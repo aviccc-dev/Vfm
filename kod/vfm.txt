@@ -2,8 +2,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="com.tikiyot.vfm"
-    android:versionCode="143"
-    android:versionName="1.15.1">
+    android:versionCode="144"
+    android:versionName="1.16.0">
     <uses-sdk android:minSdkVersion="21" android:targetSdkVersion="30" />
 
     <queries>
@@ -2510,7 +2510,8 @@ public final class Actions {
 
     // ---------- הפעולות — כל אחת פעם אחת ----------
 
-    public static final Action ADD_TO_LIST = new Action("add", "➕ " + Words.ADD_TO_LIST, Kind.VIRTUAL,
+    /** 1.16.0: מחיפוש ומרשימה חכמה — "העתקה" לרשימה ידנית (המילון, `claude/milon.md`). */
+    public static final Action ADD_TO_LIST = new Action("add", Words.VClipW.DUPLICATE + " " + Words.TO_LIST_WORD, Kind.VIRTUAL,
             false, false, false, false, Tool.DRIVE, Tool.SEARCH, Tool.DUP);
     public static final Action OPEN = new Action("open", Words.Act.OPEN, Kind.VIRTUAL,
             true, false, false, true, Tool.DRIVE, Tool.SEARCH, Tool.LIST, Tool.TRASH, Tool.DUP);
@@ -2530,22 +2531,20 @@ public final class Actions {
             true, false, false, true, Tool.DRIVE, Tool.SEARCH, Tool.LIST, Tool.DUP);
     public static final Action COPY_PATH = new Action("path", Words.Act.COPY_PATH, Kind.VIRTUAL,
             true, false, false, true, Tool.DRIVE, Tool.SEARCH, Tool.LIST, Tool.DUP);
-    /** 1.14.0: ללוח האחד (VClip) — מדביקים ברשימה, בסביבה, בבית, ובאופן אחר. העתקה = קישור (רשימה ← הפניה). */
+    /**
+     * 1.14.0: ללוח האחד (VClip). 1.16.0 (המילון): "קישור" — רק לרשימות (↪, מתעדכן); "העתקה" — עותק עצמאי של רשימה,
+     * ולקובץ — עוד מקום שבו הוא מופיע (המשתמש: "רוצים שהקובץ יופיע בעוד רשימה — כך שזו העתקה"); וירטואלית, לא בתפריט "פיזי".
+     */
     public static final Action MOVE_TO_LIST = new Action("move", Words.VClipW.MOVE, Kind.VIRTUAL,
             false, true, false, false, Tool.LIST);
     public static final Action ALSO_TO_LIST = new Action("also", Words.VClipW.COPY, Kind.VIRTUAL,
-            false, true, false, false, Tool.LIST);
-    /** 1.14.0: שכפול רשימה — עותק מלא ועצמאי (המשתמש: "העתקת כל הרשימה — פיזי שבווירטואלי"); בתפריט "פיזי". */
-    public static final Action DUPLICATE_LIST = new Action("duplicate", Words.VClipW.DUPLICATE, Kind.PHYSICAL,
             false, true, true, false, Tool.LIST);
+    public static final Action DUPLICATE_LIST = new Action("duplicate", Words.VClipW.DUPLICATE, Kind.VIRTUAL,
+            false, true, false, false, Tool.LIST);
     public static final Action REMOVE_FROM_LIST = new Action("remove", Words.REMOVE_FROM_LIST, Kind.VIRTUAL,
             false, true, false, false, Tool.LIST);
-    public static final Action RENAME_LIST = new Action("rename", Words.Act.RENAME, Kind.VIRTUAL,
-            true, true, true, false, Tool.LIST);
-    /** 1.12.1: עיצוב, וצלמית וצבע — לרשימה אחת שנבחרה (במקום שבו היא מוצגת). */
-    public static final Action DESIGN_LIST = new Action("design", Words.DesignW.MENU, Kind.VIRTUAL,
-            true, true, true, false, Tool.LIST);
-    public static final Action ICON_LIST = new Action("icon", Words.DesignW.ICON_COLOR, Kind.VIRTUAL,
+    /** 1.16.0: "הגדרות" לרשימה אחת שנבחרה — שם, צלמית, צבע, תיאור, "למה", עיצוב (ListSettings; עד כאן — שלוש פעולות). */
+    public static final Action SETTINGS_LIST = new Action("settings", Words.VClipW.SETTINGS, Kind.VIRTUAL,
             true, true, true, false, Tool.LIST);
     /** 1.13.0: הזזה ידנית ברשימה — פריטים ורשימות שנבחרו (למעלה · למטה · לראש · לסוף). */
     public static final Action ORDER_LIST = new Action("order", Words.Manual.ORDER_DOTS, Kind.VIRTUAL,
@@ -2575,8 +2574,8 @@ public final class Actions {
         DELETE_FROM_DRIVE.bar("delete", Words.Act.DELETE_ON_DRIVE, D, P);
         OPEN.bar("open", Words.Act.OPEN, T, S);                               // 1.14.0: בחיפוש — במקום הפיזיות
         MOVE_TO_LIST.bar("swap", Words.MOVE, L);
-        ALSO_TO_LIST.bar("copy", Words.COPY, L);
-        DUPLICATE_LIST.bar("copy", Words.VClipW.DUPLICATE_SHORT);
+        ALSO_TO_LIST.bar("link", Words.VClipW.COPY_SHORT, L);
+        DUPLICATE_LIST.bar("copy", Words.VClipW.DUPLICATE_SHORT, L);
         REMOVE_FROM_LIST.bar("list_remove", Words.REMOVE_FROM_LIST, L);
         RESTORE.bar("restore", Words.Act.RESTORE, T);
         DELETE_FOREVER.bar("close", Words.Act.PURGE, T);
@@ -2588,9 +2587,7 @@ public final class Actions {
         COPY_PATH.bar("link", Words.Act.PATH);
         OPEN_WITH.bar("open", Words.Act.OPEN_WITH_SHORT, S);
         EDIT.bar("edit", Words.Act.EDIT_SHORT);
-        RENAME_LIST.bar("edit", Words.Act.RENAME);
-        DESIGN_LIST.bar("edit", Words.DesignW.SHORT);                        // 1.12.1
-        ICON_LIST.bar("edit", Words.DesignW.ICON_SHORT);
+        SETTINGS_LIST.bar("edit", Words.Top.SETTINGS);
         ORDER_LIST.bar("swap", Words.Manual.ORDER_SHORT);                     // 1.13.0
         RENAME_FILE.bar("edit", Words.Act.NAME_ON_DRIVE);
         DELETE_FROM_DRIVE.folders = true;
@@ -2599,8 +2596,8 @@ public final class Actions {
     }
 
     /** הסדר בפס: וירטואליות, אחר כך פיזיות, ובסוף ההורסות (64). */
-    private static final Action[] ALL = {ADD_TO_LIST, OPEN, OPEN_WITH, EDIT, SEND_DEVICE, SHARE, COPY_PATH, MOVE_TO_LIST, ALSO_TO_LIST,
-            REMOVE_FROM_LIST, ORDER_LIST, RENAME_LIST, DESIGN_LIST, ICON_LIST, DUPLICATE_LIST, RENAME_FILE, UNZIP, MOVE_TO_FOLDER, COPY_TO_FOLDER, RESTORE, DELETE_FROM_DRIVE, DELETE_FOREVER};
+    private static final Action[] ALL = {ADD_TO_LIST, OPEN, OPEN_WITH, EDIT, SEND_DEVICE, SHARE, COPY_PATH, DUPLICATE_LIST, ALSO_TO_LIST, MOVE_TO_LIST,
+            REMOVE_FROM_LIST, ORDER_LIST, SETTINGS_LIST, RENAME_FILE, UNZIP, MOVE_TO_FOLDER, COPY_TO_FOLDER, RESTORE, DELETE_FROM_DRIVE, DELETE_FOREVER};
 
     /**
      * 1.14.0: כלי וירטואלי (חיפוש ורשימה חכמה, רשימה ידנית) — בו כל מה שנוגע בכונן בתפריט "פיזי" (המשתמש: "הכל
@@ -11103,8 +11100,6 @@ public class Home extends Activity {
                 @Override
                 public boolean onLongClick(View v) {
                     ToolMenu.show(Home.this, f, new Runnable() {
-                        @Override public void run() { Home.this.run(f); }
-                    }, new Runnable() {
                         @Override public void run() { build(); }
                     });
                     return true;
@@ -11127,7 +11122,8 @@ public class Home extends Activity {
             Tree.Node n = p.isEmpty() ? null : tr.find(p);
             if (n != null && !n.icon.isEmpty() && !n.icon.contains(".")) return n.icon;
         }
-        return Func.iconOf(f.kind);
+        String own = f.params.get("צלמית");                                   // 1.16.0: צלמית שנבחרה בהגדרות // תחביר
+        return own != null && !own.isEmpty() ? own : Func.iconOf(f.kind);
     }
 
     /** 1.12.0: העיצוב של מסך הבית; null — לא נבחר (המראה של קודם). */
@@ -15045,6 +15041,122 @@ abstract class ListScreen<T> extends Activity {
     @Override
     public void onBackPressed() {
         if (!sel.back()) super.onBackPressed();
+    }
+}
+
+===== קובץ: src/com/tikiyot/vfm/ListSettings.java =====
+package com.tikiyot.vfm;
+
+// 1.16.0: "הגדרות" של רשימה ידנית — טופס אחד, מכל מקום (המילון, `claude/milon.md`, 10–11: "אפשר לכלול את הכל
+// בהגדרות"): שם · צלמית · צבע · תיאור · "למה" · עיצוב. עד כאן — ארבעה מקומות שונים: "שינוי שם" בבחירה, "צלמית
+// ותיאור" בתפריט ⋮ ובבחירה, "🎨 עיצוב" בתפריט ⋮, בבחירה ובתפריט הכלי, ו"שינוי שם ותיאור" לכלי בבית.
+// אחראי: הטופס והשמירה ברשימה עצמה (שם חדש — כל מה שעובד עליה עובר איתה: FnVirtual.listMoved).
+
+import android.app.Activity;
+import android.widget.Button;
+import android.widget.EditText;
+import android.widget.LinearLayout;
+
+import java.io.File;
+import java.util.ArrayList;
+import java.util.List;
+
+final class ListSettings {
+
+    /** אחרי שמירה: המסלול החדש של הרשימה (אם השם השתנה), השם והתיאור. */
+    interface Done {
+        void saved(List<String> path, String name, String desc);
+    }
+
+    private ListSettings() { }
+
+    /** הטופס לרשימה path (לא השורש). */
+    static void show(final Activity a, final List<String> path, final Done done) {
+        Tree tr = Tree.load();
+        final Tree.Node n = tr.find(path);
+        if (n == null || path.isEmpty()) return;
+        final List<String> parent = new ArrayList<String>(path.subList(0, path.size() - 1));
+        final Design where = Design.forList(tr, parent);                      // הצלמית — בעיצוב של המקום שבו היא מוצגת
+        LinearLayout form = Ui.form(a);
+        form.addView(Ui.label(a, Words.ToolM.NAME));
+        final EditText name = Ui.field(a, n.name, null);
+        form.addView(name);
+        form.addView(Ui.label(a, Words.DesignW.ICON_IN + " · " + where.name));
+        final EditText icon = Ui.field(a, where.iconOf(path, n.icon), "📁");
+        form.addView(icon);
+        form.addView(Ui.label(a, Words.DesignW.COLOR));
+        final EditText color = Ui.field(a, where.colorOf(path), Words.DesignW.COLOR_HINT);
+        form.addView(color);
+        form.addView(Ui.label(a, Words.Manual.DESC));
+        final EditText desc = Ui.field(a, n.desc, Words.Manual.DESC_HINT);
+        desc.setSingleLine(false);
+        form.addView(desc);
+        form.addView(Ui.label(a, Words.WhyW.FIELD));
+        final EditText why = Ui.field(a, n.why, Words.WhyW.HINT);
+        why.setSingleLine(false);
+        form.addView(why);
+        Button design = new Button(a);                                        // העיצוב — חלון משלו (הוא רשימת עיצובים)
+        design.setAllCaps(false);
+        design.setText(Words.DesignW.MENU + " · " + (n.design.isEmpty() ? Words.DesignW.INHERIT : n.design));
+        design.setOnClickListener(new android.view.View.OnClickListener() {
+            @Override public void onClick(android.view.View v) { design(a, path, null); }
+        });
+        form.addView(design);
+        Ui.askForm(a, Words.VClipW.SETTINGS + ": " + n.name, form, new Runnable() {
+            @Override
+            public void run() {
+                final String i = icon.getText().toString().trim(), d = desc.getText().toString().trim().replace('\n', ' ');
+                final String w = why.getText().toString().trim().replace('\n', ' ');
+                File f = where.file != null ? where.file : Design.ensure(where.name);
+                if (!Design.setPrivate(f, Design.key(path), i, color.getText().toString().trim())) {
+                    Ui.toast(a, Words.SAVE_FAILED);
+                    return;
+                }
+                final String wanted = Tree.cleanName(name.getText().toString());
+                final String[] now = {null};
+                Tree.edit(new Tree.Edit() {
+                    @Override
+                    public boolean apply(Tree t) {
+                        Tree.Node node = t.find(path);
+                        if (node == null) return false;
+                        node.icon = "";                                       // הצלמית — בקובץ העיצוב (1.12.0)
+                        node.desc = d;
+                        node.why = w;
+                        if (!wanted.isEmpty() && !wanted.equals(node.name)) node.name = node.parent.uniqueChildName(wanted, node);
+                        now[0] = node.name;
+                        return true;
+                    }
+                });
+                List<String> to = new ArrayList<String>(parent);
+                to.add(now[0] != null ? now[0] : n.name);
+                if (!to.equals(path)) FnVirtual.listMoved(path, to);         // הכלים, הקישורים, הכפתורים — איתה
+                if (done != null) done.saved(to, to.get(to.size() - 1), d);
+            }
+        });
+    }
+
+    /** "🎨 עיצוב" לרשימה path — בשם, או כמו הרשימה שמעליה. after — אחרי שינוי (או null). */
+    static void design(final Activity a, final List<String> path, final Runnable after) {
+        Tree t = Tree.load();
+        DesignUi.choose(a, Words.DesignW.TITLE_LIST + (path.isEmpty() ? "" : ": " + path.get(path.size() - 1)),
+                Design.nameFor(t, path), Design.inheritedFrom(t, path), true,
+                new DesignUi.Done() {
+                    @Override
+                    public void chosen(final String name) {
+                        Tree.edit(new Tree.Edit() {
+                            @Override
+                            public boolean apply(Tree t) {
+                                Tree.Node n = t.find(path);
+                                if (n == null) return false;
+                                n.design = name;
+                                return true;
+                            }
+                        });
+                        if (after != null) after.run();
+                    }
+
+                    @Override public void changed() { if (after != null) after.run(); }
+                });
     }
 }
 
@@ -23969,6 +24081,17 @@ public final class SmartForm {
         advF.partner = moreF;
         b.addView(moreF.inner);
         b.addView(advF.inner);
+        // 1.16.0: "הגדרות" אחת (המילון) — גם הפרטים: צלמית, תיאור, "למה" (עד כאן — "שינוי שם ותיאור" נפרד)
+        final String[] detailKeys = {Program.ICON, "תיאור", Program.WHY};  // תחביר
+        final String[] detailLabels = {Words.DesignW.ICON_SHORT, Words.Manual.DESC, Words.WhyW.FIELD};
+        final EditText[] details = new EditText[detailKeys.length];
+        Fold detF = new Fold(a, Words.SmartF.DETAILS, null, false);
+        for (int i = 0; i < detailKeys.length; i++) {
+            details[i] = Ui.field(a, t == null ? "" : t.get(detailKeys[i], ""), null);
+            detF.inner.addView(line(a, detailLabels[i], details[i], false));
+        }
+        b.addView(detF.head);
+        b.addView(detF.inner);
         LinearLayout adv = advF.inner;
         adv.addView(shareNote);
         LinearLayout btns = new LinearLayout(a);
@@ -23998,14 +24121,22 @@ public final class SmartForm {
                     return;
                 }
                 String c = condOf(p), s = (String) sort.getSelectedItem(), w = (String) view.getSelectedItem();
+                Target out;
                 if (current[0] > 0) {                                         // 147: מקושר — השינוי נשמר ברשימה עצמה
                     SmartLists.Named l = named.get(current[0] - 1);
                     if (!c.equals(l.cond) || !s.equals(l.sort) || !w.equals(l.view.isEmpty() ? FolderView.FLAT : l.view))
                         SmartLists.save(l.name, c, s, dir[0], w);
-                    done.ok(n.isEmpty() ? l.name : n, Target.of(FnSmart.KIND, SmartLists.LINK, l.id, SmartLists.SORT, s, SmartLists.DIR, dir[0]));
-                    return;
+                    if (n.isEmpty()) n = l.name;
+                    out = Target.of(FnSmart.KIND, SmartLists.LINK, l.id, SmartLists.SORT, s, SmartLists.DIR, dir[0]);
+                } else {
+                    if (n.isEmpty()) n = Words.SMART_LIST;
+                    out = Target.of(FnSmart.KIND, SmartLists.COND, c, SmartLists.SORT, s, SmartLists.VIEW, w);
                 }
-                done.ok(n.isEmpty() ? Words.SMART_LIST : n, Target.of(FnSmart.KIND, SmartLists.COND, c, SmartLists.SORT, s, SmartLists.VIEW, w));
+                for (int i = 0; i < detailKeys.length; i++) {                 // ריק — רק אם נמחק (לא דורס מה שלא הוצג)
+                    String v = details[i].getText().toString().trim().replace('\n', ' ');
+                    if (!v.isEmpty() || t != null && !t.get(detailKeys[i], "").isEmpty()) out.params.put(detailKeys[i], v);
+                }
+                done.ok(n, out);
             }
         });
     }
@@ -25183,6 +25314,24 @@ public final class Structure {
         return byId(ini(), id);
     }
 
+    /**
+     * 1.16.0: הסעיף כמו כלי — סוג, שם בלי הקידומת (ובפנימית — בלי הבעלים), תיאור, ושאר המפתחות; כך אותו טופס
+     * ("הגדרות") עובד גם על רשימה חכמה שבתוך רשימה. null — אין.
+     */
+    public static synchronized Func asTool(String id) {
+        Func f = byId(ini(), id);
+        if (f == null) return null;
+        String k = f.params.remove("סוג"), d = f.params.remove("תיאור");  // תחביר
+        f.kind = k == null || k.isEmpty() ? FnSmart.KIND : k;
+        f.description = d == null ? "" : d;
+        String n = f.name;
+        if (n.startsWith(FUNC)) n = n.substring(FUNC.length());
+        else if (n.contains(" › ")) n = n.substring(n.lastIndexOf(" › ") + 3);
+        else if (n.indexOf(':') >= 0) n = n.substring(n.indexOf(':') + 1);
+        f.name = n.trim();
+        return f;
+    }
+
     /** 1.14.0: אותו דבר בכל קובץ ראשי (גם של אופן אחר — ModeCopy). */
     static Func byId(Ini ini, String id) {
         int at = indexOfId(ini, id);
@@ -25330,7 +25479,13 @@ public final class Structure {
 
     private static List<Ini.Line> funcBlock(String name, String id, String kind,
                                             String description, Target t, boolean blankFirst) {
-        String sec = FUNC + name;
+        return block(FUNC + name, id, kind, description, t, blankFirst);
+    }
+
+    /** הסעיף: כותרת, מזהה, סוג, תיאור, והשאר. 1.16.0: "תיאור" שבא מהטופס (בתוך t) — הוא התיאור, לא שורה כפולה. */
+    private static List<Ini.Line> block(String sec, String id, String kind, String description, Target t, boolean blankFirst) {
+        String fromForm = t == null ? null : t.params.get("תיאור");  // תחביר
+        if (fromForm != null) description = fromForm;
         List<Ini.Line> out = new ArrayList<Ini.Line>();
         if (blankFirst) out.add(Ini.line("", sec));
         out.add(Ini.line("[" + sec + "]", sec));
@@ -25338,6 +25493,7 @@ public final class Structure {
         out.add(Ini.line("סוג = " + kind, sec));  // תחביר
         out.add(Ini.line("תיאור = " + (description == null ? "" : description), sec));  // תחביר
         if (t != null) for (Map.Entry<String, String> e : t.params.entrySet()) {
+            if (e.getKey().equals("תיאור")) continue;  // תחביר
             if (e.getValue() != null && !e.getValue().isEmpty())
                 out.add(Ini.line(e.getKey() + " = " + e.getValue(), sec));
         }
@@ -25370,11 +25526,15 @@ public final class Structure {
         int end = ini.sectionEnd(at);
         String kind = "";
         Map<String, String> kept = new LinkedHashMap<String, String>();
+        String why = null;
         for (int i = at + 1; i < end; i++) {
             Ini.Line l = ini.lines.get(i);
             if (l.key != null && l.key.equals("סוג")) kind = l.value;  // תחביר
             if (l.key != null && VIEW_KEYS.contains(l.key)) kept.put(l.key, l.value);
+            if (l.key != null && l.key.equals(Program.WHY)) why = l.value;
         }
+        // 1.16.0 (באג): "שינוי ההגדרות" של רשימה חכמה איבד את ה"למה" (הטופס לא מחזיר אותו) — נשאר, אלא אם הטופס קבע
+        if (t != null && why != null && !t.params.containsKey(Program.WHY)) t.params.put(Program.WHY, why);
         // הגדרות תצוגה שנקבעו במסך (מיון, כיוון...) נשמרות אם טופס ההגדרה לא קבע אותן
         if (t != null) {
             Target merged = Target.of(t.kind, kept);
@@ -25393,7 +25553,10 @@ public final class Structure {
             if (l.key == null || !KNOWN_KEYS.contains(l.key)) extras.add(l);
         }
         if (t != null && t.kind != null && !t.kind.isEmpty()) kind = t.kind;      // 150: בעריכה אפשר להחליף סוג
-        List<Ini.Line> block = funcBlock(newName, id, kind, description, t, false);
+        String old = ini.lines.get(at).headerName();                         // 1.16.0 (באג): רשימה פנימית נשארת פנימית
+        String sec = old.startsWith(Nested.INNER) && old.contains(" › ")
+                ? old.substring(0, old.indexOf(" › ") + 3) + newName : FUNC + newName;
+        List<Ini.Line> block = block(sec, id, kind, description, t, false);
         block.addAll(extras);
         for (int i = end - 1; i >= at; i--) ini.lines.remove(i);
         ini.lines.addAll(at, block);
@@ -25442,6 +25605,12 @@ public final class Structure {
     static boolean toInner(Ini ini, String id, String label) {
         int at = indexOfId(ini, id);
         if (at < 0) return false;
+        ini.lines.get(at).raw = "[" + innerHeader(ini, label) + "]";
+        return true;
+    }
+
+    /** כותרת פנימית פנויה: "[רשימה פנימית: label]", ואם תפוסה — (2), (3)… */
+    private static String innerHeader(Ini ini, String label) {
         String h = Nested.INNER + label;
         boolean taken = true;
         for (int i = 2; taken; i++) {
@@ -25449,8 +25618,33 @@ public final class Structure {
             for (Ini.Line l : ini.lines) if (l.isHeader() && l.headerName().trim().equals(h.trim())) taken = true;
             if (taken) h = Nested.INNER + label + " (" + i + ")";
         }
-        ini.lines.get(at).raw = "[" + h + "]";
-        return true;
+        return h;
+    }
+
+    /**
+     * 1.16.0: "העתקה" של רשימה חכמה (המילון — עותק עצמאי; באג: עד כאן העתקה לתוך רשימה נהייתה קישור): רשימה פנימית
+     * חדשה, במזהה חדש, עם כל המפתחות של id (חכמה, כפולים, כלי או הגדרה נפוצה). מחזיר את המזהה החדש, או null.
+     */
+    public static synchronized String copyInner(String id, String label) {
+        Ini ini = ini();
+        int at = indexOfId(ini, id);
+        if (at < 0) return null;
+        String fresh = newId("p"), h = innerHeader(ini, label);
+        List<Ini.Line> b = new ArrayList<Ini.Line>();
+        b.add(Ini.line("", h));
+        b.add(Ini.line("[" + h + "]", h));
+        b.add(Ini.line(ID + " = " + fresh, h));
+        boolean kind = false;
+        for (int i = at + 1, end = ini.sectionEnd(at); i < end; i++) {
+            Ini.Line l = ini.lines.get(i);
+            if (l.key == null || l.key.equals(ID)) continue;
+            if (l.key.equals("סוג")) kind = true;  // תחביר
+            b.add(Ini.line(l.key + " = " + l.value, h));
+        }
+        if (!kind) b.add(2 + 1, Ini.line("סוג = " + FnSmart.KIND, h));  // הגדרה נפוצה — בלי "סוג" // תחביר
+        ini.lines.addAll(ini.lines.size(), b);
+        save(ini);
+        return fresh;
     }
 
     public static synchronized void removeFunc(String id) {
@@ -25809,35 +26003,31 @@ package com.tikiyot.vfm;
 
 import android.app.Activity;
 import android.content.DialogInterface;
-import android.widget.EditText;
-import android.widget.LinearLayout;
 
 final class ToolMenu {
 
     private ToolMenu() { }
 
-    /** run — הפעלת הכלי; changed — רענון המסך אחרי שינוי. */
-    static void show(final Activity a, final Structure.Func f, final Runnable run, final Runnable changed) {
-        final boolean list = FnVirtual.KIND.equals(f.kind);                 // 1.12.1: לרשימה — גם "🎨 עיצוב"
-        final java.util.List<String> items = new java.util.ArrayList<String>(java.util.Arrays.asList(
-                Words.ToolM.RUN, Words.ToolM.CHANGE_SETTINGS, Words.ToolM.RENAME_DESC,
-                Words.VClipW.COPY, Words.VClipW.MOVE, Words.VClipW.DUPLICATE,          // 1.14.0: ללוח
-                Words.Main.MOVE_RIGHT, Words.Main.MOVE_LEFT, Words.ToolM.DELETE));      // 1.14.0: כלי — זז במקומו
-        if (list) items.add(Words.DesignW.MENU);
+    /**
+     * 1.16.0 (המילון, `claude/milon.md`; המשתמש על התפריט הישן: "הפעלה — מיותר; שינוי הגדרות כולל שינוי שם ותיאור"):
+     * רשימה ורשימה חכמה — קישור · העתקה · העברה · הגדרות · הזזה · הסרה; פקודה וכל השאר — הגדרות · הזזה · הסרה
+     * (המשתמש: "פקודה אפשר להסיר או לערוך; כל השאר לא נחוץ"). changed — רענון המסך אחרי שינוי.
+     */
+    static void show(final Activity a, final Structure.Func f, final Runnable changed) {
+        final boolean list = FnVirtual.KIND.equals(f.kind);
+        final boolean clip = list || FnSmart.KIND.equals(f.kind) || FnDup.KIND.equals(f.kind);
+        final java.util.List<String> items = new java.util.ArrayList<String>();
+        if (clip) items.addAll(java.util.Arrays.asList(Words.VClipW.COPY, Words.VClipW.DUPLICATE, Words.VClipW.MOVE));
+        items.addAll(java.util.Arrays.asList(Words.VClipW.SETTINGS, Words.Manual.ORDER_DOTS, Words.ToolM.DELETE));
         Ui.options(a, f.name, items.toArray(new String[0]),
                 new DialogInterface.OnClickListener() {
                     @Override
                     public void onClick(DialogInterface d, int which) {
-                        final Func fn = Func.byKind(f.kind);
                         String w = items.get(which);
-                        if (w.equals(Words.DesignW.MENU)) design(a, FnVirtual.base(f.target()), changed);
-                        else if (w.equals(Words.ToolM.RUN)) run.run();
-                        else if (w.equals(Words.ToolM.CHANGE_SETTINGS) && fn != null) configure(a, f, fn, changed);
-                        else if (w.equals(Words.ToolM.RENAME_DESC)) rename(a, f, changed);
+                        if (w.equals(Words.VClipW.SETTINGS)) settings(a, f, changed);
                         else if (w.equals(Words.ToolM.DELETE)) delete(a, f, changed);
-                        else if (w.equals(Words.Main.MOVE_RIGHT) || w.equals(Words.Main.MOVE_LEFT)) {
-                            if (Structure.shiftFunc(f.id, w.equals(Words.Main.MOVE_RIGHT) ? -1 : 1)) changed.run();
-                        } else {
+                        else if (w.equals(Words.Manual.ORDER_DOTS)) order(a, f, changed);
+                        else {
                             boolean full = w.equals(Words.VClipW.DUPLICATE);
                             VClip.set(Modes.current(), null, java.util.Collections.singletonList(
                                     new VClip.Item(VClip.TOOL, f.id, f.name)), w.equals(Words.VClipW.MOVE), full);
@@ -25848,7 +26038,41 @@ final class ToolMenu {
                 });
     }
 
-    private static void configure(Activity a, final Structure.Func f, final Func fn, final Runnable changed) {
+    /** "הזזה" — ימינה / שמאלה במסך הבית. */
+    private static void order(Activity a, final Structure.Func f, final Runnable changed) {
+        Ui.options(a, f.name, new String[]{Words.Main.MOVE_RIGHT, Words.Main.MOVE_LEFT}, new DialogInterface.OnClickListener() {
+            @Override
+            public void onClick(DialogInterface d, int w) {
+                if (Structure.shiftFunc(f.id, w == 0 ? -1 : 1)) changed.run();
+            }
+        });
+    }
+
+    /** "הגדרות" — אחת לכל כלי: רשימה — הטופס של הרשימה; פקודה — העורך; אחר — הטופס של הסוג. */
+    private static void settings(Activity a, final Structure.Func f, final Runnable changed) {
+        if (FnVirtual.KIND.equals(f.kind)) {
+            final java.util.List<String> p = FnVirtual.base(FnVirtual.ensureOwn(a, f));
+            ListSettings.show(a, p, new ListSettings.Done() {
+                @Override
+                public void saved(java.util.List<String> path, String name, String desc) {
+                    Structure.Func now = Structure.func(f.id);                // שם חדש לרשימה — גם לכלי (המסלול כבר עודכן)
+                    if (now != null) Structure.updateFunc(f.id, path.equals(p) ? now.name : name, desc, now.target());
+                    changed.run();
+                }
+            });
+            return;
+        }
+        if (FnCommand.KIND.equals(f.kind) && FnCommand.file(f) != null) {
+            BatchUi.edit(a, FnCommand.file(f));
+            return;
+        }
+        configure(a, f, changed);
+    }
+
+    /** הטופס של הסוג (רשימה חכמה, כפולים…) — לכלי בבית ולרשימה חכמה שבתוך רשימה (1.16.0). */
+    static void configure(Activity a, final Structure.Func f, final Runnable changed) {
+        final Func fn = Func.byKind(f.kind);
+        if (fn == null) return;
         Func.Done done = new Func.Done() {
             @Override
             public void ok(String name, Target target) {
@@ -25857,31 +26081,10 @@ final class ToolMenu {
                 changed.run();
             }
         };
-        if (SearchTabs.isSearch(f.kind)) SearchTabs.configure(a, f.kind, f.name, f.target(), done);   // 150
-        else fn.configure(a, f.name, f.target(), done);
-    }
-
-    private static void rename(Activity a, final Structure.Func f, final Runnable changed) {
-        LinearLayout b = Ui.form(a);
-        final EditText name = Ui.field(a, f.name, null);
-        final EditText desc = Ui.field(a, f.description, Words.ToolM.DESC);
-        final EditText why = Ui.field(a, f.target().get(Program.WHY, ""), Words.WhyW.HINT);   // 1.13.0
-        b.addView(Ui.label(a, Words.ToolM.NAME));
-        b.addView(name);
-        b.addView(Ui.label(a, Words.ToolM.DESC));
-        b.addView(desc);
-        b.addView(Ui.label(a, Words.WhyW.FIELD));
-        b.addView(why);
-        Ui.askForm(a, Words.ToolM.RENAME_DESC, b, new Runnable() {
-            @Override
-            public void run() {
-                Target t = f.target();
-                String w = why.getText().toString().trim().replace('\n', ' ');
-                if (w.isEmpty()) t.params.remove(Program.WHY); else t.params.put(Program.WHY, w);
-                Structure.updateFunc(f.id, name.getText().toString().trim(), desc.getText().toString().trim(), t);
-                changed.run();
-            }
-        });
+        Target t = f.target();
+        t.params.put("תיאור", f.description);                                // 1.16.0: גם התיאור — בטופס // תחביר
+        if (SearchTabs.isSearch(f.kind)) SearchTabs.configure(a, f.kind, f.name, t, done);   // 150
+        else fn.configure(a, f.name, t, done);
     }
 
     private static void delete(Activity a, final Structure.Func f, final Runnable changed) {
@@ -25896,28 +26099,6 @@ final class ToolMenu {
                         Structure.removeFunc(f.id);
                         changed.run();
                     }
-                });
-    }
-    /** 1.12.1: "🎨 עיצוב" לרשימה שהכלי פותח — נרשם ברשימה עצמה (@עיצוב). */
-    static void design(Activity a, final java.util.List<String> path, final Runnable changed) {
-        Tree t = Tree.load();
-        DesignUi.choose(a, Words.DesignW.TITLE_LIST, Design.nameFor(t, path), Design.inheritedFrom(t, path), true,
-                new DesignUi.Done() {
-                    @Override
-                    public void chosen(final String name) {
-                        Tree.edit(new Tree.Edit() {
-                            @Override
-                            public boolean apply(Tree t) {
-                                Tree.Node n = t.find(path);
-                                if (n == null) return false;
-                                n.design = name;
-                                return true;
-                            }
-                        });
-                        if (changed != null) changed.run();
-                    }
-
-                    @Override public void changed() { if (changed != null) changed.run(); }
                 });
     }
 }
@@ -29158,6 +29339,7 @@ final class VClip {
         final List<String[]> moved = new ArrayList<String[]>();
         final List<String> src = from;
         final boolean mv = move, fl = full;
+        final java.util.Map<String, String> copies = fl ? innerCopies(tree, src, dest) : null;   // 1.16.0
         Tree.edit(new Tree.Edit() {
             @Override
             public boolean apply(Tree t) {
@@ -29165,7 +29347,7 @@ final class VClip {
                 if (b == null) return false;
                 boolean changed = false;
                 for (Item it : tree) {
-                    if (intoNode(t, it, a, b, dest, src, mv, fl, moved)) {
+                    if (intoNode(t, it, a, b, dest, src, mv, fl, moved, copies)) {
                         r.done++;
                         ok.add(it);
                         changed = true;
@@ -29174,6 +29356,8 @@ final class VClip {
                 return changed;
             }
         });
+        if (copies != null) for (Item it : tree)                              // עותק שלא נכנס — לא נשאר יתום
+            if (it.kind == SMART && !ok.contains(it) && copies.containsKey(it.value)) Structure.removeById(copies.get(it.value));
         for (String[] mvd : moved) FnVirtual.listMoved(child(src, mvd[0]), child(dest, mvd[1]));   // 88: הכלים עוברים איתה
         if (move) for (Item it : ok) {                                         // 1.15.1 (באג): רק מה שנכנס — יוצא מהבית
             Structure.Func f = tools.get(it);
@@ -29183,9 +29367,44 @@ final class VClip {
         }
     }
 
+    /**
+     * 1.16.0: לפני "העתקה" — העותקים העצמאיים של הרשימות החכמות: מה שהועתק עצמו, והפנימיות שבתוך רשימות שמועתקות
+     * (כלי והגדרה נפוצה בתוך רשימה — הם קישור מטבעם, ונשארים). מחוץ לעריכת העץ — כך לא נועלים את שני הקבצים יחד.
+     */
+    private static java.util.Map<String, String> innerCopies(List<Item> items, List<String> src, List<String> dest) {
+        java.util.Map<String, String> out = new java.util.HashMap<String, String>();
+        Tree tr = Tree.load();
+        String here = Tree.label(dest);
+        for (Item it : items) {
+            if (it.kind == SMART) {
+                String c = Structure.copyInner(it.value, here + " › " + it.name);
+                if (c != null) out.put(it.value, c);
+                continue;
+            }
+            Tree.Node m = it.kind == LIST ? (src == null ? null : tr.find(child(src, it.value)))
+                    : it.kind == REF ? tr.find(Tree.parsePath(it.value)) : null;
+            if (m != null) innerOf(m, out);
+        }
+        return out;
+    }
+
+    private static void innerOf(Tree.Node n, java.util.Map<String, String> out) {
+        for (String r : n.smart)
+            if (!out.containsKey(r) && Nested.kindOf(r) == Nested.Kind.INNER) {
+                Nested.Item it = Nested.resolve(r);
+                String c = Structure.copyInner(r, n.name + " › " + it.name);
+                if (c != null) out.put(r, c);
+            }
+        for (Tree.Node c : n.children) innerOf(c, out);
+    }
+
     /** פריט אחד לתוך הרשימה b (באותו עץ). */
     private static boolean intoNode(Tree t, Item it, Tree.Node a, Tree.Node b, List<String> dest, List<String> src,
-                                    boolean mv, boolean fl, List<String[]> moved) {
+                                    boolean mv, boolean fl, List<String[]> moved, final java.util.Map<String, String> copies) {
+        Tree.Links own = copies == null ? Tree.SAME : new Tree.Links() {     // 1.16.0: העתקה — גם הפנימיות שבתוכה עצמאיות
+            @Override public String smart(String ref) { return copies.containsKey(ref) ? copies.get(ref) : ref; }
+            @Override public String list(String path) { return path; }
+        };
         boolean out = mv && a != null && a != b;                              // העברה — יוצא מהמקור
         switch (it.kind) {
             case FILE: {
@@ -29201,7 +29420,7 @@ final class VClip {
                 Tree.Node m = a == null ? null : a.child(it.value);
                 if (m == null || m == b || m.isAncestorOf(b)) return false;
                 if (fl) {
-                    Tree.copyNode(m, Tree.newChild(b, b.uniqueChildName(m.name, null)));
+                    Tree.copyNode(m, Tree.newChild(b, b.uniqueChildName(m.name, null)), own);
                 } else if (mv) {
                     if (a == b) return false;
                     a.children.remove(m);
@@ -29220,12 +29439,18 @@ final class VClip {
                 if (fl) {
                     Tree.Node m = t.find(target);
                     if (m == null || m == b || m.isAncestorOf(b)) return false;
-                    Tree.copyNode(m, Tree.newChild(b, b.uniqueChildName(m.name, null)));
+                    Tree.copyNode(m, Tree.newChild(b, b.uniqueChildName(m.name, null)), own);
                 } else if (!Tree.addRef(b, dest, target)) return false;
                 if (out) a.refs.remove(it.value);
                 return true;
             }
             case SMART:
+                if (fl) {                                                     // 1.16.0: העתקה — רשימה חכמה עצמאית
+                    String c = copies.get(it.value);
+                    if (c == null || out) return false;
+                    b.smart.add(c);
+                    return true;
+                }
                 if (b.smart.contains(it.value)) {
                     if (!out) return false;
                 } else b.smart.add(it.value);
@@ -29281,7 +29506,7 @@ final class VClip {
                     if (b == null) return false;
                     boolean ch = false;
                     for (Item it : plain) {
-                        if (intoNode(t, it, null, b, d, null, false, false, null)) {
+                        if (intoNode(t, it, null, b, d, null, false, false, null, null)) {
                             rr.done++;
                             ch = true;
                         }
@@ -30029,38 +30254,17 @@ public class VirtualScreen extends ListScreen<VirtualScreen.Item> implements Top
         own.put(Actions.REMOVE_FROM_LIST, new Runnable() {
             @Override public void run() { removeSelected(); }
         });
-        own.put(Actions.DESIGN_LIST, new Runnable() {                         // 1.12.1
+        own.put(Actions.SETTINGS_LIST, new Runnable() {                       // 1.16.0: הגדרות אחת
             @Override
             public void run() {
                 ArrayList<String> p = new ArrayList<String>(path);
                 p.add(selectedLists.iterator().next());
                 stopSelecting();
-                chooseDesign(p);
-            }
-        });
-        own.put(Actions.ICON_LIST, new Runnable() {                           // 1.12.1
-            @Override
-            public void run() {
-                ArrayList<String> p = new ArrayList<String>(path);
-                p.add(selectedLists.iterator().next());
-                stopSelecting();
-                iconAndDesc(p);
+                settings(p);
             }
         });
         own.put(Actions.ORDER_LIST, new Runnable() {                          // 1.13.0: הזזה ידנית
             @Override public void run() { orderSelected(); }
-        });
-        own.put(Actions.RENAME_LIST, new Runnable() {
-            @Override
-            public void run() {
-                String name = selectedLists.iterator().next();
-                for (Item x : items)
-                    if (x.type == FOLDER && name.equals(x.folder)) {
-                        stopSelecting();
-                        renameFolder(x);
-                        return;
-                    }
-            }
         });
         pasteBar = new PasteBar(this, new PasteBar.Place() {                    // 142 · 1.14.0: הלוח האחד
             @Override public String cannot() { return VClip.cannotPasteInto(path); }
@@ -30230,6 +30434,7 @@ public class VirtualScreen extends ListScreen<VirtualScreen.Item> implements Top
             it.sub = it.smart.gone ? Words.Inner.GONE                         // 1.13.0: נתון חי — מספר וגודל
                     : it.smart.dup != null ? Func.byKind(FnDup.KIND).title  // 1.15.1: כפולים — נספרים רק בפתיחה
                     : nh == null ? Words.LOADING_INDEX : Words.files(nh[0]) + (nh[1] > 0 ? " · " + Files.size(nh[1]) : "");
+            if (!it.smart.gone && !it.smart.local) it.sub = Words.Manual.REF + it.sub;   // 1.16.0: קישור — עם ↪, כמו קישור לרשימה
             items.add(it);
         }
         for (String lp : node.live) {                                        // 1.9.0: תיקיות חיות
@@ -30339,28 +30544,18 @@ public class VirtualScreen extends ListScreen<VirtualScreen.Item> implements Top
         return new String[]{design.iconOf(k, ""), design.colorOf(k)};
     }
 
-    /** "🎨 עיצוב": לרשימה הזו (או לרשימה שנבחרה בתוכה) — עיצוב בשם, או כמו הרשימה שמעליה. */
-    private void chooseDesign(final List<String> target) {
-        Tree t = Tree.load();
-        DesignUi.choose(this, Words.DesignW.TITLE_LIST + (target.equals(path) ? "" : ": " + target.get(target.size() - 1)),
-                Design.nameFor(t, target), Design.inheritedFrom(t, target), true,
-                new DesignUi.Done() {
-                    @Override
-                    public void chosen(final String name) {
-                        Tree.edit(new Tree.Edit() {
-                            @Override
-                            public boolean apply(Tree t) {
-                                Tree.Node n = t.find(target);
-                                if (n == null) return false;
-                                n.design = name;
-                                return true;
-                            }
-                        });
-                        refresh();
-                    }
-
-                    @Override public void changed() { refresh(); }
-                });
+    /** 1.16.0: "הגדרות" של רשימה (שם, צלמית, צבע, תיאור, "למה", עיצוב) — טופס אחד (ListSettings). */
+    private void settings(final List<String> target) {
+        ListSettings.show(this, target, new ListSettings.Done() {
+            @Override
+            public void saved(List<String> to, String name, String desc) {
+                if (target.equals(path) && !to.equals(path)) {                // הרשימה הפתוחה — שם חדש
+                    path.clear();
+                    path.addAll(to);
+                }
+                refresh();
+            }
+        });
     }
 
     private static String parent(String p) {
@@ -30431,11 +30626,13 @@ public class VirtualScreen extends ListScreen<VirtualScreen.Item> implements Top
             final Lines refs = new Lines() {
                 @Override public List<String> of(Tree.Node n) { return n.refs; }
             };
-            lineMenu(it.label, rp, VClip.REF, refs, new Runnable() {
+            lineMenu(it.label, rp, VClip.REF, refs, true, Words.VClipW.ORIGINAL, it.missing() ? null : new Runnable() {
+                @Override public void run() { settings(it.ref); }
+            }, new Runnable() {
                 @Override
                 public void run() {
                     Ui.ask(VirtualScreen.this, Words.Manual.REF_REMOVE + it.label, Words.NO_TOUCH_FILES,
-                            Words.Manual.REF_REMOVE_WHAT, null, Words.Inner.REMOVE, removing(rp, refs, null));
+                            Words.Manual.REF_REMOVE_WHAT, null, Words.VClipW.REMOVE, removing(rp, refs, null));
                 }
             });
             return;
@@ -30445,11 +30642,11 @@ public class VirtualScreen extends ListScreen<VirtualScreen.Item> implements Top
             final Lines live = new Lines() {
                 @Override public List<String> of(Tree.Node n) { return n.live; }
             };
-            lineMenu(it.label, lp, VClip.LIVE, live, new Runnable() {
+            lineMenu(it.label, lp, VClip.LIVE, live, false, null, null, new Runnable() {
                 @Override
                 public void run() {
                     Ui.ask(VirtualScreen.this, Words.Live.REMOVE + ": " + it.label, Words.NO_TOUCH_FILES,
-                            Words.Live.REMOVE_WHAT, null, Words.Inner.REMOVE, removing(lp, live, null));
+                            Words.Live.REMOVE_WHAT, null, Words.VClipW.REMOVE, removing(lp, live, null));
                 }
             });
             return;
@@ -30461,11 +30658,15 @@ public class VirtualScreen extends ListScreen<VirtualScreen.Item> implements Top
             final Lines smart = new Lines() {
                 @Override public List<String> of(Tree.Node n) { return n.smart; }
             };
-            lineMenu(label, ref, VClip.SMART, smart, new Runnable() {
+            final Nested.Item si = it.smart;
+            lineMenu(label, ref, VClip.SMART, smart, !si.gone, si.local ? Words.VClipW.SETTINGS : Words.VClipW.ORIGINAL,
+                    si.gone ? null : new Runnable() {
+                @Override public void run() { smartSettings(si); }
+            }, new Runnable() {
                 @Override
                 public void run() {
                     Ui.ask(VirtualScreen.this, Words.Inner.REMOVE + ": " + label, Words.NO_TOUCH_FILES,
-                            Words.Inner.removeWhat(local), local ? Words.Box.IN_BIN : null, Words.Inner.REMOVE,
+                            Words.Inner.removeWhat(local), local ? Words.Box.IN_BIN : null, Words.VClipW.REMOVE,
                             removing(ref, smart, new Runnable() {
                                 @Override
                                 public void run() {
@@ -30491,23 +30692,36 @@ public class VirtualScreen extends ListScreen<VirtualScreen.Item> implements Top
     }
 
     /**
-     * 1.13.1 (באג): נגיעה ארוכה — הזזה (למעלה / למטה / לראש / לסוף, בין השורות מאותו סוג) או הוצאה. עד כאן — רק הוצאה,
-     * וההזזה הידנית (1.13.0) הזיזה רק קבצים ותתי־רשימות. 1.14.0: וגם העתקה / העברה ללוח.
+     * 1.13.1 · 1.14.0 · 1.16.0 (המילון, `claude/milon.md`): נגיעה ארוכה על קישור ↪, רשימה חכמה או תיקייה מתעדכנת —
+     * קישור · העתקה (copy — לא בתיקייה מתעדכנת) · העברה · הזזה · הגדרות / עריכת הרשימה המקורית (settings — או null) · הסרה.
      */
-    private void lineMenu(final String title, final String value, final int kind, final Lines lines, final Runnable remove) {
+    private void lineMenu(final String title, final String value, final int kind, final Lines lines, boolean copy,
+                          String settingsLabel, final Runnable settings, final Runnable remove) {
+        final List<String> opts = new ArrayList<String>(java.util.Arrays.asList(Words.VClipW.COPY));
+        if (copy) opts.add(Words.VClipW.DUPLICATE);
+        opts.add(Words.VClipW.MOVE);
+        opts.add(Words.Manual.ORDER_DOTS);
+        if (settings != null) opts.add(settingsLabel);
+        opts.add(Words.VClipW.REMOVE);
+        Ui.options(this, title, opts.toArray(new String[0]), new DialogInterface.OnClickListener() {
+            @Override
+            public void onClick(DialogInterface d, int which) {
+                String w = opts.get(which);
+                if (w.equals(Words.VClipW.REMOVE)) remove.run();
+                else if (w.equals(Words.Manual.ORDER_DOTS)) orderLine(title, value, lines);
+                else if (settings != null && which == opts.size() - 2) settings.run();
+                else clip(java.util.Collections.singletonList(new VClip.Item(kind, value, title)),
+                            w.equals(Words.VClipW.MOVE), w.equals(Words.VClipW.DUPLICATE));
+            }
+        });
+    }
+
+    /** הזזת השורה — למעלה / למטה / לראש / לסוף, בין השורות מאותו סוג. */
+    private void orderLine(String title, final String value, final Lines lines) {
         Ui.options(this, title, new String[]{Words.Manual.ORDER_UP, Words.Manual.ORDER_DOWN, Words.Manual.ORDER_TOP,
-                Words.Manual.ORDER_BOTTOM, Words.VClipW.COPY, Words.VClipW.MOVE, Words.Inner.REMOVE},
-                new DialogInterface.OnClickListener() {
+                Words.Manual.ORDER_BOTTOM}, new DialogInterface.OnClickListener() {
             @Override
             public void onClick(DialogInterface d, final int how) {
-                if (how == 6) {
-                    remove.run();
-                    return;
-                }
-                if (how == 4 || how == 5) {                                   // 1.14.0: ללוח — גם הן (עד כאן — לא)
-                    clip(java.util.Collections.singletonList(new VClip.Item(kind, value, title)), how == 5, false);
-                    return;
-                }
                 change(new Change() {
                     @Override
                     public boolean apply(Tree t, Tree.Node node) {
@@ -30520,7 +30734,19 @@ public class VirtualScreen extends ListScreen<VirtualScreen.Item> implements Top
         });
     }
 
-    /** הוצאת השורה מהרשימה (הקבצים לא נוגעים); after — אחרי (או null). */
+    /** 1.16.0: "הגדרות" של רשימה חכמה שבתוך הרשימה — הטופס שלה; הגדרה נפוצה — נפתחת (ההגדרות — שם). */
+    private void smartSettings(Nested.Item si) {
+        Structure.Func f = Structure.asTool(si.ref);
+        if (f == null || si.common) {
+            Nested.open(this, si);
+            return;
+        }
+        ToolMenu.configure(this, f, new Runnable() {
+            @Override public void run() { refresh(); }
+        });
+    }
+
+    /** הסרת השורה מהרשימה (הקבצים לא נוגעים); after — אחרי (או null). */
     private Runnable removing(final String value, final Lines lines, final Runnable after) {
         return new Runnable() {
             @Override
@@ -30556,8 +30782,8 @@ public class VirtualScreen extends ListScreen<VirtualScreen.Item> implements Top
 
 
     /**
-     * 142 · 1.14.0: "העתקה" / "העברה" — ללוח; מנווטים לכל מקום (רשימה, סביבה, בית, אופן אחר) ו"הדבקה כאן".
-     * full — שכפול (עותק מלא, מתפריט "פיזי").
+     * 142 · 1.14.0: ללוח; מנווטים לכל מקום (רשימה, בית, אופן אחר) ו"הדבקה כאן". 1.16.0: full — "העתקה" (עותק עצמאי);
+     * אחרת — "קישור" (רק רשימות) או "העברה".
      */
     private void transferSelected(final boolean move, boolean full) {
         if (selected.isEmpty() && selectedLists.isEmpty()) {
@@ -30566,7 +30792,7 @@ public class VirtualScreen extends ListScreen<VirtualScreen.Item> implements Top
         }
         List<VClip.Item> what = new ArrayList<VClip.Item>();
         for (String n : selectedLists) what.add(new VClip.Item(VClip.LIST, n, n));
-        if (!full) for (String p : selected) what.add(new VClip.Item(VClip.FILE, p, new File(p).getName()));
+        for (String p : selected) what.add(new VClip.Item(VClip.FILE, p, new File(p).getName()));   // 1.16.0 (באג): גם בהעתקה
         clip(what, move, full);
         stopSelecting();
     }
@@ -30669,53 +30895,6 @@ public class VirtualScreen extends ListScreen<VirtualScreen.Item> implements Top
         refresh();
     }
 
-    /** 1.11.0: צלמית ותיאור לרשימה הפתוחה — כך רשימה ידנית נראית כמו סביבה או פנקס. */
-    private void iconAndDesc(final List<String> target) {
-        Tree tr = Tree.load();
-        Tree.Node n = tr.find(target);
-        if (n == null || target.isEmpty()) return;
-        final Design where = Design.forList(tr, target.subList(0, target.size() - 1));   // 1.12.0: העיצוב של המקום שבו היא מוצגת
-        android.widget.LinearLayout form = Ui.form(this);
-        form.addView(Ui.label(this, Words.DesignW.ICON_IN + " · " + where.name));
-        final android.widget.EditText icon = Ui.field(this, where.iconOf(target, n.icon), "📁");
-        form.addView(icon);
-        form.addView(Ui.label(this, Words.DesignW.COLOR));
-        final android.widget.EditText color = Ui.field(this, where.colorOf(target), Words.DesignW.COLOR_HINT);
-        form.addView(color);
-        form.addView(Ui.label(this, Words.Manual.DESC));
-        final android.widget.EditText desc = Ui.field(this, n.desc, Words.Manual.DESC_HINT);
-        desc.setSingleLine(false);
-        form.addView(desc);
-        form.addView(Ui.label(this, Words.WhyW.FIELD));                        // 1.13.0
-        final android.widget.EditText why = Ui.field(this, n.why, Words.WhyW.HINT);
-        why.setSingleLine(false);
-        form.addView(why);
-        Ui.askForm(this, Words.Manual.ICON_DESC, form, new Runnable() {
-            @Override
-            public void run() {
-                final String i = icon.getText().toString().trim(), d = desc.getText().toString().trim();
-                final String w = why.getText().toString().trim().replace('\n', ' ');
-                File f = where.file != null ? where.file : Design.ensure(where.name);
-                if (!Design.setPrivate(f, Design.key(target), i, color.getText().toString().trim())) {   // 1.12.0: בקובץ העיצוב
-                    Ui.toast(VirtualScreen.this, Words.SAVE_FAILED);
-                    return;
-                }
-                Tree.edit(new Tree.Edit() {
-                    @Override
-                    public boolean apply(Tree t) {
-                        Tree.Node node = t.find(target);
-                        if (node == null) return false;
-                        node.icon = "";                                       // עבר לקובץ העיצוב (החלטה 1)
-                        node.desc = d.replace('\n', ' ');
-                        node.why = w;
-                        return true;
-                    }
-                });
-                refresh();
-            }
-        });
-    }
-
     private void newFolder() {
         Ui.askText(this, Words.NEW_LIST, "", Words.Manual.LIST_NAME, new Ui.Text1() {
             @Override
@@ -30727,39 +30906,6 @@ public class VirtualScreen extends ListScreen<VirtualScreen.Item> implements Top
                         return true;
                     }
                 });
-            }
-        });
-    }
-
-    /**
-     * 88: הרשימה path/oldName נמצאת עכשיו ב-newParent/newName. כלים שעובדים עליה (או על רשימה בתוכה)
-     * עוברים איתה, כדי שלא ייפתחו ריקים.
-     */
-    private void movedList(String oldName, List<String> newParent, String newName) {
-        ArrayList<String> from = new ArrayList<String>(path);
-        from.add(oldName);
-        ArrayList<String> to = new ArrayList<String>(newParent);
-        to.add(newName);
-        int n = FnVirtual.listMoved(from, to);
-        if (n > 0) Ui.toast(this, n == 1 ? Words.Manual.TOOL_UPDATED : Words.Manual.ALSO + n + Words.Manual.TOOLS_UPDATED);
-    }
-
-    private void renameFolder(final Item it) {
-        Ui.askText(this, Words.Manual.RENAME, it.label, null, new Ui.Text1() {
-            @Override
-            public void ok(final String name) {
-                final String[] now = {null};
-                change(new Change() {
-                    @Override
-                    public boolean apply(Tree t, Tree.Node node) {
-                        Tree.Node c = node.child(it.folder);
-                        if (c == null) return false;
-                        c.name = node.uniqueChildName(name, c);
-                        now[0] = c.name;
-                        return true;
-                    }
-                });
-                if (now[0] != null) movedList(it.folder, path, now[0]);   // 88
             }
         });
     }
@@ -30911,8 +31057,8 @@ public class VirtualScreen extends ListScreen<VirtualScreen.Item> implements Top
         menu.add(0, 2, 1, Words.Manual.REFRESH);
         menu.add(0, 6, 3, "➕ " + Words.NEW_LIST + "…");                       // 1.13.1 (באג): גם בלי הכפתור שבשורה
         menu.add(0, 8, 5, Words.Bg.RELOCATE_BUTTON);                          // 190
-        if (!path.isEmpty()) menu.add(0, 9, 6, Words.Manual.ICON_DESC);         // 1.11.0
-        menu.add(0, 10, 7, Words.DesignW.MENU);                                // 1.12.0
+        if (!path.isEmpty()) menu.add(0, 9, 6, Words.Manual.SETTINGS_HERE);     // 1.16.0: הגדרות אחת לרשימה הזו
+        else menu.add(0, 10, 7, Words.DesignW.MENU);                           // השורש — רק עיצוב
     }
 
     // ---------- 1.10.0: הפעולות של הרשימה — בשורת הכפתורים התחתונה (מה שהיה כפתורים קבועים) ----------
@@ -31062,11 +31208,13 @@ public class VirtualScreen extends ListScreen<VirtualScreen.Item> implements Top
             return true;
         }
         if (id == 10) {                                         // 1.12.0: עיצוב
-            chooseDesign(path);
+            ListSettings.design(this, path, new Runnable() {
+                @Override public void run() { refresh(); }
+            });
             return true;
         }
-        if (id == 9) {                                          // 1.11.0: צלמית ותיאור לרשימה הזו
-            iconAndDesc(path);
+        if (id == 9) {                                          // 1.16.0: הגדרות הרשימה הזו
+            settings(path);
             return true;
         }
         if (id == 8) {                                          // 190
@@ -31299,6 +31447,7 @@ public final class Words {
 
     // ---------- פעולות ברשימות ----------
     public static final String ADD_TO_LIST = "הוספה לרשימה";
+    public static final String TO_LIST_WORD = "לרשימה…";   // 1.16.0
     public static final String REMOVE_FROM_LIST = "הסרה מהרשימה";
 
     public static final String NO_TOUCH = "לא נוגע בקובץ";
@@ -31413,12 +31562,12 @@ public final class Words {
         private Inner() { }
 
         public static final String ADD = "➕ רשימה בתוך הרשימה", COMMON = "הגדרה נפוצה קיימת…",
-                MANUAL = "רשימה ידנית קיימת…", NEW = "חדשה…", REMOVE = "הוצאה מהרשימה",
-                GONE = "כבר לא קיימת — אפשר להוציא אותה", NONE_COMMON = "אין עדיין הגדרות נפוצות",
+                MANUAL = "רשימה ידנית קיימת…", NEW = "חדשה…", REMOVE = "הסרה מהרשימה",
+                GONE = "כבר לא קיימת — אפשר להסיר אותה", NONE_COMMON = "אין עדיין הגדרות נפוצות",
                 ALREADY = "כבר נמצאת כאן";
 
         public static String removeWhat(boolean local) {
-            return local ? "הרשימה הפנימית תימחק (היא שייכת רק לכאן)" : "רק הקישור יוצא; הרשימה עצמה נשארת";
+            return local ? "הרשימה החכמה מוסרת (היא שייכת רק לכאן) — לסל" : "רק הקישור מוסר; הרשימה עצמה נשארת";
         }
     }
 
@@ -32192,7 +32341,6 @@ public final class Words {
         public static final String ADD_MANUAL = "📁  רשימה ידנית", ADD_SMART = "✨  רשימה חכמה",
                 ADD_CMD = "▶  פקודה / קיצור דרך";
         public static final String OPEN = "פתיחה";
-        public static final String RENAME_DESC = "שינוי שם ותיאור";
         public static final String ICON = "צלמית";
         public static final String MOVE_RIGHT = "הזזה ימינה";
         public static final String MOVE_LEFT = "הזזה שמאלה";
@@ -32203,17 +32351,17 @@ public final class Words {
     /** הרשימה הידנית (VirtualScreen) */
     public static final class Manual {
 
-        public static final String ICON_DESC = "צלמית ותיאור לרשימה הזו";   // 1.11.0
+        public static final String SETTINGS_HERE = "⚙ הגדרות הרשימה הזו";   // 1.16.0
         public static final String DESC = "תיאור";
         public static final String DESC_HINT = "למשל: מה יש כאן ולמה";
         private Manual() { }
 
         /** 1.13.0 */
         public static final String DESC_WORD = "יורד", ASC_WORD = "עולה";
-        public static final String NEW_REF = "↪ הפניה לרשימה קיימת — בלי להעתיק אותה";
+        public static final String NEW_REF = "↪ קישור לרשימה קיימת — בלי להעתיק אותה";
         public static final String REF = "↪ ", REF_GONE = "↪ הרשימה לא נמצאה: ";
-        public static final String REF_REMOVE = "הוצאת ההפניה: ", REF_REMOVE_WHAT = "רק ההפניה יוצאת — הרשימה עצמה נשארת במקומה";
-        public static final String REF_SELF = "אי אפשר להפנות לרשימה הזו עצמה או לרשימה שמעליה";
+        public static final String REF_REMOVE = "הסרת הקישור: ", REF_REMOVE_WHAT = "רק הקישור מוסר — הרשימה עצמה נשארת במקומה";
+        public static final String REF_SELF = "אי אפשר לקשר לרשימה הזו עצמה או לרשימה שמעליה";
         public static final String ORDER = "הזזה", ORDER_DOTS = "↕ הזזה…", ORDER_SHORT = "הזזה";
         public static final String ORDER_UP = "▲ למעלה", ORDER_DOWN = "▼ למטה", ORDER_TOP = "⤒ לראש", ORDER_BOTTOM = "⤓ לסוף";
         public static final String ORDER_SORTED = "הסדר נשמר. התצוגה ממוינת אחרת — מיון \"הסדר שלי\" כדי לראות אותו";
@@ -32254,10 +32402,6 @@ public final class Words {
         public static final String OPEN_TRASH = "פתיחת סל המחזור";
         public static final String SEARCH_AGAIN = "חיפוש מחדש";
         public static final String LIST_NAME = "שם הרשימה";
-        public static final String TOOL_UPDATED = "גם הכלי שעובד על הרשימה הזו עודכן";
-        public static final String ALSO = "גם ";
-        public static final String TOOLS_UPDATED = " הכלים שעובדים על הרשימה הזו עודכנו";
-        public static final String RENAME = "שינוי שם";
         public static final String CURRENT_PLACE = " (המיקום הנוכחי)";
         public static final String SEARCHING_SIZE = "מחפש לפי גודל…";
         public static final String SEARCHING_FILE = "מחפש את הקובץ…";
@@ -32601,16 +32745,13 @@ public final class Words {
 
         private ToolM() { }
 
-        public static final String RUN = "הפעלה";
-        public static final String CHANGE_SETTINGS = "שינוי ההגדרות";
-        public static final String RENAME_DESC = "שינוי שם ותיאור";
-        public static final String DELETE = "מחיקה";
+        public static final String DELETE = "הסרה";
         public static final String DESC = "תיאור";
         public static final String NAME = "שם";
-        public static final String DELETE_LIST_OF = "מחיקת רשימת \"";
-        public static final String DELETE_OF = "מחיקת \"";
-        public static final String DELETES_TOOL_AND_LIST = "מוחק את הכלי ואת הרשימה שלו";
-        public static final String REMOVES_FROM_SCREEN = "מסיר את הכלי מהמסך בלבד";
+        public static final String DELETE_LIST_OF = "הסרת הרשימה \"";
+        public static final String DELETE_OF = "הסרת \"";
+        public static final String DELETES_TOOL_AND_LIST = "הרשימה מוסרת — עם כל מה שבתוכה; הקישורים אליה נשברים";
+        public static final String REMOVES_FROM_SCREEN = "הכלי מוסר מהמסך בלבד";
     }
 
     /** כלי הכפולים — הטופס (FnDup); מפתחות וערכים בקובץ ההגדרות — תחביר */
@@ -32762,6 +32903,7 @@ public final class Words {
     public static final class SmartF {
         private SmartF() { }
 
+        public static final String DETAILS = "פרטים (צלמית, תיאור, למה)";   // 1.16.0
         public static final String WORDS_OPT = "מילים בשם (לא חובה)";
         /** 197: הטופס הדחוס — תוויות בשורה עם השדה. */
         public static final String NAME_L = "שם", WORDS_L = "מכיל מילים", WORDS_HINT = "לא חובה";
@@ -32942,7 +33084,7 @@ public final class Words {
 
         public static final String UPDATING = "🔄 מתעדכנת";
         public static final String GONE = "⚠ התיקייה לא נמצאה בכונן";
-        public static final String REMOVE = "הוצאת התיקייה המתעדכנת מהרשימה";
+        public static final String REMOVE = "הסרת התיקייה המתעדכנת מהרשימה";
         public static final String REMOVE_WHAT = "התיקייה וכל מה שבה נשארים בכונן — רק השורה ברשימה יוצאת";
     }
 
@@ -32993,7 +33135,7 @@ public final class Words {
         public static final String HOME = "בית", BACK = "חזרה", SEARCH = "חיפוש", COMMANDS = "פקודות",
                 FILES = "קבצים פיזיים", SETTINGS = "הגדרות", ADD = "כפתור";
         public static final String EDIT = "✏ עריכה", RIGHT = "→ הזזה ימינה", LEFT = "← הזזה שמאלה",
-                DELETE = "🗑 מחיקת הכפתור", RESET = "↺ חזרה לברירת מחדל";
+                DELETE = "הסרת הכפתור", RESET = "↺ חזרה לברירת מחדל";
         public static final String RESET_ASK = "חזרה לברירת מחדל";
         public static final String RESET_WHAT = "רק הכפתורים — לא רשימות ולא קבצים · רק באופן העבודה הזה";
         public static final String WHAT = "מה הכפתור יעשה?";
@@ -33006,7 +33148,7 @@ public final class Words {
         public static final String NO_BATCH = "אין קובצי פקודות";
         public static final String LINE_HINT = "למשל: פתח רשימה חכמה אחרונים · מצא סוג:ספרים תאריך:שבוע · MOVE …";
         public static final String GONE = "היעד של הכפתור לא נמצא: ";
-        public static final String ANCHOR = "כפתור עוגן — אפשר לשנות שם, סמל ומקום, אבל לא למחוק";
+        public static final String ANCHOR = "כפתור עוגן — אפשר לשנות שם, סמל ומקום, אבל לא להסיר";
         public static final String UNKNOWN = "פעולה לא מוכרת בכפתור: ";
         /** 1.13.0 */
         public static final String VIRTUAL = "קבצים וירטואליים", TRASH = "סל המחזור";
@@ -33018,9 +33160,9 @@ public final class Words {
                 S_SEARCH = "חיפוש ורשימה חכמה", S_DISK = "קבצים פיזיים", S_TRASH = "סל המחזור", S_DUP = "כפולים",
                 S_SETTINGS = "הגדרות", S_BATCH = "עורך הפקודות", S_ASIF = "תוצאת הדמיה", S_EDITOR = "עורך ההגדרות";
         /** 1.10.0: מה שהיה כפתורים קבועים בתחתית. */
-        public static final String NEW_LIST = "רשימה", FROM_DRIVE = "מהכונן", FROM_SEARCH = "מחיפוש", ADD_TOOL = "הוספת כלי";
+        public static final String NEW_LIST = "רשימה", FROM_DRIVE = "מהכונן", FROM_SEARCH = "מחיפוש";
         public static final String MOVE_ROW = "↕ העברה לשורה אחרת", NEW_BUTTON = "➕ כפתור חדש", NEW_ROW = "➕ שורה חדשה",
-                DELETE_ROW = "🗑 מחיקת השורה";
+                DELETE_ROW = "הסרת השורה";
         public static final String P_TOP = "למעלה · בכל המסכים", P_BOTTOM = "למטה · בכל המסכים",
                 P_TOP_HERE = "למעלה · רק ב", P_BOTTOM_HERE = "למטה · רק ב";
         public static final String WHERE_ROW = "איפה השורה החדשה?", MAX_ROWS = "יש כבר 5 שורות במקום הזה",
@@ -33087,8 +33229,7 @@ public final class Words {
         public static final String RENAME = "שינוי שם", DELETE = "מחיקה";
         public static final String DELETED = "העיצוב נמחק";
         public static final String DELETE_ASK = "עותק נשמר בגיבויים. רשימות שהשתמשו בו יקבלו את העיצוב של הרשימה שמעליהן";
-        public static final String ICON_COLOR = "צלמית וצבע…";
-        public static final String SHORT = "עיצוב", ICON_SHORT = "צלמית";
+        public static final String ICON_SHORT = "צלמית";
         public static final String SAVE_AS = "💾 שמירת העיצוב הנוכחי בשם אחר…";
         public static final String SAVE_AS_HINT = "שם, למשל: מדף ספרים";
         public static final String RESET = "↺ חזרה לברירת מחדל — העיצוב הנוכחי";
@@ -33151,10 +33292,11 @@ public final class Words {
     public static final class VClipW {
         private VClipW() { }
 
-        public static final String TO_COPY = " — להעתקה (קישור)", TO_MOVE = " — להעברה", TO_DUPLICATE = " — לשכפול (עותק מלא)",
+        public static final String TO_COPY = " — לקישור", TO_MOVE = " — להעברה", TO_DUPLICATE = " — להעתקה",
                 FROM_MODE = " · מהאופן ", NOT_HERE = "אי אפשר להדביק את זה כאן",
                 TOOL_NOT_IN_LIST = "את הכלי הזה אי אפשר להכניס לרשימה",
-                COPY = "📋 העתקה", MOVE = "✂ העברה", DUPLICATE = "⧉ שכפול (עותק מלא)", DUPLICATE_SHORT = "שכפול",
+                COPY = "🔗 קישור", MOVE = "✂ העברה", DUPLICATE = "📋 העתקה", DUPLICATE_SHORT = "העתקה", COPY_SHORT = "קישור",
+                SETTINGS = "⚙ הגדרות", ORIGINAL = "⚙ עריכת הרשימה המקורית", REMOVE = "הסרה",
                 HINT = " · נווט והדבק",
                 PASTED = "הודבקו: ", SKIPPED = " · לא הודבקו: ", FAILED = "ההעתקה לא הצליחה";
     }
@@ -35345,10 +35487,13 @@ public final class Tests {
         check("1.14.0: שיתוף — פיזי", Actions.SHARE.kind == Actions.Kind.PHYSICAL && Actions.inPhysicalMenu(Actions.SHARE, Actions.Tool.LIST));
         check("1.14.0: במנהל הקבצים — הפיזיות בפס כמו קודם", !Actions.inPhysicalMenu(Actions.DELETE_FROM_DRIVE, Actions.Tool.DRIVE)
                 && Actions.DELETE_FROM_DRIVE.mainIn(Actions.Tool.DRIVE));
-        check("1.14.0: שכפול — רק לרשימות", Actions.DUPLICATE_LIST.fits(Actions.Tool.LIST, 0, 2, 0, false)
-                && !Actions.DUPLICATE_LIST.fits(Actions.Tool.LIST, 1, 1, 0, false));
-        check("שינוי שם: רשימה אחת בלבד", labels(Actions.fitting(Actions.Tool.LIST, 0, 1, 0, false)).contains("שינוי שם")
-                && !labels(Actions.fitting(Actions.Tool.LIST, 1, 1, 0, false)).contains("שינוי שם"));
+        check("1.16.0: העתקה — גם רשימות וגם קבצים, וירטואלית (לא בתפריט פיזי)", Actions.DUPLICATE_LIST.fits(Actions.Tool.LIST, 0, 2, 0, false)
+                && Actions.DUPLICATE_LIST.fits(Actions.Tool.LIST, 1, 1, 0, false) && !Actions.inPhysicalMenu(Actions.DUPLICATE_LIST, Actions.Tool.LIST));
+        check("1.16.0: קישור — רק לרשימות", Actions.ALSO_TO_LIST.fits(Actions.Tool.LIST, 0, 2, 0, false)
+                && !Actions.ALSO_TO_LIST.fits(Actions.Tool.LIST, 1, 1, 0, false));
+        check("1.16.0: הגדרות — לרשימה אחת בלבד", Actions.fitting(Actions.Tool.LIST, 0, 1, 0, false).contains(Actions.SETTINGS_LIST)
+                && !Actions.fitting(Actions.Tool.LIST, 1, 1, 0, false).contains(Actions.SETTINGS_LIST)
+                && !Actions.fitting(Actions.Tool.LIST, 0, 2, 0, false).contains(Actions.SETTINGS_LIST));
 
         List<String> trash = labels(Actions.fitting(Actions.Tool.TRASH, 3, 0, 0, false));
         eq("סל: שחזור ומחיקה לצמיתות", Arrays.asList("↩ שחזור", "מחיקה לצמיתות"), trash);
@@ -38225,6 +38370,36 @@ public final class Tests {
             check("1.15.1: …אותו מזהה, פנימית, עם ה\"למה\", ולא בבית", Tree.load().find(Arrays.asList("פנקס")).smart.contains("fD2")
                     && dup2 != null && dup2.name.startsWith(Nested.INNER) && "שלי".equals(dup2.params.get("למה"))
                     && Structure.func("fD2") == null && Nested.resolve("fD2").dup != null);
+            // 1.16.0: העתקה = עותק עצמאי (גם רשימה חכמה, וגם הפנימיות שבתוך רשימה שמועתקת); קבצים — נכנסים
+            VClip.set(null, Arrays.asList("לימוד (2)"), Arrays.asList(new VClip.Item(VClip.SMART, "fS", "חדשים בלימוד")), false, true);
+            eq("1.16.0: העתקת רשימה חכמה ← לתוך רשימה", 1, VClip.pasteInto(Arrays.asList("פנקס")).done);
+            String cp = null;
+            for (String r : Tree.load().find(Arrays.asList("פנקס")).smart) if (!r.equals("fD2")) cp = r;
+            Structure.Func cf = cp == null ? null : Structure.byId(cp);
+            check("1.16.0: …עותק במזהה חדש, עם התנאי וה\"למה\" (לא קישור)", cf != null && !cp.equals("fS")
+                    && "סוג:epub".equals(cf.params.get("תנאי")) && "למה החכמה".equals(cf.params.get("למה")) && Nested.uses("fS") == 2);
+            Structure.updateFunc(cp, "העותק", "", Target.of(FnSmart.KIND, "תנאי", "סוג:pdf"));
+            check("1.16.0: …שינוי בעותק — לא במקור", "סוג:epub".equals(Structure.byId("fS").params.get("תנאי")));
+            Structure.Func cf2 = Structure.byId(cp);
+            check("1.16.0 (באג): שינוי ההגדרות — הפנימית נשארת פנימית, וה\"למה\" נשאר", cf2.name.startsWith(Nested.INNER)
+                    && cf2.name.endsWith(" › העותק") && "למה החכמה".equals(cf2.params.get("למה")));
+            Structure.Func at = Structure.asTool(cp);
+            check("1.16.0: הסעיף כמו כלי — שם בלי הבעלים, סוג", at != null && at.name.equals("העותק") && at.kind.equals(FnSmart.KIND)
+                    && !at.params.containsKey("סוג"));
+            Target withDesc = Target.of(FnSmart.KIND, "תנאי", "סוג:pdf");
+            withDesc.params.put("תיאור", "מהטופס");
+            Structure.updateFunc(cp, "העותק", "ישן", withDesc);
+            int descLines = 0;
+            for (String line : Files.readUtf8(em).split("\n")) if (line.startsWith("תיאור = ")) descLines += line.equals("תיאור = מהטופס") ? 100 : 0;
+            check("1.16.0: תיאור מהטופס — הוא התיאור (שורה אחת)", descLines == 100 && "מהטופס".equals(Structure.asTool(cp).description));
+            VClip.set(null, new ArrayList<String>(), Arrays.asList(new VClip.Item(VClip.LIST, "לימוד (2)", "לימוד (2)")), false, true);
+            eq("1.16.0: העתקת רשימה עם פנימית ← לתוך רשימה", 1, VClip.pasteInto(Arrays.asList("ספרים")).done);
+            Tree.Node copied = Tree.load().find(Arrays.asList("ספרים", "לימוד (2)"));
+            check("1.16.0: …הפנימית בעותק — עצמאית", copied != null && copied.smart.size() == 3
+                    && !copied.smart.contains("fS") && !copied.smart.contains("fK") && !copied.smart.contains("fD"));
+            VClip.set(null, Arrays.asList("ספרים"), Arrays.asList(new VClip.Item(VClip.FILE, "/a.pdf", "a.pdf")), false, true);
+            eq("1.16.0 (באג): העתקת קובץ — נכנס (לא נשמט)", 1, VClip.pasteInto(Arrays.asList("פנקס")).done);
+            check("1.16.0: …הקובץ ברשימה", Tree.contains(Tree.load().find(Arrays.asList("פנקס")).entries, "/a.pdf"));
         } catch (Exception e) {
             throw new RuntimeException(e);
         } finally {
