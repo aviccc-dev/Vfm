@@ -2,8 +2,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="com.tikiyot.vfm"
-    android:versionCode="157"
-    android:versionName="1.22.0">
+    android:versionCode="158"
+    android:versionName="1.22.1">
     <uses-sdk android:minSdkVersion="21" android:targetSdkVersion="30" />
 
     <queries>
@@ -4256,15 +4256,73 @@ final class Batch {
                 Compare.Result.files(r.onlyA, r.onlyADirs), Compare.Result.files(r.onlyB, r.onlyBDirs), r.same);
     }
 
+    /**
+     * 1.22.1: הרשימה לפי שם — הדרך כמו שנכתבה ("א / ב"); אחרת בתוך "שמור לתוכנה"; אחרת — שם יחיד בכל העץ.
+     * ואם אין באופן הזה — באופן שבו נמצא "שמור לתוכנה" (Reserved). כמה רשימות באותו שם — שגיאה שמראה את הדרכים.
+     */
+    static Tree.Node findList(String name, Tree[] tree, String[] err) {
+        List<String> path = Tree.parsePath(name);
+        if (path.isEmpty()) { err[0] = Words.Cmd.LIST_ONLY_COMP; return null; }
+        List<Tree> trees = new ArrayList<Tree>();
+        trees.add(Tree.load());
+        try {
+            ModeCopy.Side side = Reserved.inUse();
+            if (side != null && side.tree != null && Reserved.modeInUse() != null && !Reserved.modeInUse().equals(Modes.current()))
+                trees.add(side.tree);
+        } catch (Throwable ignored) {
+        }
+        for (Tree t : trees) {
+            Tree.Node n = t.find(path);
+            if (n == null) {
+                List<String> under = new ArrayList<String>(Reserved.ROOT_PATH);
+                under.addAll(path);
+                n = t.find(under);
+            }
+            if (n == null && path.size() == 1) {
+                List<Tree.Node> found = new ArrayList<Tree.Node>();
+                byName(t.root, path.get(0), found);
+                if (found.size() > 1) {
+                    List<String> ways = new ArrayList<String>();
+                    for (Tree.Node f : found) ways.add(wayOf(f));
+                    err[0] = Words.Cmd.listAmbiguous(name, join(ways, " · "));
+                    return null;
+                }
+                if (found.size() == 1) n = found.get(0);
+            }
+            if (n != null) {
+                tree[0] = t;
+                return n;
+            }
+        }
+        err[0] = Words.Cmd.listNotFound(name);
+        return null;
+    }
+
+    private static void byName(Tree.Node n, String name, List<Tree.Node> out) {
+        for (Tree.Node c : n.children) {
+            if (c.name.equals(name)) out.add(c);
+            byName(c, name, out);
+        }
+    }
+
+    /** "א / ב / ג" — הדרך לרשימה. */
+    private static String wayOf(Tree.Node n) {
+        List<String> parts = new ArrayList<String>();
+        for (Tree.Node x = n; x != null && x.parent != null; x = x.parent) parts.add(0, x.name);
+        return join(parts, Tree.SEP);
+    }
+
     /** 1.22.0: COMP /רשימה:<שם> <יעד> — כל מה שברשימה, לפי <מפתח כונן>/<מסלול>, מול היעד. */
     private static void compList(Step s, List<String> args, List<String> paths, Sim sim) {
         if (paths.size() != 1) { s.error = Words.Cmd.usage("COMP"); return; }
         File b = new File(paths.get(0));
         if (!b.isDirectory() && !sim.isDir(b)) { s.error = Words.Cmd.compareNoDest(args.get(0)); return; }
         if (sim.lib == null || !sim.lib.ready) { s.error = Words.Cmd.NEEDS_INDEX; return; }
-        Tree t = Tree.load();
-        Tree.Node n = t.find(Tree.parsePath(s.listName));
-        if (n == null) { s.error = Words.Cmd.listNotFound(s.listName); return; }
+        String[] err = {null};
+        Tree[] tt = {null};
+        Tree.Node n = findList(s.listName, tt, err);
+        if (n == null) { s.error = err[0]; return; }
+        Tree t = tt[0];
         File skip = b.getName().equals(State.CURRENT) && b.getParentFile() != null ? b.getParentFile() : b;
         Compare.Source src = Compare.ofList(sim.lib, t, n, s.hidden, skip.getAbsolutePath());
         if (src.files.isEmpty() && src.emptyDirs.isEmpty()) { s.error = Words.Cmd.listEmpty(s.listName); return; }
@@ -33370,7 +33428,11 @@ public final class Words {
         public static final String LIST_NO_MOVE = "מקור שהוא רשימה — רק COPY (MOVE היה מוציא קבצים מהמקומות שלהם)";
 
         public static String listNotFound(String n) {
-            return "אין רשימה בשם: " + n;
+            return "אין רשימה בשם: " + n + " (גם לא בתוך \"שמור לתוכנה\"). אפשר לכתוב את הדרך המלאה, למשל: א / ב";
+        }
+
+        public static String listAmbiguous(String n, String ways) {
+            return "יש כמה רשימות בשם " + n + ": " + ways + " — לכתוב את הדרך המלאה";
         }
 
         public static String listEmpty(String n) {
@@ -39982,6 +40044,21 @@ public final class Tests {
             check("1.22.0: MOVE %רק-במקור% מרשימה — שגיאה", Batch.plan("COMP /רשימה:\"המסמכים שלי\" \"גיבוי\\נוכחי\"\nMOVE %רק-במקור% ש",
                     r1, vars, lib).errors == 1);
             eq("1.22.0: הטופס — COMP עם רשימה נשמר", "COMP גיבוי\\נוכחי /רשימה:x", BatchLine.parse("COMP /רשימה:x \"גיבוי\\נוכחי\"").toLine());
+            // 1.22.1: הרשימה בתוך "שמור לתוכנה", שם יחיד בכל העץ, ושני שמות זהים
+            Tree t2 = Tree.load();
+            Tree.Node res = t2.find(Reserved.ROOT_PATH);
+            if (res == null) res = Tree.newChild(t2.root, Reserved.ROOT);
+            Tree.newChild(res, "מסמכים לגיבוי").entries.add(new Tree.Entry(new File(r1, "Docs/a.txt").getAbsolutePath(), 2, false));
+            Tree.newChild(Tree.newChild(t2.root, "א"), "כפול").entries.add(new Tree.Entry(new File(r1, "Docs/a.txt").getAbsolutePath(), 2, false));
+            Tree.newChild(Tree.newChild(t2.root, "ב"), "כפול").entries.add(new Tree.Entry(new File(r1, "Docs/a.txt").getAbsolutePath(), 2, false));
+            t2.save();
+            check("1.22.1: רשימה בתוך \"שמור לתוכנה\" — לפי השם בלבד",
+                    Batch.plan("COMP /רשימה:\"מסמכים לגיבוי\" \"גיבוי\\נוכחי\"", r1, vars, lib).errors == 0);
+            check("1.22.1: הדרך המלאה", Batch.plan("COMP /רשימה:\"שמור לתוכנה / מסמכים לגיבוי\" \"גיבוי\\נוכחי\"", r1, vars, lib).errors == 0);
+            Batch.Plan amb = Batch.plan("COMP /רשימה:כפול \"גיבוי\\נוכחי\"", r1, vars, lib);
+            check("1.22.1: שני שמות זהים — שגיאה עם הדרכים", amb.errors == 1 && amb.steps.get(0).error.contains("א / כפול")
+                    && amb.steps.get(0).error.contains("ב / כפול"));
+            check("1.22.1: שם זהה — הדרך המלאה פותרת", Batch.plan("COMP /רשימה:\"ב / כפול\" \"גיבוי\\נוכחי\"", r1, vars, lib).errors == 0);
             String line = BatchLine.parse("COMP /רשימה:\"המסמכים שלי\" יעד /יומן:\"גיבוי\\יומן חדש.txt\"").toLine();
             check("1.22.0: הטופס — ערך עם רווח נשאר במרכאות", line.contains("/רשימה:\"המסמכים שלי\"") && line.contains("/יומן:\"גיבוי\\יומן חדש.txt\"")
                     && BatchLine.parse(line).toLine().equals(line));
