@@ -2,8 +2,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="com.tikiyot.vfm"
-    android:versionCode="156"
-    android:versionName="1.21.0">
+    android:versionCode="157"
+    android:versionName="1.22.0">
     <uses-sdk android:minSdkVersion="21" android:targetSdkVersion="30" />
 
     <queries>
@@ -3592,6 +3592,8 @@ final class Batch {
         /** 1.21.0: COPY … /מצב:<זמן> — שחזור: לכל קובץ — תיקיית היעד שלו (המסלול הלוגי). */
         final List<String> targets = new ArrayList<String>();
         long stateWhen = Long.MIN_VALUE;
+        /** 1.22.0: COMP /רשימה:<שם> — המקור הוא רשימה ידנית (עם כל מה שבתוכה). */
+        String listName;
         /** 203: COPY … %שיתוף% — נאסף לשליחה אחת בסוף. */
         boolean share;
         /** MD לתיקייה שכבר קיימת — בלי שינוי (ולא שגיאה). */
@@ -3733,6 +3735,8 @@ final class Batch {
     static final String SW_LIMIT = "/עד:", TAKEN_STOP = "לעצור";   // תחביר
     /** 1.21.0: COPY <גיבוי[\\תת־תיקייה][\\תבנית]> <יעד> /מצב:<זמן> — שחזור המצב של אותו זמן. */
     static final String SW_STATE = "/מצב:";   // תחביר
+    /** 1.22.0: COMP /רשימה:"<רשימה>" <יעד> — המקור הוא רשימה ידנית (קבצים, תתי־רשימות, חכמות, תיקיות מתעדכנות). */
+    static final String SW_LIST = "/רשימה:";   // תחביר
     static final String NOW_FORMAT = "dd.MM.yyyy HH-mm-ss";   // בכונן
 
     static String var(String name) {
@@ -3743,7 +3747,7 @@ final class Batch {
     private static final Pattern SWITCH = Pattern.compile(
             "^/(-?Y|S|Q|F|A(:.*)?|D(:.*)?|" + SW_DATE + ".*|" + SW_SIZE + ".*|" + SW_TAKEN.substring(1)
                     + ".*|" + SW_KEEP.substring(1) + "|" + SW_JOURNAL.substring(1) + ".*|" + SW_LIMIT.substring(1)
-                    + ".*|" + SW_STATE.substring(1) + ".*|MAXAGE:.*|MINAGE:.*|MAX:.*|MIN:.*)$",
+                    + ".*|" + SW_STATE.substring(1) + ".*|" + SW_LIST.substring(1) + ".*|MAXAGE:.*|MINAGE:.*|MAX:.*|MIN:.*)$",
             Pattern.CASE_INSENSITIVE);
 
     static boolean isSwitch(String t) {
@@ -4027,6 +4031,10 @@ final class Batch {
                     && !x.equals(SW_TAKEN + TAKEN_ASK) && !x.equals(SW_TAKEN + TAKEN_STOP))
                 s.error = Words.Cmd.switchUnknown(x) + " (" + TAKEN_ASK + " · " + TAKEN_SKIP + " · " + TAKEN_REPLACE + " · " + TAKEN_STOP + ")";
             if (x.startsWith(SW_LIMIT) && limit(x) < 0) s.error = Words.Cmd.switchUnknown(x);
+            if (x.startsWith(SW_LIST)) {                                      // 1.22.0
+                s.listName = x.substring(SW_LIST.length()).trim();
+                if (s.listName.isEmpty() || !cmd.equals("COMP")) s.error = Words.Cmd.LIST_ONLY_COMP;
+            }
             if (x.startsWith(SW_STATE)) {                                     // 1.21.0
                 s.stateWhen = State.when(x.substring(SW_STATE.length()));
                 if (s.stateWhen == Long.MIN_VALUE) s.error = Words.Cmd.switchUnknown(x);
@@ -4232,6 +4240,10 @@ final class Batch {
      */
     private static void comp(Step s, List<String> args, List<String> paths, Sim sim) {
         sim.compare = null;
+        if (s.listName != null) {                                             // 1.22.0
+            compList(s, args, paths, sim);
+            return;
+        }
         if (paths.size() != 2) { s.error = Words.Cmd.usage("COMP"); return; }
         File a = new File(paths.get(0)), b = new File(paths.get(1));
         if (!a.isDirectory()) { s.error = Words.Cmd.compareNoSource(args.get(0)); return; }
@@ -4242,6 +4254,26 @@ final class Batch {
         s.dest = b;
         s.describe = Words.Cmd.compared(Bidi.path(r.a), Bidi.path(r.b),
                 Compare.Result.files(r.onlyA, r.onlyADirs), Compare.Result.files(r.onlyB, r.onlyBDirs), r.same);
+    }
+
+    /** 1.22.0: COMP /רשימה:<שם> <יעד> — כל מה שברשימה, לפי <מפתח כונן>/<מסלול>, מול היעד. */
+    private static void compList(Step s, List<String> args, List<String> paths, Sim sim) {
+        if (paths.size() != 1) { s.error = Words.Cmd.usage("COMP"); return; }
+        File b = new File(paths.get(0));
+        if (!b.isDirectory() && !sim.isDir(b)) { s.error = Words.Cmd.compareNoDest(args.get(0)); return; }
+        if (sim.lib == null || !sim.lib.ready) { s.error = Words.Cmd.NEEDS_INDEX; return; }
+        Tree t = Tree.load();
+        Tree.Node n = t.find(Tree.parsePath(s.listName));
+        if (n == null) { s.error = Words.Cmd.listNotFound(s.listName); return; }
+        File skip = b.getName().equals(State.CURRENT) && b.getParentFile() != null ? b.getParentFile() : b;
+        Compare.Source src = Compare.ofList(sim.lib, t, n, s.hidden, skip.getAbsolutePath());
+        if (src.files.isEmpty() && src.emptyDirs.isEmpty()) { s.error = Words.Cmd.listEmpty(s.listName); return; }
+        Compare.Result r = Compare.byList(sim.lib, src, b, s.hidden);
+        sim.compare = r;
+        s.dest = b;
+        s.describe = Words.Cmd.compared(s.listName, Bidi.path(r.b),
+                Compare.Result.files(r.onlyA, new ArrayList<String>()), Compare.Result.files(r.onlyB, r.onlyBDirs), r.same)
+                + (src.outside > 0 ? Words.Cmd.outside(src.outside) : "");
     }
 
     /**
@@ -4256,11 +4288,17 @@ final class Batch {
         File dest = new File(paths.get(1));
         if (sim.isFile(dest)) { s.error = Words.Cmd.NO_DEST; r.broken = true; return; }
         s.dest = dest;
-        s.keepRoot = a ? r.a : r.b;
         s.fromCompare = true;
         s.files.addAll(a ? r.onlyA : r.onlyB);
         s.dirs.addAll(a ? r.onlyADirs : r.onlyBDirs);
-        if (Physical.inside(dest, new File(s.keepRoot))) { s.error = Words.Disk.NOT_INTO_ITSELF; r.broken = true; return; }
+        boolean mapped = a && r.relA != null;                                 // 1.22.0: מקור שהוא רשימה
+        if (mapped) {
+            if (cmd.equals("MOVE")) { s.error = Words.Cmd.LIST_NO_MOVE; r.broken = true; return; }
+            s.keepRoot = null;
+        } else {
+            s.keepRoot = a ? r.a : r.b;
+            if (Physical.inside(dest, new File(s.keepRoot))) { s.error = Words.Disk.NOT_INTO_ITSELF; r.broken = true; return; }
+        }
         int n = Compare.Result.files(s.files, s.dirs), total = a ? r.filesA : r.filesB;
         for (String x : sw)
             if (x.startsWith(SW_LIMIT)) {
@@ -4271,6 +4309,23 @@ final class Batch {
                     return;
                 }
             }
+        if (mapped) {                                                          // 1.22.0: כל פריט — לתיקייה שלו
+            List<String> items = new ArrayList<String>(s.files);
+            items.addAll(s.dirs);
+            s.files.clear();
+            s.dirs.clear();
+            for (String f : items) {
+                File to = new File(dest, r.relA.get(f));
+                if (s.skipTaken && sim.isFile(to)) continue;
+                s.files.add(f);
+                s.targets.add(to.getParentFile().getAbsolutePath());
+                if (new File(f).isDirectory()) sim.dirs.add(to.getAbsolutePath());
+                else sim.move(f, to, true);
+            }
+            s.describe = Words.Cmd.transfer(true, Words.files(s.files.size()), Bidi.path(dest.getAbsolutePath())) + Words.Cmd.KEEP_PATH;
+            sim.dirs.add(dest.getAbsolutePath());
+            return;
+        }
         if (s.skipTaken)
             for (java.util.Iterator<String> it = s.files.iterator(); it.hasNext(); )
                 if (sim.isFile(new File(dest, Physical.rel(s.keepRoot, it.next())))) it.remove();
@@ -4523,7 +4578,7 @@ final class Batch {
                     boolean copy = s.cmd.equals("COPY");
                     Physical.Journal j = s.journal == null ? null : new Physical.Journal(new File(s.journal), s.text);   // 1.19.0
                     Physical.Asker ask = s.replace ? REPLACE_ALL : s.failTaken ? null : asker;   // 1.20.0: /תפוס:לעצור
-                    Physical.Result r = s.stateWhen != Long.MIN_VALUE                 // 1.21.0: שחזור
+                    Physical.Result r = !s.targets.isEmpty()                           // 1.21.0 שחזור, 1.22.0 רשימה
                             ? Physical.transferTo(lib, s.files, s.targets, s.dest, true, ask, progress, grey, j)
                             : s.keepRoot != null
                             ? Physical.transferKeep(lib, s.keepRoot, s.files, s.dirs, s.dest, copy, ask, progress, grey, j,
@@ -5198,6 +5253,7 @@ final class BatchLine {
         if (cmd.equals("ECHO") || cmd.equals("REM")) return text.isEmpty() ? cmd : cmd + " " + text;
         if (cmd.equals("COPY") || cmd.equals("MOVE")) sb.append(' ').append(q(source())).append(' ').append(q(dest));
         else if (cmd.equals("DEL")) sb.append(' ').append(q(source()));
+        else if (cmd.equals("COMP") && newName.isEmpty()) sb.append(' ').append(q(srcDir));   // 1.22.0: COMP /רשימה: <יעד>
         else if (cmd.equals("REN") || cmd.equals("COMP")) sb.append(' ').append(q(srcDir)).append(' ').append(q(newName));
         else sb.append(' ').append(q(dest));
         boolean filters = cmd.equals("COPY") || cmd.equals("MOVE") || cmd.equals("DEL");
@@ -5206,7 +5262,11 @@ final class BatchLine {
         if (filters && !ds.sizeToken().isEmpty()) sb.append(" /").append(ds.sizeToken());
         if ((cmd.equals("COPY") || cmd.equals("MOVE")) && taken > 0) sb.append(taken == 1 ? " " + Batch.SW_TAKEN + Batch.TAKEN_SKIP : " /Y");
         if (cmd.equals("RD") && recursive) sb.append(" /S");
-        for (String o : other) sb.append(' ').append(o);
+        for (String o : other) {                                            // 1.22.0: ערך עם רווח — במרכאות
+            int c = o.indexOf(':');
+            if (o.contains(" ") && c > 0) sb.append(' ').append(o, 0, c + 1).append('"').append(o.substring(c + 1)).append('"');
+            else sb.append(' ').append(o);
+        }
         return sb.toString();
     }
 
@@ -6422,7 +6482,13 @@ package com.tikiyot.vfm;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.TreeMap;
 
 final class Compare {
 
@@ -6438,6 +6504,8 @@ final class Compare {
         int same, read, filesA, filesB;
         /** שורה שמשתמשת בתוצאה נכשלה — השורות הבאות לא ימשיכו עליה. */
         boolean broken;
+        /** 1.22.0: מקור שהוא רשימה — לכל קובץ ותיקייה במקור, המסלול שלו (<מפתח כונן>/<מסלול מתחילת הכונן>). */
+        Map<String, String> relA;
 
         /** כמה קבצים ברשימה, כולל מה שבתוך התיקיות. */
         static int files(List<String> files, List<String> dirs) {
@@ -6553,6 +6621,146 @@ final class Compare {
         int n = 0;
         for (File x : k) n += x.isDirectory() ? countFiles(x) : (Physical.isPartial(x.getName()) ? 0 : 1);
         return n;
+    }
+
+    // ================= 1.22.0: רשימה כמקור =================
+
+    /** מה שברשימה: כל קובץ ← המסלול שלו; תיקיות ריקות (מתיקיות מתעדכנות) ← המסלול שלהן. */
+    static final class Source {
+        final Map<String, String> files = new LinkedHashMap<String, String>(), emptyDirs = new LinkedHashMap<String, String>();
+        /** קבצים מחוץ לכוננים המוכרים (לא נכללים). */
+        int outside;
+    }
+
+    /**
+     * כל הקבצים של רשימה ידנית, בכל העומק: קבצים, תתי־רשימות, הפניות ↪, תיקיות מתעדכנות (מהכונן, עם תיקיות ריקות)
+     * ורשימות חכמות (מהאינדקס, עם הרשימות שבתוכן). המסלול — מפתח הכונן ואחריו המסלול מתחילת הכונן, כך שקבצים
+     * מכמה כוננים נכנסים לעץ אחד בלי להתנגש. מה שבתוך skip (הגיבוי עצמו) — לא נכלל.
+     */
+    static Source ofList(Library lib, Tree t, Tree.Node n, boolean hidden, String skip) {
+        Source src = new Source();
+        list(lib, t, n, hidden, skip, src, new HashSet<Object>());
+        return src;
+    }
+
+    private static void list(Library lib, Tree t, Tree.Node n, boolean hidden, String skip, Source src, Set<Object> seen) {
+        if (n == null || !seen.add(n)) return;
+        for (Tree.Entry e : n.entries) {
+            File f = new File(e.path);
+            if (f.isFile() && !Physical.isPartial(f.getName())) add(lib, src, f, skip);
+        }
+        for (Tree.Node c : n.children) list(lib, t, c, hidden, skip, src, seen);
+        for (String r : n.refs) list(lib, t, t.find(Tree.parsePath(r)), hidden, skip, src, seen);
+        for (String f : n.live) disk(lib, src, new File(f), hidden, skip);
+        for (String r : n.smart) smart(lib, t, r, hidden, skip, src, seen);
+    }
+
+    private static void smart(Library lib, Tree t, String ref, boolean hidden, String skip, Source src, Set<Object> seen) {
+        if (!seen.add(ref)) return;
+        if (ref.startsWith(Nested.MANUAL)) {
+            list(lib, t, t.find(Tree.parsePath(ref.substring(Nested.MANUAL.length()))), hidden, skip, src, seen);
+            return;
+        }
+        Nested.Item it = Nested.resolve(ref);
+        if (it.gone || it.dup != null) return;
+        Library.Result r = lib.search(it.cond, false, true);
+        for (Library.Hit h : r.hits)
+            if (h.rec != null) {
+                File f = new File(h.ix.path(h.rec));
+                if (f.isFile()) add(lib, src, f, skip);
+            }
+        for (String inner : Nested.refs(ref)) smart(lib, t, inner, hidden, skip, src, seen);
+    }
+
+    private static void disk(Library lib, Source src, File d, boolean hidden, String skip) {
+        if (skip != null && (d.getAbsolutePath() + "/").startsWith(skip + "/")) return;
+        File[] k = list(d, hidden);
+        boolean any = false;
+        for (File x : k) {
+            if (skip != null && (x.getAbsolutePath() + "/").startsWith(skip + "/")) continue;
+            any = true;
+            if (x.isDirectory()) disk(lib, src, x, hidden, skip);
+            else add(lib, src, x, skip);
+        }
+        if (!any && d.isDirectory()) {
+            String rel = relOf(lib, d.getAbsolutePath());
+            if (rel != null) src.emptyDirs.put(d.getAbsolutePath(), rel);
+        }
+    }
+
+    private static void add(Library lib, Source src, File f, String skip) {
+        String p = f.getAbsolutePath();
+        if (skip != null && p.startsWith(skip + "/")) return;
+        if (src.files.containsKey(p)) return;
+        String rel = relOf(lib, p);
+        if (rel == null) src.outside++;
+        else src.files.put(p, rel);
+    }
+
+    /** "<מפתח כונן>/<מסלול מתחילת הכונן>", או null — מחוץ לכוננים. */
+    static String relOf(Library lib, String p) {
+        String root = lib.rootOf(p), key = lib.keyOf(p);
+        if (root == null || key == null) return null;
+        String rel = Physical.rel(root, p);
+        if (rel == null) return null;
+        return rel.isEmpty() ? key : key + "/" + rel;
+    }
+
+    /** השוואה של רשימה (Source) מול תיקייה b — אותו משפך, לפי המסלולים של הרשימה. */
+    static Result byList(Library lib, Source src, File b, boolean hidden) {
+        Result r = new Result();
+        r.b = b.getAbsolutePath();
+        r.relA = new HashMap<String, String>();
+        TreeMap<String, String> files = new TreeMap<String, String>();        // מסלול ← קובץ
+        Set<String> dirs = new HashSet<String>();
+        for (Map.Entry<String, String> e : src.files.entrySet()) {
+            files.put(e.getValue(), e.getKey());
+            r.relA.put(e.getKey(), e.getValue());
+            parents(e.getValue(), dirs);
+        }
+        for (Map.Entry<String, String> e : src.emptyDirs.entrySet()) {
+            dirs.add(e.getValue());
+            parents(e.getValue(), dirs);
+            r.relA.put(e.getKey(), e.getValue());
+        }
+        r.filesA = files.size();
+        Set<String> matched = new HashSet<String>(), seenDirs = new HashSet<String>();
+        walkB(lib, r, b, "", files, dirs, matched, seenDirs, hidden);
+        for (Map.Entry<String, String> e : files.entrySet())
+            if (!matched.contains(e.getKey())) r.onlyA.add(e.getValue());
+        for (Map.Entry<String, String> e : src.emptyDirs.entrySet())
+            if (!seenDirs.contains(e.getValue())) r.onlyADirs.add(e.getKey());
+        return r;
+    }
+
+    private static void parents(String rel, Set<String> dirs) {
+        for (int i = rel.indexOf('/'); i > 0; i = rel.indexOf('/', i + 1)) dirs.add(rel.substring(0, i));
+    }
+
+    private static void walkB(Library lib, Result r, File d, String rel, TreeMap<String, String> files, Set<String> dirs,
+                              Set<String> matched, Set<String> seenDirs, boolean hidden) {
+        for (File y : list(d, hidden)) {
+            String ry = rel.isEmpty() ? y.getName() : rel + "/" + y.getName();
+            if (y.isDirectory()) {
+                if (dirs.contains(ry)) {
+                    seenDirs.add(ry);
+                    walkB(lib, r, y, ry, files, dirs, matched, seenDirs, hidden);
+                } else onlyB(r, y);
+                continue;
+            }
+            String x = files.get(ry);
+            if (x == null) {
+                onlyB(r, y);
+                continue;
+            }
+            matched.add(ry);
+            r.filesB++;
+            if (same(lib, r, new File(x), y)) r.same++;
+            else {
+                r.onlyA.add(x);
+                r.onlyB.add(y.getAbsolutePath());
+            }
+        }
     }
 }
 ===== קובץ: src/com/tikiyot/vfm/Cond.java =====
@@ -15105,6 +15313,12 @@ public final class Library {
     }
 
     /** שורש הכונן (לפי האינדקס) שהמסלול בתוכו, או null. */
+    /** 1.22.0: המפתח הקבוע של הכונן שהמסלול בתוכו ("פנימי", או שם הכרטיס כמו ABCD-1234); null — מחוץ לכוננים. */
+    public String keyOf(String path) {
+        Index ix = owner(path + "/");
+        return ix == null ? null : ix.key;
+    }
+
     public String rootOf(String path) {
         Index ix = owner(path + "/");
         return ix == null ? null : ix.rootPath;
@@ -33123,7 +33337,7 @@ public final class Words {
                 case "REN": return "REN <קובץ> <שם חדש>";
                 case "MD": return "MD <תיקייה>";
                 case "RD": return "RD <תיקייה> [/S — גם אם אינה ריקה]";
-                case "COMP": return "COMP <מקור> <יעד> [/A:H]";
+                case "COMP": return "COMP <מקור> <יעד> [/A:H]  ·  COMP /רשימה:<רשימה> <יעד>";
                 case "START": return "START <תיקייה | קובץ | תבנית, למשל vfm-*.apk>";
                 case "ECHO": return "ECHO <טקסט>";
                 case "REM": return "REM <טקסט>";
@@ -33150,6 +33364,22 @@ public final class Words {
         public static final String NO_COMPARE = "אין השוואה (COMP) בשורה קודמת";
         public static final String COMPARE_BROKEN = "שורה קודמת על אותה השוואה נכשלה — לא ממשיכים עליה";
         /** 1.21.0 */
+        /** 1.22.0 */
+        public static final String LIST_ONLY_COMP = "/רשימה:<שם> — רק ב־COMP, עם שם רשימה";
+        public static final String NEEDS_INDEX = "רשימה כמקור צריכה את האינדקס — הוא עוד לא מוכן. לנסות שוב בעוד רגע";
+        public static final String LIST_NO_MOVE = "מקור שהוא רשימה — רק COPY (MOVE היה מוציא קבצים מהמקומות שלהם)";
+
+        public static String listNotFound(String n) {
+            return "אין רשימה בשם: " + n;
+        }
+
+        public static String listEmpty(String n) {
+            return "הרשימה ריקה: " + n + " — ההשוואה נעצרת (רשימה ריקה אינה \"הכול נמחק\")";
+        }
+
+        public static String outside(int n) {
+            return " · " + n + " קבצים מחוץ לכוננים — לא נכללו";
+        }
         public static final String STATE_ONLY_COPY = "/מצב: — רק ב־COPY (שחזור הוא העתקה; הגיבוי לא משתנה)";
         public static final String STATE_LOGICAL = "בשחזור כותבים את המסלול הלוגי (אחרי שורש הגיבוי), בלי נוכחי או היסטוריה";
 
@@ -35842,6 +36072,7 @@ public final class Tests {
         run("גרסה 1.19.0 — שמירת מסלול, יומן, \"נוסף\" מדויק בהעברה, %תאריך%", new Runnable() { public void run() { v1190(); } });
         run("גרסה 1.20.0 — השוואה לפי מסלול (COMP), %רק-במקור% / %רק-ביעד%, /עד:, גיבוי מלא", new Runnable() { public void run() { v1200(); } });
         run("גרסה 1.21.0 — מצב בתאריך: תנאי חיפוש ושחזור (COPY /מצב:)", new Runnable() { public void run() { v1210(); } });
+        run("גרסה 1.22.0 — COMP /רשימה: — רשימה (עם חכמות, תיקיות מתעדכנות ותתי־רשימות) כמקור, מכמה כוננים", new Runnable() { public void run() { v1220(); } });
 
         System.out.println("בדיקות: " + passed + " עברו · " + failed + " נכשלו");
         for (String f : failures) System.out.println("  ✗ " + f);
@@ -39668,6 +39899,98 @@ public final class Tests {
     }
 
     /** 1.13.1 — תיקוני באגים. */
+    private static void v1220() {
+        File r1 = drive("רשימה-פנימי"), r2 = drive("רשימה-כרטיס");
+        write(new File(r1, "Docs"), "a.txt", "a1").setLastModified(1700000000000L);
+        write(new File(r1, "Docs/sub"), "b.txt", "b").setLastModified(1700000000000L);
+        new File(r1, "Docs/empty").mkdirs();
+        write(new File(r2, "מסמכים"), "חשבון-1.pdf", "1").setLastModified(1700000000000L);
+        write(new File(r2, "מסמכים"), "חשבון-2.pdf", "2").setLastModified(1700000000000L);
+        write(new File(r2, "x"), "y.txt", "y").setLastModified(1700000000000L);
+        Index i1 = built(Drive.INTERNAL, r1), i2 = built("ABCD-1234", r2);
+        Library lib = Library.forTests(new ArrayList<Index>(Arrays.asList(i1, i2)));
+        File sf = new File(home, "מבנה-1220.ini");
+        sf.delete();
+        Structure.testFile = sf;
+        Conf.set(Conf.GENERAL, SmartLists.PRESETS_DONE, "");
+        File tf = new File(home, "מבנה-1220.txt");
+        tf.delete();
+        Tree.testFile = tf;
+        try {
+            String smart = SmartLists.save("חשבונות לגיבוי", "חשבון", Sort.NAME, "", "");
+            Tree t = Tree.load();
+            Tree.Node mine = Tree.newChild(t.root, "המסמכים שלי");
+            mine.entries.add(new Tree.Entry(new File(r1, "Download/מוגה.pdf").getAbsolutePath(), 200, false));
+            mine.live.add(new File(r1, "Docs").getAbsolutePath());
+            mine.smart.add(smart);
+            Tree.Node sub = Tree.newChild(mine, "תת");
+            sub.entries.add(new Tree.Entry(new File(r2, "x/y.txt").getAbsolutePath(), 1, false));
+            Tree.newChild(t.root, "ריקה");
+            t.save();
+
+            Compare.Source src = Compare.ofList(lib, Tree.load(), Tree.load().find(Tree.parsePath("המסמכים שלי")), false, null);
+            eq("1.22.0: הרשימה — כל הקבצים, מכל הסוגים", 6, src.files.size());
+            check("1.22.0: מסלול — מפתח הכונן ומתחילת הכונן", src.files.containsValue(Drive.INTERNAL + "/Docs/sub/b.txt")
+                    && src.files.containsValue("ABCD-1234/מסמכים/חשבון-1.pdf") && src.files.containsValue("ABCD-1234/x/y.txt"));
+            check("1.22.0: תיקייה ריקה מתיקייה מתעדכנת", src.emptyDirs.containsValue(Drive.INTERNAL + "/Docs/empty"));
+
+            String text = "MD \"גיבוי\\נוכחי\"\n"
+                    + "COMP /רשימה:\"המסמכים שלי\" \"גיבוי\\נוכחי\"\n"
+                    + "MOVE %רק-ביעד% \"גיבוי\\היסטוריה\\%תאריך%\" /עד:50%\n"
+                    + "COPY %רק-במקור% \"גיבוי\\נוכחי\" /תפוס:לעצור /יומן:\"גיבוי\\יומן\\%תאריך%.txt\"\n";
+            Map<String, String> vars = Batch.vars(r1, r1.getAbsolutePath(), null);
+            vars.put(Batch.V_NOW, "01.10.2026 10-00-00");
+            Batch.Plan p = Batch.plan(text, r1, vars, lib);
+            check("1.22.0: גיבוי רשימה — בלי שגיאות", p.errors == 0);
+            Batch.run(p, lib, null, null);
+            lib.flush(5000);
+            File cur = new File(r1, "גיבוי/נוכחי");
+            check("1.22.0: גיבוי רשימה — עץ אחד לפי כוננים", "a1".equals(read(new File(cur, Drive.INTERNAL + "/Docs/a.txt")))
+                    && new File(cur, Drive.INTERNAL + "/Download/מוגה.pdf").isFile()
+                    && new File(cur, "ABCD-1234/מסמכים/חשבון-2.pdf").isFile() && new File(cur, "ABCD-1234/x/y.txt").isFile());
+            check("1.22.0: גיבוי רשימה — תיקייה ריקה", new File(cur, Drive.INTERNAL + "/Docs/empty").isDirectory());
+            check("1.22.0: גיבוי רשימה — רק מה שברשימה", !new File(cur, Drive.INTERNAL + "/Download/יוגה למתחילים.pdf").exists());
+            eq("1.22.0: גיבוי רשימה — יומן", 6, Physical.Journal.read(new File(r1, "גיבוי/יומן/01.10.2026 10-00-00.txt")).size());
+
+            // שינויים: עריכה, קובץ שיצא מהרשימה החכמה (נמחק), קובץ חדש בתיקייה המתעדכנת
+            write(new File(r1, "Docs"), "a.txt", "a2").setLastModified(1700000005000L);
+            File gone2 = new File(r2, "מסמכים/חשבון-2.pdf");
+            gone2.delete();
+            lib.fileRemoved(gone2.getAbsolutePath());
+            write(new File(r1, "Docs/sub"), "c.txt", "c");
+            lib.flush(5000);
+            vars.put(Batch.V_NOW, "05.10.2026 10-00-00");
+            p = Batch.plan(text, r1, vars, lib);
+            check("1.22.0: גיבוי שני — בלי שגיאות", p.errors == 0);
+            Batch.run(p, lib, null, null);
+            lib.flush(5000);
+            File h = new File(r1, "גיבוי/היסטוריה/05.10.2026 10-00-00");
+            check("1.22.0: גיבוי שני — הישן להיסטוריה", "a1".equals(read(new File(h, Drive.INTERNAL + "/Docs/a.txt")))
+                    && new File(h, "ABCD-1234/מסמכים/חשבון-2.pdf").isFile());
+            check("1.22.0: גיבוי שני — החדש בנוכחי", "a2".equals(read(new File(cur, Drive.INTERNAL + "/Docs/a.txt")))
+                    && new File(cur, Drive.INTERNAL + "/Docs/sub/c.txt").isFile() && !new File(cur, "ABCD-1234/מסמכים/חשבון-2.pdf").exists());
+            // מצב בתאריך עובד גם כאן
+            java.util.TreeMap<String, String> st = stateOf(new File(r1, "גיבוי"), "מצב:03.10.2026");
+            check("1.22.0: מצב בין הגיבויים", "a1".equals(st.get(Drive.INTERNAL + "/Docs/a.txt")) && st.containsKey("ABCD-1234/מסמכים/חשבון-2.pdf")
+                    && !st.containsKey(Drive.INTERNAL + "/Docs/sub/c.txt"));
+
+            // שגיאות
+            check("1.22.0: רשימה שלא קיימת — שגיאה", Batch.plan("COMP /רשימה:אין \"גיבוי\\נוכחי\"", r1, vars, lib).errors == 1);
+            check("1.22.0: רשימה ריקה — שגיאה", Batch.plan("COMP /רשימה:ריקה \"גיבוי\\נוכחי\"", r1, vars, lib).errors == 1);
+            check("1.22.0: בלי אינדקס — שגיאה", Batch.plan("COMP /רשימה:\"המסמכים שלי\" \"גיבוי\\נוכחי\"", r1, vars).errors == 1);
+            check("1.22.0: /רשימה: ב־COPY — שגיאה", Batch.plan("COPY /רשימה:x Docs ש", r1, vars, lib).errors >= 1);
+            check("1.22.0: MOVE %רק-במקור% מרשימה — שגיאה", Batch.plan("COMP /רשימה:\"המסמכים שלי\" \"גיבוי\\נוכחי\"\nMOVE %רק-במקור% ש",
+                    r1, vars, lib).errors == 1);
+            eq("1.22.0: הטופס — COMP עם רשימה נשמר", "COMP גיבוי\\נוכחי /רשימה:x", BatchLine.parse("COMP /רשימה:x \"גיבוי\\נוכחי\"").toLine());
+            String line = BatchLine.parse("COMP /רשימה:\"המסמכים שלי\" יעד /יומן:\"גיבוי\\יומן חדש.txt\"").toLine();
+            check("1.22.0: הטופס — ערך עם רווח נשאר במרכאות", line.contains("/רשימה:\"המסמכים שלי\"") && line.contains("/יומן:\"גיבוי\\יומן חדש.txt\"")
+                    && BatchLine.parse(line).toLine().equals(line));
+        } finally {
+            Structure.testFile = null;
+            Tree.testFile = null;
+        }
+    }
+
     /** הקבצים בגיבוי שעונים לתנאי: מסלול לוגי ← תוכן. */
     private static java.util.TreeMap<String, String> stateOf(File root, String cond) {
         Index ix = built("מצב-" + System.nanoTime(), root);
