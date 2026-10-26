@@ -2,8 +2,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="com.tikiyot.vfm"
-    android:versionCode="152"
-    android:versionName="1.17.6">
+    android:versionCode="153"
+    android:versionName="1.18.0">
     <uses-sdk android:minSdkVersion="21" android:targetSdkVersion="30" />
 
     <queries>
@@ -80,7 +80,6 @@
             android:exported="false" android:grantUriPermissions="true" />
     </application>
 </manifest>
-
 ===== קובץ: assets/examples/demo.txt =====
 ; תיקיית ההדמיה של דוגמאות הפקודות — נוצרת עם אופן הדוגמאות, ונבנית מחדש ב"חזרה לברירת מחדל".
 ; כל קובץ מתחיל בשורה "=== <מסלול>" (יחסי לתיקיית ההדמיה). "@ישן" בסוף — תאריך השינוי לפני שנתיים.
@@ -186,7 +185,6 @@ MOVE הורדות\*.epub לשלוח
 שם קבצים פיזיים
 למה ישר מהכונן, כמו כל מנהל קבצים; כל פעולה נשמרת אחר כך באינדקס
 פתח מסך קבצים פיזיים
-
 ===== קובץ: assets/examples/main.ini =====
 ; דוגמאות — רשימה כסביבת עבודה לכל קבוצת שימושים (הרשימות עצמן — במבנה.txt). אפשר לשנות; "החזרה למצב ההתחלתי" — בתפריט אופני העבודה (נגיעה ארוכה).
 
@@ -569,7 +567,6 @@ MOVE הורדות\*.epub לשלוח
 סוג = וירטואלי
 תיאור = כאן שמים דוגמאות משלך
 רשימה = הדוגמאות שלי
-
 ===== קובץ: assets/examples/tree.txt =====
 #1 מתכונים
 @תיאור תגיות: כשרות, מועד, סוג מאכל, מהיר — מתכון אחד בכמה רשימות
@@ -841,7 +838,6 @@ MOVE הורדות\*.epub לשלוח
 @עיצוב תוכנת ניהול קבצים
 @תיאור כאן שמים דוגמאות משלך
 @למה הרשימה הזו לא נמחקת ולא משתנה ב"חזרה לברירת מחדל" — כל השאר חוזר להתחלה
-
 ===== קובץ: build/build.sh =====
 #!/bin/bash
 set -e
@@ -864,7 +860,6 @@ aapt dump badging final.apk | grep -E "^package:|application-label:|sdkVersion"
 cp final.apk $OUT
 cd $DIR; rm -rf out gen bld
 ls -la $OUT
-
 ===== קובץ: build/test.sh =====
 #!/bin/bash
 # בדיקות על המחשב (80). יוצא בכישלון אם בדיקה אחת נכשלה — ואז build.sh לא בונה.
@@ -883,7 +878,6 @@ java -Dsun.jnu.encoding=UTF-8 -Dfile.encoding=UTF-8 -Dvfm.home=$W/home \
 R=$?
 rm -rf $W
 exit $R
-
 ===== קובץ: lab/AndroidManifest.xml =====
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
@@ -906,7 +900,6 @@ exit $R
         </activity>
     </application>
 </manifest>
-
 ===== קובץ: lab/build/build.sh =====
 #!/bin/bash
 set -e
@@ -929,7 +922,6 @@ aapt dump badging final.apk | grep -E "^package:|application-label:|sdkVersion"
 cp final.apk $OUT
 cd $DIR; rm -rf out gen bld
 ls -la $OUT
-
 ===== קובץ: lab/build/test.sh =====
 #!/bin/bash
 # בדיקות על המחשב: המנוע (Scan) — בלי אנדרואיד. יוצא בכישלון אם בדיקה נכשלה.
@@ -943,13 +935,11 @@ java -Dsun.jnu.encoding=UTF-8 -Dfile.encoding=UTF-8 -cp $W ScanTest
 R=$?
 rm -rf $W
 exit $R
-
 ===== קובץ: lab/res/values/strings.xml =====
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">מעבדת זירוזים</string>
 </resources>
-
 ===== קובץ: lab/src/com/tikiyot/lab/Fast.java =====
 package com.tikiyot.lab;
 
@@ -982,7 +972,6 @@ final class Fast {
         };
     }
 }
-
 ===== קובץ: lab/src/com/tikiyot/lab/Lab.java =====
 package com.tikiyot.lab;
 
@@ -1541,7 +1530,6 @@ public class Lab extends Activity {
         return (int) (v * getResources().getDisplayMetrics().density);
     }
 }
-
 ===== קובץ: lab/src/com/tikiyot/lab/Scan.java =====
 package com.tikiyot.lab;
 
@@ -1829,7 +1817,6 @@ public final class Scan {
         return String.format(Locale.US, "%.2f", ms / 1000.0);
     }
 }
-
 ===== קובץ: lab/src/com/tikiyot/lab/Store.java =====
 package com.tikiyot.lab;
 
@@ -1947,7 +1934,6 @@ final class Store {
         return r;
     }
 }
-
 ===== קובץ: lab/src/com/tikiyot/lab/Text.java =====
 package com.tikiyot.lab;
 
@@ -2209,7 +2195,6 @@ public final class Text {
                 || before == '(' || before == '[') ? 1 : 2;
     }
 }
-
 ===== קובץ: lab/tests/ScanTest.java =====
 import com.tikiyot.lab.Scan;
 import java.io.File;
@@ -2274,7 +2259,6 @@ public class ScanTest {
         System.exit(bad == 0 ? 0 : 1);
     }
 }
-
 ===== קובץ: res/drawable/ic_add.xml =====
 <?xml version="1.0" encoding="utf-8"?>
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
@@ -2282,7 +2266,6 @@ public class ScanTest {
     android:viewportWidth="24" android:viewportHeight="24">
     <path android:fillColor="#FF000000" android:pathData="M19,13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/>
 </vector>
-
 ===== קובץ: res/drawable/ic_close.xml =====
 <?xml version="1.0" encoding="utf-8"?>
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
@@ -2290,7 +2273,6 @@ public class ScanTest {
     android:viewportWidth="24" android:viewportHeight="24">
     <path android:fillColor="#FF000000" android:pathData="M19,6.41L17.59,5 12,10.59 6.41,5 5,6.41 10.59,12 5,17.59 6.41,19 12,13.41 17.59,19 19,17.59 13.41,12z"/>
 </vector>
-
 ===== קובץ: res/drawable/ic_copy.xml =====
 <?xml version="1.0" encoding="utf-8"?>
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
@@ -2298,7 +2280,6 @@ public class ScanTest {
     android:viewportWidth="24" android:viewportHeight="24">
     <path android:fillColor="#FF000000" android:pathData="M16,1H4c-1.1,0 -2,0.9 -2,2v14h2V3h12V1zM19,5H8c-1.1,0 -2,0.9 -2,2v14c0,1.1 0.9,2 2,2h11c1.1,0 2,-0.9 2,-2V7c0,-1.1 -0.9,-2 -2,-2zM19,21H8V7h11v14z"/>
 </vector>
-
 ===== קובץ: res/drawable/ic_delete.xml =====
 <?xml version="1.0" encoding="utf-8"?>
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
@@ -2306,7 +2287,6 @@ public class ScanTest {
     android:viewportWidth="24" android:viewportHeight="24">
     <path android:fillColor="#FF000000" android:pathData="M6,19c0,1.1 0.9,2 2,2h8c1.1,0 2,-0.9 2,-2V7H6v12zM19,4h-3.5l-1,-1h-5l-1,1H5v2h14V4z"/>
 </vector>
-
 ===== קובץ: res/drawable/ic_edit.xml =====
 <?xml version="1.0" encoding="utf-8"?>
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
@@ -2314,7 +2294,6 @@ public class ScanTest {
     android:viewportWidth="24" android:viewportHeight="24">
     <path android:fillColor="#FF000000" android:pathData="M3,17.25V21h3.75L17.81,9.94l-3.75,-3.75L3,17.25zM20.71,7.04c0.39,-0.39 0.39,-1.02 0,-1.41l-2.34,-2.34c-0.39,-0.39 -1.02,-0.39 -1.41,0l-1.83,1.83 3.75,3.75 1.83,-1.83z"/>
 </vector>
-
 ===== קובץ: res/drawable/ic_folder.xml =====
 <?xml version="1.0" encoding="utf-8"?>
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
@@ -2322,7 +2301,6 @@ public class ScanTest {
     android:viewportWidth="24" android:viewportHeight="24">
     <path android:fillColor="#FF000000" android:pathData="M10,4H4c-1.1,0 -1.99,0.9 -1.99,2L2,18c0,1.1 0.9,2 2,2h16c1.1,0 2,-0.9 2,-2V8c0,-1.1 -0.9,-2 -2,-2h-8l-2,-2z"/>
 </vector>
-
 ===== קובץ: res/drawable/ic_link.xml =====
 <?xml version="1.0" encoding="utf-8"?>
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
@@ -2330,7 +2308,6 @@ public class ScanTest {
     android:viewportWidth="24" android:viewportHeight="24">
     <path android:fillColor="#FF000000" android:pathData="M3.9,12c0,-1.71 1.39,-3.1 3.1,-3.1h4V7H7c-2.76,0 -5,2.24 -5,5s2.24,5 5,5h4v-1.9H7c-1.71,0 -3.1,-1.39 -3.1,-3.1zM8,13h8v-2H8v2zM17,7h-4v1.9h4c1.71,0 3.1,1.39 3.1,3.1s-1.39,3.1 -3.1,3.1h-4V17h4c2.76,0 5,-2.24 5,-5s-2.24,-5 -5,-5z"/>
 </vector>
-
 ===== קובץ: res/drawable/ic_list_add.xml =====
 <?xml version="1.0" encoding="utf-8"?>
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
@@ -2338,7 +2315,6 @@ public class ScanTest {
     android:viewportWidth="24" android:viewportHeight="24">
     <path android:fillColor="#FF000000" android:pathData="M14,10H2v2h12v-2zM14,6H2v2h12V6zM18,14v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zM2,16h8v-2H2v2z"/>
 </vector>
-
 ===== קובץ: res/drawable/ic_list_remove.xml =====
 <?xml version="1.0" encoding="utf-8"?>
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
@@ -2346,7 +2322,6 @@ public class ScanTest {
     android:viewportWidth="24" android:viewportHeight="24">
     <path android:fillColor="#FF000000" android:pathData="M14,10H2v2h12v-2zM14,6H2v2h12V6zM2,16h8v-2H2v2zM12,14h10v2H12z"/>
 </vector>
-
 ===== קובץ: res/drawable/ic_more.xml =====
 <?xml version="1.0" encoding="utf-8"?>
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
@@ -2354,7 +2329,6 @@ public class ScanTest {
     android:viewportWidth="24" android:viewportHeight="24">
     <path android:fillColor="#FF000000" android:pathData="M6,10c-1.1,0 -2,0.9 -2,2s0.9,2 2,2 2,-0.9 2,-2 -0.9,-2 -2,-2zM18,10c-1.1,0 -2,0.9 -2,2s0.9,2 2,2 2,-0.9 2,-2 -0.9,-2 -2,-2zM12,10c-1.1,0 -2,0.9 -2,2s0.9,2 2,2 2,-0.9 2,-2 -0.9,-2 -2,-2z"/>
 </vector>
-
 ===== קובץ: res/drawable/ic_open.xml =====
 <?xml version="1.0" encoding="utf-8"?>
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
@@ -2362,7 +2336,6 @@ public class ScanTest {
     android:viewportWidth="24" android:viewportHeight="24">
     <path android:fillColor="#FF000000" android:pathData="M19,19H5V5h7V3H5c-1.11,0 -2,0.9 -2,2v14c0,1.1 0.89,2 2,2h14c1.1,0 2,-0.9 2,-2v-7h-2v7zM14,3v2h3.59l-9.83,9.83 1.41,1.41L19,6.41V10h2V3h-7z"/>
 </vector>
-
 ===== קובץ: res/drawable/ic_remove.xml =====
 <?xml version="1.0" encoding="utf-8"?>
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
@@ -2370,7 +2343,6 @@ public class ScanTest {
     android:viewportWidth="24" android:viewportHeight="24">
     <path android:fillColor="#FF000000" android:pathData="M19,13H5v-2h14v2z"/>
 </vector>
-
 ===== קובץ: res/drawable/ic_restore.xml =====
 <?xml version="1.0" encoding="utf-8"?>
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
@@ -2378,7 +2350,6 @@ public class ScanTest {
     android:viewportWidth="24" android:viewportHeight="24">
     <path android:fillColor="#FF000000" android:pathData="M12.5,8c-2.65,0 -5.05,0.99 -6.9,2.6L2,7v9h9l-3.62,-3.62c1.39,-1.16 3.16,-1.88 5.12,-1.88 3.54,0 6.55,2.31 7.6,5.5l2.37,-0.78C21.08,11.03 17.15,8 12.5,8z"/>
 </vector>
-
 ===== קובץ: res/drawable/ic_share.xml =====
 <?xml version="1.0" encoding="utf-8"?>
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
@@ -2386,7 +2357,6 @@ public class ScanTest {
     android:viewportWidth="24" android:viewportHeight="24">
     <path android:fillColor="#FF000000" android:pathData="M18,16.08c-0.76,0 -1.44,0.3 -1.96,0.77L8.91,12.7c0.05,-0.23 0.09,-0.46 0.09,-0.7s-0.04,-0.47 -0.09,-0.7l7.05,-4.11c0.54,0.5 1.25,0.81 2.04,0.81 1.66,0 3,-1.34 3,-3s-1.34,-3 -3,-3 -3,1.34 -3,3c0,0.24 0.04,0.47 0.09,0.7L8.04,9.81C7.5,9.31 6.79,9 6,9c-1.66,0 -3,1.34 -3,3s1.34,3 3,3c0.79,0 1.5,-0.31 2.04,-0.81l7.12,4.16c-0.05,0.21 -0.08,0.43 -0.08,0.65 0,1.61 1.31,2.92 2.92,2.92 1.61,0 2.92,-1.31 2.92,-2.92s-1.31,-2.92 -2.92,-2.92z"/>
 </vector>
-
 ===== קובץ: res/drawable/ic_swap.xml =====
 <?xml version="1.0" encoding="utf-8"?>
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
@@ -2394,11 +2364,9 @@ public class ScanTest {
     android:viewportWidth="24" android:viewportHeight="24">
     <path android:fillColor="#FF000000" android:pathData="M6.99,11L3,15l3.99,4v-3H14v-2H6.99v-3zM21,9l-3.99,-4v3H10v2h7.01v3L21,9z"/>
 </vector>
-
 ===== קובץ: res/values/strings.xml =====
 <?xml version="1.0" encoding="utf-8"?>
 <resources><string name="app_name">מנהל קבצים וירטואלי</string></resources>
-
 ===== קובץ: src/com/tikiyot/vfm/Actions.java =====
 package com.tikiyot.vfm;
 
@@ -2770,7 +2738,6 @@ public final class Actions {
         return null;
     }
 }
-
 ===== קובץ: src/com/tikiyot/vfm/Acts.java =====
 package com.tikiyot.vfm;
 
@@ -2974,7 +2941,6 @@ public final class Acts {
     }
 
 }
-
 ===== קובץ: src/com/tikiyot/vfm/Adder.java =====
 package com.tikiyot.vfm;
 
@@ -3070,7 +3036,6 @@ public final class Adder {
                 });
     }
 }
-
 ===== קובץ: src/com/tikiyot/vfm/AsIfScreen.java =====
 package com.tikiyot.vfm;
 
@@ -3158,7 +3123,6 @@ public class AsIfScreen extends ListScreen<Batch.AsIfRow> {
         super.onDestroy();
     }
 }
-
 ===== קובץ: src/com/tikiyot/vfm/BarService.java =====
 package com.tikiyot.vfm;
 
@@ -3577,7 +3541,6 @@ public class BarService extends Service {
         wake();
     }
 }
-
 ===== קובץ: src/com/tikiyot/vfm/Batch.java =====
 package com.tikiyot.vfm;
 
@@ -4382,7 +4345,6 @@ final class Batch {
                 "MOVE \"" + var(V_DOWNLOADS) + "\\*.pdf\" \"" + var(V_INTERNAL) + "\\ספרים\" /" + SW_DATE + "שבוע");   // תחביר
     }
 }
-
 ===== קובץ: src/com/tikiyot/vfm/BatchEditScreen.java =====
 package com.tikiyot.vfm;
 
@@ -4800,7 +4762,6 @@ public class BatchEditScreen extends Activity {
         super.onBackPressed();
     }
 }
-
 ===== קובץ: src/com/tikiyot/vfm/BatchLine.java =====
 package com.tikiyot.vfm;
 
@@ -4960,7 +4921,6 @@ final class BatchLine {
         return out.isEmpty() ? abs : out;
     }
 }
-
 ===== קובץ: src/com/tikiyot/vfm/BatchUi.java =====
 package com.tikiyot.vfm;
 
@@ -5147,7 +5107,6 @@ final class BatchUi {
         b.show();
     }
 }
-
 ===== קובץ: src/com/tikiyot/vfm/Bidi.java =====
 package com.tikiyot.vfm;
 
@@ -5270,7 +5229,6 @@ final class Bidi {
         });
     }
 }
-
 ===== קובץ: src/com/tikiyot/vfm/BinBox.java =====
 package com.tikiyot.vfm;
 
@@ -5447,7 +5405,6 @@ final class BinBox {
         return null;
     }
 }
-
 ===== קובץ: src/com/tikiyot/vfm/Buttons.java =====
 package com.tikiyot.vfm;
 
@@ -5758,7 +5715,6 @@ final class Buttons {
         return true;
     }
 }
-
 ===== קובץ: src/com/tikiyot/vfm/Clip.java =====
 package com.tikiyot.vfm;
 
@@ -5857,7 +5813,6 @@ final class Clip {
         return first == null ? null : new File(first).getParentFile();
     }
 }
-
 ===== קובץ: src/com/tikiyot/vfm/CmdMenu.java =====
 package com.tikiyot.vfm;
 
@@ -6150,7 +6105,6 @@ final class CmdMenu {
         BatchUi.edit(a, f);
     }
 }
-
 ===== קובץ: src/com/tikiyot/vfm/Cond.java =====
 package com.tikiyot.vfm;
 
@@ -6549,7 +6503,6 @@ public final class Cond {
         return c.getTimeInMillis();
     }
 }
-
 ===== קובץ: src/com/tikiyot/vfm/Conf.java =====
 package com.tikiyot.vfm;
 
@@ -6656,7 +6609,6 @@ public final class Conf {
         set(section, key, v ? "כן" : "לא");  // תחביר
     }
 }
-
 ===== קובץ: src/com/tikiyot/vfm/DateSize.java =====
 package com.tikiyot.vfm;
 
@@ -6774,7 +6726,6 @@ final class DateSize {
         return (d + (d.isEmpty() || s.isEmpty() ? "" : " ") + s).trim();
     }
 }
-
 ===== קובץ: src/com/tikiyot/vfm/Design.java =====
 package com.tikiyot.vfm;
 
@@ -7403,7 +7354,6 @@ final class Design {
         sb.append(key).append(" = ").append(value).append('\n');
     }
 }
-
 ===== קובץ: src/com/tikiyot/vfm/DesignUi.java =====
 package com.tikiyot.vfm;
 
@@ -7782,7 +7732,6 @@ final class DesignUi {
         });
     }
 }
-
 ===== קובץ: src/com/tikiyot/vfm/DiskList.java =====
 package com.tikiyot.vfm;
 
@@ -7884,7 +7833,6 @@ final class DiskList {
         return l;
     }
 }
-
 ===== קובץ: src/com/tikiyot/vfm/DiskScreen.java =====
 package com.tikiyot.vfm;
 
@@ -8238,7 +8186,6 @@ public class DiskScreen extends ListScreen<File> implements Clip.Holder, TopRow.
         });
     }
 }
-
 ===== קובץ: src/com/tikiyot/vfm/Drive.java =====
 package com.tikiyot.vfm;
 
@@ -8281,7 +8228,6 @@ public final class Drive {
         return label(INTERNAL.equals(ix.key), ix.label);
     }
 }
-
 ===== קובץ: src/com/tikiyot/vfm/DupMode.java =====
 package com.tikiyot.vfm;
 
@@ -8324,7 +8270,6 @@ final class DupMode {
         return new DupMode(NAME_SAME, true, false);
     }
 }
-
 ===== קובץ: src/com/tikiyot/vfm/DupScreen.java =====
 package com.tikiyot.vfm;
 
@@ -9126,7 +9071,6 @@ public class DupScreen extends Activity {
         return super.onOptionsItemSelected(item);
     }
 }
-
 ===== קובץ: src/com/tikiyot/vfm/Envs.java =====
 package com.tikiyot.vfm;
 
@@ -9318,7 +9262,6 @@ final class Envs {
         }
     }
 }
-
 ===== קובץ: src/com/tikiyot/vfm/Examples.java =====
 package com.tikiyot.vfm;
 
@@ -9491,7 +9434,6 @@ final class Examples {
         if (lib != null) lib.dirChanged(dir.getParent());
     }
 }
-
 ===== קובץ: src/com/tikiyot/vfm/FileItem.java =====
 package com.tikiyot.vfm;
 
@@ -9610,7 +9552,6 @@ public final class FileItem {
         return State.MISSING;
     }
 }
-
 ===== קובץ: src/com/tikiyot/vfm/Files.java =====
 package com.tikiyot.vfm;
 
@@ -9817,7 +9758,6 @@ public final class Files {
         return !root.exists() || !root.canRead();
     }
 }
-
 ===== קובץ: src/com/tikiyot/vfm/FilterForm.java =====
 package com.tikiyot.vfm;
 
@@ -9933,7 +9873,6 @@ final class FilterForm {
         return box;
     }
 }
-
 ===== קובץ: src/com/tikiyot/vfm/Flow.java =====
 package com.tikiyot.vfm;
 
@@ -10010,7 +9949,6 @@ final class Flow extends ViewGroup {
         }
     }
 }
-
 ===== קובץ: src/com/tikiyot/vfm/FnApp.java =====
 package com.tikiyot.vfm;
 
@@ -10065,7 +10003,6 @@ public final class FnApp extends Func {
         });
     }
 }
-
 ===== קובץ: src/com/tikiyot/vfm/FnBar.java =====
 package com.tikiyot.vfm;
 
@@ -10138,7 +10075,6 @@ public final class FnBar extends Func {
         });
     }
 }
-
 ===== קובץ: src/com/tikiyot/vfm/FnCommand.java =====
 package com.tikiyot.vfm;
 
@@ -10220,7 +10156,6 @@ public final class FnCommand extends Func {
         });
     }
 }
-
 ===== קובץ: src/com/tikiyot/vfm/FnDup.java =====
 package com.tikiyot.vfm;
 
@@ -10362,7 +10297,6 @@ public final class FnDup extends Func {
         return (a + " " + b).trim();
     }
 }
-
 ===== קובץ: src/com/tikiyot/vfm/FnSettings.java =====
 package com.tikiyot.vfm;
 
@@ -10396,7 +10330,6 @@ public final class FnSettings extends Func {
         });
     }
 }
-
 ===== קובץ: src/com/tikiyot/vfm/FnSmart.java =====
 package com.tikiyot.vfm;
 
@@ -10434,7 +10367,6 @@ public final class FnSmart extends Func {
         SmartForm.show(a, name, t, done);
     }
 }
-
 ===== קובץ: src/com/tikiyot/vfm/FnTrash.java =====
 package com.tikiyot.vfm;
 
@@ -10470,7 +10402,6 @@ public final class FnTrash extends Func {
         });
     }
 }
-
 ===== קובץ: src/com/tikiyot/vfm/FnVirtual.java =====
 package com.tikiyot.vfm;
 
@@ -10685,7 +10616,6 @@ public final class FnVirtual extends Func {
         });
     }
 }
-
 ===== קובץ: src/com/tikiyot/vfm/FolderPicker.java =====
 package com.tikiyot.vfm;
 
@@ -10765,7 +10695,6 @@ public final class FolderPicker {
         else PickDialog.show(a, title, m, PickDialog.FOLDERS, creator, chosen, null);
     }
 }
-
 ===== קובץ: src/com/tikiyot/vfm/FolderView.java =====
 package com.tikiyot.vfm;
 
@@ -10933,7 +10862,6 @@ final class FolderView {
         return out;
     }
 }
-
 ===== קובץ: src/com/tikiyot/vfm/Func.java =====
 package com.tikiyot.vfm;
 
@@ -10994,7 +10922,6 @@ public abstract class Func {
         return f != null ? f.icon : "📄";
     }
 }
-
 ===== קובץ: src/com/tikiyot/vfm/Home.java =====
 package com.tikiyot.vfm;
 
@@ -11592,7 +11519,6 @@ public class Home extends Activity {
         return super.onOptionsItemSelected(item);
     }
 }
-
 ===== קובץ: src/com/tikiyot/vfm/HomeSelect.java =====
 package com.tikiyot.vfm;
 
@@ -11739,7 +11665,6 @@ final class HomeSelect {
         buttons.addView(b);
     }
 }
-
 ===== קובץ: src/com/tikiyot/vfm/Index.java =====
 package com.tikiyot.vfm;
 
@@ -12836,7 +12761,6 @@ public final class Index {
         }
     }
 }
-
 ===== קובץ: src/com/tikiyot/vfm/IndexSource.java =====
 package com.tikiyot.vfm;
 
@@ -13016,7 +12940,6 @@ final class IndexSource extends PickSource {
         return sb.toString();
     }
 }
-
 ===== קובץ: src/com/tikiyot/vfm/Ini.java =====
 package com.tikiyot.vfm;
 
@@ -13226,7 +13149,6 @@ public final class Ini {
         }
     }
 }
-
 ===== קובץ: src/com/tikiyot/vfm/IniEditScreen.java =====
 package com.tikiyot.vfm;
 
@@ -13475,7 +13397,6 @@ public class IniEditScreen extends Activity {
         return super.onOptionsItemSelected(item);
     }
 }
-
 ===== קובץ: src/com/tikiyot/vfm/IniListScreen.java =====
 package com.tikiyot.vfm;
 
@@ -13564,7 +13485,6 @@ public class IniListScreen extends Activity {
         return false;
     }
 }
-
 ===== קובץ: src/com/tikiyot/vfm/Library.java =====
 package com.tikiyot.vfm;
 
@@ -15026,7 +14946,6 @@ public final class Library {
         return false;
     }
 }
-
 ===== קובץ: src/com/tikiyot/vfm/ListCount.java =====
 package com.tikiyot.vfm;
 
@@ -15129,7 +15048,6 @@ final class ListCount {
         }
     }
 }
-
 ===== קובץ: src/com/tikiyot/vfm/ListPicker.java =====
 package com.tikiyot.vfm;
 
@@ -15192,7 +15110,6 @@ public final class ListPicker {
         });
     }
 }
-
 ===== קובץ: src/com/tikiyot/vfm/ListScreen.java =====
 package com.tikiyot.vfm;
 
@@ -15498,7 +15415,6 @@ abstract class ListScreen<T> extends Activity {
         if (!sel.back()) super.onBackPressed();
     }
 }
-
 ===== קובץ: src/com/tikiyot/vfm/ListSettings.java =====
 package com.tikiyot.vfm;
 
@@ -15624,7 +15540,6 @@ final class ListSettings {
                 });
     }
 }
-
 ===== קובץ: src/com/tikiyot/vfm/Log.java =====
 package com.tikiyot.vfm;
 
@@ -15741,7 +15656,6 @@ public final class Log {
         });
     }
 }
-
 ===== קובץ: src/com/tikiyot/vfm/Looks.java =====
 package com.tikiyot.vfm;
 
@@ -16187,7 +16101,6 @@ final class Looks {
         return t;
     }
 }
-
 ===== קובץ: src/com/tikiyot/vfm/Media.java =====
 package com.tikiyot.vfm;
 
@@ -16397,7 +16310,6 @@ final class Media {
         };
     }
 }
-
 ===== קובץ: src/com/tikiyot/vfm/Mirror.java =====
 package com.tikiyot.vfm;
 
@@ -16477,7 +16389,6 @@ public final class Mirror {
         }
     }
 }
-
 ===== קובץ: src/com/tikiyot/vfm/ModeCopy.java =====
 package com.tikiyot.vfm;
 
@@ -16928,7 +16839,6 @@ final class ModeCopy {
         return Structure.parse(ini);
     }
 }
-
 ===== קובץ: src/com/tikiyot/vfm/Modes.java =====
 package com.tikiyot.vfm;
 
@@ -17176,7 +17086,6 @@ public final class Modes {
         current = null;
     }
 }
-
 ===== קובץ: src/com/tikiyot/vfm/Nested.java =====
 package com.tikiyot.vfm;
 
@@ -17499,7 +17408,6 @@ final class Nested {
         return !link.isEmpty() && SmartLists.byId(link) != null ? link : tool.id;
     }
 }
-
 ===== קובץ: src/com/tikiyot/vfm/Order.java =====
 package com.tikiyot.vfm;
 
@@ -17550,7 +17458,6 @@ final class Order {
         l.set(j, x);
     }
 }
-
 ===== קובץ: src/com/tikiyot/vfm/PasteBar.java =====
 package com.tikiyot.vfm;
 
@@ -17636,7 +17543,6 @@ final class PasteBar {
         if (after != null) after.run();
     }
 }
-
 ===== קובץ: src/com/tikiyot/vfm/Paths.java =====
 package com.tikiyot.vfm;
 
@@ -17710,7 +17616,6 @@ public final class Paths {
         return p.startsWith(base) ? p.substring(base.length()) : p;
     }
 }
-
 ===== קובץ: src/com/tikiyot/vfm/Physical.java =====
 package com.tikiyot.vfm;
 
@@ -18014,9 +17919,7 @@ public final class Physical {
     public static Result transfer(Library lib, List<String> files, List<String> dirs, File folder, boolean copy,
                                   Asker asker, Progress progress, boolean grey) {
         Run run = new Run(lib, copy, asker, progress, grey);
-        List<File> all = new ArrayList<File>();
-        for (String p : files) all.add(new File(p));
-        for (String p : dirs) all.add(new File(p));
+        List<File> all = topOnly(files, dirs);
         for (File f : all) {
             if (f.isDirectory()) {
                 long[] st = count(f);
@@ -18045,6 +17948,7 @@ public final class Physical {
             return run.r;
         }
         folder.mkdirs();
+        run.maxFile = maxFileSize(folder);
         for (File f : all) {
             if (run.r.cancelled) break;
             String p = f.getAbsolutePath();
@@ -18104,6 +18008,79 @@ public final class Physical {
         return s;
     }
 
+    /**
+     * 1.18.0: רק הפריטים העליונים — פריט שתיקייה שמעליו כבר ברשימה יוצא (הוא עובר איתה), וכפילויות יוצאות.
+     * בלי זה: תיקייה עוברת שלמה, ואחריה הקובץ שבתוכה "לא נמצא" (בהעברה) או מועתק שוב, שטוח, ליעד (בהעתקה).
+     */
+    static List<File> topOnly(List<String> files, List<String> dirs) {
+        java.util.LinkedHashSet<String> in = new java.util.LinkedHashSet<String>();
+        for (String p : files) in.add(new File(p).getAbsolutePath());
+        for (String p : dirs) in.add(new File(p).getAbsolutePath());
+        List<File> out = new ArrayList<File>();
+        for (String p : in) {
+            boolean under = false;
+            for (File up = new File(p).getParentFile(); up != null && !under; up = up.getParentFile())
+                under = in.contains(up.getAbsolutePath());
+            if (!under) out.add(new File(p));
+        }
+        return out;
+    }
+
+    /** לבדיקות: גודל קובץ מרבי ביעד במקום מה שנקרא ממערכת הקבצים (0 — בלי). */
+    static long maxFileForTests = 0;
+    static final long FAT_MAX = 0xFFFFFFFFL;   // FAT32: עד 4GB פחות בית
+
+    /** 1.18.0: הקובץ הגדול ביותר שאפשר לכתוב בתיקייה — FAT32: 4GB פחות בית; אחרת (או לא ידוע) — בלי הגבלה. */
+    static long maxFileSize(File folder) {
+        if (maxFileForTests > 0) return maxFileForTests;
+        String t = fsType(folder.getAbsolutePath());
+        return t != null && (t.equals("vfat") || t.equals("msdos") || t.equals("fat")) ? FAT_MAX : Long.MAX_VALUE;
+    }
+
+    /** סוג מערכת הקבצים לפי /proc/mounts: נקודת העגינה הארוכה ביותר שמכילה את המסלול. בכרטיס (fuse) — לפי /mnt/media_rw. */
+    static String fsType(String path) {
+        List<String[]> m = new ArrayList<String[]>();
+        java.io.BufferedReader in = null;
+        try {
+            in = new java.io.BufferedReader(new java.io.FileReader("/proc/mounts"));
+            String line;
+            while ((line = in.readLine()) != null) {
+                String[] f = line.split(" ");
+                if (f.length >= 3) m.add(new String[]{f[1].replace("\\040", " "), f[2]});
+            }
+        } catch (Throwable t) {
+            return null;
+        } finally {
+            try { if (in != null) in.close(); } catch (Throwable ignored) { }
+        }
+        return fsTypeIn(m, path);
+    }
+
+    /** מתוך רשימת עגינות {נקודה, סוג}. */
+    static String fsTypeIn(List<String[]> m, String path) {
+        String t = typeAt(m, path);
+        if (t != null && (t.equals("fuse") || t.equals("sdcardfs")) && path.startsWith("/storage/")) {
+            List<String[]> rw = new ArrayList<String[]>();
+            for (String[] x : m) if (x[0].startsWith("/mnt/media_rw/")) rw.add(x);
+            String under = typeAt(rw, "/mnt/media_rw/" + path.substring("/storage/".length()));
+            if (under != null) return under;
+        }
+        return t;
+    }
+
+    static String typeAt(List<String[]> mounts, String path) {
+        String best = null, type = null;
+        for (String[] x : mounts) {
+            String mp = x[0];
+            boolean in = path.equals(mp) || path.startsWith(mp.endsWith("/") ? mp : mp + "/");
+            if (in && (best == null || mp.length() > best.length())) {
+                best = mp;
+                type = x[1];
+            }
+        }
+        return type;
+    }
+
     private static long free(File folder) {
         File f = folder;
         while (f != null && !f.exists()) f = f.getParentFile();
@@ -18121,6 +18098,8 @@ public final class Physical {
         Answer forFiles, forDirs;
         int total, filesDone;
         long totalBytes, bytesDone;
+        /** 1.18.0: הקובץ הגדול ביותר שהיעד מקבל (FAT32). */
+        long maxFile = Long.MAX_VALUE;
         /** בהעברה: מקור → יעד לכל קובץ, לרשימות. */
         final Map<String, String> moved = new LinkedHashMap<String, String>();
         /** קבצים שהיו ביעד והוחלפו (עברו לסל). */
@@ -18254,6 +18233,10 @@ public final class Physical {
                 return true;
             }
             long len = src.length();
+            if (len > maxFile && !(!copy && same(src, dst))) {
+                r.fail(Words.Disk.TOO_BIG_FOR_DEST);
+                return false;
+            }
             boolean ok = copy ? copyFile(src, dst) : moveFile(src, dst, same(src, dst));
             if (!ok) {
                 r.fail(copy ? Words.COPY_FAILED : Words.MOVE_FAILED);
@@ -18297,14 +18280,37 @@ public final class Physical {
         return true;
     }
 
-    /** העתקת קובץ למקום פנוי, עם בדיקת גודל. כישלון — לא נשאר עותק חלקי. */
+    /** 1.18.0: סיומת הקובץ הזמני של העתקה — נכתב בשם זה, ורק בסוף מקבל את השם הסופי. */
+    static final String PARTIAL = ".vfmtmp";  // בכונן
+
+    /** השם הזמני של dst: מוסתר, ליד היעד. שם ארוך מדי (מעל 255 בתים) — שם קצר לפי גיבוב. */
+    static File partial(File dst) {
+        String n = "." + dst.getName() + PARTIAL;
+        try {
+            if (n.getBytes("UTF-8").length > 255) n = "." + Integer.toHexString(dst.getName().hashCode()) + PARTIAL;
+        } catch (java.io.UnsupportedEncodingException ignored) {
+        }
+        return new File(dst.getParentFile(), n);
+    }
+
+    /** האם זה קובץ זמני של העתקה שלא הושלמה. */
+    static boolean isPartial(String name) {
+        return name.startsWith(".") && name.endsWith(PARTIAL);
+    }
+
+    /**
+     * העתקת קובץ למקום פנוי, עם בדיקת גודל. 1.18.0: נכתב לשם זמני ורק בסוף מקבל את השם הסופי — הפסקה
+     * באמצע (כרטיס שנשלף, מכשיר שכבה) לא משאירה קובץ שבור בשם האמיתי. שארית זמנית מניסיון קודם — נמחקת.
+     */
     static boolean copyFile(File src, File dst) {
         if (dst.exists() || !src.isFile()) return false;
         File parent = dst.getParentFile();
         if (parent != null) parent.mkdirs();
+        File tmp = partial(dst);
+        if (tmp.exists() && !tmp.delete()) return false;
         try {
             java.io.InputStream in = new java.io.FileInputStream(src);
-            java.io.FileOutputStream out = new java.io.FileOutputStream(dst);
+            java.io.FileOutputStream out = new java.io.FileOutputStream(tmp);
             try {
                 byte[] buf = new byte[1 << 16];
                 int n;
@@ -18314,14 +18320,14 @@ public final class Physical {
                 in.close();
                 out.close();
             }
-            if (dst.length() != src.length()) {
-                dst.delete();
+            if (tmp.length() != src.length() || dst.exists() || !tmp.renameTo(dst)) {
+                tmp.delete();
                 return false;
             }
             dst.setLastModified(src.lastModified());
             return true;
         } catch (Throwable t) {
-            dst.delete();
+            tmp.delete();
             Log.e("העתקה", t);
             return false;
         }
@@ -19098,7 +19104,6 @@ public final class Physical {
         }).start();
     }
 }
-
 ===== קובץ: src/com/tikiyot/vfm/PickDialog.java =====
 package com.tikiyot.vfm;
 
@@ -19554,7 +19559,6 @@ final class PickDialog {
         }
     }
 }
-
 ===== קובץ: src/com/tikiyot/vfm/PickSource.java =====
 package com.tikiyot.vfm;
 
@@ -19610,7 +19614,6 @@ abstract class PickSource {
         return null;
     }
 }
-
 ===== קובץ: src/com/tikiyot/vfm/PickerModel.java =====
 package com.tikiyot.vfm;
 
@@ -19899,7 +19902,6 @@ final class PickerModel {
         return out;
     }
 }
-
 ===== קובץ: src/com/tikiyot/vfm/Program.java =====
 package com.tikiyot.vfm;
 
@@ -20022,7 +20024,6 @@ final class Program {
         return n < 0 ? null : Words.files(n);
     }
 }
-
 ===== קובץ: src/com/tikiyot/vfm/Provider.java =====
 package com.tikiyot.vfm;
 
@@ -20090,7 +20091,6 @@ public class Provider extends ContentProvider {
     @Override public int delete(Uri uri, String s, String[] a) { return 0; }
     @Override public int update(Uri uri, ContentValues v, String s, String[] a) { return 0; }
 }
-
 ===== קובץ: src/com/tikiyot/vfm/Quick.java =====
 package com.tikiyot.vfm;
 
@@ -20212,7 +20212,6 @@ final class Quick {
         return isNot(part) ? part.substring(1) : Cond.NOT + part;
     }
 }
-
 ===== קובץ: src/com/tikiyot/vfm/QuickBar.java =====
 package com.tikiyot.vfm;
 
@@ -20593,7 +20592,6 @@ final class QuickBar {
         });
     }
 }
-
 ===== קובץ: src/com/tikiyot/vfm/Reserved.java =====
 package com.tikiyot.vfm;
 
@@ -20799,7 +20797,6 @@ final class Reserved {
         }
     }
 }
-
 ===== קובץ: src/com/tikiyot/vfm/Resolver.java =====
 package com.tikiyot.vfm;
 
@@ -20927,7 +20924,6 @@ public final class Resolver {
         return null;
     }
 }
-
 ===== קובץ: src/com/tikiyot/vfm/SearchScreen.java =====
 package com.tikiyot.vfm;
 
@@ -22149,7 +22145,6 @@ public class SearchScreen extends Activity implements Clip.Holder {
         super.onBackPressed();
     }
 }
-
 ===== קובץ: src/com/tikiyot/vfm/SearchTabs.java =====
 package com.tikiyot.vfm;
 
@@ -22228,7 +22223,6 @@ final class SearchTabs {
         }
     }
 }
-
 ===== קובץ: src/com/tikiyot/vfm/Select.java =====
 package com.tikiyot.vfm;
 
@@ -22392,7 +22386,6 @@ public final class Select {
         }, own);
     }
 }
-
 ===== קובץ: src/com/tikiyot/vfm/SelectBar.java =====
 package com.tikiyot.vfm;
 
@@ -22641,7 +22634,6 @@ public final class SelectBar {
         }
     }
 }
-
 ===== קובץ: src/com/tikiyot/vfm/SettingsScreen.java =====
 package com.tikiyot.vfm;
 
@@ -23114,7 +23106,6 @@ public class SettingsScreen extends Activity {
                 .show();
     }
 }
-
 ===== קובץ: src/com/tikiyot/vfm/ShareScreen.java =====
 package com.tikiyot.vfm;
 
@@ -23376,7 +23367,6 @@ public class ShareScreen extends Activity {
         });
     }
 }
-
 ===== קובץ: src/com/tikiyot/vfm/Shortcuts.java =====
 package com.tikiyot.vfm;
 
@@ -23479,7 +23469,6 @@ final class Shortcuts {
         return n;
     }
 }
-
 ===== קובץ: src/com/tikiyot/vfm/Sig.java =====
 package com.tikiyot.vfm;
 
@@ -24004,7 +23993,6 @@ final class Sig {
         return n;
     }
 }
-
 ===== קובץ: src/com/tikiyot/vfm/SigJob.java =====
 package com.tikiyot.vfm;
 
@@ -24070,7 +24058,6 @@ public final class SigJob extends JobService {
         return false;
     }
 }
-
 ===== קובץ: src/com/tikiyot/vfm/SigUi.java =====
 package com.tikiyot.vfm;
 
@@ -24242,7 +24229,6 @@ final class SigUi {
         if (after != null) after.run();
     }
 }
-
 ===== קובץ: src/com/tikiyot/vfm/SmartForm.java =====
 package com.tikiyot.vfm;
 
@@ -24979,7 +24965,6 @@ public final class SmartForm {
         });
     }
 }
-
 ===== קובץ: src/com/tikiyot/vfm/SmartLists.java =====
 package com.tikiyot.vfm;
 
@@ -25195,7 +25180,6 @@ final class SmartLists {
         return !link.isEmpty() && byId(link) == null;
     }
 }
-
 ===== קובץ: src/com/tikiyot/vfm/Sort.java =====
 package com.tikiyot.vfm;
 
@@ -25451,7 +25435,6 @@ public final class Sort {
         };
     }
 }
-
 ===== קובץ: src/com/tikiyot/vfm/Sources.java =====
 package com.tikiyot.vfm;
 
@@ -25670,7 +25653,6 @@ public final class Sources {
         return sb.toString();
     }
 }
-
 ===== קובץ: src/com/tikiyot/vfm/Stats.java =====
 package com.tikiyot.vfm;
 
@@ -25722,7 +25704,6 @@ public final class Stats {
         return null;
     }
 }
-
 ===== קובץ: src/com/tikiyot/vfm/Structure.java =====
 package com.tikiyot.vfm;
 
@@ -26296,7 +26277,6 @@ public final class Structure {
         if (cut(ini, id, false)) save(ini);
     }
 }
-
 ===== קובץ: src/com/tikiyot/vfm/Target.java =====
 package com.tikiyot.vfm;
 
@@ -26340,7 +26320,6 @@ public final class Target {
         return "כן".equals(params.get(key));  // תחביר
     }
 }
-
 ===== קובץ: src/com/tikiyot/vfm/Text.java =====
 package com.tikiyot.vfm;
 
@@ -26639,7 +26618,6 @@ public final class Text {
                 || before == '(' || before == '[') ? 1 : 2;
     }
 }
-
 ===== קובץ: src/com/tikiyot/vfm/ToolMenu.java =====
 package com.tikiyot.vfm;
 
@@ -26724,7 +26702,6 @@ final class ToolMenu {
         return any;
     }
 }
-
 ===== קובץ: src/com/tikiyot/vfm/TopRow.java =====
 package com.tikiyot.vfm;
 
@@ -27235,7 +27212,6 @@ final class TopRow {
         });
     }
 }
-
 ===== קובץ: src/com/tikiyot/vfm/Transfer.java =====
 package com.tikiyot.vfm;
 
@@ -27383,7 +27359,6 @@ final class Transfer {
         }
     }
 }
-
 ===== קובץ: src/com/tikiyot/vfm/Trash.java =====
 package com.tikiyot.vfm;
 
@@ -27639,7 +27614,6 @@ public final class Trash {
         return n;
     }
 }
-
 ===== קובץ: src/com/tikiyot/vfm/TrashScreen.java =====
 package com.tikiyot.vfm;
 
@@ -27788,7 +27762,6 @@ public class TrashScreen extends ListScreen<Trash.Item> {
         return true;
     }
 }
-
 ===== קובץ: src/com/tikiyot/vfm/Tree.java =====
 package com.tikiyot.vfm;
 
@@ -28602,7 +28575,6 @@ public final class Tree {
         return n;
     }
 }
-
 ===== קובץ: src/com/tikiyot/vfm/TreeSource.java =====
 package com.tikiyot.vfm;
 
@@ -28638,7 +28610,6 @@ final class TreeSource extends PickSource {
         return Tree.fullLabel(path);
     }
 }
-
 ===== קובץ: src/com/tikiyot/vfm/Trial.java =====
 package com.tikiyot.vfm;
 
@@ -28731,7 +28702,6 @@ final class Trial {
         return sb.toString();
     }
 }
-
 ===== קובץ: src/com/tikiyot/vfm/TypePicker.java =====
 package com.tikiyot.vfm;
 
@@ -28829,7 +28799,6 @@ final class TypePicker {
                 .show();
     }
 }
-
 ===== קובץ: src/com/tikiyot/vfm/Types.java =====
 package com.tikiyot.vfm;
 
@@ -28968,7 +28937,6 @@ final class Types {
         }
     }
 }
-
 ===== קובץ: src/com/tikiyot/vfm/Ui.java =====
 package com.tikiyot.vfm;
 
@@ -29845,7 +29813,6 @@ public final class Ui {
         });
     }
 }
-
 ===== קובץ: src/com/tikiyot/vfm/Unify.java =====
 package com.tikiyot.vfm;
 
@@ -30019,7 +29986,6 @@ final class Unify {
         return n[0];
     }
 }
-
 ===== קובץ: src/com/tikiyot/vfm/VClip.java =====
 package com.tikiyot.vfm;
 
@@ -30538,7 +30504,6 @@ final class VClip {
     }
 
 }
-
 ===== קובץ: src/com/tikiyot/vfm/Verbs.java =====
 package com.tikiyot.vfm;
 
@@ -30944,7 +30909,6 @@ final class Verbs {
         for (Tree.Node c : n.children) collect(c, out);
     }
 }
-
 ===== קובץ: src/com/tikiyot/vfm/VirtualScreen.java =====
 package com.tikiyot.vfm;
 
@@ -32054,7 +32018,6 @@ public class VirtualScreen extends ListScreen<VirtualScreen.Item> implements Top
         return false;
     }
 }
-
 ===== קובץ: src/com/tikiyot/vfm/Vols.java =====
 package com.tikiyot.vfm;
 
@@ -32164,7 +32127,6 @@ public final class Vols {
         return p.endsWith("/Android/data") || p.endsWith("/Android/obb");
     }
 }
-
 ===== קובץ: src/com/tikiyot/vfm/Why.java =====
 package com.tikiyot.vfm;
 
@@ -32234,7 +32196,6 @@ final class Why {
         return key == null ? "" : key.replace('=', '-').replace('\n', ' ').replace('[', '(').replace(']', ')');
     }
 }
-
 ===== קובץ: src/com/tikiyot/vfm/Words.java =====
 package com.tikiyot.vfm;
 
@@ -32896,6 +32857,7 @@ public final class Words {
         public static final String ALREADY_HERE = "כבר בתיקייה הזו";
         public static final String CANT_REPLACE_PARENT = "אי אפשר להחליף תיקייה שמכילה את המקור";
         public static final String NO_DEST_FOLDER = "לא נוצרה תיקייה ביעד";
+        public static final String TOO_BIG_FOR_DEST = "הקובץ גדול מ־4GB, והיעד (FAT32) אינו מקבל קובץ כזה";
         public static final String NO_ORIGINAL_PLACE = "אין מקום מקורי ידוע";
         public static final String FILES_SUFFIX = " קבצים";
         public static final String ONE_FILE_SUFFIX = " קובץ אחד";
@@ -34151,7 +34113,6 @@ public final class Words {
         }
     }
 }
-
 ===== קובץ: src/com/tikiyot/vfm/Zip.java =====
 package com.tikiyot.vfm;
 
@@ -34396,7 +34357,6 @@ final class Zip {
         return top.equals(base) || top.equals(destName) ? top + "/" : null;
     }
 }
-
 ===== קובץ: tests/bikoret/Probe.java =====
 package com.tikiyot.vfm;
 
@@ -34738,7 +34698,6 @@ public final class Probe {
         say("13. כפולים לפי גודל: 5 קבצים ריקים בשמות שונים נכנסים לקבוצה אחת (" + bySize.get(0L) + " עותקים של 0B)");
     }
 }
-
 ===== קובץ: tests/bikoret/Probe2.java =====
 package com.tikiyot.vfm;
 
@@ -34771,7 +34730,6 @@ public final class Probe2 {
                 + " · הקובץ הגדול ביותר בין המוצגים=" + has + " · הערה: \"" + res.note + "\"");
     }
 }
-
 ===== קובץ: tests/bikoret/Probe5.java =====
 package com.tikiyot.vfm;
 
@@ -34955,7 +34913,6 @@ public final class Probe5 {
         }
     }
 }
-
 ===== קובץ: tests/bikoret/Probe6.java =====
 package com.tikiyot.vfm;
 
@@ -35062,7 +35019,6 @@ public final class Probe6 {
         say("   MOVE של סל המחזור: " + r2 + " · הסל במקומו=" + new File(root, Index.TRASH).isDirectory());
     }
 }
-
 ===== קובץ: tests/com/tikiyot/vfm/Tests.java =====
 package com.tikiyot.vfm;
 
@@ -35159,6 +35115,7 @@ public final class Tests {
         run("גרסה 1.12.0 — עיצובים עם שם: קובץ, ירושה, צלמית לרשימה", new Runnable() { public void run() { v1120(); } });
         run("גרסה 1.13.0 — פקודות בעברית, תוכנה, הפניה לרשימה, הזזה, למה", new Runnable() { public void run() { v1130(); } });
         run("גרסה 1.13.1–1.15.0 — תיקונים, ➕ בבית, פקודות כקובץ טקסט, הלוח האחד, תפריט פיזי, ספירה, סביבות ← רשימות", new Runnable() { public void run() { v1131(); } });
+        run("גרסה 1.18.0 — הגנות בהעתקה: שם זמני, רק העליון, גודל ל-FAT32", new Runnable() { public void run() { v1180(); } });
 
         System.out.println("בדיקות: " + passed + " עברו · " + failed + " נכשלו");
         for (String f : failures) System.out.println("  ✗ " + f);
@@ -38985,6 +38942,97 @@ public final class Tests {
     }
 
     /** 1.13.1 — תיקוני באגים. */
+    private static void v1180() {
+        File root = drive("הגנות");
+        File src = new File(root, "מקור");
+        File a = mk(src, "א.pdf", 30);
+        a.setLastModified(1500000000000L);
+        File dest = new File(root, "יעד");
+        dest.mkdirs();
+
+        // 1. שם זמני: אחרי הצלחה — אין קובץ זמני, התאריך נשמר
+        File d1 = new File(dest, "א.pdf");
+        check("1.18.0: העתקה — הצליחה", Physical.copyFile(a, d1) && d1.length() == 30);
+        check("1.18.0: העתקה — אין קובץ זמני", !Physical.partial(d1).exists());
+        eq("1.18.0: העתקה — התאריך נשמר", 1500000000000L, d1.lastModified());
+        check("1.18.0: השם הזמני — מוסתר ומזוהה", Physical.partial(d1).getName().startsWith(".")
+                && Physical.isPartial(Physical.partial(d1).getName()) && !Physical.isPartial("א.pdf"));
+        // שארית מהפסקה קודמת — נמחקת, ולא נשאר קובץ בשם האמיתי לפני הסוף
+        File d2 = new File(dest, "ב.pdf");
+        File left = mk(dest, Physical.partial(d2).getName(), 7);
+        check("1.18.0: שארית — קיימת לפני", left.isFile() && !d2.exists());
+        check("1.18.0: שארית — ההעתקה מצליחה ומנקה", Physical.copyFile(a, d2) && d2.length() == 30 && !left.exists());
+        // יעד תפוס — לא נוגעים
+        check("1.18.0: יעד תפוס — לא נדרס", !Physical.copyFile(mk(src, "ג.pdf", 5), d1) && d1.length() == 30);
+        // מקור שאינו קובץ — אין שארית זמנית
+        File d3 = new File(dest, "ד.pdf");
+        check("1.18.0: מקור חסר — נכשל בלי שארית", !Physical.copyFile(new File(src, "אין.pdf"), d3)
+                && !d3.exists() && !Physical.partial(d3).exists());
+        // שם ארוך מאוד — השם הזמני מתקצר
+        StringBuilder lng = new StringBuilder();
+        for (int i = 0; i < 120; i++) lng.append('ש');
+        File longDst = new File(dest, lng + ".pdf");
+        try {
+            check("1.18.0: שם ארוך — השם הזמני עד 255 בתים", Physical.partial(longDst).getName().getBytes("UTF-8").length <= 255);
+        } catch (Exception e) {
+            check("1.18.0: שם ארוך", false);
+        }
+
+        // 2. רק הפריטים העליונים
+        File box = new File(src, "ארגז");
+        mk(new File(box, "פנים"), "1.pdf", 11);
+        mk(box, "2.pdf", 22);
+        List<File> top = Physical.topOnly(P(box + "/2.pdf", box + "/פנים/1.pdf"), P(box.getAbsolutePath(), box.getAbsolutePath(), box + "/פנים"));
+        check("1.18.0: רק העליון — תיקייה אחת", top.size() == 1 && top.get(0).getAbsolutePath().equals(box.getAbsolutePath()));
+        List<File> sib = Physical.topOnly(P(src + "/ארגז2/x.pdf"), P(box.getAbsolutePath()));
+        eq("1.18.0: שם דומה (ארגז / ארגז2) — אינו צאצא", 2, sib.size());
+
+        Index ix = built("הגנות", root);
+        Library lib = Library.forTests(new ArrayList<Index>(Collections.singletonList(ix)));
+        File tf = new File(home, "מבנה-הגנות.txt");
+        tf.delete();
+        Tree.testFile = tf;
+        File cp = new File(root, "העתק");
+        cp.mkdirs();
+        Physical.Result r = Physical.transfer(lib, P(box + "/2.pdf", box + "/פנים/1.pdf"), P(box.getAbsolutePath()), cp, true, null, null, false);
+        lib.flush(5000);
+        check("1.18.0: העתקת תיקייה וילדיה — בלי כישלון", r.failed == 0 && new File(cp, "ארגז/פנים/1.pdf").isFile());
+        check("1.18.0: העתקת תיקייה וילדיה — בלי עותק שטוח", !new File(cp, "2.pdf").exists() && !new File(cp, "1.pdf").exists());
+        File mv = new File(root, "העבר");
+        mv.mkdirs();
+        r = Physical.transfer(lib, P(box + "/2.pdf"), P(box.getAbsolutePath()), mv, false, null, null, false);
+        lib.flush(5000);
+        check("1.18.0: העברת תיקייה וקובץ שבה — בלי \"לא נמצא\"", r.failed == 0 && new File(mv, "ארגז/2.pdf").isFile() && !box.exists());
+
+        // 3. גודל מרבי ביעד (FAT32)
+        File big = mk(src, "גדול.bin", 100);
+        File small = mk(src, "קטן.bin", 10);
+        File fat = new File(root, "כרטיס");
+        fat.mkdirs();
+        Physical.maxFileForTests = 50;
+        try {
+            r = Physical.transfer(lib, P(big.getAbsolutePath(), small.getAbsolutePath()), NONE, fat, true, null, null, false);
+        } finally {
+            Physical.maxFileForTests = 0;
+        }
+        check("1.18.0: קובץ גדול מהמותר — נכשל, השאר הועתק", r.failed == 1 && !new File(fat, "גדול.bin").exists()
+                && new File(fat, "קטן.bin").isFile() && !Physical.partial(new File(fat, "גדול.bin")).exists());
+        check("1.18.0: הודעה — 4GB", r.note.contains("4GB"));
+        // סוג מערכת הקבצים מ-/proc/mounts
+        List<String[]> m = new ArrayList<String[]>();
+        m.add(new String[]{"/", "ext4"});
+        m.add(new String[]{"/storage/emulated", "fuse"});
+        m.add(new String[]{"/storage/ABCD-1234", "fuse"});
+        m.add(new String[]{"/mnt/media_rw/ABCD-1234", "vfat"});
+        m.add(new String[]{"/storage/EF01-2345", "fuse"});
+        m.add(new String[]{"/mnt/media_rw/EF01-2345", "exfat"});
+        eq("1.18.0: כרטיס FAT32", "vfat", Physical.fsTypeIn(m, "/storage/ABCD-1234/גיבוי/נוכחי"));
+        eq("1.18.0: כרטיס exFAT", "exfat", Physical.fsTypeIn(m, "/storage/EF01-2345"));
+        eq("1.18.0: פנימי", "fuse", Physical.fsTypeIn(m, "/storage/emulated/0/Download"));
+        eq("1.18.0: נקודה דומה אינה תואמת", "ext4", Physical.typeAt(m, "/storage/emulatedX"));
+        Tree.testFile = null;
+    }
+
     private static void v1131() {
         // העתקת כלי לאופן אחר — הפניות, צלמית, למה, וחכמה שהיא כלי
         String main = "[פונקציה: לפי מושג]\nמזהה = f1\nסוג = וירטואלי\nרשימה = לפי מושג\n\n"
@@ -40440,7 +40488,6 @@ public final class Tests {
         return out;
     }
 }
-
 ===== קובץ: tests/stubs/android/os/Build.java =====
 package android.os;
 
@@ -40453,7 +40500,6 @@ public class Build {
         public static final int SDK_INT = 30;
     }
 }
-
 ===== קובץ: tests/stubs/android/os/Environment.java =====
 package android.os;
 
