@@ -2,8 +2,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="com.tikiyot.vfm"
-    android:versionCode="151"
-    android:versionName="1.17.5">
+    android:versionCode="152"
+    android:versionName="1.17.6">
     <uses-sdk android:minSdkVersion="21" android:targetSdkVersion="30" />
 
     <queries>
@@ -4462,7 +4462,7 @@ public class BatchEditScreen extends Activity {
         text.setTypeface(Typeface.MONOSPACE);
         text.setTextSize(14);
         text.setGravity(Gravity.TOP | Gravity.START);
-        text.setTextDirection(View.TEXT_DIRECTION_LTR);            // כמו קובץ bat: פקודות משמאל לימין
+        text.setTextDirection(View.TEXT_DIRECTION_FIRST_STRONG);   // 1.17.6: כל שורה לפי האות הראשונה — עברית מימין, אנגלית משמאל
         text.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_MULTI_LINE | InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS);
         text.setHorizontallyScrolling(false);
         try {
@@ -5204,7 +5204,20 @@ final class Bidi {
         String s = line.trim();
         if (s.startsWith("@")) s = s.substring(1).trim();
         String u = s.toUpperCase(Locale.ROOT);
-        return s.startsWith("::") || u.startsWith("REM") || u.startsWith("ECHO");
+        return s.startsWith("::") || u.startsWith("REM") || u.startsWith("ECHO") || hebrew(s);
+    }
+
+    /**
+     * 1.17.6: שורה שמתחילה בעברית (פקודה בעברית, כותרת) — נכתבת מימין לשמאל, בלי סימנים (המשתמש: "בעברית כותבים
+     * מימין לשמאל, באנגלית משמאל לימין"); העורך קובע את הכיוון לכל שורה לפי האות הראשונה שלה.
+     */
+    static boolean hebrew(String s) {
+        for (int i = 0; i < s.length(); i++) {
+            char c = s.charAt(i);
+            if (c >= '\u0590' && c <= '\u05FF') return true;
+            if (Character.isLetter(c)) return false;
+        }
+        return false;
     }
 
     /** מסלול בתוך משפט בעברית (בתצוגה המקדימה): משמאל לימין, בלי היפוך. */
@@ -11114,7 +11127,7 @@ public class Home extends Activity {
     }
 
     /** 105: מעבר בין אופני עבודה, או יצירת חדש. */
-    private void modeMenu() {
+    void modeMenu() {
         final List<String> all = Modes.all();
         final String cur = Modes.current();
         final boolean noExamples = !all.contains(Examples.MODE);
@@ -30819,7 +30832,10 @@ final class Verbs {
             if (!(a instanceof TopRow.Host) || !((TopRow.Host) a).act(host)) Ui.toast(a, Words.Top.notHere(label(c)));
             return true;
         }
-        if (c.kind.equals(K_BACK)) a.onBackPressed();
+        if (c.kind.equals(K_BACK)) {                                          // באג (1.17.6): בבית — יציאה מהתוכנה;
+            if (a instanceof Home) ((Home) a).modeMenu();                     // עכשיו — בחירת אופן עבודה (המשתמש)
+            else a.onBackPressed();
+        }
         else if (c.kind.equals(K_MENU)) CmdMenu.showList(a, Tree.parsePath(c.arg), null, null);   // 1.17.0
         else if (c.kind.equals(K_NEW_CMD)) CmdMenu.create(a, here, null);
         else if (c.kind.equals(K_SCREEN)) screen(a, c);
@@ -39275,6 +39291,11 @@ public final class Tests {
         boolean readyOk = true;
         for (String[] r : CmdMenu.system()) if (!Verbs.isVerb(r[2]) || Verbs.parse(r[2]).error != null) readyOk = false;
         check("1.16.1: פקודות המערכת — שמונה, וכולן פקודות תקינות (טקסט)", readyOk && CmdMenu.system().size() == 8);
+        // 1.17.6: שורה בעברית — בלי סימני כיוון (מימין לשמאל); אנגלית — עם הסימנים (משמאל לימין)
+        check("1.17.6: פקודה בעברית — כמו שהיא", Bidi.mark("פתח תיקייה %הורדות%/ספרים").equals("פתח תיקייה %הורדות%/ספרים")
+                && Bidi.hebrew("צלמית ▶") && !Bidi.hebrew("COPY %הורדות%\\א ב"));
+        check("1.17.6: פקודה באנגלית — עם הסימנים", Bidi.mark("COPY %הורדות%\\א ב").indexOf(Bidi.LRM) >= 0);
+
         // 1.17.3: תיקייה מתעדכנת ← רשימה חכמה; הגדרה נפוצה ← תבנית (בלי קישור)
         File unI = new File(home, "איחוד1173.ini"), unT = new File(home, "איחוד1173.txt");
         try {
