@@ -2,8 +2,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="com.tikiyot.vfm"
-    android:versionCode="158"
-    android:versionName="1.22.1">
+    android:versionCode="159"
+    android:versionName="1.22.2">
     <uses-sdk android:minSdkVersion="21" android:targetSdkVersion="30" />
 
     <queries>
@@ -4261,14 +4261,26 @@ final class Batch {
      * ואם אין באופן הזה — באופן שבו נמצא "שמור לתוכנה" (Reserved). כמה רשימות באותו שם — שגיאה שמראה את הדרכים.
      */
     static Tree.Node findList(String name, Tree[] tree, String[] err) {
+        return findList(name, tree, err, null);
+    }
+
+    /** other[0] — נמצאה באופן עבודה אחר. */
+    static Tree.Node findList(String name, Tree[] tree, String[] err, boolean[] other) {
         List<String> path = Tree.parsePath(name);
         if (path.isEmpty()) { err[0] = Words.Cmd.LIST_ONLY_COMP; return null; }
         List<Tree> trees = new ArrayList<Tree>();
+        List<String> modes = new ArrayList<String>();
         trees.add(Tree.load());
-        try {
-            ModeCopy.Side side = Reserved.inUse();
-            if (side != null && side.tree != null && Reserved.modeInUse() != null && !Reserved.modeInUse().equals(Modes.current()))
-                trees.add(side.tree);
+        modes.add(Modes.current());
+        try {                                                                 // 1.22.2: גם באופני העבודה האחרים
+            if (Tree.testFile == null)
+                for (String m : Modes.all()) {
+                    if (m.equals(Modes.current())) continue;
+                    File tf = ModeCopy.treeOf(m);
+                    if (!tf.isFile()) continue;
+                    trees.add(Tree.loadFrom(tf));
+                    modes.add(m);
+                }
         } catch (Throwable ignored) {
         }
         for (Tree t : trees) {
@@ -4291,10 +4303,22 @@ final class Batch {
             }
             if (n != null) {
                 tree[0] = t;
+                if (other != null) other[0] = t != trees.get(0);
                 return n;
             }
         }
-        err[0] = Words.Cmd.listNotFound(name);
+        // 1.22.2: מה התוכנה כן רואה — כדי שיהיה ברור למה לא נמצא
+        StringBuilder seen = new StringBuilder();
+        for (int k = 0; k < trees.size(); k++) {
+            Tree t = trees.get(k);
+            List<String> top = new ArrayList<String>();
+            for (Tree.Node c : t.root.children) top.add(c.name);
+            Tree.Node res = t.find(Reserved.ROOT_PATH);
+            List<String> in = new ArrayList<String>();
+            if (res != null) for (Tree.Node c : res.children) in.add(c.name);
+            seen.append(Words.Cmd.listsSeen(modes.get(k), join(top, " · "), res == null ? null : join(in, " · ")));
+        }
+        err[0] = Words.Cmd.listNotFound(name) + seen;
         return null;
     }
 
@@ -4320,18 +4344,20 @@ final class Batch {
         if (sim.lib == null || !sim.lib.ready) { s.error = Words.Cmd.NEEDS_INDEX; return; }
         String[] err = {null};
         Tree[] tt = {null};
-        Tree.Node n = findList(s.listName, tt, err);
+        boolean[] other = {false};
+        Tree.Node n = findList(s.listName, tt, err, other);
         if (n == null) { s.error = err[0]; return; }
         Tree t = tt[0];
         File skip = b.getName().equals(State.CURRENT) && b.getParentFile() != null ? b.getParentFile() : b;
-        Compare.Source src = Compare.ofList(sim.lib, t, n, s.hidden, skip.getAbsolutePath());
+        Compare.Source src = Compare.ofList(sim.lib, t, n, s.hidden, skip.getAbsolutePath(), other[0]);
         if (src.files.isEmpty() && src.emptyDirs.isEmpty()) { s.error = Words.Cmd.listEmpty(s.listName); return; }
         Compare.Result r = Compare.byList(sim.lib, src, b, s.hidden);
         sim.compare = r;
         s.dest = b;
         s.describe = Words.Cmd.compared(s.listName, Bidi.path(r.b),
                 Compare.Result.files(r.onlyA, new ArrayList<String>()), Compare.Result.files(r.onlyB, r.onlyBDirs), r.same)
-                + (src.outside > 0 ? Words.Cmd.outside(src.outside) : "");
+                + (src.outside > 0 ? Words.Cmd.outside(src.outside) : "")
+                + (src.skippedSmart > 0 ? Words.Cmd.smartSkipped(src.skippedSmart) : "");
     }
 
     /**
@@ -6688,6 +6714,9 @@ final class Compare {
         final Map<String, String> files = new LinkedHashMap<String, String>(), emptyDirs = new LinkedHashMap<String, String>();
         /** קבצים מחוץ לכוננים המוכרים (לא נכללים). */
         int outside;
+        /** 1.22.2: רשימה מאופן עבודה אחר — הרשימות החכמות שבה לא נקראות (ההגדרות שלהן באופן ההוא); כמה דולגו. */
+        boolean noSmart;
+        int skippedSmart;
     }
 
     /**
@@ -6696,7 +6725,12 @@ final class Compare {
      * מכמה כוננים נכנסים לעץ אחד בלי להתנגש. מה שבתוך skip (הגיבוי עצמו) — לא נכלל.
      */
     static Source ofList(Library lib, Tree t, Tree.Node n, boolean hidden, String skip) {
+        return ofList(lib, t, n, hidden, skip, false);
+    }
+
+    static Source ofList(Library lib, Tree t, Tree.Node n, boolean hidden, String skip, boolean noSmart) {
         Source src = new Source();
+        src.noSmart = noSmart;
         list(lib, t, n, hidden, skip, src, new HashSet<Object>());
         return src;
     }
@@ -6710,7 +6744,10 @@ final class Compare {
         for (Tree.Node c : n.children) list(lib, t, c, hidden, skip, src, seen);
         for (String r : n.refs) list(lib, t, t.find(Tree.parsePath(r)), hidden, skip, src, seen);
         for (String f : n.live) disk(lib, src, new File(f), hidden, skip);
-        for (String r : n.smart) smart(lib, t, r, hidden, skip, src, seen);
+        for (String r : n.smart) {
+            if (src.noSmart) src.skippedSmart++;
+            else smart(lib, t, r, hidden, skip, src, seen);
+        }
     }
 
     private static void smart(Library lib, Tree t, String ref, boolean hidden, String skip, Source src, Set<Object> seen) {
@@ -33431,6 +33468,15 @@ public final class Words {
             return "אין רשימה בשם: " + n + " (גם לא בתוך \"שמור לתוכנה\"). אפשר לכתוב את הדרך המלאה, למשל: א / ב";
         }
 
+        public static String smartSkipped(int n) {
+            return " · ⚠ הרשימה באופן עבודה אחר — " + n + " רשימות חכמות שבה לא נכללו (לעבור לאופן ההוא כדי לכלול אותן)";
+        }
+
+        public static String listsSeen(String mode, String top, String reserved) {
+            return "\n   באופן \"" + mode + "\" — רשימות: " + (top.isEmpty() ? "אין" : top)
+                    + (reserved == null ? " · אין \"שמור לתוכנה\"" : " · בתוך \"שמור לתוכנה\": " + (reserved.isEmpty() ? "אין" : reserved));
+        }
+
         public static String listAmbiguous(String n, String ways) {
             return "יש כמה רשימות בשם " + n + ": " + ways + " — לכתוב את הדרך המלאה";
         }
@@ -40054,6 +40100,8 @@ public final class Tests {
             t2.save();
             check("1.22.1: רשימה בתוך \"שמור לתוכנה\" — לפי השם בלבד",
                     Batch.plan("COMP /רשימה:\"מסמכים לגיבוי\" \"גיבוי\\נוכחי\"", r1, vars, lib).errors == 0);
+            String nf = Batch.plan("COMP /רשימה:\"אין כזו\" \"גיבוי\\נוכחי\"", r1, vars, lib).steps.get(0).error;
+            check("1.22.2: לא נמצאה — ההודעה מראה מה כן יש", nf != null && nf.contains("המסמכים שלי") && nf.contains("מסמכים לגיבוי"));
             check("1.22.1: הדרך המלאה", Batch.plan("COMP /רשימה:\"שמור לתוכנה / מסמכים לגיבוי\" \"גיבוי\\נוכחי\"", r1, vars, lib).errors == 0);
             Batch.Plan amb = Batch.plan("COMP /רשימה:כפול \"גיבוי\\נוכחי\"", r1, vars, lib);
             check("1.22.1: שני שמות זהים — שגיאה עם הדרכים", amb.errors == 1 && amb.steps.get(0).error.contains("א / כפול")
