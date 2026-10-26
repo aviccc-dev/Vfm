@@ -2,8 +2,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="com.tikiyot.vfm"
-    android:versionCode="159"
-    android:versionName="1.22.2">
+    android:versionCode="160"
+    android:versionName="1.22.3">
     <uses-sdk android:minSdkVersion="21" android:targetSdkVersion="30" />
 
     <queries>
@@ -4264,22 +4264,25 @@ final class Batch {
         return findList(name, tree, err, null);
     }
 
-    /** other[0] — נמצאה באופן עבודה אחר. */
-    static Tree.Node findList(String name, Tree[] tree, String[] err, boolean[] other) {
+    /** ini[0] — ההגדרות של האופן שבו נמצאה (null — האופן הפעיל). */
+    static Tree.Node findList(String name, Tree[] tree, String[] err, Ini[] ini) {
         List<String> path = Tree.parsePath(name);
         if (path.isEmpty()) { err[0] = Words.Cmd.LIST_ONLY_COMP; return null; }
         List<Tree> trees = new ArrayList<Tree>();
         List<String> modes = new ArrayList<String>();
+        List<Ini> inis = new ArrayList<Ini>();
         trees.add(Tree.load());
         modes.add(Modes.current());
+        inis.add(null);
         try {                                                                 // 1.22.2: גם באופני העבודה האחרים
             if (Tree.testFile == null)
                 for (String m : Modes.all()) {
                     if (m.equals(Modes.current())) continue;
-                    File tf = ModeCopy.treeOf(m);
-                    if (!tf.isFile()) continue;
+                    File tf = ModeCopy.treeOf(m), mf = ModeCopy.mainOf(m);
+                    if (!tf.isFile() || !mf.isFile()) continue;
                     trees.add(Tree.loadFrom(tf));
                     modes.add(m);
+                    inis.add(Ini.load(mf));
                 }
         } catch (Throwable ignored) {
         }
@@ -4303,7 +4306,7 @@ final class Batch {
             }
             if (n != null) {
                 tree[0] = t;
-                if (other != null) other[0] = t != trees.get(0);
+                if (ini != null) ini[0] = inis.get(trees.indexOf(t));
                 return n;
             }
         }
@@ -4344,12 +4347,12 @@ final class Batch {
         if (sim.lib == null || !sim.lib.ready) { s.error = Words.Cmd.NEEDS_INDEX; return; }
         String[] err = {null};
         Tree[] tt = {null};
-        boolean[] other = {false};
-        Tree.Node n = findList(s.listName, tt, err, other);
+        Ini[] ini = {null};
+        Tree.Node n = findList(s.listName, tt, err, ini);
         if (n == null) { s.error = err[0]; return; }
         Tree t = tt[0];
         File skip = b.getName().equals(State.CURRENT) && b.getParentFile() != null ? b.getParentFile() : b;
-        Compare.Source src = Compare.ofList(sim.lib, t, n, s.hidden, skip.getAbsolutePath(), other[0]);
+        Compare.Source src = Compare.ofList(sim.lib, t, n, s.hidden, skip.getAbsolutePath(), ini[0]);
         if (src.files.isEmpty() && src.emptyDirs.isEmpty()) { s.error = Words.Cmd.listEmpty(s.listName); return; }
         Compare.Result r = Compare.byList(sim.lib, src, b, s.hidden);
         sim.compare = r;
@@ -6714,8 +6717,9 @@ final class Compare {
         final Map<String, String> files = new LinkedHashMap<String, String>(), emptyDirs = new LinkedHashMap<String, String>();
         /** קבצים מחוץ לכוננים המוכרים (לא נכללים). */
         int outside;
-        /** 1.22.2: רשימה מאופן עבודה אחר — הרשימות החכמות שבה לא נקראות (ההגדרות שלהן באופן ההוא); כמה דולגו. */
-        boolean noSmart;
+        /** 1.22.3: רשימה מאופן עבודה אחר — הרשימות החכמות שבה נקראות מההגדרות של האופן ההוא (null — האופן הפעיל). */
+        Ini ini;
+        /** רשימות חכמות שלא נמצאו (נמחקו). */
         int skippedSmart;
     }
 
@@ -6725,12 +6729,12 @@ final class Compare {
      * מכמה כוננים נכנסים לעץ אחד בלי להתנגש. מה שבתוך skip (הגיבוי עצמו) — לא נכלל.
      */
     static Source ofList(Library lib, Tree t, Tree.Node n, boolean hidden, String skip) {
-        return ofList(lib, t, n, hidden, skip, false);
+        return ofList(lib, t, n, hidden, skip, null);
     }
 
-    static Source ofList(Library lib, Tree t, Tree.Node n, boolean hidden, String skip, boolean noSmart) {
+    static Source ofList(Library lib, Tree t, Tree.Node n, boolean hidden, String skip, Ini ini) {
         Source src = new Source();
-        src.noSmart = noSmart;
+        src.ini = ini;
         list(lib, t, n, hidden, skip, src, new HashSet<Object>());
         return src;
     }
@@ -6744,10 +6748,7 @@ final class Compare {
         for (Tree.Node c : n.children) list(lib, t, c, hidden, skip, src, seen);
         for (String r : n.refs) list(lib, t, t.find(Tree.parsePath(r)), hidden, skip, src, seen);
         for (String f : n.live) disk(lib, src, new File(f), hidden, skip);
-        for (String r : n.smart) {
-            if (src.noSmart) src.skippedSmart++;
-            else smart(lib, t, r, hidden, skip, src, seen);
-        }
+        for (String r : n.smart) smart(lib, t, r, hidden, skip, src, seen);
     }
 
     private static void smart(Library lib, Tree t, String ref, boolean hidden, String skip, Source src, Set<Object> seen) {
@@ -6756,15 +6757,36 @@ final class Compare {
             list(lib, t, t.find(Tree.parsePath(ref.substring(Nested.MANUAL.length()))), hidden, skip, src, seen);
             return;
         }
-        Nested.Item it = Nested.resolve(ref);
-        if (it.gone || it.dup != null) return;
-        Library.Result r = lib.search(it.cond, false, true);
+        String cond;
+        List<String> inner;
+        if (src.ini == null) {
+            Nested.Item it = Nested.resolve(ref);
+            if (it.gone) { src.skippedSmart++; return; }
+            if (it.dup != null) return;
+            cond = it.cond;
+            inner = Nested.refs(ref);
+        } else {                                                              // 1.22.3: מההגדרות של האופן ההוא
+            Structure.Func f = Structure.byId(src.ini, ref);
+            if (f == null) { src.skippedSmart++; return; }
+            if (FnDup.KIND.equals(f.params.get("סוג"))) return;              // תחביר
+            cond = f.params.containsKey(SmartLists.COND) ? f.params.get(SmartLists.COND) : "";
+            String link = f.params.get(SmartLists.LINK);
+            if (cond.isEmpty() && link != null && !link.isEmpty()) {
+                Structure.Func g = Structure.byId(src.ini, link);
+                if (g != null && g.params.containsKey(SmartLists.COND)) cond = g.params.get(SmartLists.COND);
+            }
+            inner = new ArrayList<String>();
+            String k = f.params.get(Nested.KEY);
+            if (k != null) for (String x : k.split("\\|")) if (!x.trim().isEmpty()) inner.add(x.trim());
+        }
+        if (cond.trim().isEmpty()) return;                                    // בלי תנאי — לא "כל הקבצים"
+        Library.Result r = lib.search(cond, false, true);
         for (Library.Hit h : r.hits)
             if (h.rec != null) {
                 File f = new File(h.ix.path(h.rec));
                 if (f.isFile()) add(lib, src, f, skip);
             }
-        for (String inner : Nested.refs(ref)) smart(lib, t, inner, hidden, skip, src, seen);
+        for (String x : inner) smart(lib, t, x, hidden, skip, src, seen);
     }
 
     private static void disk(Library lib, Source src, File d, boolean hidden, String skip) {
@@ -11749,6 +11771,7 @@ public class Home extends Activity {
         Envs.all();                                                           // 1.15.0: סביבות ← רשימות, בכל האופנים
         Unify.all();                                                          // 1.17.3: תיקייה מתעדכנת ← חכמה; נפוצה ← תבנית
         Reserved.ensureMode(Examples.MODE);                                   // 1.17.0: "שמור לתוכנה" — ברירות המחדל
+        Reserved.ensureBackup(Modes.current());                               // 1.22.3: "שמור לתוכנה / גיבוי" גם באופן הפעיל
         Mirror.rebuild();                                                     // 1.17.5: העותק הקריא — תמיד מעודכן בפתיחה
         lib = Library.get(this);
         setTitle(Words.Main.APP_NAME);
@@ -21599,6 +21622,8 @@ final class Reserved {
 
     static final String ROOT = "שמור לתוכנה", CMDS = "פקודות", MINE = "הפקודות שלי",  // בכונן
             ALL = "כל הפקודות במכשיר", NEW = "פקודה חדשה", SYS_DIR = "פקודות המערכת";  // בכונן
+    /** 1.22.3: "שמור לתוכנה / גיבוי" — כל מה שבה נכנס לגיבוי (המשתמש: "הכי פשוט — בתוך שמור לתוכנה תיקייה גיבוי, וכל מה ששם נכנס לגיבוי"). */
+    static final String BACKUP = "גיבוי";  // בכונן
     static final List<String> ROOT_PATH = Collections.singletonList(ROOT);
     static final List<String> CMDS_PATH = Arrays.asList(ROOT, CMDS);
     static final List<String> MINE_PATH = Arrays.asList(ROOT, CMDS, MINE);
@@ -21667,6 +21692,10 @@ final class Reserved {
             String p = sys.get(i).getAbsolutePath();
             if (Tree.contains(cmds.entries, p)) continue;
             cmds.entries.add(Math.min(i, cmds.entries.size()), new Tree.Entry(p, sys.get(i).length(), false));
+            changed = true;
+        }
+        if (root.child(BACKUP) == null) {                                     // 1.22.3
+            Tree.newChild(root, BACKUP).icon = "💾";
             changed = true;
         }
         Tree.Node mine = cmds.child(MINE);
@@ -21766,6 +21795,23 @@ final class Reserved {
             }
         } catch (Throwable t) {
             Log.e("שמור לתוכנה — " + mode, t);
+        }
+    }
+
+    /** 1.22.3: "גיבוי" גם בתוך "שמור לתוכנה" של האופן הזה, אם יש בו (בלי ליצור "שמור לתוכנה" חדש). */
+    static void ensureBackup(String mode) {
+        try {
+            synchronized (Tree.LOCK) {
+                File tf = mode.equals(Modes.current()) ? Tree.file() : ModeCopy.treeOf(mode);
+                if (!tf.isFile()) return;
+                Tree t = Tree.loadFrom(tf);
+                Tree.Node root = t.root.child(ROOT);
+                if (t.unreadable || root == null || root.child(BACKUP) != null) return;
+                Tree.newChild(root, BACKUP).icon = "💾";
+                t.saveTo(tf);
+            }
+        } catch (Throwable t) {
+            Log.e("שמור לתוכנה — גיבוי", t);
         }
     }
 
@@ -33469,7 +33515,7 @@ public final class Words {
         }
 
         public static String smartSkipped(int n) {
-            return " · ⚠ הרשימה באופן עבודה אחר — " + n + " רשימות חכמות שבה לא נכללו (לעבור לאופן ההוא כדי לכלול אותן)";
+            return " · ⚠ " + n + " רשימות חכמות שברשימה לא נמצאו (נמחקו?) — לא נכללו";
         }
 
         public static String listsSeen(String mode, String top, String reserved) {
@@ -40100,6 +40146,24 @@ public final class Tests {
             t2.save();
             check("1.22.1: רשימה בתוך \"שמור לתוכנה\" — לפי השם בלבד",
                     Batch.plan("COMP /רשימה:\"מסמכים לגיבוי\" \"גיבוי\\נוכחי\"", r1, vars, lib).errors == 0);
+            // 1.22.3: חכמות — גם מההגדרות של אופן אחר (Ini), ו"שמור לתוכנה / גיבוי" נוצרת לבד
+            Compare.Source viaIni = Compare.ofList(lib, Tree.load(), Tree.load().find(Tree.parsePath("המסמכים שלי")), false,
+                    new File(r1, "גיבוי").getAbsolutePath(), Ini.load(sf));
+            eq("1.22.3: רשימה מאופן אחר — גם החכמות (לפי ההגדרות שלו)", 6, viaIni.files.size());
+            File rd = Reserved.testDir;
+            Reserved.testDir = new File(home, "פקודות-1220");
+            try {
+                Tree t3 = Tree.load();
+                Reserved.ensure(new ModeCopy.Side(Ini.load(sf), t3));
+                Tree.Node bk = t3.find(Arrays.asList(Reserved.ROOT, Reserved.BACKUP));
+                check("1.22.3: \"שמור לתוכנה / גיבוי\" נוצרת", bk != null);
+                bk.entries.add(new Tree.Entry(new File(r1, "Docs/a.txt").getAbsolutePath(), 2, false));
+                t3.save();
+                Batch.Plan gb = Batch.plan("COMP /רשימה:גיבוי \"גיבוי\\נוכחי\"", r1, vars, lib);
+                check("1.22.3: COMP /רשימה:גיבוי — נמצאת בתוך שמור לתוכנה", gb.errors == 0);
+            } finally {
+                Reserved.testDir = rd;
+            }
             String nf = Batch.plan("COMP /רשימה:\"אין כזו\" \"גיבוי\\נוכחי\"", r1, vars, lib).steps.get(0).error;
             check("1.22.2: לא נמצאה — ההודעה מראה מה כן יש", nf != null && nf.contains("המסמכים שלי") && nf.contains("מסמכים לגיבוי"));
             check("1.22.1: הדרך המלאה", Batch.plan("COMP /רשימה:\"שמור לתוכנה / מסמכים לגיבוי\" \"גיבוי\\נוכחי\"", r1, vars, lib).errors == 0);
