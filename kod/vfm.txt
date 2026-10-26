@@ -2,8 +2,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="com.tikiyot.vfm"
-    android:versionCode="150"
-    android:versionName="1.17.4">
+    android:versionCode="151"
+    android:versionName="1.17.5">
     <uses-sdk android:minSdkVersion="21" android:targetSdkVersion="30" />
 
     <queries>
@@ -11037,6 +11037,7 @@ public class Home extends Activity {
         Envs.all();                                                           // 1.15.0: סביבות ← רשימות, בכל האופנים
         Unify.all();                                                          // 1.17.3: תיקייה מתעדכנת ← חכמה; נפוצה ← תבנית
         Reserved.ensureMode(Examples.MODE);                                   // 1.17.0: "שמור לתוכנה" — ברירות המחדל
+        Mirror.rebuild();                                                     // 1.17.5: העותק הקריא — תמיד מעודכן בפתיחה
         lib = Library.get(this);
         setTitle(Words.Main.APP_NAME);
 
@@ -16402,6 +16403,11 @@ public final class Mirror {
         try {
             File root = Paths.mirror();
             clear(root);
+            File old = new File(Paths.settings(), "אריחים");                    // 1.17.5: השם הישן — העותק עבר ל"כלים"  // בכונן
+            if (old.isDirectory()) {
+                clear(old);
+                old.delete();
+            }
             Structure.Model m = Structure.load();
             int n = 0;
             for (Structure.Func f : m.direct) {
@@ -17665,7 +17671,7 @@ public final class Paths {
     }
 
     public static File mirror() {
-        return mk(new File(settings(), "אריחים"));  // בכונן
+        return mk(new File(settings(), "כלים"));  // בכונן — 1.17.5: היה "אריחים" (סביבות העבודה יצאו ב־1.15.0)
     }
 
     public static File system() {
@@ -20755,7 +20761,10 @@ final class Reserved {
                     if (!main.isFile() || !tf.isFile()) return;
                     ModeCopy.Side s = new ModeCopy.Side(Ini.load(main), Tree.loadFrom(tf));
                     if (s.tree.unreadable) return;
-                    if (ensure(s) && s.ini.saveQuiet()) s.tree.saveTo(tf);
+                    if (ensure(s) && s.ini.saveQuiet()) {
+                        s.tree.saveTo(tf);
+                        if (mode.equals(Modes.current())) Mirror.rebuild();     // באג (1.17.4): העותק הקריא — גם הכלי החדש
+                    }
                 }
             }
         } catch (Throwable t) {
@@ -29960,7 +29969,10 @@ final class Unify {
                     if (s.tree.unreadable || !run(s)) return;
                     Files.backupNamed(main, Words.EnvsW.UNIFY + mode);
                     Files.backupNamed(tf, Words.EnvsW.UNIFY + mode);
-                    if (s.ini.saveQuiet()) s.tree.saveTo(tf);
+                    if (s.ini.saveQuiet()) {
+                        s.tree.saveTo(tf);
+                        if (mode.equals(Modes.current())) Mirror.rebuild();
+                    }
                 }
             }
         } catch (Throwable t) {
