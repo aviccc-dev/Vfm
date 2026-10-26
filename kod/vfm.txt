@@ -2,8 +2,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="com.tikiyot.vfm"
-    android:versionCode="149"
-    android:versionName="1.17.3">
+    android:versionCode="150"
+    android:versionName="1.17.4">
     <uses-sdk android:minSdkVersion="21" android:targetSdkVersion="30" />
 
     <queries>
@@ -20687,7 +20687,24 @@ final class Reserved {
             cmds.smart.add(newAll(side.ini));
             changed = true;
         }
+        if (!hasTool(side.ini)) {                                             // באג (1.17.0): בלי כלי בבית — אין דרך להגיע אליה
+            String h = Structure.FUNC + ROOT;
+            List<Ini.Line> b = new ArrayList<Ini.Line>();
+            b.add(Ini.line("", h));
+            b.add(Ini.line("[" + h + "]", h));
+            b.add(Ini.line(Structure.ID + " = " + Structure.newId("f"), h));
+            b.add(Ini.line("סוג = " + FnVirtual.KIND, h));  // תחביר
+            b.add(Ini.line(FnVirtual.LIST + " = " + ROOT, h));
+            side.ini.lines.addAll(Structure.insertAt(side.ini), b);
+            changed = true;
+        }
         return changed;
+    }
+
+    /** האם יש בבית כלי של "שמור לתוכנה". */
+    static boolean hasTool(Ini ini) {
+        for (Ini.Line l : ini.lines) if (l.key != null && l.key.equals(FnVirtual.LIST) && ROOT.equals(l.value)) return true;
+        return false;
     }
 
     /** "כל הפקודות במכשיר" — המזהה שלה ברשימה, או null. */
@@ -38687,6 +38704,12 @@ public final class Tests {
         String written = "";
         try { written = Files.readUtf8(main); } catch (Exception e) { }
         check("157: בהתקנה — המשתנה הוחלף בכונן האמיתי", written.contains("/x/y/Download") && !written.contains(Examples.IN));
+        Tree exT = Tree.loadFrom(new File(dir, Paths.TREE));
+        Tree.Node exC = exT.find(Reserved.CMDS_PATH);
+        check("1.17.0: בהתקנת הדוגמאות — \"שמור לתוכנה\" בשורש", exC != null && exC.entries.size() == 9 && exC.child(Reserved.MINE) != null);
+        boolean exTool = false;
+        try { exTool = Reserved.hasTool(Ini.load(main)); } catch (Exception e) { }
+        check("1.17.3 (באג): …ובבית — כלי שלה (בלי כלי אין דרך להגיע אליה)", exTool);
         check("156: פעם שנייה — לא נוגעת", !Examples.install(data, "/x/y", false, mainText, treeText, null));
         deleteTree(dir);
         check("156: נמחקו — לא חוזרות לבד", !Examples.install(data, "/x/y", false, mainText, treeText, null) && !dir.exists());
