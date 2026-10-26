@@ -2,8 +2,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="com.tikiyot.vfm"
-    android:versionCode="145"
-    android:versionName="1.16.1">
+    android:versionCode="146"
+    android:versionName="1.17.0">
     <uses-sdk android:minSdkVersion="21" android:targetSdkVersion="30" />
 
     <queries>
@@ -5853,6 +5853,8 @@ package com.tikiyot.vfm;
 // הקיימות. ובנוסף — עריכת פקודות, שיאפשר לערוך גם את פקודות המערכת"; "פקודות המערכת לא אמורות להשתנות — השינוי
 // נשמר אם בוחרים בשם אחר"; "שלי" — רשימה ידנית ("לקבוע רשימה כתפריט עם תתי תפריטים, רק שיוצג כמו שמקובל בתפריטים").
 // נגיעה — הרצה (או בחירה, כשמוסיפים כלי או כפתור); נגיעה ארוכה — עריכה.
+// 1.17.0: התפריט נבנה מרשימה ב"שמור לתוכנה" (Reserved), עם כל ההיררכיה שלה: קובצי הפקודות שבה — פקודות; תתי־רשימות
+// וקישורים — תפריטי משנה; רשימה חכמה — תפריט משנה של מה שהיא מוצאת. ברירת המחדל: שמור לתוכנה / פקודות.
 // עד כאן — חמישה מקומות שונים: "⭐ קובצי פקודות" ב־⋮, "פקודה / קיצור דרך" ב־➕ בבית, "מה הכפתור יעשה?",
 // מסך "⭐ פקודות", ונגיעה על קובץ פקודות (תפריט "הרצה / עריכה").
 // אחראי: התפריט. ההרצה — Verbs ו־BatchUi; הקבצים — Shortcuts.
@@ -5885,142 +5887,156 @@ final class CmdMenu {
                 new String[]{"🗑", Words.Top.TRASH, Verbs.openScreen(Verbs.S_TRASH)});
     }
 
-    /** "שלי" — רשימה ידנית בשורש. */
-    static final List<String> MINE = java.util.Collections.singletonList(Words.CmdM.MINE_LIST);
-
     private CmdMenu() { }
 
     /** הרצה. newIn — תיקייה ל"➕ פקודה חדשה" (null — תיקיית הקיצורים). */
     static void show(Activity a, File newIn) {
-        show(a, newIn, null, null);
+        showList(a, Reserved.CMDS_PATH, newIn, null, null, true);
     }
 
     /**
      * pick — בחירה במקום הרצה (null — הרצה); screen — שם המסך, ל"🧩 פעולה של המסך" (רק כשמוסיפים כפתור).
      * בבחירה — גם שורה בכתב ותיקייה במנהל הקבצים (אלה פקודות שאין להן קובץ).
      */
-    static void show(final Activity a, final File newIn, final Picked pick, final String screen) {
-        final List<String[]> sys = system();
-        final List<String> labels = new ArrayList<String>();
-        for (String[] s : sys) labels.add(s[0] + "  " + s[1]);
-        final int mine = labels.size();
-        labels.add(Words.CmdM.MINE);
-        labels.add(Words.CmdM.ALL);
-        final List<Runnable> extra = new ArrayList<Runnable>();
-        if (pick != null) {
-            labels.add(Words.Top.T_LINE);
-            extra.add(new Runnable() {
-                @Override
-                public void run() {
-                    Ui.askText(a, Words.Top.T_LINE, "", Words.Top.LINE_HINT, new Ui.Text1() {
-                        @Override
-                        public void ok(String s) {
-                            pick.ok("⌨", s.length() > 12 ? s.substring(0, 12) + "…" : s, s.trim(), null);
-                        }
-                    });
-                }
-            });
-            labels.add(Words.CmdM.FOLDER);
-            extra.add(new Runnable() {
-                @Override
-                public void run() {
-                    FolderPicker.choose(a, new FolderPicker.Picked() {
-                        @Override public void ok(File f) { pick.ok("📂", f.getName(), Verbs.openFolder(f.getAbsolutePath()), null); }
-                    });
-                }
-            });
-            if (screen != null && a instanceof TopRow.Host && !((TopRow.Host) a).actions().isEmpty()) {
-                labels.add(Words.Top.T_OWN + screen);
-                extra.add(new Runnable() {
-                    @Override public void run() { own(a, screen, pick); }
-                });
-            }
+    static void show(Activity a, File newIn, Picked pick, String screen) {
+        showList(a, Reserved.CMDS_PATH, newIn, pick, screen, true);
+    }
+
+    /** "פתח תפריט <רשימה>" — רשימה מ"שמור לתוכנה" כתפריט. */
+    static void showList(Activity a, List<String> path, Picked pick, String screen) {
+        showList(a, path, null, pick, screen, true);
+    }
+
+    private static void showList(final Activity a, final List<String> path, final File newIn, final Picked pick,
+                                 final String screen, final boolean top) {
+        ModeCopy.Side side = Reserved.inUse();
+        if (side == null) {                                                   // אין "שמור לתוכנה" בשום מקום — באופן הזה
+            Reserved.ensureMode(Modes.current());
+            side = Reserved.inUse();
         }
-        labels.add(Words.CmdM.NEW);
-        Ui.list(a, Words.CmdM.TITLE, labels, new DialogInterface.OnClickListener() {
+        final Tree.Node n = side == null ? null : side.tree.find(path);
+        if (n == null) {
+            Ui.toast(a, Words.Verb.NOT_FOUND + Tree.label(path));
+            return;
+        }
+        final boolean here = Modes.current().equals(Reserved.modeInUse());
+        final List<String> labels = new ArrayList<String>();
+        final List<Runnable> taps = new ArrayList<Runnable>(), holds = new ArrayList<Runnable>();
+        for (Tree.Entry e : n.entries) {                                      // קובצי הפקודות שבה
+            final File f = new File(e.path);
+            if (!Batch.isBatch(f.getName()) || !f.isFile()) continue;
+            Program p = Program.read(f);
+            labels.add((p.isProgram() ? p.icon : "▶") + "  " + p.title(f));
+            taps.add(new Runnable() {
+                @Override public void run() { if (Reserved.isNew(f)) create(a, newIn, pick); else useFile(a, f, pick); }
+            });
+            holds.add(new Runnable() {
+                @Override public void run() { if (Reserved.isSystem(f)) { if (!Reserved.isNew(f)) saveAs(a, f); } else BatchUi.edit(a, f); }
+            });
+        }
+        for (final Tree.Node c : n.children) {                                // תתי־רשימות — תפריטי משנה
+            labels.add(c.name + "  ▸");
+            taps.add(new Runnable() {
+                @Override public void run() { showList(a, c.path(), newIn, pick, screen, false); }
+            });
+            holds.add(null);
+        }
+        for (String r : n.smart) {                                            // רשימה חכמה — מה שהיא מוצאת
+            Structure.Func f = Structure.byId(side.ini, r);
+            if (f == null) continue;
+            final String name = f.name.substring(f.name.lastIndexOf(" › ") >= 0 ? f.name.lastIndexOf(" › ") + 3 : 0);
+            final String cond = f.params.containsKey(SmartLists.COND) ? f.params.get(SmartLists.COND) : "";
+            labels.add("📜 " + name + "  ▸");
+            taps.add(new Runnable() {
+                @Override public void run() { found(a, name, cond, pick); }
+            });
+            holds.add(null);
+        }
+        for (String r : n.refs) {                                             // קישור ↪ — הרשימה שאליה הוא מקשר
+            final List<String> p = Tree.parsePath(r);
+            if (side.tree.find(p) == null) continue;
+            labels.add("↪ " + p.get(p.size() - 1) + "  ▸");
+            taps.add(new Runnable() {
+                @Override public void run() { showList(a, p, newIn, pick, screen, false); }
+            });
+            holds.add(null);
+        }
+        if (top && pick != null) extras(a, screen, pick, labels, taps, holds);
+        labels.add(Words.CmdM.ARRANGE);
+        taps.add(new Runnable() {
             @Override
-            public void onClick(DialogInterface d, int w) {
-                if (w < mine) use(a, sys.get(w)[0], sys.get(w)[1], sys.get(w)[2], null, pick);
-                else if (w == mine) mine(a, MINE, pick);
-                else if (w == mine + 1) all(a, pick);
-                else if (w - mine - 2 < extra.size()) extra.get(w - mine - 2).run();
-                else create(a, newIn, pick);
-            }
-        }, new Ui.Index1() {
-            @Override
-            public void ok(int w) {
-                if (w < mine) saveAs(a, sys.get(w));                          // פקודת מערכת — עריכה רק בשם אחר
+            public void run() {
+                if (here) VirtualScreen.open(a, path, null, null);
+                else Ui.toast(a, Words.CmdM.FROM_EXAMPLES);
             }
         });
+        holds.add(null);
+        Ui.list(a, top && path.equals(Reserved.CMDS_PATH) ? Words.CmdM.TITLE : path.get(path.size() - 1), labels,
+                new DialogInterface.OnClickListener() {
+                    @Override public void onClick(DialogInterface d, int w) { taps.get(w).run(); }
+                }, new Ui.Index1() {
+                    @Override public void ok(int w) { if (holds.get(w) != null) holds.get(w).run(); }
+                });
+    }
+
+    /** בבחירה: שורה בכתב · תיקייה במנהל הקבצים · פעולה של המסך (פקודות בלי קובץ). */
+    private static void extras(final Activity a, final String screen, final Picked pick, List<String> labels,
+                               List<Runnable> taps, List<Runnable> holds) {
+        labels.add(Words.Top.T_LINE);
+        taps.add(new Runnable() {
+            @Override
+            public void run() {
+                Ui.askText(a, Words.Top.T_LINE, "", Words.Top.LINE_HINT, new Ui.Text1() {
+                    @Override
+                    public void ok(String s) { pick.ok("⌨", s.length() > 12 ? s.substring(0, 12) + "…" : s, s.trim(), null); }
+                });
+            }
+        });
+        holds.add(null);
+        labels.add(Words.CmdM.FOLDER);
+        taps.add(new Runnable() {
+            @Override
+            public void run() {
+                FolderPicker.choose(a, new FolderPicker.Picked() {
+                    @Override public void ok(File f) { pick.ok("📂", f.getName(), Verbs.openFolder(f.getAbsolutePath()), null); }
+                });
+            }
+        });
+        holds.add(null);
+        if (screen != null && a instanceof TopRow.Host && !((TopRow.Host) a).actions().isEmpty()) {
+            labels.add(Words.Top.T_OWN + screen);
+            taps.add(new Runnable() {
+                @Override public void run() { own(a, screen, pick); }
+            });
+            holds.add(null);
+        }
     }
 
     /** נגיעה: הרצה, או בחירה. */
-    private static void use(Activity a, String icon, String name, String line, File f, Picked pick) {
-        if (pick != null) pick.ok(icon, name, f != null ? Verbs.run(f.getAbsolutePath()) : line, f);
-        else if (f != null) BatchUi.run(a, f);
-        else if (!Verbs.run(a, line, null)) Ui.toast(a, Words.Top.UNKNOWN + line);
-    }
-
     private static void useFile(Activity a, File f, Picked pick) {
         Program p = Program.read(f);
-        use(a, p.isProgram() ? p.icon : "▶", p.title(f), null, f, pick);
+        if (pick != null) pick.ok(p.isProgram() ? p.icon : "▶", p.title(f), Verbs.run(f.getAbsolutePath()), f);
+        else BatchUi.run(a, f);
     }
 
-    /** "שלי" — הרשימה כתפריט: תתי־רשימות ▸ ותפריטי משנה, קובצי הפקודות שבה; ובסוף — "סידור" (הרשימה עצמה). */
-    private static void mine(final Activity a, final List<String> path, final Picked pick) {
-        Tree t = Tree.load();
-        Tree.Node n = t.find(path);
-        if (n == null && path.equals(MINE)) n = ensureMine();
-        if (n == null) return;
-        final List<String> subs = new ArrayList<String>();
+    /** רשימה חכמה בתפריט — קובצי הפקודות שהיא מוצאת. */
+    private static void found(final Activity a, String title, String cond, final Picked pick) {
         final List<File> files = new ArrayList<File>();
-        final List<String> labels = new ArrayList<String>();
-        for (Tree.Node c : n.children) {
-            subs.add(c.name);
-            labels.add(c.name + "  ▸");
-        }
-        for (Tree.Entry e : n.entries) {
-            File f = new File(e.path);
-            if (!Batch.isBatch(f.getName()) || !f.isFile()) continue;
-            Program p = Program.read(f);
-            files.add(f);
-            labels.add((p.isProgram() ? p.icon : "▶") + "  " + p.title(f));
-        }
-        labels.add(Words.CmdM.ARRANGE);
-        Ui.list(a, path.get(path.size() - 1), labels, new DialogInterface.OnClickListener() {
-            @Override
-            public void onClick(DialogInterface d, int w) {
-                if (w < subs.size()) {
-                    List<String> p = new ArrayList<String>(path);
-                    p.add(subs.get(w));
-                    mine(a, p, pick);
-                } else if (w < subs.size() + files.size()) useFile(a, files.get(w - subs.size()), pick);
-                else VirtualScreen.open(a, path, null, null);
-            }
-        }, new Ui.Index1() {
-            @Override
-            public void ok(int w) {
-                if (w >= subs.size() && w < subs.size() + files.size()) BatchUi.edit(a, files.get(w - subs.size()));
-            }
-        });
-    }
-
-    /** "כל הפקודות שבמכשיר" — מהאינדקס. */
-    private static void all(final Activity a, final Picked pick) {
-        final List<File> found = BatchUi.all(a);
-        if (found.isEmpty()) {
+        for (Library.Hit h : Library.get(a).search(cond, false, false).hits)
+            if (h.rec != null && Batch.isBatch(h.path())) files.add(new File(h.path()));
+        if (files.isEmpty()) {
             Ui.toast(a, Words.Top.NO_BATCH);
             return;
         }
         List<String> labels = new ArrayList<String>();
-        for (File f : found) {
+        for (File f : files) {
             Program p = Program.read(f);
             labels.add((p.isProgram() ? p.icon : "▶") + "  " + p.title(f));
         }
-        Ui.list(a, Words.CmdM.ALL, labels, new DialogInterface.OnClickListener() {
-            @Override public void onClick(DialogInterface d, int w) { useFile(a, found.get(w), pick); }
+        Ui.list(a, title, labels, new DialogInterface.OnClickListener() {
+            @Override public void onClick(DialogInterface d, int w) { useFile(a, files.get(w), pick); }
         }, new Ui.Index1() {
-            @Override public void ok(int w) { BatchUi.edit(a, found.get(w)); }
+            @Override public void ok(int w) { BatchUi.edit(a, files.get(w)); }
         });
     }
 
@@ -6037,24 +6053,34 @@ final class CmdMenu {
         });
     }
 
-    /** פקודת מערכת — "שמירה בשם": שם חדש ← קובץ פקודות ב"שלי" (המקור לא משתנה) ← העורך. */
-    private static void saveAs(final Activity a, final String[] s) {
-        Ui.askText(a, Words.CmdM.SAVE_AS, s[1] + Words.CmdM.MINE_SUFFIX, Words.Short.NAME_HINT, new Ui.Text1() {
+    /** פקודת מערכת — "שמירה בשם": שם חדש ← קובץ פקודות ב"הפקודות שלי" (המקור לא משתנה) ← העורך. */
+    private static void saveAs(final Activity a, final File sys) {
+        final Program p = Program.read(sys);
+        Ui.askText(a, Words.CmdM.SAVE_AS, p.title(sys) + Words.CmdM.MINE_SUFFIX, Words.Short.NAME_HINT, new Ui.Text1() {
             @Override
             public void ok(String name) {
-                File f = Shortcuts.write(s[0], name, s[2]);
+                String text;
+                try {
+                    text = Files.readUtf8(sys);
+                } catch (Throwable e) {
+                    text = "";
+                }
+                StringBuilder lines = new StringBuilder();                   // השורות — בלי הכותרת (צלמית, שם)
+                for (String l : text.split("\n")) if (!l.startsWith(Program.ICON + " ") && !l.startsWith(Program.NAME + " ") && !l.trim().isEmpty())
+                    lines.append(lines.length() > 0 ? "\n" : "").append(l);
+                File f = Shortcuts.write(p.isProgram() ? p.icon : "▶", name, lines.toString());
                 if (f == null) {
                     Ui.toast(a, Words.SAVE_FAILED);
                     return;
                 }
-                addToMine(f);
+                Reserved.addToMine(f);
                 BatchUi.edit(a, f);
             }
         });
     }
 
-    /** "➕ פקודה חדשה" — שם ← קובץ (בתיקייה newIn, או בקיצורים) ← ב"שלי" ← העורך (ובבחירה — גם נבחרת). */
-    private static void create(final Activity a, final File newIn, final Picked pick) {
+    /** "➕ פקודה חדשה" (וגם `צור פקודה`) — שם ← קובץ (בתיקייה newIn, או בקיצורים) ← ב"הפקודות שלי" ← העורך. */
+    static void create(final Activity a, final File newIn, final Picked pick) {
         Ui.askText(a, Words.CmdM.NEW, "", Words.Short.NAME_HINT, new Ui.Text1() {
             @Override
             public void ok(final String name) {
@@ -6075,40 +6101,9 @@ final class CmdMenu {
     }
 
     private static void made(Activity a, File f, String name, Picked pick) {
-        addToMine(f);
+        Reserved.addToMine(f);
         if (pick != null) pick.ok("▶", name, Verbs.run(f.getAbsolutePath()), f);
         BatchUi.edit(a, f);
-    }
-
-    /**
-     * הרשימה "שלי" — קיימת, או נוצרת עכשיו עם הקיצורים שכבר יש (מה שהיה "⭐ הקיצורים שלי" בתפריט ➕ בבית).
-     */
-    static Tree.Node ensureMine() {
-        final List<File> had = Shortcuts.mine();
-        Tree.edit(new Tree.Edit() {
-            @Override
-            public boolean apply(Tree t) {
-                if (t.find(MINE) != null) return false;
-                Tree.Node n = Tree.newChild(t.root, MINE.get(0));
-                n.icon = "⭐";
-                for (File f : had) n.entries.add(new Tree.Entry(f.getAbsolutePath(), f.length(), false));
-                return true;
-            }
-        });
-        return Tree.load().find(MINE);
-    }
-
-    static void addToMine(final File f) {
-        ensureMine();
-        Tree.edit(new Tree.Edit() {
-            @Override
-            public boolean apply(Tree t) {
-                Tree.Node n = t.find(MINE);
-                if (n == null || Tree.contains(n.entries, f.getAbsolutePath())) return false;
-                n.entries.add(new Tree.Entry(f.getAbsolutePath(), f.length(), false));
-                return true;
-            }
-        });
     }
 }
 
@@ -9351,7 +9346,7 @@ final class Examples {
             if (reset && mainFile.isFile()) {
                 ModeCopy.Side old = new ModeCopy.Side(Ini.load(mainFile), Tree.loadFrom(treeFile));
                 Envs.migrate(old.ini, old.tree, null);                        // 1.15.0: מלפני ההסבה — סביבה ← רשימה
-                if (!old.tree.unreadable && old.tree.find(MINE_PATH) != null) mine = old;
+                if (!old.tree.unreadable && (old.tree.find(MINE_PATH) != null || old.tree.find(Reserved.ROOT_PATH) != null)) mine = old;
             }
             if (reset && dir.exists() && !BinBox.mode(MODE, dir)) {          // 1.10.0: הכול מההתחלה — הקודם לסל
                 Files.backup(mainFile, "דוגמאות");  // בכונן
@@ -9362,6 +9357,7 @@ final class Examples {
             Files.writeAtomic(mainFile, main.replace(IN, internal));
             Files.writeAtomic(treeFile, tree.replace(IN, internal));
             if (mine != null) keepMine(mine, mainFile, treeFile);              // 1.13.2 (באג): מיד — לפני כל דבר שעלול להיכשל
+            if (mine != null && mine.tree.find(Reserved.ROOT_PATH) != null) keepReserved(mine, mainFile, treeFile);
             if (demo != null) {
                 try {
                     demo(new File(data, DEMO), demo);
@@ -9371,6 +9367,10 @@ final class Examples {
             }
             modes.mkdirs();
             if (!mark.exists()) Files.writeAtomic(mark, "1\n");
+            if (mine == null || mine.tree.find(Reserved.ROOT_PATH) == null) {  // 1.17.0: "שמור לתוכנה" — ברירות המחדל
+                ModeCopy.Side now = new ModeCopy.Side(Ini.load(mainFile), Tree.loadFrom(treeFile));
+                if (Reserved.ensure(now) && now.ini.saveQuiet()) now.tree.saveTo(treeFile);
+            }
             return true;
         } catch (Throwable t) {
             Log.e("התקנת הדוגמאות", t);
@@ -9401,6 +9401,21 @@ final class Examples {
             now.tree.saveTo(treeFile);
         } catch (Throwable t) {
             Log.e("הדוגמאות שלי — גיבוי", t);
+        }
+    }
+
+    /**
+     * 1.17.0: "שמור לתוכנה" — מה שהמשתמש הוסיף שם נשאר (המשתמש: "כאשר מחזירים לברירת מחדל — מתקנים רק את הרשימות של
+     * התוכנה; אם הוסף שם — נשאר"); ואחר כך ברירות המחדל — מה שחסר בהן חוזר.
+     */
+    static void keepReserved(ModeCopy.Side old, File mainFile, File treeFile) {
+        try {
+            ModeCopy.Side now = new ModeCopy.Side(Ini.load(mainFile), Tree.loadFrom(treeFile));
+            ModeCopy.keep(old, Reserved.ROOT_PATH, now);
+            Reserved.ensure(now);
+            if (now.ini.saveQuiet()) now.tree.saveTo(treeFile);
+        } catch (Throwable t) {
+            Log.e("שמור לתוכנה — חזרה לברירת מחדל", t);
         }
     }
 
@@ -10986,6 +11001,7 @@ public class Home extends Activity {
         Log.initVersion(this);
         Examples.install(this, Paths.data(), internalRoot(), false);        // 156: בפעם הראשונה בלבד
         Envs.all();                                                           // 1.15.0: סביבות ← רשימות, בכל האופנים
+        Reserved.ensureMode(Examples.MODE);                                   // 1.17.0: "שמור לתוכנה" — ברירות המחדל
         lib = Library.get(this);
         setTitle(Words.Main.APP_NAME);
 
@@ -11311,8 +11327,9 @@ public class Home extends Activity {
             tileColor = Looks.kindColor(f.kind);
             boolean cmd = f.kind.equals(FnCommand.KIND);                       // 1.13.0: פקודה — הצלמית ו"למה" שלה
             String why = cmd ? FnCommand.whyOf(f) : "";
-            grid.addView(tile(cmd ? FnCommand.iconOf(f) : iconOf(f, tr), cmd ? FnCommand.nameOf(f) : f.name,
-                    !why.isEmpty() ? why : fn0 != null ? fn0.title : f.kind, w, new View.OnClickListener() {
+            String tag = tagOf(f.kind);                                       // 1.17.0: הסוג — תמיד (המילון, 24)
+            grid.addView(tile(cmd ? FnCommand.iconOf(f) : iconOf(f, tr), tag, cmd ? FnCommand.nameOf(f) : f.name,
+                    !why.isEmpty() ? why : tag != null ? "" : fn0 != null ? fn0.title : f.kind, w, new View.OnClickListener() {
                 @Override public void onClick(View v) { run(f); }
             }, new View.OnLongClickListener() {
                 @Override
@@ -11328,7 +11345,7 @@ public class Home extends Activity {
         pendingStat = null;
         tileColor = 0;
         computeStats();
-        grid.addView(tile("➕", Words.Main.ADD, "", w, new View.OnClickListener() {
+        grid.addView(tile("➕", null, Words.Main.ADD, "", w, new View.OnClickListener() {
             @Override public void onClick(View v) { addSomething(); }
         }, null));
     }
@@ -11349,9 +11366,17 @@ public class Home extends Activity {
     /** 1.12.1: צבע האריח הבא — לפי סוג הכלי (ל"צבע רקע לפריט" ול"ריבוע צבעוני"). */
     private int tileColor;
 
-    private View tile(String icon, String name, String kindLabel, int w, View.OnClickListener click,
+    /** 1.17.0: תווית הסוג של כלי בבית (null — כלי בלי סוג של רשימה או פקודה). */
+    static String tagOf(String kind) {
+        if (FnVirtual.KIND.equals(kind)) return Ui.MANUAL;
+        if (FnSmart.KIND.equals(kind) || FnDup.KIND.equals(kind)) return Ui.SMART;
+        if (FnCommand.KIND.equals(kind)) return Ui.CMD;
+        return null;
+    }
+
+    private View tile(String icon, String tag, String name, String kindLabel, int w, View.OnClickListener click,
                       View.OnLongClickListener longClick) {
-        if (look != null) return Looks.homeTile(this, look, icon, name, kindLabel, w, click, longClick, statFor(), tileColor);
+        if (look != null) return Looks.homeTile(this, look, icon, tag, name, kindLabel, w, click, longClick, statFor(), tileColor);
         LinearLayout t = new LinearLayout(this);
         t.setOrientation(LinearLayout.VERTICAL);
         t.setGravity(Gravity.CENTER);
@@ -11369,6 +11394,7 @@ public class Home extends Activity {
         nm.setMaxLines(3);                                                    // 176: בלי לקטוע מילה אחרונה
         nm.setEllipsize(android.text.TextUtils.TruncateAt.END);
         t.addView(ic);
+        if (tag != null) t.addView(Looks.strip(this, tag, Ui.dp(this, 64)), new LinearLayout.LayoutParams(Ui.dp(this, 64), -2));
         t.addView(nm);
         TextView stat = new TextView(this);
         stat.setTextSize(10);
@@ -15615,7 +15641,7 @@ final class Looks {
         box.setTextColor(Ui.ON_COLOR);
         int bp = Ui.dp(c, 3);
         box.setPadding(bp, bp, bp, bp);
-        TextView title = new TextView(c), sub = new TextView(c), more = new TextView(c);
+        TextView title = new TextView(c), sub = new TextView(c), more = new TextView(c), strip = null;
         title.setTextColor(Ui.TEXT);
         sub.setTextColor(Ui.MUTED);
         more.setTextColor(Ui.MUTED);
@@ -15626,6 +15652,13 @@ final class Looks {
             row.setGravity(Gravity.CENTER_HORIZONTAL);
             row.setPadding(pad, pad, pad, pad);
             row.addView(box, new LinearLayout.LayoutParams(icon, icon));
+            strip = new TextView(c);                                          // 1.17.0: הסוג — פס בתחתית הצלמית (ב')
+            strip.setGravity(Gravity.CENTER);
+            strip.setTextColor(Ui.ON_COLOR);
+            strip.setSingleLine(true);
+            strip.setTypeface(Typeface.DEFAULT_BOLD);
+            strip.setVisibility(View.GONE);
+            row.addView(strip, new LinearLayout.LayoutParams(icon, LinearLayout.LayoutParams.WRAP_CONTENT));
             for (TextView t : new TextView[]{title, sub}) {
                 t.setGravity(Gravity.CENTER);
                 t.setTextAlignment(View.TEXT_ALIGNMENT_CENTER);
@@ -15654,7 +15687,7 @@ final class Looks {
                 row.addView(sub, new LinearLayout.LayoutParams(-2, -2));
             }
         }
-        row.setTag(new TextView[]{box, title, sub, more});
+        row.setTag(strip == null ? new TextView[]{box, title, sub, more} : new TextView[]{box, title, sub, more, strip});
         return row;
     }
 
@@ -15666,6 +15699,35 @@ final class Looks {
         int bg = box.getBackground() instanceof ColorDrawable ? ((ColorDrawable) box.getBackground()).getColor() : 0;
         if ((bg >>> 24) == 0) bg = 0;
         box.setCompoundDrawables(null, null, null, null);
+        TextView strip = t.length > 4 ? t[4] : null;
+        if (strip != null) strip.setVisibility(View.GONE);
+        String kind = Ui.kindOf(v);
+        int kindBg = 0;
+        if (kind != null) {                                                   // 1.17.0: הסוג תמיד, והצלמית בנוסף (המילון, 24)
+            String own = Ui.userIconOf(v);
+            if (own.isEmpty() && icon != null) own = icon;
+            if (d.grid) {                                                     // ב': הצלמית באריח, הסוג בפס מתחת
+                String txt = title.getText().toString();
+                if (!own.isEmpty() && txt.startsWith(own + "  ")) title.setText(txt.substring(own.length() + 2));
+                if (strip != null) {
+                    strip.setText(Ui.tagShort(kind));
+                    strip.setBackgroundColor(Ui.kindColor(kind));
+                    strip.setTextSize(TypedValue.COMPLEX_UNIT_PX, Math.max(sp(c, 11), px * 0.16f));
+                    strip.setVisibility(View.VISIBLE);
+                }
+                icon = !own.isEmpty() ? own : Ui.tag(kind) != null ? kind : "📄";
+                box.setBackgroundColor(0x00000000);
+                box.setTextColor(Ui.TEXT);
+                bg = 0;
+            } else {                                                          // א': התווית במקומה, הצלמית לפני השם
+                kindBg = bg;
+                if (own.contains(".")) {
+                    Drawable img = image(c, own, (int) sp(c, d.nameT.size * 1.2f));
+                    if (img != null) title.setCompoundDrawablesRelative(img, null, null, null);
+                }
+                icon = null;
+            }
+        }
         if (icon != null && !icon.isEmpty()) {
             Drawable img = image(c, icon, px);
             if (img != null) {
@@ -15677,7 +15739,8 @@ final class Looks {
                 box.setTextSize(TypedValue.COMPLEX_UNIT_SP, 18);
             }
         }
-        bg = color(color, bg);
+        int own = color(color, 0);
+        bg = kindBg != 0 ? kindBg : color(color, bg);                        // 1.17.0: תווית הסוג — בצבע הסוג, תמיד
         // הכיתוב שבתוך הצלמית — בקנה מידה של הצלמית (בשורות, בגודל של היום: יחס 1)
         float scale = px / (float) Ui.dp(c, ROW_BOX_DP);
         CharSequence label = box.getText();
@@ -15716,8 +15779,9 @@ final class Looks {
             sub.setVisibility(hasData ? View.VISIBLE : View.GONE);
         }
         // צבע רקע לפריט
-        v.setBackground(d.tint ? rounded(bg == 0 ? Ui.BG_SOFT : soft(bg), Ui.dp(c, 10), 0, 0) : null);
-        if (d.tint && bg != 0) title.setTextColor(darker(bg));
+        int tint = kindBg != 0 ? own : bg;                                    // הצבע של המשתמש — לרקע הפריט
+        v.setBackground(d.tint ? rounded(tint == 0 ? Ui.BG_SOFT : soft(tint), Ui.dp(c, 10), 0, 0) : null);
+        if (d.tint && tint != 0) title.setTextColor(darker(tint));
     }
 
     /** אחרי apply: הבחירה (או ההתאמה) — גוברת על צבע הרקע של העיצוב, בלי לאבד את הפינות. */
@@ -15819,7 +15883,20 @@ final class Looks {
     }
 
     /** אריח של מסך הבית לפי העיצוב: ברשת — צלמית למעלה ושם מתחת; בשורות — צלמית בצד. */
-    static View homeTile(Context c, Design d, String icon, String name, String kind, int w,
+    /** 1.17.0: פס הסוג שבתחתית הצלמית (ב') — בצבע הסוג, עם המילה. */
+    static TextView strip(Context c, String tag, int width) {
+        TextView s = new TextView(c);
+        s.setText(Ui.tagShort(tag));
+        s.setGravity(Gravity.CENTER);
+        s.setTextColor(Ui.ON_COLOR);
+        s.setSingleLine(true);
+        s.setTypeface(Typeface.DEFAULT_BOLD);
+        s.setTextSize(TypedValue.COMPLEX_UNIT_PX, Math.max(sp(c, 11), width * 0.16f));
+        s.setBackgroundColor(Ui.kindColor(tag));
+        return s;
+    }
+
+    static View homeTile(Context c, Design d, String icon, String tag, String name, String kind, int w,
                          View.OnClickListener click, View.OnLongClickListener longClick, TextView stat, int color) {
         LinearLayout t = new LinearLayout(c);
         t.setLayoutDirection(Ui.DIRECTION);
@@ -15853,6 +15930,7 @@ final class Looks {
             t.setGravity(Gravity.CENTER_HORIZONTAL);
             t.setPadding(pad, pad, pad, pad);
             t.addView(ic, new LinearLayout.LayoutParams(px, px));
+            if (tag != null) t.addView(strip(c, tag, px), new LinearLayout.LayoutParams(px, -2));   // ב'
             for (TextView x : new TextView[]{nm, kl, stat}) {
                 x.setGravity(Gravity.CENTER);
                 t.addView(x, new LinearLayout.LayoutParams(-1, -2));
@@ -15862,6 +15940,12 @@ final class Looks {
             t.setOrientation(LinearLayout.HORIZONTAL);
             t.setGravity(Gravity.CENTER_VERTICAL);
             t.setPadding(Ui.dp(c, 8), pad, Ui.dp(c, 8), pad);
+            if (tag != null) {                                                // א': התווית במקום הצלמית, והצלמית לפני השם
+                Ui.icon(ic, tag);
+                ic.setTextSize(TypedValue.COMPLEX_UNIT_PX, Math.max(sp(c, 9), px * 0.2f));
+                ic.setBackground(rounded(Ui.kindColor(tag), r, 0, 0));
+                if (icon != null && !icon.isEmpty() && !icon.equals(tag)) nm.setText(icon + "  " + name);
+            }
             t.addView(ic, new LinearLayout.LayoutParams(px, px));
             LinearLayout texts = new LinearLayout(c);
             texts.setOrientation(LinearLayout.VERTICAL);
@@ -16913,7 +16997,7 @@ final class Nested {
 
     /** רשימה בתוך רשימה, כמו שמוצגת. */
     static final class Item {
-        String ref = "", name = "", cond = "", sort = "", view = "";
+        String ref = "", name = "", cond = "", sort = "", view = "", icon = "";
         /** השורה השנייה (מחושבת פעם אחת לכל הצגה — לא בכל ציור). */
         String sub = "";
         boolean smart;
@@ -17047,6 +17131,7 @@ final class Nested {
             it.gone = true;
             return it;
         }
+        it.icon = f.params.containsKey(Program.ICON) ? f.params.get(Program.ICON) : "";   // 1.17.0: הצלמית שנבחרה בהגדרות
         String h = f.name.startsWith(INNER) ? f.name.substring(INNER.length()) : f.name;
         int cut = h.lastIndexOf(" › ");
         it.name = cut >= 0 ? h.substring(cut + 3) : h;
@@ -20288,6 +20373,192 @@ final class QuickBar {
     }
 }
 
+===== קובץ: src/com/tikiyot/vfm/Reserved.java =====
+package com.tikiyot.vfm;
+
+// 1.17.0: "שמור לתוכנה" — רשימות שהתוכנה משתמשת בהן (המילון, `claude/milon.md`, 23). המשתמש: "באופן עבודה דוגמאות
+// תהיה תיקייה, שכל מה שבה יהיה שמור לתוכנה — בשלב הזה פקודות; ושם אפשר יהיה לערוך ולסדר את ההיררכיה כפי הרצוי";
+// "אם יש רשימה כזו באופן עבודה אחר — ייקח ממנה; אם לא — ייקח מדוגמאות"; "וכאשר מחזירים לברירת מחדל — מתקנים רק את
+// הרשימות של התוכנה; אם הוסף שם — נשאר"; "כל התפריטים אפשר יהיה לקבוע ברשימות, וכל עדכון יהיה שם — עם ברירות מחדל".
+// ברירת המחדל: שמור לתוכנה / פקודות — פקודות המערכת (קובצי פקודות בתיקייה משותפת, שהתוכנה כותבת — הן לא משתנות),
+// "פקודה חדשה" (`צור פקודה`), "הפקודות שלי" (תת־רשימה), ו"כל הפקודות במכשיר" (רשימה חכמה).
+// אחראי: הרשימות של ברירת המחדל — לוודא, לתקן, ולמצוא באיזה אופן הן. בלי ממשק (התפריט — CmdMenu).
+
+import java.io.File;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
+
+final class Reserved {
+
+    static final String ROOT = "שמור לתוכנה", CMDS = "פקודות", MINE = "הפקודות שלי",  // בכונן
+            ALL = "כל הפקודות במכשיר", NEW = "פקודה חדשה", SYS_DIR = "פקודות המערכת";  // בכונן
+    static final List<String> ROOT_PATH = Collections.singletonList(ROOT);
+    static final List<String> CMDS_PATH = Arrays.asList(ROOT, CMDS);
+    static final List<String> MINE_PATH = Arrays.asList(ROOT, CMDS, MINE);
+
+    /** בבדיקות — תיקייה אחרת לפקודות המערכת. */
+    static File testDir;
+
+    private Reserved() { }
+
+    /** התיקייה המשותפת של פקודות המערכת (לכל האופנים — הן אותן פקודות). */
+    static File sysDir() {
+        return testDir != null ? testDir : new File(Paths.data(), SYS_DIR);
+    }
+
+    /** פקודות המערכת והקובץ "פקודה חדשה" — נכתבים כמו שהם (מה שהשתנה — חוזר). מחזיר את הקבצים, לפי הסדר. */
+    static List<File> writeSystem() {
+        List<File> out = new ArrayList<File>();
+        List<String[]> all = new ArrayList<String[]>(CmdMenu.system());
+        all.add(new String[]{"➕", NEW, Verbs.CREATE + " " + Verbs.CMD_WORD});
+        File dir = sysDir();
+        for (String[] s : all) {
+            File f = new File(dir, s[1] + "." + Batch.EXT);
+            String text = Program.ICON + " " + s[0] + "\n" + Program.NAME + " " + s[1] + "\n" + s[2] + "\n";
+            try {
+                if (!f.isFile() || !text.equals(Files.readUtf8(f))) {
+                    if (!dir.isDirectory()) dir.mkdirs();
+                    Files.writeAtomic(f, text);
+                }
+            } catch (Throwable e) {
+                Log.e("פקודות המערכת", e);
+            }
+            out.add(f);
+        }
+        return out;
+    }
+
+    static boolean isSystem(File f) {
+        return f != null && f.getParentFile() != null && f.getParentFile().equals(sysDir());
+    }
+
+    static boolean isNew(File f) {
+        return isSystem(f) && f.getName().equals(NEW + "." + Batch.EXT);
+    }
+
+    /**
+     * מוודא את רשימות ברירת המחדל באופן אחד (בזיכרון): מה שחסר — חוזר; מה שהמשתמש הוסיף — נשאר.
+     * 1.16.1 → 1.17.0: רשימה "הפקודות שלי" בשורש — עוברת לתוך שמור לתוכנה / פקודות. מחזיר true אם השתנה משהו.
+     */
+    static boolean ensure(ModeCopy.Side side) {
+        boolean changed = false;
+        Tree t = side.tree;
+        Tree.Node root = t.root.child(ROOT);
+        if (root == null) {
+            root = Tree.newChild(t.root, ROOT);
+            root.icon = "⚙";
+            changed = true;
+        }
+        Tree.Node cmds = root.child(CMDS);
+        if (cmds == null) {
+            cmds = Tree.newChild(root, CMDS);
+            cmds.icon = "⭐";
+            changed = true;
+        }
+        List<File> sys = writeSystem();
+        for (int i = 0; i < sys.size(); i++) {                                // פקודות המערכת — ראשונות, ו"פקודה חדשה" אחריהן
+            String p = sys.get(i).getAbsolutePath();
+            if (Tree.contains(cmds.entries, p)) continue;
+            cmds.entries.add(Math.min(i, cmds.entries.size()), new Tree.Entry(p, sys.get(i).length(), false));
+            changed = true;
+        }
+        Tree.Node mine = cmds.child(MINE);
+        if (mine == null) {
+            mine = Tree.newChild(cmds, MINE);
+            mine.icon = "⭐";
+            changed = true;
+        }
+        Tree.Node old = t.root.child(MINE);                                   // 1.16.1: "הפקודות שלי" בשורש
+        if (old != null && old != mine) {
+            for (Tree.Entry e : old.entries) if (!Tree.contains(mine.entries, e.path)) mine.entries.add(e);
+            for (Tree.Node c : old.children) {
+                c.name = mine.uniqueChildName(c.name, null);
+                c.parent = mine;
+                mine.children.add(c);
+            }
+            t.root.children.remove(old);
+            changed = true;
+        }
+        if (allOf(side, cmds) == null) {
+            cmds.smart.add(newAll(side.ini));
+            changed = true;
+        }
+        return changed;
+    }
+
+    /** "כל הפקודות במכשיר" — המזהה שלה ברשימה, או null. */
+    static String allOf(ModeCopy.Side side, Tree.Node cmds) {
+        for (String r : cmds.smart) {
+            Structure.Func f = Structure.byId(side.ini, r);
+            if (f != null && f.name.endsWith(ALL)) return r;                   // גם אחרי העתקה (הכותרת בלי הבעלים)
+        }
+        return null;
+    }
+
+    private static String newAll(Ini ini) {
+        String id = Structure.newId("p"), h = Nested.INNER + ROOT + " › " + CMDS + " › " + ALL;
+        List<Ini.Line> b = new ArrayList<Ini.Line>();
+        b.add(Ini.line("", h));
+        b.add(Ini.line("[" + h + "]", h));
+        b.add(Ini.line(Structure.ID + " = " + id, h));
+        b.add(Ini.line("סוג = " + FnSmart.KIND, h));  // תחביר
+        b.add(Ini.line(SmartLists.COND + " = " + Cond.TYPE + ":" + Batch.EXT, h));
+        b.add(Ini.line(SmartLists.SORT + " = " + Sort.NAME, h));
+        ini.lines.addAll(Structure.insertAt(ini), b);
+        return id;
+    }
+
+    // ---------- בכונן ----------
+
+    /** באיזה אופן הרשימות: הפעיל, אם יש בו "שמור לתוכנה"; אחרת — דוגמאות (אם קיים); אחרת — null. */
+    static String modeInUse() {
+        if (Tree.load().find(ROOT_PATH) != null) return Modes.current();
+        File ex = ModeCopy.treeOf(Examples.MODE);
+        return ex.isFile() && Tree.loadFrom(ex).find(ROOT_PATH) != null ? Examples.MODE : null;
+    }
+
+    /** הרשימות של האופן שבשימוש (לקריאה). null — אין. */
+    static ModeCopy.Side inUse() {
+        String m = modeInUse();
+        if (m == null) return null;
+        if (m.equals(Modes.current())) return new ModeCopy.Side(Ini.load(Structure.file()), Tree.load());
+        return ModeCopy.read(m);
+    }
+
+    /** מוודא באופן mode, בקבצים שלו (בפתיחת התוכנה — לדוגמאות; ואחרי חזרה לברירת מחדל). */
+    static void ensureMode(String mode) {
+        try {
+            synchronized (Structure.class) {
+                synchronized (Tree.LOCK) {
+                    File main = ModeCopy.mainOf(mode), tf = ModeCopy.treeOf(mode);
+                    if (!main.isFile() || !tf.isFile()) return;
+                    ModeCopy.Side s = new ModeCopy.Side(Ini.load(main), Tree.loadFrom(tf));
+                    if (s.tree.unreadable) return;
+                    if (ensure(s) && s.ini.saveQuiet()) s.tree.saveTo(tf);
+                }
+            }
+        } catch (Throwable t) {
+            Log.e("שמור לתוכנה — " + mode, t);
+        }
+    }
+
+    /** פקודה ל"הפקודות שלי" — באופן שבשימוש. */
+    static void addToMine(final File f) {
+        String m = modeInUse();
+        if (m == null) return;
+        synchronized (Tree.LOCK) {
+            File tf = m.equals(Modes.current()) ? Tree.file() : ModeCopy.treeOf(m);
+            Tree t = Tree.loadFrom(tf);
+            Tree.Node n = t.find(MINE_PATH);
+            if (t.unreadable || n == null || Tree.contains(n.entries, f.getAbsolutePath())) return;
+            n.entries.add(new Tree.Entry(f.getAbsolutePath(), f.length(), false));
+            t.saveTo(tf);
+        }
+    }
+}
+
 ===== קובץ: src/com/tikiyot/vfm/Resolver.java =====
 package com.tikiyot.vfm;
 
@@ -20738,7 +21009,8 @@ public class SearchScreen extends Activity implements Clip.Holder {
                 View v = Ui.row(SearchScreen.this, convert);
                 if (o instanceof Nested.Item) {                               // 161: רשימה בתוך הרשימה
                     Nested.Item it = (Nested.Item) o;
-                    Ui.bindIcon(v, it.smart ? Ui.SMART : Ui.MANUAL, it.name, it.sub);
+                    Ui.bindIcon(v, "", it.name, it.sub);
+                    Ui.kind(v, it.smart && it.local ? Ui.SMART : Ui.LINK, it.icon);   // 1.17.0: מה שאינו שלה — קישור ↪
                     v.setBackgroundColor(0x00000000);
                     return v;
                 }
@@ -26652,13 +26924,43 @@ final class TopRow {
         pick(a, screen, cb);
     }
 
+    /** 1.17.0: "☰ תפריט" — רשימה מ"שמור לתוכנה" (המשתמש: "בכפתורים תהיה אפשרות לקחת רשימה כתפריט — רק משמור לתוכנה"). */
+    private static void menus(Activity a, final Chosen cb) {
+        ModeCopy.Side side = Reserved.inUse();
+        Tree.Node root = side == null ? null : side.tree.find(Reserved.ROOT_PATH);
+        if (root == null) {
+            Ui.toast(a, Words.Verb.NOT_FOUND + Reserved.ROOT);
+            return;
+        }
+        final List<List<String>> paths = new ArrayList<List<String>>();
+        List<String> labels = new ArrayList<String>();
+        collect(root, 0, paths, labels);
+        Ui.list(a, Words.Top.T_MENU, labels, new DialogInterface.OnClickListener() {
+            @Override
+            public void onClick(DialogInterface d, int k) {
+                List<String> p = paths.get(k);
+                cb.ok("☰", p.get(p.size() - 1), Verbs.openMenu(p));
+            }
+        });
+    }
+
+    private static void collect(Tree.Node n, int depth, List<List<String>> paths, List<String> labels) {
+        for (Tree.Node c : n.children) {
+            StringBuilder in = new StringBuilder();
+            for (int i = 0; i < depth; i++) in.append("    ");
+            paths.add(c.path());
+            labels.add(in + "☰ " + c.name);
+            collect(c, depth + 1, paths, labels);
+        }
+    }
+
     /**
      * "מה הכפתור יעשה?" — 1.16.1: אותו תפריט כמו ➕ בבית (המשתמש: "שני המקומות אמורים להיות זהים; ההבדל היחיד —
      * הפלוס מוסיף במסך הבית, והשני מוסיף כפתור במקום שמחליטים"): רשימה ידנית · רשימה חכמה · פקודה (תפריט הפקודות
      * האחד — ובו גם שורה בכתב, תיקייה במנהל הקבצים ופעולה של המסך). התוצאה — שורת פקודה.
      */
     static void pick(final Activity a, final String screen, final Chosen cb) {
-        Ui.options(a, Words.Top.WHAT, new String[]{Words.Main.ADD_MANUAL, Words.Main.ADD_SMART, Words.Main.ADD_CMD},
+        Ui.options(a, Words.Top.WHAT, new String[]{Words.Main.ADD_MANUAL, Words.Main.ADD_SMART, Words.Main.ADD_CMD, Words.Top.T_MENU},
                 new DialogInterface.OnClickListener() {
             @Override
             public void onClick(DialogInterface d, int w) {
@@ -26683,7 +26985,8 @@ final class TopRow {
                             cb.ok("✨", all.get(k).name, Verbs.openSmart(all.get(k).name));
                         }
                     });
-                } else CmdMenu.show(a, null, new CmdMenu.Picked() {
+                } else if (w == 3) menus(a, cb);                                  // 1.17.0: רשימה מ"שמור לתוכנה" כתפריט
+                else CmdMenu.show(a, null, new CmdMenu.Picked() {
                     @Override
                     public void ok(String icon, String name, String line, File file) { cb.ok(icon, name, line); }
                 }, screen);
@@ -27386,7 +27689,7 @@ public final class Tree {
     /** לבדיקות: הפניית מבנה.txt למקום אחר. */
     public static File testFile;
 
-    private static File file() {
+    static File file() {
         return testFile != null ? testFile : Paths.tree();
     }
 
@@ -28611,23 +28914,18 @@ public final class Ui {
 
     /** הסמלים שמסמנים מכל — והתווית והצבע של כל אחד — מקום אחד. */
     static final String FOLDER = "📁", SMART = "✨", MANUAL = "📋";
+    /** 1.17.0: עוד שני סוגים עם תווית — קישור ↪ ופקודה (המילון, 24: "צריך שיהיה אפשר מיידית לזהות כל פריט מה הוא"). */
+    static final String LINK = "↪", CMD = "▶";
 
     /** 1.13.0: צלמיות ברירת המחדל ברשימה ידנית — במקום תווית הטקסט (המשתמש: "מתאים"). */
-    static final String ICON_MANUAL = "📁", ICON_SMART = "✨", ICON_LIVE = "🔄";
-
-    /** 1.13.0: צלמית רגילה בשורה (לא תווית צבעונית), גם כשהסמל הוא אחד מסמלי התוויות. */
-    static void plainIcon(View row, String icon) {
-        TextView t = ((TextView[]) row.getTag())[0];
-        t.setTextColor(TEXT);
-        t.setSingleLine(true);
-        t.setText(icon);
-        t.setTextSize(18);
-        t.setBackgroundColor(0x00000000);
-    }
+    static final String LIVE = "🔄";                                        // תיקייה מתעדכנת
 
     /** התווית (בשתי שורות) — או null, אם זה סמל רגיל. */
     public static String tag(String icon) {
         if (FOLDER.equals(icon)) return Words.Tags.FOLDER;
+        if (LINK.equals(icon)) return Words.Tags.LINK;
+        if (CMD.equals(icon)) return Words.Tags.CMD;
+        if (LIVE.equals(icon)) return Words.Tags.LIVE;
         if (SMART.equals(icon)) return Words.Tags.SMART;
         if (MANUAL.equals(icon)) return Words.Tags.MANUAL;
         if (Drive.icon(true).equals(icon)) return Words.Tags.INTERNAL;
@@ -28639,7 +28937,57 @@ public final class Ui {
         if (FOLDER.equals(icon)) return 0xFFBA7517;                         // כתום־צהוב — תמיד ורק תיקייה אמיתית
         if (SMART.equals(icon)) return 0xFF534AB7;                          // סגול
         if (MANUAL.equals(icon)) return 0xFF0F6E56;                         // ירוק
+        if (LINK.equals(icon)) return 0xFF993C1D;                           // 1.17.0: כתום־אדמדם
+        if (CMD.equals(icon) || Words.Tags.CMD.equals(icon)) return 0xFF185FA5;   // כחול
+        if (LIVE.equals(icon)) return 0xFF854F0B;
         return 0xFF5F5E5A;                                                  // כונן — אפור
+    }
+
+    /** 1.17.0: המילה הקצרה של הסוג — לפס שבתחתית האריח (ברשת). סוג קובץ — כמו שהוא. */
+    static String tagShort(String kind) {
+        String t = tag(kind);
+        if (t == null) return kind;
+        String[] w = t.split("\n");
+        if (FOLDER.equals(kind) || w.length == 1) return w[0];                 // "תיקייה", "פקודה"
+        return LINK.equals(kind) ? t.replace('\n', ' ') : w[w.length - 1];    // "↪ קישור", "ידנית", "חכמה"
+    }
+
+    /** 1.17.0: צבע הסוג — של תווית, או של סוג קובץ. */
+    static int kindColor(String kind) {
+        return tag(kind) != null ? tagColor(kind) : typeColor(kind);
+    }
+
+    /**
+     * 1.17.0: הסוג — תמיד, והצלמית של המשתמש — בנוסף (המילון, 24; המשתמש: "כל פעם מישהו אחר משתלט על האייקון").
+     * בשורות (א'): התווית במקומה, והצלמית לפני השם. ברשת (ב') — Looks.apply: הצלמית באריח, והתווית כפס בתחתיתו.
+     * kind — אחד מסמלי התוויות (MANUAL, SMART, LINK, CMD, FOLDER, LIVE) או סוג קובץ ("PDF").
+     */
+    static void kind(View row, String kind, String userIcon) {
+        TextView[] v = (TextView[]) row.getTag();
+        if (tag(kind) != null) icon(v[0], kind);
+        v[0].setTag(kind);
+        String own = userIcon == null || kind.equals(userIcon) ? "" : userIcon;
+        v[1].setTag(own);
+        if (!own.isEmpty() && !own.contains(".")) v[1].setText(own + "  " + v[1].getText());
+    }
+
+    /** הסוג שנקבע לשורה (או null — שורה בלי סוג). */
+    static String kindOf(View row) {
+        Object k = ((TextView[]) row.getTag())[0].getTag();
+        return k instanceof String ? (String) k : null;
+    }
+
+    /** הצלמית של המשתמש בשורה ("" — אין). */
+    static String userIconOf(View row) {
+        Object k = ((TextView[]) row.getTag())[1].getTag();
+        return k instanceof String ? (String) k : "";
+    }
+
+    /** שורה שנבנית מחדש (מתאם) — בלי סוג וצלמית של השורה הקודמת. */
+    private static void clearKind(TextView[] v) {
+        v[0].setTag(null);
+        v[1].setTag(null);
+        v[1].setCompoundDrawablesRelative(null, null, null, null);
     }
 
     /** הצלמית שבשורה: תווית צבעונית (מכל), או סמל רגיל. */
@@ -28663,11 +29011,13 @@ public final class Ui {
     /** שורה עם צלמית טקסט, למשל אריח או תיקייה. */
     public static void bindIcon(View row, String icon, String title, String sub) {
         TextView[] v = (TextView[]) row.getTag();
+        clearKind(v);
         v[1].setMaxLines(2);
         v[2].setSingleLine(true);
         v[2].setEllipsize(TextUtils.TruncateAt.END);
         v[3].setVisibility(View.GONE);
         icon(v[0], icon);
+        if (tag(icon) != null) v[0].setTag(icon);                            // 1.17.0: סמל של סוג — גם הוא סוג
         v[1].setText(title);
         v[1].setTextColor(TEXT);
         v[2].setText(sub == null ? "" : sub);
@@ -28703,8 +29053,10 @@ public final class Ui {
                                String path, String status, String queryNorm) {
         boolean full = full(c);
         TextView[] v = (TextView[]) row.getTag();
+        clearKind(v);
         String label = typeLabel(name, isDir);
         typeBox(v[0], label, isDir);
+        v[0].setTag(isDir ? FOLDER : label);                                  // 1.17.0: הסוג — גם לשורת קובץ
         v[1].setText(highlight(baseName(name, isDir), queryNorm));
         v[1].setTextColor(TEXT);
         v[1].setMaxLines(full ? 20 : 2);
@@ -28755,8 +29107,10 @@ public final class Ui {
         v[3].setVisibility(View.GONE);
         v[1].setMaxLines(2);
         v[2].setSingleLine(true);
+        clearKind(v);
         String label = typeLabel(name, isDir);
         typeBox(v[0], label, isDir);
+        v[0].setTag(isDir ? FOLDER : label);
         v[1].setText(highlight(baseName(name, isDir), queryNorm));
         v[1].setTextColor(TEXT);
         v[2].setText(sub == null ? "" : sub);
@@ -28796,18 +29150,19 @@ public final class Ui {
 
     public static String typeLabel(String name, boolean isDir) {
         if (isDir) return "📁";
-        if (Batch.isBatch(name)) return Words.UiW.TEXT_TAG;                   // 1.13.1: פקודות — קובץ טקסט
+        if (Batch.isBatch(name)) return Words.Tags.CMD;                       // 1.17.0: פקודה — מזוהה כפקודה (המילון, 24)
         String e = Text.ext(name).toUpperCase(Locale.US);                    // 104
         return e.isEmpty() || e.length() > 5 ? "•" : e;
     }
 
     public static int typeColor(String label) {
         if (label.equals("📁")) return 0x00000000;
+        if (label.equals(Words.Tags.CMD)) return tagColor(CMD);
         if (label.equals("PDF")) return 0xFFC5221F;
         if (label.equals("EPUB") || label.equals("MOBI") || label.equals("AZW3") || label.equals("DJVU"))
             return 0xFF188038;
         if (label.equals("DOC") || label.equals("DOCX") || label.equals("TXT") || label.equals("RTF")
-                || label.equals(Words.UiW.TEXT_TAG))
+                )
             return 0xFF1A73E8;
         if (label.equals("JPG") || label.equals("JPEG") || label.equals("PNG") || label.equals("WEBP"))
             return 0xFF9334E6;
@@ -29808,6 +30163,8 @@ final class Verbs {
     static final String OPEN = "פתח", CREATE = "צור", UPDATE = "עדכן", FIND = "מצא", BACK = "חזור",   // תחביר
             RUN = "הרץ", ADD = "הוסף";   // תחביר
     static final String SCREEN = "מסך", LIST = "רשימה", SMART_WORD = "חכמה", FOLDER = "תיקייה";   // תחביר
+    /** 1.17.0: "פתח תפריט <רשימה ב'שמור לתוכנה'>" · "צור פקודה" (המילון, 23). */
+    static final String MENU = "תפריט", CMD_WORD = "פקודה";   // תחביר
     static final String S_HOME = "הבית", S_SEARCH = "חיפוש", S_COMMANDS = "פקודות", S_DISK = "קבצים פיזיים",   // תחביר
             S_VIRTUAL = "קבצים וירטואליים", S_SETTINGS = "הגדרות", S_TRASH = "סל";   // תחביר
     static final String[] SCREENS = {S_HOME, S_SEARCH, S_COMMANDS, S_DISK, S_VIRTUAL, S_SETTINGS, S_TRASH};
@@ -29816,7 +30173,7 @@ final class Verbs {
 
     /** סוגי הפקודה אחרי הפענוח. */
     static final String K_SCREEN = "screen", K_LIST = "list", K_SMART = "smart", K_FOLDER = "folder", K_FIND = "find",
-            K_BACK = "back", K_RUN = "run", K_NEW_LIST = "newlist", K_ADD = "add";
+            K_BACK = "back", K_RUN = "run", K_NEW_LIST = "newlist", K_ADD = "add", K_MENU = "menu", K_NEW_CMD = "newcmd";
 
     static final class Cmd {
         String verb = "", kind = "", arg = "", sort = "", cond = "";
@@ -29904,6 +30261,9 @@ final class Verbs {
                         c.cond = unquote(after(r, sc));                         // קבצים פיזיים / וירטואליים — תיקייה (לא חובה)
                     }
                 if (c.arg.isEmpty()) c.error = Words.Verb.unknownScreen(r);
+            } else if (starts(rest, MENU)) {                                  // 1.17.0
+                c.kind = K_MENU;
+                c.arg = unquote(after(rest, MENU));
             } else if (starts(rest, LIST + " " + SMART_WORD)) {
                 c.kind = K_SMART;
                 c.arg = unquote(takeSort(c, after(rest, LIST + " " + SMART_WORD)));
@@ -29924,6 +30284,8 @@ final class Verbs {
                 c.arg = nr[0];
                 c.cond = nr[1];
                 if (c.arg.isEmpty() || c.cond.isEmpty()) c.error = Words.Verb.usage(c.verb);
+            } else if (c.verb.equals(CREATE) && rest.trim().equals(CMD_WORD)) {   // 1.17.0
+                c.kind = K_NEW_CMD;
             } else if (c.verb.equals(CREATE) && starts(rest, LIST)) {
                 c.kind = c.verb.equals(CREATE) && after(rest, LIST).isEmpty() ? K_NEW_LIST : K_LIST;
                 c.arg = unquote(after(rest, LIST));
@@ -29944,6 +30306,11 @@ final class Verbs {
 
     static String openList(List<String> path) {
         return OPEN + " " + LIST + " " + Tree.key(path);
+    }
+
+    /** 1.17.0: רשימה מ"שמור לתוכנה" כתפריט. */
+    static String openMenu(List<String> path) {
+        return OPEN + " " + MENU + " " + Tree.key(path);
     }
 
     /**
@@ -30026,6 +30393,8 @@ final class Verbs {
         if (c.kind.equals(K_FIND)) return Words.Verb.FIND + c.cond;
         if (c.kind.equals(K_BACK)) return Words.Verb.BACK;
         if (c.kind.equals(K_RUN)) return Words.Verb.RUN + new File(c.arg).getName();
+        if (c.kind.equals(K_MENU)) return Words.Verb.MENU + c.arg;
+        if (c.kind.equals(K_NEW_CMD)) return Words.CmdM.NEW;
         return c.verb + " " + c.arg;
     }
 
@@ -30057,6 +30426,8 @@ final class Verbs {
             return true;
         }
         if (c.kind.equals(K_BACK)) a.onBackPressed();
+        else if (c.kind.equals(K_MENU)) CmdMenu.showList(a, Tree.parsePath(c.arg), null, null);   // 1.17.0
+        else if (c.kind.equals(K_NEW_CMD)) CmdMenu.create(a, here, null);
         else if (c.kind.equals(K_SCREEN)) screen(a, c);
         else if (c.kind.equals(K_FOLDER)) {
             if (new File(c.arg).isDirectory()) DiskScreen.open(a, c.arg);
@@ -30378,19 +30749,22 @@ public class VirtualScreen extends ListScreen<VirtualScreen.Item> implements Top
 
     @Override
     protected void bind(View v, Item it) {
-        if (it.type == FOLDER) {                                             // 1.13.0: צלמיות ברירת מחדל לכל סוג (במקום תווית)
+        // 1.17.0: הסוג — תווית תמיד; הצלמית של המשתמש — בנוסף (המילון, 24; עד כאן הצלמית החליפה את הסוג)
+        if (it.type == FOLDER) {
             Ui.bindIcon(v, "", it.label, it.sub);
-            Ui.plainIcon(v, it.icon.isEmpty() ? Ui.ICON_MANUAL : it.icon);
+            String[] own = ownLook(it);
+            Ui.kind(v, Ui.MANUAL, own != null && !own[0].isEmpty() ? own[0] : it.icon);
         } else if (it.type == SMART) {                                        // 161
             Ui.bindIcon(v, "", it.label, it.sub);
-            Ui.plainIcon(v, it.smart.dup != null ? Func.iconOf(FnDup.KIND) : Ui.ICON_SMART);
+            Ui.kind(v, it.smart.local || it.smart.gone ? Ui.SMART : Ui.LINK,
+                    !it.smart.icon.isEmpty() ? it.smart.icon : it.smart.dup != null ? Func.iconOf(FnDup.KIND) : "");
         } else if (it.type == LIVE) {                                         // 1.9.0
             Ui.bindIcon(v, "", it.label, it.sub);
-            Ui.plainIcon(v, Ui.ICON_LIVE);
+            Ui.kind(v, Ui.LIVE, "");
             if (it.missing()) ((TextView[]) v.getTag())[1].setTextColor(Ui.MUTED);
         } else if (it.type == REF) {                                          // 1.13.0
             Ui.bindIcon(v, "", it.label, it.sub);
-            Ui.plainIcon(v, it.icon.isEmpty() ? Ui.ICON_MANUAL : it.icon);
+            Ui.kind(v, Ui.LINK, it.icon);
             if (it.missing()) ((TextView[]) v.getTag())[1].setTextColor(Ui.MUTED);
         } else if (it.type == FILE) {
             Ui.bindRow(this, v, it.label, false, it.entry.size, it.mtime,
@@ -31636,7 +32010,8 @@ public final class Words {
         private Tags() { }
 
         public static final String FOLDER = "תיקייה\nאמיתית", SMART = "רשימה\nחכמה", MANUAL = "רשימה\nידנית",
-                INTERNAL = "כונן\nפנימי", CARD = "כרטיס\nזיכרון";
+                INTERNAL = "כונן\nפנימי", CARD = "כרטיס\nזיכרון",
+                LINK = "↪\nקישור", CMD = "פקודה", LIVE = "תיקייה\nמתעדכנת";   // 1.17.0
     }
 
     // ---------- הדבקה ומנהל קבצים ברשימה החכמה (149) ----------
@@ -32278,7 +32653,7 @@ public final class Words {
         public static final String REBUILD = "בניית האינדקס מחדש";
         public static final String READERS_BUTTON = "בניית האינדקס — במקביל";
         public static final String DELETED_BUTTON = "קובץ שנמחק — מה קורה ברשימות";
-        public static final String EXCLUDED_BUTTON = "תיקיות שלא נכנסות לאינדקס";
+        public static final String EXCLUDED_BUTTON = "תיקיות שלא נכנסות לאינדקס — באופן העבודה הזה";
         public static final String QUICK_REFRESH = "רענון מהיר";
         public static final String EDIT_INI = "עריכת קבצי ההגדרות";
         public static final String CHECK_PATH = "בדיקת מסלול באינדקס";
@@ -32292,7 +32667,7 @@ public final class Words {
         public static final String LAST_BUILD_LINE = "\nבנייה אחרונה: ";
         public static final String GREY_EXAMPLE = " (\"נמחק · בסל המחזור\")";
         public static final String EXCLUDED_NONE = "אין — הכול נכנס לאינדקס";
-        public static final String EXCLUDED_ABOUT = "תיקיות שיוצאו מהאינדקס (למשל מטמון). ייכנס לתוקף בבנייה מחדש.";
+        public static final String EXCLUDED_ABOUT = "תיקיות שיוצאו מהאינדקס (למשל מטמון). ייכנס לתוקף בבנייה מחדש.\nלכל אופן עבודה אינדקס משלו — וההגדרה הזו שלו בלבד (באופן אחר — רשימה אחרת; ב\"דוגמאות\" — מתאפסת בחזרה לברירת מחדל).";
         public static final String EXCLUDED_TITLE = "לא לאנדקס";
         public static final String EXCLUDED_SAVED = "נשמר · ייכנס לתוקף בבניית האינדקס מחדש";
         public static final String LEVEL_ABOUT = "\nעדכון האינדקס (לשינויים שנעשו מחוץ לתוכנה; מה שהתוכנה עושה — מתעדכן מיד):";
@@ -32929,7 +33304,7 @@ public final class Words {
     /** חלקי ממשק משותפים (Ui) */
     public static final class UiW {
         /** 1.13.1: קובץ פקודות — תווית הסוג, והשורה מתחת לשם (המשתמש: "סימן שרומז שהם אינם אלא קבצי טקסט"). */
-        public static final String TEXT_TAG = "טקסט", BATCH_LINE = "פקודות · קובץ טקסט";
+        public static final String BATCH_LINE = "פקודות · קובץ טקסט";
         private UiW() { }
 
         public static final String CANT_OPEN_PERMISSION = "לא ניתן לפתוח את מסך ההרשאה";
@@ -33197,7 +33572,7 @@ public final class Words {
         public static final String RESET_ASK = "חזרה לברירת מחדל";
         public static final String RESET_WHAT = "רק הכפתורים — לא רשימות ולא קבצים · רק באופן העבודה הזה";
         public static final String WHAT = "מה הכפתור יעשה?";
-        public static final String T_LINE = "⌨ שורת פקודה בכתב";
+        public static final String T_LINE = "⌨ שורת פקודה בכתב", T_MENU = "☰ תפריט — רשימה מ\"שמור לתוכנה\"";
         public static final String NAME = "שם", ICON = "סמל (אות או סימן אחד)", ACTION = "מה הכפתור עושה: ",
                 CHANGE = "שינוי…", FIXED = " (קבוע — זה כפתור עוגן)";
         public static final String NO_SMART = "אין רשימות חכמות שמורות";
@@ -33302,6 +33677,7 @@ public final class Words {
     /** 1.13.0: פקודות הפתיחה בעברית (Verbs) */
     public static final class Verb {
         private Verb() { }
+        public static final String MENU = "תפריט: ";   // 1.17.0
 
         public static final String SCREEN = "מסך ", LIST = "רשימה: ", SMART = "רשימה חכמה: ", FOLDER = "תיקייה: ",
                 FIND = "מצא: ", BACK = "חזרה למסך הקודם", RUN = "הרצה: ";
@@ -33361,10 +33737,11 @@ public final class Words {
     public static final class CmdM {
         private CmdM() { }
 
-        public static final String TITLE = "⭐ פקודות · נגיעה — הרצה · ארוכה — עריכה", MINE = "⭐ שלי  ▸",
-                ALL = "📜 כל הפקודות במכשיר  ▸", FOLDER = "📂 פתיחת תיקייה במנהל הקבצים…", NEW = "➕ פקודה חדשה…",
+        public static final String TITLE = "⭐ פקודות · נגיעה — הרצה · ארוכה — עריכה",
+                FOLDER = "📂 פתיחת תיקייה במנהל הקבצים…", NEW = "➕ פקודה חדשה…",
                 ARRANGE = "✎ סידור התפריט (הרשימה)…", SAVE_AS = "שמירה בשם — פקודות המערכת לא משתנות",
-                MINE_SUFFIX = " — שלי", MINE_LIST = "הפקודות שלי";  // MINE_LIST — שם רשימה בכונן
+                MINE_SUFFIX = " — שלי",
+                FROM_EXAMPLES = "התפריט בא מ\"שמור לתוכנה\" שבאופן \"דוגמאות\" — לסדר אותו שם, או להעתיק את \"שמור לתוכנה\" לאופן הזה";
     }
 
     /** 1.13.1: "פקודה / קיצור דרך" (Shortcuts) */
@@ -38515,27 +38892,62 @@ public final class Tests {
         } catch (Exception e) { throw new RuntimeException(e); }
 
         // ➕ בבית ותוכנה כקובץ
-        check("1.13.1: קובץ פקודות — תווית \"טקסט\"", Words.UiW.TEXT_TAG.equals(Ui.typeLabel("סידור.vbat", false))
-                && Ui.typeColor(Words.UiW.TEXT_TAG) == Ui.typeColor("TXT"));
+        check("1.17.0: קובץ פקודות — תווית \"פקודה\" בצבע הפקודה", Words.Tags.CMD.equals(Ui.typeLabel("סידור.vbat", false))
+                && Ui.typeColor(Words.Tags.CMD) == Ui.tagColor(Ui.CMD));
+        check("1.17.0: מילת הסוג לפס", "ידנית".equals(Ui.tagShort(Ui.MANUAL)) && "חכמה".equals(Ui.tagShort(Ui.SMART))
+                && "↪ קישור".equals(Ui.tagShort(Ui.LINK)) && "פקודה".equals(Ui.tagShort(Ui.CMD)) && "תיקייה".equals(Ui.tagShort(Ui.FOLDER))
+                && "PDF".equals(Ui.tagShort("PDF")));
+        check("1.17.0: לכל סוג צבע משלו", Ui.kindColor(Ui.MANUAL) != Ui.kindColor(Ui.SMART) && Ui.kindColor(Ui.LINK) != Ui.kindColor(Ui.CMD)
+                && Ui.kindColor(Ui.LINK) != Ui.kindColor(Ui.MANUAL) && Ui.kindColor("PDF") == Ui.typeColor("PDF"));
         boolean readyOk = true;
         for (String[] r : CmdMenu.system()) if (!Verbs.isVerb(r[2]) || Verbs.parse(r[2]).error != null) readyOk = false;
         check("1.16.1: פקודות המערכת — שמונה, וכולן פקודות תקינות (טקסט)", readyOk && CmdMenu.system().size() == 8);
-        File mineT = new File(home, "מבנה-שלי.txt");
+        // 1.17.0: "שמור לתוכנה" — ברירות המחדל, ההעברה מ־1.16.1, ושמירת התוספות
+        File resD = new File(home, "פקודות-מערכת"), resT = new File(home, "מבנה-שמור.txt"), resI = new File(home, "ראשי-שמור.ini");
         try {
-            Files.writeAtomic(mineT, "#1 א\n");
-            Tree.testFile = mineT;
-            Tree.Node mn = CmdMenu.ensureMine();
-            File cmdF = new File(home, "שלי-בדיקה.vbat");
-            Files.writeAtomic(cmdF, "פתח מסך הבית\n");
-            CmdMenu.addToMine(cmdF);
-            CmdMenu.addToMine(cmdF);
-            Tree.Node m2 = Tree.load().find(CmdMenu.MINE);
-            check("1.16.1: \"שלי\" — רשימה ידנית בשורש, ופקודה נכנסת אליה פעם אחת", mn != null && m2 != null
-                    && m2.entries.size() == Shortcuts.mine().size() + 1 && Tree.contains(m2.entries, cmdF.getAbsolutePath()));
+            Reserved.testDir = resD;
+            Files.writeAtomic(resT, "#1 א\n#1 הפקודות שלי\n/x/שלי.vbat | 1\n");
+            Files.writeAtomic(resI, "");
+            ModeCopy.Side rs = new ModeCopy.Side(Ini.load(resI), Tree.loadFrom(resT));
+            check("1.17.0: שמור לתוכנה — נוצר", Reserved.ensure(rs));
+            Tree.Node cm = rs.tree.find(Reserved.CMDS_PATH), mn = rs.tree.find(Reserved.MINE_PATH);
+            check("1.17.0: …פקודות המערכת ו\"פקודה חדשה\" — קבצים, לפי הסדר", cm != null && cm.entries.size() == 9
+                    && cm.entries.get(0).path.endsWith(Words.Top.HOME + "." + Batch.EXT) && Reserved.isNew(new File(cm.entries.get(8).path))
+                    && new File(cm.entries.get(0).path).isFile());
+            check("1.17.0: …\"הפקודות שלי\" מהשורש עברה פנימה", mn != null && Tree.contains(mn.entries, "/x/שלי.vbat")
+                    && rs.tree.root.child(Reserved.MINE) == null);
+            String allId = Reserved.allOf(rs, cm);
+            Structure.Func allF = allId == null ? null : Structure.byId(rs.ini, allId);
+            check("1.17.0: …\"כל הפקודות במכשיר\" — רשימה חכמה של קובצי הפקודות", allF != null
+                    && (Cond.TYPE + ":" + Batch.EXT).equals(allF.params.get(SmartLists.COND)));
+            check("1.17.0: …פעם שנייה — כלום", !Reserved.ensure(rs));
+            String first = cm.entries.remove(0).path;
+            cm.entries.add(new Tree.Entry("/x/עוד.vbat", 1, false));
+            Tree.newChild(rs.tree.find(Reserved.ROOT_PATH), "תפריט שלי");
+            check("1.17.0: …מה שחסר חוזר, ומה שנוסף נשאר", Reserved.ensure(rs) && cm.entries.get(0).path.equals(first)
+                    && Tree.contains(cm.entries, "/x/עוד.vbat") && rs.tree.find(Arrays.asList(Reserved.ROOT, "תפריט שלי")) != null);
+            Files.writeAtomic(new File(resD, "בדיקה.txt"), "");
+            String sysLine = Files.readUtf8(new File(cm.entries.get(0).path)).split("\n")[2];
+            check("1.17.0: פקודת מערכת — טקסט, פקודה תקינה", Verbs.isVerb(sysLine) && Verbs.parse(sysLine).error == null);
+            check("1.17.0: \"צור פקודה\" ו\"פתח תפריט\"", Verbs.K_NEW_CMD.equals(Verbs.parse("צור פקודה").kind)
+                    && Verbs.K_MENU.equals(Verbs.parse(Verbs.openMenu(Reserved.CMDS_PATH)).kind)
+                    && Tree.key(Reserved.CMDS_PATH).equals(Verbs.parse(Verbs.openMenu(Reserved.CMDS_PATH)).arg));
+            // חזרה לברירת מחדל: מאופן ישן עם תוספות — לחדש
+            File resT2 = new File(home, "מבנה-שמור2.txt"), resI2 = new File(home, "ראשי-שמור2.ini");
+            Files.writeAtomic(resT2, "#1 ב\n");
+            Files.writeAtomic(resI2, "");
+            ModeCopy.Side now = new ModeCopy.Side(Ini.load(resI2), Tree.loadFrom(resT2));
+            ModeCopy.keep(rs, Reserved.ROOT_PATH, now);
+            Reserved.ensure(now);
+            Tree.Node cm2 = now.tree.find(Reserved.CMDS_PATH);
+            int alls = 0;
+            for (String r : cm2.smart) if (Structure.byId(now.ini, r) != null && Structure.byId(now.ini, r).name.endsWith(Reserved.ALL)) alls++;
+            check("1.17.0: חזרה לברירת מחדל — התוספות נשארות, ו\"כל הפקודות\" אחת", Tree.contains(cm2.entries, "/x/עוד.vbat")
+                    && now.tree.find(Arrays.asList(Reserved.ROOT, "תפריט שלי")) != null && alls == 1 && cm2.entries.size() == 10);
         } catch (Exception e) {
             throw new RuntimeException(e);
         } finally {
-            Tree.testFile = null;
+            Reserved.testDir = null;
         }
 
         File tf = new File(home, "מבנה-1131.txt");
