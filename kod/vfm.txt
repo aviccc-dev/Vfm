@@ -2,8 +2,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="com.tikiyot.vfm"
-    android:versionCode="155"
-    android:versionName="1.20.0">
+    android:versionCode="156"
+    android:versionName="1.21.0">
     <uses-sdk android:minSdkVersion="21" android:targetSdkVersion="30" />
 
     <queries>
@@ -3589,6 +3589,9 @@ final class Batch {
         boolean fromCompare;
         /** 1.20.0: /תפוס:לעצור — שם תפוס נרשם ככישלון, בלי לשאול. */
         boolean failTaken;
+        /** 1.21.0: COPY … /מצב:<זמן> — שחזור: לכל קובץ — תיקיית היעד שלו (המסלול הלוגי). */
+        final List<String> targets = new ArrayList<String>();
+        long stateWhen = Long.MIN_VALUE;
         /** 203: COPY … %שיתוף% — נאסף לשליחה אחת בסוף. */
         boolean share;
         /** MD לתיקייה שכבר קיימת — בלי שינוי (ולא שגיאה). */
@@ -3728,6 +3731,8 @@ final class Batch {
     /** 1.20.0: תוצאת COMP האחרונה — מקור לשורות COPY/MOVE שאחריה (תמיד עם שמירת מסלול). /עד:N% — סף. */
     static final String V_ONLY_A = "רק-במקור", V_ONLY_B = "רק-ביעד", ONLY_A_MARK = "/\u0000onlyA", ONLY_B_MARK = "/\u0000onlyB";   // תחביר
     static final String SW_LIMIT = "/עד:", TAKEN_STOP = "לעצור";   // תחביר
+    /** 1.21.0: COPY <גיבוי[\\תת־תיקייה][\\תבנית]> <יעד> /מצב:<זמן> — שחזור המצב של אותו זמן. */
+    static final String SW_STATE = "/מצב:";   // תחביר
     static final String NOW_FORMAT = "dd.MM.yyyy HH-mm-ss";   // בכונן
 
     static String var(String name) {
@@ -3738,7 +3743,7 @@ final class Batch {
     private static final Pattern SWITCH = Pattern.compile(
             "^/(-?Y|S|Q|F|A(:.*)?|D(:.*)?|" + SW_DATE + ".*|" + SW_SIZE + ".*|" + SW_TAKEN.substring(1)
                     + ".*|" + SW_KEEP.substring(1) + "|" + SW_JOURNAL.substring(1) + ".*|" + SW_LIMIT.substring(1)
-                    + ".*|MAXAGE:.*|MINAGE:.*|MAX:.*|MIN:.*)$",
+                    + ".*|" + SW_STATE.substring(1) + ".*|MAXAGE:.*|MINAGE:.*|MAX:.*|MIN:.*)$",
             Pattern.CASE_INSENSITIVE);
 
     static boolean isSwitch(String t) {
@@ -4022,6 +4027,11 @@ final class Batch {
                     && !x.equals(SW_TAKEN + TAKEN_ASK) && !x.equals(SW_TAKEN + TAKEN_STOP))
                 s.error = Words.Cmd.switchUnknown(x) + " (" + TAKEN_ASK + " · " + TAKEN_SKIP + " · " + TAKEN_REPLACE + " · " + TAKEN_STOP + ")";
             if (x.startsWith(SW_LIMIT) && limit(x) < 0) s.error = Words.Cmd.switchUnknown(x);
+            if (x.startsWith(SW_STATE)) {                                     // 1.21.0
+                s.stateWhen = State.when(x.substring(SW_STATE.length()));
+                if (s.stateWhen == Long.MIN_VALUE) s.error = Words.Cmd.switchUnknown(x);
+                else if (!cmd.equals("COPY")) s.error = Words.Cmd.STATE_ONLY_COPY;
+            }
         }
         if (s.error != null) return;
         if (cmd.equals("MD")) {
@@ -4069,6 +4079,8 @@ final class Batch {
             if (!s.files.isEmpty() || s.dirs.isEmpty()) what.add(Words.files(s.files.size()));
             if (!s.dirs.isEmpty()) what.add(Words.folders(s.dirs.size()));
             s.describe = Words.Cmd.toShare(join(what, Words.Cmd.AND)) + filtered(s);
+        } else if (cmd.equals("COPY") && s.stateWhen != Long.MIN_VALUE) {         // 1.21.0: שחזור
+            restore(s, args, paths, flt, sim);
         } else if (cmd.equals("COMP")) {                                      // 1.20.0
             comp(s, args, paths, sim);
         } else if ((cmd.equals("COPY") || cmd.equals("MOVE")) && paths.size() == 2
@@ -4275,6 +4287,84 @@ final class Batch {
         }
     }
 
+    /**
+     * 1.21.0: שחזור — COPY <גיבוי> <יעד> /מצב:<זמן>. המקור: שורש גיבוי "מראה + היסטוריה", או מסלול לוגי בתוכו
+     * ("<שורש>\\מסמכים\\א" = מה שהיה ב־מסמכים/א), ואפשר תבנית בסוף. כל קובץ שהיה במצב באותו זמן (State) — מ"נוכחי"
+     * או מתיקיית היסטוריה — נכתב ביעד במסלול הלוגי שלו (יחסית לתת־התיקייה שנבחרה). הגיבוי עצמו — לא משתנה.
+     */
+    private static void restore(Step s, List<String> args, List<String> paths, Filter flt, Sim sim) {
+        if (paths.size() != 2) { s.error = Words.Cmd.usage("COPY"); return; }
+        File src = new File(paths.get(0));
+        String mask = null;
+        if (src.getName().contains("*") || src.getName().contains("?")) {
+            mask = src.getName();
+            src = src.getParentFile();
+        }
+        File root = src;
+        while (root != null && !State.isBackupRoot(root)) root = root.getParentFile();
+        if (root == null) { s.error = Words.Cmd.notBackup(args.get(0)); return; }
+        String prefix = Physical.rel(root.getAbsolutePath(), src.getAbsolutePath());
+        if (prefix.equals(State.CURRENT) || prefix.startsWith(State.CURRENT + "/") || prefix.equals(State.HISTORY)
+                || prefix.startsWith(State.HISTORY + "/")) { s.error = Words.Cmd.STATE_LOGICAL; return; }
+        File dest = new File(paths.get(1));
+        if (sim.isFile(dest)) { s.error = Words.Cmd.NO_DEST; return; }
+        if (Physical.inside(dest, root)) { s.error = Words.Disk.NOT_INTO_ITSELF; return; }
+        State st = new State(s.stateWhen);
+        java.util.TreeMap<String, State.Where> best = new java.util.TreeMap<String, State.Where>();
+        java.util.Map<String, String> phys = new java.util.HashMap<String, String>();
+        List<File> places = new ArrayList<File>();
+        places.add(new File(root, State.CURRENT));
+        File[] hs = new File(root, State.HISTORY).listFiles();
+        if (hs != null) for (File h : hs) if (h.isDirectory()) places.add(h);
+        for (File place : places) {
+            File start = prefix.isEmpty() ? place : new File(place, prefix);
+            List<String> found = new ArrayList<String>();
+            collect(s, start, mask, found);
+            for (String f : found) {
+                Library.Hit hit = sim.lib == null ? null : sim.lib.find(f);
+                State.Where w = st.version(f, hit == null || hit.rec == null ? 0 : hit.rec.added);
+                if (w == null || !(w.came <= st.when && st.when < w.left)) continue;
+                s.total++;
+                if (!flt.ok(new File(f))) continue;
+                State.Where old = best.get(w.rel);
+                if (old == null || w.left < old.left) {                     // שתי גרסאות — הקרובה ביותר אחרי הזמן
+                    best.put(w.rel, w);
+                    phys.put(w.rel, f);
+                }
+            }
+        }
+        s.dest = dest;
+        for (Map.Entry<String, State.Where> e : best.entrySet()) {
+            String rel = e.getKey();
+            String sub = prefix.isEmpty() ? rel : rel.substring(prefix.length() + 1);
+            File to = new File(dest, sub).getParentFile();
+            s.files.add(phys.get(rel));
+            s.targets.add(to.getAbsolutePath());
+            sim.added.put(new File(dest, sub).getAbsolutePath(), new File(phys.get(rel)));
+            for (File up = to; up != null && !up.equals(dest.getParentFile()); up = up.getParentFile()) sim.dirs.add(up.getAbsolutePath());
+        }
+        if (s.skipTaken)
+            for (int k = s.files.size() - 1; k >= 0; k--)
+                if (new File(s.targets.get(k), new File(s.files.get(k)).getName()).exists()) {
+                    s.files.remove(k);
+                    s.targets.remove(k);
+                }
+        s.describe = Words.Cmd.restore(Words.files(s.files.size()), new java.text.SimpleDateFormat("dd.MM.yyyy HH:mm", Locale.ROOT)
+                .format(new java.util.Date(s.stateWhen)), Bidi.path(dest.getAbsolutePath()));   // בכונן
+    }
+
+    /** כל הקבצים מתחת ל־d (מוסתרים — רק עם /A:H; זמניים — אף פעם), לפי תבנית אם יש. */
+    private static void collect(Step s, File d, String mask, List<String> out) {
+        File[] k = d.listFiles();
+        if (k == null) return;
+        java.util.Arrays.sort(k);
+        for (File x : k) {
+            if (!visible(s, x) || Physical.isPartial(x.getName())) continue;
+            if (x.isDirectory()) collect(s, x, mask, out);
+            else if (mask == null || wild(mask, x.getName())) out.add(x.getAbsolutePath());
+        }
+    }
+
     /** /עד:20% או /עד:20 — המספר; -1 אם אינו מספר בין 0 ל־100. */
     static int limit(String sw) {
         String v = sw.substring(SW_LIMIT.length()).trim();
@@ -4433,7 +4523,9 @@ final class Batch {
                     boolean copy = s.cmd.equals("COPY");
                     Physical.Journal j = s.journal == null ? null : new Physical.Journal(new File(s.journal), s.text);   // 1.19.0
                     Physical.Asker ask = s.replace ? REPLACE_ALL : s.failTaken ? null : asker;   // 1.20.0: /תפוס:לעצור
-                    Physical.Result r = s.keepRoot != null
+                    Physical.Result r = s.stateWhen != Long.MIN_VALUE                 // 1.21.0: שחזור
+                            ? Physical.transferTo(lib, s.files, s.targets, s.dest, true, ask, progress, grey, j)
+                            : s.keepRoot != null
                             ? Physical.transferKeep(lib, s.keepRoot, s.files, s.dirs, s.dest, copy, ask, progress, grey, j,
                                     !s.fromCompare)
                             : Physical.transfer(lib, s.files, s.dirs, s.dest, copy, ask, progress, grey, j);
@@ -6505,7 +6597,8 @@ public final class Cond {
      */
     public static final String TYPE = "סוג", FOLDER = "תיקייה", DRIVE = "כונן", SOURCE = "מקור",  // תחביר
             SIZE = "גודל", DATE = "תאריך",  // תחביר
-            ADDED = "נוסף";  // 189: מתי האינדקס ראה את הקובץ לראשונה // תחביר
+            ADDED = "נוסף",  // 189: מתי האינדקס ראה את הקובץ לראשונה // תחביר
+            STATE = "מצב", STATE2 = "מצב-בתאריך";  // 1.21.0: מצב הגיבוי בזמן נבחר // תחביר
     /** 175: רק תיקיות ריקות — תיקיות במקום קבצים. */
     public static final String EMPTY = "תיקיות:ריקות";  // תחביר
 
@@ -6610,6 +6703,7 @@ public final class Cond {
             else if (is(key, SIZE)) t = size(value);
             else if (is(key, DATE)) t = date(value);
             else if (is(key, ADDED)) t = date(value, true);
+            else if (is(key, STATE) || is(key, STATE2)) t = state(value);
             else {
                 c.words.add(token);
                 continue;
@@ -6797,6 +6891,23 @@ public final class Cond {
      */
     static Test date(String value) {
         return date(value, false);
+    }
+
+    /**
+     * 1.21.0: מצב:«26.10.2026 14:30» — רק קבצים בגיבוי "מראה + היסטוריה" שהיו בו באותו זמן: הגרסה שהגיעה עד אז
+     * ועוד לא יצאה (State). כל המסלולים — לפי השורש של הגיבוי, כך שהתוצאה היא העץ של אותו זמן.
+     */
+    static Test state(String value) {
+        long t = State.when(value);
+        if (t == Long.MIN_VALUE) return null;
+        final State st = new State(t);
+        return new Test() {
+            @Override
+            public boolean ok(Index ix, Index.Rec r) {
+                if (r.name == null || r.name.isEmpty()) return false;            // תיקייה — לא
+                return st.in(ix.path(r), r.added);
+            }
+        };
     }
 
     /** 189: added — לפי "נוסף" (לא ידוע = 0: "ישן" — לא עונה ל"מאז", עונה ל"לפני"). */
@@ -18353,6 +18464,23 @@ public final class Physical {
                     emptied.add(up.getAbsolutePath());
         go(run, all, to, destRoot);
         for (String d : emptied) run.removeIfEmpty(new File(d));     // מהעמוק אל הרדוד
+        run.finish();
+        return run.r;
+    }
+
+    /** 1.21.0: כל קובץ אל התיקייה שלו (folders[i]) — לשחזור, כשהקבצים באים מכמה שורשים. */
+    public static Result transferTo(Library lib, List<String> files, List<String> folders, File checkFolder, boolean copy,
+                                    Asker asker, Progress progress, boolean grey, Journal journal) {
+        Run run = new Run(lib, copy, asker, progress, grey);
+        run.keep = true;
+        run.journal = journal;
+        run.journalRoot = checkFolder;
+        List<File> all = new ArrayList<File>(), to = new ArrayList<File>();
+        for (int k = 0; k < files.size(); k++) {
+            all.add(new File(files.get(k)));
+            to.add(new File(folders.get(k)));
+        }
+        go(run, all, to, checkFolder);
         run.finish();
         return run.r;
     }
@@ -33021,6 +33149,17 @@ public final class Words {
         /** 1.20.0 */
         public static final String NO_COMPARE = "אין השוואה (COMP) בשורה קודמת";
         public static final String COMPARE_BROKEN = "שורה קודמת על אותה השוואה נכשלה — לא ממשיכים עליה";
+        /** 1.21.0 */
+        public static final String STATE_ONLY_COPY = "/מצב: — רק ב־COPY (שחזור הוא העתקה; הגיבוי לא משתנה)";
+        public static final String STATE_LOGICAL = "בשחזור כותבים את המסלול הלוגי (אחרי שורש הגיבוי), בלי נוכחי או היסטוריה";
+
+        public static String notBackup(String p) {
+            return "אינו בתוך גיבוי (אין נוכחי ויומן או היסטוריה): " + p;
+        }
+
+        public static String restore(String what, String when, String dest) {
+            return "שחזור המצב של " + when + ": " + what + " ← " + dest + " · שומר מסלול";
+        }
         public static final String SETS_ONLY_SOURCE = "%רק-במקור% ו־%רק-ביעד% — רק לבדם, כמקור של COPY או MOVE";
 
         public static String compareNoSource(String p) {
@@ -33236,6 +33375,7 @@ public final class Words {
                     + "REM שמירת מסלול: /S או /מסלול — כל מה שבתיקייה, גם בתיקיות שבתוכה, באותו מסלול ביעד\n"
                     + "REM יומן: /יומן:<קובץ> — כל קובץ שהגיע ליעד נרשם בקובץ, שורה אחרי שורה\n"
                     + "REM השוואה: COMP <מקור> <יעד>, ואחריה COPY %רק-במקור% <יעד> · MOVE %רק-ביעד% <יעד> /עד:20%\n"
+                    + "REM שחזור: COPY <גיבוי>[\\תת־תיקייה] <יעד> /מצב:\"26.10.2026 14:30\" — מה שהיה באותו זמן\n"
                     + "REM לפני כל הרצה — תצוגה מקדימה ואישור. DEL מעביר לסל המחזור.\n"
                     + "REM בכאילו — שורה לבדה: הקובץ רץ בהדמיה בלבד ומראה מה היה קורה, בלי לשנות דבר.\n"
                     + "REM          כדי להריץ באמת — למחוק את השורה.\n"
@@ -35701,6 +35841,7 @@ public final class Tests {
         run("גרסה 1.18.0 — הגנות בהעתקה: שם זמני, רק העליון, גודל ל-FAT32", new Runnable() { public void run() { v1180(); } });
         run("גרסה 1.19.0 — שמירת מסלול, יומן, \"נוסף\" מדויק בהעברה, %תאריך%", new Runnable() { public void run() { v1190(); } });
         run("גרסה 1.20.0 — השוואה לפי מסלול (COMP), %רק-במקור% / %רק-ביעד%, /עד:, גיבוי מלא", new Runnable() { public void run() { v1200(); } });
+        run("גרסה 1.21.0 — מצב בתאריך: תנאי חיפוש ושחזור (COPY /מצב:)", new Runnable() { public void run() { v1210(); } });
 
         System.out.println("בדיקות: " + passed + " עברו · " + failed + " נכשלו");
         for (String f : failures) System.out.println("  ✗ " + f);
@@ -39527,6 +39668,114 @@ public final class Tests {
     }
 
     /** 1.13.1 — תיקוני באגים. */
+    /** הקבצים בגיבוי שעונים לתנאי: מסלול לוגי ← תוכן. */
+    private static java.util.TreeMap<String, String> stateOf(File root, String cond) {
+        Index ix = built("מצב-" + System.nanoTime(), root);
+        Cond c = Cond.parse(cond);
+        java.util.TreeMap<String, String> out = new java.util.TreeMap<String, String>();
+        State st = new State(0);
+        for (Index.Rec r : ix.files) {
+            if (r.gone || !c.matches(ix, r)) continue;
+            String p = ix.path(r);
+            State.Where w = st.where(p);
+            out.put(w == null ? p : w.rel, read(new File(p)));
+        }
+        return out;
+    }
+
+    private static void v1210() {
+        // תאריכים ושמות
+        long s1 = State.stamp("01.10.2026 10-00-00");
+        check("1.21.0: שם גיבוי — נקרא", s1 != Long.MIN_VALUE && State.stamp("0007 01.10.2026 10-00-00") == s1);
+        check("1.21.0: שם שאינו גיבוי", State.stamp("ספרים") == Long.MIN_VALUE && State.stamp("0002") == Long.MIN_VALUE);
+        check("1.21.0: תאריך בלבד — סוף היום", State.when("01.10.2026") > s1 && State.when("01.10.2026") < s1 + 14L * 3600 * 1000);
+        check("1.21.0: תאריך ושעה", State.when("01.10.2026 10:00") >= s1 && State.when("01.10.2026 09:59") < s1);
+        check("1.21.0: לא תאריך", State.when("אתמול בערב") == Long.MIN_VALUE);
+
+        File root = drive("מצב");
+        File docs = new File(root, "מסמכים");
+        Index ix = built("מצב", root);
+        Library lib = Library.forTests(new ArrayList<Index>(Collections.singletonList(ix)));
+        File tf = new File(home, "מבנה-מצב.txt");
+        tf.delete();
+        Tree.testFile = tf;
+        String text = "MD \"גיבוי\\נוכחי\"\n"
+                + "COMP מסמכים \"גיבוי\\נוכחי\"\n"
+                + "MOVE %רק-ביעד% \"גיבוי\\היסטוריה\\%תאריך%\"\n"
+                + "COPY %רק-במקור% \"גיבוי\\נוכחי\" /תפוס:לעצור /יומן:\"גיבוי\\יומן\\%תאריך%.txt\"\n";
+        long base = 1700000000000L;
+        // גיבוי 1
+        write(docs, "a.txt", "v1").setLastModified(base);
+        write(docs, "b.txt", "b").setLastModified(base);
+        write(new File(docs, "dir"), "c.txt", "c").setLastModified(base);
+        Map<String, String> vars = Batch.vars(root, root.getAbsolutePath(), null);
+        vars.put(Batch.V_NOW, "01.10.2026 10-00-00");
+        Batch.Plan p = Batch.plan(text, root, vars, lib);
+        Batch.run(p, lib, null, null);
+        lib.flush(5000);
+        // גיבוי 2: a נערך, b נמחק, d חדש
+        write(docs, "a.txt", "v2").setLastModified(base + 1000);
+        new File(docs, "b.txt").delete();
+        write(docs, "d.txt", "d").setLastModified(base);
+        vars.put(Batch.V_NOW, "05.10.2026 10-00-00");
+        Batch.run(Batch.plan(text, root, vars, lib), lib, null, null);
+        lib.flush(5000);
+        // גיבוי 3: a שוב, c שינה שם
+        write(docs, "a.txt", "v3").setLastModified(base + 2000);
+        new File(docs, "dir/c.txt").renameTo(new File(docs, "dir/c2.txt"));
+        vars.put(Batch.V_NOW, "10.10.2026 10-00-00");
+        p = Batch.plan(text, root, vars, lib);
+        check("1.21.0: (הכנה) שלושה גיבויים בלי שגיאות", p.errors == 0);
+        Batch.run(p, lib, null, null);
+        lib.flush(5000);
+        File back = new File(root, "גיבוי");
+
+        // תנאי החיפוש
+        java.util.TreeMap<String, String> e1 = new java.util.TreeMap<String, String>();
+        e1.put("a.txt", "v1");
+        e1.put("b.txt", "b");
+        e1.put("dir/c.txt", "c");
+        eq("1.21.0: מצב בין גיבוי 1 ל־2", e1.toString(), stateOf(back, "מצב:03.10.2026").toString());
+        java.util.TreeMap<String, String> e2 = new java.util.TreeMap<String, String>();
+        e2.put("a.txt", "v2");
+        e2.put("d.txt", "d");
+        e2.put("dir/c.txt", "c");
+        eq("1.21.0: מצב ביום גיבוי 2", e2.toString(), stateOf(back, "מצב:05.10.2026").toString());
+        eq("1.21.0: לפני השעה של גיבוי 2 — עדיין 1", e1.toString(), stateOf(back, "מצב:«05.10.2026 09:59»").toString());
+        java.util.TreeMap<String, String> e3 = new java.util.TreeMap<String, String>();
+        e3.put("a.txt", "v3");
+        e3.put("d.txt", "d");
+        e3.put("dir/c2.txt", "c");
+        eq("1.21.0: מצב אחרי גיבוי 3", e3.toString(), stateOf(back, "מצב:20.10.2026").toString());
+        eq("1.21.0: מצב-בתאריך — שם נרדף", e3.toString(), stateOf(back, "מצב-בתאריך:20.10.2026").toString());
+        check("1.21.0: לפני הגיבוי הראשון — ריק", stateOf(back, "מצב:30.09.2026").isEmpty());
+        eq("1.21.0: עם תנאי נוסף (גודל)", "{a.txt=v1}", stateOf(back, "מצב:03.10.2026 גודל:>1").toString());
+        check("1.21.0: מצב: לא מובן — לא נקלט כתנאי", !Cond.parse("מצב:אתמול").unknown.isEmpty());
+        check("1.21.0: קובץ מחוץ לגיבוי — אינו במצב", stateOf(docs, "מצב:20.10.2026").isEmpty());
+
+        // שחזור
+        p = Batch.plan("COPY גיבוי שחזור1 /מצב:03.10.2026", root, vars, lib);
+        check("1.21.0: שחזור — תכנון", p.errors == 0 && p.steps.get(0).files.size() == 3);
+        Batch.run(p, lib, null, null);
+        lib.flush(5000);
+        File r1 = new File(root, "שחזור1");
+        check("1.21.0: שחזור — המצב של אז, במסלולים הלוגיים", "v1".equals(read(new File(r1, "a.txt")))
+                && "b".equals(read(new File(r1, "b.txt"))) && "c".equals(read(new File(r1, "dir/c.txt"))) && !new File(r1, "d.txt").exists());
+        check("1.21.0: שחזור — הגיבוי לא השתנה", "v3".equals(read(new File(back, "נוכחי/a.txt"))));
+        p = Batch.plan("COPY \"גיבוי\\dir\" שחזור2 /מצב:\"05.10.2026 12:00\"", root, vars, lib);
+        Batch.run(p, lib, null, null);
+        lib.flush(5000);
+        check("1.21.0: שחזור תת־תיקייה", new File(root, "שחזור2/c.txt").isFile() && new File(root, "שחזור2").list().length == 1);
+        p = Batch.plan("COPY \"גיבוי\\*.txt\" שחזור3 /מצב:20.10.2026", root, vars, lib);
+        eq("1.21.0: שחזור עם תבנית — בכל העומק", 3, p.steps.get(0).files.size());
+        check("1.21.0: /מצב: ב־MOVE — שגיאה", Batch.plan("MOVE גיבוי ש /מצב:03.10.2026", root, vars).errors == 1);
+        check("1.21.0: מקור שאינו גיבוי — שגיאה", Batch.plan("COPY מסמכים ש /מצב:03.10.2026", root, vars).errors == 1);
+        check("1.21.0: נוכחי במסלול — שגיאה (מסלול לוגי)", Batch.plan("COPY \"גיבוי\\נוכחי\" ש /מצב:03.10.2026", root, vars).errors == 1);
+        check("1.21.0: זמן לא מובן — שגיאה", Batch.plan("COPY גיבוי ש /מצב:מחר", root, vars).errors == 1);
+        check("1.21.0: לתוך הגיבוי — שגיאה", Batch.plan("COPY גיבוי \"גיבוי\\ש\" /מצב:03.10.2026", root, vars).errors == 1);
+        Tree.testFile = null;
+    }
+
     /** תוכן כל הקבצים בעץ: מסלול יחסי ← גודל:בתים (בלי מוסתרים). */
     private static java.util.TreeMap<String, String> treeOf(File d) {
         java.util.TreeMap<String, String> out = new java.util.TreeMap<String, String>();
@@ -41364,5 +41613,191 @@ package android.os;
 public class Environment {
     public static java.io.File getExternalStorageDirectory() {
         return new java.io.File(System.getProperty("vfm.home"));
+    }
+}
+===== קובץ: src/com/tikiyot/vfm/State.java =====
+package com.tikiyot.vfm;
+
+// 1.21.0: "מצב בתאריך" (שלב 4 של שילוב הגיבוי). בגיבוי "מראה + היסטוריה":
+//   <שורש>/נוכחי/<מסלול>                  — הגרסה של היום
+//   <שורש>/היסטוריה/<זמן>/<מסלול>          — גרסה שיצאה מ"נוכחי" בגיבוי של <זמן>
+//   <שורש>/יומן/<זמן>.txt                  — מה שהגיע ל"נוכחי" בגיבוי של <זמן> (שורה לכל קובץ: מסלול <טאב> גודל)
+// גרסה הייתה במצב בזמן T אם הגיעה עד T ולא יצאה עד T. "הגיעה" — מהיומנים (מקור האמת, שמור בגיבוי עצמו);
+// אם אין יומן שמזכיר אותה — "נוסף" מהאינדקס. "יצאה" — שם תיקיית ההיסטוריה. גרסה ב"נוכחי" — לא יצאה.
+// T שהוא בין שני גיבויים — המצב שאחרי הגיבוי שלפניו (מתעגל מעצמו).
+// אחראי: לקרוא יומנים ושמות תיקיות, ולענות לכל קובץ. אסור לו: לשנות דבר.
+
+import java.io.File;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+
+final class State {
+
+    static final String CURRENT = "נוכחי", HISTORY = "היסטוריה", JOURNAL = "יומן";   // בכונן
+
+    /** הזמן שנבחר. */
+    final long when;
+    /** שורש גיבוי ← ציר הזמן שלו (נקרא פעם אחת לכל חיפוש). */
+    private final Map<String, Line> lines = new HashMap<String, Line>();
+
+    State(long when) {
+        this.when = when;
+    }
+
+    /** ציר הזמן של שורש אחד: מסלול ← זמני ההגעה (ממוינים). null — אינו שורש גיבוי. */
+    static final class Line {
+        final Map<String, long[]> arrivals = new HashMap<String, long[]>();
+    }
+
+    /** האם הקובץ (מסלול מלא) היה במצב ב־when. added — "נוסף" מהאינדקס, לגיבוי בלי יומן. */
+    boolean in(String path, long added) {
+        Where w = version(path, added);
+        return w != null && w.came <= when && when < w.left;
+    }
+
+    /** הגרסה: איפה בגיבוי, מתי הגיעה ומתי יצאה. null — אינה בגיבוי. */
+    Where version(String path, long added) {
+        Where w = where(path);
+        if (w == null) return null;
+        Line line = line(w.root);
+        long[] arr = line.arrivals.get(w.rel);
+        long came = Long.MIN_VALUE;
+        if (arr != null)
+            for (long t : arr) if (t < w.left) came = Math.max(came, t);      // ההגעה האחרונה לפני היציאה
+        if (came == Long.MIN_VALUE) came = added > 0 ? added : Long.MIN_VALUE + 1;
+        w.came = came;
+        return w;
+    }
+
+    /** איפה בגיבוי: השורש, המסלול שאחרי נוכחי/ או היסטוריה/<זמן>/, ומתי יצא. */
+    static final class Where {
+        String root, rel;
+        /** מתי יצאה (Long.MAX_VALUE — עדיין בנוכחי), ומתי הגיעה. */
+        long left = Long.MAX_VALUE, came;
+    }
+
+    Where where(String path) {
+        String cur = "/" + CURRENT + "/", hist = "/" + HISTORY + "/";
+        int from = 0;
+        while (true) {
+            int c = path.indexOf(cur, from), h = path.indexOf(hist, from);
+            if (c < 0 && h < 0) return null;
+            boolean isCur = c >= 0 && (h < 0 || c < h);
+            int at = isCur ? c : h;
+            String root = path.substring(0, at);
+            if (isBackup(root)) {
+                Where w = new Where();
+                w.root = root;
+                if (isCur) {
+                    w.rel = path.substring(at + cur.length());
+                    return w;
+                }
+                String rest = path.substring(at + hist.length());
+                int slash = rest.indexOf('/');
+                if (slash > 0) {
+                    long t = stamp(rest.substring(0, slash));
+                    if (t != Long.MIN_VALUE) {
+                        w.left = t;
+                        w.rel = rest.substring(slash + 1);
+                        return w;
+                    }
+                }
+            }
+            from = at + 1;
+        }
+    }
+
+    private final Map<String, Boolean> backups = new HashMap<String, Boolean>();
+
+    /** שורש גיבוי: יש בו יומן או היסטוריה, וגם נוכחי. נבדק פעם אחת לכל שורש. */
+    private synchronized boolean isBackup(String root) {
+        Boolean b = backups.get(root);
+        if (b == null) {
+            File r = new File(root);
+            b = isBackupRoot(r);
+            backups.put(root, b);
+        }
+        return b;
+    }
+
+    static boolean isBackupRoot(File r) {
+        return new File(r, CURRENT).isDirectory() && (new File(r, JOURNAL).isDirectory() || new File(r, HISTORY).isDirectory());
+    }
+
+    private synchronized Line line(String root) {
+        if (lines.containsKey(root)) return lines.get(root);
+        Line l = read(new File(root));
+        lines.put(root, l);
+        return l;
+    }
+
+    /** קורא את כל היומנים של שורש. */
+    static Line read(File root) {
+        Line l = new Line();
+        File[] js = new File(root, JOURNAL).listFiles();
+        if (js == null) return l;
+        Map<String, List<Long>> m = new HashMap<String, List<Long>>();
+        for (File j : js) {
+            String n = j.getName();
+            if (!n.endsWith(".txt")) continue;
+            long t = stamp(n.substring(0, n.length() - 4));
+            if (t == Long.MIN_VALUE) continue;
+            for (String[] row : Physical.Journal.read(j)) {
+                List<Long> x = m.get(row[0]);
+                if (x == null) m.put(row[0], x = new ArrayList<Long>());
+                x.add(t);
+            }
+        }
+        for (Map.Entry<String, List<Long>> e : m.entrySet()) {
+            long[] a = new long[e.getValue().size()];
+            for (int i = 0; i < a.length; i++) a[i] = e.getValue().get(i);
+            Arrays.sort(a);
+            l.arrivals.put(e.getKey(), a);
+        }
+        return l;
+    }
+
+    /** שם של גיבוי: "dd.MM.yyyy HH-mm-ss", אפשר עם מספר לפניו ("0007 …"). Long.MIN_VALUE — לא הובן. */
+    static long stamp(String name) {
+        String n = name.trim();
+        int sp = n.indexOf(' ');
+        if (sp > 0 && n.substring(0, sp).matches("\\d+") && n.indexOf('.') > sp) n = n.substring(sp + 1).trim();
+        try {
+            java.text.SimpleDateFormat f = new java.text.SimpleDateFormat(Batch.NOW_FORMAT, Locale.ROOT);
+            f.setLenient(false);
+            java.text.ParsePosition pos = new java.text.ParsePosition(0);
+            java.util.Date d = f.parse(n, pos);
+            return d == null || pos.getIndex() != n.length() ? Long.MIN_VALUE : d.getTime();
+        } catch (Throwable t) {
+            return Long.MIN_VALUE;
+        }
+    }
+
+    /**
+     * הזמן שבתנאי: "26.10.2026" (סוף היום), "26.10.2026 14:30", "26.10.2026 14:30:05", או שם של גיבוי
+     * ("26.10.2026 14-30-05", גם עם מספר לפניו). Long.MIN_VALUE — לא הובן.
+     */
+    static long when(String raw) {
+        String v = raw.trim();
+        long s = stamp(v);
+        if (s != Long.MIN_VALUE) return s + 999;                        // השנייה כולה
+        String[] fmts = {"dd.MM.yyyy HH:mm:ss", "dd.MM.yyyy HH:mm", "d.M.yyyy HH:mm:ss", "d.M.yyyy HH:mm"};   // בכונן
+        for (String fm : fmts) {
+            try {
+                java.text.SimpleDateFormat f = new java.text.SimpleDateFormat(fm, Locale.ROOT);
+                f.setLenient(false);
+                java.text.ParsePosition pos = new java.text.ParsePosition(0);
+                java.util.Date d = f.parse(v, pos);
+                if (d != null && pos.getIndex() == v.length()) return d.getTime() + (fm.endsWith("ss") ? 999 : 59999);
+            } catch (Throwable ignored) {
+            }
+        }
+        long day = Cond.dateEdge(v);
+        if (day == Long.MIN_VALUE || !v.matches("[\\d./-]+")) return Long.MIN_VALUE;
+        return day + 24L * 3600 * 1000 - 1;                              // תאריך בלבד — סוף היום
     }
 }
