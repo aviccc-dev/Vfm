@@ -2,8 +2,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="com.tikiyot.vfm"
-    android:versionCode="147"
-    android:versionName="1.17.1">
+    android:versionCode="148"
+    android:versionName="1.17.2">
     <uses-sdk android:minSdkVersion="21" android:targetSdkVersion="30" />
 
     <queries>
@@ -5922,11 +5922,13 @@ final class CmdMenu {
         final boolean here = Modes.current().equals(Reserved.modeInUse());
         final List<String> labels = new ArrayList<String>();
         final List<Runnable> taps = new ArrayList<Runnable>(), holds = new ArrayList<Runnable>();
+        final List<String> keys = new ArrayList<String>();                    // 1.17.2: לסדר החופשי של הרשימה
         for (Tree.Entry e : n.entries) {                                      // קובצי הפקודות שבה
             final File f = new File(e.path);
             if (!Batch.isBatch(f.getName()) || !f.isFile()) continue;
             Program p = Program.read(f);
             labels.add((p.isProgram() ? p.icon : "▶") + "  " + p.title(f));
+            keys.add("f" + e.path);
             taps.add(new Runnable() {
                 @Override public void run() { if (Reserved.isNew(f)) create(a, newIn, pick); else useFile(a, f, pick); }
             });
@@ -5936,6 +5938,7 @@ final class CmdMenu {
         }
         for (final Tree.Node c : n.children) {                                // תתי־רשימות — תפריטי משנה
             labels.add(c.name + "  ▸");
+            keys.add("c" + c.name);
             taps.add(new Runnable() {
                 @Override public void run() { showList(a, c.path(), newIn, pick, screen, false); }
             });
@@ -5947,6 +5950,7 @@ final class CmdMenu {
             final String name = f.name.substring(f.name.lastIndexOf(" › ") >= 0 ? f.name.lastIndexOf(" › ") + 3 : 0);
             final String cond = f.params.containsKey(SmartLists.COND) ? f.params.get(SmartLists.COND) : "";
             labels.add("📜 " + name + "  ▸");
+            keys.add("s" + r);
             taps.add(new Runnable() {
                 @Override public void run() { found(a, name, cond, pick); }
             });
@@ -5956,10 +5960,37 @@ final class CmdMenu {
             final List<String> p = Tree.parsePath(r);
             if (side.tree.find(p) == null) continue;
             labels.add("↪ " + p.get(p.size() - 1) + "  ▸");
+            keys.add("r" + r);
             taps.add(new Runnable() {
                 @Override public void run() { showList(a, p, newIn, pick, screen, false); }
             });
             holds.add(null);
+        }
+        if (!n.order.isEmpty()) {                                             // 1.17.2: התפריט — בסדר של הרשימה
+            final java.util.Map<String, Integer> at = new java.util.HashMap<String, Integer>();
+            for (int i = 0; i < n.order.size(); i++) at.put(n.order.get(i), i);
+            Integer[] idx = new Integer[keys.size()];
+            for (int i = 0; i < idx.length; i++) idx[i] = i;
+            java.util.Arrays.sort(idx, new java.util.Comparator<Integer>() {
+                @Override
+                public int compare(Integer x, Integer y) {
+                    Integer rx = at.get(keys.get(x)), ry = at.get(keys.get(y));
+                    return (rx != null ? rx : 100000 + x) - (ry != null ? ry : 100000 + y);
+                }
+            });
+            List<String> l2 = new ArrayList<String>();
+            List<Runnable> t2 = new ArrayList<Runnable>(), h2 = new ArrayList<Runnable>();
+            for (Integer i : idx) {
+                l2.add(labels.get(i));
+                t2.add(taps.get(i));
+                h2.add(holds.get(i));
+            }
+            labels.clear();
+            labels.addAll(l2);
+            taps.clear();
+            taps.addAll(t2);
+            holds.clear();
+            holds.addAll(h2);
         }
         if (top && pick != null) extras(a, screen, pick, labels, taps, holds);
         labels.add(Words.CmdM.ARRANGE);
@@ -15534,7 +15565,12 @@ final class ListSettings {
                         node.icon = "";                                       // הצלמית — בקובץ העיצוב (1.12.0)
                         node.desc = d;
                         node.why = w;
-                        if (!wanted.isEmpty() && !wanted.equals(node.name)) node.name = node.parent.uniqueChildName(wanted, node);
+                        if (!wanted.isEmpty() && !wanted.equals(node.name)) {
+                            String was = node.name;
+                            node.name = node.parent.uniqueChildName(wanted, node);
+                            int at = node.parent.order.indexOf("c" + was);    // 1.17.2: מקומה בסדר החופשי נשאר
+                            if (at >= 0) node.parent.order.set(at, "c" + node.name);
+                        }
                         now[0] = node.name;
                         return true;
                     }
@@ -27721,6 +27757,11 @@ public final class Tree {
     public static final String DESIGN_LINE = "@עיצוב ";  // תחביר
     /** 1.13.0: "למה" — המטרה של הרשימה (מוצגת בראשה כשנכנסים, מתקפלת בנגיעה). */
     public static final String WHY_LINE = "@למה ";  // תחביר
+    /**
+     * 1.17.2: הסדר החופשי (המילון, 12: "ברור שכן") — שורה לכל פריט, לפי הסדר: סוג (c רשימה · s חכמה · r קישור ·
+     * l תיקייה מתעדכנת · f קובץ) והערך שלו. אין — הסדר הרגיל (רשימות ואז קבצים).
+     */
+    public static final String ORDER_LINE = "@סדר ";  // תחביר
     /** 1.13.0: הפניה לרשימה ידנית אחרת — בלי להעתיק אותה (רשימה במקומה = קבוצה, הפניה אליה = תגית). "@רשימה א / ב". */
     public static final String REF_LINE = "@רשימה ";  // תחביר
 
@@ -27762,6 +27803,8 @@ public final class Tree {
         /** 1.13.0: למה, והפניות לרשימות אחרות (מסלולים). */
         public String why = "";
         public final List<String> refs = new ArrayList<String>();
+        /** 1.17.2: הסדר החופשי — מפתחות (סוג + ערך); ריק — הסדר הרגיל. */
+        public final List<String> order = new ArrayList<String>();
         boolean declared;
 
         public Node child(String n) {
@@ -27947,6 +27990,11 @@ public final class Tree {
                 cur.why = line.substring(WHY_LINE.trim().length()).trim();
                 continue;
             }
+            if (line.startsWith(ORDER_LINE)) {                          // 1.17.2: הסדר החופשי
+                String k = line.substring(ORDER_LINE.length()).trim();
+                if (k.length() > 1 && !cur.order.contains(k)) cur.order.add(k);
+                continue;
+            }
             if (line.startsWith(REF_LINE)) {                            // 1.13.0: הפניה לרשימה
                 String r = line.substring(REF_LINE.length()).trim();
                 if (!r.isEmpty() && !cur.refs.contains(r)) cur.refs.add(r);
@@ -28070,6 +28118,7 @@ public final class Tree {
         if (!n.design.isEmpty()) sb.append(DESIGN_LINE).append(n.design).append('\n');       // 1.12.0
         if (!n.desc.isEmpty()) sb.append(DESC_LINE).append(n.desc.replace('\n', ' ')).append('\n');
         if (!n.why.isEmpty()) sb.append(WHY_LINE).append(n.why.replace('\n', ' ')).append('\n');   // 1.13.0
+        for (String k : n.order) sb.append(ORDER_LINE).append(k).append('\n');                // 1.17.2
         for (String r : n.smart) sb.append(SMART_LINE).append(r).append('\n');                // 161
         for (String r : n.refs) sb.append(REF_LINE).append(r).append('\n');                   // 1.13.0
         for (String l : n.live) sb.append(LIVE_LINE).append(l).append('\n');                  // 1.9.0
@@ -28271,6 +28320,12 @@ public final class Tree {
         if (to.desc.isEmpty()) to.desc = from.desc;
         if (to.design.isEmpty()) to.design = from.design;                                 // 1.12.0
         if (to.why.isEmpty()) to.why = from.why;                                          // 1.13.0
+        if (to.order.isEmpty())                                                           // 1.17.2: גם הסדר
+            for (String k : from.order) {
+                String v = k.substring(1);
+                String n = k.charAt(0) == 's' ? links.smart(v) : k.charAt(0) == 'r' ? links.list(v) : v;
+                if (n != null) to.order.add(k.charAt(0) + n);
+            }
         for (Node c : from.children) copyNode(c, newChild(to, c.name), links);
     }
 
@@ -31108,6 +31163,7 @@ public class VirtualScreen extends ListScreen<VirtualScreen.Item> implements Top
             files.addAll(0, gone);
         }
         items.addAll(files);
+        if (Sort.MINE.equals(srt.by) && !node.order.isEmpty()) freeOrder(items, node.order);   // 1.17.2
 
         StringBuilder st = new StringBuilder();
         int lists = node.children.size() + node.smart.size() + node.live.size() + node.refs.size();   // 161: גם החכמות שבתוכה · 1.9.0: והחיות · 1.13.0: וההפניות
@@ -31634,6 +31690,33 @@ public class VirtualScreen extends ListScreen<VirtualScreen.Item> implements Top
     }
 
     /** "↕ הזזה": למעלה · למטה · לראש · לסוף — לפריטים ולרשימות שנבחרו (כל סוג בתוך הסוג שלו). נשמר בסדר הקובץ. */
+    /** 1.17.2: מפתח הסדר של שורה (Tree.ORDER_LINE): סוג + ערך. */
+    private static String orderKey(Item it) {
+        if (it.type == FOLDER) return "c" + it.folder;
+        if (it.type == SMART) return "s" + it.smart.ref;
+        if (it.type == REF) return "r" + it.refText;
+        if (it.type == LIVE) return "l" + it.live;
+        return it.entry != null ? "f" + it.entry.path : null;
+    }
+
+    /** 1.17.2: הסדר החופשי — מה שבו לפי הסדר שלו; מה שעוד לא בו (נוסף אחר כך) — אחריו, בסדר הרגיל. */
+    private static void freeOrder(List<Item> items, List<String> order) {
+        final java.util.Map<String, Integer> at = new java.util.HashMap<String, Integer>();
+        for (int i = 0; i < order.size(); i++) at.put(order.get(i), i);
+        final java.util.Map<Item, Integer> rank = new java.util.HashMap<Item, Integer>();
+        for (int i = 0; i < items.size(); i++) {
+            Integer r = at.get(orderKey(items.get(i)));
+            rank.put(items.get(i), r != null ? r : order.size() + i);
+        }
+        java.util.Collections.sort(items, new java.util.Comparator<Item>() {
+            @Override public int compare(Item x, Item y) { return rank.get(x) - rank.get(y); }
+        });
+    }
+
+    /**
+     * 1.13.0 · 1.17.2: הזזה ידנית של מה שנבחר — למעלה · למטה · לראש · לסוף, בין כל השורות (המילון, 12: סדר חופשי —
+     * קובץ יכול לבוא לפני קישור או לפני תת־רשימה). הסדר נשמר ברשימה (@סדר).
+     */
     private void orderSelected() {
         if (selected.isEmpty() && selectedLists.isEmpty()) {
             Ui.toast(this, Words.NOTHING_SELECTED);
@@ -31643,25 +31726,23 @@ public class VirtualScreen extends ListScreen<VirtualScreen.Item> implements Top
                 Words.Manual.ORDER_TOP, Words.Manual.ORDER_BOTTOM}, new DialogInterface.OnClickListener() {
             @Override
             public void onClick(DialogInterface d, final int how) {
-                final java.util.Set<String> files = new java.util.HashSet<String>(selected), lists = new java.util.HashSet<String>(selectedLists);
+                final java.util.Set<String> picked = new java.util.HashSet<String>();
+                for (String p : selected) picked.add("f" + p);
+                for (String n : selectedLists) picked.add(n.startsWith(LINE) ? n.substring(1) : "c" + n);
+                final List<String> keys = new ArrayList<String>();           // הסדר כמו שהוא מוצג עכשיו
+                for (Item it : items) if (orderKey(it) != null) keys.add(orderKey(it));
                 change(new Change() {
                     @Override
                     public boolean apply(Tree t, Tree.Node node) {
-                        boolean a = Order.move(node.entries, how, new Order.Picked<Tree.Entry>() {
-                            @Override public boolean is(Tree.Entry e) { return !e.bad && files.contains(e.path); }
-                        });
-                        boolean b = Order.move(node.children, how, new Order.Picked<Tree.Node>() {
-                            @Override public boolean is(Tree.Node n) { return lists.contains(n.name); }
-                        });
-                        boolean c = false;                                    // 1.17.1: גם שורות — כל סוג בין שלו
-                        for (final char k : new char[]{'r', 's', 'l'})
-                            c |= Order.move(k == 'r' ? node.refs : k == 's' ? node.smart : node.live, how, new Order.Picked<String>() {
-                                @Override public boolean is(String v) { return lists.contains(LINE + k + v); }
-                            });
-                        return a || b || c;
+                        if (!Order.move(keys, how, new Order.Picked<String>() {
+                            @Override public boolean is(String k) { return picked.contains(k); }
+                        })) return false;
+                        node.order.clear();
+                        node.order.addAll(keys);
+                        return true;
                     }
                 });
-                if (!selected.isEmpty() && srt != null && !Sort.MINE.equals(srt.by)) Ui.toast(VirtualScreen.this, Words.Manual.ORDER_SORTED);
+                if (srt != null && !Sort.MINE.equals(srt.by)) Ui.toast(VirtualScreen.this, Words.Manual.ORDER_SORTED);
             }
         });
     }
@@ -38989,6 +39070,26 @@ public final class Tests {
         boolean readyOk = true;
         for (String[] r : CmdMenu.system()) if (!Verbs.isVerb(r[2]) || Verbs.parse(r[2]).error != null) readyOk = false;
         check("1.16.1: פקודות המערכת — שמונה, וכולן פקודות תקינות (טקסט)", readyOk && CmdMenu.system().size() == 8);
+        // 1.17.2: סדר חופשי — נשמר ונקרא, ומועתק עם הרשימה (גם המזהים של החכמות)
+        File foT = new File(home, "סדר1172.txt");
+        try {
+            Files.writeAtomic(foT, "#1 א\n@סדר f/x/1.pdf\n@סדר rב\n@סדר cג\n@חכמה s1\n@רשימה ב\n/x/1.pdf | 1\n#2 א / ג\n#1 ב\n");
+            Tree fo = Tree.loadFrom(foT);
+            Tree.Node fa = fo.find(Arrays.asList("א"));
+            eq("1.17.2: הסדר נקרא", Arrays.asList("f/x/1.pdf", "rב", "cג"), fa.order);
+            fa.order.add(0, "ss1");
+            fo.saveTo(foT);
+            eq("1.17.2: …ונשמר", Arrays.asList("ss1", "f/x/1.pdf", "rב", "cג"), Tree.loadFrom(foT).find(Arrays.asList("א")).order);
+            Tree.Node cp = Tree.newChild(fo.root, "עותק");
+            Tree.copyNode(fa, cp, new Tree.Links() {
+                @Override public String smart(String ref) { return "s2"; }
+                @Override public String list(String path) { return path; }
+            });
+            eq("1.17.2: …ומועתק עם הרשימה", Arrays.asList("ss2", "f/x/1.pdf", "rב", "cג"), cp.order);
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+
         // 1.17.1: הזזה של כמה כלים יחד בבית
         File shI = new File(home, "הזזה1171.ini");
         try {
