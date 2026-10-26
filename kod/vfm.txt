@@ -2,8 +2,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="com.tikiyot.vfm"
-    android:versionCode="148"
-    android:versionName="1.17.2">
+    android:versionCode="149"
+    android:versionName="1.17.3">
     <uses-sdk android:minSdkVersion="21" android:targetSdkVersion="30" />
 
     <queries>
@@ -3031,7 +3031,7 @@ public final class Adder {
                         if (which == 0) {                                      // 1.9.0: תיקייה חיה — מיד, בלי סריקה
                             List<String> paths = new ArrayList<String>();
                             for (File f : folders) paths.add(f.getAbsolutePath());
-                            int lives = Tree.addLive(listPath, paths);
+                            int lives = Unify.addFolders(listPath, paths);    // 1.17.3: רשימה חכמה של התיקייה
                             int items = lives < 0 || files.isEmpty() ? 0 : Math.max(0, Tree.addFiles(listPath, files));
                             Ui.toast(a, lives < 0 ? Words.LIST_NOT_FOUND
                                     : Words.AddW.ADDED_N + lives + Words.AddW.LIVE_ADDED
@@ -9398,6 +9398,8 @@ final class Examples {
             }
             modes.mkdirs();
             if (!mark.exists()) Files.writeAtomic(mark, "1\n");
+            ModeCopy.Side un = new ModeCopy.Side(Ini.load(mainFile), Tree.loadFrom(treeFile));
+            if (Unify.run(un) && un.ini.saveQuiet()) un.tree.saveTo(treeFile);  // 1.17.3: גם הדוגמאות — מיד, לא רק בפתיחה הבאה
             if (mine == null || mine.tree.find(Reserved.ROOT_PATH) == null) {  // 1.17.0: "שמור לתוכנה" — ברירות המחדל
                 ModeCopy.Side now = new ModeCopy.Side(Ini.load(mainFile), Tree.loadFrom(treeFile));
                 if (Reserved.ensure(now) && now.ini.saveQuiet()) now.tree.saveTo(treeFile);
@@ -11033,6 +11035,7 @@ public class Home extends Activity {
         Log.initVersion(this);
         Examples.install(this, Paths.data(), internalRoot(), false);        // 156: בפעם הראשונה בלבד
         Envs.all();                                                           // 1.15.0: סביבות ← רשימות, בכל האופנים
+        Unify.all();                                                          // 1.17.3: תיקייה מתעדכנת ← חכמה; נפוצה ← תבנית
         Reserved.ensureMode(Examples.MODE);                                   // 1.17.0: "שמור לתוכנה" — ברירות המחדל
         lib = Library.get(this);
         setTitle(Words.Main.APP_NAME);
@@ -21014,6 +21017,11 @@ public class SearchScreen extends Activity implements Clip.Holder {
 
 
     private String funcId;
+
+    /** 1.17.3: רשימה חכמה (כלי, או רשימה בתוך רשימה) — ולא חיפוש פתוח; לשורות הכפתורים. */
+    boolean isList() {
+        return funcId != null || owner != null;
+    }
     /**
      * 1.15.0: איפה נשמרות ההגדרות של המסך ("למה", הכפתורים הדולקים, המיון…): הכלי — או רשימה חכמה פנימית (מאז שהסביבות
      * הוסבו לרשימות, הכלים החכמים שבהן הם רשימות פנימיות — עם ה"למה" וההגדרות שלהם). null — ההגדרות הכלליות.
@@ -21492,7 +21500,11 @@ public class SearchScreen extends Activity implements Clip.Holder {
         List<String> names = new ArrayList<String>();
         for (SmartLists.Named n : all) names.add(n.name);
         Ui.list(this, Words.Inner.COMMON, names, new android.content.DialogInterface.OnClickListener() {
-            @Override public void onClick(android.content.DialogInterface d, int w) { added(Nested.add(owner, all.get(w).id)); }
+            @Override
+            public void onClick(android.content.DialogInterface d, int w) {    // 1.17.3: מתבנית — עותק משלה
+                String id = Structure.copyInner(all.get(w).id, all.get(w).name);
+                if (id != null) added(Nested.add(owner, id));
+            }
         });
     }
 
@@ -24518,8 +24530,9 @@ public final class SmartForm {
         final Spinner view = Ui.choice(a, FolderView.MODES, Ui.indexOf(FolderView.MODES, shown[2], 0));   // 148
         final TextView shareNote = Ui.info(a);                                // 196: במילים — רק כאן, או משותפת
         final TextView shareTop = Ui.info(a);
-        final int[] current = {linked == null ? 0 : named.indexOf(linked) + 1};
-        for (int i = 0; i < named.size(); i++) if (linked != null && named.get(i).id.equals(linked.id)) current[0] = i + 1;
+        // 1.17.3: "תבנית רשימה חכמה" במקום "הגדרה נפוצה" (המילון, 20: "רק התבנית משתנה") — טעינה מתבנית מעתיקה את
+        // ההגדרות לטופס, ושמירה כתבנית שומרת עותק; הרשימה לא מקושרת לתבנית.
+        final int[] current = {0};
         final Button unlink = new Button(a);
         final Fold[] advRef = new Fold[1];                                    // 202: מתחת ל"הגדרה נפוצה" — המצב
         final Runnable fillWhich = new Runnable() {
@@ -24545,7 +24558,6 @@ public final class SmartForm {
         final Ui.Index1 pick = new Ui.Index1() {                             // טעינת הגדרה שמורה — ההגדרות שלה לטופס
             @Override
             public void ok(int pos) {
-                current[0] = pos + 1;
                 SmartLists.Named n = named.get(pos);
                 p.reload(a, n.cond);
                 sort.setSelection(Ui.indexOf(SORTS, n.sort.isEmpty() ? Sort.RANK : n.sort, 0));
@@ -24599,7 +24611,6 @@ public final class SmartForm {
                                 (String) view.getSelectedItem());
                         named.clear();
                         named.addAll(SmartLists.all());
-                        for (int i = 0; i < named.size(); i++) if (named.get(i).id.equals(id)) current[0] = i + 1;
                         fillWhich.run();
                         Ui.toast(a, Words.Named.SAVED_AS);
                     }
@@ -26732,7 +26743,8 @@ final class TopRow {
     static String screenOf(Activity a) {
         if (a instanceof VirtualScreen) return Words.Top.S_LIST;
         if (a instanceof Home) return Words.Top.S_HOME;
-        if (a instanceof SearchScreen) return Words.Top.S_SEARCH;
+        if (a instanceof SearchScreen)                                        // 1.17.3: רשימה חכמה — אותה שורה כמו ידנית
+            return ((SearchScreen) a).isList() ? Words.Top.S_LIST : Words.Top.S_SEARCH;
         if (a instanceof DiskScreen) return Words.Top.S_DISK;
         if (a instanceof TrashScreen) return Words.Top.S_TRASH;
         if (a instanceof DupScreen) return Words.Top.S_DUP;
@@ -26792,6 +26804,18 @@ final class TopRow {
         }
     }
 
+    /**
+     * 1.17.3: שורה אחת לכל הרשימות — ידניות וחכמות (המשתמש: "שורה למסך הבית, ושורה נפרדת לירידה ברמה לתוך רשימה —
+     * לא משנה חכמה או ידנית"). כפתור של פעולה שרק סוג אחד מכיר (למשל "מהכונן" ברשימה ידנית) — לא מוצג בשני.
+     */
+    private boolean fits(Buttons.Btn b) {
+        String code = Verbs.isVerb(b.act) ? Verbs.hostCode(Verbs.parse(b.act)) : b.act.startsWith(Buttons.ACT) ? b.act : null;
+        if (code == null) return true;
+        if (!(a instanceof Host)) return false;
+        for (String[] x : ((Host) a).actions()) if (x[0].equals(code)) return true;
+        return false;
+    }
+
     private View rowView(final Buttons.Layout lay, final String place, final List<Buttons.Btn> row, boolean up) {
         LinearLayout wrap = new LinearLayout(a);
         wrap.setOrientation(LinearLayout.VERTICAL);
@@ -26807,6 +26831,7 @@ final class TopRow {
         for (int i = 0; i < row.size(); i++) {
             final int at = i;
             final Buttons.Btn b = row.get(i);
+            if (!fits(b)) continue;                                           // 1.17.3: פעולה שהמסך הזה לא מכיר — לא מוצגת
             View v = button(b.icon, b.name, Ui.ACCENT);
             v.setOnClickListener(new View.OnClickListener() {
                 @Override public void onClick(View x) { run(b); }
@@ -28188,33 +28213,6 @@ public final class Tree {
                     break;
                 }
         for (Node c : n.children) liveListsOf(c, path, out);
-    }
-
-    /** 1.9.0: מוסיף תיקיות חיות לרשימה. מחזיר כמה נוספו (שכבר קיימת — לא שוב), או -1. */
-    public static int addLive(List<String> listPath, List<String> folders) {
-        synchronized (LOCK) {
-            Tree t = load();
-            Node n = t.find(listPath);
-            if (n == null) return -1;
-            int added = 0;
-            for (String f : folders)
-                if (!n.live.contains(f)) {
-                    n.live.add(f);
-                    added++;
-                }
-            if (added > 0 && !t.save()) return -1;
-            return added;
-        }
-    }
-
-    /** 1.9.0: הוצאת תיקייה חיה מהרשימה (לא נוגע בקבצים). */
-    public static boolean removeLive(List<String> listPath, String folder) {
-        synchronized (LOCK) {
-            Tree t = load();
-            Node n = t.find(listPath);
-            if (n == null || !n.live.remove(folder)) return false;
-            return t.save();
-        }
     }
 
     // ---------- פעולות על פריטים ----------
@@ -29806,6 +29804,177 @@ public final class Ui {
                 });
             }
         });
+    }
+}
+
+===== קובץ: src/com/tikiyot/vfm/Unify.java =====
+package com.tikiyot.vfm;
+
+// 1.17.3: שני איחודים לפי המילון (`claude/milon.md`), בכל אופני העבודה (בפתיחת התוכנה, עם גיבוי):
+//   (4) "תיקייה מתעדכנת" יוצאת כסוג נפרד — המשתמש: "זו גם סוג של רשימה חכמה"; "בחלק הוירטואלי אין כזה דבר ישר מהכונן —
+//       זה רק בחלק הפיזי". כל תיקייה מתעדכנת ← רשימה חכמה בתוך הרשימה: התנאי — התיקייה (מקור:"…"), בתצוגת תיקיות.
+//   (20) "הגדרה נפוצה" ← "תבנית רשימה חכמה" — המשתמש: "רק התבנית משתנה". רשימה חכמה שמקושרת להגדרה נפוצה — מקבלת
+//       את ההגדרות לעצמה (בלי הקישור); הגדרה נפוצה שנמצאת ישר בתוך רשימה — עותק משלה. התבניות נשארות — לטעינה.
+// אחראי: ההסבה (בלי ממשק — נבדק), וההוספה החדשה של תיקייה כרשימה חכמה.
+
+import java.io.File;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+
+final class Unify {
+
+    private Unify() { }
+
+    /** ההסבה באופן אחד, בזיכרון. מחזיר true אם השתנה משהו. */
+    static boolean run(ModeCopy.Side s) {
+        boolean ch = unlink(s.ini);
+        ch |= walk(s, s.tree.root);
+        return ch;
+    }
+
+    private static boolean walk(ModeCopy.Side s, Tree.Node n) {
+        boolean ch = false;
+        String owner = n.parent == null ? Words.MANUAL_LISTS : Tree.label(n.path());
+        for (String lp : new ArrayList<String>(n.live)) {                     // תיקייה מתעדכנת ← רשימה חכמה
+            String id = inner(s.ini, owner + " › " + new File(lp).getName(), folderKeys(lp));
+            if (!n.smart.contains(id)) n.smart.add(id);
+            rekey(n, "l" + lp, "s" + id);
+            ch = true;
+        }
+        n.live.clear();
+        for (int i = 0; i < n.smart.size(); i++) {                            // הגדרה נפוצה ישר ברשימה ← עותק משלה
+            String r = n.smart.get(i);
+            Structure.Func f = Structure.byId(s.ini, r);
+            if (f == null || !f.name.startsWith(SmartLists.SECTION)) continue;
+            Map<String, String> kv = new LinkedHashMap<String, String>();
+            kv.put("סוג", FnSmart.KIND);  // תחביר
+            for (Map.Entry<String, String> e : f.params.entrySet())
+                if (!e.getKey().equals("שם")) kv.put(e.getKey(), e.getValue());  // תחביר
+            String id = inner(s.ini, owner + " › " + f.name.substring(SmartLists.SECTION.length()), kv);
+            n.smart.set(i, id);
+            rekey(n, "s" + r, "s" + id);
+            ch = true;
+        }
+        for (Tree.Node c : n.children) ch |= walk(s, c);
+        return ch;
+    }
+
+    private static void rekey(Tree.Node n, String from, String to) {
+        int at = n.order.indexOf(from);
+        if (at >= 0) n.order.set(at, to);
+    }
+
+    /** רשימה חכמה של תיקייה: מה שבתיקייה (ובתוכה), בתצוגת תיקיות, לפי שם. */
+    static Map<String, String> folderKeys(String folder) {
+        Map<String, String> kv = new LinkedHashMap<String, String>();
+        kv.put("סוג", FnSmart.KIND);  // תחביר
+        kv.put(SmartLists.COND, Cond.SOURCE + ":" + Cond.quote(folder));
+        kv.put(SmartLists.SORT, Sort.NAME);
+        kv.put(SmartLists.VIEW, FolderView.ALL);
+        return kv;
+    }
+
+    /** כל סעיף שמקושר להגדרה נפוצה — מקבל את ההגדרות שלה לעצמו, והקישור יוצא. */
+    private static boolean unlink(Ini ini) {
+        boolean ch = false;
+        for (int i = 0; i < ini.lines.size(); i++) {
+            Ini.Line l = ini.lines.get(i);
+            if (!l.isHeader() || l.headerName().startsWith(SmartLists.SECTION)) continue;
+            int end = ini.sectionEnd(i), link = -1;
+            java.util.Set<String> has = new java.util.HashSet<String>();
+            for (int k = i + 1; k < end; k++) {
+                Ini.Line x = ini.lines.get(k);
+                if (x.key == null) continue;
+                has.add(x.key);
+                if (x.key.equals(SmartLists.LINK)) link = k;
+            }
+            if (link < 0) continue;
+            Structure.Func common = Structure.byId(ini, ini.lines.get(link).value);
+            String header = l.headerName();
+            ini.lines.remove(link);
+            if (common != null) {
+                int at = link;
+                for (String key : new String[]{SmartLists.COND, SmartLists.SORT, SmartLists.VIEW, SmartLists.DIR}) {
+                    String v = common.params.get(key);
+                    if (v == null || v.isEmpty() || has.contains(key)) continue;
+                    ini.lines.add(at++, Ini.line(key + " = " + v, header));
+                }
+            }
+            ch = true;
+        }
+        return ch;
+    }
+
+    /** רשימה פנימית חדשה בקובץ הזה; מחזיר את המזהה. */
+    private static String inner(Ini ini, String label, Map<String, String> kv) {
+        String h = Nested.INNER + label, base = h;
+        for (int n = 2; taken(ini, h); n++) h = base + " (" + n + ")";
+        String id = Structure.newId("p");
+        List<Ini.Line> b = new ArrayList<Ini.Line>();
+        b.add(Ini.line("", h));
+        b.add(Ini.line("[" + h + "]", h));
+        b.add(Ini.line(Structure.ID + " = " + id, h));
+        for (Map.Entry<String, String> e : kv.entrySet()) b.add(Ini.line(e.getKey() + " = " + e.getValue(), h));
+        ini.lines.addAll(Structure.insertAt(ini), b);
+        return id;
+    }
+
+    private static boolean taken(Ini ini, String h) {
+        for (Ini.Line l : ini.lines) if (l.isHeader() && l.headerName().trim().equals(h.trim())) return true;
+        return false;
+    }
+
+    // ---------- בכונן ----------
+
+    /** כל האופנים (בפתיחת התוכנה). */
+    static void all() {
+        for (String m : Modes.all()) mode(m);
+    }
+
+    static void mode(String mode) {
+        try {
+            synchronized (Structure.class) {
+                synchronized (Tree.LOCK) {
+                    File main = ModeCopy.mainOf(mode), tf = ModeCopy.treeOf(mode);
+                    if (!main.isFile() || !tf.isFile()) return;
+                    ModeCopy.Side s = new ModeCopy.Side(Ini.load(main), Tree.loadFrom(tf));
+                    if (s.tree.unreadable || !run(s)) return;
+                    Files.backupNamed(main, Words.EnvsW.UNIFY + mode);
+                    Files.backupNamed(tf, Words.EnvsW.UNIFY + mode);
+                    if (s.ini.saveQuiet()) s.tree.saveTo(tf);
+                }
+            }
+        } catch (Throwable t) {
+            Log.e("איחוד — " + mode, t);
+        }
+    }
+
+    /** 1.17.3: "➕ תיקייה" לרשימה — רשימה חכמה של כל תיקייה (במקום "תיקייה מתעדכנת"). מחזיר כמה נוספו, או ‎-1. */
+    static int addFolders(List<String> listPath, List<String> folders) {
+        if (Tree.load().find(listPath) == null) return -1;
+        final List<String> ids = new ArrayList<String>();
+        for (String f : folders) {
+            Map<String, String> kv = folderKeys(f);
+            ids.add(Nested.newInner(Tree.label(listPath), new File(f).getName(), kv.get(SmartLists.COND),
+                    kv.get(SmartLists.SORT), kv.get(SmartLists.VIEW)));
+        }
+        final List<String> p = listPath;
+        final int[] n = {0};
+        Tree.edit(new Tree.Edit() {
+            @Override
+            public boolean apply(Tree t) {
+                Tree.Node node = t.find(p);
+                if (node == null) return false;
+                for (String id : ids) if (!node.smart.contains(id)) {
+                    node.smart.add(id);
+                    n[0]++;
+                }
+                return n[0] > 0;
+            }
+        });
+        return n[0];
     }
 }
 
@@ -31775,7 +31944,11 @@ public class VirtualScreen extends ListScreen<VirtualScreen.Item> implements Top
                             List<String> names = new ArrayList<String>();
                             for (SmartLists.Named n : all) names.add(n.name);
                             Ui.list(VirtualScreen.this, Words.Inner.COMMON, names, new DialogInterface.OnClickListener() {
-                                @Override public void onClick(DialogInterface d2, int k) { addSmart(all.get(k).id); }
+                                @Override
+                                public void onClick(DialogInterface d2, int k) {        // 1.17.3: מתבנית — עותק משלה
+                                    String id = Structure.copyInner(all.get(k).id, Tree.label(path) + " › " + all.get(k).name);
+                                    if (id != null) addSmart(id);
+                                }
                             });
                         } else {
                             SmartForm.show(VirtualScreen.this, null, null, new Func.Done() {
@@ -32163,9 +32336,9 @@ public final class Words {
     public static final class Inner {
         private Inner() { }
 
-        public static final String ADD = "➕ רשימה בתוך הרשימה", COMMON = "הגדרה נפוצה קיימת…",
+        public static final String ADD = "➕ רשימה בתוך הרשימה", COMMON = "מתבנית…",
                 MANUAL = "רשימה ידנית קיימת…", NEW = "חדשה…", REMOVE = "הסרה מהרשימה",
-                GONE = "כבר לא קיימת — אפשר להסיר אותה", NONE_COMMON = "אין עדיין הגדרות נפוצות",
+                GONE = "כבר לא קיימת — אפשר להסיר אותה", NONE_COMMON = "אין עדיין תבניות",
                 ALREADY = "כבר נמצאת כאן";
 
         public static String removeWhat(boolean local) {
@@ -32220,19 +32393,19 @@ public final class Words {
         private Named() { }
 
         // 154: "הגדרות נפוצות" (המשתמש: "צריך לשנות את השם — במקום 'שמירה בשם' — הגדרות נפוצות")
-        public static final String TITLE = "הגדרות נפוצות", SAVE_AS = "💾 שמירה כהגדרה נפוצה…",
-                SAVE_AS_TITLE = "שמירה כהגדרה נפוצה", NAME_HINT = "שם, למשל: ספרים מהחודש",
-                GONE = "ההגדרה הנפוצה שהכלי מקשר אליה נמחקה מהקובץ הראשי";
+        public static final String TITLE = "תבניות רשימה חכמה", SAVE_AS = "💾 שמירה כתבנית…",
+                SAVE_AS_TITLE = "שמירה כתבנית", NAME_HINT = "שם, למשל: ספרים מהחודש",
+                GONE = "התבנית שהכלי מקשר אליה נמחקה מהקובץ הראשי";
 
         public static String exists(String name) {
-            return "כבר יש הגדרה נפוצה בשם \"" + name + "\"";
+            return "כבר יש תבנית בשם \"" + name + "\"";
         }
 
         public static String overwrite(int tools) {
             return "ההגדרות שלה יוחלפו בהגדרות שבטופס" + (tools > 0 ? ", בכל " + (tools == 1 ? "הכלי שמקשר" : tools + " הכלים שמקשרים") + " אליה" : "");
         }
 
-        public static final String UPDATE = "לעדכן", SAVED_AS = "נשמרה כהגדרה נפוצה";
+        public static final String UPDATE = "לעדכן", SAVED_AS = "נשמרה כתבנית";
     }
 
     // ---------- קובצי פקודות (117א) ----------
@@ -33330,12 +33503,12 @@ public final class Words {
         public static final String ADD_N = "הוספת ";
         public static final String TO_LIST = " לרשימה \"";
         /** 1.9.0: ברירת המחדל — תיקייה שמתעדכנת; השתיים שאחריה — צילום של הרגע. */
-        public static final String LIVE = "🔄 תיקייה מתעדכנת (מה שיתווסף לתיקייה — יופיע גם ברשימה)";
-        public static final String EACH_LIVE = "🔄 כל תיקייה — מתעדכנת";
+        public static final String LIVE = "✨ רשימה חכמה של התיקייה (מה שיתווסף לתיקייה — יופיע גם ברשימה)";
+        public static final String EACH_LIVE = "✨ כל תיקייה — רשימה חכמה";
         public static final String AS_SUBLIST = "📸 צילום: כרשימת-משנה, עם המבנה (לא מתעדכן)";
         public static final String EACH_AS_SUBLIST = "📸 צילום: כל תיקייה כרשימת-משנה, עם המבנה (לא מתעדכן)";
         public static final String FILES_ONLY = "📸 צילום: הקבצים בלבד, בלי המבנה (לא מתעדכן)";
-        public static final String LIVE_ADDED = " תיקיות מתעדכנות · ";
+        public static final String LIVE_ADDED = " רשימות חכמות של תיקיות · ";
         public static final String ADDING = "מוסיף…";
         public static final String LISTS_AND = " רשימות ו-";
     }
@@ -33518,22 +33691,22 @@ public final class Words {
         public static final String HOW_SHOW = "איך מציגים";
         public static final String MORE_FILTERS = "עוד סינון";
         /** 202: מה רואים מתחת לכותרת המקופלת, בלי לפתוח. */
-        public static final String MORE_WHAT = "בלי תאריך ובלי גודל", ADV_OWN = "משלה (לא נפוצה)", BY_ADDED = " (הוספה)";
+        public static final String MORE_WHAT = "בלי תאריך ובלי גודל", ADV_OWN = "טעינה ושמירה", BY_ADDED = " (הוספה)";
 
         /** "מאז שבוע", "גדול מ־10MB". */
         public static String phrase(String mode, String value) {
             if (value == null || value.isEmpty()) return mode.trim();
             return mode.endsWith("־") ? mode + value : mode + " " + value;
         }
-        public static final String ADVANCED = "הגדרה נפוצה";
+        public static final String ADVANCED = "תבנית";
         public static final String SORT_L = "מיון";
         public static final String VIEW_L = "תצוגה";
-        public static final String ONLY_HERE = "לרשימה הזו — הגדרות משלה (לא הגדרה נפוצה).";
+        public static final String ONLY_HERE = "תבנית — נקודת התחלה: טעינה מעתיקה את ההגדרות שלה לכאן; שינוי בתבנית לא משנה רשימות שנוצרו ממנה.";
         public static final String LOAD_SAVED = "📥 לטעון";
-        public static final String LOAD_TITLE = "לטעון הגדרה נפוצה";
+        public static final String LOAD_TITLE = "טעינה מתבנית";
         public static final String SAVE_REUSE = "💾 לשמור…";
         public static final String UNLINK = "✂ לנתק — רק לרשימה הזו";
-        public static final String NONE_SAVED = "עוד אין הגדרות נפוצות";
+        public static final String NONE_SAVED = "עוד אין תבניות";
 
         public static String shared(String name, int tools) {
             return "הגדרה נפוצה \"" + name + "\"" + (tools > 1 ? " — גם ב־" + (tools - 1) + (tools - 1 == 1 ? " מקום נוסף" : " מקומות נוספים") : "")
@@ -33885,7 +34058,8 @@ public final class Words {
     public static final class EnvsW {
         private EnvsW() { }
 
-        public static final String BACKUP = "לפני הסבת הסביבות לרשימות — ";
+        public static final String BACKUP = "לפני הסבת הסביבות לרשימות — ",
+                UNIFY = "לפני האיחוד (תיקיות מתעדכנות, הגדרות נפוצות) — ";   // 1.17.3
     }
 
     /** 1.14.0: הלוח הווירטואלי (VClip) */
@@ -35195,11 +35369,7 @@ public final class Tests {
         check("1.9.0: נשמרת ונקראת שוב", t2.find(Arrays.asList("לימוד")).live.size() == 1 && t2.find(Arrays.asList("לימוד")).entries.size() == 1);
         check("1.9.0: באילו רשימות — קובץ בתוך התיקייה החיה", Tree.listsOf("/storage/x/הורדות/משנה/ספר.pdf").contains("לימוד"));
         check("1.9.0: תיקייה בשם דומה — לא", !Tree.listsOf("/storage/x/הורדות2/ספר.pdf").contains("לימוד"));
-        eq("1.9.0: הוספה כפולה — לא נוספת", 0, Tree.addLive(Arrays.asList("לימוד"), Arrays.asList("/storage/x/הורדות")));
-        eq("1.9.0: הוספה חדשה", 1, Tree.addLive(Arrays.asList("לימוד"), Arrays.asList("/storage/x/ספרים")));
-        eq("1.9.0: רשימה שאינה קיימת", -1, Tree.addLive(Arrays.asList("אין"), Arrays.asList("/storage/x/ספרים")));
-        check("1.9.0: הוצאה מהרשימה", Tree.removeLive(Arrays.asList("לימוד"), "/storage/x/ספרים")
-                && Tree.load().find(Arrays.asList("לימוד")).live.size() == 1);
+        // 1.17.3: הוספת תיקייה — רשימה חכמה של התיקייה (Unify.addFolders; התיקייה המתעדכנת הישנה עוד נקראת)
         // תיקייה חיה שזזה — המסלול מתעדכן; תיקייה שעדיין קיימת — לא
         File gone = new File(root, "ישנה"), moved = new File(root, "חדשה");
         moved.mkdirs();
@@ -39070,6 +39240,45 @@ public final class Tests {
         boolean readyOk = true;
         for (String[] r : CmdMenu.system()) if (!Verbs.isVerb(r[2]) || Verbs.parse(r[2]).error != null) readyOk = false;
         check("1.16.1: פקודות המערכת — שמונה, וכולן פקודות תקינות (טקסט)", readyOk && CmdMenu.system().size() == 8);
+        // 1.17.3: תיקייה מתעדכנת ← רשימה חכמה; הגדרה נפוצה ← תבנית (בלי קישור)
+        File unI = new File(home, "איחוד1173.ini"), unT = new File(home, "איחוד1173.txt");
+        try {
+            Files.writeAtomic(unI, "[הגדרה נפוצה: חדשים]\nמזהה = s1\nתנאי = תאריך:שבוע\nמיון = תאריך\n\n"
+                    + "[פונקציה: מקושרת]\nמזהה = fK\nסוג = חכמה\nהגדרה נפוצה = s1\nלמה = שלי\n");
+            Files.writeAtomic(unT, "#1 א\n@סדר l/x/הורדות\n@סדר f/x/1.pdf\n@חכמה s1\n@תיקייה /x/הורדות\n/x/1.pdf | 1\n");
+            ModeCopy.Side us = new ModeCopy.Side(Ini.load(unI), Tree.loadFrom(unT));
+            check("1.17.3: האיחוד — משהו השתנה", Unify.run(us));
+            Tree.Node ua = us.tree.find(Arrays.asList("א"));
+            Structure.Func k = Structure.byId(us.ini, "fK");
+            check("1.17.3: מקושרת להגדרה נפוצה — ההגדרות שלה אצלה, בלי הקישור", k != null && !k.params.containsKey(SmartLists.LINK)
+                    && "תאריך:שבוע".equals(k.params.get(SmartLists.COND)) && "שלי".equals(k.params.get("למה")));
+            check("1.17.3: תיקייה מתעדכנת — יצאה, ובמקומה רשימה חכמה", ua.live.isEmpty() && ua.smart.size() == 2 && !ua.smart.contains("s1"));
+            String fid = null, cid = null;
+            for (String r : ua.smart) {
+                Structure.Func f2 = Structure.byId(us.ini, r);
+                if (f2.params.get(SmartLists.COND).startsWith(Cond.SOURCE + ":")) fid = r; else cid = r;
+            }
+            check("1.17.3: …התנאי — התיקייה, בתצוגת תיקיות", fid != null && Structure.byId(us.ini, fid).params.get(SmartLists.COND).contains("/x/הורדות")
+                    && FolderView.ALL.equals(Structure.byId(us.ini, fid).params.get(SmartLists.VIEW)));
+            check("1.17.3: הגדרה נפוצה ישר ברשימה — עותק משלה", cid != null && Structure.byId(us.ini, cid).name.startsWith(Nested.INNER)
+                    && "תאריך:שבוע".equals(Structure.byId(us.ini, cid).params.get(SmartLists.COND)));
+            eq("1.17.3: …והמקום בסדר נשמר", "s" + fid, ua.order.get(0));
+            check("1.17.3: …פעם שנייה — כלום", !Unify.run(us));
+            us.ini.saveQuiet();
+            us.tree.saveTo(unT);
+            Structure.testFile = unI;
+            Tree.testFile = unT;
+            eq("1.17.3: הוספת תיקייה לרשימה — רשימה חכמה שלה", 1, Unify.addFolders(Arrays.asList("א"), Arrays.asList("/x/ספרים")));
+            Tree.Node ua2 = Tree.load().find(Arrays.asList("א"));
+            String last = ua2.smart.get(ua2.smart.size() - 1);
+            check("1.17.3: …בתנאי — התיקייה", ua2.live.isEmpty() && Nested.resolve(last).cond.contains("/x/ספרים"));
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        } finally {
+            Structure.testFile = null;
+            Tree.testFile = null;
+        }
+
         // 1.17.2: סדר חופשי — נשמר ונקרא, ומועתק עם הרשימה (גם המזהים של החכמות)
         File foT = new File(home, "סדר1172.txt");
         try {
