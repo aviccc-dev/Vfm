@@ -1,160 +1,9 @@
-# קוד המקור — מנהל קבצים וירטואלי מורחב, גרסה 1.15.0 (versionCode 142), 21.10.2026
-# כל קובצי הקוד, הבדיקות, הדוגמאות וסקריפטי הבנייה. בלי מפתח החתימה, בלי צלמיות התוכנה (png), בלי המסמכים (docs, mesira.md).
-# כל קובץ מתחיל בשורה: ===== קובץ: <מסלול> =====  — והתוכן עד שורת הכותרת הבאה.
-# לשחזור: לפצל לפי שורות הכותרת, ולכתוב כל קטע למסלול שלו (מתוך תיקיית vfm). צלמיות התוכנה ומפתח החתימה — מהחבילה הקודמת.
-# בנייה: android.jar של API 30 (Sable/android-platforms, android-30) ב־/home/claude/tools/android.jar; aapt, dalvik-exchange, zipalign, apksigner מ־apt.
-# קבצים: 144
-#   AndroidManifest.xml
-#   assets/examples/demo.txt
-#   assets/examples/main.ini
-#   assets/examples/tree.txt
-#   build/build.sh
-#   build/test.sh
-#   lab/AndroidManifest.xml
-#   lab/build/build.sh
-#   lab/build/test.sh
-#   lab/res/values/strings.xml
-#   lab/src/com/tikiyot/lab/Fast.java
-#   lab/src/com/tikiyot/lab/Lab.java
-#   lab/src/com/tikiyot/lab/Scan.java
-#   lab/src/com/tikiyot/lab/Store.java
-#   lab/src/com/tikiyot/lab/Text.java
-#   lab/tests/ScanTest.java
-#   res/drawable/ic_add.xml
-#   res/drawable/ic_close.xml
-#   res/drawable/ic_copy.xml
-#   res/drawable/ic_delete.xml
-#   res/drawable/ic_edit.xml
-#   res/drawable/ic_folder.xml
-#   res/drawable/ic_link.xml
-#   res/drawable/ic_list_add.xml
-#   res/drawable/ic_list_remove.xml
-#   res/drawable/ic_more.xml
-#   res/drawable/ic_open.xml
-#   res/drawable/ic_remove.xml
-#   res/drawable/ic_restore.xml
-#   res/drawable/ic_share.xml
-#   res/drawable/ic_swap.xml
-#   res/values/strings.xml
-#   src/com/tikiyot/vfm/Actions.java
-#   src/com/tikiyot/vfm/Acts.java
-#   src/com/tikiyot/vfm/Adder.java
-#   src/com/tikiyot/vfm/AsIfScreen.java
-#   src/com/tikiyot/vfm/BarService.java
-#   src/com/tikiyot/vfm/Batch.java
-#   src/com/tikiyot/vfm/BatchEditScreen.java
-#   src/com/tikiyot/vfm/BatchLine.java
-#   src/com/tikiyot/vfm/BatchUi.java
-#   src/com/tikiyot/vfm/Bidi.java
-#   src/com/tikiyot/vfm/BinBox.java
-#   src/com/tikiyot/vfm/Buttons.java
-#   src/com/tikiyot/vfm/Clip.java
-#   src/com/tikiyot/vfm/Cond.java
-#   src/com/tikiyot/vfm/Conf.java
-#   src/com/tikiyot/vfm/DateSize.java
-#   src/com/tikiyot/vfm/Design.java
-#   src/com/tikiyot/vfm/DesignUi.java
-#   src/com/tikiyot/vfm/DiskList.java
-#   src/com/tikiyot/vfm/DiskScreen.java
-#   src/com/tikiyot/vfm/Drive.java
-#   src/com/tikiyot/vfm/DupMode.java
-#   src/com/tikiyot/vfm/DupScreen.java
-#   src/com/tikiyot/vfm/Envs.java
-#   src/com/tikiyot/vfm/Examples.java
-#   src/com/tikiyot/vfm/FileItem.java
-#   src/com/tikiyot/vfm/Files.java
-#   src/com/tikiyot/vfm/FilterForm.java
-#   src/com/tikiyot/vfm/Flow.java
-#   src/com/tikiyot/vfm/FnApp.java
-#   src/com/tikiyot/vfm/FnBar.java
-#   src/com/tikiyot/vfm/FnCommand.java
-#   src/com/tikiyot/vfm/FnDup.java
-#   src/com/tikiyot/vfm/FnSettings.java
-#   src/com/tikiyot/vfm/FnSmart.java
-#   src/com/tikiyot/vfm/FnTrash.java
-#   src/com/tikiyot/vfm/FnVirtual.java
-#   src/com/tikiyot/vfm/FolderPicker.java
-#   src/com/tikiyot/vfm/FolderView.java
-#   src/com/tikiyot/vfm/Func.java
-#   src/com/tikiyot/vfm/Home.java
-#   src/com/tikiyot/vfm/Index.java
-#   src/com/tikiyot/vfm/IndexSource.java
-#   src/com/tikiyot/vfm/Ini.java
-#   src/com/tikiyot/vfm/IniEditScreen.java
-#   src/com/tikiyot/vfm/IniListScreen.java
-#   src/com/tikiyot/vfm/Library.java
-#   src/com/tikiyot/vfm/ListCount.java
-#   src/com/tikiyot/vfm/ListPicker.java
-#   src/com/tikiyot/vfm/ListScreen.java
-#   src/com/tikiyot/vfm/Log.java
-#   src/com/tikiyot/vfm/Looks.java
-#   src/com/tikiyot/vfm/Media.java
-#   src/com/tikiyot/vfm/Mirror.java
-#   src/com/tikiyot/vfm/ModeCopy.java
-#   src/com/tikiyot/vfm/Modes.java
-#   src/com/tikiyot/vfm/Nested.java
-#   src/com/tikiyot/vfm/Order.java
-#   src/com/tikiyot/vfm/PasteBar.java
-#   src/com/tikiyot/vfm/Paths.java
-#   src/com/tikiyot/vfm/Physical.java
-#   src/com/tikiyot/vfm/PickDialog.java
-#   src/com/tikiyot/vfm/PickSource.java
-#   src/com/tikiyot/vfm/PickerModel.java
-#   src/com/tikiyot/vfm/Program.java
-#   src/com/tikiyot/vfm/Provider.java
-#   src/com/tikiyot/vfm/Quick.java
-#   src/com/tikiyot/vfm/QuickBar.java
-#   src/com/tikiyot/vfm/Resolver.java
-#   src/com/tikiyot/vfm/SearchScreen.java
-#   src/com/tikiyot/vfm/SearchTabs.java
-#   src/com/tikiyot/vfm/Select.java
-#   src/com/tikiyot/vfm/SelectBar.java
-#   src/com/tikiyot/vfm/SettingsScreen.java
-#   src/com/tikiyot/vfm/ShareScreen.java
-#   src/com/tikiyot/vfm/Shortcuts.java
-#   src/com/tikiyot/vfm/Sig.java
-#   src/com/tikiyot/vfm/SigJob.java
-#   src/com/tikiyot/vfm/SigUi.java
-#   src/com/tikiyot/vfm/SmartForm.java
-#   src/com/tikiyot/vfm/SmartLists.java
-#   src/com/tikiyot/vfm/Sort.java
-#   src/com/tikiyot/vfm/Sources.java
-#   src/com/tikiyot/vfm/Stats.java
-#   src/com/tikiyot/vfm/Structure.java
-#   src/com/tikiyot/vfm/Target.java
-#   src/com/tikiyot/vfm/Text.java
-#   src/com/tikiyot/vfm/ToolMenu.java
-#   src/com/tikiyot/vfm/TopRow.java
-#   src/com/tikiyot/vfm/Transfer.java
-#   src/com/tikiyot/vfm/Trash.java
-#   src/com/tikiyot/vfm/TrashScreen.java
-#   src/com/tikiyot/vfm/Tree.java
-#   src/com/tikiyot/vfm/TreeSource.java
-#   src/com/tikiyot/vfm/Trial.java
-#   src/com/tikiyot/vfm/TypePicker.java
-#   src/com/tikiyot/vfm/Types.java
-#   src/com/tikiyot/vfm/Ui.java
-#   src/com/tikiyot/vfm/VClip.java
-#   src/com/tikiyot/vfm/Verbs.java
-#   src/com/tikiyot/vfm/VirtualScreen.java
-#   src/com/tikiyot/vfm/Vols.java
-#   src/com/tikiyot/vfm/Why.java
-#   src/com/tikiyot/vfm/Words.java
-#   src/com/tikiyot/vfm/Zip.java
-#   tests/bikoret/Probe.java
-#   tests/bikoret/Probe2.java
-#   tests/bikoret/Probe5.java
-#   tests/bikoret/Probe6.java
-#   tests/com/tikiyot/vfm/Tests.java
-#   tests/stubs/android/os/Build.java
-#   tests/stubs/android/os/Environment.java
-
 ===== קובץ: AndroidManifest.xml =====
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="com.tikiyot.vfm"
-    android:versionCode="142"
-    android:versionName="1.15.0">
+    android:versionCode="143"
+    android:versionName="1.15.1">
     <uses-sdk android:minSdkVersion="21" android:targetSdkVersion="30" />
 
     <queries>
@@ -652,7 +501,7 @@ MOVE הורדות\*.epub לשלוח
 סוג = וירטואלי
 רשימה = ג. תחזוקה וניקוי
 
-[פונקציה: כפולים בהורדות]
+[רשימה פנימית: ג. תחזוקה וניקוי › כפולים בהורדות]
 מזהה = f-דוגמה-23
 למה = בהורדות מצטברים עותקים ("קובץ (1).pdf")
 סוג = כפולים
@@ -660,7 +509,7 @@ MOVE הורדות\*.epub לשלוח
 היקף = מקור:%פנימי%/Download
 השוואה = שם וגודל
 
-[פונקציה: כפולים בכל המכשיר]
+[רשימה פנימית: ג. תחזוקה וניקוי › כפולים בכל המכשיר]
 מזהה = f-דוגמה-24
 למה = אותו ספר גם בזיכרון וגם בכרטיס — לבחור מה להשאיר
 סוג = כפולים
@@ -917,6 +766,8 @@ MOVE הורדות\*.epub לשלוח
 @חכמה f-דוגמה-20
 @חכמה f-דוגמה-21
 @חכמה f-דוגמה-22
+@חכמה f-דוגמה-23
+@חכמה f-דוגמה-24
 %פנימי%/מנהל קבצים וירטואלי/דוגמאות לפקודות/תוכנה — סל המחזור.vbat | 0
 
 #1 ד. הצגה והעברה
@@ -9030,8 +8881,8 @@ package com.tikiyot.vfm;
 // כל סביבה ← רשימה ידנית בשורש, עם הצלמית, התיאור וה"למה" שלה, ועיצוב "תוכנת ניהול קבצים"; ובבית — כלי שלה במקום
 // האריח, באותו סדר. הכלים שבה ← פריטים ברשימה (הכלל של הלוח):
 //   רשימה ידנית ← הפניה ↪ · רשימה חכמה ← רשימה חכמה בתוכה (הסעיף נשאר עם המזהה, ההגדרות וה"למה" — רק נהיה
-//   [רשימה פנימית]; כך גם הפניות אליו ממקומות אחרים לא נשברות) · פקודה ← קובץ הפקודות · סל, הגדרות ← קיצור
-//   (קובץ פקודות בן שורה) · כפולים, פס, אפליקציה — אין להם צורה ברשימה: עוברים לבית ככלים, כמו שהם.
+//   [רשימה פנימית]; כך גם הפניות אליו ממקומות אחרים לא נשברות; 1.15.1: כך גם כפולים — לשונית של רשימה חכמה) ·
+//   פקודה ← קובץ הפקודות · סל, הגדרות ← קיצור (קובץ פקודות בן שורה) · פס, אפליקציה — אין להם צורה ברשימה: לבית.
 // סביבה שכל כולה כלי של רשימה אחת — הכלי בבית פותח את הרשימה עצמה (בלי רשימה עוטפת).
 // רץ על כל אופני העבודה בפתיחת התוכנה, ועל האופן הפעיל בכל כניסה (גיבוי לפני). בלי ממשק — נבדק.
 
@@ -9110,9 +8961,8 @@ final class Envs {
             if (list.why.isEmpty()) list.why = target.get(Program.WHY, "");
             Tree.addRef(node, path, p);
             take(ini, f.id);
-        } else if (FnSmart.KIND.equals(f.kind)) {
-            int at = Structure.indexOfId(ini, f.id);
-            ini.lines.get(at).raw = "[" + Nested.INNER + free(ini, t.name + " › " + f.name) + "]";
+        } else if (FnSmart.KIND.equals(f.kind) || FnDup.KIND.equals(f.kind)) {     // 1.15.1: גם כפולים — לשונית של רשימה חכמה
+            Structure.toInner(ini, f.id, t.name + " › " + f.name);
             if (!node.smart.contains(f.id)) node.smart.add(f.id);
         } else if (FnCommand.KIND.equals(f.kind) && FnCommand.file(f) != null) {
             entry(node, FnCommand.file(f));
@@ -9125,7 +8975,7 @@ final class Envs {
                 take(ini, f.id);
             } else toHome.addAll(take(ini, f.id));
         } else {
-            toHome.addAll(take(ini, f.id));                                  // כפולים, פס, אפליקציה — לבית
+            toHome.addAll(take(ini, f.id));                                  // פס, אפליקציה — לבית
         }
         return toHome;
     }
@@ -9167,17 +9017,6 @@ final class Envs {
         out.addAll(ini.lines.subList(at, last));                              // בלי השורות הריקות שאחריו
         for (int i = end - 1; i >= at; i--) ini.lines.remove(i);              // והן יוצאות איתו
         return out;
-    }
-
-    private static String free(Ini ini, String name) {
-        String n = name;
-        for (int i = 2; header(ini, Nested.INNER + n); i++) n = name + " (" + i + ")";
-        return n;
-    }
-
-    private static boolean header(Ini ini, String h) {
-        for (Ini.Line l : ini.lines) if (l.isHeader() && l.headerName().trim().equals(h.trim())) return true;
-        return false;
     }
 
     private static List<Ini.Line> block(String section, String id, Map<String, String> kv) {
@@ -14822,7 +14661,7 @@ final class ListCount {
             long[] v = cache.get(ref);
             if (v != null) return v;
             Nested.Item it = Nested.resolve(ref);
-            if (it.gone) return null;
+            if (it.gone || it.dup != null) return null;                       // כפולים — נספרים רק בפתיחה
             Library.Result r = lib.search(it.cond, false, true);
             long s = 0;
             for (Library.Hit x : r.hits) if (x.rec != null) s += x.rec.size;
@@ -16243,31 +16082,28 @@ final class ModeCopy {
             return list == null ? null : new String[]{Nested.MANUAL + list, list};
         }
         Map<String, String> kv = keys(src.ini, pick.id);
-        if (!FnSmart.KIND.equals(kv.get("סוג"))) return null;                         // תחביר
+        boolean dup = FnDup.KIND.equals(kv.get("סוג"));                               // תחביר
+        if (!dup && !FnSmart.KIND.equals(kv.get("סוג"))) return null;                // תחביר
         String link = kv.get(SmartLists.LINK);
-        if (link != null && !link.isEmpty()) {
+        if (!dup && link != null && !link.isEmpty()) {
             String id = copyRef(link);
             return id == null ? null : new String[]{id, pick.name};
         }
         return new String[]{newInner(kv, pick.name, null), pick.name};
     }
 
-    /** 1.14.0: רשימה פנימית חדשה ביעד, עם הגדרות החיפוש מ-kv (עד כאן — אותו קוד בשלושה מקומות); ref — לזכור. */
+    /**
+     * 1.14.0: רשימה פנימית חדשה ביעד, עם ההגדרות מ-kv (עד כאן — אותו קוד בשלושה מקומות); ref — לזכור.
+     * 1.15.1 (באג): עם כל המפתחות — גם "למה", הכפתורים הדולקים והקישור להגדרה נפוצה (עד כאן — רק תנאי, מיון ותצוגה),
+     * וגם כפולים.
+     */
     private String newInner(Map<String, String> kv, String name, String ref) {
-        Map<String, String> inner = smartKeys(kv, false);
+        Map<String, String> inner = new LinkedHashMap<String, String>(kv);
         String id = Structure.newId("p");
         if (ref != null) ids.put(ref, id);                                    // לפני הקישורים — כך סיבוב לא חוזר
         remapLinks(inner);
         dst.ini.lines.addAll(firstHeader(Nested.INNER), block(Nested.INNER + freeName(Nested.INNER, name), id, inner));
         return id;
-    }
-
-    /** הגדרות החיפוש של רשימה חכמה (link — גם הקישור להגדרה נפוצה). */
-    private static Map<String, String> smartKeys(Map<String, String> kv, boolean link) {
-        Map<String, String> out = new LinkedHashMap<String, String>();
-        for (String k : new String[]{SmartLists.COND, SmartLists.SORT, SmartLists.DIR, SmartLists.VIEW, SmartLists.LINK, Nested.KEY})
-            if (kv.get(k) != null && (link || !k.equals(SmartLists.LINK))) out.put(k, kv.get(k));
-        return out;
     }
 
     private String run(Pick pick) {
@@ -16289,13 +16125,14 @@ final class ModeCopy {
         String[] h = header(src.ini, pick.id);
         if (h == null) return null;
         Map<String, String> kv = new LinkedHashMap<String, String>();
-        kv.put("סוג", FnSmart.KIND);  // תחביר
         if (h[0].startsWith(SmartLists.SECTION)) {
             String id = copyRef(pick.id);
             if (id == null) return null;
+            kv.put("סוג", FnSmart.KIND);  // תחביר
             kv.put(SmartLists.LINK, id);
         } else {
-            kv.putAll(smartKeys(keys(src.ini, pick.id), true));
+            kv.putAll(keys(src.ini, pick.id));                                // 1.15.1: כל המפתחות (גם כפולים)
+            if (!FnDup.KIND.equals(kv.get("סוג"))) kv.put("סוג", FnSmart.KIND);  // תחביר
             remapLinks(kv);
         }
         return addTool(pick.name, kv);
@@ -16750,6 +16587,8 @@ final class Nested {
         boolean gone;
         /** הגדרה נפוצה (קישור) / רשימה פנימית מקומית. */
         boolean common, local;
+        /** 1.15.1: כפולים (הלשונית השנייה של רשימה חכמה) — נפתחים במסך הכפולים, עם ההגדרות שלהם. */
+        Target dup;
     }
 
     // ---------- בתוך רשימה חכמה ----------
@@ -16876,11 +16715,22 @@ final class Nested {
         String h = f.name.startsWith(INNER) ? f.name.substring(INNER.length()) : f.name;
         int cut = h.lastIndexOf(" › ");
         it.name = cut >= 0 ? h.substring(cut + 3) : h;
+        if (FnDup.KIND.equals(f.params.get("סוג"))) {                            // תחביר
+            it.dup = Target.of(FnDup.KIND, f.params);
+            it.dup.id = ref;
+            return it;
+        }
         String[] r = SmartLists.resolve(Target.of(FnSmart.KIND, f.params));   // 1.15.0 (באג): גם מקושרת — לפי הנפוצה
         it.cond = r[0];
         it.sort = r[1];
         it.view = r[2];
         return it;
+    }
+
+    /** 1.15.1: פתיחה — רשימה חכמה במסך החיפוש, כפולים במסך הכפולים (מכל מקום שיש בו רשימה בתוך רשימה). */
+    static void open(android.app.Activity a, Item it) {
+        if (it.dup != null) Func.byKind(FnDup.KIND).open(a, it.dup);
+        else a.startActivity(SearchScreen.innerIntent(a, it));
     }
 
     /** 1.15.0: ההגדרה הנפוצה שרשימה (פנימית או כלי) מקושרת אליה, או "". */
@@ -16913,7 +16763,7 @@ final class Nested {
             @Override
             public String name(String ref) {
                 Item it = item(ref);
-                return it.gone || !it.smart ? null : it.name;
+                return it.gone || !it.smart || it.dup != null ? null : it.name;   // כפולים — לא "רשימה" של קבצים
             }
 
             @Override
@@ -16922,7 +16772,7 @@ final class Nested {
                 if (out != null) return out;
                 out = new ArrayList<String>();
                 Item it = item(ref);
-                if (!it.gone && lib != null && lib.ready)
+                if (!it.gone && it.dup == null && lib != null && lib.ready)
                     for (Library.Hit h : lib.search(it.cond, false, true).hits) if (h.rec != null) out.add(h.path());
                 paths.put(ref, out);
                 return out;
@@ -20767,6 +20617,7 @@ public class SearchScreen extends Activity implements Clip.Holder {
             int[] t = n == null ? new int[]{0, 0} : n.totals();
             return (t[0] > 0 ? t[0] + Words.Look.LISTS_DOT : "") + Words.items(t[1]);
         }
+        if (it.dup != null) return Func.byKind(FnDup.KIND).title;
         int n = lib.ready ? lib.search(it.cond, false, true).hits.size() : 0;
         return (it.common ? Words.Named.TITLE + " · " : "") + Words.files(n);
     }
@@ -20780,7 +20631,7 @@ public class SearchScreen extends Activity implements Clip.Holder {
             VirtualScreen.open(this, it.path, null, null);                    // 1.13.1: החזרה — לכאן
             return;
         }
-        startActivity(innerIntent(this, it));
+        Nested.open(this, it);                                                // 1.15.1: גם כפולים
     }
 
     /** פתיחת רשימה חכמה פנימית — במסך הזה, עם הבעלים שלה. */
@@ -25234,8 +25085,14 @@ public final class Structure {
     // ---------- עזר ----------
 
     static String newId(String prefix) {
-        return prefix + Long.toString(System.currentTimeMillis(), 36) + Integer.toString(SEQ.incrementAndGet() % 1296, 36)
-                + Integer.toString((int) (Math.random() * 1296), 36);
+        return prefix + Long.toString(System.currentTimeMillis(), 36) + two((int) (Math.random() * 1296))
+                + Integer.toString(SEQ.incrementAndGet(), 36);                // המונה — בסוף, שלם (לא חוזר על עצמו)
+    }
+
+    /** באג (1.15.1): בלי רוחב קבוע "1"+"ab" ו-"1a"+"b" יצאו אותו מזהה, והמונה חזר לאפס אחרי 1296 — תמיד שתי ספרות. */
+    private static String two(int n) {
+        String s = Integer.toString(n, 36);
+        return s.length() < 2 ? "0" + s : s;
     }
 
     /** 1.15.0 (באג): כמה מזהים באותו אלפית שנייה (העתקה, הסבה) — עד כאן רק אקראי, ולפעמים יצאו שניים זהים. */
@@ -25568,6 +25425,31 @@ public final class Structure {
         for (int i = s1 - 1; i >= f0; i--) ini.lines.remove(i);
         ini.lines.addAll(f0, block);
         save(ini);
+        return true;
+    }
+
+    /**
+     * 1.15.1: כלי ← רשימה פנימית, באותו מזהה ועם כל ההגדרות (רשימה חכמה או כפולים שעברו לתוך רשימה ידנית).
+     * כך כל הפניה אליו ממשיכה לעבוד. false — לא נמצא.
+     */
+    public static synchronized boolean toInner(String id, String label) {
+        Ini ini = ini();
+        if (!toInner(ini, id, label)) return false;
+        save(ini);
+        return true;
+    }
+
+    static boolean toInner(Ini ini, String id, String label) {
+        int at = indexOfId(ini, id);
+        if (at < 0) return false;
+        String h = Nested.INNER + label;
+        boolean taken = true;
+        for (int i = 2; taken; i++) {
+            taken = false;
+            for (Ini.Line l : ini.lines) if (l.isHeader() && l.headerName().trim().equals(h.trim())) taken = true;
+            if (taken) h = Nested.INNER + label + " (" + i + ")";
+        }
+        ini.lines.get(at).raw = "[" + h + "]";
         return true;
     }
 
@@ -29257,20 +29139,21 @@ final class VClip {
     /** הפריטים כ"קישורים" לעץ: כלים מתורגמים לרשימה / חכמה / קובץ שהם מחזיקים. */
     private static void pasteIntoSame(final List<String> dest, final Result r) {
         final List<Item> tree = new ArrayList<Item>();
-        final List<String> removeTools = new ArrayList<String>();
+        final java.util.Map<Item, Structure.Func> tools = new java.util.HashMap<Item, Structure.Func>();
+        final List<Item> ok = new ArrayList<Item>();
         for (Item it : items) {
             if (it.kind != TOOL) {
                 tree.add(it);
                 continue;
             }
             Structure.Func f = Structure.func(it.value);
-            Item as = f == null ? null : toolAsItem(f, dest);
+            Item as = f == null ? null : toolAsItem(f);
             if (as == null) {
                 r.skip(Words.VClipW.TOOL_NOT_IN_LIST);
                 continue;
             }
             tree.add(as);
-            if (move) removeTools.add(f.id);
+            tools.put(as, f);
         }
         final List<String[]> moved = new ArrayList<String[]>();
         final List<String> src = from;
@@ -29282,9 +29165,9 @@ final class VClip {
                 if (b == null) return false;
                 boolean changed = false;
                 for (Item it : tree) {
-                    boolean ok = intoNode(t, it, a, b, dest, src, mv, fl, moved);
-                    if (ok) {
+                    if (intoNode(t, it, a, b, dest, src, mv, fl, moved)) {
                         r.done++;
+                        ok.add(it);
                         changed = true;
                     } else r.skip(Words.VClipW.NOT_HERE);
                 }
@@ -29292,7 +29175,12 @@ final class VClip {
             }
         });
         for (String[] mvd : moved) FnVirtual.listMoved(child(src, mvd[0]), child(dest, mvd[1]));   // 88: הכלים עוברים איתה
-        for (String id : removeTools) Structure.removeFunc(id);
+        if (move) for (Item it : ok) {                                         // 1.15.1 (באג): רק מה שנכנס — יוצא מהבית
+            Structure.Func f = tools.get(it);
+            if (f == null) continue;
+            if (it.kind == SMART && it.value.equals(f.id)) Structure.toInner(f.id, Tree.label(dest) + " › " + f.name);
+            else Structure.removeFunc(f.id);
+        }
     }
 
     /** פריט אחד לתוך הרשימה b (באותו עץ). */
@@ -29355,19 +29243,16 @@ final class VClip {
     }
 
     /** כלי — מה שהוא מחזיק, כפריט ברשימה: רשימה ← הפניה (או עותק); חכמה ← חכמה; קובץ פקודות ← קובץ. */
-    private static Item toolAsItem(Structure.Func f, List<String> dest) {
+    private static Item toolAsItem(Structure.Func f) {
         Target t = f.target();
         if (FnVirtual.KIND.equals(f.kind)) {
             List<String> p = FnVirtual.base(t);
             return p.isEmpty() ? null : new Item(REF, Tree.fullLabel(p), f.name);
         }
-        if (FnSmart.KIND.equals(f.kind)) {
+        if (FnSmart.KIND.equals(f.kind) || FnDup.KIND.equals(f.kind)) {       // 1.15.1: כפולים — לשונית של רשימה חכמה
             String link = SmartLists.linkOf(t);
-            if (!link.isEmpty()) return new Item(SMART, link, f.name);
-            if (!move) return new Item(SMART, f.id, f.name);                  // קישור לכלי עצמו
-            String inner = Nested.newInner(Tree.label(dest), f.name, t.get(SmartLists.COND, ""),
-                    t.get(SmartLists.SORT, Sort.NAME), t.get(SmartLists.VIEW, FolderView.FLAT));
-            return new Item(SMART, inner, f.name);                            // הכלי יוצא — ההגדרות נשארות ברשימה
+            if (!link.isEmpty() && !move) return new Item(SMART, link, f.name);
+            return new Item(SMART, f.id, f.name);   // העתקה — קישור לכלי; העברה — הסעיף עצמו נהיה רשימה פנימית (אותו מזהה)
         }
         if (FnCommand.KIND.equals(f.kind)) {
             File x = FnCommand.file(f);
@@ -29509,10 +29394,11 @@ final class VClip {
             return Structure.addDirectFunc(it.name, FnSmart.KIND, "", Target.of(FnSmart.KIND, SmartLists.LINK, it.value)) != null ? it.name : null;
         Structure.Func f = Structure.byId(it.value);
         if (f == null) return null;
-        Target t = Target.of(FnSmart.KIND, f.params);
+        String kind = FnDup.KIND.equals(f.params.get("סוג")) ? FnDup.KIND : FnSmart.KIND;   // 1.15.1: גם כפולים // תחביר
+        Target t = Target.of(kind, f.params);
         t.params.remove("סוג");  // תחביר
         t.params.remove("תיאור");  // תחביר
-        return Structure.addDirectFunc(it.name, FnSmart.KIND, "", t) != null ? it.name : null;
+        return Structure.addDirectFunc(it.name, kind, "", t) != null ? it.name : null;
     }
 
     /** מאופן אחר — עותק מלא (ModeCopy). */
@@ -30233,7 +30119,7 @@ public class VirtualScreen extends ListScreen<VirtualScreen.Item> implements Top
             Ui.plainIcon(v, it.icon.isEmpty() ? Ui.ICON_MANUAL : it.icon);
         } else if (it.type == SMART) {                                        // 161
             Ui.bindIcon(v, "", it.label, it.sub);
-            Ui.plainIcon(v, Ui.ICON_SMART);
+            Ui.plainIcon(v, it.smart.dup != null ? Func.iconOf(FnDup.KIND) : Ui.ICON_SMART);
         } else if (it.type == LIVE) {                                         // 1.9.0
             Ui.bindIcon(v, "", it.label, it.sub);
             Ui.plainIcon(v, Ui.ICON_LIVE);
@@ -30340,8 +30226,9 @@ public class VirtualScreen extends ListScreen<VirtualScreen.Item> implements Top
             it.type = SMART;
             it.smart = Nested.resolve(ref);
             it.label = it.smart.gone ? ref : it.smart.name;
-            long[] nh = it.smart.gone ? null : ix.smart(ref);
+            long[] nh = it.smart.gone || it.smart.dup != null ? null : ix.smart(ref);
             it.sub = it.smart.gone ? Words.Inner.GONE                         // 1.13.0: נתון חי — מספר וגודל
+                    : it.smart.dup != null ? Func.byKind(FnDup.KIND).title  // 1.15.1: כפולים — נספרים רק בפתיחה
                     : nh == null ? Words.LOADING_INDEX : Words.files(nh[0]) + (nh[1] > 0 ? " · " + Files.size(nh[1]) : "");
             items.add(it);
         }
@@ -30512,7 +30399,7 @@ public class VirtualScreen extends ListScreen<VirtualScreen.Item> implements Top
         if (it.type == SMART) {                                               // 161
             if (sel.on()) return;
             if (it.smart.gone) Ui.toast(this, Words.Inner.GONE);
-            else startActivity(SearchScreen.innerIntent(this, it.smart));
+            else Nested.open(this, it.smart);                                 // 1.15.1: גם כפולים
             return;
         }
         if (sel.on()) {
@@ -37803,7 +37690,7 @@ public final class Tests {
             int tools = 0;
             List<Structure.Func> all = new ArrayList<Structure.Func>(m.direct);
             for (Structure.Func in : Structure.sections(Nested.INNER)) {         // הרשימות החכמות שבתוך הרשימות
-                in.kind = "חכמה";
+                in.kind = "כפולים".equals(in.params.get("סוג")) ? "כפולים" : "חכמה";   // 1.15.1: גם כפולים בתוך רשימה
                 all.add(in);
             }
             for (Structure.Func fn : all) {
@@ -38302,22 +38189,22 @@ public final class Tests {
             check("1.15.0: הסבה — שלוש סביבות, ואין עוד", done.size() == 3 && mm.tiles.isEmpty() && !Envs.has(Ini.load(em)));
             List<String> order = new ArrayList<String>();
             for (Structure.Func fn : mm.direct) order.add(fn.name);
-            eq("1.15.0: בבית — הישיר, כלי לכל סביבה, וכפולים אחרי הסביבה שלו",
-                    Arrays.asList("ישיר", "לימוד", "כפולים", "פנקס", "ביד"), order);
+            eq("1.15.0: בבית — הישיר וכלי לכל סביבה (1.15.1: הכפולים — בתוך הרשימה)",
+                    Arrays.asList("ישיר", "לימוד", "פנקס", "ביד"), order);
             Tree.Node lm = etr.find(Arrays.asList("לימוד (2)"));
             check("1.15.0: רשימה בשם פנוי, עם צלמית, תיאור, למה ועיצוב", lm != null && lm.icon.equals("📚")
                     && lm.desc.equals("כל מה שלומדים") && lm.why.equals("במקום אחד") && lm.design.equals(Design.FILES));
             eq("1.15.0: הכלי בבית — לרשימה", "לימוד (2)", mm.direct.get(1).params.get("רשימה"));
             check("1.15.0: כלי רשימה ← הפניה, וה\"למה\" שלו — לרשימה", lm.refs.equals(Arrays.asList("ספרים"))
                     && etr.find(Arrays.asList("ספרים")).why.equals("למה של הכלי"));
-            check("1.15.0: חכמה ← רשימה פנימית באותו מזהה, עם ההגדרות וה\"למה\"", lm.smart.equals(Arrays.asList("fS", "fK")));
+            check("1.15.0: חכמה ← רשימה פנימית באותו מזהה, עם ההגדרות וה\"למה\"", lm.smart.equals(Arrays.asList("fS", "fK", "fD")));
             Structure.Func inS = Structure.byId(Ini.load(em), "fS");
             check("1.15.0: …הסעיף", inS != null && inS.name.startsWith(Nested.INNER) && "למה החכמה".equals(inS.params.get("למה"))
                     && "א".equals(inS.params.get("כפתורים דולקים")));
             File sh = new File(sc, "סל." + Batch.EXT);
             check("1.15.0: פקודה ← הקובץ; סל ← קיצור", Tree.contains(lm.entries, "/x/א.vbat") && sh.isFile()
                     && Tree.contains(lm.entries, sh.getAbsolutePath()) && Files.readUtf8(sh).contains(Verbs.openScreen(Verbs.S_TRASH)));
-            check("1.15.0: סביבה שכולה רשימה אחת — הרשימה עצמה, עם התיאור", "פנקס".equals(mm.direct.get(3).params.get("רשימה"))
+            check("1.15.0: סביבה שכולה רשימה אחת — הרשימה עצמה, עם התיאור", "פנקס".equals(mm.direct.get(2).params.get("רשימה"))
                     && etr.find(Arrays.asList("פנקס")).desc.equals("רשומות") && etr.find(Arrays.asList("פנקס (2)")) == null);
             check("1.15.0: שורות בלי מזהה — גם הן", etr.find(Arrays.asList("ביד")) != null
                     && etr.find(Arrays.asList("ביד")).refs.equals(Arrays.asList("אין עדיין")) && etr.find(Arrays.asList("אין עדיין")) != null);
@@ -38330,6 +38217,14 @@ public final class Tests {
             two.find(Arrays.asList("ספרים")).smart.add("fS");
             two.save();
             check("1.15.0: …ושתיים — לא נמחקת כשמוציאים אחת", Nested.uses("fS") == 2);
+            check("1.15.1: כפולים בתוך רשימה — נפתחים ככפולים", Nested.resolve("fD").dup != null && !Nested.resolve("fD").gone);
+            Files.writeAtomic(em, Files.readUtf8(em) + "\n[פונקציה: כפולים2]\nמזהה = fD2\nסוג = כפולים\nלמה = שלי\n");
+            VClip.set(null, null, Arrays.asList(new VClip.Item(VClip.TOOL, "fD2", "כפולים2")), true, false);
+            eq("1.15.1: העברת כלי כפולים ← לתוך רשימה", 1, VClip.pasteInto(Arrays.asList("פנקס")).done);
+            Structure.Func dup2 = Structure.byId("fD2");
+            check("1.15.1: …אותו מזהה, פנימית, עם ה\"למה\", ולא בבית", Tree.load().find(Arrays.asList("פנקס")).smart.contains("fD2")
+                    && dup2 != null && dup2.name.startsWith(Nested.INNER) && "שלי".equals(dup2.params.get("למה"))
+                    && Structure.func("fD2") == null && Nested.resolve("fD2").dup != null);
         } catch (Exception e) {
             throw new RuntimeException(e);
         } finally {
