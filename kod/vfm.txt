@@ -2,8 +2,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="com.tikiyot.vfm"
-    android:versionCode="144"
-    android:versionName="1.16.0">
+    android:versionCode="145"
+    android:versionName="1.16.1">
     <uses-sdk android:minSdkVersion="21" android:targetSdkVersion="30" />
 
     <queries>
@@ -4984,17 +4984,6 @@ final class BatchUi {
 
     private BatchUi() { }
 
-    /** נגיעה על קובץ פקודות. */
-    static void menu(final Activity a, final File f) {
-        Ui.options(a, "📜 " + f.getName(), new String[]{Words.Cmd.RUN_FIRST_PREVIEW, Words.Cmd.EDIT},
-                new DialogInterface.OnClickListener() {
-                    @Override
-                    public void onClick(DialogInterface d, int w) {
-                        if (w == 0) run(a, f); else edit(a, f);
-                    }
-                });
-    }
-
     static void edit(Activity a, File f) {
         a.startActivity(new Intent(a, BatchEditScreen.class).putExtra(BatchEditScreen.EXTRA_FILE, f.getAbsolutePath()));
     }
@@ -5013,47 +5002,9 @@ final class BatchUi {
         return found;
     }
 
-    /**
-     * תפריט ⭐: כל קובצי הפקודות, ו"➕ קובץ פקודות חדש". 216: נגיעה — הרצה; נגיעה ארוכה — עריכה (בלי תפריט באמצע;
-     * המשתמש: "לחיצה רגילה אמורה לבצע, לחיצה ארוכה — לערוך. אין צורך בכפילות").
-     */
-    static void starMenu(final Activity a, final File newIn) {
-        final List<File> found = all(a);
-        List<String> labels = new ArrayList<String>();
-        for (File f : found) labels.add("📜 " + Text.stem(f.getName()));        // 124: סיומת במקום אחד
-        labels.add("➕ " + Words.Cmd.NEW + (newIn != null ? Words.Cmd.HERE : ""));
-        Ui.list(a, Words.Cmd.STAR_TITLE, labels, new DialogInterface.OnClickListener() {
-            @Override
-            public void onClick(DialogInterface d, int w) {
-                if (w < found.size()) run(a, found.get(w));
-                else create(a, newIn != null ? newIn : new File(internal(a), Words.Cmd.SHORTCUTS_DIR));
-            }
-        }, new Ui.Index1() {
-            @Override
-            public void ok(int w) {
-                if (w < found.size()) edit(a, found.get(w));
-            }
-        });
-    }
-
     private static String internal(Activity a) {
         for (Vols.Vol v : Vols.list(a)) if (v.internal) return v.root.getAbsolutePath();
         return "/storage/emulated/0";
-    }
-
-    /** קובץ פקודות חדש בתיקייה — שינוי בכונן: דרך Physical, עם חלון אישור. */
-    static void create(final Activity a, final File dir) {
-        Ui.askText(a, Words.Cmd.NEW, "", Words.Cmd.NEW_HINT, new Ui.Text1() {
-            @Override
-            public void ok(String value) {
-                String name = value.trim();
-                if (!name.toLowerCase(java.util.Locale.ROOT).endsWith("." + Batch.EXT)) name += "." + Batch.EXT;
-                final File f = new File(dir, name);
-                Physical.askNewFile(a, f, Batch.template(), new Runnable() {
-                    @Override public void run() { edit(a, f); }
-                });
-            }
-        });
     }
 
     /** הרצה: תצוגה מקדימה, אישור, ביצוע, דוח. */
@@ -5891,6 +5842,273 @@ final class Clip {
     static synchronized File startDir() {
         String first = !files.isEmpty() ? files.get(0) : !dirs.isEmpty() ? dirs.get(0) : null;
         return first == null ? null : new File(first).getParentFile();
+    }
+}
+
+===== קובץ: src/com/tikiyot/vfm/CmdMenu.java =====
+package com.tikiyot.vfm;
+
+// 1.16.1: תפריט הפקודות האחד — זהה בכל מקום (המילון, `claude/milon.md`, 8). המשתמש: "שלושה תפריטי משנה: אחד של
+// המערכת — יוצג במלואו בכל פתיחת פקודות; השני — שהמשתמש בוחר למקם שם, בתפריט נפרד; השלישי יכיל את כל הפקודות
+// הקיימות. ובנוסף — עריכת פקודות, שיאפשר לערוך גם את פקודות המערכת"; "פקודות המערכת לא אמורות להשתנות — השינוי
+// נשמר אם בוחרים בשם אחר"; "שלי" — רשימה ידנית ("לקבוע רשימה כתפריט עם תתי תפריטים, רק שיוצג כמו שמקובל בתפריטים").
+// נגיעה — הרצה (או בחירה, כשמוסיפים כלי או כפתור); נגיעה ארוכה — עריכה.
+// עד כאן — חמישה מקומות שונים: "⭐ קובצי פקודות" ב־⋮, "פקודה / קיצור דרך" ב־➕ בבית, "מה הכפתור יעשה?",
+// מסך "⭐ פקודות", ונגיעה על קובץ פקודות (תפריט "הרצה / עריכה").
+// אחראי: התפריט. ההרצה — Verbs ו־BatchUi; הקבצים — Shortcuts.
+
+import android.app.Activity;
+import android.content.DialogInterface;
+
+import java.io.File;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+
+final class CmdMenu {
+
+    /** בחירה (בהוספת כלי או כפתור): צלמית, שם, שורת הפקודה, והקובץ (null — פקודה של שורה, בלי קובץ). */
+    interface Picked {
+        void ok(String icon, String name, String line, File file);
+    }
+
+    /** פקודות המערכת — קבוצה 1: פתיחת מסכים (המשתמש: "יוצגו גם בתור טקסט לעריכה"). {צלמית, שם, שורה}. */
+    static List<String[]> system() {
+        return Arrays.asList(
+                new String[]{"🏠", Words.Top.HOME, Verbs.openScreen(Verbs.S_HOME)},
+                new String[]{"→", Words.Top.BACK, Verbs.BACK},
+                new String[]{"🔎", Words.Top.SEARCH, Verbs.openScreen(Verbs.S_SEARCH)},
+                new String[]{"⭐", Words.Top.COMMANDS, Verbs.openScreen(Verbs.S_COMMANDS)},
+                new String[]{"📂", Words.Top.FILES, Verbs.openScreen(Verbs.S_DISK)},
+                new String[]{"🗂", Words.Top.VIRTUAL, Verbs.openScreen(Verbs.S_VIRTUAL)},
+                new String[]{"⚙", Words.Top.SETTINGS, Verbs.openScreen(Verbs.S_SETTINGS)},
+                new String[]{"🗑", Words.Top.TRASH, Verbs.openScreen(Verbs.S_TRASH)});
+    }
+
+    /** "שלי" — רשימה ידנית בשורש. */
+    static final List<String> MINE = java.util.Collections.singletonList(Words.CmdM.MINE_LIST);
+
+    private CmdMenu() { }
+
+    /** הרצה. newIn — תיקייה ל"➕ פקודה חדשה" (null — תיקיית הקיצורים). */
+    static void show(Activity a, File newIn) {
+        show(a, newIn, null, null);
+    }
+
+    /**
+     * pick — בחירה במקום הרצה (null — הרצה); screen — שם המסך, ל"🧩 פעולה של המסך" (רק כשמוסיפים כפתור).
+     * בבחירה — גם שורה בכתב ותיקייה במנהל הקבצים (אלה פקודות שאין להן קובץ).
+     */
+    static void show(final Activity a, final File newIn, final Picked pick, final String screen) {
+        final List<String[]> sys = system();
+        final List<String> labels = new ArrayList<String>();
+        for (String[] s : sys) labels.add(s[0] + "  " + s[1]);
+        final int mine = labels.size();
+        labels.add(Words.CmdM.MINE);
+        labels.add(Words.CmdM.ALL);
+        final List<Runnable> extra = new ArrayList<Runnable>();
+        if (pick != null) {
+            labels.add(Words.Top.T_LINE);
+            extra.add(new Runnable() {
+                @Override
+                public void run() {
+                    Ui.askText(a, Words.Top.T_LINE, "", Words.Top.LINE_HINT, new Ui.Text1() {
+                        @Override
+                        public void ok(String s) {
+                            pick.ok("⌨", s.length() > 12 ? s.substring(0, 12) + "…" : s, s.trim(), null);
+                        }
+                    });
+                }
+            });
+            labels.add(Words.CmdM.FOLDER);
+            extra.add(new Runnable() {
+                @Override
+                public void run() {
+                    FolderPicker.choose(a, new FolderPicker.Picked() {
+                        @Override public void ok(File f) { pick.ok("📂", f.getName(), Verbs.openFolder(f.getAbsolutePath()), null); }
+                    });
+                }
+            });
+            if (screen != null && a instanceof TopRow.Host && !((TopRow.Host) a).actions().isEmpty()) {
+                labels.add(Words.Top.T_OWN + screen);
+                extra.add(new Runnable() {
+                    @Override public void run() { own(a, screen, pick); }
+                });
+            }
+        }
+        labels.add(Words.CmdM.NEW);
+        Ui.list(a, Words.CmdM.TITLE, labels, new DialogInterface.OnClickListener() {
+            @Override
+            public void onClick(DialogInterface d, int w) {
+                if (w < mine) use(a, sys.get(w)[0], sys.get(w)[1], sys.get(w)[2], null, pick);
+                else if (w == mine) mine(a, MINE, pick);
+                else if (w == mine + 1) all(a, pick);
+                else if (w - mine - 2 < extra.size()) extra.get(w - mine - 2).run();
+                else create(a, newIn, pick);
+            }
+        }, new Ui.Index1() {
+            @Override
+            public void ok(int w) {
+                if (w < mine) saveAs(a, sys.get(w));                          // פקודת מערכת — עריכה רק בשם אחר
+            }
+        });
+    }
+
+    /** נגיעה: הרצה, או בחירה. */
+    private static void use(Activity a, String icon, String name, String line, File f, Picked pick) {
+        if (pick != null) pick.ok(icon, name, f != null ? Verbs.run(f.getAbsolutePath()) : line, f);
+        else if (f != null) BatchUi.run(a, f);
+        else if (!Verbs.run(a, line, null)) Ui.toast(a, Words.Top.UNKNOWN + line);
+    }
+
+    private static void useFile(Activity a, File f, Picked pick) {
+        Program p = Program.read(f);
+        use(a, p.isProgram() ? p.icon : "▶", p.title(f), null, f, pick);
+    }
+
+    /** "שלי" — הרשימה כתפריט: תתי־רשימות ▸ ותפריטי משנה, קובצי הפקודות שבה; ובסוף — "סידור" (הרשימה עצמה). */
+    private static void mine(final Activity a, final List<String> path, final Picked pick) {
+        Tree t = Tree.load();
+        Tree.Node n = t.find(path);
+        if (n == null && path.equals(MINE)) n = ensureMine();
+        if (n == null) return;
+        final List<String> subs = new ArrayList<String>();
+        final List<File> files = new ArrayList<File>();
+        final List<String> labels = new ArrayList<String>();
+        for (Tree.Node c : n.children) {
+            subs.add(c.name);
+            labels.add(c.name + "  ▸");
+        }
+        for (Tree.Entry e : n.entries) {
+            File f = new File(e.path);
+            if (!Batch.isBatch(f.getName()) || !f.isFile()) continue;
+            Program p = Program.read(f);
+            files.add(f);
+            labels.add((p.isProgram() ? p.icon : "▶") + "  " + p.title(f));
+        }
+        labels.add(Words.CmdM.ARRANGE);
+        Ui.list(a, path.get(path.size() - 1), labels, new DialogInterface.OnClickListener() {
+            @Override
+            public void onClick(DialogInterface d, int w) {
+                if (w < subs.size()) {
+                    List<String> p = new ArrayList<String>(path);
+                    p.add(subs.get(w));
+                    mine(a, p, pick);
+                } else if (w < subs.size() + files.size()) useFile(a, files.get(w - subs.size()), pick);
+                else VirtualScreen.open(a, path, null, null);
+            }
+        }, new Ui.Index1() {
+            @Override
+            public void ok(int w) {
+                if (w >= subs.size() && w < subs.size() + files.size()) BatchUi.edit(a, files.get(w - subs.size()));
+            }
+        });
+    }
+
+    /** "כל הפקודות שבמכשיר" — מהאינדקס. */
+    private static void all(final Activity a, final Picked pick) {
+        final List<File> found = BatchUi.all(a);
+        if (found.isEmpty()) {
+            Ui.toast(a, Words.Top.NO_BATCH);
+            return;
+        }
+        List<String> labels = new ArrayList<String>();
+        for (File f : found) {
+            Program p = Program.read(f);
+            labels.add((p.isProgram() ? p.icon : "▶") + "  " + p.title(f));
+        }
+        Ui.list(a, Words.CmdM.ALL, labels, new DialogInterface.OnClickListener() {
+            @Override public void onClick(DialogInterface d, int w) { useFile(a, found.get(w), pick); }
+        }, new Ui.Index1() {
+            @Override public void ok(int w) { BatchUi.edit(a, found.get(w)); }
+        });
+    }
+
+    /** "🧩 פעולה של המסך" — הפעולות שהמסך עצמו מכיר (בכפתור בלבד). */
+    private static void own(Activity a, String screen, final Picked pick) {
+        final List<String[]> acts = ((TopRow.Host) a).actions();
+        String[] names = new String[acts.size()];
+        for (int i = 0; i < acts.size(); i++) names[i] = acts.get(i)[1] + " " + acts.get(i)[2];
+        Ui.options(a, Words.Top.T_OWN + screen, names, new DialogInterface.OnClickListener() {
+            @Override
+            public void onClick(DialogInterface d, int k) {
+                pick.ok(acts.get(k)[1], acts.get(k)[2], Verbs.fromOld(acts.get(k)[0]), null);
+            }
+        });
+    }
+
+    /** פקודת מערכת — "שמירה בשם": שם חדש ← קובץ פקודות ב"שלי" (המקור לא משתנה) ← העורך. */
+    private static void saveAs(final Activity a, final String[] s) {
+        Ui.askText(a, Words.CmdM.SAVE_AS, s[1] + Words.CmdM.MINE_SUFFIX, Words.Short.NAME_HINT, new Ui.Text1() {
+            @Override
+            public void ok(String name) {
+                File f = Shortcuts.write(s[0], name, s[2]);
+                if (f == null) {
+                    Ui.toast(a, Words.SAVE_FAILED);
+                    return;
+                }
+                addToMine(f);
+                BatchUi.edit(a, f);
+            }
+        });
+    }
+
+    /** "➕ פקודה חדשה" — שם ← קובץ (בתיקייה newIn, או בקיצורים) ← ב"שלי" ← העורך (ובבחירה — גם נבחרת). */
+    private static void create(final Activity a, final File newIn, final Picked pick) {
+        Ui.askText(a, Words.CmdM.NEW, "", Words.Short.NAME_HINT, new Ui.Text1() {
+            @Override
+            public void ok(final String name) {
+                if (newIn != null) {                                          // בתיקייה של המשתמש — שינוי בכונן, באישור
+                    String n = name.trim();
+                    if (!n.toLowerCase(java.util.Locale.ROOT).endsWith("." + Batch.EXT)) n += "." + Batch.EXT;
+                    final File f = new File(newIn, n);
+                    Physical.askNewFile(a, f, Batch.template(), new Runnable() {
+                        @Override public void run() { made(a, f, name, pick); }
+                    });
+                    return;
+                }
+                File f = Shortcuts.write("▶", name, "");
+                if (f == null) Ui.toast(a, Words.SAVE_FAILED);
+                else made(a, f, name, pick);
+            }
+        });
+    }
+
+    private static void made(Activity a, File f, String name, Picked pick) {
+        addToMine(f);
+        if (pick != null) pick.ok("▶", name, Verbs.run(f.getAbsolutePath()), f);
+        BatchUi.edit(a, f);
+    }
+
+    /**
+     * הרשימה "שלי" — קיימת, או נוצרת עכשיו עם הקיצורים שכבר יש (מה שהיה "⭐ הקיצורים שלי" בתפריט ➕ בבית).
+     */
+    static Tree.Node ensureMine() {
+        final List<File> had = Shortcuts.mine();
+        Tree.edit(new Tree.Edit() {
+            @Override
+            public boolean apply(Tree t) {
+                if (t.find(MINE) != null) return false;
+                Tree.Node n = Tree.newChild(t.root, MINE.get(0));
+                n.icon = "⭐";
+                for (File f : had) n.entries.add(new Tree.Entry(f.getAbsolutePath(), f.length(), false));
+                return true;
+            }
+        });
+        return Tree.load().find(MINE);
+    }
+
+    static void addToMine(final File f) {
+        ensureMine();
+        Tree.edit(new Tree.Edit() {
+            @Override
+            public boolean apply(Tree t) {
+                Tree.Node n = t.find(MINE);
+                if (n == null || Tree.contains(n.entries, f.getAbsolutePath())) return false;
+                n.entries.add(new Tree.Entry(f.getAbsolutePath(), f.length(), false));
+                return true;
+            }
+        });
     }
 }
 
@@ -8853,7 +9071,7 @@ public class DupScreen extends Activity {
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
         if (item.getItemId() == 900) {                                       // 127
-            BatchUi.starMenu(this, null);
+            CmdMenu.show(this, null);
             return true;
         }
         if (item.getItemId() == 1) {
@@ -11230,9 +11448,14 @@ public class Home extends Activity {
                     public void onClick(DialogInterface d, int which) {
                         if (which == 0) Func.byKind(FnVirtual.KIND).configure(Home.this, null, null, added);
                         else if (which == 1) SearchTabs.configure(Home.this, SearchTabs.KINDS[0], null, null, added);
-                        else Shortcuts.menu(Home.this, new Runnable() {
-                            @Override public void run() { build(); }
-                        });
+                        else CmdMenu.show(Home.this, null, new CmdMenu.Picked() {   // 1.16.1: תפריט הפקודות האחד
+                            @Override
+                            public void ok(String icon, String name, String line, java.io.File file) {
+                                Shortcuts.add(Home.this, file != null ? file : Shortcuts.write(icon, name, line), name, new Runnable() {
+                                    @Override public void run() { build(); }
+                                });
+                            }
+                        }, null);
                     }
                 });
     }
@@ -11278,7 +11501,7 @@ public class Home extends Activity {
             return true;
         }
         if (item.getItemId() == 2) {                                    // 117א
-            BatchUi.starMenu(this, null);
+            CmdMenu.show(this, null);
             return true;
         }
         return super.onOptionsItemSelected(item);
@@ -21315,7 +21538,7 @@ public class SearchScreen extends Activity implements Clip.Holder {
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
         if (item.getItemId() == 900) {                                       // 127
-            BatchUi.starMenu(this, folderMode() && here != null ? new File(here) : null);   // 149: "קובץ פקודות חדש כאן"
+            CmdMenu.show(this, folderMode() && here != null ? new File(here) : null);   // 149: "פקודה חדשה" — כאן
             return true;
         }
         if (item.getItemId() == 1) {
@@ -22635,19 +22858,14 @@ public class ShareScreen extends Activity {
 ===== קובץ: src/com/tikiyot/vfm/Shortcuts.java =====
 package com.tikiyot.vfm;
 
-// 1.13.1: "פקודה / קיצור דרך" — מתפריט ➕ בבית (הוכרע 16.10). המשתמש: "יש עוד תפריט נוסף של קיצורי דרך, ששם
-// המשתמש יכול לבחור פקודה או ליצור פקודה"; "ושם אפשר להציע רשימה כסביבת עבודה"; "ואם אתה דווקא מתעקש — בקיצורי
-// הדרך תוכל להוסיף פקודות לסל ולשאר אלו שמחקת מהראשי".
-// בתפריט: ⭐ הקיצורים שלי (קובצי הפקודות שבתיקיית "קיצורים" של האופן) · 💡 מוכנות · 📜 קובץ פקודות קיים… · ✏️ פקודה חדשה….
-// נגיעה — כלי "פקודה" בבית שמפנה לקובץ. מוכנה — נכתבת כקובץ בתיקייה (ומאז — גם בין "הקיצורים שלי").
-// אחראי: התפריט והקבצים שבתיקייה. אסור לו: לגעת בקובצי פקודות של המשתמש מחוץ לתיקייה.
+// 1.13.1: קיצורים — קובצי פקודות בתיקיית "קיצורים" של האופן. 1.16.1: התפריט עבר לתפריט הפקודות האחד (CmdMenu);
+// כאן — רק הקבצים: כתיבה, "שלי" הישנים (נכנסים לרשימה "הפקודות שלי"), כלי "פקודה" בבית, ורשימה שעברה.
+// אסור לו: לגעת בקובצי פקודות של המשתמש מחוץ לתיקייה.
 
 import android.app.Activity;
-import android.content.DialogInterface;
 
 import java.io.File;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 
 final class Shortcuts {
@@ -22669,107 +22887,12 @@ final class Shortcuts {
         return out;
     }
 
-    /** המוכנות: { צלמית, שם, שורה }; שורה ריקה — "רשימה כסביבת עבודה" (לא פקודה). */
-    static List<String[]> ready() {
-        return Arrays.asList(
-                new String[]{"🗑", Words.Short.TRASH, Verbs.openScreen(Verbs.S_TRASH)},
-                new String[]{"⚙", Words.Short.SETTINGS, Verbs.openScreen(Verbs.S_SETTINGS)},
-                new String[]{"📂", Words.Short.DISK, Verbs.openScreen(Verbs.S_DISK)},
-                new String[]{"🗂", Words.Short.VIRTUAL, Verbs.openScreen(Verbs.S_VIRTUAL)},
-                new String[]{"🧰", Words.Short.WORKSPACE, ""});
-    }
-
-    static void menu(final Activity a, final Runnable changed) {
-        final List<File> mine = mine();
-        final List<String[]> ready = ready();
-        List<String> labels = new ArrayList<String>();
-        for (File f : mine) {
-            Program p = Program.read(f);
-            labels.add("⭐ " + (p.isProgram() ? p.icon : "▶") + " " + p.title(f));
-        }
-        for (String[] r : ready) labels.add("💡 " + r[0] + " " + r[1]);
-        labels.add(Words.Short.EXISTING);
-        labels.add(Words.Short.NEW);
-        Ui.list(a, Words.Main.ADD_CMD.trim(), labels, new DialogInterface.OnClickListener() {
-            @Override
-            public void onClick(DialogInterface d, int w) {
-                if (w < mine.size()) {
-                    File f = mine.get(w);
-                    add(a, f, Program.read(f).title(f), changed);
-                } else if (w < mine.size() + ready.size()) {
-                    String[] r = ready.get(w - mine.size());
-                    if (r[2].isEmpty()) workspace(a, changed);
-                    else {
-                        File f = write(r[0], r[1], r[2]);
-                        if (f == null) Ui.toast(a, Words.SAVE_FAILED);
-                        else add(a, f, r[1], changed);
-                    }
-                } else if (w == mine.size() + ready.size()) {
-                    Func.byKind(FnCommand.KIND).configure(a, null, null, new Func.Done() {
-                        @Override
-                        public void ok(String name, Target t) {
-                            add(a, FnCommand.file(t), name, changed);
-                        }
-                    });
-                } else {
-                    newOne(a, changed);
-                }
-            }
-        });
-    }
-
     /** כלי "פקודה" בבית שמפנה לקובץ. */
-    private static void add(Activity a, File f, String name, Runnable changed) {
+    static void add(Activity a, File f, String name, Runnable changed) {
         if (f == null) return;
         Structure.addDirectFunc(name, FnCommand.KIND, "", Target.of(FnCommand.KIND, FnCommand.FILE, f.getAbsolutePath()));
         changed.run();
         Ui.toast(a, Words.CmdTool.added(name));
-    }
-
-    /** ✏️ פקודה חדשה: שם ← קובץ בתיקייה עם כותרת (צלמית, שם) ← לבית, ולעורך. */
-    private static void newOne(final Activity a, final Runnable changed) {
-        Ui.askText(a, Words.Short.NEW, "", Words.Short.NAME_HINT, new Ui.Text1() {
-            @Override
-            public void ok(String name) {
-                File f = write("▶", name, "");
-                if (f == null) {
-                    Ui.toast(a, Words.SAVE_FAILED);
-                    return;
-                }
-                add(a, f, name, changed);
-                BatchUi.edit(a, f);
-            }
-        });
-    }
-
-    /**
-     * 🧰 רשימה כסביבת עבודה: רשימה ידנית חדשה בשורש — צלמית, תיאור ועיצוב "תוכנת ניהול קבצים" — וכלי שלה בבית.
-     */
-    private static void workspace(final Activity a, final Runnable changed) {
-        Ui.askText(a, Words.Short.WORKSPACE, "", Words.Short.NAME_HINT, new Ui.Text1() {
-            @Override
-            public void ok(final String asked) {
-                final String[] made = {null};
-                Tree.edit(new Tree.Edit() {
-                    @Override
-                    public boolean apply(Tree t) {
-                        Tree.Node n = Tree.newChild(t.root, t.root.uniqueChildName(Tree.cleanName(asked), null));
-                        n.icon = "🧰";
-                        n.desc = Words.Short.WORKSPACE_DESC;
-                        n.design = Design.FILES;
-                        made[0] = n.name;
-                        return true;
-                    }
-                });
-                if (made[0] == null) {
-                    Ui.toast(a, Words.SAVE_FAILED);
-                    return;
-                }
-                Structure.addDirectFunc(made[0], FnVirtual.KIND, "", Target.of(FnVirtual.KIND, FnVirtual.LIST, made[0]));
-                changed.run();
-                Ui.toast(a, Words.CmdTool.added(made[0]));
-            }
-        });
     }
 
     /**
@@ -26328,24 +26451,6 @@ final class TopRow {
         File hereDir();
     }
 
-    /**
-     * 1.11.0: ⭐ פקודות = רשימה חכמה של כל קובצי הפקודות, "קודם כאן, השאר בתיקיות". נגיעה — הרצה.
-     * (קובץ פקודות חדש — מהתפריט של הרשימה, "⭐ קובצי פקודות".)
-     */
-    /**
-     * ⭐ פקודות — תמיד אותו מסך: כל קובצי הפקודות. 1.14.0 (באג — המשתמש: "'פקודות' מופיע לעיתים כספרייה ולעיתים
-     * כמסך"): עד כאן, מתוך תיקייה — נפתח על התיקייה.
-     */
-    static void commands(Activity a) {
-        Intent i = new Intent(a, SearchScreen.class);
-        i.putExtra(SearchScreen.EXTRA_QUERY, Cond.TYPE + ":" + Batch.EXT);
-        i.putExtra(SearchScreen.EXTRA_FIXED, true);
-        i.putExtra(SearchScreen.EXTRA_TITLE, "⭐ " + Words.Top.COMMANDS);
-        i.putExtra(SearchScreen.EXTRA_SORT, Sort.NAME);
-        i.putExtra(SearchScreen.EXTRA_VIEW, FolderView.HERE);
-        a.startActivity(i);
-    }
-
     // ---------- עריכה ----------
 
     /** 1.13.0 (באג): השורות שונו במסך אחר מאז שהמסך הזה נבנה — לבנות מחדש לפני כל שינוי, כדי לא לדרוס. */
@@ -26548,28 +26653,23 @@ final class TopRow {
     }
 
     /**
-     * "מה הכפתור יעשה?" — תיקייה · רשימה ידנית · רשימה חכמה · קובץ פקודות · שורת פקודה · מסך · פעולה של המסך הזה.
-     * 1.13.0: התוצאה — שורת פקודה בעברית (הטופס כותב את הפקודה).
+     * "מה הכפתור יעשה?" — 1.16.1: אותו תפריט כמו ➕ בבית (המשתמש: "שני המקומות אמורים להיות זהים; ההבדל היחיד —
+     * הפלוס מוסיף במסך הבית, והשני מוסיף כפתור במקום שמחליטים"): רשימה ידנית · רשימה חכמה · פקודה (תפריט הפקודות
+     * האחד — ובו גם שורה בכתב, תיקייה במנהל הקבצים ופעולה של המסך). התוצאה — שורת פקודה.
      */
     static void pick(final Activity a, final String screen, final Chosen cb) {
-        final boolean own = a instanceof Host && !((Host) a).actions().isEmpty();
-        List<String> opts = new ArrayList<String>(java.util.Arrays.asList(Words.Top.T_FOLDER, Words.Top.T_LIST,
-                Words.Top.T_SMART, Words.Top.T_BATCH, Words.Top.T_LINE, Words.Top.T_SCREEN));
-        if (own) opts.add(Words.Top.T_OWN + screen);
-        Ui.options(a, Words.Top.WHAT, opts.toArray(new String[0]), new DialogInterface.OnClickListener() {
+        Ui.options(a, Words.Top.WHAT, new String[]{Words.Main.ADD_MANUAL, Words.Main.ADD_SMART, Words.Main.ADD_CMD},
+                new DialogInterface.OnClickListener() {
             @Override
             public void onClick(DialogInterface d, int w) {
-                if (w == 0) FolderPicker.choose(a, new FolderPicker.Picked() {
-                    @Override public void ok(File f) { cb.ok("📁", f.getName(), Verbs.openFolder(f.getAbsolutePath())); }
-                });
-                else if (w == 1) ListPicker.choose(a, Words.Top.T_LIST, null, new ListPicker.Picked() {
+                if (w == 0) ListPicker.choose(a, Words.Main.ADD_MANUAL.trim(), null, new ListPicker.Picked() {
                     @Override
                     public void ok(ArrayList<String> path) {
                         if (path.isEmpty()) return;
-                        cb.ok("📁", path.get(path.size() - 1), Verbs.openList(path));
+                        cb.ok("📋", path.get(path.size() - 1), Verbs.openList(path));
                     }
                 });
-                else if (w == 2) {
+                else if (w == 1) {
                     final List<SmartLists.Named> all = SmartLists.all();
                     if (all.isEmpty()) {
                         Ui.toast(a, Words.Top.NO_SMART);
@@ -26577,56 +26677,16 @@ final class TopRow {
                     }
                     List<String> names = new ArrayList<String>();
                     for (SmartLists.Named n : all) names.add("✨ " + n.name);
-                    Ui.list(a, Words.Top.T_SMART, names, new DialogInterface.OnClickListener() {
+                    Ui.list(a, Words.Main.ADD_SMART.trim(), names, new DialogInterface.OnClickListener() {
                         @Override
                         public void onClick(DialogInterface d2, int k) {
                             cb.ok("✨", all.get(k).name, Verbs.openSmart(all.get(k).name));
                         }
                     });
-                } else if (w == 3) {
-                    final List<File> found = BatchUi.all(a);
-                    if (found.isEmpty()) {
-                        Ui.toast(a, Words.Top.NO_BATCH);
-                        return;
-                    }
-                    List<String> names = new ArrayList<String>();
-                    for (File f : found) names.add("▶ " + Text.stem(f.getName()));
-                    Ui.list(a, Words.Top.T_BATCH, names, new DialogInterface.OnClickListener() {
-                        @Override
-                        public void onClick(DialogInterface d2, int k) {
-                            File f = found.get(k);
-                            Program pg = Program.read(f);
-                            cb.ok(pg.isProgram() ? pg.icon : "▶", pg.title(f), Verbs.run(f.getAbsolutePath()));
-                        }
-                    });
-                } else if (w == 4) {
-                    Ui.askText(a, Words.Top.T_LINE, "", Words.Top.LINE_HINT, new Ui.Text1() {
-                        @Override public void ok(String s) { cb.ok("⌨", s.length() > 12 ? s.substring(0, 12) + "…" : s, s.trim()); }
-                    });
-                } else if (w == 5) {
-                    final String[] names = {"🏠 " + Words.Top.HOME, "→ " + Words.Top.BACK, "⭐ " + Words.Top.COMMANDS,
-                            "🔎 " + Words.Top.SEARCH, "📂 " + Words.Top.FILES, "🗂 " + Words.Top.VIRTUAL, "⚙ " + Words.Top.SETTINGS,
-                            "🗑 " + Words.Top.TRASH};
-                    final String[] acts = {Buttons.HOME, Buttons.BACK, Buttons.COMMANDS, Buttons.SEARCH, Buttons.FILES,
-                            Verbs.openScreen(Verbs.S_VIRTUAL), Buttons.SETTINGS, Verbs.openScreen(Verbs.S_TRASH)};
-                    Ui.options(a, Words.Top.T_SCREEN, names, new DialogInterface.OnClickListener() {
-                        @Override
-                        public void onClick(DialogInterface d2, int k) {
-                            String[] p = names[k].split(" ", 2);
-                            cb.ok(p[0], p[1], acts[k]);
-                        }
-                    });
-                } else {
-                    final List<String[]> acts = ((Host) a).actions();
-                    String[] names = new String[acts.size()];
-                    for (int i = 0; i < acts.size(); i++) names[i] = acts.get(i)[1] + " " + acts.get(i)[2];
-                    Ui.options(a, Words.Top.T_OWN + screen, names, new DialogInterface.OnClickListener() {
-                        @Override
-                        public void onClick(DialogInterface d2, int k) {
-                            cb.ok(acts.get(k)[1], acts.get(k)[2], Verbs.fromOld(acts.get(k)[0]));
-                        }
-                    });
-                }
+                } else CmdMenu.show(a, null, new CmdMenu.Picked() {
+                    @Override
+                    public void ok(String icon, String name, String line, File file) { cb.ok(icon, name, line); }
+                }, screen);
             }
         });
     }
@@ -28775,7 +28835,7 @@ public final class Ui {
                 toast(c, Words.UiW.BATCH_IN_TRASH);
                 return;
             }
-            if (c instanceof Activity) BatchUi.menu((Activity) c, f);
+            if (c instanceof Activity) BatchUi.run((Activity) c, f);           // 1.16.1: נגיעה — הרצה (ארוכה — עריכה)
             else c.startActivity(new Intent(c, BatchEditScreen.class)            // 125: מהפס הצף — לעורך, ומשם הרצה
                     .putExtra(BatchEditScreen.EXTRA_FILE, f.getAbsolutePath()).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
             return;
@@ -30033,7 +30093,7 @@ final class Verbs {
         String s = c.arg;
         if (s.equals(S_HOME)) Home.go(a);
         else if (s.equals(S_SEARCH)) a.startActivity(new Intent(a, SearchScreen.class));
-        else if (s.equals(S_COMMANDS)) TopRow.commands(a);
+        else if (s.equals(S_COMMANDS)) CmdMenu.show(a, null);             // 1.16.1: אותו תפריט בכל מקום
         else if (s.equals(S_DISK)) DiskScreen.open(a, c.cond.isEmpty() ? null : c.cond);
         else if (s.equals(S_VIRTUAL)) a.startActivity(SearchScreen.fileManager(a, "", c.cond.isEmpty() ? null : c.cond, null));
         else if (s.equals(S_SETTINGS)) a.startActivity(new Intent(a, SettingsScreen.class));
@@ -31196,7 +31256,7 @@ public class VirtualScreen extends ListScreen<VirtualScreen.Item> implements Top
     @Override
     protected boolean item(int id) {
         if (id == 900) {                                       // 127
-            BatchUi.starMenu(this, null);
+            CmdMenu.show(this, null);
             return true;
         }
         if (id == 1) {
@@ -31504,7 +31564,7 @@ public final class Words {
     public static final String LOADING_INDEX = "טוען את האינדקס…";
     public static final String CANT_READ_FILE = "לא הצלחתי לקרוא את הקובץ";
     public static final String CANT_CREATE_FOLDER = "לא הצלחתי ליצור את התיקייה";
-    public static final String BATCH_MENU = "⭐ קובצי פקודות";
+    public static final String BATCH_MENU = "⭐ פקודות";
 
     // ---------- נכשל ----------
     public static final String DELETE_FAILED = "המחיקה נכשלה", RENAME_FAILED = "שינוי השם נכשל",
@@ -31734,7 +31794,6 @@ public final class Words {
 
         /** 203: COPY … %שיתוף% */
         /** 216: תפריט ⭐ — נגיעה מריצה, נגיעה ארוכה עורכת; ובסוף הרצה שהלכה חלק — הודעה קצרה. */
-        public static final String STAR_TITLE = "⭐ קובצי פקודות · נגיעה — הרצה · ארוכה — עריכה";
 
         public static String doneShort(int lines) {
             return "✓ בוצע" + (lines > 1 ? " (" + lines + " שורות)" : "");
@@ -31802,9 +31861,8 @@ public final class Words {
         }
 
         // התפריט והחלונות
-        public static final String RUN_FIRST_PREVIEW = "▶ הרצה (קודם תצוגה מקדימה)", EDIT = "✎ עריכה",
-                NEW = "קובץ פקודות חדש", NEW_HINT = "שם, למשל: הורדות לספרים", SHORTCUTS_DIR = "קיצורי דרך",
-                HERE = " כאן", RUN = "הרצה", NOTHING_TO_DO = "אין בקובץ פקודות לביצוע.",
+        public static final String EDIT = "✎ עריכה",
+                RUN = "הרצה", NOTHING_TO_DO = "אין בקובץ פקודות לביצוע.",
                 NO_CHANGE = "לא ישתנה דבר בכונן", CHANGES = "ישתנו קבצים בכונן",
                 DELETES_TO_TRASH = " · DEL ו-RD מעבירים לסל המחזור",
                 UNDO = "מחיקה — מסל המחזור; העברה והעתקה — הרשימות עוקבות";
@@ -32338,8 +32396,8 @@ public final class Words {
         public static final String UNKNOWN_TOOL = "כלי עבודה לא מוכר: ";
         public static final String WHAT_TO_ADD = "מה להוסיף";
         /** 1.13.1: ➕ בבית — ארבע שורות (הוכרע 16.10). */
-        public static final String ADD_MANUAL = "📁  רשימה ידנית", ADD_SMART = "✨  רשימה חכמה",
-                ADD_CMD = "▶  פקודה / קיצור דרך";
+        public static final String ADD_MANUAL = "📋  רשימה ידנית", ADD_SMART = "✨  רשימה חכמה",   // 1.16.1: אותו תפריט
+                ADD_CMD = "▶  פקודה";                                                                // גם בכפתור
         public static final String OPEN = "פתיחה";
         public static final String ICON = "צלמית";
         public static final String MOVE_RIGHT = "הזזה ימינה";
@@ -33139,9 +33197,7 @@ public final class Words {
         public static final String RESET_ASK = "חזרה לברירת מחדל";
         public static final String RESET_WHAT = "רק הכפתורים — לא רשימות ולא קבצים · רק באופן העבודה הזה";
         public static final String WHAT = "מה הכפתור יעשה?";
-        public static final String T_FOLDER = "📁 פתיחת תיקייה (ישר מהכונן)", T_LIST = "📋 פתיחת רשימה ידנית",
-                T_SMART = "✨ פתיחת רשימה חכמה", T_BATCH = "▶ הרצת קובץ פקודות", T_LINE = "⌨ שורת פקודה בכתב",
-                T_SCREEN = "🖥 מסך בתוכנה";
+        public static final String T_LINE = "⌨ שורת פקודה בכתב";
         public static final String NAME = "שם", ICON = "סמל (אות או סימן אחד)", ACTION = "מה הכפתור עושה: ",
                 CHANGE = "שינוי…", FIXED = " (קבוע — זה כפתור עוגן)";
         public static final String NO_SMART = "אין רשימות חכמות שמורות";
@@ -33301,14 +33357,21 @@ public final class Words {
                 PASTED = "הודבקו: ", SKIPPED = " · לא הודבקו: ", FAILED = "ההעתקה לא הצליחה";
     }
 
+    /** 1.16.1: תפריט הפקודות האחד (CmdMenu) */
+    public static final class CmdM {
+        private CmdM() { }
+
+        public static final String TITLE = "⭐ פקודות · נגיעה — הרצה · ארוכה — עריכה", MINE = "⭐ שלי  ▸",
+                ALL = "📜 כל הפקודות במכשיר  ▸", FOLDER = "📂 פתיחת תיקייה במנהל הקבצים…", NEW = "➕ פקודה חדשה…",
+                ARRANGE = "✎ סידור התפריט (הרשימה)…", SAVE_AS = "שמירה בשם — פקודות המערכת לא משתנות",
+                MINE_SUFFIX = " — שלי", MINE_LIST = "הפקודות שלי";  // MINE_LIST — שם רשימה בכונן
+    }
+
     /** 1.13.1: "פקודה / קיצור דרך" (Shortcuts) */
     public static final class Short {
         private Short() { }
 
-        public static final String TRASH = "סל המחזור", SETTINGS = "הגדרות", DISK = "קבצים פיזיים",
-                VIRTUAL = "קבצים וירטואליים", WORKSPACE = "רשימה כסביבת עבודה",
-                WORKSPACE_DESC = "רשימה שמתפקדת כסביבת עבודה — רשימות בתוכה, תיקיות מתעדכנות וקבצים",
-                EXISTING = "📜 קובץ פקודות קיים…", NEW = "✏️ פקודה חדשה…", NAME_HINT = "שם";
+        public static final String NAME_HINT = "שם";
     }
 
     /** 1.13.0: כלי "פקודה" (FnCommand) */
@@ -38455,8 +38518,25 @@ public final class Tests {
         check("1.13.1: קובץ פקודות — תווית \"טקסט\"", Words.UiW.TEXT_TAG.equals(Ui.typeLabel("סידור.vbat", false))
                 && Ui.typeColor(Words.UiW.TEXT_TAG) == Ui.typeColor("TXT"));
         boolean readyOk = true;
-        for (String[] r : Shortcuts.ready()) if (!r[2].isEmpty() && Verbs.parse(r[2]).error != null) readyOk = false;
-        check("1.13.1: קיצורי הדרך המוכנים — פקודות תקינות", readyOk && Shortcuts.ready().size() == 5);
+        for (String[] r : CmdMenu.system()) if (!Verbs.isVerb(r[2]) || Verbs.parse(r[2]).error != null) readyOk = false;
+        check("1.16.1: פקודות המערכת — שמונה, וכולן פקודות תקינות (טקסט)", readyOk && CmdMenu.system().size() == 8);
+        File mineT = new File(home, "מבנה-שלי.txt");
+        try {
+            Files.writeAtomic(mineT, "#1 א\n");
+            Tree.testFile = mineT;
+            Tree.Node mn = CmdMenu.ensureMine();
+            File cmdF = new File(home, "שלי-בדיקה.vbat");
+            Files.writeAtomic(cmdF, "פתח מסך הבית\n");
+            CmdMenu.addToMine(cmdF);
+            CmdMenu.addToMine(cmdF);
+            Tree.Node m2 = Tree.load().find(CmdMenu.MINE);
+            check("1.16.1: \"שלי\" — רשימה ידנית בשורש, ופקודה נכנסת אליה פעם אחת", mn != null && m2 != null
+                    && m2.entries.size() == Shortcuts.mine().size() + 1 && Tree.contains(m2.entries, cmdF.getAbsolutePath()));
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        } finally {
+            Tree.testFile = null;
+        }
 
         File tf = new File(home, "מבנה-1131.txt");
         try {
