@@ -2,8 +2,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="com.tikiyot.vfm"
-    android:versionCode="153"
-    android:versionName="1.18.0">
+    android:versionCode="154"
+    android:versionName="1.19.0">
     <uses-sdk android:minSdkVersion="21" android:targetSdkVersion="30" />
 
     <queries>
@@ -3581,6 +3581,10 @@ final class Batch {
         /** 1.13.0: פקודת פתיחה — השורה, אחרי המשתנים. */
         String open;
         boolean replace, skipTaken, recursive, hidden;
+        /** 1.19.0: COPY/MOVE /S — שמירת מסלול: השורש שממנו נמדד המסלול; files — כל הקבצים, dirs — תיקיות ריקות. */
+        String keepRoot;
+        /** 1.19.0: /יומן: — קובץ היומן (מסלול מלא), או null. */
+        String journal;
         /** 203: COPY … %שיתוף% — נאסף לשליחה אחת בסוף. */
         boolean share;
         /** MD לתיקייה שכבר קיימת — בלי שינוי (ולא שגיאה). */
@@ -3712,6 +3716,11 @@ final class Batch {
     static final String SW_DATE = DateSize.DATE, SW_SIZE = DateSize.SIZE;
     /** שם תפוס: /תפוס:לשאול · /תפוס:לדלג · /תפוס:להחליף */
     static final String SW_TAKEN = "/תפוס:", TAKEN_ASK = "לשאול", TAKEN_SKIP = "לדלג", TAKEN_REPLACE = "להחליף";   // תחביר
+    /** 1.19.0: שמירת מסלול — /S (כמו XCOPY), ובעברית /מסלול. יומן — /יומן:<קובץ>. */
+    static final String SW_KEEP = "/מסלול", SW_JOURNAL = "/יומן:";   // תחביר
+    /** 1.19.0: %תאריך% — זמן ההרצה (קבוע לכל הקובץ); %מזהה-כרטיס% — שם הכרטיס הקבוע (למשל ABCD-1234). */
+    static final String V_NOW = "תאריך", V_CARD_ID = "מזהה-כרטיס";   // תחביר
+    static final String NOW_FORMAT = "dd.MM.yyyy HH-mm-ss";   // בכונן
 
     static String var(String name) {
         return "%" + name + "%";
@@ -3720,7 +3729,8 @@ final class Batch {
     /** מתג: מתחיל ב-"/" ושמו מוכר (כך "/storage/..." אינו מתג). */
     private static final Pattern SWITCH = Pattern.compile(
             "^/(-?Y|S|Q|F|A(:.*)?|D(:.*)?|" + SW_DATE + ".*|" + SW_SIZE + ".*|" + SW_TAKEN.substring(1)
-                    + ".*|MAXAGE:.*|MINAGE:.*|MAX:.*|MIN:.*)$", Pattern.CASE_INSENSITIVE);
+                    + ".*|" + SW_KEEP.substring(1) + "|" + SW_JOURNAL.substring(1) + ".*|MAXAGE:.*|MINAGE:.*|MAX:.*|MIN:.*)$",
+            Pattern.CASE_INSENSITIVE);
 
     static boolean isSwitch(String t) {
         return SWITCH.matcher(t).matches();
@@ -3733,6 +3743,8 @@ final class Batch {
         if (card != null) v.put(V_CARD, card);
         v.put(V_DOWNLOADS, internal + "/Download");
         v.put(V_HERE, here.getAbsolutePath());
+        if (card != null) v.put(V_CARD_ID, new File(card).getName());       // 1.19.0
+        v.put(V_NOW, new java.text.SimpleDateFormat(NOW_FORMAT, Locale.ROOT).format(new java.util.Date()));   // 1.19.0
         v.put(V_SHARE, SHARE_MARK);                                           // 203
         v.put(V_HOME, HOME_MARK);                                             // 1.9.0
         return v;
@@ -3950,6 +3962,17 @@ final class Batch {
                 if (p == null) break;
                 paths.add(p);
             }
+            if (err[0] == null)                                                // 1.19.0: /יומן:<קובץ>
+                for (String x : sw) {
+                    if (!x.startsWith(SW_JOURNAL)) continue;
+                    String v = x.substring(SW_JOURNAL.length()).trim();
+                    if (v.isEmpty() || !(cmd.equals("COPY") || cmd.equals("MOVE"))) {
+                        err[0] = Words.Cmd.JOURNAL_USAGE;
+                        break;
+                    }
+                    s.journal = path(v, here, vars, err);
+                    if (s.journal == null) break;
+                }
             if (err[0] == null) err[0] = shareMisuse(cmd, paths);           // 203
             if (err[0] == null) err[0] = homeMisuse(cmd, paths);            // 1.9.0
             if (err[0] != null) s.error = err[0];
@@ -3971,7 +3994,7 @@ final class Batch {
             String u = x.toUpperCase(Locale.ROOT);
             if (u.equals("/Y") || x.equals(SW_TAKEN + TAKEN_REPLACE)) s.replace = true;
             if (x.equals(SW_TAKEN + TAKEN_SKIP)) s.skipTaken = true;
-            if (u.equals("/S")) s.recursive = true;
+            if (u.equals("/S") || x.equals(SW_KEEP)) s.recursive = true;
             if (u.equals("/A") || u.startsWith("/A:H") || u.equals("/A:")) s.hidden = true;
             if (x.startsWith(SW_TAKEN) && !x.equals(SW_TAKEN + TAKEN_REPLACE) && !x.equals(SW_TAKEN + TAKEN_SKIP)
                     && !x.equals(SW_TAKEN + TAKEN_ASK))
@@ -4023,6 +4046,8 @@ final class Batch {
             if (!s.files.isEmpty() || s.dirs.isEmpty()) what.add(Words.files(s.files.size()));
             if (!s.dirs.isEmpty()) what.add(Words.folders(s.dirs.size()));
             s.describe = Words.Cmd.toShare(join(what, Words.Cmd.AND)) + filtered(s);
+        } else if ((cmd.equals("COPY") || cmd.equals("MOVE")) && s.recursive) {     // 1.19.0: שמירת מסלול
+            keep(s, cmd, args, paths, flt, sim);
         } else if (cmd.equals("COPY") || cmd.equals("MOVE")) {
             if (paths.size() != 2) { s.error = Words.Cmd.usage(cmd); return; }
             File dest = new File(paths.get(1));
@@ -4100,6 +4125,65 @@ final class Batch {
         } else {
             s.error = Words.Cmd.unknownCommand(cmd) + " (" + join(java.util.Arrays.asList(BatchLine.COMMANDS), " ") + ")";
         }
+    }
+
+    /**
+     * 1.19.0: COPY/MOVE <תיקייה או תיקייה\תבנית> <יעד> /S — כל הקבצים שבתוכה, גם בתיקיות שבתוכה, נכתבים ביעד
+     * באותו מסלול (כמו XCOPY /S). היעד נוצר אם אינו קיים. בלי תבנית ובלי סינון — גם תיקיות ריקות (כמו /E).
+     */
+    private static void keep(Step s, String cmd, List<String> args, List<String> paths, Filter flt, Sim sim) {
+        if (paths.size() != 2) { s.error = Words.Cmd.usage(cmd); return; }
+        File dest = new File(paths.get(1));
+        if (sim.isFile(dest)) { s.error = Words.Cmd.NO_DEST; return; }
+        File src = new File(paths.get(0));
+        String mask = null;
+        if (src.getName().contains("*") || src.getName().contains("?")) {
+            mask = src.getName();
+            src = src.getParentFile();
+        }
+        if (src == null || !sim.isDir(src)) { s.error = Words.FOLDER_NOT_FOUND + ": " + args.get(0); return; }
+        if (Physical.inside(dest, src)) { s.error = Words.Disk.NOT_INTO_ITSELF; return; }
+        s.dest = dest;
+        s.keepRoot = src.getAbsolutePath();
+        walk(s, src, mask, flt, sim, mask == null && flt.tests.isEmpty(), true);
+        if (s.skipTaken)
+            for (java.util.Iterator<String> it = s.files.iterator(); it.hasNext(); )
+                if (sim.isFile(new File(dest, Physical.rel(s.keepRoot, it.next())))) it.remove();
+        List<String> what = new ArrayList<String>();
+        what.add(Words.files(s.files.size()));
+        if (!s.dirs.isEmpty()) what.add(Words.Cmd.emptyFolders(s.dirs.size()));
+        s.describe = Words.Cmd.transfer(cmd.equals("COPY"), join(what, Words.Cmd.AND), Bidi.path(dest.getAbsolutePath()))
+                + Words.Cmd.KEEP_PATH + filtered(s);
+        sim.dirs.add(dest.getAbsolutePath());
+        for (String f : s.files) {
+            File to = new File(dest, Physical.rel(s.keepRoot, f));
+            for (File up = to.getParentFile(); up != null && !up.equals(dest); up = up.getParentFile()) sim.dirs.add(up.getAbsolutePath());
+            sim.move(f, to, cmd.equals("COPY"));
+        }
+        for (String d : s.dirs) sim.dirs.add(new File(dest, Physical.rel(s.keepRoot, d)).getAbsolutePath());
+    }
+
+    /** הקבצים בתיקייה ובתיקיות שבתוכה (מוסתרים — רק עם /A:H; קבצים זמניים של העתקה — אף פעם). */
+    private static boolean walk(Step s, File dir, String mask, Filter flt, Sim sim, boolean empties, boolean top) {
+        boolean any = false;
+        for (File x : sim.files(dir)) {
+            if (!visible(s, x) || Physical.isPartial(x.getName())) continue;
+            any = true;
+            if (mask != null && !wild(mask, x.getName())) continue;
+            s.total++;
+            if (flt.ok(sim.real(x))) s.files.add(x.getAbsolutePath());
+        }
+        File[] kids = dir.listFiles();
+        if (kids != null) {
+            java.util.Arrays.sort(kids);
+            for (File k : kids) {
+                if (!k.isDirectory() || !visible(s, k) || sim.gone.contains(k.getAbsolutePath())) continue;
+                any = true;
+                walk(s, k, mask, flt, sim, empties, false);
+            }
+        }
+        if (!any && !top && empties) s.dirs.add(dir.getAbsolutePath());
+        return any;
     }
 
     /** 1.9.0: "%בית%" — רק לבדו, אחרי START. */
@@ -4230,9 +4314,21 @@ final class Batch {
             } else if (s.cmd.equals("COPY") || s.cmd.equals("MOVE")) {
                 if (s.files.isEmpty() && s.dirs.isEmpty()) out = Words.Cmd.NO_FILES;
                 else {
-                    Physical.Result r = Physical.transfer(lib, s.files, s.dirs, s.dest, s.cmd.equals("COPY"),
-                            s.replace ? REPLACE_ALL : asker, progress, grey);
-                    out = result(r, s.cmd.equals("COPY") ? Words.Cmd.COPIED : Words.Cmd.MOVED);
+                    boolean copy = s.cmd.equals("COPY");
+                    Physical.Journal j = s.journal == null ? null : new Physical.Journal(new File(s.journal), s.text);   // 1.19.0
+                    Physical.Result r = s.keepRoot != null
+                            ? Physical.transferKeep(lib, s.keepRoot, s.files, s.dirs, s.dest, copy,
+                                    s.replace ? REPLACE_ALL : asker, progress, grey, j)
+                            : Physical.transfer(lib, s.files, s.dirs, s.dest, copy,
+                                    s.replace ? REPLACE_ALL : asker, progress, grey, j);
+                    out = result(r, copy ? Words.Cmd.COPIED : Words.Cmd.MOVED);
+                    if (j != null) {
+                        j.close();
+                        if (j.failed()) {
+                            out += Words.Cmd.JOURNAL_FAILED;
+                            plan.trouble = true;
+                        }
+                    }
                     if (r.failed > 0) plan.trouble = true;
                 }
             } else if (s.cmd.equals("REN")) {
@@ -4339,7 +4435,8 @@ final class Batch {
     /** תבנית לקובץ חדש — ההסבר מהמילון, התחביר מכאן. */
     static String template() {
         return Words.Cmd.template(join(Arrays.asList(BatchLine.COMMANDS), "  "),
-                var(V_INTERNAL) + "  " + var(V_CARD) + "  " + var(V_DOWNLOADS) + "  " + var(V_HERE) + "  " + var(V_SHARE) + "  " + var(V_HOME),
+                var(V_INTERNAL) + "  " + var(V_CARD) + "  " + var(V_DOWNLOADS) + "  " + var(V_HERE) + "  " + var(V_SHARE) + "  " + var(V_HOME)
+                        + "  " + var(V_NOW) + "  " + var(V_CARD_ID),
                 "/" + SW_DATE + "יום  /" + SW_DATE + "<שנה  /" + SW_SIZE + ">10MB",   // תחביר
                 SW_TAKEN + TAKEN_ASK, SW_TAKEN + TAKEN_SKIP,
                 "MOVE \"" + var(V_DOWNLOADS) + "\\*.pdf\" \"" + var(V_INTERNAL) + "\\ספרים\" /" + SW_DATE + "שבוע");   // תחביר
@@ -14717,18 +14814,33 @@ public final class Library {
     // כונן, החלפה ברגע אחד, הודעה אחת "מה קרה", ושמירה לקובץ אחר כך (62). התמונה המוצגת אינה משתנה
     // לעולם במקומה — כך אין מרוץ בין חוטים.
 
-    private static final int ADD = 0, REMOVE = 1, SYNC = 2, MARK = 3;
+    private static final int ADD = 0, REMOVE = 1, SYNC = 2, MARK = 3, CARRY = 4;
 
     private static final class Job {
         final int kind;
         final String path;
         final Runnable done;
+        /** 1.19.0 (CARRY): "נוסף", החתימה, ולפי מה החתימה תקפה (גודל ותאריך). */
+        long added, sig, size, mtime;
 
         Job(int kind, String path, Runnable done) {
             this.kind = kind;
             this.path = path;
             this.done = done;
         }
+    }
+
+    /**
+     * 1.19.0: קובץ שהתוכנה העבירה — "נוסף" שלו (והחתימה, אם אותו גודל ותאריך) נלקחים מהמקור המדויק, אחרי
+     * שהוא נכנס לאינדקס במקומו החדש. גובר על הניחוש לפי גודל ותאריך (שנשאר לשינויים מחוץ לתוכנה).
+     */
+    public void carry(String path, long added, long sig, long size, long mtime) {
+        Job j = new Job(CARRY, path, null);
+        j.added = added;
+        j.sig = sig;
+        j.size = size;
+        j.mtime = mtime;
+        enqueue(j);
     }
 
     /** "מה קרה" — נמסר לכל מסך שמקשיב, אחרי שהתמונה החדשה כבר מוצגת. */
@@ -14858,6 +14970,13 @@ public final class Library {
         } else if (j.kind == REMOVE) {
             did = f.removeFile(j.path);
             if (did && ch != null) ch.removed.add(j.path);
+        } else if (j.kind == CARRY) {                    // 1.19.0
+            Index.Rec r = f.find(j.path);
+            if (r != null && !r.gone) {
+                r.added = j.added;
+                if (j.sig != 0 && r.size == j.size && r.mtime == j.mtime) r.sig = j.sig;
+                did = true;
+            }
         } else if (j.kind == SYNC) {
             String p = j.path;                           // תיקייה שעוד אינה באינדקס: הקרובה שמעליה (82)
             int id = f.dirId(p);
@@ -17918,8 +18037,69 @@ public final class Physical {
      */
     public static Result transfer(Library lib, List<String> files, List<String> dirs, File folder, boolean copy,
                                   Asker asker, Progress progress, boolean grey) {
+        return transfer(lib, files, dirs, folder, copy, asker, progress, grey, null);
+    }
+
+    /** 1.19.0: עם יומן — כל קובץ שהגיע ליעד נרשם בו (null — בלי). */
+    public static Result transfer(Library lib, List<String> files, List<String> dirs, File folder, boolean copy,
+                                  Asker asker, Progress progress, boolean grey, Journal journal) {
         Run run = new Run(lib, copy, asker, progress, grey);
+        run.journal = journal;
+        run.journalRoot = folder;
         List<File> all = topOnly(files, dirs);
+        List<File> to = new ArrayList<File>();
+        for (int k = 0; k < all.size(); k++) to.add(folder);
+        go(run, all, to, folder);
+        run.finish();
+        return run.r;
+    }
+
+    /**
+     * 1.19.0: העתקה או העברה ששומרת מסלול (כמו XCOPY /S): כל פריט נכתב ב־destRoot + המסלול שלו יחסית ל־root.
+     * תיקיות היעד נוצרות; תיקייה שכבר קיימת ביעד — ממוזגת (בלי שאלה על התיקייה עצמה). פריט שאינו בתוך root —
+     * כישלון. בהעברה — תיקיות המקור שהתרוקנו (מתחת ל־root) נמחקות.
+     */
+    public static Result transferKeep(Library lib, String root, List<String> files, List<String> dirs, File destRoot,
+                                      boolean copy, Asker asker, Progress progress, boolean grey, Journal journal) {
+        Run run = new Run(lib, copy, asker, progress, grey);
+        run.keep = true;
+        run.journal = journal;
+        run.journalRoot = destRoot;
+        String base = new File(root).getAbsolutePath();
+        List<File> all = new ArrayList<File>(), to = new ArrayList<File>();
+        for (File f : topOnly(files, dirs)) {
+            String rel = rel(base, f.getAbsolutePath());
+            if (rel == null || rel.isEmpty()) {
+                run.r.fail(Words.Disk.NOT_UNDER_ROOT);
+                continue;
+            }
+            File parent = new File(destRoot, rel).getParentFile();
+            all.add(f);
+            to.add(parent);
+        }
+        java.util.Set<String> emptied = new java.util.TreeSet<String>(java.util.Collections.reverseOrder());
+        if (!copy)
+            for (File f : all)
+                for (File up = f.getParentFile(); up != null && rel(base, up.getAbsolutePath()) != null
+                        && !up.getAbsolutePath().equals(base); up = up.getParentFile())
+                    emptied.add(up.getAbsolutePath());
+        go(run, all, to, destRoot);
+        for (String d : emptied) run.removeIfEmpty(new File(d));     // מהעמוק אל הרדוד
+        run.finish();
+        return run.r;
+    }
+
+    /** המסלול של p יחסית ל־base ("" — הוא עצמו), או null אם אינו בתוכו. */
+    static String rel(String base, String p) {
+        if (p.equals(base)) return "";
+        String b = base.endsWith("/") ? base : base + "/";
+        return p.startsWith(b) ? p.substring(b.length()) : null;
+    }
+
+    /** הביצוע עצמו: all[i] אל תוך to[i]. הבדיקות (תיקיית התוכנה, סל, מקום, גודל) — לפי checkFolder. */
+    private static void go(Run run, List<File> all, List<File> to, File checkFolder) {
+        boolean copy = run.copy;
+        Library lib = run.lib;
         for (File f : all) {
             if (f.isDirectory()) {
                 long[] st = count(f);
@@ -17930,27 +18110,28 @@ public final class Physical {
                 run.totalBytes += f.length();
             }
         }
-        if (programFile(folder.getAbsolutePath()) != null) {
+        if (programFile(checkFolder.getAbsolutePath()) != null) {
             run.r.fail(Words.Disk.DEST_IS_APP);
             run.r.failed = all.size();
-            return run.r;
+            return;
         }
-        String droot = lib.rootOf(folder.getAbsolutePath());
-        if (droot != null && inside(folder, new File(droot, Index.TRASH))) {
+        String droot = lib.rootOf(checkFolder.getAbsolutePath());
+        if (droot != null && inside(checkFolder, new File(droot, Index.TRASH))) {
             run.r.fail(Words.Disk.DEST_IS_TRASH);
             run.r.failed = all.size();
-            return run.r;
+            return;
         }
-        long need = run.needed(all, folder);
-        if (need > 0 && free(folder) < need) {
-            run.r.fail(Words.Disk.NO_ROOM_NEED + Files.size(need) + Words.Disk.NO_ROOM_FREE + Files.size(free(folder)) + ")");
+        long need = run.needed(all, checkFolder);
+        if (need > 0 && free(checkFolder) < need) {
+            run.r.fail(Words.Disk.NO_ROOM_NEED + Files.size(need) + Words.Disk.NO_ROOM_FREE + Files.size(free(checkFolder)) + ")");
             run.r.failed = all.size();
-            return run.r;
+            return;
         }
-        folder.mkdirs();
-        run.maxFile = maxFileSize(folder);
-        for (File f : all) {
+        checkFolder.mkdirs();
+        run.maxFile = maxFileSize(checkFolder);
+        for (int k = 0; k < all.size(); k++) {
             if (run.r.cancelled) break;
+            File f = all.get(k), folder = to.get(k);
             String p = f.getAbsolutePath();
             boolean isDir = f.isDirectory();
             if (!f.exists()) {
@@ -17976,6 +18157,10 @@ public final class Physical {
                 run.r.fail(Words.Disk.ALREADY_HERE);
                 continue;
             }
+            if (!folder.isDirectory() && !folder.mkdirs() && !folder.isDirectory()) {
+                run.r.fail(Words.Disk.NO_DEST_FOLDER);
+                continue;
+            }
             int before = run.filesDone;
             String dst = run.transfer(f, folder, true);
             if (dst == null) continue;
@@ -17987,8 +18172,6 @@ public final class Physical {
                 run.r.inner += run.filesDone - before;
             }
         }
-        run.finish();
-        return run.r;
     }
 
     private static long[] count(File dir) {
@@ -18100,6 +18283,11 @@ public final class Physical {
         long totalBytes, bytesDone;
         /** 1.18.0: הקובץ הגדול ביותר שהיעד מקבל (FAT32). */
         long maxFile = Long.MAX_VALUE;
+        /** 1.19.0: שמירת מסלול — תיקייה שכבר קיימת ביעד ממוזגת בלי שאלה. */
+        boolean keep;
+        /** 1.19.0: יומן — כל קובץ שהגיע ליעד, במסלולו יחסית ל־journalRoot. */
+        Journal journal;
+        File journalRoot;
         /** בהעברה: מקור → יעד לכל קובץ, לרשימות. */
         final Map<String, String> moved = new LinkedHashMap<String, String>();
         /** קבצים שהיו ביעד והוחלפו (עברו לסל). */
@@ -18142,6 +18330,9 @@ public final class Physical {
             File dst = new File(dir, src.getName());
             if (dst.equals(src)) {                             // העתקה לאותה תיקייה: עותק בשם חדש, בלי לשאול
                 dst = new File(dir, freeName(dir, src.getName(), isDir));
+            } else if (keep && isDir && dst.isDirectory()) {     // 1.19.0: התיקייה כבר קיימת ביעד — ממזגים
+                merge(src, dst);
+                return dst.getAbsolutePath();
             } else if (dst.exists()) {
                 boolean both = isDir && dst.isDirectory();
                 Answer a = both ? forDirs : forFiles;
@@ -18210,10 +18401,17 @@ public final class Physical {
                 if (!copy) {
                     List<String> rel = Trash.relFiles(src);
                     long bytes = count(src)[1];
+                    List<Library.Hit> was = new ArrayList<Library.Hit>();
+                    if (same(src, dst)) for (String x : rel) was.add(lib.find(src + "/" + x));
                     if (same(src, dst) && src.renameTo(dst)) {  // אותו כונן: רגע אחד
                         lib.dirChanged(src.getParent());
                         lib.dirChanged(dst.getParent());
-                        for (String x : rel) moved.put(src + "/" + x, dst + "/" + x);
+                        for (int k = 0; k < rel.size(); k++) {
+                            String x = rel.get(k);
+                            moved.put(src + "/" + x, dst + "/" + x);
+                            carry(was.get(k), dst + "/" + x);
+                            if (journal != null) journal.file(journalRoot, new File(dst, x));
+                        }
                         filesDone += rel.size() - 1;
                         tick(bytes);
                         return true;
@@ -18237,6 +18435,7 @@ public final class Physical {
                 r.fail(Words.Disk.TOO_BIG_FOR_DEST);
                 return false;
             }
+            Library.Hit was = copy ? null : lib.find(src.getAbsolutePath());
             boolean ok = copy ? copyFile(src, dst) : moveFile(src, dst, same(src, dst));
             if (!ok) {
                 r.fail(copy ? Words.COPY_FAILED : Words.MOVE_FAILED);
@@ -18247,8 +18446,16 @@ public final class Physical {
                 moved.put(src.getAbsolutePath(), dst.getAbsolutePath());
             }
             lib.fileAdded(dst);
+            if (!copy) carry(was, dst.getAbsolutePath());
+            if (journal != null) journal.file(journalRoot, dst);
             tick(len);
             return true;
+        }
+
+        /** 1.19.0: "נוסף" (והחתימה) עוברים בהעברה לפי המקור המדויק — לא לפי ניחוש גודל+תאריך. */
+        private void carry(Library.Hit was, String to) {
+            if (was != null && was.rec != null && was.rec.added > 0)
+                lib.carry(to, was.rec.added, was.rec.sig, was.rec.size, was.rec.mtime);
         }
 
         /** אותו כונן (לפי האינדקס): אפשר שינוי שם. בין כוננים — תמיד קובץ אחרי קובץ. */
@@ -19102,6 +19309,80 @@ public final class Physical {
                 });
             }
         }).start();
+    }
+
+    // ================= 1.19.0: יומן העתקה =================
+
+    /**
+     * יומן: קובץ טקסט שכל קובץ שהגיע ליעד נרשם בו מיד, שורה אחרי שורה — המסלול יחסית לשורש היעד, טאב, גודל.
+     * הפסקה באמצע משאירה יומן נכון למה שבוצע. נוסף לסוף קובץ קיים. שורות שמתחילות ב־"#" — כותרת.
+     */
+    public static final class Journal {
+        final File file;
+        private java.io.OutputStream out;
+        private boolean failed;
+        int lines;
+
+        public Journal(File file, String title) {
+            this.file = file;
+            try {
+                File d = file.getParentFile();
+                if (d != null) d.mkdirs();
+                out = new java.io.FileOutputStream(file, true);
+                write("# " + title + "\n");
+            } catch (Throwable t) {
+                failed = true;
+                Log.e("יומן", t);
+            }
+        }
+
+        void file(File root, File f) {
+            String r = rel(root.getAbsolutePath(), f.getAbsolutePath());
+            if (r == null) r = f.getAbsolutePath();
+            write(r + "\t" + f.length() + "\n");
+            lines++;
+        }
+
+        private void write(String line) {
+            if (out == null) return;
+            try {
+                out.write(line.getBytes("UTF-8"));
+                out.flush();
+            } catch (Throwable t) {
+                failed = true;
+                Log.e("יומן", t);
+            }
+        }
+
+        /** נכשל בפתיחה או בכתיבה. */
+        public boolean failed() {
+            return failed;
+        }
+
+        public void close() {
+            if (out == null) return;
+            try {
+                if (out instanceof java.io.FileOutputStream) ((java.io.FileOutputStream) out).getFD().sync();
+                out.close();
+            } catch (Throwable t) {
+                failed = true;
+            }
+            out = null;
+        }
+
+        /** קריאה: {מסלול יחסי, גודל} לכל שורה (בלי הכותרות). */
+        public static List<String[]> read(File f) {
+            List<String[]> outList = new ArrayList<String[]>();
+            try {
+                for (String line : Files.readUtf8(f).split("\n")) {
+                    if (line.isEmpty() || line.startsWith("#")) continue;
+                    int t = line.lastIndexOf('\t');
+                    outList.add(t < 0 ? new String[]{line, ""} : new String[]{line.substring(0, t), line.substring(t + 1)});
+                }
+            } catch (Throwable ignored) {
+            }
+            return outList;
+        }
     }
 }
 ===== קובץ: src/com/tikiyot/vfm/PickDialog.java =====
@@ -32463,6 +32744,14 @@ public final class Words {
         public static final String FOLDER_NOT_EMPTY = "התיקייה לא ריקה — כמו ב-bat, צריך RD /S";
         public static final String DEL_S = "DEL /S (גם בתיקיות שבפנים) — לא נתמך עדיין";
         public static final String NO_DEST = "היעד לא קיים או שאינו תיקייה — אפשר ליצור אותו קודם ב-MD";
+        /** 1.19.0 */
+        public static final String JOURNAL_USAGE = "/יומן:<קובץ> — רק ב־COPY וב־MOVE, עם שם קובץ";
+        public static final String JOURNAL_FAILED = " · היומן לא נכתב";
+        public static final String KEEP_PATH = " · שומר מסלול";
+
+        public static String emptyFolders(int n) {
+            return n == 1 ? "תיקייה ריקה אחת" : n + " תיקיות ריקות";
+        }
         public static final String REN_WILD = "REN עם * — לא נתמך עדיין";
 
         public static String unknownVar(String name) {
@@ -32654,6 +32943,8 @@ public final class Words {
                     + "REM לשיתוף: COPY <מה> %שיתוף% — נשלח בסוף למכשיר אחר\n"
                     + "REM סינון: " + filters + "   ·   ROBOCOPY: /MAXAGE:1  /MINAGE:365  /MAX:  /MIN:\n"
                     + "REM שם תפוס: /Y להחליף (הקודם לסל) · /-Y או " + ask + " · " + skip + "\n"
+                    + "REM שמירת מסלול: /S או /מסלול — כל מה שבתיקייה, גם בתיקיות שבתוכה, באותו מסלול ביעד\n"
+                    + "REM יומן: /יומן:<קובץ> — כל קובץ שהגיע ליעד נרשם בקובץ, שורה אחרי שורה\n"
                     + "REM לפני כל הרצה — תצוגה מקדימה ואישור. DEL מעביר לסל המחזור.\n"
                     + "REM בכאילו — שורה לבדה: הקובץ רץ בהדמיה בלבד ומראה מה היה קורה, בלי לשנות דבר.\n"
                     + "REM          כדי להריץ באמת — למחוק את השורה.\n"
@@ -32857,6 +33148,7 @@ public final class Words {
         public static final String ALREADY_HERE = "כבר בתיקייה הזו";
         public static final String CANT_REPLACE_PARENT = "אי אפשר להחליף תיקייה שמכילה את המקור";
         public static final String NO_DEST_FOLDER = "לא נוצרה תיקייה ביעד";
+        public static final String NOT_UNDER_ROOT = "הפריט אינו בתוך תיקיית המקור";
         public static final String TOO_BIG_FOR_DEST = "הקובץ גדול מ־4GB, והיעד (FAT32) אינו מקבל קובץ כזה";
         public static final String NO_ORIGINAL_PLACE = "אין מקום מקורי ידוע";
         public static final String FILES_SUFFIX = " קבצים";
@@ -35116,6 +35408,7 @@ public final class Tests {
         run("גרסה 1.13.0 — פקודות בעברית, תוכנה, הפניה לרשימה, הזזה, למה", new Runnable() { public void run() { v1130(); } });
         run("גרסה 1.13.1–1.15.0 — תיקונים, ➕ בבית, פקודות כקובץ טקסט, הלוח האחד, תפריט פיזי, ספירה, סביבות ← רשימות", new Runnable() { public void run() { v1131(); } });
         run("גרסה 1.18.0 — הגנות בהעתקה: שם זמני, רק העליון, גודל ל-FAT32", new Runnable() { public void run() { v1180(); } });
+        run("גרסה 1.19.0 — שמירת מסלול, יומן, \"נוסף\" מדויק בהעברה, %תאריך%", new Runnable() { public void run() { v1190(); } });
 
         System.out.println("בדיקות: " + passed + " עברו · " + failed + " נכשלו");
         for (String f : failures) System.out.println("  ✗ " + f);
@@ -38942,6 +39235,128 @@ public final class Tests {
     }
 
     /** 1.13.1 — תיקוני באגים. */
+    private static void v1190() {
+        File root = drive("מסלול");
+        File src = new File(root, "מקור");
+        mk(new File(src, "א"), "1.pdf", 10);
+        mk(new File(src, "ב/ג"), "2.pdf", 20);
+        mk(src, "3.txt", 30);
+        new File(src, "ריקה/פנימית").mkdirs();
+        Index ix = built("מסלול", root);
+        Library lib = Library.forTests(new ArrayList<Index>(Collections.singletonList(ix)));
+        File tf = new File(home, "מבנה-מסלול.txt");
+        tf.delete();
+        Tree.testFile = tf;
+
+        // 1. העתקה עם שמירת מסלול, ויומן
+        File dest = new File(root, "גיבוי/נוכחי");
+        File jf = new File(root, "גיבוי/יומן/1.txt");
+        Physical.Journal j = new Physical.Journal(jf, "בדיקה");
+        Physical.Result r = Physical.transferKeep(lib, src.getAbsolutePath(),
+                P(src + "/א/1.pdf", src + "/ב/ג/2.pdf", src + "/3.txt"), P(src + "/ריקה/פנימית"), dest, true, null, null, false, j);
+        j.close();
+        lib.flush(5000);
+        check("1.19.0: שמירת מסלול — הכול במקומו", r.failed == 0 && new File(dest, "א/1.pdf").length() == 10
+                && new File(dest, "ב/ג/2.pdf").length() == 20 && new File(dest, "3.txt").isFile());
+        check("1.19.0: שמירת מסלול — תיקייה ריקה", new File(dest, "ריקה/פנימית").isDirectory());
+        check("1.19.0: שמירת מסלול — המקור נשאר", new File(src, "א/1.pdf").isFile());
+        List<String[]> lines = Physical.Journal.read(jf);
+        eq("1.19.0: יומן — שורה לכל קובץ", 3, lines.size());
+        check("1.19.0: יומן — מסלול יחסי וגודל", lines.size() == 3 && lines.get(1)[0].equals("ב/ג/2.pdf") && lines.get(1)[1].equals("20"));
+        String head = "";
+        try {
+            head = Files.readUtf8(jf);
+        } catch (Exception e) {
+            head = "";
+        }
+        check("1.19.0: יומן — כותרת", head.startsWith("# בדיקה"));
+
+        // 2. שוב לאותו יעד: תיקיות קיימות ממוזגות בלי שאלה; קובץ תפוס בלי שואל — כישלון, לא נדרס
+        mk(new File(src, "א"), "4.pdf", 4);
+        r = Physical.transferKeep(lib, src.getAbsolutePath(), P(src + "/א/1.pdf", src + "/א/4.pdf"), P(src + "/ריקה/פנימית"),
+                dest, true, null, null, false, null);
+        check("1.19.0: שוב — רק הקובץ התפוס נכשל", r.failed == 1 && new File(dest, "א/4.pdf").isFile());
+        // פריט מחוץ לשורש — כישלון
+        r = Physical.transferKeep(lib, src + "/א", P(src + "/3.txt"), NONE, dest, true, null, null, false, null);
+        check("1.19.0: מחוץ לשורש — כישלון", r.failed == 1 && r.note.equals(Words.Disk.NOT_UNDER_ROOT));
+
+        // 3. העברה עם שמירת מסלול: "נוסף" עובר לפי המקור המדויק, גם לשני קבצים באותו גודל ותאריך
+        File m = new File(root, "להעביר");
+        File x1 = mk(new File(m, "ש1"), "x.bin", 50), x2 = mk(new File(m, "ש2"), "y.bin", 50);
+        x1.setLastModified(1600000000000L);
+        x2.setLastModified(1600000000000L);
+        lib.fileAdded(x1);
+        lib.fileAdded(x2);
+        lib.flush(5000);
+        lib.find(x1.getAbsolutePath()).rec.added = 1111L;
+        lib.find(x2.getAbsolutePath()).rec.added = 2222L;
+        File hist = new File(root, "גיבוי/היסטוריה/0001");
+        r = Physical.transferKeep(lib, m.getAbsolutePath(), P(x2.getAbsolutePath(), x1.getAbsolutePath()), NONE, hist, false,
+                null, null, false, null);
+        lib.flush(5000);
+        Library.Hit h1 = lib.find(hist + "/ש1/x.bin"), h2 = lib.find(hist + "/ש2/y.bin");
+        check("1.19.0: העברה — במקום", r.failed == 0 && h1 != null && h2 != null);
+        check("1.19.0: \"נוסף\" עובר לפי המקור המדויק", h1 != null && h2 != null && h1.rec.added == 1111L && h2.rec.added == 2222L);
+        check("1.19.0: העברה — תיקיות המקור שהתרוקנו נמחקו, השורש נשאר", !new File(m, "ש1").exists() && !new File(m, "ש2").exists() && m.isDirectory());
+        // העברת תיקייה שלמה באותו כונן (שינוי שם) — גם כן
+        File box = new File(root, "ארגז");
+        File b1 = mk(box, "ב1.bin", 70);
+        b1.setLastModified(1600000000000L);
+        lib.fileAdded(b1);
+        lib.flush(5000);
+        lib.find(b1.getAbsolutePath()).rec.added = 3333L;
+        r = Physical.transfer(lib, NONE, P(box.getAbsolutePath()), hist, false, null, null, false);
+        lib.flush(5000);
+        Library.Hit hb = lib.find(hist + "/ארגז/ב1.bin");
+        check("1.19.0: העברת תיקייה — \"נוסף\" עובר", hb != null && hb.rec.added == 3333L);
+
+        // 4. קובץ פקודות: COPY /S ו־/מסלול, /יומן:, %תאריך%, %מזהה-כרטיס%
+        Map<String, String> vars = Batch.vars(root, root.getAbsolutePath(), "/storage/ABCD-1234");
+        check("1.19.0: %תאריך% — יום.חודש.שנה שעה-דקה-שנייה", vars.get(Batch.V_NOW).matches("\\d\\d\\.\\d\\d\\.\\d{4} \\d\\d-\\d\\d-\\d\\d"));
+        eq("1.19.0: %מזהה-כרטיס%", "ABCD-1234", vars.get(Batch.V_CARD_ID));
+        check("1.19.0: בלי כרטיס — בלי מזהה", Batch.vars(root, root.getAbsolutePath(), null).get(Batch.V_CARD_ID) == null);
+        vars = Batch.vars(root, root.getAbsolutePath(), null);
+        String now = vars.get(Batch.V_NOW);
+        Batch.Plan p = Batch.plan("COPY מקור \"גיבוי2\\%תאריך%\" /S /יומן:\"גיבוי2\\יומן\\%תאריך%.txt\"", root, vars);
+        check("1.19.0: COPY /S — בלי שגיאה", p.errors == 0 && p.steps.size() == 1);
+        Batch.Step st = p.steps.get(0);
+        check("1.19.0: COPY /S — שומר מסלול בתיאור", st.describe != null && st.describe.contains(Words.Cmd.KEEP_PATH.trim()));
+        eq("1.19.0: COPY /S — כל הקבצים", 4, st.files.size());
+        Batch.run(p, lib, null, null);
+        lib.flush(5000);
+        File g2 = new File(root, "גיבוי2/" + now);
+        check("1.19.0: COPY /S — בוצע", new File(g2, "ב/ג/2.pdf").isFile() && new File(g2, "ריקה/פנימית").isDirectory());
+        eq("1.19.0: /יומן: — נכתב בשם עם %תאריך%", 4, Physical.Journal.read(new File(root, "גיבוי2/יומן/" + now + ".txt")).size());
+        // תבנית עם /מסלול — רק pdf, בכל העומק, בלי תיקיות ריקות
+        p = Batch.plan("COPY מקור\\*.pdf גיבוי3 /מסלול", root, vars);
+        check("1.19.0: /מסלול עם תבנית", p.errors == 0 && p.steps.get(0).files.size() == 3 && p.steps.get(0).dirs.isEmpty());
+        // קובץ זמני של העתקה — לא נכלל
+        mk(new File(src, "א"), Physical.partial(new File(src, "א/5.pdf")).getName(), 3);
+        p = Batch.plan("COPY מקור גיבוי4 /S /A:H", root, vars);
+        boolean partial = false;
+        for (String f : p.steps.get(0).files) if (Physical.isPartial(new File(f).getName())) partial = true;
+        check("1.19.0: קובץ זמני — לא נכלל גם עם /A:H", !partial);
+        // לתוך עצמו — שגיאה; /יומן: ב־DEL — שגיאה; /יומן: בלי שם — שגיאה
+        check("1.19.0: COPY /S לתוך עצמו — שגיאה", Batch.plan("COPY מקור מקור\\בפנים /S", root, vars).errors == 1);
+        check("1.19.0: /יומן: ב־DEL — שגיאה", Batch.plan("DEL מקור\\*.txt /יומן:x.txt", root, vars).errors == 1);
+        check("1.19.0: /יומן: בלי שם — שגיאה", Batch.plan("COPY מקור\\3.txt גיבוי2 /יומן:", root, vars).errors == 1);
+        // /תפוס:לדלג עם שמירת מסלול — מה שכבר ביעד יוצא מהתכנון
+        mk(src, "חדש.pdf", 1);
+        p = Batch.plan("COPY מקור \"גיבוי2\\%תאריך%\" /S /תפוס:לדלג", root, vars);
+        eq("1.19.0: /S /תפוס:לדלג — רק החדש", 1, p.steps.get(0).files.size());
+        // MOVE /S — מעביר, ומשאיר את שורש המקור
+        File mv = new File(root, "מעבר");
+        mk(new File(mv, "פ"), "ק.pdf", 9);
+        p = Batch.plan("MOVE מעבר יעד-מעבר /S", root, vars);
+        Batch.run(p, lib, null, null);
+        lib.flush(5000);
+        check("1.19.0: MOVE /S", new File(root, "יעד-מעבר/פ/ק.pdf").isFile() && !new File(mv, "פ").exists() && mv.isDirectory());
+        // השורה בטופס — המתגים נשמרים
+        BatchLine bl = BatchLine.parse("COPY מקור יעד /S /יומן:\"י\\1.txt\"");
+        check("1.19.0: הטופס — /S ו־/יומן: נשמרים", bl.toLine().contains("/S") && bl.toLine().contains("/יומן:"));
+        Tree.testFile = null;
+    }
+
     private static void v1180() {
         File root = drive("הגנות");
         File src = new File(root, "מקור");
