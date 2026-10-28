@@ -52,8 +52,25 @@ final class BatchUi {
             Ui.toast(a, Words.CANT_READ_FILE);
             return;
         }
+        final Map<String, String> vars0 = vars(a, f.getParentFile());
+        List<String> lines = java.util.Arrays.asList(text.replace("\r", "").split("\n"));
+        if (!CmdTemplates.holes(lines).isEmpty()) {                            // 1.25.6: מקומות פתוחים — נשאלים לפני ההרצה
+            HoleForm.ask(a, f.getName(), lines, vars0, new HoleForm.Filled() {
+                @Override
+                public void ok(List<String> filled) {
+                    StringBuilder sb = new StringBuilder();
+                    for (String l : filled) sb.append(l).append('\n');
+                    prepare(a, f, sb.toString(), vars0);
+                }
+            });
+            return;
+        }
+        prepare(a, f, text, vars0);
+    }
+
+    /** ההכנה והתצוגה המקדימה — לטקסט (אחרי מילוי המקומות הפתוחים; הקובץ עצמו לא משתנה). */
+    private static void prepare(final Activity a, final File f, final String text, final Map<String, String> vars) {
         final Library lib = Library.get(a);
-        final Map<String, String> vars = vars(a, f.getParentFile());
         // 1.25.4 (באג, המשתמש: "אחרי ההרצה — גם אין דוח וגם לא רואים שינוי ברשימות"): ההכנה יכולה לקחת זמן
         // (לולאות, רשימות גדולות) — עד כאן בלי שום סימן על המסך. עכשיו — חלון "מכין…" עם עצירה, ותקלה — הודעה.
         final Physical.Busy busy = new Physical.Busy(a, Words.Cmd.preparing(f.getName()));

@@ -4099,6 +4099,12 @@ public final class Tests {
             Map<String, Long> mf = ListCount.filesOf(Tree.load(), Tree.load().find(Arrays.asList("עותקים רבים")), fl);
             check("1.25.4: 300 עותקים של אותה חכמה — חיפוש אחד (" + fl.searches + ")", mf != null && fl.searches == 1);
 
+            String app = Paths.data().getAbsolutePath();                         // 1.25.6
+            check("1.25.6: נפוצה שלי ויומן בדיקות — אפשר למחוק מהכונן", Physical.programFile(app + "/פקודות נפוצות/x.vbat") == null
+                    && Physical.programFile(app + "/בדיקות/עומס.txt") == null);
+            check("1.25.6: קובצי התוכנה — עדיין מוגנים", Physical.programFile(app + "/מבנה.txt") != null
+                    && Physical.programFile(app + "/פקודות נפוצות") != null);
+
             // השוואה של חכמות, ותנאים
             Batch.Plan pc = Batch.plan("COMP חכמה \"א. ארגון לפי הבחנות\\כל הספרים\" חכמה \"א. ארגון לפי הבחנות\\כל המסמכים\" /תנאים",
                     root, vars, lib);

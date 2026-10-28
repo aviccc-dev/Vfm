@@ -418,11 +418,13 @@ public class BatchEditScreen extends Activity {
     private void templateMenu(final CmdTemplates.Tpl t) {
         final boolean mine = t.file != null;
         String[] items = mine ? new String[]{Words.Ed.TPL_EDIT, Words.Ed.TPL_RENAME, Words.Ed.TPL_DELETE}
-                : new String[]{Words.Ed.TPL_EDIT_COPY};
+                : new String[]{Words.Ed.TPL_EDIT_COPY, Words.Ed.TPL_SYS_NO_DELETE};   // 1.25.6: למה אין מחיקה
         Ui.options(this, t.name, items, new android.content.DialogInterface.OnClickListener() {
             @Override
             public void onClick(android.content.DialogInterface d, int which) {
-                if (!mine) {
+                if (!mine && which == 1) {
+                    Ui.toast(BatchEditScreen.this, Words.Ed.TPL_SYS_NO_DELETE_WHY);
+                } else if (!mine) {
                     File f = CmdTemplates.copyToMine(t);
                     if (f == null) Ui.toast(BatchEditScreen.this, Words.SAVE_FAILED);
                     else openTemplate(f);
@@ -441,8 +443,12 @@ public class BatchEditScreen extends Activity {
                             new Runnable() {
                                 @Override
                                 public void run() {
-                                    Physical.Result r = Physical.delete(Library.get(BatchEditScreen.this),
-                                            java.util.Collections.singletonList(t.file.getAbsolutePath()), false);
+                                    Library lib = Library.get(BatchEditScreen.this);
+                                    if (lib.find(t.file.getAbsolutePath()) == null) {         // 1.25.6: נפוצה שעוד לא באינדקס
+                                        lib.fileAdded(t.file);
+                                        lib.flush(5000);
+                                    }
+                                    Physical.Result r = Physical.delete(lib, java.util.Collections.singletonList(t.file.getAbsolutePath()), false);
                                     if (r.failed > 0 || t.file.exists()) Ui.toast(BatchEditScreen.this, Words.Ed.TPL_DELETE_FAILED);
                                     renderMenu();
                                 }
@@ -1036,49 +1042,11 @@ public class BatchEditScreen extends Activity {
             insertLines(t.lines);
             return;
         }
-        LinearLayout box = Ui.form(this);
-        final List<EditText> fields = new ArrayList<EditText>();
-        for (final String h : holes) {
-            final int kind = CmdTemplates.holeKind(t.lines, h);                  // 1.25.2: בוחר לפי הסוג
-            box.addView(Ui.label(this, h + Words.Ed.holeKind(kind)));
-            final EditText e = Ui.field(this, "", "");
-            e.setTextDirection(kind == CmdTemplates.HOLE_PATH ? View.TEXT_DIRECTION_LTR : View.TEXT_DIRECTION_FIRST_STRONG);
-            if (kind == CmdTemplates.HOLE_NUMBER) e.setInputType(InputType.TYPE_CLASS_NUMBER);
-            Bidi.watch(e);
-            box.addView(e);
-            fields.add(e);
-            if (kind == CmdTemplates.HOLE_NUMBER) continue;
-            box.addView(button(Words.Cmd.PICK, new View.OnClickListener() {
-                @Override
-                public void onClick(View v) {
-                    if (kind == CmdTemplates.HOLE_MANUAL) {
-                        ListPicker.choose(BatchEditScreen.this, h, null, new ArrayList<String>(), new ListPicker.Picked() {   // 1.25.5: כל הרשימות
-                            @Override public void ok(ArrayList<String> path) { e.setText(ListCmd.pathText(path)); }
-                        });
-                    } else if (kind == CmdTemplates.HOLE_SMART) {
-                        final List<String> names = ListCmd.smartNames();
-                        if (names.isEmpty()) {
-                            Ui.toast(BatchEditScreen.this, Words.Ed.NO_SMART);
-                            return;
-                        }
-                        Ui.options(BatchEditScreen.this, h, names.toArray(new String[0]), new android.content.DialogInterface.OnClickListener() {
-                            @Override public void onClick(android.content.DialogInterface d, int which) { e.setText(names.get(which)); }
-                        });
-                    } else {
-                        FolderPicker.choose(BatchEditScreen.this, h, true, new FolderPicker.Picked() {
-                            @Override public void ok(File folder) { e.setText(BatchLine.toVar(folder.getAbsolutePath(), vars)); }
-                        });
-                    }
-                }
-            }));
-        }
-        Ui.askForm(this, Words.Ed.FILL + ": " + t.name, box, new Runnable() {
+        HoleForm.ask(this, t.name, t.lines, vars, new HoleForm.Filled() {        // 1.25.6: חלון אחד — גם להרצה
             @Override
-            public void run() {
-                Map<String, String> v = CmdTemplates.empty(holes);
-                for (int i = 0; i < holes.size(); i++) v.put(holes.get(i), Bidi.strip(fields.get(i).getText().toString()));
+            public void ok(List<String> filled) {
                 templatesOff();
-                insertLines(CmdTemplates.fill(t.lines, v));
+                insertLines(filled);
             }
         });
     }

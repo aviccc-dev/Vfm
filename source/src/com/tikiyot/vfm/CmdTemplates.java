@@ -19,7 +19,7 @@ import java.util.regex.Pattern;
 final class CmdTemplates {
 
     static final String ASSET = "commands/templates.txt";
-    static final String MINE_DIR = "פקודות נפוצות", TEST_DIR = "בדיקות", TEST_FILE = "בדיקת הפקודות 1.23.0";  // בכונן
+    static final String MINE_DIR = Paths.USER_DIRS[0], TEST_DIR = Paths.USER_DIRS[1], TEST_FILE = "בדיקת הפקודות 1.23.0";  // בכונן
     private static final String HEAD = "=== ";   // תחביר
     /** מקום פתוח: <שם> — בלי רווח, בלי / \ : % (כך /תאריך:<שנה לא נתפס). */
     private static final Pattern HOLE = Pattern.compile("<([^<>\\s/\\\\:%]+)>");

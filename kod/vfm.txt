@@ -2,8 +2,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="com.tikiyot.vfm"
-    android:versionCode="174"
-    android:versionName="1.25.5">
+    android:versionCode="175"
+    android:versionName="1.25.6">
     <uses-sdk android:minSdkVersion="21" android:targetSdkVersion="30" />
 
     <queries>
@@ -5543,11 +5543,13 @@ public class BatchEditScreen extends Activity {
     private void templateMenu(final CmdTemplates.Tpl t) {
         final boolean mine = t.file != null;
         String[] items = mine ? new String[]{Words.Ed.TPL_EDIT, Words.Ed.TPL_RENAME, Words.Ed.TPL_DELETE}
-                : new String[]{Words.Ed.TPL_EDIT_COPY};
+                : new String[]{Words.Ed.TPL_EDIT_COPY, Words.Ed.TPL_SYS_NO_DELETE};   // 1.25.6: למה אין מחיקה
         Ui.options(this, t.name, items, new android.content.DialogInterface.OnClickListener() {
             @Override
             public void onClick(android.content.DialogInterface d, int which) {
-                if (!mine) {
+                if (!mine && which == 1) {
+                    Ui.toast(BatchEditScreen.this, Words.Ed.TPL_SYS_NO_DELETE_WHY);
+                } else if (!mine) {
                     File f = CmdTemplates.copyToMine(t);
                     if (f == null) Ui.toast(BatchEditScreen.this, Words.SAVE_FAILED);
                     else openTemplate(f);
@@ -5566,8 +5568,12 @@ public class BatchEditScreen extends Activity {
                             new Runnable() {
                                 @Override
                                 public void run() {
-                                    Physical.Result r = Physical.delete(Library.get(BatchEditScreen.this),
-                                            java.util.Collections.singletonList(t.file.getAbsolutePath()), false);
+                                    Library lib = Library.get(BatchEditScreen.this);
+                                    if (lib.find(t.file.getAbsolutePath()) == null) {         // 1.25.6: נפוצה שעוד לא באינדקס
+                                        lib.fileAdded(t.file);
+                                        lib.flush(5000);
+                                    }
+                                    Physical.Result r = Physical.delete(lib, java.util.Collections.singletonList(t.file.getAbsolutePath()), false);
                                     if (r.failed > 0 || t.file.exists()) Ui.toast(BatchEditScreen.this, Words.Ed.TPL_DELETE_FAILED);
                                     renderMenu();
                                 }
@@ -6161,49 +6167,11 @@ public class BatchEditScreen extends Activity {
             insertLines(t.lines);
             return;
         }
-        LinearLayout box = Ui.form(this);
-        final List<EditText> fields = new ArrayList<EditText>();
-        for (final String h : holes) {
-            final int kind = CmdTemplates.holeKind(t.lines, h);                  // 1.25.2: בוחר לפי הסוג
-            box.addView(Ui.label(this, h + Words.Ed.holeKind(kind)));
-            final EditText e = Ui.field(this, "", "");
-            e.setTextDirection(kind == CmdTemplates.HOLE_PATH ? View.TEXT_DIRECTION_LTR : View.TEXT_DIRECTION_FIRST_STRONG);
-            if (kind == CmdTemplates.HOLE_NUMBER) e.setInputType(InputType.TYPE_CLASS_NUMBER);
-            Bidi.watch(e);
-            box.addView(e);
-            fields.add(e);
-            if (kind == CmdTemplates.HOLE_NUMBER) continue;
-            box.addView(button(Words.Cmd.PICK, new View.OnClickListener() {
-                @Override
-                public void onClick(View v) {
-                    if (kind == CmdTemplates.HOLE_MANUAL) {
-                        ListPicker.choose(BatchEditScreen.this, h, null, new ArrayList<String>(), new ListPicker.Picked() {   // 1.25.5: כל הרשימות
-                            @Override public void ok(ArrayList<String> path) { e.setText(ListCmd.pathText(path)); }
-                        });
-                    } else if (kind == CmdTemplates.HOLE_SMART) {
-                        final List<String> names = ListCmd.smartNames();
-                        if (names.isEmpty()) {
-                            Ui.toast(BatchEditScreen.this, Words.Ed.NO_SMART);
-                            return;
-                        }
-                        Ui.options(BatchEditScreen.this, h, names.toArray(new String[0]), new android.content.DialogInterface.OnClickListener() {
-                            @Override public void onClick(android.content.DialogInterface d, int which) { e.setText(names.get(which)); }
-                        });
-                    } else {
-                        FolderPicker.choose(BatchEditScreen.this, h, true, new FolderPicker.Picked() {
-                            @Override public void ok(File folder) { e.setText(BatchLine.toVar(folder.getAbsolutePath(), vars)); }
-                        });
-                    }
-                }
-            }));
-        }
-        Ui.askForm(this, Words.Ed.FILL + ": " + t.name, box, new Runnable() {
+        HoleForm.ask(this, t.name, t.lines, vars, new HoleForm.Filled() {        // 1.25.6: חלון אחד — גם להרצה
             @Override
-            public void run() {
-                Map<String, String> v = CmdTemplates.empty(holes);
-                for (int i = 0; i < holes.size(); i++) v.put(holes.get(i), Bidi.strip(fields.get(i).getText().toString()));
+            public void ok(List<String> filled) {
                 templatesOff();
-                insertLines(CmdTemplates.fill(t.lines, v));
+                insertLines(filled);
             }
         });
     }
@@ -6464,8 +6432,25 @@ final class BatchUi {
             Ui.toast(a, Words.CANT_READ_FILE);
             return;
         }
+        final Map<String, String> vars0 = vars(a, f.getParentFile());
+        List<String> lines = java.util.Arrays.asList(text.replace("\r", "").split("\n"));
+        if (!CmdTemplates.holes(lines).isEmpty()) {                            // 1.25.6: מקומות פתוחים — נשאלים לפני ההרצה
+            HoleForm.ask(a, f.getName(), lines, vars0, new HoleForm.Filled() {
+                @Override
+                public void ok(List<String> filled) {
+                    StringBuilder sb = new StringBuilder();
+                    for (String l : filled) sb.append(l).append('\n');
+                    prepare(a, f, sb.toString(), vars0);
+                }
+            });
+            return;
+        }
+        prepare(a, f, text, vars0);
+    }
+
+    /** ההכנה והתצוגה המקדימה — לטקסט (אחרי מילוי המקומות הפתוחים; הקובץ עצמו לא משתנה). */
+    private static void prepare(final Activity a, final File f, final String text, final Map<String, String> vars) {
         final Library lib = Library.get(a);
-        final Map<String, String> vars = vars(a, f.getParentFile());
         // 1.25.4 (באג, המשתמש: "אחרי ההרצה — גם אין דוח וגם לא רואים שינוי ברשימות"): ההכנה יכולה לקחת זמן
         // (לולאות, רשימות גדולות) — עד כאן בלי שום סימן על המסך. עכשיו — חלון "מכין…" עם עצירה, ותקלה — הודעה.
         final Physical.Busy busy = new Physical.Busy(a, Words.Cmd.preparing(f.getName()));
@@ -19629,6 +19614,12 @@ public final class Paths {
     public static final String TREE = "מבנה.txt", SETTINGS = "הגדרות", SYSTEM = ".מערכת", BACKUPS = ".גיבויים",  // בכונן
             MAIN = "מבנה התוכנה.ini";  // בכונן
 
+    /**
+     * 1.25.6: תיקיות בתוך תיקיית התוכנה שהתוכן שלהן — של המשתמש (הנפוצות שלו, יומני הבדיקות): אפשר למחוק ולשנות
+     * מהכונן. המשתמש: "ומהכונן הוא לא מוכן למחוק בטענה שזו תוכנת מערכת".
+     */
+    public static final String[] USER_DIRS = {"פקודות נפוצות", "בדיקות"};  // בכונן
+
     private Paths() { }
 
     private static File mk(File f) {
@@ -19856,8 +19847,10 @@ public final class Physical {
      */
     public static String programFile(String path) {
         String app = appDir();
-        if (app != null && (path.equals(app) || path.startsWith(app + "/"))) return Words.Disk.IS_APP_FILE;
-        return null;
+        if (app == null || !(path.equals(app) || path.startsWith(app + "/"))) return null;
+        for (String u : Paths.USER_DIRS)                                         // 1.25.6: מה שהמשתמש יצר — שלו
+            if (path.startsWith(app + "/" + u + "/")) return null;
+        return Words.Disk.IS_APP_FILE;
     }
 
     private static String appDir() {
@@ -36595,7 +36588,9 @@ public final class Words {
                 ADVANCED = "מתקדם", SIMULATE = "▶ הדמיה", SIMULATING = "מחשב…", REMOVE = "הסרה", UP = "▲", DOWN = "▼",
                 SAVE_TPL = "★ שמור כנפוצה", TPL_NAME = "שם לפקודה הנפוצה", TPL_SAVED = "נשמרה בנפוצות",
                 MINE_SUFFIX = " (שלי)", TPL_EDIT = "✎ ערוך", TPL_EDIT_COPY = "✎ ערוך — עותק אצל \"שלי\" (המקור נשאר)",
-                TPL_RENAME = "שנה שם", TPL_DELETE = "מחק", TPL_DELETE_FAILED = "לא נמחקה", TPL_NAME_BAD = "השם לא תקין או תפוס",
+                TPL_RENAME = "שנה שם", TPL_DELETE = "מחק", TPL_DELETE_FAILED = "לא נמחקה",
+                TPL_SYS_NO_DELETE = "מחיקה — רק בנפוצות שלי (☆, למטה)",
+                TPL_SYS_NO_DELETE_WHY = "הנפוצות של התוכנה מגיעות עם ההתקנה ומתעדכנות בכל גרסה. את העותקים שלך — מוחקים ב\"שלי\"", TPL_NAME_BAD = "השם לא תקין או תפוס",
                 TPL_HINT = "נגיעה — שימוש · נגיעה ארוכה — עריכה", TPL_THIS_LINE = "השורה שנבחרה", TPL_WHOLE_FILE = "כל הקובץ",
                 NEW = "חדשה — עוד לא בקובץ", THE_LINE = "השורה בקובץ (אפשר גם לערוך כאן)", THE_FILE = "הקובץ הפתוח",
                 NEED_COMPARE = "⚠ %רק-במקור% / %רק-ביעד% צריכים שורת COMP לפניהם",
@@ -41854,6 +41849,12 @@ public final class Tests {
             Map<String, Long> mf = ListCount.filesOf(Tree.load(), Tree.load().find(Arrays.asList("עותקים רבים")), fl);
             check("1.25.4: 300 עותקים של אותה חכמה — חיפוש אחד (" + fl.searches + ")", mf != null && fl.searches == 1);
 
+            String app = Paths.data().getAbsolutePath();                         // 1.25.6
+            check("1.25.6: נפוצה שלי ויומן בדיקות — אפשר למחוק מהכונן", Physical.programFile(app + "/פקודות נפוצות/x.vbat") == null
+                    && Physical.programFile(app + "/בדיקות/עומס.txt") == null);
+            check("1.25.6: קובצי התוכנה — עדיין מוגנים", Physical.programFile(app + "/מבנה.txt") != null
+                    && Physical.programFile(app + "/פקודות נפוצות") != null);
+
             // השוואה של חכמות, ותנאים
             Batch.Plan pc = Batch.plan("COMP חכמה \"א. ארגון לפי הבחנות\\כל הספרים\" חכמה \"א. ארגון לפי הבחנות\\כל המסמכים\" /תנאים",
                     root, vars, lib);
@@ -44973,7 +44974,7 @@ import java.util.regex.Pattern;
 final class CmdTemplates {
 
     static final String ASSET = "commands/templates.txt";
-    static final String MINE_DIR = "פקודות נפוצות", TEST_DIR = "בדיקות", TEST_FILE = "בדיקת הפקודות 1.23.0";  // בכונן
+    static final String MINE_DIR = Paths.USER_DIRS[0], TEST_DIR = Paths.USER_DIRS[1], TEST_FILE = "בדיקת הפקודות 1.23.0";  // בכונן
     private static final String HEAD = "=== ";   // תחביר
     /** מקום פתוח: <שם> — בלי רווח, בלי / \ : % (כך /תאריך:<שנה לא נתפס). */
     private static final Pattern HOLE = Pattern.compile("<([^<>\\s/\\\\:%]+)>");
@@ -45738,6 +45739,97 @@ final class ListCmd {
         out.items.add(new VClip.Item(VClip.LIST, n.name, n.name));
         out.what = Words.ListCmdW.list(a.label());
         return out;
+    }
+}
+===== קובץ: src/com/tikiyot/vfm/HoleForm.java =====
+package com.tikiyot.vfm;
+
+// 1.25.6: חלון המילוי של המקומות הפתוחים (<רשימה-חדשה>, <סבבים>, <יעד>) — אחד לעורך ולהרצה.
+// המשתמש: "כאשר אני מריץ ישר ומכניס רשימה ומספר — אין דוח": קובץ נפוצה שנפתח והורץ ישר רץ עם המקומות ריקים.
+// עכשיו גם ההרצה שואלת אותם (הקובץ עצמו לא משתנה). הבוחר — לפי סוג המקום (1.25.2).
+// אחראי: החלון בלבד; המילוי עצמו — CmdTemplates.
+
+import android.app.Activity;
+import android.text.InputType;
+import android.view.View;
+import android.widget.Button;
+import android.widget.EditText;
+import android.widget.LinearLayout;
+
+import java.io.File;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+
+final class HoleForm {
+
+    interface Filled {
+        void ok(List<String> lines);
+    }
+
+    private HoleForm() { }
+
+    /** שואל את כל המקומות הפתוחים, ומחזיר את השורות הממולאות. ביטול — לא כלום. */
+    static void ask(final Activity a, final String title, final List<String> lines, final Map<String, String> vars, final Filled cb) {
+        final List<String> holes = CmdTemplates.holes(lines);
+        if (holes.isEmpty()) {
+            cb.ok(lines);
+            return;
+        }
+        LinearLayout box = Ui.form(a);
+        final List<EditText> fields = new ArrayList<EditText>();
+        for (final String h : holes) {
+            final int kind = CmdTemplates.holeKind(lines, h);
+            box.addView(Ui.label(a, h + Words.Ed.holeKind(kind)));
+            final EditText e = Ui.field(a, "", "");
+            e.setTextDirection(kind == CmdTemplates.HOLE_PATH ? View.TEXT_DIRECTION_LTR : View.TEXT_DIRECTION_FIRST_STRONG);
+            if (kind == CmdTemplates.HOLE_NUMBER) e.setInputType(InputType.TYPE_CLASS_NUMBER);
+            Bidi.watch(e);
+            box.addView(e);
+            fields.add(e);
+            if (kind == CmdTemplates.HOLE_NUMBER) continue;
+            Button b = new Button(a);
+            b.setText(Words.Cmd.PICK);
+            b.setAllCaps(false);
+            b.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    if (kind == CmdTemplates.HOLE_MANUAL) {
+                        ListPicker.choose(a, h, null, new ArrayList<String>(), new ListPicker.Picked() {   // כל הרשימות
+                            @Override public void ok(ArrayList<String> path) { e.setText(ListCmd.pathText(path)); }
+                        });
+                    } else if (kind == CmdTemplates.HOLE_SMART) {
+                        final List<String> names = ListCmd.smartNames();
+                        if (names.isEmpty()) {
+                            Ui.toast(a, Words.Ed.NO_SMART);
+                            return;
+                        }
+                        Ui.options(a, h, names.toArray(new String[0]), new android.content.DialogInterface.OnClickListener() {
+                            @Override public void onClick(android.content.DialogInterface d, int which) { e.setText(names.get(which)); }
+                        });
+                    } else {
+                        FolderPicker.choose(a, h, true, new FolderPicker.Picked() {
+                            @Override public void ok(File folder) { e.setText(BatchLine.toVar(folder.getAbsolutePath(), vars)); }
+                        });
+                    }
+                }
+            });
+            box.addView(b);
+        }
+        Ui.askForm(a, Words.Ed.FILL + ": " + title, box, new Runnable() {
+            @Override
+            public void run() {
+                Map<String, String> v = CmdTemplates.empty(holes);
+                for (int i = 0; i < holes.size(); i++) v.put(holes.get(i), Bidi.strip(fields.get(i).getText().toString()).trim());
+                for (String h : holes)
+                    if (v.get(h).isEmpty()) {                                  // ריק — שואלים שוב, לא מריצים עם "<…>"
+                        Ui.toast(a, Words.Ed.fillFirst(h));
+                        ask(a, title, lines, vars, cb);
+                        return;
+                    }
+                cb.ok(CmdTemplates.fill(lines, v));
+            }
+        });
     }
 }
 ===== קובץ: assets/commands/templates.txt =====

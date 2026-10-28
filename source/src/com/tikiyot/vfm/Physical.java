@@ -167,8 +167,10 @@ public final class Physical {
      */
     public static String programFile(String path) {
         String app = appDir();
-        if (app != null && (path.equals(app) || path.startsWith(app + "/"))) return Words.Disk.IS_APP_FILE;
-        return null;
+        if (app == null || !(path.equals(app) || path.startsWith(app + "/"))) return null;
+        for (String u : Paths.USER_DIRS)                                         // 1.25.6: מה שהמשתמש יצר — שלו
+            if (path.startsWith(app + "/" + u + "/")) return null;
+        return Words.Disk.IS_APP_FILE;
     }
 
     private static String appDir() {

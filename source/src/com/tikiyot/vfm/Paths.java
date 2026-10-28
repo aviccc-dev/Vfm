@@ -13,6 +13,12 @@ public final class Paths {
     public static final String TREE = "מבנה.txt", SETTINGS = "הגדרות", SYSTEM = ".מערכת", BACKUPS = ".גיבויים",  // בכונן
             MAIN = "מבנה התוכנה.ini";  // בכונן
 
+    /**
+     * 1.25.6: תיקיות בתוך תיקיית התוכנה שהתוכן שלהן — של המשתמש (הנפוצות שלו, יומני הבדיקות): אפשר למחוק ולשנות
+     * מהכונן. המשתמש: "ומהכונן הוא לא מוכן למחוק בטענה שזו תוכנת מערכת".
+     */
+    public static final String[] USER_DIRS = {"פקודות נפוצות", "בדיקות"};  // בכונן
+
     private Paths() { }
 
     private static File mk(File f) {
