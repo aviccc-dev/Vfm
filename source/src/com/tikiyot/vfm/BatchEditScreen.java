@@ -155,7 +155,11 @@ public class BatchEditScreen extends Activity {
         Bidi.watch(text);                                                      // 204
         text.setText(Bidi.mark(saved));
         text.setOnFocusChangeListener(new View.OnFocusChangeListener() {
-            @Override public void onFocusChange(View v, boolean has) { if (has) lastField = text; }
+            @Override
+            public void onFocusChange(View v, boolean has) {
+                if (has) lastField = text;
+                else if (panelStale) renderPanel();                             // 1.27.1: אחרי ההקלדה
+            }
         });
         text.addTextChangedListener(watcher(new Runnable() {
             @Override
@@ -169,7 +173,9 @@ public class BatchEditScreen extends Activity {
                         if (sel >= rows.size()) sel = -1;
                         renderMenu();
                         highlight();
-                        if (text.hasFocus()) renderPanel();                    // נערך בקובץ עצמו — הפרמטרים מתעדכנים
+                        // 1.27.1 (באג, הקלטת המסך של המשתמש): בזמן הקלדה בקובץ החלק העליון נבנה מחדש כל 400 אלפיות — הקובץ
+                        // קפץ, המקלדת נסגרה ונפתחה, ולא היה אפשר לראות מה כותבים. עכשיו — רק מסמנים, ובונים כשיוצאים מהקובץ.
+                        if (text.hasFocus()) panelStale = true;
                     }
                 }, 400);
             }
