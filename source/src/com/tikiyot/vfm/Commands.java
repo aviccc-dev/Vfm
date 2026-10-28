@@ -89,6 +89,8 @@ final class Commands {
     /** פקודה אחת. */
     static final class Def {
         final String name;
+        /** השם הקצר בעברית — לתפריט ולחיפוש (בפעלים — הפועל עצמו). */
+        final String he;
         final List<String> aliases;
         final Family family;
         /** מה היא עושה (Words.Def). */
@@ -97,8 +99,9 @@ final class Commands {
         /** צורה נוספת של אותה פקודה ("COMP /רשימה:<רשימה> <יעד>") — לשורת השימוש. */
         final String alternative;
 
-        Def(String name, String[] aliases, Family family, String what, Param[] params, String alternative) {
+        Def(String name, String he, String[] aliases, Family family, String what, Param[] params, String alternative) {
             this.name = name;
+            this.he = he;
             this.aliases = Collections.unmodifiableList(Arrays.asList(aliases == null ? new String[0] : aliases));
             this.family = family;
             this.what = what;
@@ -192,12 +195,13 @@ final class Commands {
                 sw(Batch.SW_LIMIT, null, Type.PERCENT, Words.Def.P_LIMIT, Words.Def.H_LIMIT)));
         if (state) ps.add(sw(Batch.SW_STATE, null, Type.TIME, Words.Def.P_STATE, Words.Def.H_STATE));
         ps.addAll(filters());
-        return new Def(name, null, Family.FILE, name.equals("COPY") ? Words.Def.W_COPY : Words.Def.W_MOVE,
+        return new Def(name, name.equals("COPY") ? Words.Def.N_COPY : Words.Def.N_MOVE, null, Family.FILE,
+                name.equals("COPY") ? Words.Def.W_COPY : Words.Def.W_MOVE,
                 ps.toArray(new Param[0]), null);
     }
 
     private static Def verb(String name, String what) {
-        return new Def(name, null, Family.VERB, what,
+        return new Def(name, name, null, Family.VERB, what,
                 new Param[]{pos(Type.TEXT, Words.Def.P_ARG, Words.Verb.usage(name))}, null);
     }
 
@@ -205,26 +209,26 @@ final class Commands {
     static final List<Def> ALL = Collections.unmodifiableList(Arrays.asList(
             transfer("COPY", Words.Def.H_COPY_SRC, true),
             transfer("MOVE", Words.Def.H_MOVE_SRC, false),
-            new Def("DEL", new String[]{"ERASE"}, Family.FILE, Words.Def.W_DEL,
+            new Def("DEL", Words.Def.N_DEL, new String[]{"ERASE"}, Family.FILE, Words.Def.W_DEL,
                     list(pos(Type.FILES, Words.Def.P_FILES, Words.Def.H_DEL_SRC), filters()), null),
-            new Def("REN", new String[]{"RENAME"}, Family.FILE, Words.Def.W_REN, list(
+            new Def("REN", Words.Def.N_REN, new String[]{"RENAME"}, Family.FILE, Words.Def.W_REN, list(
                     pos(Type.PATH, Words.Def.P_FILE, Words.Def.H_REN_SRC),
                     pos(Type.NAME, Words.Def.P_NEW_NAME, Words.Def.H_NEW_NAME)), null),
-            new Def("MD", new String[]{"MKDIR"}, Family.FILE, Words.Def.W_MD,
+            new Def("MD", Words.Def.N_MD, new String[]{"MKDIR"}, Family.FILE, Words.Def.W_MD,
                     list(pos(Type.PATH, Words.Def.P_FOLDER, Words.Def.H_MD)), null),
-            new Def("RD", new String[]{"RMDIR"}, Family.FILE, Words.Def.W_RD, list(
+            new Def("RD", Words.Def.N_RD, new String[]{"RMDIR"}, Family.FILE, Words.Def.W_RD, list(
                     pos(Type.PATH, Words.Def.P_FOLDER, Words.Def.H_RD),
                     sw("/S", null, Type.FLAG, Words.Def.P_NOT_EMPTY, Words.Def.H_NOT_EMPTY)), null),
-            new Def("COMP", null, Family.FILE, Words.Def.W_COMP, list(
+            new Def("COMP", Words.Def.N_COMP, null, Family.FILE, Words.Def.W_COMP, list(
                     pos(Type.PATH, Words.Def.P_SOURCE, Words.Def.H_COMP_SRC),
                     pos(Type.PATH, Words.Def.P_DEST, Words.Def.H_COMP_DEST),
                     hidden(),
                     sw(Batch.SW_LIST, null, Type.LIST, Words.Def.P_LIST, Words.Def.H_LIST)),
                     "COMP " + Batch.SW_LIST + "<" + Words.Def.P_LIST + "> <" + Words.Def.P_DEST + ">"),
-            new Def("START", null, Family.FILE, Words.Def.W_START,
+            new Def("START", Words.Def.N_START, null, Family.FILE, Words.Def.W_START,
                     list(pos(Type.PATH, Words.Def.P_WHAT_OPEN, Words.Def.H_START, Words.Def.U_START)), null),
-            new Def("ECHO", null, Family.FILE, Words.Def.W_ECHO, list(pos(Type.TEXT, Words.Def.P_TEXT, Words.Def.H_TEXT)), null),
-            new Def("REM", null, Family.FILE, Words.Def.W_REM, list(pos(Type.TEXT, Words.Def.P_TEXT, Words.Def.H_TEXT)), null),
+            new Def("ECHO", Words.Def.N_ECHO, null, Family.FILE, Words.Def.W_ECHO, list(pos(Type.TEXT, Words.Def.P_TEXT, Words.Def.H_TEXT)), null),
+            new Def("REM", Words.Def.N_REM, null, Family.FILE, Words.Def.W_REM, list(pos(Type.TEXT, Words.Def.P_TEXT, Words.Def.H_TEXT)), null),
             verb(Verbs.OPEN, Words.Def.W_OPEN),
             verb(Verbs.CREATE, Words.Def.W_CREATE),
             verb(Verbs.UPDATE, Words.Def.W_UPDATE),
@@ -232,7 +236,7 @@ final class Commands {
             verb(Verbs.BACK, Words.Def.W_BACK),
             verb(Verbs.RUN, Words.Def.W_RUN),
             verb(Verbs.ADD, Words.Def.W_ADD),
-            new Def(Batch.AS_IF2, new String[]{Batch.AS_IF}, Family.HEADER, Words.Def.W_AS_IF, new Param[0], null)));
+            new Def(Batch.AS_IF2, Batch.AS_IF2, new String[]{Batch.AS_IF}, Family.HEADER, Words.Def.W_AS_IF, new Param[0], null)));
 
     // ---------- שאילתות ----------
 
@@ -258,6 +262,16 @@ final class Commands {
         List<String> out = new ArrayList<String>();
         for (Def d : ALL) if (d.family == Family.FILE) out.add(d.name);
         return out.toArray(new String[0]);
+    }
+
+    /** 1.23.0: לחיפוש בתפריט — שם, שם נרדף, השם בעברית, או מילה מההסבר. ריק — הכול. */
+    static boolean matches(Def d, String query) {
+        String q = query == null ? "" : query.trim();
+        if (q.isEmpty()) return true;
+        String u = q.toUpperCase(Locale.ROOT);
+        if (d.name.startsWith(u) || d.name.startsWith(q) || d.he.startsWith(q)) return true;
+        for (String a : d.aliases) if (a.startsWith(u) || a.startsWith(q)) return true;
+        return q.length() >= 2 && d.what.contains(q);
     }
 
     static List<Def> of(Family f) {

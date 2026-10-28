@@ -2,8 +2,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="com.tikiyot.vfm"
-    android:versionCode="162"
-    android:versionName="1.22.5">
+    android:versionCode="163"
+    android:versionName="1.23.0">
     <uses-sdk android:minSdkVersion="21" android:targetSdkVersion="30" />
 
     <queries>
@@ -4792,47 +4792,78 @@ final class Batch {
 ===== קובץ: src/com/tikiyot/vfm/BatchEditScreen.java =====
 package com.tikiyot.vfm;
 
-// עורך קובץ פקודות (117א, שלב 1): טקסט חופשי, ושורת פקודות שמכניסה פקודה או משתנה במקום הסמן.
-// בשלב 2 — טופס לכל פקודה (תוספות, "קיצורי דרך חכמים").
+// ממשק הפקודות (1.23.0; האפיון — claude/mimshak-pkudot.md). למעלה — תפריט נגלל: הפקודות שבקובץ, לפי הסדר, ואחריהן
+// עוד פקודות (מההגדרה האחת, Commands); שדה כתיבה מסנן אותו ("העתק" או "COPY"); "★ נפוצות" מחליף אותו לפקודות
+// הנפוצות (של התוכנה ושלי). בחירה — הפרמטרים נפתחים מתחת: פקודה מהקובץ — עם הערכים, לשינוי; פקודה חדשה — ריקים,
+// עם "הכנס לקובץ" אחרי השורה הנבחרת. לכל פרמטר — שם, הסבר, ובוחר לפי סוגו; המתקדמים מקופלים. השורה עצמה —
+// לעריכה גם ידנית; "הדמיה" — מה השורה תעשה, מהמנוע עצמו, ברקע. למטה — הקובץ הפתוח, והשורה הנבחרת מודגשת בו.
+// הקובץ נשמר רק ב"שמירה" (וביציאה — שאלה).
 
 import android.app.Activity;
 import android.graphics.Typeface;
 import android.os.Bundle;
+import android.os.Handler;
+import android.text.Editable;
 import android.text.InputType;
+import android.text.Spannable;
+import android.text.TextWatcher;
+import android.text.style.BackgroundColorSpan;
 import android.view.Gravity;
 import android.view.View;
 import android.widget.Button;
+import android.widget.CheckBox;
 import android.widget.EditText;
 import android.widget.HorizontalScrollView;
 import android.widget.LinearLayout;
+import android.widget.ScrollView;
+import android.widget.Spinner;
 import android.widget.TextView;
 
 import java.io.File;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
 
 public class BatchEditScreen extends Activity {
 
     public static final String EXTRA_FILE = "file";
 
-    /** שורת הכפתורים בתחתית: הפקודות, המשתנים ומתגים נפוצים — מהתחביר שב-Batch. */
-    private static final String[] CMDS = {"COPY ", "MOVE ", "DEL ", "REN ", "MD ", "RD ", "START ", "ECHO ", "REM ",
-            Batch.var(Batch.V_INTERNAL), Batch.var(Batch.V_CARD), Batch.var(Batch.V_DOWNLOADS), Batch.var(Batch.V_HERE),
-            Batch.var(Batch.V_SHARE), "*.pdf", "\"\"", "/Y", "/" + Batch.SW_DATE + "יום", "/" + Batch.SW_DATE + "<שנה", "/" + Batch.SW_SIZE + ">10MB"};   // תחביר
+    /** שורת הכפתורים בתחתית: משתנים ומתגים נפוצים — נכנסים לשדה שבו הסמן. */
+    private static final String[] CHIPS = {Batch.var(Batch.V_INTERNAL), Batch.var(Batch.V_CARD), Batch.var(Batch.V_DOWNLOADS),
+            Batch.var(Batch.V_HERE), Batch.var(Batch.V_SHARE), Batch.var(Batch.V_NOW), Batch.var(Batch.V_ONLY_A),
+            Batch.var(Batch.V_ONLY_B), "*.pdf", "\"\""};
+    private static final String[] MASKS = {"*.*", "*.pdf", "*.epub", "*.mp3"};
 
     private File file;
     private Editor text;
-    private TextView help;
+    private EditText filter;
+    private LinearLayout menu, panel;
+    private Button modeBtn;
     private String saved = "";
+    private boolean templates, advOpen, selfEdit, panelStale;
+    /** השורה שנבחרה בתפריט (מספר בין השורות שאינן ריקות), או -1. */
+    private int sel = -1;
+    /** פקודה חדשה שעוד לא בקובץ (קבצים), או ההגדרה שלה (פועל / כותרת). */
+    private CmdLine draft;
+    private Commands.Def draftDef;
+    /** אחרי איזו שורה תיכנס פקודה חדשה (-1 — בסוף). */
+    private int anchor = -1;
+    private TextView result;
+    private EditText lastField;
+    private final Handler later = new Handler();
+    private Map<String, String> vars;
 
-    /** עורך שמודיע כשהסמן זז — כדי להסביר את הפקודה שבשורה. */
+    /** שורה בקובץ: גבולות בטקסט שבעורך, ומספרה (מ-1, כמו בדוח). */
+    private static final class Row {
+        int start, end, number;
+        String text;
+    }
+
+    private List<Row> rows = new ArrayList<Row>();
+
     private final class Editor extends EditText {
         Editor() {
             super(BatchEditScreen.this);
-        }
-
-        @Override
-        protected void onSelectionChanged(int st, int en) {
-            super.onSelectionChanged(st, en);
-            if (help != null) showHelp();
         }
     }
 
@@ -4845,16 +4876,13 @@ public class BatchEditScreen extends Activity {
             return;
         }
         file = new File(p);
+        vars = BatchUi.vars(this, file.getParentFile());
         setTitle("📜 " + file.getName());
         LinearLayout root = Ui.screen(this);
 
         LinearLayout top = new LinearLayout(this);
-        top.setOrientation(LinearLayout.HORIZONTAL);
         top.addView(button(Words.Cmd.SAVE_BTN, new View.OnClickListener() {
             @Override public void onClick(View v) { save(); }
-        }));
-        top.addView(button(Words.Cmd.LINE_IN_FORM, new View.OnClickListener() {
-            @Override public void onClick(View v) { formForLine(); }
         }));
         top.addView(button(Words.Cmd.PREVIEW_AND_RUN, new View.OnClickListener() {
             @Override
@@ -4862,78 +4890,110 @@ public class BatchEditScreen extends Activity {
                 if (save()) BatchUi.run(BatchEditScreen.this, file);
             }
         }));
-        root.addView(top);
+        modeBtn = button(Words.Ed.TEMPLATES, new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                templates = !templates;
+                modeBtn.setText(templates ? Words.Ed.COMMANDS : Words.Ed.TEMPLATES);
+                renderMenu();
+            }
+        });
+        top.addView(modeBtn);
+        HorizontalScrollView topScroll = new HorizontalScrollView(this);
+        topScroll.addView(top);
+        root.addView(topScroll);
+
+        filter = Ui.field(this, "", Words.Ed.FILTER_HINT);
+        filter.addTextChangedListener(watcher(new Runnable() {
+            @Override public void run() { renderMenu(); }
+        }));
+        root.addView(filter);
+
+        menu = new LinearLayout(this);
+        menu.setOrientation(LinearLayout.VERTICAL);
+        ScrollView menuScroll = new ScrollView(this);
+        menuScroll.setBackgroundColor(Ui.BG_SOFT);
+        menuScroll.addView(menu);
+        int h = getResources().getDisplayMetrics().heightPixels;
+        root.addView(menuScroll, new LinearLayout.LayoutParams(-1, (int) (h * 0.30f)));
+
+        LinearLayout body = new LinearLayout(this);
+        body.setOrientation(LinearLayout.VERTICAL);
+        panel = new LinearLayout(this);
+        panel.setOrientation(LinearLayout.VERTICAL);
+        panel.setPadding(Ui.dp(this, 12), Ui.dp(this, 4), Ui.dp(this, 12), Ui.dp(this, 8));
+        body.addView(panel);
+        TextView fl = Ui.label(this, Words.Ed.THE_FILE);
+        fl.setPadding(Ui.dp(this, 12), Ui.dp(this, 10), Ui.dp(this, 12), 0);
+        body.addView(fl);
 
         text = new Editor();
         text.setTypeface(Typeface.MONOSPACE);
-        text.setTextSize(14);
+        text.setTextSize(13);
         text.setGravity(Gravity.TOP | Gravity.START);
-        text.setTextDirection(View.TEXT_DIRECTION_FIRST_STRONG);   // 1.17.6: כל שורה לפי האות הראשונה — עברית מימין, אנגלית משמאל
+        text.setTextDirection(View.TEXT_DIRECTION_FIRST_STRONG);   // 1.17.6: כל שורה לפי האות הראשונה
         text.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_MULTI_LINE | InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS);
         text.setHorizontallyScrolling(false);
+        text.setMinLines(6);
         try {
             saved = Files.readUtf8(file);
         } catch (Throwable t) {
             saved = "";
         }
-        Bidi.watch(text);                                                      // 204: מסלולים בעברית — בלי היפוך
+        Bidi.watch(text);                                                      // 204
         text.setText(Bidi.mark(saved));
-        root.addView(text, new LinearLayout.LayoutParams(-1, 0, 1f));
+        text.setOnFocusChangeListener(new View.OnFocusChangeListener() {
+            @Override public void onFocusChange(View v, boolean has) { if (has) lastField = text; }
+        });
+        text.addTextChangedListener(watcher(new Runnable() {
+            @Override
+            public void run() {
+                if (selfEdit) return;
+                later.removeCallbacksAndMessages(null);
+                later.postDelayed(new Runnable() {
+                    @Override
+                    public void run() {
+                        computeRows();
+                        if (sel >= rows.size()) sel = -1;
+                        renderMenu();
+                        highlight();
+                        if (text.hasFocus()) renderPanel();                    // נערך בקובץ עצמו — הפרמטרים מתעדכנים
+                    }
+                }, 400);
+            }
+        }));
+        body.addView(text);
+        ScrollView bodyScroll = new ScrollView(this);
+        bodyScroll.addView(body);
+        root.addView(bodyScroll, new LinearLayout.LayoutParams(-1, 0, 1f));
 
-        help = Ui.info(this);
-        root.addView(help);
-        showHelp();
-        LinearLayout row = new LinearLayout(this);
-        row.setOrientation(LinearLayout.HORIZONTAL);
-        // 1.13.0: הטופס כותב גם את הפקודות בעברית — "פתח…" (רשימה, רשימה חכמה, תיקייה, מסך, קובץ פקודות),
-        // כותרת התוכנה (צלמית / שם / למה), ו"הדמיה"
-        row.addView(button(Words.Cmd.OPEN_BTN, new View.OnClickListener() {
+        LinearLayout chips = new LinearLayout(this);
+        chips.addView(button(Words.Cmd.OPEN_BTN, new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 TopRow.pick(BatchEditScreen.this, Words.Top.S_BATCH, new TopRow.Chosen() {
-                    @Override public void ok(String icon, String name, String line) { insertLine(line); }
+                    @Override public void ok(String icon, String name, String line) { insertLines(lines(line)); }
                 });
             }
         }));
-        row.addView(button(Words.Cmd.PROGRAM_BTN, new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                String t = text.getText().toString();
-                if (Program.parse(t).isProgram()) {
-                    Ui.toast(BatchEditScreen.this, Words.Cmd.ALREADY_PROGRAM);
-                    return;
-                }
-                text.getText().insert(0, Program.ICON + " ▶\n" + Program.NAME + " " + Text.stem(file.getName()) + "\n"
-                        + Program.WHY + " \n");
-                text.setSelection(Program.ICON.length() + 3 + Program.NAME.length() + 1 + Text.stem(file.getName()).length() + 1
-                        + Program.WHY.length() + 1);
-            }
+        chips.addView(button(Words.Cmd.PROGRAM_BTN, new View.OnClickListener() {
+            @Override public void onClick(View v) { programHeader(); }
         }));
-        row.addView(button(Batch.AS_IF2, new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                if (!text.getText().toString().contains(Batch.AS_IF2)) text.getText().insert(0, Batch.AS_IF2 + "\n");
-            }
-        }));
-        for (final String c : CMDS)
-            row.addView(button(c.trim(), new View.OnClickListener() {
-                @Override
-                public void onClick(View v) {
-                    String cmd = c.trim();
-                    if (java.util.Arrays.asList(BatchLine.COMMANDS).contains(cmd)) {   // פקודה — טופס לשורה חדשה
-                        BatchLine b = new BatchLine();
-                        b.cmd = cmd;
-                        form(b, -1, -1);
-                    } else {
-                        insert(c);                                                   // משתנה או מתג — במקום הסמן
-                    }
-                }
+        for (final String c : CHIPS)
+            chips.addView(button(c, new View.OnClickListener() {
+                @Override public void onClick(View v) { insertAtCursor(c); }
             }));
         HorizontalScrollView hs = new HorizontalScrollView(this);
-        hs.addView(row);
+        hs.addView(chips);
         root.addView(hs);
         setContentView(TopRow.wrap(this, root));                   // 1.9.0: שורת הכפתורים העליונה
+
+        computeRows();
+        renderMenu();
+        renderPanel();
     }
+
+    // ---------- עזר ----------
 
     private Button button(String label, View.OnClickListener l) {
         Button b = new Button(this);
@@ -4943,239 +5003,738 @@ public class BatchEditScreen extends Activity {
         return b;
     }
 
-    /** 1.13.0: שורה שלמה — אחרי השורה שהסמן בה. */
-    private void insertLine(String line) {
+    private static TextWatcher watcher(final Runnable r) {
+        return new TextWatcher() {
+            @Override public void beforeTextChanged(CharSequence s, int a, int b, int c) { }
+            @Override public void onTextChanged(CharSequence s, int a, int b, int c) { }
+            @Override public void afterTextChanged(Editable e) { r.run(); }
+        };
+    }
+
+    private static List<String> lines(String one) {
+        List<String> l = new ArrayList<String>();
+        l.add(one);
+        return l;
+    }
+
+    private String plain() {
+        return Bidi.strip(text.getText().toString());
+    }
+
+    /** השורות שאינן ריקות, עם הגבולות שלהן בעורך. */
+    private void computeRows() {
+        List<Row> out = new ArrayList<Row>();
         String t = text.getText().toString();
-        int at = Math.max(text.getSelectionEnd(), 0);
-        int end = t.indexOf('\n', at);
-        if (end < 0) end = t.length();
-        String ins = (t.isEmpty() || end == 0 && t.isEmpty() ? "" : "\n") + line;
-        text.getText().insert(end, ins);
-        text.setSelection(end + ins.length());
+        int st = 0, n = 1;
+        while (st <= t.length()) {
+            int en = t.indexOf('\n', st);
+            if (en < 0) en = t.length();
+            String line = Bidi.strip(t.substring(st, en)).trim();
+            if (!line.isEmpty()) {
+                Row r = new Row();
+                r.start = st;
+                r.end = en;
+                r.number = n;
+                r.text = line;
+                out.add(r);
+            }
+            if (en >= t.length()) break;
+            st = en + 1;
+            n++;
+        }
+        rows = out;
     }
 
-    private void insert(String s) {
-        int st = Math.max(text.getSelectionStart(), 0), en = Math.max(text.getSelectionEnd(), 0);
-        text.getText().replace(Math.min(st, en), Math.max(st, en), s);
-        if (s.equals("\"\"")) text.setSelection(Math.min(st, en) + 1);   // הסמן בין המרכאות
+    private static boolean isHeader(String line) {
+        return Program.isHeader(line) || line.equals(Batch.AS_IF) || line.equals(Batch.AS_IF2);
     }
 
-    // ---------- הטופס (שלב 2) ----------
-
-    /** גבולות השורה שהסמן עומד בה: {התחלה, סוף}. */
-    private int[] lineAt() {
-        String t = text.getText().toString();
-        int pos = Math.max(0, Math.min(text.getSelectionStart(), t.length()));
-        int st = t.lastIndexOf('\n', pos - 1) + 1;
-        int en = t.indexOf('\n', pos);
-        return new int[]{st, en < 0 ? t.length() : en};
+    /** ההגדרה של שורה: פקודת קבצים, פועל, או כותרת; null — לא מוכרת. */
+    private static Commands.Def defOf(String line) {
+        if (isHeader(line)) return Commands.get(Batch.AS_IF2);
+        if (Verbs.isVerb(line)) return Commands.get(line.split("\\s+")[0]);
+        return CmdLine.parse(line).def;
     }
 
-    private void showHelp() {
-        int[] r = lineAt();
-        String line = text.getText().toString().substring(r[0], r[1]).trim();
-        if (Verbs.isVerb(line)) {                                             // 1.13.0: פקודה בעברית — מה תפתח
-            Verbs.Cmd vc = Verbs.parse(line);
-            help.setText(vc.error != null ? "⚠ " + vc.error : Verbs.describe(vc));
+    /** %רק-במקור% בלי COMP לפניו. */
+    private boolean needsCompare(int i) {
+        if (!CmdLine.parse(rows.get(i).text).usesCompare()) return false;
+        for (int k = 0; k < i; k++) {
+            Commands.Def d = defOf(rows.get(k).text);
+            if (d != null && d.name.equals("COMP")) return false;
+        }
+        return true;
+    }
+
+    /** כמה שורות נפתחות בסוף (START ופעלים) — רק האחרונה נפתחת. */
+    private int opens() {
+        int n = 0;
+        for (Row r : rows) {
+            Commands.Def d = defOf(r.text);
+            if (d != null && (d.family == Commands.Family.VERB || d.name.equals("START"))) n++;
+        }
+        return n;
+    }
+
+    // ---------- התפריט ----------
+
+    private TextView tag(String s, boolean danger) {
+        TextView t = new TextView(this);
+        t.setText(s);
+        t.setTextSize(12);
+        t.setTextColor(danger ? Ui.RED : Ui.ACCENT_DARK);
+        t.setBackgroundColor(danger ? 0xFFFCE8E6 : Ui.BAR);
+        t.setPadding(Ui.dp(this, 8), Ui.dp(this, 2), Ui.dp(this, 8), Ui.dp(this, 2));
+        t.setSingleLine(true);
+        return t;
+    }
+
+    private void section(String title) {
+        TextView t = Ui.label(this, title);
+        t.setPadding(Ui.dp(this, 12), Ui.dp(this, 8), Ui.dp(this, 12), Ui.dp(this, 2));
+        menu.addView(t);
+    }
+
+    private LinearLayout menuRow(View tagView, String body, boolean mono, boolean selected, View.OnClickListener tap) {
+        LinearLayout r = new LinearLayout(this);
+        r.setGravity(Gravity.CENTER_VERTICAL);
+        r.setPadding(Ui.dp(this, 10), Ui.dp(this, 7), Ui.dp(this, 10), Ui.dp(this, 7));
+        r.setBackgroundColor(selected ? Ui.SELECTED : Ui.BG);
+        r.addView(tagView);
+        TextView b = new TextView(this);
+        b.setText(mono ? Bidi.mark(body) : body);
+        b.setTextSize(13);
+        b.setTextColor(Ui.TEXT);
+        if (mono) {
+            b.setTypeface(Typeface.MONOSPACE);
+            b.setTextDirection(View.TEXT_DIRECTION_FIRST_STRONG);
+        }
+        b.setPadding(Ui.dp(this, 8), 0, 0, 0);
+        r.addView(b, new LinearLayout.LayoutParams(0, -2, 1f));
+        r.setOnClickListener(tap);
+        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(-1, -2);
+        lp.setMargins(0, 0, 0, Ui.dp(this, 1));
+        menu.addView(r, lp);
+        return r;
+    }
+
+    private void renderMenu() {
+        menu.removeAllViews();
+        String q = filter.getText().toString();
+        if (templates) {
+            section(Words.Ed.TPL_SYS);
+            for (final CmdTemplates.Tpl t : CmdTemplates.system(this)) templateRow(t, "★");
+            section(Words.Ed.TPL_MINE);
+            for (final CmdTemplates.Tpl t : CmdTemplates.mine()) templateRow(t, "☆");
             return;
         }
-        if (Program.isHeader(line) || line.equals(Batch.AS_IF) || line.equals(Batch.AS_IF2)) {   // כותרת / הדמיה
-            help.setText(Words.Cmd.HEADER_HELP);
+        section(Words.Ed.IN_FILE);
+        if (rows.isEmpty()) {
+            TextView e = Ui.info(this);
+            e.setText(Words.Ed.EMPTY_FILE);
+            menu.addView(e);
+        }
+        for (int i = 0; i < rows.size(); i++) {
+            final int idx = i;
+            String line = rows.get(i).text;
+            Commands.Def d = defOf(line);
+            if (!q.trim().isEmpty() && (d == null || !Commands.matches(d, q))) continue;
+            String name = d == null ? Words.Ed.TAG_UNKNOWN : d.family == Commands.Family.HEADER ? Words.Ed.TAG_HEADER : d.he;
+            boolean danger = d != null && d.family == Commands.Family.FILE && CmdLine.parse(line).destructive();
+            String body = (needsCompare(i) ? "⚠ " : "") + line;
+            menuRow(tag(name, danger), body, true, i == sel && draft == null && draftDef == null, new View.OnClickListener() {
+                @Override public void onClick(View v) { select(idx); }
+            });
+        }
+        section(Words.Ed.MORE);
+        for (final Commands.Def d : Commands.ALL) {
+            if (!Commands.matches(d, q)) continue;
+            boolean on = (draft != null && draft.def == d) || draftDef == d;
+            String head = d.family == Commands.Family.FILE ? d.name + " · " : "";
+            menuRow(tag(d.he, false), head + d.what, false, on, new View.OnClickListener() {
+                @Override public void onClick(View v) { startNew(d); }
+            });
+        }
+    }
+
+    private void templateRow(final CmdTemplates.Tpl t, String mark) {
+        menuRow(tag(mark, false), t.name + "  ·  " + Words.Ed.lines(t.lines.size()), false, false, new View.OnClickListener() {
+            @Override public void onClick(View v) { useTemplate(t); }
+        });
+    }
+
+    // ---------- בחירה ----------
+
+    private void select(int i) {
+        sel = i;
+        anchor = i;
+        draft = null;
+        draftDef = null;
+        advOpen = false;
+        renderMenu();
+        highlight();
+        renderPanel();
+    }
+
+    private void startNew(Commands.Def d) {
+        if (sel >= 0) anchor = sel;
+        sel = -1;
+        draftDef = d.family == Commands.Family.FILE ? null : d;
+        draft = d.family == Commands.Family.FILE ? CmdLine.of(d) : null;
+        advOpen = false;
+        renderMenu();
+        highlight();
+        renderPanel();
+    }
+
+    private void highlight() {
+        Editable e = text.getText();
+        for (BackgroundColorSpan s : e.getSpans(0, e.length(), BackgroundColorSpan.class)) e.removeSpan(s);
+        if (sel >= 0 && sel < rows.size()) {
+            Row r = rows.get(sel);
+            e.setSpan(new BackgroundColorSpan(Ui.SELECTED), r.start, r.end, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE);
+        }
+    }
+
+    // ---------- הפרמטרים ----------
+
+    private void renderPanel() {
+        panelStale = false;
+        panel.removeAllViews();
+        result = null;
+        if (draft == null && draftDef == null && (sel < 0 || sel >= rows.size())) {
+            TextView t = Ui.info(this);
+            t.setText(rows.isEmpty() ? Words.Ed.EMPTY_FILE : Words.Ed.PICK_FIRST);
+            panel.addView(t);
             return;
         }
-        String cmd = line.isEmpty() ? "" : BatchLine.parse(line).cmd;
-        String h = BatchLine.help(cmd);
-        if (!line.isEmpty() && h.isEmpty() && !line.startsWith("::") && !line.equalsIgnoreCase("@ECHO OFF"))
-            h = "⚠ " + Words.Cmd.unknownCommand(Batch.tokens(line).get(0));
-        help.setText(h.isEmpty() ? Words.Cmd.EDITOR_HINT : h + Words.Cmd.TO_FORM);
-    }
+        boolean isNew = sel < 0;
+        String line = isNew ? (draft != null ? draft.text() : draftDef.name) : rows.get(sel).text;
+        Commands.Def d = isNew ? (draft != null ? draft.def : draftDef) : defOf(line);
+        TextView title = new TextView(this);
+        title.setTextSize(15);
+        title.setTextColor(Ui.TEXT);
+        title.setTypeface(Typeface.DEFAULT_BOLD);
+        title.setText((d == null ? Words.Ed.TAG_UNKNOWN : d.he + (d.family == Commands.Family.FILE ? " (" + d.name + ")" : ""))
+                + "   ·   " + (isNew ? Words.Ed.NEW : Words.Ed.lineN(rows.get(sel).number)));
+        panel.addView(title);
+        TextView what = Ui.info(this);
+        what.setPadding(0, Ui.dp(this, 2), 0, Ui.dp(this, 4));
+        what.setText(d == null ? Words.Ed.NOT_UNDERSTOOD : d.what + (d.family == Commands.Family.HEADER ? "\n" + Words.Cmd.HEADER_HELP : ""));
+        panel.addView(what);
+        if (!isNew && needsCompare(sel)) warn(Words.Ed.NEED_COMPARE);
+        if (d != null && (d.family == Commands.Family.VERB || d.name.equals("START")) && opens() > 1) warn(Words.Ed.ONE_OPEN);
 
-    private void formForLine() {
-        int[] r = lineAt();
-        String line = text.getText().toString().substring(r[0], r[1]).trim();
-        if (line.isEmpty()) {
-            Ui.toast(this, Words.Cmd.EMPTY_LINE);
+        final EditText live = Ui.field(this, line, "");
+        if (d != null && d.family == Commands.Family.FILE) fileFields(isNew ? draft : CmdLine.parse(line), live);
+        else if (d != null && d.family == Commands.Family.VERB) verbField(d, line, live);
+
+        panel.addView(Ui.label(this, Words.Ed.THE_LINE));
+        live.setSingleLine(false);
+        live.setTypeface(Typeface.MONOSPACE);
+        live.setTextDirection(View.TEXT_DIRECTION_FIRST_STRONG);
+        Bidi.watch(live);
+        live.setText(Bidi.mark(line));
+        live.addTextChangedListener(watcher(new Runnable() {
+            @Override
+            public void run() {
+                if (selfEdit) return;
+                String now = Bidi.strip(live.getText().toString()).trim();
+                if (sel >= 0) {
+                    replaceRow(now);
+                    panelStale = true;
+                } else if (draft != null) {
+                    CmdLine c = CmdLine.parse(now);
+                    if (c.def != null) draft = c;
+                    panelStale = true;
+                }
+            }
+        }));
+        live.setOnFocusChangeListener(new View.OnFocusChangeListener() {
+            @Override
+            public void onFocusChange(View v, boolean has) {
+                if (has) lastField = live;
+                else if (panelStale) renderPanel();
+            }
+        });
+        panel.addView(live);
+
+        LinearLayout acts = new LinearLayout(this);
+        HorizontalScrollView as = new HorizontalScrollView(this);
+        as.addView(acts);
+        panel.addView(as);
+        if (isNew) {
+            final Commands.Def nd = d;
+            acts.addView(button(Words.Ed.insertAfter(anchor >= 0 && anchor < rows.size() ? rows.get(anchor).number : 0),
+                    new View.OnClickListener() {
+                        @Override public void onClick(View v) { insertNew(nd, live); }
+                    }));
             return;
         }
-        BatchLine b = BatchLine.parse(line);
-        if (!java.util.Arrays.asList(BatchLine.COMMANDS).contains(b.cmd)) {
-            Ui.toast(this, Words.Cmd.NO_FORM);
-            return;
+        acts.addView(button(Words.Ed.SIMULATE, new View.OnClickListener() {
+            @Override public void onClick(View v) { simulate(); }
+        }));
+        acts.addView(button(Words.Ed.UP, new View.OnClickListener() {
+            @Override public void onClick(View v) { move(-1); }
+        }));
+        acts.addView(button(Words.Ed.DOWN, new View.OnClickListener() {
+            @Override public void onClick(View v) { move(1); }
+        }));
+        acts.addView(button(Words.Ed.REMOVE, new View.OnClickListener() {
+            @Override public void onClick(View v) { removeRow(); }
+        }));
+        acts.addView(button(Words.Ed.SAVE_TPL, new View.OnClickListener() {
+            @Override public void onClick(View v) { saveTemplate(); }
+        }));
+        result = Ui.info(this);
+        result.setPadding(0, Ui.dp(this, 4), 0, 0);
+        panel.addView(result);
+    }
+
+    private void warn(String s) {
+        TextView w = Ui.info(this);
+        w.setTextColor(Ui.RED);
+        w.setPadding(0, 0, 0, Ui.dp(this, 4));
+        w.setText(s);
+        panel.addView(w);
+    }
+
+    /** שינוי בשדה: השורה נבנית מחדש, ונכנסת לקובץ (או לטיוטה). */
+    private void changed(CmdLine c, EditText live) {
+        String now = c.text();
+        selfEdit = true;
+        live.setText(Bidi.mark(now));
+        selfEdit = false;
+        if (sel >= 0) replaceRow(now);
+        else draft = c;
+    }
+
+    private void fileFields(final CmdLine c, final EditText live) {
+        List<Commands.Param> basic = new ArrayList<Commands.Param>(), adv = new ArrayList<Commands.Param>();
+        for (Commands.Param p : c.def.params) {
+            if (p.compat || (!p.isSwitch() && c.slot(p) < 0)) continue;
+            if (p.type == Commands.Type.SIZE) continue;                       // יחד עם התאריך (FilterForm)
+            (p.advanced ? adv : basic).add(p);
         }
-        form(b, r[0], r[1]);
-    }
-
-    private EditText field(LinearLayout box, String label, String value, String hint) {
-        box.addView(Ui.label(this, label));
-        EditText e = Ui.field(this, "", hint);
-        e.setTextDirection(View.TEXT_DIRECTION_LTR);
-        Bidi.watch(e);                                                        // 204
-        e.setText(value == null ? "" : value);
-        box.addView(e);
-        return e;
-    }
-
-    /** שדה מסלול, עם כפתור בורר שמכניס מסלול בסגנון bat (%פנימי%\…). */
-    private EditText pathField(LinearLayout box, String label, String value, final boolean canCreate, final Runnable changed) {
-        return pathField(box, label, value, canCreate, changed, false);
-    }
-
-    /** 203/204: share — בבורר, ליד הכוננים, גם "📤 שיתוף": היעד הוא שליחה למכשיר אחר (רק ב־COPY). */
-    private EditText pathField(LinearLayout box, String label, String value, final boolean canCreate, final Runnable changed,
-                               final boolean share) {
-        final EditText e = field(box, label, value, Batch.var(Batch.V_INTERNAL) + "\\" + Words.Cmd.FOLDER);
-        LinearLayout row = new LinearLayout(this);
-        row.setOrientation(LinearLayout.HORIZONTAL);
-        box.addView(row);
-        row.addView(button(Words.Cmd.PICK, new View.OnClickListener() {
+        for (Commands.Param p : basic) field(c, p, live);
+        if (adv.isEmpty()) return;
+        int set = 0;
+        for (Commands.Param p : adv) if (!c.value(p).isEmpty()) set++;
+        final boolean open = advOpen || set > 0;
+        Button t = button(Words.Ed.advanced(adv.size()), new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                FolderPicker.choose(BatchEditScreen.this, label, canCreate, new FolderPicker.Picked() {
+                advOpen = !open;
+                renderPanel();
+            }
+        });
+        panel.addView(t);
+        if (open) for (Commands.Param p : adv) field(c, p, live);
+    }
+
+    private void field(final CmdLine c, final Commands.Param p, final EditText live) {
+        field(c, p, live, false);
+    }
+
+    /** asText — תאריך או גודל שהרכיב לא יודע להציג: שדה טקסט, כדי לא לאבד אותו (בדיקת באגים 5). */
+    private void field(final CmdLine c, final Commands.Param p, final EditText live, boolean asText) {
+        if (p.type == Commands.Type.DATE && !asText) {
+            if (dateSize(c, live)) return;
+            field(c, p, live, true);
+            field(c, c.def.switchFor("/" + Batch.SW_SIZE), live, true);
+            return;
+        }
+        panel.addView(Ui.label(this, p.label + (p.isSwitch() ? "   " + p.key : "")));
+        TextView h = Ui.info(this);
+        h.setPadding(0, 0, 0, 0);
+        h.setText(p.help);
+        panel.addView(h);
+        String v = c.value(p);
+        if (p.type == Commands.Type.FLAG) {
+            CheckBox cb = Ui.check(this, Words.Ed.ON, !v.isEmpty());
+            cb.setOnCheckedChangeListener(new android.widget.CompoundButton.OnCheckedChangeListener() {
+                @Override
+                public void onCheckedChanged(android.widget.CompoundButton b, boolean on) {
+                    c.set(p, on ? "1" : "");
+                    changed(c, live);
+                }
+            });
+            panel.addView(cb);
+            return;
+        }
+        if (p.type == Commands.Type.CHOICE) {
+            final String[] items = new String[p.options.size() + 1];
+            items[0] = Words.Ed.NONE;
+            for (int i = 0; i < p.options.size(); i++) items[i + 1] = p.options.get(i);
+            Spinner sp = Ui.choice(this, items, Math.max(0, p.options.indexOf(v) + 1));
+            final boolean[] ready = {false};
+            sp.setOnItemSelectedListener(new android.widget.AdapterView.OnItemSelectedListener() {
+                @Override
+                public void onItemSelected(android.widget.AdapterView<?> a, View vw, int pos, long id) {
+                    if (!ready[0]) {
+                        ready[0] = true;
+                        return;
+                    }
+                    c.set(p, pos == 0 ? "" : items[pos]);
+                    changed(c, live);
+                }
+                @Override public void onNothingSelected(android.widget.AdapterView<?> a) { }
+            });
+            panel.addView(sp);
+            return;
+        }
+        final EditText e = Ui.field(this, "", p.type == Commands.Type.PERCENT ? "20" : "");
+        boolean path = p.type == Commands.Type.PATH || p.type == Commands.Type.FILES;
+        e.setTextDirection(path ? View.TEXT_DIRECTION_LTR : View.TEXT_DIRECTION_FIRST_STRONG);
+        if (p.type == Commands.Type.PERCENT) e.setInputType(InputType.TYPE_CLASS_NUMBER);
+        Bidi.watch(e);
+        e.setText(v);
+        e.addTextChangedListener(watcher(new Runnable() {
+            @Override
+            public void run() {
+                if (selfEdit) return;
+                c.set(p, Bidi.strip(e.getText().toString()));
+                changed(c, live);
+            }
+        }));
+        e.setOnFocusChangeListener(new View.OnFocusChangeListener() {
+            @Override public void onFocusChange(View x, boolean has) { if (has) lastField = e; }
+        });
+        panel.addView(e);
+        if (!path) return;
+        LinearLayout row = new LinearLayout(this);
+        final boolean dest = p.label.equals(Words.Def.P_DEST) || c.def.name.equals("MD") || c.def.name.equals("START");
+        final boolean share = c.def.name.equals("COPY") && p.label.equals(Words.Def.P_DEST);
+        row.addView(button(Words.Cmd.PICK, new View.OnClickListener() {
+            @Override
+            public void onClick(View x) {
+                FolderPicker.choose(BatchEditScreen.this, p.label, dest, new FolderPicker.Picked() {
                     @Override
                     public void ok(File folder) {
-                        e.setText(BatchLine.toVar(folder.getAbsolutePath(), BatchUi.vars(BatchEditScreen.this, file.getParentFile())));
-                        changed.run();
+                        String old = Bidi.strip(e.getText().toString()), mask = maskOf(old);
+                        e.setText(BatchLine.toVar(folder.getAbsolutePath(), vars) + (mask.isEmpty() ? "" : "\\" + mask));
                     }
-                }, share ? Words.Cmd.SHARE_BTN : null, share ? new Runnable() {     // 204: "📤 שיתוף" — ליד הכוננים
-                    @Override
-                    public void run() {
-                        e.setText(Batch.var(Batch.V_SHARE));
-                        changed.run();
-                    }
+                }, share ? Words.Cmd.SHARE_BTN : null, share ? new Runnable() {
+                    @Override public void run() { e.setText(Batch.var(Batch.V_SHARE)); }
                 } : null);
             }
         }));
-        return e;
-    }
-
-    private android.widget.Spinner spinner(LinearLayout box, String label, String[] items, int sel, final Runnable changed) {
-        if (label != null) box.addView(Ui.label(this, label));
-        android.widget.Spinner sp = Ui.choice(this, items, sel);
-        sp.setOnItemSelectedListener(new android.widget.AdapterView.OnItemSelectedListener() {
-            @Override public void onItemSelected(android.widget.AdapterView<?> p, View v, int pos, long id) { changed.run(); }
-            @Override public void onNothingSelected(android.widget.AdapterView<?> p) { }
-        });
-        box.addView(sp);
-        return sp;
-    }
-
-    /** טופס לפקודה: כל האפשרויות שלה, והשורה מתעדכנת מתחת. start < 0 — שורה חדשה (אחרי השורה של הסמן). */
-    private void form(final BatchLine b, final int start, final int end) {
-        LinearLayout box = Ui.form(this);
-        TextView title = Ui.label(this, BatchLine.help(b.cmd));
-        box.addView(title);
-        final TextView preview = new TextView(this);
-        preview.setTypeface(Typeface.MONOSPACE);
-        preview.setTextDirection(View.TEXT_DIRECTION_LTR);
-        preview.setTextColor(Ui.TEXT);
-        preview.setBackgroundColor(Ui.HEADER);
-        preview.setPadding(Ui.dp(this, 8), Ui.dp(this, 8), Ui.dp(this, 8), Ui.dp(this, 8));
-
-        final EditText[] src = new EditText[1], mask = new EditText[1], dest = new EditText[1], name = new EditText[1],
-                txt = new EditText[1], dval = new EditText[1], snum = new EditText[1], other = new EditText[1];
-        final android.widget.Spinner[] dmode = new android.widget.Spinner[1], smode = new android.widget.Spinner[1],
-                sunit = new android.widget.Spinner[1], taken = new android.widget.Spinner[1];
-        final android.widget.CheckBox[] rec = new android.widget.CheckBox[1];
-        final boolean[] ready = {false};
-        final DateSize[] dsh = {null};
-        final Runnable update = new Runnable() {
-            @Override
-            public void run() {
-                if (!ready[0]) return;
-                if (src[0] != null) b.srcDir = Bidi.strip(src[0].getText().toString()).trim();      // 204
-                if (mask[0] != null) b.mask = Bidi.strip(mask[0].getText().toString()).trim();
-                if (dest[0] != null) b.dest = Bidi.strip(dest[0].getText().toString()).trim();
-                if (name[0] != null) b.newName = Bidi.strip(name[0].getText().toString()).trim();
-                if (txt[0] != null) b.text = txt[0].getText().toString().trim();
-                if (dsh[0] != null) b.filter(dsh[0]);                            // 128
-                if (taken[0] != null) b.taken = taken[0].getSelectedItemPosition();
-                if (rec[0] != null) b.recursive = rec[0].isChecked();
-                if (other[0] != null) {
-                    b.other.clear();
-                    for (String o : other[0].getText().toString().trim().split("\\s+")) if (!o.isEmpty()) b.other.add(o);
-                }
-                preview.setText(Bidi.mark(b.toLine()));
-            }
-        };
-        android.text.TextWatcher w = new android.text.TextWatcher() {
-            @Override public void beforeTextChanged(CharSequence x, int a, int c, int d) { }
-            @Override public void onTextChanged(CharSequence x, int a, int c, int d) { }
-            @Override public void afterTextChanged(android.text.Editable e) { update.run(); }
-        };
-        String c = b.cmd;
-        boolean files = c.equals("COPY") || c.equals("MOVE") || c.equals("DEL");
-        if (files) {
-            src[0] = pathField(box, Words.Cmd.SRC_FOLDER, b.srcDir, false, update);
-            mask[0] = field(box, Words.Cmd.MASK, b.mask, "*.pdf");
-            LinearLayout chips = new LinearLayout(this);
-            for (final String m : new String[]{"*.*", "*.pdf", "*.epub", "*.mp3"})
-                chips.addView(button(m, new View.OnClickListener() {
-                    @Override public void onClick(View v) { mask[0].setText(m); }
-                }));
-            box.addView(chips);
-            dsh[0] = b.filter();                                             // 128: הרכיב המשותף
-            box.addView(FilterForm.build(this, dsh[0], update));
-        }
-        if (c.equals("COPY") || c.equals("MOVE")) {
-            dest[0] = pathField(box, c.equals("COPY") ? Words.Cmd.DEST_OR_SHARE : Words.Cmd.DEST_FOLDER, b.dest, true, update,
-                    c.equals("COPY"));                                        // 203: COPY — גם לשיתוף
-            taken[0] = spinner(box, Words.NAME_TAKEN_AT_DEST, BatchLine.TAKEN, b.taken, update);
-        }
-        if (c.equals("REN")) {
-            src[0] = field(box, Words.Cmd.THE_FILE, b.srcDir, Batch.var(Batch.V_DOWNLOADS) + "\\ספר.pdf");   // תחביר
-            name[0] = field(box, Words.Cmd.NEW_NAME, b.newName, "שם.pdf");   // תחביר
-        }
-        if (c.equals("MD") || c.equals("RD") || c.equals("START"))
-            dest[0] = pathField(box, c.equals("START") ? Words.Cmd.START_TARGET : Words.Cmd.FOLDER, b.dest,
-                    c.equals("MD") || c.equals("START"), update);
-        if (c.equals("RD")) {
-            rec[0] = new android.widget.CheckBox(this);
-            rec[0].setText(Words.Cmd.RD_ALL);
-            rec[0].setChecked(b.recursive);
-            rec[0].setOnCheckedChangeListener(new android.widget.CompoundButton.OnCheckedChangeListener() {
-                @Override public void onCheckedChanged(android.widget.CompoundButton x, boolean y) { update.run(); }
-            });
-            box.addView(rec[0]);
-        }
-        if (c.equals("ECHO") || c.equals("REM")) txt[0] = field(box, c.equals("ECHO") ? Words.Cmd.THE_MESSAGE : Words.Cmd.THE_REMARK, b.text, "");
-        if (!c.equals("ECHO") && !c.equals("REM")) {
-            StringBuilder o = new StringBuilder();
-            for (String x : b.other) o.append(o.length() > 0 ? " " : "").append(x);
-            other[0] = field(box, Words.Cmd.OTHER_SWITCHES, o.toString(), "/MAXAGE:7");
-        }
-        for (EditText e : new EditText[]{src[0], mask[0], dest[0], name[0], txt[0], other[0]})
-            if (e != null) e.addTextChangedListener(w);
-        box.addView(Ui.label(this, Words.Cmd.THE_LINE));
-        box.addView(preview);
-        ready[0] = true;
-        update.run();
-        Ui.askForm(this, Words.Cmd.formTitle(start < 0, c), box, new Runnable() {
-            @Override
-            public void run() {
-                update.run();
-                String line = b.toLine();
-                android.text.Editable ed = text.getText();
-                if (start >= 0) {
-                    ed.replace(start, end, line);
-                    text.setSelection(start + line.length());
-                } else {
-                    int[] r = lineAt();
-                    boolean empty = ed.toString().substring(r[0], r[1]).trim().isEmpty();
-                    if (empty) {
-                        ed.replace(r[0], r[1], line);
-                        text.setSelection(r[0] + line.length());
-                    } else {
-                        ed.insert(r[1], "\n" + line);
-                        text.setSelection(r[1] + 1 + line.length());
+        if (p.type == Commands.Type.FILES)
+            for (final String m : MASKS)
+                row.addView(button(m, new View.OnClickListener() {
+                    @Override
+                    public void onClick(View x) {
+                        String old = Bidi.strip(e.getText().toString()), base = old;
+                        if (!maskOf(old).isEmpty()) base = old.substring(0, Math.max(0, old.length() - maskOf(old).length() - 1));
+                        e.setText(base.isEmpty() ? m : base + "\\" + m);
                     }
+                }));
+        HorizontalScrollView hs = new HorizontalScrollView(this);
+        hs.addView(row);
+        panel.addView(hs);
+    }
+
+    /** "*.pdf" שבסוף המסלול, או "". */
+    private static String maskOf(String s) {
+        String n = s.replace('/', '\\');
+        int cut = n.lastIndexOf('\\');
+        String last = cut >= 0 ? n.substring(cut + 1) : n;
+        return last.contains("*") || last.contains("?") ? last : "";
+    }
+
+    /** /תאריך: ו/גודל: — הרכיב המשותף (FilterForm), כמו בטופס הקודם. */
+    private boolean dateSize(final CmdLine c, final EditText live) {
+        final Commands.Param date = c.def.switchFor("/" + Batch.SW_DATE), size = c.def.switchFor("/" + Batch.SW_SIZE);
+        final DateSize ds = new DateSize();
+        if (!c.value(date).isEmpty() && !ds.take(Batch.SW_DATE + c.value(date))) return false;
+        if (!c.value(size).isEmpty() && !ds.take(Batch.SW_SIZE + c.value(size))) return false;
+        panel.addView(Ui.label(this, date.label + " · " + size.label));
+        TextView h = Ui.info(this);
+        h.setPadding(0, 0, 0, 0);
+        h.setText(date.help + " · " + size.help);
+        panel.addView(h);
+        panel.addView(FilterForm.build(this, ds, new Runnable() {
+            @Override
+            public void run() {
+                String d = ds.dateToken(), s = ds.sizeToken();
+                String dv = d.startsWith(Batch.SW_DATE) ? d.substring(Batch.SW_DATE.length()) : "",
+                        sv = s.startsWith(Batch.SW_SIZE) ? s.substring(Batch.SW_SIZE.length()) : "";
+                if (dv.equals(c.value(date)) && sv.equals(c.value(size))) return;   // הרכיב קורא גם בבנייה — שורה שלא שונתה נשארת אות באות
+                c.set(date, dv);
+                c.set(size, sv);
+                changed(c, live);
+            }
+        }));
+        return true;
+    }
+
+    /** פועל בעברית: מה שאחריו; "פתח" — גם בחירה (מסך, רשימה, תיקייה, תפריט). */
+    private void verbField(final Commands.Def d, String line, final EditText live) {
+        panel.addView(Ui.label(this, Words.Def.P_ARG));
+        TextView h = Ui.info(this);
+        h.setPadding(0, 0, 0, 0);
+        h.setText(Words.Verb.usage(d.name));
+        panel.addView(h);
+        String rest = line.length() > d.name.length() ? line.substring(d.name.length()).trim() : "";
+        final EditText e = Ui.field(this, rest, "");
+        e.setTextDirection(View.TEXT_DIRECTION_FIRST_STRONG);
+        e.addTextChangedListener(watcher(new Runnable() {
+            @Override
+            public void run() {
+                if (selfEdit) return;
+                String now = (d.name + " " + e.getText().toString().trim()).trim();
+                selfEdit = true;
+                live.setText(Bidi.mark(now));
+                selfEdit = false;
+                if (sel >= 0) replaceRow(now);
+            }
+        }));
+        panel.addView(e);
+        if (!d.name.equals(Verbs.OPEN)) return;
+        panel.addView(button(Words.Ed.PICK, new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                TopRow.pick(BatchEditScreen.this, Words.Top.S_BATCH, new TopRow.Chosen() {
+                    @Override
+                    public void ok(String icon, String name, String act) {
+                        if (act.startsWith(d.name + " ")) e.setText(act.substring(d.name.length() + 1));
+                        else live.setText(Bidi.mark(act));
+                    }
+                });
+            }
+        }));
+    }
+
+    // ---------- שינויים בקובץ ----------
+
+    /** מחליף את השורה הנבחרת בעורך. */
+    private void replaceRow(String now) {
+        if (sel < 0 || sel >= rows.size()) return;
+        Row r = rows.get(sel);
+        selfEdit = true;
+        text.getText().replace(r.start, r.end, Bidi.mark(now));
+        selfEdit = false;
+        computeRows();
+        renderMenu();
+        highlight();
+    }
+
+    private void insertNew(Commands.Def d, EditText live) {
+        String line = Bidi.strip(live.getText().toString()).trim();
+        if (d.family == Commands.Family.HEADER) {
+            if (plain().contains(Batch.AS_IF2) || plain().contains(Batch.AS_IF)) {
+                Ui.toast(this, Words.Ed.ALREADY_AS_IF);
+                return;
+            }
+            selfEdit = true;
+            text.getText().insert(0, Batch.AS_IF2 + "\n");
+            selfEdit = false;
+            computeRows();
+            select(0);
+            return;
+        }
+        if (draft != null) {
+            List<Commands.Param> miss = CmdLine.parse(line).missing();
+            if (!miss.isEmpty()) {
+                StringBuilder sb = new StringBuilder();
+                for (Commands.Param p : miss) sb.append(sb.length() > 0 ? ", " : "").append(p.label);
+                Ui.toast(this, Words.Ed.fillFirst(sb.toString()));
+                return;
+            }
+        }
+        insertLines(lines(line));
+    }
+
+    /** שורות אחרי השורה של העוגן (או בסוף), והראשונה נבחרת. */
+    private void insertLines(List<String> ls) {
+        Editable e = text.getText();
+        int at = anchor >= 0 && anchor < rows.size() ? rows.get(anchor).end : e.length();
+        StringBuilder sb = new StringBuilder();
+        boolean empty = Bidi.strip(e.toString()).trim().isEmpty();
+        for (String l : ls) sb.append(sb.length() > 0 || !empty ? "\n" : "").append(Bidi.mark(l));
+        if (empty) {
+            selfEdit = true;
+            e.replace(0, e.length(), sb.toString());
+            selfEdit = false;
+        } else {
+            selfEdit = true;
+            e.insert(at, sb.toString());
+            selfEdit = false;
+        }
+        int first = empty ? 0 : at + 1;
+        computeRows();
+        int idx = 0;
+        for (int i = 0; i < rows.size(); i++) if (rows.get(i).start <= first) idx = i;
+        draft = null;
+        draftDef = null;
+        select(idx);
+    }
+
+    private void insertAtCursor(String s) {
+        EditText e = lastField != null && lastField.isShown() ? lastField : text;
+        int st = Math.max(e.getSelectionStart(), 0), en = Math.max(e.getSelectionEnd(), 0);
+        e.getText().replace(Math.min(st, en), Math.max(st, en), s);
+        if (s.equals("\"\"")) e.setSelection(Math.min(st, en) + 1);
+    }
+
+    private void move(int dir) {
+        int other = sel + dir;
+        if (sel < 0 || other < 0 || other >= rows.size()) return;
+        Row a = rows.get(Math.min(sel, other)), b = rows.get(Math.max(sel, other));
+        Editable e = text.getText();
+        String ta = e.subSequence(a.start, a.end).toString(), tb = e.subSequence(b.start, b.end).toString();
+        selfEdit = true;
+        e.replace(b.start, b.end, ta);                                         // קודם המאוחרת — הגבולות של הראשונה לא זזים
+        e.replace(a.start, a.end, tb);
+        selfEdit = false;
+        computeRows();
+        select(other);
+    }
+
+    private void removeRow() {
+        if (sel < 0 || sel >= rows.size()) return;
+        Row r = rows.get(sel);
+        Editable e = text.getText();
+        int st = r.start, en = r.end < e.length() ? r.end + 1 : r.end;
+        if (en == r.end && st > 0) st--;                                       // השורה האחרונה — גם המעבר שלפניה
+        selfEdit = true;
+        e.delete(st, en);
+        selfEdit = false;
+        computeRows();
+        sel = -1;
+        anchor = Math.min(anchor, rows.size() - 1);
+        renderMenu();
+        highlight();
+        renderPanel();
+    }
+
+    private void programHeader() {
+        String t = text.getText().toString();
+        if (Program.parse(t).isProgram()) {
+            Ui.toast(this, Words.Cmd.ALREADY_PROGRAM);
+            return;
+        }
+        selfEdit = true;
+        text.getText().insert(0, Program.ICON + " ▶\n" + Program.NAME + " " + Text.stem(file.getName()) + "\n" + Program.WHY + " \n");
+        selfEdit = false;
+        computeRows();
+        renderMenu();
+        highlight();
+    }
+
+    // ---------- הדמיה ----------
+
+    /** מה השורה תעשה — מהמנוע עצמו (Batch.plan על כל הקובץ), ברקע (בדיקת באגים 9–10). */
+    private void simulate() {
+        if (sel < 0 || result == null) return;
+        final int line = rows.get(sel).number;
+        final String all = plain();
+        final TextView out = result;
+        out.setTextColor(Ui.SUB);
+        out.setText(Words.Ed.SIMULATING);
+        final Library lib = Library.get(this);
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                String msg;
+                boolean bad = false;
+                try {
+                    Batch.Plan plan = Batch.plan(all, file.getParentFile(), vars, lib);
+                    Batch.Step step = null;
+                    for (Batch.Step s : plan.steps) if (s.line == line) step = s;
+                    if (step == null) msg = Words.Ed.NO_STEP;
+                    else if (step.error != null) {
+                        msg = "⚠ " + step.error;
+                        bad = true;
+                    } else {
+                        StringBuilder sb = new StringBuilder(step.describe == null ? "" : step.describe);
+                        int shown = Math.min(3, step.files.size());
+                        for (int i = 0; i < shown; i++) sb.append("\n · ").append(new File(step.files.get(i)).getName());
+                        if (step.files.size() > shown) sb.append("\n · ").append(Words.andMore(step.files.size() - shown));
+                        msg = sb.toString();
+                    }
+                } catch (Throwable t) {
+                    Log.e("הדמיה של שורה", t);
+                    msg = "⚠ " + t;
+                    bad = true;
                 }
+                final String m = msg;
+                final boolean b = bad;
+                runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        if (out != result) return;                            // בינתיים נבחרה שורה אחרת
+                        out.setTextColor(b ? Ui.RED : Ui.TEXT);
+                        out.setText(m);
+                    }
+                });
+            }
+        }).start();
+    }
+
+    // ---------- נפוצות ----------
+
+    private void saveTemplate() {
+        if (sel < 0) return;
+        final String line = rows.get(sel).text;
+        Commands.Def d = defOf(line);
+        Ui.askText(this, Words.Ed.TPL_NAME, d == null ? "" : d.he, "", new Ui.Text1() {
+            @Override
+            public void ok(String name) {
+                if (CmdTemplates.save(name, lines(line)) != null) Ui.toast(BatchEditScreen.this, Words.Ed.TPL_SAVED);
+                else Ui.toast(BatchEditScreen.this, Words.SAVE_FAILED);
             }
         });
     }
+
+    /** תבנית: המקומות הפתוחים נשאלים כולם לפני ההכנסה; ביטול — לא נכנס כלום (בדיקת באגים 16). */
+    private void useTemplate(final CmdTemplates.Tpl t) {
+        if (sel >= 0) anchor = sel;
+        final List<String> holes = CmdTemplates.holes(t.lines);
+        if (holes.isEmpty()) {
+            templatesOff();
+            insertLines(t.lines);
+            return;
+        }
+        LinearLayout box = Ui.form(this);
+        final List<EditText> fields = new ArrayList<EditText>();
+        for (final String h : holes) {
+            box.addView(Ui.label(this, h));
+            final EditText e = Ui.field(this, "", "");
+            e.setTextDirection(View.TEXT_DIRECTION_LTR);
+            Bidi.watch(e);
+            box.addView(e);
+            fields.add(e);
+            box.addView(button(Words.Cmd.PICK, new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    FolderPicker.choose(BatchEditScreen.this, h, true, new FolderPicker.Picked() {
+                        @Override public void ok(File folder) { e.setText(BatchLine.toVar(folder.getAbsolutePath(), vars)); }
+                    });
+                }
+            }));
+        }
+        Ui.askForm(this, Words.Ed.FILL + ": " + t.name, box, new Runnable() {
+            @Override
+            public void run() {
+                Map<String, String> v = CmdTemplates.empty(holes);
+                for (int i = 0; i < holes.size(); i++) v.put(holes.get(i), Bidi.strip(fields.get(i).getText().toString()));
+                templatesOff();
+                insertLines(CmdTemplates.fill(t.lines, v));
+            }
+        });
+    }
+
+    private void templatesOff() {
+        templates = false;
+        modeBtn.setText(Words.Ed.TEMPLATES);
+    }
+
+    // ---------- שמירה ----------
 
     /** שמירה של הקובץ שהמשתמש עורך (כפתור מפורש — הוא השינוי שביקש). */
     private boolean save() {
-        String now = Bidi.strip(text.getText().toString());   // 204: נשמר בלי סימני הכיוון
+        String now = plain();                                                  // 204: נשמר בלי סימני הכיוון
         if (now.equals(saved)) return true;
         try {
             Files.writeAtomic(file, now);
@@ -5192,7 +5751,7 @@ public class BatchEditScreen extends Activity {
 
     @Override
     public void onBackPressed() {
-        if (!Bidi.strip(text.getText().toString()).equals(saved)) {
+        if (!plain().equals(saved)) {
             Ui.ask(this, Words.Cmd.ASK_SAVE, Words.Cmd.fileNamed(file.getName()), null, null, Words.SAVE, new Runnable() {
                 @Override
                 public void run() {
@@ -11774,6 +12333,7 @@ public class Home extends Activity {
         Reserved.ensureMode(Examples.MODE);                                   // 1.17.0: "שמור לתוכנה" — ברירות המחדל
         Reserved.ensureBackup(Modes.current());                               // 1.22.3: "שמור לתוכנה / גיבוי" גם באופן הפעיל
         Mirror.rebuild();                                                     // 1.17.5: העותק הקריא — תמיד מעודכן בפתיחה
+        CmdTemplates.writeTest(this);                                         // 1.23.0: קובץ הבדיקה (בגרסה הבאה — נמחק)
         lib = Library.get(this);
         setTitle(Words.Main.APP_NAME);
 
@@ -33762,24 +34322,10 @@ public final class Words {
             return "אין קובץ שמתאים ל־" + pattern;
         }
 
-        public static final String START_TARGET = "תיקייה, קובץ, או תבנית (החדש ביותר)";
-
-        // העורך
-        public static final String SAVE_BTN = "💾 שמירה", LINE_IN_FORM = "✎ השורה בטופס",
-                PREVIEW_AND_RUN = "▶ תצוגה מקדימה והרצה", PICK = "📁 בחירה",
-                SHARE_BTN = "📤 שיתוף", DEST_OR_SHARE = "יעד — תיקייה, או שיתוף למכשיר אחר",   // 203
-                EDITOR_HINT = "פקודה — נגיעה בכפתור למטה פותחת טופס · \"✎ השורה בטופס\" — לשורה שהסמן בה",
-                TO_FORM = "   ·   ✎ לטופס", EMPTY_LINE = "השורה ריקה — בחר פקודה בכפתורים למטה",
-                NO_FORM = "לשורה הזו אין טופס", THE_LINE = "השורה:", ASK_SAVE = "לשמור את השינויים?",
-                DONT_SAVE = "בלי לשמור", REPLACE_NOTE = " (הקודם לסל)",
-                SRC_FOLDER = "מקור — תיקייה", MASK = "קבצים — תבנית (ריק = התיקייה עצמה / קובץ אחד)",
-                DEST_FOLDER = "יעד — תיקייה", THE_FILE = "הקובץ", NEW_NAME = "שם חדש", FOLDER = "תיקייה",
-                RD_ALL = "/S — גם אם אינה ריקה (הכול לסל המחזור)", THE_MESSAGE = "ההודעה", THE_REMARK = "ההערה",
-                OTHER_SWITCHES = "מתגים נוספים (ROBOCOPY וכו')";
-
-        public static String formTitle(boolean isNew, String cmd) {
-            return (isNew ? "פקודה חדשה: " : "עריכת השורה: ") + cmd;
-        }
+        // העורך (1.23.0: הטופס הישן יצא — הטקסטים של הממשק החדש ב-Words.Ed)
+        public static final String SAVE_BTN = "💾 שמירה", PREVIEW_AND_RUN = "▶ תצוגה מקדימה והרצה", PICK = "📁 בחירה",
+                SHARE_BTN = "📤 שיתוף", ASK_SAVE = "לשמור את השינויים?",   // 203
+                DONT_SAVE = "בלי לשמור", REPLACE_NOTE = " (הקודם לסל)";
 
         /** ההסבר בראש קובץ פקודות חדש. התחביר (פקודות, משתנים, מתגים, דוגמה) — מ-Batch. */
         public static String template(String commands, String vars, String filters, String ask, String skip, String example) {
@@ -35240,8 +35786,48 @@ public final class Words {
                 H_COMPAT = "תחביר ישן (XCOPY / ROBOCOPY) — מובן, לא מוצג בטופס";
         /** במקום "<מה לפתוח>" בשורת השימוש של START. */
         public static final String U_START = "<תיקייה | קובץ | תבנית, למשל vfm-*.apk>";
+        /** 1.23.0: השם הקצר בעברית — לתפריט ולחיפוש ("העתק" מוצא את COPY). השורה בקובץ — כמו שהשפה מכירה. */
+        public static final String N_COPY = "העתק", N_MOVE = "העבר", N_DEL = "מחק", N_REN = "שנה שם", N_MD = "צור תיקייה",
+                N_RD = "הסר תיקייה", N_COMP = "השווה", N_START = "פתח בסוף", N_ECHO = "הודעה", N_REM = "הערה";
         /** ערך של מתג בשורת השימוש. */
         public static final String V_FILE = "<קובץ>", V_TIME = "<זמן>", V_LIST = "<רשימה>";
+    }
+
+    /** 1.23.0: ממשק הפקודות (BatchEditScreen) — claude/mimshak-pkudot.md. */
+    public static final class Ed {
+        private Ed() { }
+
+        public static final String FILTER_HINT = "חיפוש פקודה: העתק או COPY", IN_FILE = "בקובץ", MORE = "עוד פקודות",
+                TEMPLATES = "★ נפוצות", COMMANDS = "☰ פקודות", TPL_SYS = "של התוכנה", TPL_MINE = "שלי",
+                ADVANCED = "מתקדם", SIMULATE = "▶ הדמיה", SIMULATING = "מחשב…", REMOVE = "הסרה", UP = "▲", DOWN = "▼",
+                SAVE_TPL = "★ שמור כנפוצה", TPL_NAME = "שם לפקודה הנפוצה", TPL_SAVED = "נשמרה בנפוצות",
+                NEW = "חדשה — עוד לא בקובץ", THE_LINE = "השורה בקובץ (אפשר גם לערוך כאן)", THE_FILE = "הקובץ הפתוח",
+                NEED_COMPARE = "⚠ %רק-במקור% / %רק-ביעד% צריכים שורת COMP לפניהם",
+                NOT_UNDERSTOOD = "שורה שהממשק לא מכיר — נשמרת כמו שהיא. אפשר לערוך אותה בקובץ הפתוח",
+                ONE_OPEN = "⚠ רק פקודת פתיחה אחת נפתחת בסוף — האחרונה", NO_STEP = "השורה לא מבוצעת (הערה או כותרת)",
+                TAG_HEADER = "כותרת", TAG_UNKNOWN = "?", NONE = "—", ON = "פעיל", PICK = "בחירה…", FILL = "השלמת התבנית",
+                VARS = "משתנים", EMPTY_FILE = "הקובץ ריק — בחר פקודה מהרשימה, והיא תיכנס לכאן",
+                ALREADY_AS_IF = "יש כבר הדמיה בראש הקובץ", PICK_FIRST = "בחר שורה בתפריט קודם";
+
+        public static String lineN(int n) {
+            return "שורה " + n + " בקובץ";
+        }
+
+        public static String insertAfter(int n) {
+            return n <= 0 ? "＋ הכנס לקובץ" : "＋ הכנס לקובץ אחרי שורה " + n;
+        }
+
+        public static String fillFirst(String what) {
+            return "מלא קודם: " + what;
+        }
+
+        public static String advanced(int n) {
+            return "▾ " + ADVANCED + " (" + n + ")";
+        }
+
+        public static String lines(int n) {
+            return n == 1 ? "שורה אחת" : n + " שורות";
+        }
     }
 
     /** 1.13.0: שורת "למה" (Why) */
@@ -36316,6 +36902,7 @@ public final class Tests {
         run("גרסה 1.21.0 — מצב בתאריך: תנאי חיפוש ושחזור (COPY /מצב:)", new Runnable() { public void run() { v1210(); } });
         run("גרסה 1.22.0 — COMP /רשימה: — רשימה (עם חכמות, תיקיות מתעדכנות ותתי־רשימות) כמקור, מכמה כוננים", new Runnable() { public void run() { v1220(); } });
         run("גרסה 1.22.5 — ההגדרה האחת של שפת הפקודות (Commands)", new Runnable() { public void run() { v1225(); } });
+        run("גרסה 1.23.0 — ממשק הפקודות: שורה לפי ההגדרה (CmdLine), פקודות נפוצות, קובץ הבדיקה", new Runnable() { public void run() { v1230(); } });
 
         System.out.println("בדיקות: " + passed + " עברו · " + failed + " נכשלו");
         for (String f : failures) System.out.println("  ✗ " + f);
@@ -40143,6 +40730,109 @@ public final class Tests {
 
     /** 1.13.1 — תיקוני באגים. */
 
+    /** 1.23.0: CmdLine — שינוי פרמטר אחד בלי לאבד דבר; התבניות; קובץ הבדיקה. */
+    private static void v1230() {
+        Commands.Def cp = Commands.get("COPY");
+        Commands.Param src = cp.positional().get(0), dst = cp.positional().get(1), keep = cp.switchFor("/S"),
+                taken = cp.switchFor(Batch.SW_TAKEN), journal = cp.switchFor(Batch.SW_JOURNAL), limit = cp.switchFor(Batch.SW_LIMIT),
+                date = cp.switchFor("/" + Batch.SW_DATE);
+        String raw = "COPY   \"%פנימי%\\א ב\"  x /Q";
+        check("1.23.0: שורה שלא שונתה — אות באות", CmdLine.parse(raw).text().equals(raw));
+        CmdLine c = CmdLine.parse(raw);
+        check("1.23.0: ערכים לפי מקום", c.value(src).equals("%פנימי%\\א ב") && c.value(dst).equals("x"));
+        c.set(dst, "%כרטיס%\\ג ד");
+        check("1.23.0: שינוי יעד — מרכאות, ו/Q נשאר", c.text().equals("COPY \"%פנימי%\\א ב\" \"%כרטיס%\\ג ד\" /Q"));
+        CmdLine d = CmdLine.parse("COPY a b /תאריך:שבוע");
+        d.set(keep, "1");
+        check("1.23.0: מתג חדש — במקומו לפי ההגדרה", d.text().equals("COPY a b /S /תאריך:שבוע"));
+        d.set(journal, "x y.txt");
+        check("1.23.0: ערך עם רווח — במרכאות", d.text().equals("COPY a b /S /יומן:\"x y.txt\" /תאריך:שבוע"));
+        check("1.23.0: הערך חוזר כמו שנקבע", CmdLine.parse(d.text()).value(journal).equals("x y.txt"));
+        d.set(keep, "");
+        check("1.23.0: מתג כבוי — יוצא", d.text().equals("COPY a b /יומן:\"x y.txt\" /תאריך:שבוע"));
+        CmdLine y = CmdLine.parse("COPY a b /Y");
+        check("1.23.0: /Y = להחליף", y.value(taken).equals(Batch.TAKEN_REPLACE));
+        y.set(taken, Batch.TAKEN_SKIP);
+        check("1.23.0: /Y ← /תפוס:לדלג (באותו מקום)", y.text().equals("COPY a b " + Batch.SW_TAKEN + Batch.TAKEN_SKIP));
+        check("1.23.0: /מסלול = /S", CmdLine.parse("COPY a b " + Batch.SW_KEEP).value(keep).equals("1"));
+        CmdLine l = CmdLine.parse("MOVE %רק-ביעד% h /עד:20%");
+        Commands.Param mlimit = Commands.get("MOVE").switchFor(Batch.SW_LIMIT);
+        check("1.23.0: אחוז", l.value(mlimit).equals("20"));
+        l.set(mlimit, "30");
+        check("1.23.0: אחוז — עם %", l.text().equals("MOVE %רק-ביעד% h /עד:30%") && l.usesCompare() && l.destructive());
+        Commands.Def comp = Commands.get("COMP");
+        CmdLine k = CmdLine.parse("COMP /רשימה:גיבוי \"%כרטיס%\\גיבוי\\נוכחי\"");
+        check("1.23.0: COMP /רשימה: — המקור לא רלוונטי, היעד ראשון",
+                k.slot(comp.positional().get(0)) < 0 && k.value(comp.positional().get(1)).equals("%כרטיס%\\גיבוי\\נוכחי") && k.missing().isEmpty());
+        CmdLine n = CmdLine.of(cp);
+        check("1.23.0: פקודה חדשה — חסרים מקור ויעד", n.missing().size() == 2 && n.text().equals("COPY"));
+        n.set(dst, "b");
+        check("1.23.0: יעד לפני מקור — מקום ריק למקור", n.text().equals("COPY \"\" b"));
+        n.set(src, "a");
+        check("1.23.0: ואז המקור במקומו", n.text().equals("COPY a b") && n.missing().isEmpty());
+        n.set(limit, "20");
+        n.set(date, "שבוע");
+        n.set(taken, Batch.TAKEN_STOP);
+        check("1.23.0: כמה מתגים — בסדר ההגדרה", n.text().equals("COPY a b " + Batch.SW_TAKEN + Batch.TAKEN_STOP + " /עד:20% /תאריך:שבוע"));
+        Commands.Param txt = Commands.get("ECHO").positional().get(0);
+        CmdLine e = CmdLine.parse("ECHO שלום  עולם");
+        check("1.23.0: ECHO — הטקסט כמו שהוא", e.value(txt).equals("שלום  עולם"));
+        e.set(txt, "חדש");
+        check("1.23.0: ECHO — שינוי", e.text().equals("ECHO חדש"));
+        check("1.23.0: שורה לא מוכרת — בלי הגדרה, נשמרת", CmdLine.parse("FORMAT C:").def == null && CmdLine.parse("FORMAT C:").text().equals("FORMAT C:"));
+        check("1.23.0: פועל — לא פקודת קבצים", CmdLine.parse("פתח מסך חיפוש").def == null);
+        check("1.23.0: חיפוש בתפריט — העתק / CO / שינוי", Commands.matches(cp, "העתק") && Commands.matches(cp, "co")
+                && Commands.matches(Commands.get("REN"), "שנה") && !Commands.matches(cp, "מחק"));
+
+        // התבניות
+        String src0 = System.getProperty("vfm.src");
+        String tplText = "", testText = "";
+        try {
+            tplText = Files.readUtf8(new File(src0, "assets/commands/templates.txt"));
+            testText = Files.readUtf8(new File(src0, "assets/commands/test-1.23.0.vbat"));
+        } catch (Throwable t) {
+            check("1.23.0: קבצי ההתקנה נקראו", false);
+        }
+        List<CmdTemplates.Tpl> ts = CmdTemplates.parse(tplText);
+        check("1.23.0: תבניות התוכנה", ts.size() >= 8);
+        check("1.23.0: גיבוי — מקומות פתוחים", CmdTemplates.holes(ts.get(0).lines).equals(Arrays.asList("יעד", "מקור")));
+        check("1.23.0: /תאריך:<שנה — לא מקום פתוח", CmdTemplates.holes(Arrays.asList("COPY a b /תאריך:<שנה /גודל:>10MB")).isEmpty());
+        for (CmdTemplates.Tpl t : ts) {
+            java.util.Map<String, String> v = CmdTemplates.empty(CmdTemplates.holes(t.lines));
+            for (String h : v.keySet()) v.put(h, "%פנימי%\\x");
+            List<String> filled = CmdTemplates.fill(t.lines, v);
+            boolean ok = CmdTemplates.holes(filled).isEmpty();
+            for (String fl : filled) ok &= CmdLine.parse(fl).def != null;
+            check("1.23.0: תבנית — ממולאת ומוכרת: " + t.name, ok);
+        }
+        File tr = drive("נפוצות");
+        CmdTemplates.testRoot = tr;
+        try {
+            File a = CmdTemplates.save("שלי", Arrays.asList("COPY a b")), b = CmdTemplates.save("שלי", Arrays.asList("MD x"));
+            List<CmdTemplates.Tpl> mine = CmdTemplates.mine();
+            check("1.23.0: שלי — נשמרה, ושם תפוס מקבל מספר", a != null && b != null && !a.equals(b) && mine.size() == 2
+                    && mine.get(0).lines.get(0).equals("COPY a b"));
+            check("1.23.0: שם עם תווים אסורים", CmdTemplates.save("א/ב", Arrays.asList("MD x")) != null);
+        } finally {
+            CmdTemplates.testRoot = null;
+        }
+        // קובץ הבדיקה — כל שורה מוכרת, וכל שורת קבצים נשארת אות באות
+        boolean all = true, round = true, asIf = false;
+        for (String line : testText.replace("\r", "").split("\n")) {
+            String t = line.trim();
+            if (t.isEmpty()) continue;
+            if (t.equals(Batch.AS_IF2)) asIf = true;
+            boolean known = t.equals(Batch.AS_IF2) || Verbs.isVerb(t) || CmdLine.parse(t).def != null;
+            all &= known;
+            if (CmdLine.parse(t).def != null) round &= CmdLine.parse(t).text().equals(t);
+        }
+        check("1.23.0: קובץ הבדיקה — כל השורות מוכרות", all);
+        check("1.23.0: קובץ הבדיקה — בהדמיה", asIf);
+        check("1.23.0: קובץ הבדיקה — כל פקודות הקבצים בו", testText.contains("COPY") && testText.contains("MOVE") && testText.contains("DEL")
+                && testText.contains("REN") && testText.contains("MD") && testText.contains("RD") && testText.contains("COMP")
+                && testText.contains("START") && testText.contains("ECHO") && testText.contains("REM") && round);
+    }
+
     /** 1.22.5: ההגדרה האחת — שלמה, תואמת למנוע, וכל פרמטר עם שם והסבר. */
     private static void v1225() {
         check("1.22.5: פקודות הקבצים — אותן ובאותו סדר",
@@ -42555,6 +43245,8 @@ final class Commands {
     /** פקודה אחת. */
     static final class Def {
         final String name;
+        /** השם הקצר בעברית — לתפריט ולחיפוש (בפעלים — הפועל עצמו). */
+        final String he;
         final List<String> aliases;
         final Family family;
         /** מה היא עושה (Words.Def). */
@@ -42563,8 +43255,9 @@ final class Commands {
         /** צורה נוספת של אותה פקודה ("COMP /רשימה:<רשימה> <יעד>") — לשורת השימוש. */
         final String alternative;
 
-        Def(String name, String[] aliases, Family family, String what, Param[] params, String alternative) {
+        Def(String name, String he, String[] aliases, Family family, String what, Param[] params, String alternative) {
             this.name = name;
+            this.he = he;
             this.aliases = Collections.unmodifiableList(Arrays.asList(aliases == null ? new String[0] : aliases));
             this.family = family;
             this.what = what;
@@ -42658,12 +43351,13 @@ final class Commands {
                 sw(Batch.SW_LIMIT, null, Type.PERCENT, Words.Def.P_LIMIT, Words.Def.H_LIMIT)));
         if (state) ps.add(sw(Batch.SW_STATE, null, Type.TIME, Words.Def.P_STATE, Words.Def.H_STATE));
         ps.addAll(filters());
-        return new Def(name, null, Family.FILE, name.equals("COPY") ? Words.Def.W_COPY : Words.Def.W_MOVE,
+        return new Def(name, name.equals("COPY") ? Words.Def.N_COPY : Words.Def.N_MOVE, null, Family.FILE,
+                name.equals("COPY") ? Words.Def.W_COPY : Words.Def.W_MOVE,
                 ps.toArray(new Param[0]), null);
     }
 
     private static Def verb(String name, String what) {
-        return new Def(name, null, Family.VERB, what,
+        return new Def(name, name, null, Family.VERB, what,
                 new Param[]{pos(Type.TEXT, Words.Def.P_ARG, Words.Verb.usage(name))}, null);
     }
 
@@ -42671,26 +43365,26 @@ final class Commands {
     static final List<Def> ALL = Collections.unmodifiableList(Arrays.asList(
             transfer("COPY", Words.Def.H_COPY_SRC, true),
             transfer("MOVE", Words.Def.H_MOVE_SRC, false),
-            new Def("DEL", new String[]{"ERASE"}, Family.FILE, Words.Def.W_DEL,
+            new Def("DEL", Words.Def.N_DEL, new String[]{"ERASE"}, Family.FILE, Words.Def.W_DEL,
                     list(pos(Type.FILES, Words.Def.P_FILES, Words.Def.H_DEL_SRC), filters()), null),
-            new Def("REN", new String[]{"RENAME"}, Family.FILE, Words.Def.W_REN, list(
+            new Def("REN", Words.Def.N_REN, new String[]{"RENAME"}, Family.FILE, Words.Def.W_REN, list(
                     pos(Type.PATH, Words.Def.P_FILE, Words.Def.H_REN_SRC),
                     pos(Type.NAME, Words.Def.P_NEW_NAME, Words.Def.H_NEW_NAME)), null),
-            new Def("MD", new String[]{"MKDIR"}, Family.FILE, Words.Def.W_MD,
+            new Def("MD", Words.Def.N_MD, new String[]{"MKDIR"}, Family.FILE, Words.Def.W_MD,
                     list(pos(Type.PATH, Words.Def.P_FOLDER, Words.Def.H_MD)), null),
-            new Def("RD", new String[]{"RMDIR"}, Family.FILE, Words.Def.W_RD, list(
+            new Def("RD", Words.Def.N_RD, new String[]{"RMDIR"}, Family.FILE, Words.Def.W_RD, list(
                     pos(Type.PATH, Words.Def.P_FOLDER, Words.Def.H_RD),
                     sw("/S", null, Type.FLAG, Words.Def.P_NOT_EMPTY, Words.Def.H_NOT_EMPTY)), null),
-            new Def("COMP", null, Family.FILE, Words.Def.W_COMP, list(
+            new Def("COMP", Words.Def.N_COMP, null, Family.FILE, Words.Def.W_COMP, list(
                     pos(Type.PATH, Words.Def.P_SOURCE, Words.Def.H_COMP_SRC),
                     pos(Type.PATH, Words.Def.P_DEST, Words.Def.H_COMP_DEST),
                     hidden(),
                     sw(Batch.SW_LIST, null, Type.LIST, Words.Def.P_LIST, Words.Def.H_LIST)),
                     "COMP " + Batch.SW_LIST + "<" + Words.Def.P_LIST + "> <" + Words.Def.P_DEST + ">"),
-            new Def("START", null, Family.FILE, Words.Def.W_START,
+            new Def("START", Words.Def.N_START, null, Family.FILE, Words.Def.W_START,
                     list(pos(Type.PATH, Words.Def.P_WHAT_OPEN, Words.Def.H_START, Words.Def.U_START)), null),
-            new Def("ECHO", null, Family.FILE, Words.Def.W_ECHO, list(pos(Type.TEXT, Words.Def.P_TEXT, Words.Def.H_TEXT)), null),
-            new Def("REM", null, Family.FILE, Words.Def.W_REM, list(pos(Type.TEXT, Words.Def.P_TEXT, Words.Def.H_TEXT)), null),
+            new Def("ECHO", Words.Def.N_ECHO, null, Family.FILE, Words.Def.W_ECHO, list(pos(Type.TEXT, Words.Def.P_TEXT, Words.Def.H_TEXT)), null),
+            new Def("REM", Words.Def.N_REM, null, Family.FILE, Words.Def.W_REM, list(pos(Type.TEXT, Words.Def.P_TEXT, Words.Def.H_TEXT)), null),
             verb(Verbs.OPEN, Words.Def.W_OPEN),
             verb(Verbs.CREATE, Words.Def.W_CREATE),
             verb(Verbs.UPDATE, Words.Def.W_UPDATE),
@@ -42698,7 +43392,7 @@ final class Commands {
             verb(Verbs.BACK, Words.Def.W_BACK),
             verb(Verbs.RUN, Words.Def.W_RUN),
             verb(Verbs.ADD, Words.Def.W_ADD),
-            new Def(Batch.AS_IF2, new String[]{Batch.AS_IF}, Family.HEADER, Words.Def.W_AS_IF, new Param[0], null)));
+            new Def(Batch.AS_IF2, Batch.AS_IF2, new String[]{Batch.AS_IF}, Family.HEADER, Words.Def.W_AS_IF, new Param[0], null)));
 
     // ---------- שאילתות ----------
 
@@ -42726,6 +43420,16 @@ final class Commands {
         return out.toArray(new String[0]);
     }
 
+    /** 1.23.0: לחיפוש בתפריט — שם, שם נרדף, השם בעברית, או מילה מההסבר. ריק — הכול. */
+    static boolean matches(Def d, String query) {
+        String q = query == null ? "" : query.trim();
+        if (q.isEmpty()) return true;
+        String u = q.toUpperCase(Locale.ROOT);
+        if (d.name.startsWith(u) || d.name.startsWith(q) || d.he.startsWith(q)) return true;
+        for (String a : d.aliases) if (a.startsWith(u) || a.startsWith(q)) return true;
+        return q.length() >= 2 && d.what.contains(q);
+    }
+
     static List<Def> of(Family f) {
         List<Def> out = new ArrayList<Def>();
         for (Def d : ALL) if (d.family == f) out.add(d);
@@ -42738,3 +43442,412 @@ final class Commands {
         return sb.toString();
     }
 }
+===== קובץ: src/com/tikiyot/vfm/CmdLine.java =====
+package com.tikiyot.vfm;
+
+// 1.23.0: שורת פקודה אחת לממשק הפקודות — קריאה ושינוי של פרמטר אחד לפי ההגדרה (Commands), בלי לאבד דבר
+// (claude/mimshak-pkudot.md, בדיקת באגים 5–8): מתג שלא מוכר, משתנה, מרכאות — נשארים; שורה שלא שונתה — נשארת אות באות;
+// פרמטר חדש — במקום שלו לפי הסדר שבהגדרה; שורה קיימת — לא מסודרת מחדש. בלי ממשק — נבדק.
+// אחראי: השורה כטקסט ↔ הערכים. אסור לו: לבדוק תקינות או להריץ (זה Batch).
+
+import java.util.ArrayList;
+import java.util.List;
+
+final class CmdLine {
+
+    /** המילה הראשונה כמו שנכתבה. */
+    final String word;
+    /** ההגדרה (משפחת הקבצים), או null — שורה שהממשק לא מכיר. */
+    final Commands.Def def;
+    /** השורה כמו שנכתבה — כל עוד לא שונתה. */
+    private final String raw;
+    private boolean changed;
+    /** מה שאחרי הפקודה, בלי מרכאות (כמו Batch.tokens). */
+    private final List<String> tokens = new ArrayList<String>();
+    /** ECHO / REM — הטקסט כמו שהוא. */
+    private String rest = "";
+
+    private CmdLine(String word, Commands.Def def, String raw) {
+        this.word = word;
+        this.def = def;
+        this.raw = raw;
+    }
+
+    static CmdLine parse(String line) {
+        String l = Bidi.strip(line == null ? "" : line).trim();
+        List<String> tk = Batch.tokens(l);
+        String w = tk.isEmpty() ? "" : tk.get(0);
+        Commands.Def d = Commands.get(w);
+        if (d != null && d.family != Commands.Family.FILE) d = null;
+        CmdLine c = new CmdLine(w, d, l);
+        if (isText(d)) c.rest = l.length() > w.length() ? l.substring(w.length()).trim() : "";
+        else for (int i = 1; i < tk.size(); i++) c.tokens.add(tk.get(i));
+        return c;
+    }
+
+    /** פקודה חדשה, בלי ערכים. */
+    static CmdLine of(Commands.Def d) {
+        CmdLine c = new CmdLine(d.name, d, d.name);
+        c.changed = true;
+        return c;
+    }
+
+    private static boolean isText(Commands.Def d) {
+        return d != null && (d.name.equals("ECHO") || d.name.equals("REM"));
+    }
+
+    /** השורה. לא שונתה — כמו שנכתבה. */
+    String text() {
+        if (!changed) return raw;
+        if (isText(def)) return rest.isEmpty() ? word : word + " " + rest;
+        StringBuilder sb = new StringBuilder(word);
+        for (String t : tokens) sb.append(' ').append(quote(t));
+        return sb.toString();
+    }
+
+    private static String quote(String t) {
+        if (t.isEmpty()) return "\"\"";
+        if (!t.contains(" ") && !t.contains("\t")) return t;
+        int c = t.indexOf(':');
+        if (Batch.isSwitch(t) && c > 0) return t.substring(0, c + 1) + "\"" + t.substring(c + 1) + "\"";
+        return "\"" + t + "\"";
+    }
+
+    // ---------- פרמטר לפי מקום ----------
+
+    /** COMP /רשימה: — אז המקור הוא הרשימה, והיעד הוא הפרמטר הראשון. */
+    private boolean listInsteadOfSource() {
+        if (def == null || !def.name.equals("COMP")) return false;
+        for (String t : tokens) if (t.startsWith(Batch.SW_LIST)) return true;
+        return false;
+    }
+
+    /** המקום של p בין הפרמטרים לפי מקום, בשורה הזו; -1 — לא רלוונטי (המקור כשיש /רשימה:). */
+    int slot(Commands.Param p) {
+        if (def == null || p.isSwitch()) return -1;
+        int i = def.positional().indexOf(p);
+        if (listInsteadOfSource()) return i == 0 ? -1 : i - 1;
+        return i;
+    }
+
+    private List<Integer> positionalAt() {
+        List<Integer> out = new ArrayList<Integer>();
+        for (int i = 0; i < tokens.size(); i++) if (!Batch.isSwitch(tokens.get(i))) out.add(i);
+        return out;
+    }
+
+    String value(Commands.Param p) {
+        if (isText(def)) return rest;
+        if (!p.isSwitch()) {
+            int s = slot(p);
+            List<Integer> at = positionalAt();
+            return s < 0 || s >= at.size() ? "" : tokens.get(at.get(s));
+        }
+        for (String t : tokens) {
+            String k = keyOf(p, t);
+            if (k == null) continue;
+            if (p.type == Commands.Type.FLAG) return "1";
+            if (p.type == Commands.Type.CHOICE && !k.endsWith(":"))           // /Y · /-Y
+                return k.equalsIgnoreCase("/Y") ? Batch.TAKEN_REPLACE : Batch.TAKEN_ASK;
+            String v = t.substring(k.length());
+            if (p.type == Commands.Type.PERCENT && v.endsWith("%")) v = v.substring(0, v.length() - 1);
+            return v;
+        }
+        return "";
+    }
+
+    /** המתג (או השם הנרדף) שהטוקן כתוב בו, או null. */
+    private static String keyOf(Commands.Param p, String t) {
+        for (String k : p.all())
+            if (k.endsWith(":") ? t.regionMatches(true, 0, k, 0, k.length()) : t.equalsIgnoreCase(k)) return k;
+        return null;
+    }
+
+    /** קובע ערך. ריק (או מתג כבוי) — הפרמטר יוצא מהשורה. */
+    void set(Commands.Param p, String v) {
+        String val = v == null ? "" : v.trim();
+        changed = true;
+        if (isText(def)) {
+            rest = val;
+            return;
+        }
+        if (!p.isSwitch()) {
+            setPositional(slot(p), val);
+            return;
+        }
+        int idx = -1;
+        for (int i = 0; i < tokens.size(); i++) if (keyOf(p, tokens.get(i)) != null) idx = i;
+        String tok;
+        if (p.type == Commands.Type.FLAG) tok = val.isEmpty() ? null : idx >= 0 ? tokens.get(idx) : p.key;
+        else if (val.isEmpty()) tok = null;
+        else tok = p.key + val + (p.type == Commands.Type.PERCENT && !val.endsWith("%") ? "%" : "");
+        if (idx >= 0) {
+            if (tok == null) tokens.remove(idx);
+            else tokens.set(idx, tok);
+            return;
+        }
+        if (tok == null) return;
+        int order = def.params.indexOf(p), at = tokens.size();                  // לפי הסדר שבהגדרה (החלטה 8)
+        for (int i = 0; i < tokens.size(); i++) {
+            Commands.Param q = def.switchFor(tokens.get(i));
+            if (q != null && def.params.indexOf(q) > order) {
+                at = i;
+                break;
+            }
+        }
+        tokens.add(at, tok);
+    }
+
+    private void setPositional(int slot, String v) {
+        if (slot < 0) return;
+        List<Integer> at = positionalAt();
+        if (slot < at.size()) {
+            if (v.isEmpty() && slot == at.size() - 1) tokens.remove((int) at.get(slot));
+            else tokens.set(at.get(slot), v);
+            return;
+        }
+        if (v.isEmpty()) return;
+        int put = at.isEmpty() ? firstSwitchOrEnd() : at.get(at.size() - 1) + 1;
+        for (int i = at.size(); i < slot; i++) tokens.add(put++, "");          // פרמטר שחסר לפניו — ריק במקומו
+        tokens.add(put, v);
+    }
+
+    private int firstSwitchOrEnd() {
+        for (int i = 0; i < tokens.size(); i++) if (Batch.isSwitch(tokens.get(i))) return i;
+        return tokens.size();
+    }
+
+    /** הפרמטרים לפי מקום שחסרים (לפני הכנסה לקובץ). */
+    List<Commands.Param> missing() {
+        List<Commands.Param> out = new ArrayList<Commands.Param>();
+        if (def == null || isText(def)) return out;
+        for (Commands.Param p : def.positional()) if (slot(p) >= 0 && value(p).isEmpty()) out.add(p);
+        return out;
+    }
+
+    /** מקור מתוך השוואה (%רק-במקור% / %רק-ביעד%) — צריך COMP לפניו. */
+    boolean usesCompare() {
+        for (String t : tokens)
+            if (t.equals(Batch.var(Batch.V_ONLY_A)) || t.equals(Batch.var(Batch.V_ONLY_B))) return true;
+        return false;
+    }
+
+    /** פקודה שמוציאה קבצים ממקומם — מסומנת (בדיקת באגים 12). */
+    boolean destructive() {
+        if (def == null) return false;
+        String n = def.name;
+        return n.equals("DEL") || n.equals("MOVE") || (n.equals("RD") && value(def.switches().get(0)).length() > 0);
+    }
+}
+===== קובץ: src/com/tikiyot/vfm/CmdTemplates.java =====
+package com.tikiyot.vfm;
+
+// 1.23.0: הפקודות הנפוצות (claude/mimshak-pkudot.md, החלטה 4): של התוכנה — מתוך ההתקנה (assets/commands/templates.txt),
+// קריאה בלבד, מתעדכנות עם הגרסה; שלי — קובצי פקודות בתיקייה "פקודות נפוצות" שבתיקיית התוכנה, שעדכון גרסה לא נוגע בה.
+// תבנית — שורה אחת או כמה, עם מקומות פתוחים (<מקור>, <יעד>…) שנשאלים לפני ההכנסה. בלי ממשק — נבדק.
+// גם: קובץ הבדיקה של הגרסה (נכתב בתיקייה "בדיקות"; נמחק בגרסה הבאה).
+
+import android.content.Context;
+
+import java.io.File;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
+final class CmdTemplates {
+
+    static final String ASSET = "commands/templates.txt", TEST_ASSET = "commands/test-1.23.0.vbat";
+    static final String MINE_DIR = "פקודות נפוצות", TEST_DIR = "בדיקות", TEST_FILE = "בדיקת הפקודות 1.23.0";  // בכונן
+    private static final String HEAD = "=== ";   // תחביר
+    /** מקום פתוח: <שם> — בלי רווח, בלי / \ : % (כך /תאריך:<שנה לא נתפס). */
+    private static final Pattern HOLE = Pattern.compile("<([^<>\\s/\\\\:%]+)>");
+
+    /** בבדיקות — תיקייה אחרת. */
+    static File testRoot;
+
+    static final class Tpl {
+        final String name;
+        final List<String> lines;
+        /** של המשתמש — הקובץ; של התוכנה — null. */
+        final File file;
+
+        Tpl(String name, List<String> lines, File file) {
+            this.name = name;
+            this.lines = lines;
+            this.file = file;
+        }
+    }
+
+    private CmdTemplates() { }
+
+    /** "=== שם" ואחריו השורות. */
+    static List<Tpl> parse(String text) {
+        List<Tpl> out = new ArrayList<Tpl>();
+        String name = null;
+        List<String> cur = null;
+        for (String l : (text == null ? "" : text).replace("\r", "").split("\n")) {
+            if (l.startsWith(HEAD)) {
+                if (name != null && !cur.isEmpty()) out.add(new Tpl(name, cur, null));
+                name = l.substring(HEAD.length()).trim();
+                cur = new ArrayList<String>();
+            } else if (cur != null && !l.trim().isEmpty()) {
+                cur.add(l.trim());
+            }
+        }
+        if (name != null && !cur.isEmpty()) out.add(new Tpl(name, cur, null));
+        return out;
+    }
+
+    static List<Tpl> system(Context c) {
+        try {
+            return parse(Examples.asset(c, ASSET));
+        } catch (Throwable t) {
+            Log.e("הפקודות הנפוצות של התוכנה", t);
+            return new ArrayList<Tpl>();
+        }
+    }
+
+    private static File root() {
+        return testRoot != null ? testRoot : Paths.data();
+    }
+
+    static File mineDir() {
+        return new File(root(), MINE_DIR);
+    }
+
+    /** שלי — לפי שם. */
+    static List<Tpl> mine() {
+        List<Tpl> out = new ArrayList<Tpl>();
+        File[] fs = mineDir().listFiles();
+        if (fs == null) return out;
+        Arrays.sort(fs, new java.util.Comparator<File>() {                     // לפי השם בלי הסיומת ("שלי" לפני "שלי 2")
+            @Override public int compare(File a, File b) { return Text.stem(a.getName()).compareTo(Text.stem(b.getName())); }
+        });
+        for (File f : fs) {
+            if (!f.isFile() || !f.getName().endsWith("." + Batch.EXT)) continue;
+            try {
+                List<String> lines = new ArrayList<String>();
+                for (String l : Files.readUtf8(f).replace("\r", "").split("\n")) if (!l.trim().isEmpty()) lines.add(l.trim());
+                if (!lines.isEmpty()) out.add(new Tpl(Text.stem(f.getName()), lines, f));
+            } catch (Throwable t) {
+                Log.e("פקודה נפוצה: " + f, t);
+            }
+        }
+        return out;
+    }
+
+    /** שומר שורות כפקודה נפוצה שלי. שם תפוס — מספר בסוף. null — לא נשמר. */
+    static File save(String name, List<String> lines) {
+        String n = Physical.badName(name) == null ? name.trim() : name.trim().replaceAll("[\\\\/:*?\"<>|]", "_");
+        if (n.isEmpty() || lines.isEmpty()) return null;
+        File dir = mineDir();
+        dir.mkdirs();
+        File f = new File(dir, n + "." + Batch.EXT);
+        for (int i = 2; f.exists(); i++) f = new File(dir, n + " " + i + "." + Batch.EXT);
+        StringBuilder sb = new StringBuilder();
+        for (String l : lines) sb.append(l).append('\n');
+        try {
+            Files.writeAtomic(f, sb.toString());
+            return f;
+        } catch (Throwable t) {
+            Log.e("שמירת פקודה נפוצה", t);
+            return null;
+        }
+    }
+
+    /** המקומות הפתוחים, בסדר, כל אחד פעם אחת. */
+    static List<String> holes(List<String> lines) {
+        List<String> out = new ArrayList<String>();
+        for (String l : lines) {
+            Matcher m = HOLE.matcher(l);
+            while (m.find()) if (!out.contains(m.group(1))) out.add(m.group(1));
+        }
+        return out;
+    }
+
+    /** ממלא את המקומות הפתוחים. מקום שלא מולא — נשאר כמו שהוא. */
+    static List<String> fill(List<String> lines, Map<String, String> values) {
+        List<String> out = new ArrayList<String>();
+        for (String l : lines) {
+            Matcher m = HOLE.matcher(l);
+            StringBuffer sb = new StringBuffer();
+            while (m.find()) {
+                String v = values.get(m.group(1));
+                m.appendReplacement(sb, Matcher.quoteReplacement(v == null || v.trim().isEmpty() ? m.group() : v.trim()));
+            }
+            m.appendTail(sb);
+            out.add(sb.toString());
+        }
+        return out;
+    }
+
+    static Map<String, String> empty(List<String> holes) {
+        Map<String, String> m = new LinkedHashMap<String, String>();
+        for (String h : holes) m.put(h, "");
+        return m;
+    }
+
+    /** 1.23.0: קובץ הבדיקה — בתיקיית התוכנה / בדיקות. נכתב פעם אחת (אם נמחק — לא חוזר). הגרסה הבאה מוחקת אותו. */
+    static File writeTest(Context c) {
+        File dir = new File(root(), TEST_DIR), f = new File(dir, TEST_FILE + "." + Batch.EXT), mark = new File(dir, ".1.23.0");
+        if (mark.exists()) return f;
+        try {
+            dir.mkdirs();
+            Files.writeAtomic(f, Examples.asset(c, TEST_ASSET));
+            Files.writeAtomic(mark, "1\n");
+            Library lib = Library.peek();
+            if (lib != null) lib.fileAdded(f);
+        } catch (Throwable t) {
+            Log.e("קובץ הבדיקה 1.23.0", t);
+        }
+        return f;
+    }
+}
+===== קובץ: assets/commands/templates.txt =====
+=== גיבוי: מראה והיסטוריה (תיקייה)
+MD "<יעד>\נוכחי"
+COMP "<מקור>" "<יעד>\נוכחי"
+MOVE %רק-ביעד% "<יעד>\היסטוריה\%תאריך%" /עד:20%
+COPY %רק-במקור% "<יעד>\נוכחי" /תפוס:לעצור /יומן:"<יעד>\יומן\%תאריך%.txt"
+=== גיבוי: הרשימה "גיבוי" שב"שמור לתוכנה"
+MD "<יעד>\נוכחי"
+COMP /רשימה:גיבוי "<יעד>\נוכחי"
+MOVE %רק-ביעד% "<יעד>\היסטוריה\%תאריך%" /עד:20%
+COPY %רק-במקור% "<יעד>\נוכחי" /תפוס:לעצור /יומן:"<יעד>\יומן\%תאריך%.txt"
+=== שחזור מגיבוי — המצב של תאריך מסוים
+COPY "<גיבוי>" "<יעד>" /מצב:"<זמן>"
+=== השוואת שתי תיקיות
+COMP "<מקור>" "<יעד>"
+=== העתקת תיקייה עם כל המבנה
+COPY "<מקור>" "<יעד>" /S /תפוס:לדלג
+=== העברת PDF מההורדות לתיקייה
+MOVE "%הורדות%\*.pdf" "<יעד>" /תפוס:לדלג
+=== ניקוי קבצים זמניים (לסל המחזור)
+DEL "<תיקייה>\*.tmp"
+=== פתיחת תיקייה בסוף
+START "<תיקייה>"
+===== קובץ: assets/commands/test-1.23.0.vbat =====
+הדמיה
+REM בדיקת ממשק הפקודות 1.23.0. לעבור על כל שורה בתפריט שלמעלה: לבחור, לקרוא את ההסבר והפרמטרים, ולנסות ▶ הדמיה.
+REM השורה הראשונה (הדמיה) — כל הקובץ רץ בכאילו, ושום דבר לא משתנה בכונן. הקובץ נמחק בגרסה הבאה.
+ECHO מתחילים את הבדיקה
+MD "%פנימי%\בדיקת-פקודות\א"
+COPY "%הורדות%\*.pdf" "%פנימי%\בדיקת-פקודות\א" /תפוס:לדלג /תאריך:שנה
+COPY "%פנימי%\Documents" "%פנימי%\בדיקת-פקודות\ב" /S /יומן:"%פנימי%\בדיקת-פקודות\יומן.txt"
+MOVE "%פנימי%\בדיקת-פקודות\א\*.pdf" "%פנימי%\בדיקת-פקודות\ג" /גודל:>1MB
+REN "%פנימי%\בדיקת-פקודות\קובץ.txt" חדש.txt
+COMP "%פנימי%\בדיקת-פקודות\א" "%פנימי%\בדיקת-פקודות\ב"
+COPY %רק-במקור% "%פנימי%\בדיקת-פקודות\ב" /תפוס:לעצור
+MOVE %רק-ביעד% "%פנימי%\בדיקת-פקודות\היסטוריה\%תאריך%" /עד:20%
+COMP /רשימה:גיבוי "%פנימי%\בדיקת-פקודות\גיבוי"
+DEL "%פנימי%\בדיקת-פקודות\*.tmp"
+RD "%פנימי%\בדיקת-פקודות\ריקה"
+RD "%פנימי%\בדיקת-פקודות\ג" /S
+COPY "%פנימי%\גיבוי" "%פנימי%\בדיקת-פקודות\שחזור" /מצב:"28.10.2026"
+START "%פנימי%\בדיקת-פקודות"
+פתח מסך חיפוש
+מצא סוג:ספרים

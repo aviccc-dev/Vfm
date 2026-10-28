@@ -480,24 +480,10 @@ public final class Words {
             return "אין קובץ שמתאים ל־" + pattern;
         }
 
-        public static final String START_TARGET = "תיקייה, קובץ, או תבנית (החדש ביותר)";
-
-        // העורך
-        public static final String SAVE_BTN = "💾 שמירה", LINE_IN_FORM = "✎ השורה בטופס",
-                PREVIEW_AND_RUN = "▶ תצוגה מקדימה והרצה", PICK = "📁 בחירה",
-                SHARE_BTN = "📤 שיתוף", DEST_OR_SHARE = "יעד — תיקייה, או שיתוף למכשיר אחר",   // 203
-                EDITOR_HINT = "פקודה — נגיעה בכפתור למטה פותחת טופס · \"✎ השורה בטופס\" — לשורה שהסמן בה",
-                TO_FORM = "   ·   ✎ לטופס", EMPTY_LINE = "השורה ריקה — בחר פקודה בכפתורים למטה",
-                NO_FORM = "לשורה הזו אין טופס", THE_LINE = "השורה:", ASK_SAVE = "לשמור את השינויים?",
-                DONT_SAVE = "בלי לשמור", REPLACE_NOTE = " (הקודם לסל)",
-                SRC_FOLDER = "מקור — תיקייה", MASK = "קבצים — תבנית (ריק = התיקייה עצמה / קובץ אחד)",
-                DEST_FOLDER = "יעד — תיקייה", THE_FILE = "הקובץ", NEW_NAME = "שם חדש", FOLDER = "תיקייה",
-                RD_ALL = "/S — גם אם אינה ריקה (הכול לסל המחזור)", THE_MESSAGE = "ההודעה", THE_REMARK = "ההערה",
-                OTHER_SWITCHES = "מתגים נוספים (ROBOCOPY וכו')";
-
-        public static String formTitle(boolean isNew, String cmd) {
-            return (isNew ? "פקודה חדשה: " : "עריכת השורה: ") + cmd;
-        }
+        // העורך (1.23.0: הטופס הישן יצא — הטקסטים של הממשק החדש ב-Words.Ed)
+        public static final String SAVE_BTN = "💾 שמירה", PREVIEW_AND_RUN = "▶ תצוגה מקדימה והרצה", PICK = "📁 בחירה",
+                SHARE_BTN = "📤 שיתוף", ASK_SAVE = "לשמור את השינויים?",   // 203
+                DONT_SAVE = "בלי לשמור", REPLACE_NOTE = " (הקודם לסל)";
 
         /** ההסבר בראש קובץ פקודות חדש. התחביר (פקודות, משתנים, מתגים, דוגמה) — מ-Batch. */
         public static String template(String commands, String vars, String filters, String ask, String skip, String example) {
@@ -1958,8 +1944,48 @@ public final class Words {
                 H_COMPAT = "תחביר ישן (XCOPY / ROBOCOPY) — מובן, לא מוצג בטופס";
         /** במקום "<מה לפתוח>" בשורת השימוש של START. */
         public static final String U_START = "<תיקייה | קובץ | תבנית, למשל vfm-*.apk>";
+        /** 1.23.0: השם הקצר בעברית — לתפריט ולחיפוש ("העתק" מוצא את COPY). השורה בקובץ — כמו שהשפה מכירה. */
+        public static final String N_COPY = "העתק", N_MOVE = "העבר", N_DEL = "מחק", N_REN = "שנה שם", N_MD = "צור תיקייה",
+                N_RD = "הסר תיקייה", N_COMP = "השווה", N_START = "פתח בסוף", N_ECHO = "הודעה", N_REM = "הערה";
         /** ערך של מתג בשורת השימוש. */
         public static final String V_FILE = "<קובץ>", V_TIME = "<זמן>", V_LIST = "<רשימה>";
+    }
+
+    /** 1.23.0: ממשק הפקודות (BatchEditScreen) — claude/mimshak-pkudot.md. */
+    public static final class Ed {
+        private Ed() { }
+
+        public static final String FILTER_HINT = "חיפוש פקודה: העתק או COPY", IN_FILE = "בקובץ", MORE = "עוד פקודות",
+                TEMPLATES = "★ נפוצות", COMMANDS = "☰ פקודות", TPL_SYS = "של התוכנה", TPL_MINE = "שלי",
+                ADVANCED = "מתקדם", SIMULATE = "▶ הדמיה", SIMULATING = "מחשב…", REMOVE = "הסרה", UP = "▲", DOWN = "▼",
+                SAVE_TPL = "★ שמור כנפוצה", TPL_NAME = "שם לפקודה הנפוצה", TPL_SAVED = "נשמרה בנפוצות",
+                NEW = "חדשה — עוד לא בקובץ", THE_LINE = "השורה בקובץ (אפשר גם לערוך כאן)", THE_FILE = "הקובץ הפתוח",
+                NEED_COMPARE = "⚠ %רק-במקור% / %רק-ביעד% צריכים שורת COMP לפניהם",
+                NOT_UNDERSTOOD = "שורה שהממשק לא מכיר — נשמרת כמו שהיא. אפשר לערוך אותה בקובץ הפתוח",
+                ONE_OPEN = "⚠ רק פקודת פתיחה אחת נפתחת בסוף — האחרונה", NO_STEP = "השורה לא מבוצעת (הערה או כותרת)",
+                TAG_HEADER = "כותרת", TAG_UNKNOWN = "?", NONE = "—", ON = "פעיל", PICK = "בחירה…", FILL = "השלמת התבנית",
+                VARS = "משתנים", EMPTY_FILE = "הקובץ ריק — בחר פקודה מהרשימה, והיא תיכנס לכאן",
+                ALREADY_AS_IF = "יש כבר הדמיה בראש הקובץ", PICK_FIRST = "בחר שורה בתפריט קודם";
+
+        public static String lineN(int n) {
+            return "שורה " + n + " בקובץ";
+        }
+
+        public static String insertAfter(int n) {
+            return n <= 0 ? "＋ הכנס לקובץ" : "＋ הכנס לקובץ אחרי שורה " + n;
+        }
+
+        public static String fillFirst(String what) {
+            return "מלא קודם: " + what;
+        }
+
+        public static String advanced(int n) {
+            return "▾ " + ADVANCED + " (" + n + ")";
+        }
+
+        public static String lines(int n) {
+            return n == 1 ? "שורה אחת" : n + " שורות";
+        }
     }
 
     /** 1.13.0: שורת "למה" (Why) */

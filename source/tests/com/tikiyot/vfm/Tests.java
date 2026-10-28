@@ -99,6 +99,7 @@ public final class Tests {
         run("גרסה 1.21.0 — מצב בתאריך: תנאי חיפוש ושחזור (COPY /מצב:)", new Runnable() { public void run() { v1210(); } });
         run("גרסה 1.22.0 — COMP /רשימה: — רשימה (עם חכמות, תיקיות מתעדכנות ותתי־רשימות) כמקור, מכמה כוננים", new Runnable() { public void run() { v1220(); } });
         run("גרסה 1.22.5 — ההגדרה האחת של שפת הפקודות (Commands)", new Runnable() { public void run() { v1225(); } });
+        run("גרסה 1.23.0 — ממשק הפקודות: שורה לפי ההגדרה (CmdLine), פקודות נפוצות, קובץ הבדיקה", new Runnable() { public void run() { v1230(); } });
 
         System.out.println("בדיקות: " + passed + " עברו · " + failed + " נכשלו");
         for (String f : failures) System.out.println("  ✗ " + f);
@@ -3925,6 +3926,109 @@ public final class Tests {
     }
 
     /** 1.13.1 — תיקוני באגים. */
+
+    /** 1.23.0: CmdLine — שינוי פרמטר אחד בלי לאבד דבר; התבניות; קובץ הבדיקה. */
+    private static void v1230() {
+        Commands.Def cp = Commands.get("COPY");
+        Commands.Param src = cp.positional().get(0), dst = cp.positional().get(1), keep = cp.switchFor("/S"),
+                taken = cp.switchFor(Batch.SW_TAKEN), journal = cp.switchFor(Batch.SW_JOURNAL), limit = cp.switchFor(Batch.SW_LIMIT),
+                date = cp.switchFor("/" + Batch.SW_DATE);
+        String raw = "COPY   \"%פנימי%\\א ב\"  x /Q";
+        check("1.23.0: שורה שלא שונתה — אות באות", CmdLine.parse(raw).text().equals(raw));
+        CmdLine c = CmdLine.parse(raw);
+        check("1.23.0: ערכים לפי מקום", c.value(src).equals("%פנימי%\\א ב") && c.value(dst).equals("x"));
+        c.set(dst, "%כרטיס%\\ג ד");
+        check("1.23.0: שינוי יעד — מרכאות, ו/Q נשאר", c.text().equals("COPY \"%פנימי%\\א ב\" \"%כרטיס%\\ג ד\" /Q"));
+        CmdLine d = CmdLine.parse("COPY a b /תאריך:שבוע");
+        d.set(keep, "1");
+        check("1.23.0: מתג חדש — במקומו לפי ההגדרה", d.text().equals("COPY a b /S /תאריך:שבוע"));
+        d.set(journal, "x y.txt");
+        check("1.23.0: ערך עם רווח — במרכאות", d.text().equals("COPY a b /S /יומן:\"x y.txt\" /תאריך:שבוע"));
+        check("1.23.0: הערך חוזר כמו שנקבע", CmdLine.parse(d.text()).value(journal).equals("x y.txt"));
+        d.set(keep, "");
+        check("1.23.0: מתג כבוי — יוצא", d.text().equals("COPY a b /יומן:\"x y.txt\" /תאריך:שבוע"));
+        CmdLine y = CmdLine.parse("COPY a b /Y");
+        check("1.23.0: /Y = להחליף", y.value(taken).equals(Batch.TAKEN_REPLACE));
+        y.set(taken, Batch.TAKEN_SKIP);
+        check("1.23.0: /Y ← /תפוס:לדלג (באותו מקום)", y.text().equals("COPY a b " + Batch.SW_TAKEN + Batch.TAKEN_SKIP));
+        check("1.23.0: /מסלול = /S", CmdLine.parse("COPY a b " + Batch.SW_KEEP).value(keep).equals("1"));
+        CmdLine l = CmdLine.parse("MOVE %רק-ביעד% h /עד:20%");
+        Commands.Param mlimit = Commands.get("MOVE").switchFor(Batch.SW_LIMIT);
+        check("1.23.0: אחוז", l.value(mlimit).equals("20"));
+        l.set(mlimit, "30");
+        check("1.23.0: אחוז — עם %", l.text().equals("MOVE %רק-ביעד% h /עד:30%") && l.usesCompare() && l.destructive());
+        Commands.Def comp = Commands.get("COMP");
+        CmdLine k = CmdLine.parse("COMP /רשימה:גיבוי \"%כרטיס%\\גיבוי\\נוכחי\"");
+        check("1.23.0: COMP /רשימה: — המקור לא רלוונטי, היעד ראשון",
+                k.slot(comp.positional().get(0)) < 0 && k.value(comp.positional().get(1)).equals("%כרטיס%\\גיבוי\\נוכחי") && k.missing().isEmpty());
+        CmdLine n = CmdLine.of(cp);
+        check("1.23.0: פקודה חדשה — חסרים מקור ויעד", n.missing().size() == 2 && n.text().equals("COPY"));
+        n.set(dst, "b");
+        check("1.23.0: יעד לפני מקור — מקום ריק למקור", n.text().equals("COPY \"\" b"));
+        n.set(src, "a");
+        check("1.23.0: ואז המקור במקומו", n.text().equals("COPY a b") && n.missing().isEmpty());
+        n.set(limit, "20");
+        n.set(date, "שבוע");
+        n.set(taken, Batch.TAKEN_STOP);
+        check("1.23.0: כמה מתגים — בסדר ההגדרה", n.text().equals("COPY a b " + Batch.SW_TAKEN + Batch.TAKEN_STOP + " /עד:20% /תאריך:שבוע"));
+        Commands.Param txt = Commands.get("ECHO").positional().get(0);
+        CmdLine e = CmdLine.parse("ECHO שלום  עולם");
+        check("1.23.0: ECHO — הטקסט כמו שהוא", e.value(txt).equals("שלום  עולם"));
+        e.set(txt, "חדש");
+        check("1.23.0: ECHO — שינוי", e.text().equals("ECHO חדש"));
+        check("1.23.0: שורה לא מוכרת — בלי הגדרה, נשמרת", CmdLine.parse("FORMAT C:").def == null && CmdLine.parse("FORMAT C:").text().equals("FORMAT C:"));
+        check("1.23.0: פועל — לא פקודת קבצים", CmdLine.parse("פתח מסך חיפוש").def == null);
+        check("1.23.0: חיפוש בתפריט — העתק / CO / שינוי", Commands.matches(cp, "העתק") && Commands.matches(cp, "co")
+                && Commands.matches(Commands.get("REN"), "שנה") && !Commands.matches(cp, "מחק"));
+
+        // התבניות
+        String src0 = System.getProperty("vfm.src");
+        String tplText = "", testText = "";
+        try {
+            tplText = Files.readUtf8(new File(src0, "assets/commands/templates.txt"));
+            testText = Files.readUtf8(new File(src0, "assets/commands/test-1.23.0.vbat"));
+        } catch (Throwable t) {
+            check("1.23.0: קבצי ההתקנה נקראו", false);
+        }
+        List<CmdTemplates.Tpl> ts = CmdTemplates.parse(tplText);
+        check("1.23.0: תבניות התוכנה", ts.size() >= 8);
+        check("1.23.0: גיבוי — מקומות פתוחים", CmdTemplates.holes(ts.get(0).lines).equals(Arrays.asList("יעד", "מקור")));
+        check("1.23.0: /תאריך:<שנה — לא מקום פתוח", CmdTemplates.holes(Arrays.asList("COPY a b /תאריך:<שנה /גודל:>10MB")).isEmpty());
+        for (CmdTemplates.Tpl t : ts) {
+            java.util.Map<String, String> v = CmdTemplates.empty(CmdTemplates.holes(t.lines));
+            for (String h : v.keySet()) v.put(h, "%פנימי%\\x");
+            List<String> filled = CmdTemplates.fill(t.lines, v);
+            boolean ok = CmdTemplates.holes(filled).isEmpty();
+            for (String fl : filled) ok &= CmdLine.parse(fl).def != null;
+            check("1.23.0: תבנית — ממולאת ומוכרת: " + t.name, ok);
+        }
+        File tr = drive("נפוצות");
+        CmdTemplates.testRoot = tr;
+        try {
+            File a = CmdTemplates.save("שלי", Arrays.asList("COPY a b")), b = CmdTemplates.save("שלי", Arrays.asList("MD x"));
+            List<CmdTemplates.Tpl> mine = CmdTemplates.mine();
+            check("1.23.0: שלי — נשמרה, ושם תפוס מקבל מספר", a != null && b != null && !a.equals(b) && mine.size() == 2
+                    && mine.get(0).lines.get(0).equals("COPY a b"));
+            check("1.23.0: שם עם תווים אסורים", CmdTemplates.save("א/ב", Arrays.asList("MD x")) != null);
+        } finally {
+            CmdTemplates.testRoot = null;
+        }
+        // קובץ הבדיקה — כל שורה מוכרת, וכל שורת קבצים נשארת אות באות
+        boolean all = true, round = true, asIf = false;
+        for (String line : testText.replace("\r", "").split("\n")) {
+            String t = line.trim();
+            if (t.isEmpty()) continue;
+            if (t.equals(Batch.AS_IF2)) asIf = true;
+            boolean known = t.equals(Batch.AS_IF2) || Verbs.isVerb(t) || CmdLine.parse(t).def != null;
+            all &= known;
+            if (CmdLine.parse(t).def != null) round &= CmdLine.parse(t).text().equals(t);
+        }
+        check("1.23.0: קובץ הבדיקה — כל השורות מוכרות", all);
+        check("1.23.0: קובץ הבדיקה — בהדמיה", asIf);
+        check("1.23.0: קובץ הבדיקה — כל פקודות הקבצים בו", testText.contains("COPY") && testText.contains("MOVE") && testText.contains("DEL")
+                && testText.contains("REN") && testText.contains("MD") && testText.contains("RD") && testText.contains("COMP")
+                && testText.contains("START") && testText.contains("ECHO") && testText.contains("REM") && round);
+    }
 
     /** 1.22.5: ההגדרה האחת — שלמה, תואמת למנוע, וכל פרמטר עם שם והסבר. */
     private static void v1225() {
