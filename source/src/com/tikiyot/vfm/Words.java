@@ -1970,7 +1970,18 @@ public final class Words {
                 ONE_OPEN = "⚠ רק פקודת פתיחה אחת נפתחת בסוף — האחרונה", NO_STEP = "השורה לא מבוצעת (הערה או כותרת)",
                 TAG_HEADER = "כותרת", TAG_UNKNOWN = "?", NONE = "—", ON = "פעיל", PICK = "בחירה…", FILL = "השלמת התבנית",
                 VARS = "משתנים", EMPTY_FILE = "הקובץ ריק — בחר פקודה מהרשימה, והיא תיכנס לכאן",
-                ALREADY_AS_IF = "יש כבר הדמיה בראש הקובץ", ALREADY_MEASURE = "יש כבר מדידה בקובץ", PICK_FIRST = "בחר שורה בתפריט קודם";
+                ALREADY_AS_IF = "יש כבר הדמיה בראש הקובץ", ALREADY_MEASURE = "יש כבר מדידה בקובץ",
+                NO_SMART = "אין רשימות חכמות", PICK_FIRST = "בחר שורה בתפריט קודם";
+
+        /** 1.25.2: מה מבקשים במקום הפתוח. */
+        public static String holeKind(int kind) {
+            switch (kind) {
+                case 1: return " — רשימה ידנית (קיימת, או שם חדש — תיווצר)";
+                case 2: return " — רשימה חכמה";
+                case 3: return " — מספר";
+                default: return " — תיקייה";
+            }
+        }
 
         public static String lineN(int n) {
             return "שורה " + n + " בקובץ";

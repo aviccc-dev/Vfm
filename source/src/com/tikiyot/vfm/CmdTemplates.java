@@ -128,6 +128,27 @@ final class CmdTemplates {
     }
 
     /** ממלא את המקומות הפתוחים. מקום שלא מולא — נשאר כמו שהוא. */
+    /** 1.25.2: סוג המקום הפתוח — לפי המילה שלפניו בשורה: מסלול (ברירת מחדל), רשימה ידנית, רשימה חכמה, מספר. */
+    static final int HOLE_PATH = 0, HOLE_MANUAL = 1, HOLE_SMART = 2, HOLE_NUMBER = 3;
+
+    static int holeKind(List<String> lines, String hole) {
+        String mark = "<" + hole + ">";
+        for (String l : lines) {
+            if (!l.contains(mark)) continue;
+            List<ListCmd.Tok> tk = ListCmd.tokens(l);
+            for (int i = 0; i < tk.size(); i++) {
+                if (!tk.get(i).text.contains(mark)) continue;
+                if (i == 1 && tk.get(0).text.equals(Batch.LOOP)) return HOLE_NUMBER;
+                if (i > 0 && !tk.get(i - 1).quoted) {
+                    String w = tk.get(i - 1).text;
+                    if (w.equals(ListCmd.MANUAL)) return HOLE_MANUAL;
+                    if (w.equals(ListCmd.SMART)) return HOLE_SMART;
+                }
+            }
+        }
+        return HOLE_PATH;
+    }
+
     static List<String> fill(List<String> lines, Map<String, String> values) {
         List<String> out = new ArrayList<String>();
         for (String l : lines) {

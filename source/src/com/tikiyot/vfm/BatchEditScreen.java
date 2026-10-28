@@ -953,18 +953,36 @@ public class BatchEditScreen extends Activity {
         LinearLayout box = Ui.form(this);
         final List<EditText> fields = new ArrayList<EditText>();
         for (final String h : holes) {
-            box.addView(Ui.label(this, h));
+            final int kind = CmdTemplates.holeKind(t.lines, h);                  // 1.25.2: בוחר לפי הסוג
+            box.addView(Ui.label(this, h + Words.Ed.holeKind(kind)));
             final EditText e = Ui.field(this, "", "");
-            e.setTextDirection(View.TEXT_DIRECTION_LTR);
+            e.setTextDirection(kind == CmdTemplates.HOLE_PATH ? View.TEXT_DIRECTION_LTR : View.TEXT_DIRECTION_FIRST_STRONG);
+            if (kind == CmdTemplates.HOLE_NUMBER) e.setInputType(InputType.TYPE_CLASS_NUMBER);
             Bidi.watch(e);
             box.addView(e);
             fields.add(e);
+            if (kind == CmdTemplates.HOLE_NUMBER) continue;
             box.addView(button(Words.Cmd.PICK, new View.OnClickListener() {
                 @Override
                 public void onClick(View v) {
-                    FolderPicker.choose(BatchEditScreen.this, h, true, new FolderPicker.Picked() {
-                        @Override public void ok(File folder) { e.setText(BatchLine.toVar(folder.getAbsolutePath(), vars)); }
-                    });
+                    if (kind == CmdTemplates.HOLE_MANUAL) {
+                        ListPicker.choose(BatchEditScreen.this, h, null, new ListPicker.Picked() {
+                            @Override public void ok(ArrayList<String> path) { e.setText(ListCmd.pathText(path)); }
+                        });
+                    } else if (kind == CmdTemplates.HOLE_SMART) {
+                        final List<String> names = ListCmd.smartNames();
+                        if (names.isEmpty()) {
+                            Ui.toast(BatchEditScreen.this, Words.Ed.NO_SMART);
+                            return;
+                        }
+                        Ui.options(BatchEditScreen.this, h, names.toArray(new String[0]), new android.content.DialogInterface.OnClickListener() {
+                            @Override public void onClick(android.content.DialogInterface d, int which) { e.setText(names.get(which)); }
+                        });
+                    } else {
+                        FolderPicker.choose(BatchEditScreen.this, h, true, new FolderPicker.Picked() {
+                            @Override public void ok(File folder) { e.setText(BatchLine.toVar(folder.getAbsolutePath(), vars)); }
+                        });
+                    }
                 }
             }));
         }

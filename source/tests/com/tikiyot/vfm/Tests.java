@@ -4039,6 +4039,12 @@ public final class Tests {
             for (CmdTemplates.Tpl t : CmdTemplates.parse(Files.readUtf8(new File(src0, "assets/commands/templates.txt"))))
                 if (t.name.startsWith("בדיקת עומס")) load = t;
             check("1.25.0: בדיקת העומס — בנפוצות", load != null);
+            check("1.25.2: מקום פתוח — רשימה ידנית, מספר", CmdTemplates.holeKind(load.lines, "רשימה") == CmdTemplates.HOLE_MANUAL
+                    && CmdTemplates.holeKind(load.lines, "סבבים") == CmdTemplates.HOLE_NUMBER);
+            List<String> fz = Arrays.asList("COPY קבצי חכמה \"<חכמה>\" ידנית \"<ידנית>\"", "COPY \"<מקור>\" \"<יעד>\"");
+            check("1.25.2: מקום פתוח — חכמה, ידנית, תיקייה", CmdTemplates.holeKind(fz, "חכמה") == CmdTemplates.HOLE_SMART
+                    && CmdTemplates.holeKind(fz, "ידנית") == CmdTemplates.HOLE_MANUAL && CmdTemplates.holeKind(fz, "יעד") == CmdTemplates.HOLE_PATH);
+            check("1.25.2: הבוחר של החכמות — בשם שהפקודות מכירות", ListCmd.smartNames().contains("א. ארגון לפי הבחנות\\כל הספרים"));
             java.util.Map<String, String> hv = new java.util.HashMap<String, String>();
             hv.put("רשימה", "עומס");
             hv.put("סבבים", "3");

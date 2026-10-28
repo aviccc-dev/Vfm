@@ -2,8 +2,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="com.tikiyot.vfm"
-    android:versionCode="170"
-    android:versionName="1.25.1">
+    android:versionCode="171"
+    android:versionName="1.25.2">
     <uses-sdk android:minSdkVersion="21" android:targetSdkVersion="30" />
 
     <queries>
@@ -6065,18 +6065,36 @@ public class BatchEditScreen extends Activity {
         LinearLayout box = Ui.form(this);
         final List<EditText> fields = new ArrayList<EditText>();
         for (final String h : holes) {
-            box.addView(Ui.label(this, h));
+            final int kind = CmdTemplates.holeKind(t.lines, h);                  // 1.25.2: בוחר לפי הסוג
+            box.addView(Ui.label(this, h + Words.Ed.holeKind(kind)));
             final EditText e = Ui.field(this, "", "");
-            e.setTextDirection(View.TEXT_DIRECTION_LTR);
+            e.setTextDirection(kind == CmdTemplates.HOLE_PATH ? View.TEXT_DIRECTION_LTR : View.TEXT_DIRECTION_FIRST_STRONG);
+            if (kind == CmdTemplates.HOLE_NUMBER) e.setInputType(InputType.TYPE_CLASS_NUMBER);
             Bidi.watch(e);
             box.addView(e);
             fields.add(e);
+            if (kind == CmdTemplates.HOLE_NUMBER) continue;
             box.addView(button(Words.Cmd.PICK, new View.OnClickListener() {
                 @Override
                 public void onClick(View v) {
-                    FolderPicker.choose(BatchEditScreen.this, h, true, new FolderPicker.Picked() {
-                        @Override public void ok(File folder) { e.setText(BatchLine.toVar(folder.getAbsolutePath(), vars)); }
-                    });
+                    if (kind == CmdTemplates.HOLE_MANUAL) {
+                        ListPicker.choose(BatchEditScreen.this, h, null, new ListPicker.Picked() {
+                            @Override public void ok(ArrayList<String> path) { e.setText(ListCmd.pathText(path)); }
+                        });
+                    } else if (kind == CmdTemplates.HOLE_SMART) {
+                        final List<String> names = ListCmd.smartNames();
+                        if (names.isEmpty()) {
+                            Ui.toast(BatchEditScreen.this, Words.Ed.NO_SMART);
+                            return;
+                        }
+                        Ui.options(BatchEditScreen.this, h, names.toArray(new String[0]), new android.content.DialogInterface.OnClickListener() {
+                            @Override public void onClick(android.content.DialogInterface d, int which) { e.setText(names.get(which)); }
+                        });
+                    } else {
+                        FolderPicker.choose(BatchEditScreen.this, h, true, new FolderPicker.Picked() {
+                            @Override public void ok(File folder) { e.setText(BatchLine.toVar(folder.getAbsolutePath(), vars)); }
+                        });
+                    }
                 }
             }));
         }
@@ -36426,7 +36444,18 @@ public final class Words {
                 ONE_OPEN = "⚠ רק פקודת פתיחה אחת נפתחת בסוף — האחרונה", NO_STEP = "השורה לא מבוצעת (הערה או כותרת)",
                 TAG_HEADER = "כותרת", TAG_UNKNOWN = "?", NONE = "—", ON = "פעיל", PICK = "בחירה…", FILL = "השלמת התבנית",
                 VARS = "משתנים", EMPTY_FILE = "הקובץ ריק — בחר פקודה מהרשימה, והיא תיכנס לכאן",
-                ALREADY_AS_IF = "יש כבר הדמיה בראש הקובץ", ALREADY_MEASURE = "יש כבר מדידה בקובץ", PICK_FIRST = "בחר שורה בתפריט קודם";
+                ALREADY_AS_IF = "יש כבר הדמיה בראש הקובץ", ALREADY_MEASURE = "יש כבר מדידה בקובץ",
+                NO_SMART = "אין רשימות חכמות", PICK_FIRST = "בחר שורה בתפריט קודם";
+
+        /** 1.25.2: מה מבקשים במקום הפתוח. */
+        public static String holeKind(int kind) {
+            switch (kind) {
+                case 1: return " — רשימה ידנית (קיימת, או שם חדש — תיווצר)";
+                case 2: return " — רשימה חכמה";
+                case 3: return " — מספר";
+                default: return " — תיקייה";
+            }
+        }
 
         public static String lineN(int n) {
             return "שורה " + n + " בקובץ";
@@ -41606,6 +41635,12 @@ public final class Tests {
             for (CmdTemplates.Tpl t : CmdTemplates.parse(Files.readUtf8(new File(src0, "assets/commands/templates.txt"))))
                 if (t.name.startsWith("בדיקת עומס")) load = t;
             check("1.25.0: בדיקת העומס — בנפוצות", load != null);
+            check("1.25.2: מקום פתוח — רשימה ידנית, מספר", CmdTemplates.holeKind(load.lines, "רשימה") == CmdTemplates.HOLE_MANUAL
+                    && CmdTemplates.holeKind(load.lines, "סבבים") == CmdTemplates.HOLE_NUMBER);
+            List<String> fz = Arrays.asList("COPY קבצי חכמה \"<חכמה>\" ידנית \"<ידנית>\"", "COPY \"<מקור>\" \"<יעד>\"");
+            check("1.25.2: מקום פתוח — חכמה, ידנית, תיקייה", CmdTemplates.holeKind(fz, "חכמה") == CmdTemplates.HOLE_SMART
+                    && CmdTemplates.holeKind(fz, "ידנית") == CmdTemplates.HOLE_MANUAL && CmdTemplates.holeKind(fz, "יעד") == CmdTemplates.HOLE_PATH);
+            check("1.25.2: הבוחר של החכמות — בשם שהפקודות מכירות", ListCmd.smartNames().contains("א. ארגון לפי הבחנות\\כל הספרים"));
             java.util.Map<String, String> hv = new java.util.HashMap<String, String>();
             hv.put("רשימה", "עומס");
             hv.put("סבבים", "3");
@@ -44850,6 +44885,27 @@ final class CmdTemplates {
     }
 
     /** ממלא את המקומות הפתוחים. מקום שלא מולא — נשאר כמו שהוא. */
+    /** 1.25.2: סוג המקום הפתוח — לפי המילה שלפניו בשורה: מסלול (ברירת מחדל), רשימה ידנית, רשימה חכמה, מספר. */
+    static final int HOLE_PATH = 0, HOLE_MANUAL = 1, HOLE_SMART = 2, HOLE_NUMBER = 3;
+
+    static int holeKind(List<String> lines, String hole) {
+        String mark = "<" + hole + ">";
+        for (String l : lines) {
+            if (!l.contains(mark)) continue;
+            List<ListCmd.Tok> tk = ListCmd.tokens(l);
+            for (int i = 0; i < tk.size(); i++) {
+                if (!tk.get(i).text.contains(mark)) continue;
+                if (i == 1 && tk.get(0).text.equals(Batch.LOOP)) return HOLE_NUMBER;
+                if (i > 0 && !tk.get(i - 1).quoted) {
+                    String w = tk.get(i - 1).text;
+                    if (w.equals(ListCmd.MANUAL)) return HOLE_MANUAL;
+                    if (w.equals(ListCmd.SMART)) return HOLE_SMART;
+                }
+            }
+        }
+        return HOLE_PATH;
+    }
+
     static List<String> fill(List<String> lines, Map<String, String> values) {
         List<String> out = new ArrayList<String>();
         for (String l : lines) {
@@ -45025,6 +45081,30 @@ final class ListCmd {
             }
         }
         if (s.path.isEmpty() && s.mask == null) s.home = true;
+    }
+
+    /** 1.25.2: כל הרשימות החכמות — בשם שהפקודות מכירות ("רשימה\\חכמה"; כלי בבית — בשמו), לבוחר בעורך. */
+    static List<String> smartNames() {
+        List<String> out = new ArrayList<String>();
+        for (Structure.Func f : Structure.load().direct)
+            if (FnSmart.KIND.equals(f.kind) || FnDup.KIND.equals(f.kind)) out.add(f.name);
+        smartNames(Tree.load().root, "", out);
+        return out;
+    }
+
+    private static void smartNames(Tree.Node n, String prefix, List<String> out) {
+        for (String r : n.smart) {
+            Nested.Item it = Nested.resolve(r);
+            if (!it.gone && it.name != null && !it.name.isEmpty()) out.add(prefix + it.name);
+        }
+        for (Tree.Node c : n.children) smartNames(c, prefix + c.name + "\\", out);
+    }
+
+    /** "א\ב" — כמו שהפקודות כותבות דרך לרשימה. */
+    static String pathText(List<String> path) {
+        StringBuilder sb = new StringBuilder();
+        for (String p : path) sb.append(sb.length() > 0 ? "\\" : "").append(p);
+        return sb.toString();
     }
 
     // ---------- מציאה בעץ ----------

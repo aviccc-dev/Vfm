@@ -153,6 +153,30 @@ final class ListCmd {
         if (s.path.isEmpty() && s.mask == null) s.home = true;
     }
 
+    /** 1.25.2: כל הרשימות החכמות — בשם שהפקודות מכירות ("רשימה\\חכמה"; כלי בבית — בשמו), לבוחר בעורך. */
+    static List<String> smartNames() {
+        List<String> out = new ArrayList<String>();
+        for (Structure.Func f : Structure.load().direct)
+            if (FnSmart.KIND.equals(f.kind) || FnDup.KIND.equals(f.kind)) out.add(f.name);
+        smartNames(Tree.load().root, "", out);
+        return out;
+    }
+
+    private static void smartNames(Tree.Node n, String prefix, List<String> out) {
+        for (String r : n.smart) {
+            Nested.Item it = Nested.resolve(r);
+            if (!it.gone && it.name != null && !it.name.isEmpty()) out.add(prefix + it.name);
+        }
+        for (Tree.Node c : n.children) smartNames(c, prefix + c.name + "\\", out);
+    }
+
+    /** "א\ב" — כמו שהפקודות כותבות דרך לרשימה. */
+    static String pathText(List<String> path) {
+        StringBuilder sb = new StringBuilder();
+        for (String p : path) sb.append(sb.length() > 0 ? "\\" : "").append(p);
+        return sb.toString();
+    }
+
     // ---------- מציאה בעץ ----------
 
     /** רשימה חכמה: ההפניה שלה ברשימה (from = הרשימה שבה), או כלי בבית (tool). */
