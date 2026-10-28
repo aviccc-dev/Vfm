@@ -41,6 +41,10 @@ public class Home extends Activity {
     private PasteBar pasteBar;
     private HomeSelect pick;
     private final java.util.Map<String, TextView> statViews = new java.util.HashMap<String, TextView>();
+    /** 1.23.2: האריח של כל כלי, והרקע שלו — לסימון הבחירה בלי בנייה מחדש. */
+    private final java.util.Map<String, View> tiles = new java.util.HashMap<String, View>();
+    private final java.util.Map<String, android.graphics.drawable.Drawable> tileBg = new java.util.HashMap<String, android.graphics.drawable.Drawable>();
+    private ScrollView sv;
     private final List<Structure.Func> statFuncs = new ArrayList<Structure.Func>();
 
     @Override
@@ -85,6 +89,8 @@ public class Home extends Activity {
         root.addView(pasteBar.view);
         pick = new HomeSelect(this, new Runnable() {                          // 1.17.1: בחירה מרובה בבית
             @Override public void run() { build(); }
+        }, new Runnable() {
+            @Override public void run() { marks(); }                         // 1.23.2: נגיעה בבחירה — רק הסימון
         });
         root.addView(pick.view);
 
@@ -108,7 +114,7 @@ public class Home extends Activity {
         grid.setColumnCount(3);
         root.addView(grid);
 
-        ScrollView sv = new ScrollView(this);
+        sv = new ScrollView(this);
         sv.addView(root);
         setContentView(TopRow.wrap(this, sv));                   // 1.9.0: שורת הכפתורים העליונה
     }
@@ -362,10 +368,21 @@ public class Home extends Activity {
 
     // ---------- אריחים ----------
 
+    /** 1.23.2: הסימון של הבחירה, על האריחים הקיימים — המסך לא נבנה מחדש ולא קופץ. */
+    private void marks() {
+        for (java.util.Map.Entry<String, View> e : tiles.entrySet()) {
+            if (pick.has(e.getKey())) e.getValue().setBackgroundColor(Select.color(true));
+            else e.getValue().setBackground(tileBg.get(e.getKey()));
+        }
+    }
+
     private void build() {
         if (pasteBar != null) pasteBar.refresh();
         Structure.ensureIds();
+        final int y = sv == null ? 0 : sv.getScrollY();                       // 1.23.2: אחרי פעולה — באותו מקום, לא למעלה
         grid.removeAllViews();
+        tiles.clear();
+        tileBg.clear();
         statViews.clear();
         statFuncs.clear();
         Structure.Model m = Structure.load();
@@ -395,6 +412,8 @@ public class Home extends Activity {
                     return true;
                 }
             });
+            tiles.put(f.id, tl);
+            tileBg.put(f.id, tl.getBackground());
             if (pick.has(f.id)) tl.setBackgroundColor(Select.color(true));
             grid.addView(tl);
         }
@@ -405,6 +424,9 @@ public class Home extends Activity {
         grid.addView(tile("➕", null, Words.Main.ADD, "", w, new View.OnClickListener() {
             @Override public void onClick(View v) { addSomething(); }
         }, null));
+        if (sv != null && y > 0) sv.post(new Runnable() {
+            @Override public void run() { sv.scrollTo(0, y); }
+        });
     }
 
     /** 1.15.0: כלי של רשימה — הצלמית של הרשימה (רשימה כסביבת עבודה — 🧰); אחרת — של סוג הכלי. */

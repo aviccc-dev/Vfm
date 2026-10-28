@@ -26,11 +26,14 @@ final class HomeSelect {
     private final LinearLayout buttons;
     private final Activity a;
     private final Runnable rebuild;
+    /** 1.23.2: סימון הבחירה בלבד — בלי לבנות את המסך מחדש (המשתמש: "סימנתי אחת אחת, וכל פעם המסך קופץ"). */
+    private final Runnable marks;
     private final Set<String> ids = new LinkedHashSet<String>();
 
-    HomeSelect(Activity a, Runnable rebuild) {
+    HomeSelect(Activity a, Runnable rebuild, Runnable marks) {
         this.a = a;
         this.rebuild = rebuild;
+        this.marks = marks;
         view = new LinearLayout(a);
         view.setOrientation(LinearLayout.VERTICAL);
         view.setBackgroundColor(Ui.HEADER);
@@ -59,7 +62,7 @@ final class HomeSelect {
     void toggle(Structure.Func f) {
         if (!ids.remove(f.id)) ids.add(f.id);
         refresh();
-        rebuild.run();
+        marks.run();
     }
 
     void stop() {
