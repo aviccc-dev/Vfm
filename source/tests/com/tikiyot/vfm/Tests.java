@@ -4081,7 +4081,11 @@ public final class Tests {
             String fpErr = "";
             for (Batch.Step x : fp.steps) if (x.error != null) fpErr += x.label() + ": " + x.error + " | ";
             check("1.25.4: התבנית המלאה — בלי שגיאות (" + fpErr + ")", fp.errors == 0 && fp.measure && fp.changes() > 0);
+            fp.inputs.add("קלט · בדיקה");                                    // 1.27.0
             List<String> frep = Batch.run(fp, lib, null, null);
+            String fr = frep.toString();
+            check("1.27.0: הדוח — הקלט בראש, שמות, והיעד לא לתוך עצמו (" + fr + ")", frep.get(0).equals("קלט · בדיקה")
+                    && fr.contains("— \"") && fr.contains("לא לתוך עצמו") && !fr.contains("לא נכנסו"));
             for (int rr = 1; rr <= 2; rr++) {                                    // מדידה: הכנה מול הרצה, כשהרשימה כבר גדולה
                 long q0 = System.nanoTime();
                 Batch.Plan big = Batch.plan(full.toString().replace("חזור 3", "חזור " + (rr + 1)), root, dv, lib);

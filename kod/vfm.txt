@@ -2,8 +2,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="com.tikiyot.vfm"
-    android:versionCode="177"
-    android:versionName="1.26.0">
+    android:versionCode="178"
+    android:versionName="1.27.0">
     <uses-sdk android:minSdkVersion="21" android:targetSdkVersion="30" />
 
     <queries>
@@ -3609,6 +3609,8 @@ final class Batch {
         boolean ran;
         /** 1.26.0: על מה השורה פועלת (רשימה / תיקייה) — לסיכום; null — מתוך describe. */
         String target;
+        /** 1.27.0: MD ידנית — הרשימה (לניקוי שבסוף, ולאזהרה כשכבר קיימת). */
+        List<String> listPath;
 
         /** "12" · בלולאה — "12 (סבב 3)". */
         String label() {
@@ -3641,6 +3643,8 @@ final class Batch {
         /** 1.25.0: הלולאות — לכל מזהה: הגבול לסבב (אלפיות שנייה; 0 — בלי) והשורה של "חזור". */
         final List<Long> loopLimit = new ArrayList<Long>();
         final List<Integer> loopLine = new ArrayList<Integer>();
+        /** 1.27.0: הקלט — בראש הדוח והיומן (קובץ, ערכים שמולאו). */
+        final List<String> inputs = new ArrayList<String>();
         /** 1.25.4: המשתמש עצר בזמן ההכנה — לא מריצים. */
         boolean stopped;
         /** 1.25.0: לולאה שנעצרה בתכנון (הסבב עבר את הגבול) — מוצג בתצוגה המקדימה. */
@@ -4922,7 +4926,7 @@ final class Batch {
     }
 
     static List<String> run(Plan plan, Library lib, Physical.Asker asker, Physical.Progress progress, boolean grey, Listener listen) {
-        List<String> report = new ArrayList<String>();
+        List<String> report = new ArrayList<String>(plan.inputs);              // 1.27.0: הקלט — בראש
         Clock clock = new Clock();                                               // 1.25.0: לולאה — עצירה לפי זמן
         long all0 = System.nanoTime();
         Step prev = null;
@@ -4960,7 +4964,11 @@ final class Batch {
                 continue;
             }
             String out;
-            if (s.cmd.equals("ECHO") || s.cmd.equals("START") || s.cmd.equals(OPEN) || s.noop) continue;
+            if (s.noop) {                                                       // 1.27.0: גם מה שלא השתנה — נאמר
+                report.add(Words.Cmd.line(s.label(), s.describe));
+                continue;
+            }
+            if (s.cmd.equals("ECHO") || s.cmd.equals("START") || s.cmd.equals(OPEN)) continue;
             if (s.op != null) {                                                // 1.24.0: רשימות
                 report.add(Words.Cmd.line(s.label(), s.op.run(lib)));
                 continue;
@@ -36870,6 +36878,15 @@ public final class Words {
         public static String open(String list) {
             return "פתח את \"" + list + "\"";
         }
+
+        /** 1.27.0: הניקוי — אחרי שבדקת. */
+        public static final String CLEAN = "🗑 מחק את מה שההרצה יצרה", CLEAN_TITLE = "למחוק את מה שההרצה הזו יצרה?",
+                CLEAN_WHAT = "הרשימות האלה, עם כל מה שבתוכן — לסל (אפשר לשחזר משם). הקבצים בכונן לא נוגעים.",
+                CLEANED = "נמחקו לסל", INPUT = "קלט", FILE = "קובץ: ";
+
+        public static String exists(String list) {
+            return "⚠ " + list + " כבר קיימת — ההעתקות ייכנסו לתוכה, והניקוי שבסוף לא ימחק אותה";
+        }
     }
 
     /** 1.25.0: לולאה ומדידה בקובצי פקודות (claude/pkudot-reshimot.md). */
@@ -37002,6 +37019,12 @@ public final class Words {
 
         public static String conds(String a, String onlyA, String b, String onlyB) {
             return "התנאים — רק ב" + a + ": " + onlyA + " · רק ב" + b + ": " + onlyB;
+        }
+
+        public static String notIntoSelf(java.util.List<String> paths) {
+            StringBuilder sb = new StringBuilder();
+            for (String p : paths) sb.append(sb.length() > 0 ? ", " : "").append('"').append(p).append('"');
+            return " · בלי " + sb + " (היעד עצמו — לא לתוך עצמו)";
         }
 
         public static String dupSkipped(int n) {
@@ -42051,7 +42074,11 @@ public final class Tests {
             String fpErr = "";
             for (Batch.Step x : fp.steps) if (x.error != null) fpErr += x.label() + ": " + x.error + " | ";
             check("1.25.4: התבנית המלאה — בלי שגיאות (" + fpErr + ")", fp.errors == 0 && fp.measure && fp.changes() > 0);
+            fp.inputs.add("קלט · בדיקה");                                    // 1.27.0
             List<String> frep = Batch.run(fp, lib, null, null);
+            String fr = frep.toString();
+            check("1.27.0: הדוח — הקלט בראש, שמות, והיעד לא לתוך עצמו (" + fr + ")", frep.get(0).equals("קלט · בדיקה")
+                    && fr.contains("— \"") && fr.contains("לא לתוך עצמו") && !fr.contains("לא נכנסו"));
             for (int rr = 1; rr <= 2; rr++) {                                    // מדידה: הכנה מול הרצה, כשהרשימה כבר גדולה
                 long q0 = System.nanoTime();
                 Batch.Plan big = Batch.plan(full.toString().replace("חזור 3", "חזור " + (rr + 1)), root, dv, lib);
@@ -45823,6 +45850,8 @@ final class ListCmd {
             if (a.kind != LIST || a.content || a.filesOf || a.home || a.mask != null) { s.error = Words.ListCmdW.USAGE_MD; return; }
             if (t.find(a.path) != null) {
                 s.noop = true;
+                s.target = a.label();
+                s.listPath = a.path;
                 s.describe = Words.ListCmdW.exists(a.label());
                 return;
             }
@@ -45833,6 +45862,7 @@ final class ListCmd {
             }
             s.describe = Words.ListCmdW.created(a.label());
             s.target = a.label();
+            s.listPath = a.path;
             s.op = new Op() {
                 @Override public String run(Library lib) {
                     Verbs.ensureList(a.path);
@@ -45898,13 +45928,16 @@ final class ListCmd {
                 Tree.Node m = t.find(a.path), dn = t.find(b.path);
                 if (m != null && (m == dn || m.isAncestorOf(dn))) { s.error = Words.ListCmdW.INTO_ITSELF; return; }
             }
-            s.describe = Words.ListCmdW.copy(src.what, b.label());
+            String self = notIntoSelf(src, b);
+            s.describe = Words.ListCmdW.copy(src.what, b.label()) + names(src) + self;
             s.target = b.label();
             VClip.simulate(t, src.from, src.items, b.home ? null : b.path, full);
             s.op = new Op() {
                 @Override public String run(Library lib) {
                     Src now = source(Tree.load(), a, fsFiles, lib);
                     if (now.error != null) return now.error;
+                    String self2 = notIntoSelf(now, b);                        // 1.27.0: הרשימה של הסבב — לא לתוך עצמה (נאמר)
+                    String what = names(now);
                     VClip.Result r = VClip.apply(now.from, now.items, full, b.home ? null : b.path);
                     String size = "";
                     if (!b.home) {                                           // 1.25.0: כמה יש ביעד עכשיו (לגידול בסבבים)
@@ -45912,7 +45945,7 @@ final class ListCmd {
                         ListCount c = ListCount.of(t2, t2.find(b.path), null);
                         size = Words.ListCmdW.nowIn(c.lists, c.items);
                     }
-                    return Words.ListCmdW.copied(r.done, r.skipped, r.why, b.label()) + size;
+                    return Words.ListCmdW.copied(r.done, r.skipped, r.why, b.label()) + what + self2 + size;
                 }
             };
             return;
@@ -45974,6 +46007,34 @@ final class ListCmd {
         StringBuilder sb = new StringBuilder();
         for (String x : xs) sb.append(sb.length() > 0 ? " " : "").append(x);
         return sb.length() == 0 ? "—" : sb.toString();
+    }
+
+    /**
+     * 1.27.0 (המשתמש: "מעתיקה — אני לא יודע בדיוק מה, ולא לאיפה"): מה שמועתק — בשמות (עד חמישה, ו"עוד N").
+     */
+    static String names(Src src) {
+        if (src.items.isEmpty()) return "";
+        StringBuilder sb = new StringBuilder(" — ");
+        for (int i = 0; i < Math.min(5, src.items.size()); i++) sb.append(i > 0 ? ", " : "").append('"').append(src.items.get(i).name).append('"');
+        if (src.items.size() > 5) sb.append(" ").append(Words.andMore(src.items.size() - 5));
+        return sb.toString();
+    }
+
+    /** 1.27.0: תוכן של רשימה לתוך רשימה שבתוכה — היעד עצמו (והרשימות שהוא בתוכן) יוצא מהפריטים, ונאמר. */
+    static String notIntoSelf(Src src, Side b) {
+        if (src.from == null || b.home) return "";
+        List<String> out = new ArrayList<String>();
+        for (java.util.Iterator<VClip.Item> it = src.items.iterator(); it.hasNext(); ) {
+            VClip.Item x = it.next();
+            if (x.kind != VClip.LIST) continue;
+            List<String> p = new ArrayList<String>(src.from);
+            p.add(x.value);
+            if (Tree.inside(b.path, p)) {
+                out.add(pathText(p));
+                it.remove();
+            }
+        }
+        return out.isEmpty() ? "" : Words.ListCmdW.notIntoSelf(out);
     }
 
     /** מה יוצא בהסרה: רשימה, חכמה (או כלי בבית), תוכן, או קבצים לפי תבנית. */
@@ -46218,6 +46279,8 @@ public class RunScreen extends Activity {
     private Library lib;
     private List<String> lines;
     private HoleForm.Fields fields;
+    /** 1.27.0: מה שמולא — לראש הדוח והיומן. */
+    private Map<String, String> filled;
     private Batch.Plan plan;
     private List<String> report = new ArrayList<String>();
     private final Handler h = new Handler();
@@ -46294,6 +46357,7 @@ public class RunScreen extends Activity {
                 public void onClick(View v) {
                     Map<String, String> val = fields.values(RunScreen.this);
                     if (val == null) return;
+                    filled = val;
                     StringBuilder sb = new StringBuilder();
                     for (String l : CmdTemplates.fill(lines, val)) sb.append(l).append('\n');
                     fields.view.setEnabled(false);
@@ -46352,6 +46416,8 @@ public class RunScreen extends Activity {
         List<Batch.Step> ok = new ArrayList<Batch.Step>();
         for (Batch.Step s : plan.steps) if (s.error == null) ok.add(s);
         for (String e : plan.echoes) bodies[1].addView(info("💬 " + e));
+        for (Batch.Step s : ok)                                                // 1.27.0: היעד "החדש" כבר קיים — אזהרה
+            if (s.noop && s.listPath != null && s.cmd.equals("MD")) bodies[1].addView(warn(Words.Run.exists(s.target)));
         row(bodies[1], Words.Run.WILL_CREATE, names(ok, Batch.K_CREATE, false));
         row(bodies[1], Words.Run.WILL_CHANGE, names(ok, Batch.K_CHANGE, false));
         row(bodies[1], Words.Run.WILL_DELETE, names(ok, Batch.K_DELETE, false));
@@ -46380,6 +46446,11 @@ public class RunScreen extends Activity {
 
     private void run() {
         stage(2);
+        plan.inputs.clear();                                                   // 1.27.0: הקלט — בראש הדוח והיומן
+        plan.inputs.add(Words.Run.FILE + file.getName());
+        if (filled != null)
+            for (Map.Entry<String, String> e : filled.entrySet())
+                plan.inputs.add(Words.Run.INPUT + " · " + e.getKey() + ": " + e.getValue().replace("\n", ", "));
         final TextView where = info(""), last = info(""), clock = info("");
         final ProgressBar bar = new ProgressBar(this, null, android.R.attr.progressBarStyleHorizontal);
         bar.setMax(Math.max(1, plan.steps.size()));
@@ -46461,6 +46532,7 @@ public class RunScreen extends Activity {
             else if (!s.ran) skipped++;
         }
         for (String e : plan.echoes) bodies[3].addView(info("💬 " + e));
+        for (String in : plan.inputs) bodies[3].addView(info(in));
         row(bodies[3], Words.Run.CREATED, names(ran, Batch.K_CREATE, true));
         row(bodies[3], Words.Run.CHANGED, names(ran, Batch.K_CHANGE, true));
         row(bodies[3], Words.Run.DELETED, names(ran, Batch.K_DELETE, true));
@@ -46487,12 +46559,69 @@ public class RunScreen extends Activity {
             bs.add(btn(Words.Run.JOURNAL, new View.OnClickListener() {
                 @Override public void onClick(View v) { Ui.open(RunScreen.this, new File(plan.measureJournal)); }
             }));
+        final List<List<String>> made = created();
+        if (!made.isEmpty()) {                                                 // 1.27.0: הניקוי — אחרי שבדקת, בשמות
+            final Button[] clean = new Button[1];
+            clean[0] = btn(Words.Run.CLEAN, new View.OnClickListener() {
+                @Override public void onClick(View v) { clean(made, clean[0]); }
+            });
+            bs.add(clean[0]);
+        }
         bs.add(btn(Words.CLOSE, close()));
         buttons(bs.toArray(new Button[0]));
         if (!plan.shared.isEmpty()) {                                          // 203: כל מה שלשיתוף — שליחה אחת
             Ui.toast(this, Words.Cmd.sending(plan.shared.size()));
             Acts.sendReady(this, plan.shared);
         }
+    }
+
+    /** 1.27.0: הרשימות שההרצה יצרה (MD שלא היה קיים) — רק העליונות (מה שבתוכן נמחק איתן). */
+    private List<List<String>> created() {
+        List<List<String>> all = new ArrayList<List<String>>();
+        for (Batch.Step s : plan.steps)
+            if (s.ran && !s.noop && s.listPath != null && s.cmd.equals("MD")) all.add(s.listPath);
+        List<List<String>> top = new ArrayList<List<String>>();
+        for (List<String> p : all) {
+            boolean inner = false;
+            for (List<String> q : all) if (q != p && q.size() < p.size() && Tree.inside(p, q)) inner = true;
+            if (!inner && !top.contains(p)) top.add(p);
+        }
+        return top;
+    }
+
+    private void clean(final List<List<String>> made, final Button b) {
+        StringBuilder names = new StringBuilder();
+        for (List<String> p : made) names.append("• ").append(ListCmd.pathText(p)).append('\n');
+        Ui.ask(this, Words.Run.CLEAN_TITLE, names.toString().trim(), Words.Run.CLEAN_WHAT, Words.Box.IN_BIN, Words.Run.CLEAN, new Runnable() {
+            @Override
+            public void run() {
+                List<String> gone = new ArrayList<String>();
+                for (List<String> p : made) {
+                    if (Tree.load().find(p) == null) continue;
+                    List<String> parent = new ArrayList<String>(p.subList(0, p.size() - 1));
+                    String leaf = p.get(p.size() - 1);
+                    VClip.remove(parent, java.util.Collections.singletonList(new VClip.Item(VClip.LIST, leaf, leaf)));
+                    gone.add(ListCmd.pathText(p));
+                }
+                Log.i(Words.Run.CLEANED + ": " + gone);
+                bodies[3].addView(warn(Words.Run.CLEANED + ": " + join(gone)));
+                b.setEnabled(false);
+            }
+        });
+    }
+
+    private static String join(List<String> xs) {
+        StringBuilder sb = new StringBuilder();
+        for (String x : xs) sb.append(sb.length() > 0 ? ", " : "").append('"').append(x).append('"');
+        return sb.toString();
+    }
+
+    private TextView warn(String s) {
+        TextView t = info(s);
+        t.setTextColor(Ui.TEXT);
+        t.setBackgroundColor(Ui.DOUBT);
+        t.setPadding(Ui.dp(this, 8), Ui.dp(this, 4), Ui.dp(this, 8), Ui.dp(this, 4));
+        return t;
     }
 
     /** הרשימה הראשונה שנוצרה או שהשתנתה (לכפתור "פתח"). */

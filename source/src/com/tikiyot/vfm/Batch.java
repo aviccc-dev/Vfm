@@ -64,6 +64,8 @@ final class Batch {
         boolean ran;
         /** 1.26.0: על מה השורה פועלת (רשימה / תיקייה) — לסיכום; null — מתוך describe. */
         String target;
+        /** 1.27.0: MD ידנית — הרשימה (לניקוי שבסוף, ולאזהרה כשכבר קיימת). */
+        List<String> listPath;
 
         /** "12" · בלולאה — "12 (סבב 3)". */
         String label() {
@@ -96,6 +98,8 @@ final class Batch {
         /** 1.25.0: הלולאות — לכל מזהה: הגבול לסבב (אלפיות שנייה; 0 — בלי) והשורה של "חזור". */
         final List<Long> loopLimit = new ArrayList<Long>();
         final List<Integer> loopLine = new ArrayList<Integer>();
+        /** 1.27.0: הקלט — בראש הדוח והיומן (קובץ, ערכים שמולאו). */
+        final List<String> inputs = new ArrayList<String>();
         /** 1.25.4: המשתמש עצר בזמן ההכנה — לא מריצים. */
         boolean stopped;
         /** 1.25.0: לולאה שנעצרה בתכנון (הסבב עבר את הגבול) — מוצג בתצוגה המקדימה. */
@@ -1377,7 +1381,7 @@ final class Batch {
     }
 
     static List<String> run(Plan plan, Library lib, Physical.Asker asker, Physical.Progress progress, boolean grey, Listener listen) {
-        List<String> report = new ArrayList<String>();
+        List<String> report = new ArrayList<String>(plan.inputs);              // 1.27.0: הקלט — בראש
         Clock clock = new Clock();                                               // 1.25.0: לולאה — עצירה לפי זמן
         long all0 = System.nanoTime();
         Step prev = null;
@@ -1415,7 +1419,11 @@ final class Batch {
                 continue;
             }
             String out;
-            if (s.cmd.equals("ECHO") || s.cmd.equals("START") || s.cmd.equals(OPEN) || s.noop) continue;
+            if (s.noop) {                                                       // 1.27.0: גם מה שלא השתנה — נאמר
+                report.add(Words.Cmd.line(s.label(), s.describe));
+                continue;
+            }
+            if (s.cmd.equals("ECHO") || s.cmd.equals("START") || s.cmd.equals(OPEN)) continue;
             if (s.op != null) {                                                // 1.24.0: רשימות
                 report.add(Words.Cmd.line(s.label(), s.op.run(lib)));
                 continue;

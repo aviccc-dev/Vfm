@@ -424,6 +424,8 @@ final class ListCmd {
             if (a.kind != LIST || a.content || a.filesOf || a.home || a.mask != null) { s.error = Words.ListCmdW.USAGE_MD; return; }
             if (t.find(a.path) != null) {
                 s.noop = true;
+                s.target = a.label();
+                s.listPath = a.path;
                 s.describe = Words.ListCmdW.exists(a.label());
                 return;
             }
@@ -434,6 +436,7 @@ final class ListCmd {
             }
             s.describe = Words.ListCmdW.created(a.label());
             s.target = a.label();
+            s.listPath = a.path;
             s.op = new Op() {
                 @Override public String run(Library lib) {
                     Verbs.ensureList(a.path);
@@ -499,13 +502,16 @@ final class ListCmd {
                 Tree.Node m = t.find(a.path), dn = t.find(b.path);
                 if (m != null && (m == dn || m.isAncestorOf(dn))) { s.error = Words.ListCmdW.INTO_ITSELF; return; }
             }
-            s.describe = Words.ListCmdW.copy(src.what, b.label());
+            String self = notIntoSelf(src, b);
+            s.describe = Words.ListCmdW.copy(src.what, b.label()) + names(src) + self;
             s.target = b.label();
             VClip.simulate(t, src.from, src.items, b.home ? null : b.path, full);
             s.op = new Op() {
                 @Override public String run(Library lib) {
                     Src now = source(Tree.load(), a, fsFiles, lib);
                     if (now.error != null) return now.error;
+                    String self2 = notIntoSelf(now, b);                        // 1.27.0: הרשימה של הסבב — לא לתוך עצמה (נאמר)
+                    String what = names(now);
                     VClip.Result r = VClip.apply(now.from, now.items, full, b.home ? null : b.path);
                     String size = "";
                     if (!b.home) {                                           // 1.25.0: כמה יש ביעד עכשיו (לגידול בסבבים)
@@ -513,7 +519,7 @@ final class ListCmd {
                         ListCount c = ListCount.of(t2, t2.find(b.path), null);
                         size = Words.ListCmdW.nowIn(c.lists, c.items);
                     }
-                    return Words.ListCmdW.copied(r.done, r.skipped, r.why, b.label()) + size;
+                    return Words.ListCmdW.copied(r.done, r.skipped, r.why, b.label()) + what + self2 + size;
                 }
             };
             return;
@@ -575,6 +581,34 @@ final class ListCmd {
         StringBuilder sb = new StringBuilder();
         for (String x : xs) sb.append(sb.length() > 0 ? " " : "").append(x);
         return sb.length() == 0 ? "—" : sb.toString();
+    }
+
+    /**
+     * 1.27.0 (המשתמש: "מעתיקה — אני לא יודע בדיוק מה, ולא לאיפה"): מה שמועתק — בשמות (עד חמישה, ו"עוד N").
+     */
+    static String names(Src src) {
+        if (src.items.isEmpty()) return "";
+        StringBuilder sb = new StringBuilder(" — ");
+        for (int i = 0; i < Math.min(5, src.items.size()); i++) sb.append(i > 0 ? ", " : "").append('"').append(src.items.get(i).name).append('"');
+        if (src.items.size() > 5) sb.append(" ").append(Words.andMore(src.items.size() - 5));
+        return sb.toString();
+    }
+
+    /** 1.27.0: תוכן של רשימה לתוך רשימה שבתוכה — היעד עצמו (והרשימות שהוא בתוכן) יוצא מהפריטים, ונאמר. */
+    static String notIntoSelf(Src src, Side b) {
+        if (src.from == null || b.home) return "";
+        List<String> out = new ArrayList<String>();
+        for (java.util.Iterator<VClip.Item> it = src.items.iterator(); it.hasNext(); ) {
+            VClip.Item x = it.next();
+            if (x.kind != VClip.LIST) continue;
+            List<String> p = new ArrayList<String>(src.from);
+            p.add(x.value);
+            if (Tree.inside(b.path, p)) {
+                out.add(pathText(p));
+                it.remove();
+            }
+        }
+        return out.isEmpty() ? "" : Words.ListCmdW.notIntoSelf(out);
     }
 
     /** מה יוצא בהסרה: רשימה, חכמה (או כלי בבית), תוכן, או קבצים לפי תבנית. */

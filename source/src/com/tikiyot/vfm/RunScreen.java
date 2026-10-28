@@ -36,6 +36,8 @@ public class RunScreen extends Activity {
     private Library lib;
     private List<String> lines;
     private HoleForm.Fields fields;
+    /** 1.27.0: מה שמולא — לראש הדוח והיומן. */
+    private Map<String, String> filled;
     private Batch.Plan plan;
     private List<String> report = new ArrayList<String>();
     private final Handler h = new Handler();
@@ -112,6 +114,7 @@ public class RunScreen extends Activity {
                 public void onClick(View v) {
                     Map<String, String> val = fields.values(RunScreen.this);
                     if (val == null) return;
+                    filled = val;
                     StringBuilder sb = new StringBuilder();
                     for (String l : CmdTemplates.fill(lines, val)) sb.append(l).append('\n');
                     fields.view.setEnabled(false);
@@ -170,6 +173,8 @@ public class RunScreen extends Activity {
         List<Batch.Step> ok = new ArrayList<Batch.Step>();
         for (Batch.Step s : plan.steps) if (s.error == null) ok.add(s);
         for (String e : plan.echoes) bodies[1].addView(info("💬 " + e));
+        for (Batch.Step s : ok)                                                // 1.27.0: היעד "החדש" כבר קיים — אזהרה
+            if (s.noop && s.listPath != null && s.cmd.equals("MD")) bodies[1].addView(warn(Words.Run.exists(s.target)));
         row(bodies[1], Words.Run.WILL_CREATE, names(ok, Batch.K_CREATE, false));
         row(bodies[1], Words.Run.WILL_CHANGE, names(ok, Batch.K_CHANGE, false));
         row(bodies[1], Words.Run.WILL_DELETE, names(ok, Batch.K_DELETE, false));
@@ -198,6 +203,11 @@ public class RunScreen extends Activity {
 
     private void run() {
         stage(2);
+        plan.inputs.clear();                                                   // 1.27.0: הקלט — בראש הדוח והיומן
+        plan.inputs.add(Words.Run.FILE + file.getName());
+        if (filled != null)
+            for (Map.Entry<String, String> e : filled.entrySet())
+                plan.inputs.add(Words.Run.INPUT + " · " + e.getKey() + ": " + e.getValue().replace("\n", ", "));
         final TextView where = info(""), last = info(""), clock = info("");
         final ProgressBar bar = new ProgressBar(this, null, android.R.attr.progressBarStyleHorizontal);
         bar.setMax(Math.max(1, plan.steps.size()));
@@ -279,6 +289,7 @@ public class RunScreen extends Activity {
             else if (!s.ran) skipped++;
         }
         for (String e : plan.echoes) bodies[3].addView(info("💬 " + e));
+        for (String in : plan.inputs) bodies[3].addView(info(in));
         row(bodies[3], Words.Run.CREATED, names(ran, Batch.K_CREATE, true));
         row(bodies[3], Words.Run.CHANGED, names(ran, Batch.K_CHANGE, true));
         row(bodies[3], Words.Run.DELETED, names(ran, Batch.K_DELETE, true));
@@ -305,12 +316,69 @@ public class RunScreen extends Activity {
             bs.add(btn(Words.Run.JOURNAL, new View.OnClickListener() {
                 @Override public void onClick(View v) { Ui.open(RunScreen.this, new File(plan.measureJournal)); }
             }));
+        final List<List<String>> made = created();
+        if (!made.isEmpty()) {                                                 // 1.27.0: הניקוי — אחרי שבדקת, בשמות
+            final Button[] clean = new Button[1];
+            clean[0] = btn(Words.Run.CLEAN, new View.OnClickListener() {
+                @Override public void onClick(View v) { clean(made, clean[0]); }
+            });
+            bs.add(clean[0]);
+        }
         bs.add(btn(Words.CLOSE, close()));
         buttons(bs.toArray(new Button[0]));
         if (!plan.shared.isEmpty()) {                                          // 203: כל מה שלשיתוף — שליחה אחת
             Ui.toast(this, Words.Cmd.sending(plan.shared.size()));
             Acts.sendReady(this, plan.shared);
         }
+    }
+
+    /** 1.27.0: הרשימות שההרצה יצרה (MD שלא היה קיים) — רק העליונות (מה שבתוכן נמחק איתן). */
+    private List<List<String>> created() {
+        List<List<String>> all = new ArrayList<List<String>>();
+        for (Batch.Step s : plan.steps)
+            if (s.ran && !s.noop && s.listPath != null && s.cmd.equals("MD")) all.add(s.listPath);
+        List<List<String>> top = new ArrayList<List<String>>();
+        for (List<String> p : all) {
+            boolean inner = false;
+            for (List<String> q : all) if (q != p && q.size() < p.size() && Tree.inside(p, q)) inner = true;
+            if (!inner && !top.contains(p)) top.add(p);
+        }
+        return top;
+    }
+
+    private void clean(final List<List<String>> made, final Button b) {
+        StringBuilder names = new StringBuilder();
+        for (List<String> p : made) names.append("• ").append(ListCmd.pathText(p)).append('\n');
+        Ui.ask(this, Words.Run.CLEAN_TITLE, names.toString().trim(), Words.Run.CLEAN_WHAT, Words.Box.IN_BIN, Words.Run.CLEAN, new Runnable() {
+            @Override
+            public void run() {
+                List<String> gone = new ArrayList<String>();
+                for (List<String> p : made) {
+                    if (Tree.load().find(p) == null) continue;
+                    List<String> parent = new ArrayList<String>(p.subList(0, p.size() - 1));
+                    String leaf = p.get(p.size() - 1);
+                    VClip.remove(parent, java.util.Collections.singletonList(new VClip.Item(VClip.LIST, leaf, leaf)));
+                    gone.add(ListCmd.pathText(p));
+                }
+                Log.i(Words.Run.CLEANED + ": " + gone);
+                bodies[3].addView(warn(Words.Run.CLEANED + ": " + join(gone)));
+                b.setEnabled(false);
+            }
+        });
+    }
+
+    private static String join(List<String> xs) {
+        StringBuilder sb = new StringBuilder();
+        for (String x : xs) sb.append(sb.length() > 0 ? ", " : "").append('"').append(x).append('"');
+        return sb.toString();
+    }
+
+    private TextView warn(String s) {
+        TextView t = info(s);
+        t.setTextColor(Ui.TEXT);
+        t.setBackgroundColor(Ui.DOUBT);
+        t.setPadding(Ui.dp(this, 8), Ui.dp(this, 4), Ui.dp(this, 8), Ui.dp(this, 4));
+        return t;
     }
 
     /** הרשימה הראשונה שנוצרה או שהשתנתה (לכפתור "פתח"). */

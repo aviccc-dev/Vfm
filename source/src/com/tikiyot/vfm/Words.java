@@ -2078,6 +2078,15 @@ public final class Words {
         public static String open(String list) {
             return "פתח את \"" + list + "\"";
         }
+
+        /** 1.27.0: הניקוי — אחרי שבדקת. */
+        public static final String CLEAN = "🗑 מחק את מה שההרצה יצרה", CLEAN_TITLE = "למחוק את מה שההרצה הזו יצרה?",
+                CLEAN_WHAT = "הרשימות האלה, עם כל מה שבתוכן — לסל (אפשר לשחזר משם). הקבצים בכונן לא נוגעים.",
+                CLEANED = "נמחקו לסל", INPUT = "קלט", FILE = "קובץ: ";
+
+        public static String exists(String list) {
+            return "⚠ " + list + " כבר קיימת — ההעתקות ייכנסו לתוכה, והניקוי שבסוף לא ימחק אותה";
+        }
     }
 
     /** 1.25.0: לולאה ומדידה בקובצי פקודות (claude/pkudot-reshimot.md). */
@@ -2210,6 +2219,12 @@ public final class Words {
 
         public static String conds(String a, String onlyA, String b, String onlyB) {
             return "התנאים — רק ב" + a + ": " + onlyA + " · רק ב" + b + ": " + onlyB;
+        }
+
+        public static String notIntoSelf(java.util.List<String> paths) {
+            StringBuilder sb = new StringBuilder();
+            for (String p : paths) sb.append(sb.length() > 0 ? ", " : "").append('"').append(p).append('"');
+            return " · בלי " + sb + " (היעד עצמו — לא לתוך עצמו)";
         }
 
         public static String dupSkipped(int n) {
