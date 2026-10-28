@@ -92,6 +92,8 @@ final class Batch {
         /** 1.25.0: הלולאות — לכל מזהה: הגבול לסבב (אלפיות שנייה; 0 — בלי) והשורה של "חזור". */
         final List<Long> loopLimit = new ArrayList<Long>();
         final List<Integer> loopLine = new ArrayList<Integer>();
+        /** 1.25.4: המשתמש עצר בזמן ההכנה — לא מריצים. */
+        boolean stopped;
         /** 1.25.0: לולאה שנעצרה בתכנון (הסבב עבר את הגבול) — מוצג בתצוגה המקדימה. */
         final List<String> notes = new ArrayList<String>();
 
@@ -368,6 +370,8 @@ final class Batch {
         Library lib;
         /** 1.24.0: הרשימות בזיכרון — מה יהיה בהן אחרי השורות שלפני (ListCmd); null — עוד לא נטען. לא נשמר. */
         Tree tree;
+        /** 1.25.4: הקבצים של רשימות חכמות — חיפוש אחד לכל תנאי, לכל הקובץ (גם בעותקים שלהן). */
+        ListCmd.Lenient files;
 
         boolean isDir(File d) {
             String p = d.getAbsolutePath();
@@ -579,6 +583,11 @@ final class Batch {
 
     /** 1.20.0: עם האינדקס — ההשוואה לוקחת ממנו חתימות שכבר חושבו. */
     static Plan plan(String text, File here, Map<String, String> vars, Library lib) {
+        return plan(text, here, vars, lib, null);
+    }
+
+    /** 1.25.4: עם עצירה — ההכנה עצמה יכולה לקחת זמן (לולאות, השוואות של רשימות גדולות). */
+    static Plan plan(String text, File here, Map<String, String> vars, Library lib, Physical.Progress progress) {
         Plan plan = new Plan();
         Sim sim = new Sim();
         sim.lib = lib;
@@ -599,6 +608,10 @@ final class Batch {
             mark = plan.steps.size();
             t0 = System.nanoTime();
             if (li == all.size()) break;
+            if (progress != null && progress.stopped()) {                      // 1.25.4: עצירה בהכנה
+                plan.stopped = true;
+                break;
+            }
             Ln ln = all.get(li);
             prev = ln;
             if (clock.skip(plan, ln.loops, ln.rounds)) continue;               // לולאה שעברה את הגבול — גם בתכנון

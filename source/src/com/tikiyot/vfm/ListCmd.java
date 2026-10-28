@@ -234,6 +234,16 @@ final class ListCmd {
 
     /** הקבצים שהצד מצביע עליהם (ידנית — בכל העומק; חכמה — מה שהיא מוצאת עכשיו). */
     static List<String> files(Tree t, Side s, Library lib, String[] err) {
+        return files(t, s, lib, err, new Lenient(lib));
+    }
+
+    /** בתכנון — עם הזיכרון של הקובץ כולו (sim.files). */
+    static List<String> files(Tree t, Side s, Batch.Sim sim, String[] err) {
+        if (sim.files == null) sim.files = new Lenient(sim.lib);
+        return files(t, s, sim.lib, err, sim.files);
+    }
+
+    static List<String> files(Tree t, Side s, Library lib, String[] err, Lenient len) {
         List<String> out = new ArrayList<String>();
         Map<String, Long> m;
         if (s.kind == SMART_LIST) {
@@ -263,7 +273,7 @@ final class ListCmd {
             for (Tree.Entry e : n.entries) if (!e.bad && Batch.wild(s.mask, new File(e.path).getName())) out.add(e.path);
             return out;
         }
-        Lenient len = new Lenient(lib);
+        len.dups = 0;
         m = ListCount.filesOf(t, n, len);
         if (m == null) {
             err[0] = Words.ListCmdW.INDEX_NOT_READY;
@@ -302,8 +312,15 @@ final class ListCmd {
                 dups++;
                 return new java.util.HashMap<String, Long>();
             }
-            return in.smartFiles(ref);
+            Map<String, Long> m = byCond.get(it.cond);                        // 1.25.4: עותקים — אותו תנאי, חיפוש אחד
+            if (m == null) {
+                m = in.smartFiles(ref);
+                if (m != null) byCond.put(it.cond, m);
+            }
+            return m;
         }
+
+        private final Map<String, Map<String, Long>> byCond = new java.util.HashMap<String, Map<String, Long>>();
 
         @Override public Map<String, Long> liveFiles(String folder) { return in.liveFiles(folder); }
     }
@@ -425,7 +442,7 @@ final class ListCmd {
             if (a.filesOf) {                                                 // הקבצים עצמם — לסל (הביצוע הרגיל)
                 if (cmd.equals("RD")) { s.error = Words.ListCmdW.RD_FILES; return; }
                 String[] err = {null, null};
-                List<String> fs = files(t, a, sim.lib, err);
+                List<String> fs = files(t, a, sim, err);
                 if (fs == null) { s.error = err[0]; return; }
                 for (String f : fs) if (sim.isFile(new File(f))) s.files.add(new File(f).getAbsolutePath());
                 s.describe = Words.Cmd.toTrash(Words.files(s.files.size())) + Words.ListCmdW.FROM_DISK + (err[1] != null ? err[1] : "");
@@ -459,7 +476,7 @@ final class ListCmd {
             if (b.kind == FS) {                                             // מרשימה לתיקייה — הקבצים עצמם (הביצוע הרגיל)
                 if (fsDest == null || !sim.isDir(fsDest)) { s.error = Words.Cmd.NO_DEST; return; }
                 String[] err = {null, null};
-                List<String> fs = files(t, a, sim.lib, err);
+                List<String> fs = files(t, a, sim, err);
                 if (fs == null) { s.error = err[0]; return; }
                 s.dest = fsDest;
                 for (String f : fs) if (sim.isFile(new File(f))) s.files.add(new File(f).getAbsolutePath());
@@ -501,7 +518,7 @@ final class ListCmd {
             boolean conds = sw.contains(SW_CONDS);
             if (conds && (a.kind != SMART_LIST || b.kind != SMART_LIST || a.filesOf || b.filesOf)) { s.error = Words.ListCmdW.CONDS_SMART; return; }
             String[] err = {null, null};
-            List<String> fa = files(t, a, sim.lib, err), fb = fa == null ? null : files(t, b, sim.lib, err);
+            List<String> fa = files(t, a, sim, err), fb = fa == null ? null : files(t, b, sim, err);
             if (fa == null || fb == null) { s.error = err[0]; return; }
             String note = err[1] != null ? err[1] : "";
             java.util.Set<String> sa = new java.util.LinkedHashSet<String>(fa), sb = new java.util.LinkedHashSet<String>(fb);

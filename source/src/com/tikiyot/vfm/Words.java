@@ -468,6 +468,14 @@ public final class Words {
             return "מריץ את " + file + "…";
         }
 
+        /** 1.25.4: ההכנה (תכנון והדמיה) — לפני התצוגה המקדימה. */
+        public static String preparing(String file) {
+            return "מכין את " + file + "… (בודק כל שורה לפני ההרצה)";
+        }
+
+        public static final String PLAN_FAILED = "תקלה בהכנת קובץ הפקודות", STOPPED_PREPARING = "נעצר — שום דבר לא בוצע",
+                RUN_FAILED = "תקלה בהרצה: ";
+
         public static String openFolder(String name) {
             return "📂 פתיחת " + name;
         }

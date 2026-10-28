@@ -2,8 +2,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="com.tikiyot.vfm"
-    android:versionCode="172"
-    android:versionName="1.25.3">
+    android:versionCode="173"
+    android:versionName="1.25.4">
     <uses-sdk android:minSdkVersion="21" android:targetSdkVersion="30" />
 
     <queries>
@@ -3636,6 +3636,8 @@ final class Batch {
         /** 1.25.0: הלולאות — לכל מזהה: הגבול לסבב (אלפיות שנייה; 0 — בלי) והשורה של "חזור". */
         final List<Long> loopLimit = new ArrayList<Long>();
         final List<Integer> loopLine = new ArrayList<Integer>();
+        /** 1.25.4: המשתמש עצר בזמן ההכנה — לא מריצים. */
+        boolean stopped;
         /** 1.25.0: לולאה שנעצרה בתכנון (הסבב עבר את הגבול) — מוצג בתצוגה המקדימה. */
         final List<String> notes = new ArrayList<String>();
 
@@ -3912,6 +3914,8 @@ final class Batch {
         Library lib;
         /** 1.24.0: הרשימות בזיכרון — מה יהיה בהן אחרי השורות שלפני (ListCmd); null — עוד לא נטען. לא נשמר. */
         Tree tree;
+        /** 1.25.4: הקבצים של רשימות חכמות — חיפוש אחד לכל תנאי, לכל הקובץ (גם בעותקים שלהן). */
+        ListCmd.Lenient files;
 
         boolean isDir(File d) {
             String p = d.getAbsolutePath();
@@ -4123,6 +4127,11 @@ final class Batch {
 
     /** 1.20.0: עם האינדקס — ההשוואה לוקחת ממנו חתימות שכבר חושבו. */
     static Plan plan(String text, File here, Map<String, String> vars, Library lib) {
+        return plan(text, here, vars, lib, null);
+    }
+
+    /** 1.25.4: עם עצירה — ההכנה עצמה יכולה לקחת זמן (לולאות, השוואות של רשימות גדולות). */
+    static Plan plan(String text, File here, Map<String, String> vars, Library lib, Physical.Progress progress) {
         Plan plan = new Plan();
         Sim sim = new Sim();
         sim.lib = lib;
@@ -4143,6 +4152,10 @@ final class Batch {
             mark = plan.steps.size();
             t0 = System.nanoTime();
             if (li == all.size()) break;
+            if (progress != null && progress.stopped()) {                      // 1.25.4: עצירה בהכנה
+                plan.stopped = true;
+                break;
+            }
             Ln ln = all.get(li);
             prev = ln;
             if (clock.skip(plan, ln.loops, ln.rounds)) continue;               // לולאה שעברה את הגבול — גם בתכנון
@@ -5379,6 +5392,7 @@ public class BatchEditScreen extends Activity {
 
     /** ההגדרה של שורה: פקודת קבצים, פועל, או כותרת; null — לא מוכרת. */
     private static Commands.Def defOf(String line) {
+        if (line.startsWith("::")) return Commands.get("REM");                // 1.25.4: הערה — כמו REM
         if (Batch.isLoopStart(line)) return Commands.Defs.LOOP;               // 1.25.0
         if (Batch.isLoopEnd(line)) return Commands.Defs.END;
         if (isMeasure(line)) return Commands.Defs.MEASURE;
@@ -6451,12 +6465,31 @@ final class BatchUi {
         }
         final Library lib = Library.get(a);
         final Map<String, String> vars = vars(a, f.getParentFile());
+        // 1.25.4 (באג, המשתמש: "אחרי ההרצה — גם אין דוח וגם לא רואים שינוי ברשימות"): ההכנה יכולה לקחת זמן
+        // (לולאות, רשימות גדולות) — עד כאן בלי שום סימן על המסך. עכשיו — חלון "מכין…" עם עצירה, ותקלה — הודעה.
+        final Physical.Busy busy = new Physical.Busy(a, Words.Cmd.preparing(f.getName()));
         new Thread(new Runnable() {                                      // התכנון — מהכונן; קבצים חדשים נכנסים לאינדקס בביצוע (134)
             @Override
             public void run() {
-                final Batch.Plan plan = Batch.plan(text, f.getParentFile(), vars, lib);
+                Batch.Plan p;
+                try {
+                    p = Batch.plan(text, f.getParentFile(), vars, lib, busy);
+                } catch (final Throwable t) {
+                    Log.e("הכנת קובץ פקודות: " + f, t);
+                    busy.close();
+                    a.runOnUiThread(new Runnable() {
+                        @Override public void run() { show(a, Words.Cmd.PLAN_FAILED, String.valueOf(t), null); }
+                    });
+                    return;
+                }
+                busy.close();
+                final Batch.Plan plan = p;
                 a.runOnUiThread(new Runnable() {
-                    @Override public void run() { preview(a, f, plan, lib); }
+                    @Override
+                    public void run() {
+                        if (plan.stopped) Ui.toast(a, Words.Cmd.STOPPED_PREPARING);
+                        else preview(a, f, plan, lib);
+                    }
                 });
             }
         }).start();
@@ -6505,7 +6538,16 @@ final class BatchUi {
                 new Thread(new Runnable() {
                     @Override
                     public void run() {
-                        final List<String> report = Batch.run(plan, lib, new Physical.DialogAsker(a), busy, Acts.deletedStaysGrey());
+                        List<String> rep;
+                        try {
+                            rep = Batch.run(plan, lib, new Physical.DialogAsker(a), busy, Acts.deletedStaysGrey());
+                        } catch (Throwable t) {                               // 1.25.4: תקלה בהרצה — דוח עם התקלה
+                            Log.e("הרצת קובץ פקודות: " + f, t);
+                            rep = new ArrayList<String>();
+                            rep.add(Words.Cmd.RUN_FAILED + t);
+                            plan.trouble = true;
+                        }
+                        final List<String> report = rep;
                         busy.close();
                         Log.i("קובץ פקודות: " + f + " · " + (report.isEmpty() ? Words.Cmd.NO_CHANGE : report.toString())     // 187
                                 + (plan.start != null ? " · " + (Batch.isHome(plan.start) ? Words.Cmd.HOME_AT_END : Words.Cmd.openAtEnd(plan.start.getName())) : ""));
@@ -35026,6 +35068,14 @@ public final class Words {
             return "מריץ את " + file + "…";
         }
 
+        /** 1.25.4: ההכנה (תכנון והדמיה) — לפני התצוגה המקדימה. */
+        public static String preparing(String file) {
+            return "מכין את " + file + "… (בודק כל שורה לפני ההרצה)";
+        }
+
+        public static final String PLAN_FAILED = "תקלה בהכנת קובץ הפקודות", STOPPED_PREPARING = "נעצר — שום דבר לא בוצע",
+                RUN_FAILED = "תקלה בהרצה: ";
+
         public static String openFolder(String name) {
             return "📂 פתיחת " + name;
         }
@@ -41722,14 +41772,14 @@ public final class Tests {
             for (CmdTemplates.Tpl t : CmdTemplates.parse(Files.readUtf8(new File(src0, "assets/commands/templates.txt"))))
                 if (t.name.startsWith("בדיקת עומס")) load = t;
             check("1.25.0: בדיקת העומס — בנפוצות", load != null);
-            check("1.25.2: מקום פתוח — רשימה ידנית, מספר", CmdTemplates.holeKind(load.lines, "רשימה") == CmdTemplates.HOLE_MANUAL
+            check("1.25.2: מקום פתוח — רשימה ידנית, מספר", CmdTemplates.holeKind(load.lines, "רשימה-חדשה") == CmdTemplates.HOLE_MANUAL
                     && CmdTemplates.holeKind(load.lines, "סבבים") == CmdTemplates.HOLE_NUMBER);
             List<String> fz = Arrays.asList("COPY קבצי חכמה \"<חכמה>\" ידנית \"<ידנית>\"", "COPY \"<מקור>\" \"<יעד>\"");
             check("1.25.2: מקום פתוח — חכמה, ידנית, תיקייה", CmdTemplates.holeKind(fz, "חכמה") == CmdTemplates.HOLE_SMART
                     && CmdTemplates.holeKind(fz, "ידנית") == CmdTemplates.HOLE_MANUAL && CmdTemplates.holeKind(fz, "יעד") == CmdTemplates.HOLE_PATH);
             check("1.25.2: הבוחר של החכמות — בשם שהפקודות מכירות", ListCmd.smartNames().contains("א. ארגון לפי הבחנות\\כל הספרים"));
             java.util.Map<String, String> hv = new java.util.HashMap<String, String>();
-            hv.put("רשימה", "עומס");
+            hv.put("רשימה-חדשה", "עומס");
             hv.put("סבבים", "3");
             StringBuilder lt = new StringBuilder();
             for (String l : CmdTemplates.fill(load.lines, hv)) if (!l.startsWith("RD")) lt.append(l).append("\n");
@@ -41747,6 +41797,23 @@ public final class Tests {
             int c1 = w.child("1").children.size() + w.child("1").smart.size(), c3 = w.child("3").children.size() + w.child("3").smart.size();
             System.out.println("  1.25.0 עומס: " + lr.get(lr.size() - 1) + " · סבב 1: " + c1 + " · סבב 3: " + c3);
             check("1.25.0: עומס — כל סבב גדל (" + c1 + " → " + c3 + ")", c3 > c1);
+            // 1.25.4: כמו במכשיר — כל התבנית (גם RD), עם המשתנים, והדמיה של התצוגה המקדימה
+            StringBuilder full = new StringBuilder();
+            hv.put("רשימה-חדשה", "עומס מלא");
+            for (String l : CmdTemplates.fill(load.lines, hv)) full.append(l).append("\n");
+            Map<String, String> dv = Batch.vars(root, root.getAbsolutePath(), null);
+            Batch.Plan fp = Batch.plan(full.toString(), root, dv, lib);
+            String fpErr = "";
+            for (Batch.Step x : fp.steps) if (x.error != null) fpErr += x.label() + ": " + x.error + " | ";
+            check("1.25.4: התבנית המלאה — בלי שגיאות (" + fpErr + ")", fp.errors == 0 && fp.measure && fp.changes() > 0);
+            List<String> frep = Batch.run(fp, lib, null, null);
+            System.out.println("  1.25.4 דוח: " + frep.size() + " שורות · " + (frep.isEmpty() ? "" : frep.get(frep.size() - 1)));
+            check("1.25.4: התבנית המלאה — דוח, והרשימה נשארת לראות (הניקוי — בהערה)", frep.size() > 5 && Tree.load().find(Arrays.asList("עומס מלא")) != null);
+            Batch.Plan stopP = Batch.plan(full.toString(), root, dv, lib, new Physical.Progress() {
+                @Override public boolean stopped() { return true; }
+                @Override public void step(int files, int total, long bytes, long totalBytes) { }
+            });
+            check("1.25.4: עצירה בהכנה — שום שורה", stopP.stopped && stopP.steps.isEmpty());
             boolean compared = false;
             for (String l : lr) compared |= l.contains("בשתיהן");
             check("1.25.0: עומס — ההשוואה בדוח", compared);
@@ -41993,7 +42060,7 @@ public final class Tests {
             List<String> filled = CmdTemplates.fill(t.lines, v);
             boolean ok = CmdTemplates.holes(filled).isEmpty();
             for (String fl : filled) ok &= CmdLine.parse(fl).def != null || Batch.isLoopStart(fl) || Batch.isLoopEnd(fl)
-                    || fl.startsWith(Batch.MEASURE);                                     // 1.25.0: שורות מבנה
+                    || fl.startsWith(Batch.MEASURE) || fl.startsWith("::");             // 1.25.0: שורות מבנה; הערה
             check("1.23.0: תבנית — ממולאת ומוכרת: " + t.name, ok);
         }
         File tr = drive("נפוצות");
@@ -45273,6 +45340,16 @@ final class ListCmd {
 
     /** הקבצים שהצד מצביע עליהם (ידנית — בכל העומק; חכמה — מה שהיא מוצאת עכשיו). */
     static List<String> files(Tree t, Side s, Library lib, String[] err) {
+        return files(t, s, lib, err, new Lenient(lib));
+    }
+
+    /** בתכנון — עם הזיכרון של הקובץ כולו (sim.files). */
+    static List<String> files(Tree t, Side s, Batch.Sim sim, String[] err) {
+        if (sim.files == null) sim.files = new Lenient(sim.lib);
+        return files(t, s, sim.lib, err, sim.files);
+    }
+
+    static List<String> files(Tree t, Side s, Library lib, String[] err, Lenient len) {
         List<String> out = new ArrayList<String>();
         Map<String, Long> m;
         if (s.kind == SMART_LIST) {
@@ -45302,7 +45379,7 @@ final class ListCmd {
             for (Tree.Entry e : n.entries) if (!e.bad && Batch.wild(s.mask, new File(e.path).getName())) out.add(e.path);
             return out;
         }
-        Lenient len = new Lenient(lib);
+        len.dups = 0;
         m = ListCount.filesOf(t, n, len);
         if (m == null) {
             err[0] = Words.ListCmdW.INDEX_NOT_READY;
@@ -45341,8 +45418,15 @@ final class ListCmd {
                 dups++;
                 return new java.util.HashMap<String, Long>();
             }
-            return in.smartFiles(ref);
+            Map<String, Long> m = byCond.get(it.cond);                        // 1.25.4: עותקים — אותו תנאי, חיפוש אחד
+            if (m == null) {
+                m = in.smartFiles(ref);
+                if (m != null) byCond.put(it.cond, m);
+            }
+            return m;
         }
+
+        private final Map<String, Map<String, Long>> byCond = new java.util.HashMap<String, Map<String, Long>>();
 
         @Override public Map<String, Long> liveFiles(String folder) { return in.liveFiles(folder); }
     }
@@ -45464,7 +45548,7 @@ final class ListCmd {
             if (a.filesOf) {                                                 // הקבצים עצמם — לסל (הביצוע הרגיל)
                 if (cmd.equals("RD")) { s.error = Words.ListCmdW.RD_FILES; return; }
                 String[] err = {null, null};
-                List<String> fs = files(t, a, sim.lib, err);
+                List<String> fs = files(t, a, sim, err);
                 if (fs == null) { s.error = err[0]; return; }
                 for (String f : fs) if (sim.isFile(new File(f))) s.files.add(new File(f).getAbsolutePath());
                 s.describe = Words.Cmd.toTrash(Words.files(s.files.size())) + Words.ListCmdW.FROM_DISK + (err[1] != null ? err[1] : "");
@@ -45498,7 +45582,7 @@ final class ListCmd {
             if (b.kind == FS) {                                             // מרשימה לתיקייה — הקבצים עצמם (הביצוע הרגיל)
                 if (fsDest == null || !sim.isDir(fsDest)) { s.error = Words.Cmd.NO_DEST; return; }
                 String[] err = {null, null};
-                List<String> fs = files(t, a, sim.lib, err);
+                List<String> fs = files(t, a, sim, err);
                 if (fs == null) { s.error = err[0]; return; }
                 s.dest = fsDest;
                 for (String f : fs) if (sim.isFile(new File(f))) s.files.add(new File(f).getAbsolutePath());
@@ -45540,7 +45624,7 @@ final class ListCmd {
             boolean conds = sw.contains(SW_CONDS);
             if (conds && (a.kind != SMART_LIST || b.kind != SMART_LIST || a.filesOf || b.filesOf)) { s.error = Words.ListCmdW.CONDS_SMART; return; }
             String[] err = {null, null};
-            List<String> fa = files(t, a, sim.lib, err), fb = fa == null ? null : files(t, b, sim.lib, err);
+            List<String> fa = files(t, a, sim, err), fb = fa == null ? null : files(t, b, sim, err);
             if (fa == null || fb == null) { s.error = err[0]; return; }
             String note = err[1] != null ? err[1] : "";
             java.util.Set<String> sa = new java.util.LinkedHashSet<String>(fa), sb = new java.util.LinkedHashSet<String>(fb);
@@ -45651,15 +45735,16 @@ DEL "<תיקייה>\*.tmp"
 === פתיחת תיקייה בסוף
 START "<תיקייה>"
 === בדיקת עומס — רשימות (מדידה, לולאה, השוואה)
+:: רשימה חדשה לבדיקה (לא רשימה קיימת). בסוף — לפתוח אותה, ולמחוק בעצמך, או להוריד את ה־:: משורת הניקוי.
 מדידה /יומן:"%כאן%\בדיקות\עומס.txt"
-MD ידנית "<רשימה>"
-COPY תוכן ידנית "*" ידנית "<רשימה>"
+MD ידנית "<רשימה-חדשה>"
+COPY תוכן ידנית "*" ידנית "<רשימה-חדשה>"
 חזור <סבבים> /עד:30שניות
-MD ידנית "<רשימה>\%סבב%"
-COPY תוכן ידנית "<רשימה>" ידנית "<רשימה>\%סבב%"
+MD ידנית "<רשימה-חדשה>\%סבב%"
+COPY תוכן ידנית "<רשימה-חדשה>" ידנית "<רשימה-חדשה>\%סבב%"
 סוף
-COMP ידנית "<רשימה>\1" ידנית "<רשימה>"
-RD ידנית "<רשימה>"
+COMP ידנית "<רשימה-חדשה>\1" ידנית "<רשימה-חדשה>"
+:: RD ידנית "<רשימה-חדשה>"
 === הקפאת רשימה חכמה לרשימה ידנית
 MD ידנית "<ידנית>"
 COPY קבצי חכמה "<חכמה>" ידנית "<ידנית>"

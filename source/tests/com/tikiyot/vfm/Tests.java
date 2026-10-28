@@ -4039,14 +4039,14 @@ public final class Tests {
             for (CmdTemplates.Tpl t : CmdTemplates.parse(Files.readUtf8(new File(src0, "assets/commands/templates.txt"))))
                 if (t.name.startsWith("בדיקת עומס")) load = t;
             check("1.25.0: בדיקת העומס — בנפוצות", load != null);
-            check("1.25.2: מקום פתוח — רשימה ידנית, מספר", CmdTemplates.holeKind(load.lines, "רשימה") == CmdTemplates.HOLE_MANUAL
+            check("1.25.2: מקום פתוח — רשימה ידנית, מספר", CmdTemplates.holeKind(load.lines, "רשימה-חדשה") == CmdTemplates.HOLE_MANUAL
                     && CmdTemplates.holeKind(load.lines, "סבבים") == CmdTemplates.HOLE_NUMBER);
             List<String> fz = Arrays.asList("COPY קבצי חכמה \"<חכמה>\" ידנית \"<ידנית>\"", "COPY \"<מקור>\" \"<יעד>\"");
             check("1.25.2: מקום פתוח — חכמה, ידנית, תיקייה", CmdTemplates.holeKind(fz, "חכמה") == CmdTemplates.HOLE_SMART
                     && CmdTemplates.holeKind(fz, "ידנית") == CmdTemplates.HOLE_MANUAL && CmdTemplates.holeKind(fz, "יעד") == CmdTemplates.HOLE_PATH);
             check("1.25.2: הבוחר של החכמות — בשם שהפקודות מכירות", ListCmd.smartNames().contains("א. ארגון לפי הבחנות\\כל הספרים"));
             java.util.Map<String, String> hv = new java.util.HashMap<String, String>();
-            hv.put("רשימה", "עומס");
+            hv.put("רשימה-חדשה", "עומס");
             hv.put("סבבים", "3");
             StringBuilder lt = new StringBuilder();
             for (String l : CmdTemplates.fill(load.lines, hv)) if (!l.startsWith("RD")) lt.append(l).append("\n");
@@ -4064,6 +4064,23 @@ public final class Tests {
             int c1 = w.child("1").children.size() + w.child("1").smart.size(), c3 = w.child("3").children.size() + w.child("3").smart.size();
             System.out.println("  1.25.0 עומס: " + lr.get(lr.size() - 1) + " · סבב 1: " + c1 + " · סבב 3: " + c3);
             check("1.25.0: עומס — כל סבב גדל (" + c1 + " → " + c3 + ")", c3 > c1);
+            // 1.25.4: כמו במכשיר — כל התבנית (גם RD), עם המשתנים, והדמיה של התצוגה המקדימה
+            StringBuilder full = new StringBuilder();
+            hv.put("רשימה-חדשה", "עומס מלא");
+            for (String l : CmdTemplates.fill(load.lines, hv)) full.append(l).append("\n");
+            Map<String, String> dv = Batch.vars(root, root.getAbsolutePath(), null);
+            Batch.Plan fp = Batch.plan(full.toString(), root, dv, lib);
+            String fpErr = "";
+            for (Batch.Step x : fp.steps) if (x.error != null) fpErr += x.label() + ": " + x.error + " | ";
+            check("1.25.4: התבנית המלאה — בלי שגיאות (" + fpErr + ")", fp.errors == 0 && fp.measure && fp.changes() > 0);
+            List<String> frep = Batch.run(fp, lib, null, null);
+            System.out.println("  1.25.4 דוח: " + frep.size() + " שורות · " + (frep.isEmpty() ? "" : frep.get(frep.size() - 1)));
+            check("1.25.4: התבנית המלאה — דוח, והרשימה נשארת לראות (הניקוי — בהערה)", frep.size() > 5 && Tree.load().find(Arrays.asList("עומס מלא")) != null);
+            Batch.Plan stopP = Batch.plan(full.toString(), root, dv, lib, new Physical.Progress() {
+                @Override public boolean stopped() { return true; }
+                @Override public void step(int files, int total, long bytes, long totalBytes) { }
+            });
+            check("1.25.4: עצירה בהכנה — שום שורה", stopP.stopped && stopP.steps.isEmpty());
             boolean compared = false;
             for (String l : lr) compared |= l.contains("בשתיהן");
             check("1.25.0: עומס — ההשוואה בדוח", compared);
@@ -4310,7 +4327,7 @@ public final class Tests {
             List<String> filled = CmdTemplates.fill(t.lines, v);
             boolean ok = CmdTemplates.holes(filled).isEmpty();
             for (String fl : filled) ok &= CmdLine.parse(fl).def != null || Batch.isLoopStart(fl) || Batch.isLoopEnd(fl)
-                    || fl.startsWith(Batch.MEASURE);                                     // 1.25.0: שורות מבנה
+                    || fl.startsWith(Batch.MEASURE) || fl.startsWith("::");             // 1.25.0: שורות מבנה; הערה
             check("1.23.0: תבנית — ממולאת ומוכרת: " + t.name, ok);
         }
         File tr = drive("נפוצות");

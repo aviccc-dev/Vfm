@@ -54,12 +54,31 @@ final class BatchUi {
         }
         final Library lib = Library.get(a);
         final Map<String, String> vars = vars(a, f.getParentFile());
+        // 1.25.4 (באג, המשתמש: "אחרי ההרצה — גם אין דוח וגם לא רואים שינוי ברשימות"): ההכנה יכולה לקחת זמן
+        // (לולאות, רשימות גדולות) — עד כאן בלי שום סימן על המסך. עכשיו — חלון "מכין…" עם עצירה, ותקלה — הודעה.
+        final Physical.Busy busy = new Physical.Busy(a, Words.Cmd.preparing(f.getName()));
         new Thread(new Runnable() {                                      // התכנון — מהכונן; קבצים חדשים נכנסים לאינדקס בביצוע (134)
             @Override
             public void run() {
-                final Batch.Plan plan = Batch.plan(text, f.getParentFile(), vars, lib);
+                Batch.Plan p;
+                try {
+                    p = Batch.plan(text, f.getParentFile(), vars, lib, busy);
+                } catch (final Throwable t) {
+                    Log.e("הכנת קובץ פקודות: " + f, t);
+                    busy.close();
+                    a.runOnUiThread(new Runnable() {
+                        @Override public void run() { show(a, Words.Cmd.PLAN_FAILED, String.valueOf(t), null); }
+                    });
+                    return;
+                }
+                busy.close();
+                final Batch.Plan plan = p;
                 a.runOnUiThread(new Runnable() {
-                    @Override public void run() { preview(a, f, plan, lib); }
+                    @Override
+                    public void run() {
+                        if (plan.stopped) Ui.toast(a, Words.Cmd.STOPPED_PREPARING);
+                        else preview(a, f, plan, lib);
+                    }
                 });
             }
         }).start();
@@ -108,7 +127,16 @@ final class BatchUi {
                 new Thread(new Runnable() {
                     @Override
                     public void run() {
-                        final List<String> report = Batch.run(plan, lib, new Physical.DialogAsker(a), busy, Acts.deletedStaysGrey());
+                        List<String> rep;
+                        try {
+                            rep = Batch.run(plan, lib, new Physical.DialogAsker(a), busy, Acts.deletedStaysGrey());
+                        } catch (Throwable t) {                               // 1.25.4: תקלה בהרצה — דוח עם התקלה
+                            Log.e("הרצת קובץ פקודות: " + f, t);
+                            rep = new ArrayList<String>();
+                            rep.add(Words.Cmd.RUN_FAILED + t);
+                            plan.trouble = true;
+                        }
+                        final List<String> report = rep;
                         busy.close();
                         Log.i("קובץ פקודות: " + f + " · " + (report.isEmpty() ? Words.Cmd.NO_CHANGE : report.toString())     // 187
                                 + (plan.start != null ? " · " + (Batch.isHome(plan.start) ? Words.Cmd.HOME_AT_END : Words.Cmd.openAtEnd(plan.start.getName())) : ""));
