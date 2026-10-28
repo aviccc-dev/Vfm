@@ -1010,6 +1010,7 @@ public final class Words {
                 NEW_SMART = "✨ רשימה חכמה — לפי הגדרה, מתעדכנת לבד";
         public static final String BAD_LINE = "שורה לא מובנת";
         public static final String CANT_READ_TREE = "לא הצלחתי לקרוא את מבנה.txt. שינויים לא יישמרו עד שהקובץ ייקרא. כדאי לצאת ולהיכנס שוב.";
+        public static final String COUNTING = "סופר…";
         public static final String LISTS_DOT = " רשימות · ";
         public static final String ITEMS_SUFFIX = " פריטים";
         public static final String LISTS_SEP = " רשימות   ·   ";

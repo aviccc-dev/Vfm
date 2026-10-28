@@ -309,6 +309,46 @@ public class VirtualScreen extends ListScreen<VirtualScreen.Item> implements Top
 
     private PasteBar pasteBar;
 
+    /**
+     * 1.27.2 (באג, המשתמש: "הוא מעמיס ומעמיס עד שנחנק"): הספירה של כל תת־רשימה ("3 רשימות · 4,210 קבצים…") חושבה
+     * על המסך עצמו, לכל רשימה בכל העומק — ואחרי בדיקת העומס (אלפי רשימות מקוננות) המסך נתקע. עכשיו — "סופר…", והמספרים
+     * מגיעים מחוט ברקע; מסך שהשתנה או נסגר בינתיים — העבודה הישנה נזנחת.
+     */
+    private int countGen;
+
+    private void countLater(final Tree t, final List<Object[]> todo) {
+        final int gen = ++countGen;
+        if (todo.isEmpty()) return;
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                ListCount.FromLibrary ix = new ListCount.FromLibrary(lib);
+                for (final Object[] w : todo) {
+                    if (gen != countGen || isFinishing()) return;
+                    String text;
+                    try {
+                        text = ListCount.of(t, (Tree.Node) w[1], ix).text();
+                    } catch (Throwable e) {
+                        Log.e("ספירת רשימה", e);
+                        text = "";
+                    }
+                    final Item it = (Item) w[0];
+                    final String desc = (String) w[2];
+                    final String pre = w.length > 3 ? (String) w[3] : "";
+                    final String sub = (desc == null || desc.isEmpty() ? "" : desc + "\n") + pre + text;
+                    runOnUiThread(new Runnable() {
+                        @Override
+                        public void run() {
+                            if (gen != countGen) return;
+                            it.sub = sub;
+                            adapter.notifyDataSetChanged();
+                        }
+                    });
+                }
+            }
+        }, "ספירת רשימות").start();  // תחביר
+    }
+
     @Override
     protected void refresh() {
         if (pasteBar != null) pasteBar.refresh();
@@ -338,14 +378,15 @@ public class VirtualScreen extends ListScreen<VirtualScreen.Item> implements Top
 
         boolean useIndex = lib.ready && !lib.busy;
         ListCount.FromLibrary ix = new ListCount.FromLibrary(lib);           // 1.14.0: ספירה אחת לכל המקומות
+        final List<Object[]> counts = new ArrayList<Object[]>();              // 1.27.2: הספירות — ברקע
         for (Tree.Node c : node.children) {
             Item it = new Item();
             it.type = FOLDER;
             it.folder = c.name;
             it.label = c.name;
-            it.sub = ListCount.of(t, c, ix).text();                           // 161 · 1.13.0 · 1.14.0: הכול, בכל העומק
+            it.sub = (c.desc.isEmpty() ? "" : c.desc + "\n") + Words.Manual.COUNTING;
             it.icon = c.icon;                                                 // 1.11.0
-            if (!c.desc.isEmpty()) it.sub = c.desc + "\n" + it.sub;
+            counts.add(new Object[]{it, c, c.desc});
             items.add(it);
         }
         for (String ref : node.smart) {                                       // 161: רשימות חכמות בתוך הרשימה
@@ -390,7 +431,8 @@ public class VirtualScreen extends ListScreen<VirtualScreen.Item> implements Top
             } else {
                 it.icon = Design.forList(t, it.ref.subList(0, it.ref.size() - 1)).iconOf(it.ref, target.icon);
                 if (it.icon.contains(".")) it.icon = "";
-                it.sub = Words.Manual.REF + rp + " · " + ListCount.of(t, target, ix).text();
+                it.sub = Words.Manual.REF + rp + " · " + Words.Manual.COUNTING;
+                counts.add(new Object[]{it, target, null, Words.Manual.REF + rp + " · "});
             }
             items.add(it);
         }
@@ -451,6 +493,7 @@ public class VirtualScreen extends ListScreen<VirtualScreen.Item> implements Top
         empty.setVisibility(items.isEmpty() ? View.VISIBLE : View.GONE);
         look(look);                                                           // 1.12.0: שורות או רשת
         adapter.notifyDataSetChanged();
+        countLater(t, counts);
     }
 
     // ---------- 1.12.0: עיצוב ----------
