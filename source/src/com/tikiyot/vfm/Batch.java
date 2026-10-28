@@ -54,6 +54,8 @@ final class Batch {
         boolean share;
         /** MD לתיקייה שכבר קיימת — בלי שינוי (ולא שגיאה). */
         boolean noop;
+        /** 1.24.0: שורה על רשימות (ListCmd) — מה שיתבצע בהרצה. */
+        ListCmd.Op op;
         int total;              // לפני הסינון
         String describe;
     }
@@ -161,6 +163,8 @@ final class Batch {
         for (String g : new java.util.TreeSet<String>(plan.sim.gone))
             if (!sources.contains(g) && !movedDirs.contains(g))
                 out.add(new AsIfRow("🗑", new File(g).getName(), Words.AsIf.TO_TRASH + Bidi.path(g)));
+        for (Step s : plan.steps)                                               // 1.24.0: רשימות
+            if (s.error == null && s.op != null) out.add(new AsIfRow("🗂", s.describe, s.line + ". " + s.text));
         for (Step s : plan.steps)
             if (s.error == null && s.share)
                 out.add(new AsIfRow("📤", Words.AsIf.SHARE, s.describe));
@@ -341,6 +345,8 @@ final class Batch {
         /** 1.20.0: ההשוואה האחרונה (COMP), והאינדקס לחתימות שכבר חושבו (יכול להיות null). */
         Compare.Result compare;
         Library lib;
+        /** 1.24.0: הרשימות בזיכרון — מה יהיה בהן אחרי השורות שלפני (ListCmd); null — עוד לא נטען. לא נשמר. */
+        Tree tree;
 
         boolean isDir(File d) {
             String p = d.getAbsolutePath();
@@ -435,6 +441,24 @@ final class Batch {
                 continue;
             }
             List<String> args = new ArrayList<String>(), sw = new ArrayList<String>();
+            List<String> lsw = new ArrayList<String>();
+            ListCmd.Parsed lp = ListCmd.parse(line, lsw);                      // 1.24.0: מילות סוג — רשימות
+            if (lp != null && lp.error == null && lp.anyList()) {
+                planList(s, cmd, lp, lsw, here, vars, sim);
+                if (s.error != null) plan.errors++;
+                plan.steps.add(s);
+                continue;
+            }
+            if (lp != null && lp.error != null) {
+                s.error = lp.error;
+                plan.errors++;
+                plan.steps.add(s);
+                continue;
+            }
+            if (lp != null) {                                                  // רק "תיקייה" — שורה רגילה בלי המילים
+                sw.addAll(lsw);
+                for (ListCmd.Side x : lp.sides) args.add(x.raw);
+            } else
             for (int i = 1; i < tk.size(); i++) (isSwitch(tk.get(i)) ? sw : args).add(tk.get(i));
             String[] err = {null};
             List<String> paths = new ArrayList<String>();
@@ -464,6 +488,31 @@ final class Batch {
             plan.steps.add(s);
         }
         return plan;
+    }
+
+    /** 1.24.0: שורה עם רשימה — הצד שבכונן מפוענח כאן (מסלול, תבנית, סינון), והשאר — ListCmd. */
+    private static void planList(Step s, String cmd, ListCmd.Parsed lp, List<String> sw, File here, Map<String, String> vars, Sim sim) {
+        List<String> fsFiles = new ArrayList<String>();
+        File fsDest = null;
+        for (int i = 0; i < lp.sides.size(); i++) {
+            ListCmd.Side x = lp.sides.get(i);
+            if (x.list()) {
+                ListCmd.resolve(x, vars);
+                continue;
+            }
+            String[] err = {null};
+            String p = path(x.raw, here, vars, err);
+            if (p == null) { s.error = err[0]; return; }
+            if (i == lp.sides.size() - 1 && i > 0) fsDest = new File(p);
+            else {
+                match(s, p, filter(sw), false, sim);
+                if (s.error != null) return;
+                if (!s.dirs.isEmpty()) { s.error = Words.ListCmdW.FOLDER_TO_LIST; return; }
+                fsFiles.addAll(s.files);
+                s.files.clear();
+            }
+        }
+        ListCmd.plan(s, cmd, lp, sw, sim, fsFiles, fsDest);
     }
 
     private static void plan(Step s, String cmd, List<String> args, List<String> paths, List<String> sw, Sim sim) {
@@ -1093,6 +1142,10 @@ final class Batch {
             }
             String out;
             if (s.cmd.equals("ECHO") || s.cmd.equals("START") || s.cmd.equals(OPEN) || s.noop) continue;
+            if (s.op != null) {                                                // 1.24.0: רשימות
+                report.add(Words.Cmd.line(s.line, s.op.run(lib)));
+                continue;
+            }
             if (s.cmd.equals("COMP")) {                                       // 1.20.0: חושב בתכנון — רק בדוח
                 report.add(Words.Cmd.line(s.line, s.describe));
                 continue;

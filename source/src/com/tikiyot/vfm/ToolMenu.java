@@ -61,14 +61,19 @@ final class ToolMenu {
                 Words.Box.IN_BIN, Words.ToolM.DELETE, new Runnable() {
                     @Override
                     public void run() {
-                        for (Structure.Func f : fs) {
-                            BinBox.tool(f);                                   // 1.10.0: לסל — לפני ההסרה
-                            if (f.kind.equals(FnVirtual.KIND)) FnVirtual.deleteOwnList(f);
-                            Structure.removeFunc(f.id);
-                        }
+                        removeNow(fs);
                         changed.run();
                     }
                 });
+    }
+
+    /** 1.24.0: ההסרה עצמה (בלי לשאול) — גם לפקודות. כל כלי — לסל לפני ההסרה (1.10.0). */
+    static void removeNow(java.util.List<Structure.Func> fs) {
+        for (Structure.Func f : fs) {
+            BinBox.tool(f);
+            if (f.kind.equals(FnVirtual.KIND)) FnVirtual.deleteOwnList(f);
+            Structure.removeFunc(f.id);
+        }
     }
 
     /** 1.17.1: הזזת כלים בבית — dir ‎-1 ימינה, 1 שמאלה; כמה יחד — כל אחד צעד, בלי לעקוף זה את זה. */

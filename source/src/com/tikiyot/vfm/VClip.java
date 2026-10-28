@@ -132,7 +132,7 @@ final class VClip {
                 continue;
             }
             Structure.Func f = Structure.func(it.value);
-            Item as = f == null ? null : toolAsItem(f);
+            Item as = f == null ? null : toolAsItem(f, move);
             if (as == null) {
                 r.skip(Words.VClipW.TOOL_NOT_IN_LIST);
                 continue;
@@ -274,7 +274,7 @@ final class VClip {
     }
 
     /** כלי — מה שהוא מחזיק, כפריט ברשימה: רשימה ← הפניה (או עותק); חכמה ← חכמה; קובץ פקודות ← קובץ. */
-    private static Item toolAsItem(Structure.Func f) {
+    private static Item toolAsItem(Structure.Func f, boolean move) {
         Target t = f.target();
         if (FnVirtual.KIND.equals(f.kind)) {
             List<String> p = FnVirtual.base(t);
@@ -520,6 +520,115 @@ final class VClip {
             s.ini.saveQuiet();
         } catch (Throwable t) {
             Log.e("העברה מאופן אחר — יציאה מהמקור", t);
+        }
+    }
+
+    // ---------- 1.24.0: לפקודות (ListCmd) — אותו מנוע, בלי לגעת בלוח של המשתמש ----------
+
+    /**
+     * הדבקה מתוך פקודה: what מתוך fromList (null — מהבית) לתוך dest (null — לבית), באופן הפעיל. הלוח של המשתמש —
+     * נשמר ומוחזר כמו שהיה.
+     */
+    static synchronized Result apply(List<String> fromList, List<Item> what, boolean isFull, List<String> dest) {
+        List<Item> oldItems = new ArrayList<Item>(items);
+        String oldMode = mode;
+        List<String> oldFrom = from;
+        boolean oldMove = move, oldFull = full;
+        try {
+            set(Modes.current(), fromList, what, false, isFull);
+            return dest == null ? pasteHome() : pasteInto(dest);
+        } finally {
+            items.clear();
+            items.addAll(oldItems);
+            mode = oldMode;
+            from = oldFrom;
+            move = oldMove;
+            full = oldFull;
+        }
+    }
+
+    /**
+     * ההדמיה של apply על עץ בזיכרון (לא נשמר): אותו intoNode, והרשימות החכמות שמועתקות — באותה הפניה (בלי ליצור
+     * עותקים). לבית — לא מודמה.
+     */
+    static void simulate(Tree t, List<String> src, List<Item> what, List<String> dest, boolean fl) {
+        if (dest == null) return;
+        Tree.Node a = src == null ? null : t.find(src), b = t.find(dest);
+        if (b == null) return;
+        java.util.Map<String, String> same = new java.util.HashMap<String, String>() {
+            @Override public boolean containsKey(Object k) { return true; }
+            @Override public String get(Object k) { return (String) k; }
+        };
+        for (Item it : what) {
+            Item x = it;
+            if (it.kind == TOOL) {
+                Structure.Func f = Structure.func(it.value);
+                x = f == null ? null : toolAsItem(f, false);
+            }
+            if (x != null) intoNode(t, x, a, b, dest, src, false, fl, new ArrayList<String[]>(), same);
+        }
+    }
+
+    /**
+     * הסרה מרשימה — מה שהממשק עושה (VirtualScreen) ומה שהפקודות עושות: רשימות — לסל ואז יוצאות; חכמה פנימית שכולה
+     * כאן — לסל ונמחקת; הפניה, תיקייה מתעדכנת וקובץ — רק השורה. הקבצים בכונן לא נוגעים.
+     */
+    static void remove(final List<String> parent, List<Item> what) {
+        final List<String> lists = new ArrayList<String>(), files = new ArrayList<String>();
+        final List<Item> lines = new ArrayList<Item>();
+        for (Item it : what) {
+            if (it.kind == LIST) lists.add(it.value);
+            else if (it.kind == FILE) files.add(it.value);
+            else if (it.kind == SMART || it.kind == REF || it.kind == LIVE) lines.add(it);
+        }
+        if (!lists.isEmpty()) {
+            BinBox.lists(parent, lists);
+            Files.backupNamed(Paths.tree(), Words.Manual.BEFORE_DELETING + lists.size() + Words.Manual.LISTS_SUFFIX);
+            Tree.edit(new Tree.Edit() {
+                @Override
+                public boolean apply(Tree t) {
+                    Tree.Node n = t.find(parent);
+                    if (n == null) return false;
+                    boolean ch = false;
+                    for (String name : lists) {
+                        Tree.Node c = n.child(name);
+                        if (c != null) ch |= n.children.remove(c);
+                    }
+                    return ch;
+                }
+            });
+        }
+        if (!lines.isEmpty()) {
+            for (Item it : lines)
+                if (it.kind == SMART && Nested.kindOf(it.value) == Nested.Kind.INNER && Nested.uses(it.value) <= 1) {
+                    BinBox.smart(parent, it.value, it.name);
+                    Structure.removeById(it.value);
+                }
+            Tree.edit(new Tree.Edit() {
+                @Override
+                public boolean apply(Tree t) {
+                    Tree.Node n = t.find(parent);
+                    if (n == null) return false;
+                    boolean ch = false;
+                    for (Item it : lines)
+                        ch |= it.kind == REF ? n.refs.remove(it.value) : it.kind == LIVE ? n.live.remove(it.value) : n.smart.remove(it.value);
+                    return ch;
+                }
+            });
+        }
+        if (!files.isEmpty()) Tree.removeFiles(parent, files);
+    }
+
+    /** ההדמיה של remove על עץ בזיכרון. */
+    static void simulateRemove(Tree t, List<String> parent, List<Item> what) {
+        Tree.Node n = t.find(parent);
+        if (n == null) return;
+        for (Item it : what) {
+            if (it.kind == LIST) n.children.remove(n.child(it.value));
+            else if (it.kind == FILE) Tree.remove(n.entries, it.value);
+            else if (it.kind == REF) n.refs.remove(it.value);
+            else if (it.kind == LIVE) n.live.remove(it.value);
+            else if (it.kind == SMART) n.smart.remove(it.value);
         }
     }
 

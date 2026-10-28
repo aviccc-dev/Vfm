@@ -2,8 +2,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="com.tikiyot.vfm"
-    android:versionCode="167"
-    android:versionName="1.23.4">
+    android:versionCode="168"
+    android:versionName="1.24.0">
     <uses-sdk android:minSdkVersion="21" android:targetSdkVersion="30" />
 
     <queries>
@@ -3598,6 +3598,8 @@ final class Batch {
         boolean share;
         /** MD לתיקייה שכבר קיימת — בלי שינוי (ולא שגיאה). */
         boolean noop;
+        /** 1.24.0: שורה על רשימות (ListCmd) — מה שיתבצע בהרצה. */
+        ListCmd.Op op;
         int total;              // לפני הסינון
         String describe;
     }
@@ -3705,6 +3707,8 @@ final class Batch {
         for (String g : new java.util.TreeSet<String>(plan.sim.gone))
             if (!sources.contains(g) && !movedDirs.contains(g))
                 out.add(new AsIfRow("🗑", new File(g).getName(), Words.AsIf.TO_TRASH + Bidi.path(g)));
+        for (Step s : plan.steps)                                               // 1.24.0: רשימות
+            if (s.error == null && s.op != null) out.add(new AsIfRow("🗂", s.describe, s.line + ". " + s.text));
         for (Step s : plan.steps)
             if (s.error == null && s.share)
                 out.add(new AsIfRow("📤", Words.AsIf.SHARE, s.describe));
@@ -3885,6 +3889,8 @@ final class Batch {
         /** 1.20.0: ההשוואה האחרונה (COMP), והאינדקס לחתימות שכבר חושבו (יכול להיות null). */
         Compare.Result compare;
         Library lib;
+        /** 1.24.0: הרשימות בזיכרון — מה יהיה בהן אחרי השורות שלפני (ListCmd); null — עוד לא נטען. לא נשמר. */
+        Tree tree;
 
         boolean isDir(File d) {
             String p = d.getAbsolutePath();
@@ -3979,6 +3985,24 @@ final class Batch {
                 continue;
             }
             List<String> args = new ArrayList<String>(), sw = new ArrayList<String>();
+            List<String> lsw = new ArrayList<String>();
+            ListCmd.Parsed lp = ListCmd.parse(line, lsw);                      // 1.24.0: מילות סוג — רשימות
+            if (lp != null && lp.error == null && lp.anyList()) {
+                planList(s, cmd, lp, lsw, here, vars, sim);
+                if (s.error != null) plan.errors++;
+                plan.steps.add(s);
+                continue;
+            }
+            if (lp != null && lp.error != null) {
+                s.error = lp.error;
+                plan.errors++;
+                plan.steps.add(s);
+                continue;
+            }
+            if (lp != null) {                                                  // רק "תיקייה" — שורה רגילה בלי המילים
+                sw.addAll(lsw);
+                for (ListCmd.Side x : lp.sides) args.add(x.raw);
+            } else
             for (int i = 1; i < tk.size(); i++) (isSwitch(tk.get(i)) ? sw : args).add(tk.get(i));
             String[] err = {null};
             List<String> paths = new ArrayList<String>();
@@ -4008,6 +4032,31 @@ final class Batch {
             plan.steps.add(s);
         }
         return plan;
+    }
+
+    /** 1.24.0: שורה עם רשימה — הצד שבכונן מפוענח כאן (מסלול, תבנית, סינון), והשאר — ListCmd. */
+    private static void planList(Step s, String cmd, ListCmd.Parsed lp, List<String> sw, File here, Map<String, String> vars, Sim sim) {
+        List<String> fsFiles = new ArrayList<String>();
+        File fsDest = null;
+        for (int i = 0; i < lp.sides.size(); i++) {
+            ListCmd.Side x = lp.sides.get(i);
+            if (x.list()) {
+                ListCmd.resolve(x, vars);
+                continue;
+            }
+            String[] err = {null};
+            String p = path(x.raw, here, vars, err);
+            if (p == null) { s.error = err[0]; return; }
+            if (i == lp.sides.size() - 1 && i > 0) fsDest = new File(p);
+            else {
+                match(s, p, filter(sw), false, sim);
+                if (s.error != null) return;
+                if (!s.dirs.isEmpty()) { s.error = Words.ListCmdW.FOLDER_TO_LIST; return; }
+                fsFiles.addAll(s.files);
+                s.files.clear();
+            }
+        }
+        ListCmd.plan(s, cmd, lp, sw, sim, fsFiles, fsDest);
     }
 
     private static void plan(Step s, String cmd, List<String> args, List<String> paths, List<String> sw, Sim sim) {
@@ -4637,6 +4686,10 @@ final class Batch {
             }
             String out;
             if (s.cmd.equals("ECHO") || s.cmd.equals("START") || s.cmd.equals(OPEN) || s.noop) continue;
+            if (s.op != null) {                                                // 1.24.0: רשימות
+                report.add(Words.Cmd.line(s.line, s.op.run(lib)));
+                continue;
+            }
             if (s.cmd.equals("COMP")) {                                       // 1.20.0: חושב בתכנון — רק בדוח
                 report.add(Words.Cmd.line(s.line, s.describe));
                 continue;
@@ -16463,6 +16516,13 @@ final class ListCount {
         }
         c.seenFiles = null;
         return c;
+    }
+
+    /** 1.24.0: הקבצים שהרשימה מצביעה עליהם, בכל העומק (מסלול → גודל); null — חלק לא ידוע (האינדקס לא מוכן). */
+    static Map<String, Long> filesOf(Tree t, Tree.Node n, Index index) {
+        ListCount c = new ListCount();
+        if (n != null) c.add(t, n, index, new HashSet<Tree.Node>());
+        return c.partial ? null : c.seenFiles;
     }
 
     private void add(Tree t, Tree.Node n, Index ix, Set<Tree.Node> seen) {
@@ -28470,14 +28530,19 @@ final class ToolMenu {
                 Words.Box.IN_BIN, Words.ToolM.DELETE, new Runnable() {
                     @Override
                     public void run() {
-                        for (Structure.Func f : fs) {
-                            BinBox.tool(f);                                   // 1.10.0: לסל — לפני ההסרה
-                            if (f.kind.equals(FnVirtual.KIND)) FnVirtual.deleteOwnList(f);
-                            Structure.removeFunc(f.id);
-                        }
+                        removeNow(fs);
                         changed.run();
                     }
                 });
+    }
+
+    /** 1.24.0: ההסרה עצמה (בלי לשאול) — גם לפקודות. כל כלי — לסל לפני ההסרה (1.10.0). */
+    static void removeNow(java.util.List<Structure.Func> fs) {
+        for (Structure.Func f : fs) {
+            BinBox.tool(f);
+            if (f.kind.equals(FnVirtual.KIND)) FnVirtual.deleteOwnList(f);
+            Structure.removeFunc(f.id);
+        }
     }
 
     /** 1.17.1: הזזת כלים בבית — dir ‎-1 ימינה, 1 שמאלה; כמה יחד — כל אחד צעד, בלי לעקוף זה את זה. */
@@ -31909,7 +31974,7 @@ final class VClip {
                 continue;
             }
             Structure.Func f = Structure.func(it.value);
-            Item as = f == null ? null : toolAsItem(f);
+            Item as = f == null ? null : toolAsItem(f, move);
             if (as == null) {
                 r.skip(Words.VClipW.TOOL_NOT_IN_LIST);
                 continue;
@@ -32051,7 +32116,7 @@ final class VClip {
     }
 
     /** כלי — מה שהוא מחזיק, כפריט ברשימה: רשימה ← הפניה (או עותק); חכמה ← חכמה; קובץ פקודות ← קובץ. */
-    private static Item toolAsItem(Structure.Func f) {
+    private static Item toolAsItem(Structure.Func f, boolean move) {
         Target t = f.target();
         if (FnVirtual.KIND.equals(f.kind)) {
             List<String> p = FnVirtual.base(t);
@@ -32297,6 +32362,115 @@ final class VClip {
             s.ini.saveQuiet();
         } catch (Throwable t) {
             Log.e("העברה מאופן אחר — יציאה מהמקור", t);
+        }
+    }
+
+    // ---------- 1.24.0: לפקודות (ListCmd) — אותו מנוע, בלי לגעת בלוח של המשתמש ----------
+
+    /**
+     * הדבקה מתוך פקודה: what מתוך fromList (null — מהבית) לתוך dest (null — לבית), באופן הפעיל. הלוח של המשתמש —
+     * נשמר ומוחזר כמו שהיה.
+     */
+    static synchronized Result apply(List<String> fromList, List<Item> what, boolean isFull, List<String> dest) {
+        List<Item> oldItems = new ArrayList<Item>(items);
+        String oldMode = mode;
+        List<String> oldFrom = from;
+        boolean oldMove = move, oldFull = full;
+        try {
+            set(Modes.current(), fromList, what, false, isFull);
+            return dest == null ? pasteHome() : pasteInto(dest);
+        } finally {
+            items.clear();
+            items.addAll(oldItems);
+            mode = oldMode;
+            from = oldFrom;
+            move = oldMove;
+            full = oldFull;
+        }
+    }
+
+    /**
+     * ההדמיה של apply על עץ בזיכרון (לא נשמר): אותו intoNode, והרשימות החכמות שמועתקות — באותה הפניה (בלי ליצור
+     * עותקים). לבית — לא מודמה.
+     */
+    static void simulate(Tree t, List<String> src, List<Item> what, List<String> dest, boolean fl) {
+        if (dest == null) return;
+        Tree.Node a = src == null ? null : t.find(src), b = t.find(dest);
+        if (b == null) return;
+        java.util.Map<String, String> same = new java.util.HashMap<String, String>() {
+            @Override public boolean containsKey(Object k) { return true; }
+            @Override public String get(Object k) { return (String) k; }
+        };
+        for (Item it : what) {
+            Item x = it;
+            if (it.kind == TOOL) {
+                Structure.Func f = Structure.func(it.value);
+                x = f == null ? null : toolAsItem(f, false);
+            }
+            if (x != null) intoNode(t, x, a, b, dest, src, false, fl, new ArrayList<String[]>(), same);
+        }
+    }
+
+    /**
+     * הסרה מרשימה — מה שהממשק עושה (VirtualScreen) ומה שהפקודות עושות: רשימות — לסל ואז יוצאות; חכמה פנימית שכולה
+     * כאן — לסל ונמחקת; הפניה, תיקייה מתעדכנת וקובץ — רק השורה. הקבצים בכונן לא נוגעים.
+     */
+    static void remove(final List<String> parent, List<Item> what) {
+        final List<String> lists = new ArrayList<String>(), files = new ArrayList<String>();
+        final List<Item> lines = new ArrayList<Item>();
+        for (Item it : what) {
+            if (it.kind == LIST) lists.add(it.value);
+            else if (it.kind == FILE) files.add(it.value);
+            else if (it.kind == SMART || it.kind == REF || it.kind == LIVE) lines.add(it);
+        }
+        if (!lists.isEmpty()) {
+            BinBox.lists(parent, lists);
+            Files.backupNamed(Paths.tree(), Words.Manual.BEFORE_DELETING + lists.size() + Words.Manual.LISTS_SUFFIX);
+            Tree.edit(new Tree.Edit() {
+                @Override
+                public boolean apply(Tree t) {
+                    Tree.Node n = t.find(parent);
+                    if (n == null) return false;
+                    boolean ch = false;
+                    for (String name : lists) {
+                        Tree.Node c = n.child(name);
+                        if (c != null) ch |= n.children.remove(c);
+                    }
+                    return ch;
+                }
+            });
+        }
+        if (!lines.isEmpty()) {
+            for (Item it : lines)
+                if (it.kind == SMART && Nested.kindOf(it.value) == Nested.Kind.INNER && Nested.uses(it.value) <= 1) {
+                    BinBox.smart(parent, it.value, it.name);
+                    Structure.removeById(it.value);
+                }
+            Tree.edit(new Tree.Edit() {
+                @Override
+                public boolean apply(Tree t) {
+                    Tree.Node n = t.find(parent);
+                    if (n == null) return false;
+                    boolean ch = false;
+                    for (Item it : lines)
+                        ch |= it.kind == REF ? n.refs.remove(it.value) : it.kind == LIVE ? n.live.remove(it.value) : n.smart.remove(it.value);
+                    return ch;
+                }
+            });
+        }
+        if (!files.isEmpty()) Tree.removeFiles(parent, files);
+    }
+
+    /** ההדמיה של remove על עץ בזיכרון. */
+    static void simulateRemove(Tree t, List<String> parent, List<Item> what) {
+        Tree.Node n = t.find(parent);
+        if (n == null) return;
+        for (Item it : what) {
+            if (it.kind == LIST) n.children.remove(n.child(it.value));
+            else if (it.kind == FILE) Tree.remove(n.entries, it.value);
+            else if (it.kind == REF) n.refs.remove(it.value);
+            else if (it.kind == LIVE) n.live.remove(it.value);
+            else if (it.kind == SMART) n.smart.remove(it.value);
         }
     }
 
@@ -33277,15 +33451,6 @@ public class VirtualScreen extends ListScreen<VirtualScreen.Item> implements Top
         if (it.type == FOLDER) sel.longPressList(it.folder); else sel.longPress(it.entry.path);   // הכלל האחיד (59)
     }
 
-    /** הסרת שורה (קישור, רשימה חכמה, תיקייה מתעדכנת) מהרשימה n. הקבצים לא נוגעים. רשימה חכמה שכולה כאן — לסל. */
-    private boolean removeLine(Tree.Node n, String key) {
-        char k = key.charAt(1);
-        String v = key.substring(2);
-        if (k == 'r') return n.refs.remove(v);
-        if (k == 'l') return n.live.remove(v);
-        return n.smart.remove(v);
-    }
-
     /** 1.16.0: "הגדרות" של רשימה חכמה שבתוך הרשימה — הטופס שלה; הגדרה נפוצה — נפתחת (ההגדרות — שם). */
     private void smartSettings(Nested.Item si) {
         Structure.Func f = Structure.asTool(si.ref);
@@ -33363,36 +33528,11 @@ public class VirtualScreen extends ListScreen<VirtualScreen.Item> implements Top
                 Words.Manual.REMOVE, new Runnable() {
                     @Override
                     public void run() {
-                        if (!lists.isEmpty()) {
-                            BinBox.lists(path, lists);                   // 1.10.0: לסל — לפני ההסרה
-                            Files.backupNamed(Paths.tree(), Words.Manual.BEFORE_DELETING + lists.size() + Words.Manual.LISTS_SUFFIX);
-                            synchronized (Tree.LOCK) {                   // 92
-                                Tree t = Tree.load();
-                                Tree.Node n = t.find(path);
-                                if (n != null) for (String name : lists) {
-                                    Tree.Node c = n.child(name);
-                                    if (c != null) n.children.remove(c);
-                                }
-                                t.save();
-                            }
-                        }
-                        if (!lines.isEmpty()) {
-                            for (String k : lines) {                         // רשימה חכמה שכולה כאן — לסל, ואז נמחקת
-                                String ref = k.substring(2);
-                                if (k.charAt(1) != 's' || Nested.kindOf(ref) != Nested.Kind.INNER || Nested.uses(ref) > 1) continue;
-                                BinBox.smart(path, ref, lineItem(k).name);
-                                Structure.removeById(ref);
-                            }
-                            change(new Change() {
-                                @Override
-                                public boolean apply(Tree t, Tree.Node node) {
-                                    boolean ch = false;
-                                    for (String k : lines) ch |= removeLine(node, k);
-                                    return ch;
-                                }
-                            });
-                        }
-                        Tree.removeFiles(path, paths);
+                        List<VClip.Item> what = new ArrayList<VClip.Item>();          // 1.24.0: הסרה אחת — גם לפקודות
+                        for (String name : lists) what.add(new VClip.Item(VClip.LIST, name, name));
+                        for (String k : lines) what.add(lineItem(k));
+                        for (String p : paths) what.add(new VClip.Item(VClip.FILE, p, new File(p).getName()));
+                        VClip.remove(path, what);
                         stopSelecting();
                         refresh();
                     }
@@ -36010,6 +36150,85 @@ public final class Words {
                 UNIFY = "לפני האיחוד (תיקיות מתעדכנות, הגדרות נפוצות) — ";   // 1.17.3
     }
 
+    /** 1.24.0: פקודות על רשימות (ListCmd) — claude/pkudot-reshimot.md. */
+    public static final class ListCmdW {
+        private ListCmdW() { }
+
+        public static final String HOME = "הבית",
+                USAGE = "צורה: COPY [ידנית | חכמה | תוכן ידנית | קבצי ידנית | קבצי חכמה] \"שם\" [ידנית | תיקייה] \"יעד\"",
+                USAGE_MD = "צורה: MD ידנית \"א\\ב\" — רשימה ידנית (חסרה — נוצרת בכל הדרך)",
+                CONTENT_SMART = "\"תוכן\" — רק לרשימה ידנית; לקבצים שרשימה חכמה מוצאת: קבצי חכמה",
+                INTO_SMART = "אי אפשר להכניס לתוך רשימה חכמה — היא מוצאת את הקבצים לבד, לפי התנאים שלה",
+                INTO_ITSELF = "אי אפשר להעתיק רשימה לתוך עצמה (או לתוך רשימה שבתוכה)",
+                MOVE_TO_LIST = "העברה לרשימה — אין לה מובן: לרשימה נכנסים רק המסלולים, והקבצים נשארים במקומם. להוספה — COPY",
+                MOVE_LATER = "העברה של רשימות — עדיין לא בפקודות; בינתיים — העתקה ואחריה מחיקה",
+                HOME_ONLY_CONTENT = "\"*\" הוא הבית — כמקור רק עם \"תוכן\": תוכן ידנית \"*\"",
+                HOME_FILES = "לבית אין קבצים משלו — אפשר לבחור רשימה",
+                HOME_NO_REMOVE = "את הבית אי אפשר למחוק בפקודה",
+                MD_SMART = "רשימה חכמה — יוצרים בטופס שלה; בפקודה — העתקה של חכמה קיימת",
+                RD_FILES = "למחיקת הקבצים שברשימה: DEL קבצי ידנית \"שם\"",
+                NO_FILTER = "סינון (/תאריך, /גודל) — עדיין לא חל על רשימות",
+                INDEX_NOT_READY = "האינדקס עוד לא מוכן (או שחלק מהרשימה לא ידוע) — אי אפשר לדעת אילו קבצים ברשימה",
+                FOLDER_TO_LIST = "תיקייה שלמה לרשימה — עדיין לא; לקבצים שבה: \"תיקייה\\*.*\"",
+                FROM_DISK = " — הקבצים עצמם, מהכונן";
+
+        public static String noList(String name) {
+            return "אין רשימה ידנית: \"" + name + "\"";
+        }
+
+        public static String noSmart(String name) {
+            return "אין רשימה חכמה: \"" + name + "\"";
+        }
+
+        public static String notYet(String cmd) {
+            return "הפקודה " + cmd + " — עדיין לא על רשימות";
+        }
+
+        public static String list(String label) {
+            return "הרשימה " + label;
+        }
+
+        public static String smartList(String label) {
+            return "הרשימה החכמה " + label;
+        }
+
+        public static String contentOf(int n, String label) {
+            return "התוכן של " + label + " (" + n + ")";
+        }
+
+        public static String homeContent(int n) {
+            return "כל מה שבבית (" + n + " כלים)";
+        }
+
+        public static String filesOf(String files, String label) {
+            return files + " מתוך " + label;
+        }
+
+        public static String created(String label) {
+            return "רשימה ידנית חדשה: " + label;
+        }
+
+        public static String exists(String label) {
+            return "הרשימה " + label + " כבר קיימת — בלי שינוי";
+        }
+
+        public static String removes(String what) {
+            return what + " — יוצא מהרשימות (לסל); הקבצים לא נוגעים";
+        }
+
+        public static String removed(String what) {
+            return what + " — יצא (לסל)";
+        }
+
+        public static String copy(String what, String to) {
+            return what + " ← לתוך " + to;
+        }
+
+        public static String copied(int done, int skipped, String why, String to) {
+            return "נכנסו ל" + to + ": " + done + (skipped > 0 ? " · לא נכנסו: " + skipped + (why != null ? " (" + why + ")" : "") : "");
+        }
+    }
+
     /** 1.14.0: הלוח הווירטואלי (VClip) */
     public static final class VClipW {
         private VClipW() { }
@@ -37065,6 +37284,7 @@ public final class Tests {
         run("גרסה 1.23.0 — ממשק הפקודות: שורה לפי ההגדרה (CmdLine), פקודות נפוצות, קובץ הבדיקה", new Runnable() { public void run() { v1230(); } });
         run("גרסה 1.23.1 — שמירה אחת: העתקת הרבה רשימות חכמות בכתיבה אחת", new Runnable() { public void run() { v1231(); } });
         run("גרסה 1.23.3 — חזרה לבית אחרי העתקת הדוגמאות: מדידה", new Runnable() { public void run() { v1233(); } });
+        run("גרסה 1.24.0 — פקודות על רשימות: ידנית, חכמה, תוכן, קבצי", new Runnable() { public void run() { v1240(); } });
 
         System.out.println("בדיקות: " + passed + " עברו · " + failed + " נכשלו");
         for (String f : failures) System.out.println("  ✗ " + f);
@@ -40944,6 +41164,105 @@ public final class Tests {
         }
     }
 
+    /** 1.24.0: פקודות על רשימות — דרך מנוע הלוח; ההדמיה על עותק בזיכרון; הלוח של המשתמש לא נוגע. */
+    private static void v1240() {
+        File tf = new File(home, "מבנה-1240.txt"), sf = new File(home, "ראשי-1240.ini");
+        Tree.testFile = tf;
+        Structure.testFile = sf;
+        try {
+            String src0 = System.getProperty("vfm.src");
+            Files.writeAtomic(sf, Files.readUtf8(new File(src0, "assets/examples/main.ini")).replace("%פנימי%", "/x/y"));
+            Files.writeAtomic(tf, Files.readUtf8(new File(src0, "assets/examples/tree.txt")).replace("%פנימי%", "/x/y"));
+            File root = new File(home, "רשימות1240");
+            wipe(root);
+            mk(new File(root, "מקור"), "א.txt", 10);
+            mk(new File(root, "מקור"), "ב.txt", 20);
+            mk(new File(root, "מקור"), "ג.pdf", 30);
+            new File(root, "יעד").mkdirs();
+            Map<String, String> vars = new java.util.HashMap<String, String>();
+            int tools = Structure.load().direct.size();
+            List<VClip.Item> mine = Arrays.asList(new VClip.Item(VClip.FILE, "/שלי.pdf", "שלי.pdf"));
+            VClip.set(null, null, mine, false, false);
+
+            String text = "MD ידנית \"עומס\"\n"
+                    + "COPY תוכן ידנית \"*\" ידנית \"עומס\"\n"
+                    + "MD ידנית \"עומס\\2\"\n"
+                    + "COPY תוכן ידנית \"עומס\" ידנית \"עומס\\2\"\n"
+                    + "COPY \"" + root + "/מקור/*.txt\" ידנית \"עומס\"\n";
+            Batch.Plan pl = Batch.plan(text, root, vars);
+            check("1.24.0: תכנון — בלי שגיאות (" + pl.errors + ")", pl.errors == 0);
+            check("1.24.0: תכנון — הכול בזיכרון, העץ לא השתנה", Tree.load().find(Arrays.asList("עומס")) == null);
+            boolean rows = false;
+            for (Batch.AsIfRow r : Batch.asIfRows(pl)) rows |= r.icon.equals("🗂");
+            check("1.24.0: ההדמיה מראה את שורות הרשימות", rows);
+            List<String> rep = Batch.run(pl, null, null, null);
+            Tree t = Tree.load();
+            Tree.Node load = t.find(Arrays.asList("עומס")), two = t.find(Arrays.asList("עומס", "2"));
+            check("1.24.0: נוצרו עומס ועומס\\2", load != null && two != null);
+            int inLoad = load.children.size() + load.smart.size() + load.refs.size();
+            check("1.24.0: כל הבית הועתק (" + inLoad + " מתוך " + tools + " כלים)", inLoad >= tools - 1 && inLoad > 0);
+            check("1.24.0: התוכן הועתק לתת־הרשימה — בלי 2 עצמו (" + (two.children.size() + two.smart.size() + two.refs.size()) + ")",
+                    two.children.size() + two.smart.size() + two.refs.size() == inLoad - 1 && two.child("2") == null);
+            check("1.24.0: קבצים מהכונן — רק המסלולים (2)", load.entries.size() == 2 && new File(root, "מקור/א.txt").isFile());
+            check("1.24.0: הלוח של המשתמש — כמו שהיה", VClip.items().size() == 1 && VClip.items().get(0).value.equals("/שלי.pdf"));
+            check("1.24.0: דוח לכל שורה (" + rep.size() + ")", rep.size() == 5);
+
+            check("1.24.0: MD לרשימה קיימת — בלי שינוי", Batch.plan("MD ידנית \"עומס\"", root, vars).steps.get(0).noop);
+            check("1.24.0: העברה לרשימה — נעצרת עם הסבר", Words.ListCmdW.MOVE_TO_LIST.equals(
+                    Batch.plan("MOVE \"" + root + "/מקור/*.txt\" ידנית \"עומס\"", root, vars).steps.get(0).error));
+            check("1.24.0: לתוך חכמה — נעצר", Words.ListCmdW.INTO_SMART.equals(
+                    Batch.plan("COPY ידנית \"עומס\" חכמה \"x\"", root, vars).steps.get(0).error));
+            check("1.24.0: רשימה לתוך עצמה — נעצר", Words.ListCmdW.INTO_ITSELF.equals(
+                    Batch.plan("COPY ידנית \"עומס\" ידנית \"עומס\\2\"", root, vars).steps.get(0).error));
+            check("1.24.0: רשימה שאינה — שגיאה", Batch.plan("COPY ידנית \"אין כזו\" ידנית \"עומס\"", root, vars).errors == 1);
+            check("1.24.0: \"ידנית\" במרכאות — שם, לא מילה", Batch.plan("MD \"" + root + "/ידנית\"", root, vars).steps.get(0).op == null
+                    && Batch.plan("MD \"" + root + "/ידנית\"", root, vars).errors == 0);
+            check("1.24.0: סינון על רשימה — עדיין לא", Batch.plan("DEL ידנית \"עומס\\*.txt\" /גודל:>1", root, vars).errors == 1);
+
+            check("1.24.0: רשימה עם חכמות, בלי האינדקס — נעצר", Words.ListCmdW.INDEX_NOT_READY.equals(
+                    Batch.plan("COPY ידנית \"עומס\" תיקייה \"" + root + "/יעד\"", root, vars).steps.get(0).error));
+            Index ix40 = new Index("1240", "1240", root.getAbsolutePath());
+            ix40.scan(null);
+            Library lib40 = Library.forTests(new ArrayList<Index>(Collections.singletonList(ix40)));
+            Batch.run(Batch.plan("COPY ידנית \"עומס\\*.txt\" תיקייה \"" + root + "/יעד\"", root, vars, lib40), lib40, null, null);
+            check("1.24.0: מרשימה לתיקייה — הקבצים עצמם", new File(root, "יעד/א.txt").isFile() && new File(root, "יעד/ב.txt").isFile());
+
+            Batch.run(Batch.plan("DEL ידנית \"עומס\\*.txt\"", root, vars), null, null, null);
+            check("1.24.0: מחיקה מרשימה — רק המסלולים", Tree.load().find(Arrays.asList("עומס")).entries.isEmpty()
+                    && new File(root, "מקור/א.txt").isFile());
+
+            String smartName = "כל הספרים";
+            {
+                Batch.Plan cs = Batch.plan("MD ידנית \"חכמות\"\nCOPY חכמה \"א. ארגון לפי הבחנות\\" + smartName + "\" ידנית \"חכמות\"", root, vars);
+                check("1.24.0: חכמה ברשימה — נמצאת בשמה (" + cs.steps.get(1).error + ")", cs.errors == 0);
+                Batch.run(cs, null, null, null);
+                Tree.Node sm = Tree.load().find(Arrays.asList("חכמות"));
+                check("1.24.0: חכמה מהבית ← עותק עצמאי ברשימה", sm != null && sm.smart.size() == 1
+                        && Nested.kindOf(sm.smart.get(0)) == Nested.Kind.INNER);
+                Batch.Plan ds = Batch.plan("DEL חכמה \"חכמות\\" + smartName + "\"", root, vars);
+                check("1.24.0: מחיקת חכמה מרשימה — בשמה (" + ds.steps.get(0).error + ")", ds.errors == 0);
+                Batch.run(ds, null, null, null);
+                check("1.24.0: …יצאה", Tree.load().find(Arrays.asList("חכמות")).smart.isEmpty());
+            }
+            Batch.run(Batch.plan("MD ידנית \"קבצים\"\nCOPY \"" + root + "/מקור/*.*\" ידנית \"קבצים\"\n"
+                    + "MD ידנית \"קפוא\"\nCOPY קבצי ידנית \"קבצים\" ידנית \"קפוא\"", root, vars, lib40), lib40, null, null);
+            check("1.24.0: קבצי ידנית ← ידנית: המסלולים (3)", Tree.load().find(Arrays.asList("קפוא")).entries.size() == 3);
+            Batch.run(Batch.plan("DEL קבצי ידנית \"קפוא\\*.pdf\"", root, vars, lib40), lib40, null, null);
+            check("1.24.0: DEL קבצי — הקובץ עצמו לסל", !new File(root, "מקור/ג.pdf").exists() && new File(root, "מקור/א.txt").isFile());
+
+            Batch.Plan rd = Batch.plan("RD ידנית \"עומס\"", root, vars);
+            Batch.run(rd, null, null, null);
+            check("1.24.0: RD ידנית — הרשימה יצאה", Tree.load().find(Arrays.asList("עומס")) == null);
+        } catch (Throwable e) {
+            check("1.24.0: " + e, false);
+            e.printStackTrace();
+        } finally {
+            Tree.testFile = null;
+            Structure.testFile = null;
+            VClip.clear();
+        }
+    }
+
     /** 1.23.1: איחוד הליבה, שלב 1 — הדבקה של רשימה עם 40 רשימות חכמות בתוכה: כתיבה אחת של הקובץ הראשי. */
     private static void v1231() {
         File tf = new File(home, "מבנה-שמירה-אחת.txt"), sf = new File(home, "ראשי-שמירה-אחת.ini");
@@ -44057,6 +44376,480 @@ final class CmdTemplates {
         Map<String, String> m = new LinkedHashMap<String, String>();
         for (String h : holes) m.put(h, "");
         return m;
+    }
+}
+===== קובץ: src/com/tikiyot/vfm/ListCmd.java =====
+package com.tikiyot.vfm;
+
+// 1.24.0: פקודות על רשימות (claude/pkudot-reshimot.md). המשתמש: "אם פרמטר — מספיק העתק רגיל; אם בסתם — זה קובץ; אם
+// העתק רשימה — אז זו רשימה"; "העתק רשימה א לתיקייה ב — כך שיעתיק מהרשימה את הקבצים לתיקייה"; "לפצל מההתחלה
+// לרשימות ידניות וחכמות"; "קבצים לא יכולים להיכנס לרשימה — רק השמות והמסלולים שלהם".
+// מילת סוג לפני כל צד: ידנית · חכמה · תוכן ידנית · קבצי ידנית · קבצי חכמה · תיקייה (בלי מילה — קבצים ותיקיות).
+// "*" — הבית של האופן. הפקודות פונות לרשימה בשמה ובמקומה במבנה — לא לאחסון שלה (כך גם במסד נתונים בעתיד).
+// שלב 1: MD, COPY, RD, DEL. ההדבקה וההסרה — אותו מנוע של הלוח (VClip); ההדמיה — על עותק של העץ בזיכרון.
+// אחראי: הקריאה, התכנון וההרצה של שורה עם מילות סוג (בלי ממשק — נבדק).
+
+import java.io.File;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+
+final class ListCmd {
+
+    static final String MANUAL = "ידנית", SMART = "חכמה", CONTENT = "תוכן", FILES_OF = "קבצי", FOLDER = "תיקייה";   // תחביר
+    static final String HOME = "*";
+
+    static final int FS = 0, LIST = 1, SMART_LIST = 2;
+
+    /** צד אחד בשורה: מה הוא, והערך שלו. */
+    static final class Side {
+        int kind = FS;
+        boolean content, filesOf;
+        String raw;
+        /** ברשימה: הדרך (ריקה — הבית); mask — תבנית קבצים בסוף הדרך ("א\*.pdf"), או null. */
+        List<String> path;
+        boolean home;
+        String mask;
+
+        boolean list() {
+            return kind != FS || content || filesOf;
+        }
+
+        String label() {
+            return home ? Words.ListCmdW.HOME : "\"" + raw + "\"";
+        }
+    }
+
+    /** חלק בשורה — עם סימן אם היה במרכאות (מילה במרכאות היא שם, לא מילת סוג). */
+    static final class Tok {
+        final String text;
+        final boolean quoted;
+
+        Tok(String text, boolean quoted) {
+            this.text = text;
+            this.quoted = quoted;
+        }
+    }
+
+    /** הצדדים של שורה, או null — אין בה מילת סוג (שורה רגילה). */
+    static final class Parsed {
+        final List<Side> sides = new ArrayList<Side>();
+        String error;
+
+        boolean anyList() {
+            for (Side s : sides) if (s.list()) return true;
+            return false;
+        }
+    }
+
+    /** הפעולה שתתבצע בהרצה (רשימות בלבד; קבצים בכונן — Batch כרגיל). */
+    interface Op {
+        String run(Library lib);
+    }
+
+    private ListCmd() { }
+
+    // ---------- קריאה ----------
+
+    static List<Tok> tokens(String line) {
+        List<Tok> out = new ArrayList<Tok>();
+        StringBuilder cur = new StringBuilder();
+        boolean q = false, any = false, wasQ = false;
+        for (int i = 0; i < line.length(); i++) {
+            char c = line.charAt(i);
+            if (c == '"') {
+                q = !q;
+                any = true;
+                wasQ = true;
+            } else if (!q && Character.isWhitespace(c)) {
+                if (any || cur.length() > 0) out.add(new Tok(cur.toString(), wasQ));
+                cur.setLength(0);
+                any = false;
+                wasQ = false;
+            } else cur.append(c);
+        }
+        if (any || cur.length() > 0) out.add(new Tok(cur.toString(), wasQ));
+        return out;
+    }
+
+    private static boolean word(Tok t) {
+        return !t.quoted && (t.text.equals(MANUAL) || t.text.equals(SMART) || t.text.equals(CONTENT)
+                || t.text.equals(FILES_OF) || t.text.equals(FOLDER));
+    }
+
+    /** null — אין בשורה מילת סוג. switches — נאספים בנפרד (כמו ב-Batch). */
+    static Parsed parse(String line, List<String> switches) {
+        List<Tok> tk = tokens(line);
+        boolean typed = false;
+        for (int i = 1; i < tk.size(); i++) typed |= word(tk.get(i));
+        if (!typed) return null;
+        Parsed p = new Parsed();
+        Side cur = null;
+        for (int i = 1; i < tk.size(); i++) {
+            Tok t = tk.get(i);
+            if (!t.quoted && Batch.isSwitch(t.text)) {
+                switches.add(t.text);
+                continue;
+            }
+            if (cur == null) cur = new Side();
+            if (word(t)) {
+                if (t.text.equals(CONTENT)) cur.content = true;
+                else if (t.text.equals(FILES_OF)) cur.filesOf = true;
+                else if (t.text.equals(MANUAL)) cur.kind = LIST;
+                else if (t.text.equals(SMART)) cur.kind = SMART_LIST;
+                else cur.kind = FS;
+                if (t.text.equals(FOLDER) && (cur.content || cur.filesOf)) p.error = Words.ListCmdW.USAGE;
+                continue;
+            }
+            cur.raw = t.text;
+            if ((cur.content || cur.filesOf) && cur.kind == FS) p.error = Words.ListCmdW.USAGE;   // "תוכן" בלי "ידנית"
+            if (cur.content && cur.kind == SMART_LIST) p.error = Words.ListCmdW.CONTENT_SMART;
+            p.sides.add(cur);
+            cur = null;
+        }
+        if (cur != null) p.error = Words.ListCmdW.USAGE;                     // מילת סוג בלי שם אחריה
+        return p;
+    }
+
+    /** הדרך לרשימה: "א\ב" או "א/ב"; "*" — הבית; משתנים (%…%) מוחלפים. */
+    static void resolve(Side s, Map<String, String> vars) {
+        String raw = s.raw;
+        if (vars != null) for (Map.Entry<String, String> e : vars.entrySet()) raw = raw.replace(Batch.var(e.getKey()), e.getValue());
+        s.raw = raw;
+        s.path = new ArrayList<String>();
+        if (raw.trim().equals(HOME)) {
+            s.home = true;
+            return;
+        }
+        for (String part : raw.replace('\\', '/').split("/")) if (!part.trim().isEmpty()) s.path.add(part.trim());
+        if (!s.path.isEmpty()) {
+            String last = s.path.get(s.path.size() - 1);
+            if (last.contains("*") || last.contains("?")) {
+                s.mask = last;
+                s.path.remove(s.path.size() - 1);
+            }
+        }
+        if (s.path.isEmpty() && s.mask == null) s.home = true;
+    }
+
+    // ---------- מציאה בעץ ----------
+
+    /** רשימה חכמה: ההפניה שלה ברשימה (from = הרשימה שבה), או כלי בבית (tool). */
+    static final class SmartRef {
+        List<String> from;
+        String ref, name;
+        Structure.Func tool;
+    }
+
+    static SmartRef smart(Tree t, Side s) {
+        if (s.path.isEmpty()) return null;
+        List<String> parent = new ArrayList<String>(s.path.subList(0, s.path.size() - 1));
+        String name = s.path.get(s.path.size() - 1);
+        Tree.Node n = t.find(parent);
+        if (n != null)
+            for (String r : n.smart) {
+                Nested.Item it = Nested.resolve(r);
+                if (!it.gone && name.equals(it.name)) {
+                    SmartRef x = new SmartRef();
+                    x.from = parent;
+                    x.ref = r;
+                    x.name = it.name;
+                    return x;
+                }
+            }
+        if (parent.isEmpty())
+            for (Structure.Func f : Structure.load().direct)
+                if ((FnSmart.KIND.equals(f.kind) || FnDup.KIND.equals(f.kind)) && f.name.equals(name)) {
+                    SmartRef x = new SmartRef();
+                    x.tool = f;
+                    x.name = f.name;
+                    return x;
+                }
+        return null;
+    }
+
+    /** מקור להדבקה: מאיזו רשימה (null — מהבית), ומה. */
+    static final class Src {
+        List<String> from;
+        final List<VClip.Item> items = new ArrayList<VClip.Item>();
+        String error;
+        String what;
+        /** הסרה של רשימה חכמה שהיא כלי בבית. */
+        Structure.Func tool;
+    }
+
+    /** כל מה שברשימה, כפריטי לוח. */
+    private static void contentOf(Tree.Node n, Src out) {
+        for (Tree.Node c : n.children) out.items.add(new VClip.Item(VClip.LIST, c.name, c.name));
+        for (String r : n.smart) out.items.add(new VClip.Item(VClip.SMART, r, Nested.resolve(r).name));
+        for (String r : n.refs) out.items.add(new VClip.Item(VClip.REF, r, r));
+        for (String l : n.live) out.items.add(new VClip.Item(VClip.LIVE, l, new File(l).getName()));
+        for (Tree.Entry e : n.entries) out.items.add(new VClip.Item(VClip.FILE, e.path, new File(e.path).getName()));
+    }
+
+    /** הקבצים שהצד מצביע עליהם (ידנית — בכל העומק; חכמה — מה שהיא מוצאת עכשיו). */
+    static List<String> files(Tree t, Side s, Library lib, String[] err) {
+        List<String> out = new ArrayList<String>();
+        ListCount.Index ix = new ListCount.FromLibrary(lib);
+        Map<String, Long> m;
+        if (s.kind == SMART_LIST) {
+            SmartRef r = smart(t, s);
+            if (r == null) {
+                err[0] = Words.ListCmdW.noSmart(s.raw);
+                return null;
+            }
+            if (lib == null || !lib.ready) {
+                err[0] = Words.ListCmdW.INDEX_NOT_READY;
+                return null;
+            }
+            String cond = r.tool != null ? SmartLists.resolve(r.tool.target())[0] : Nested.resolve(r.ref).cond;
+            for (Library.Hit h : lib.search(cond, false, true).hits) if (h.rec != null) out.add(h.path());
+            return out;
+        }
+        if (s.home) {
+            err[0] = Words.ListCmdW.HOME_FILES;
+            return null;
+        }
+        Tree.Node n = t.find(s.path);
+        if (n == null) {
+            err[0] = Words.ListCmdW.noList(s.raw);
+            return null;
+        }
+        if (s.mask != null) {
+            for (Tree.Entry e : n.entries) if (!e.bad && Batch.wild(s.mask, new File(e.path).getName())) out.add(e.path);
+            return out;
+        }
+        m = ListCount.filesOf(t, n, ix);
+        if (m == null) {
+            err[0] = Words.ListCmdW.INDEX_NOT_READY;
+            return null;
+        }
+        out.addAll(m.keySet());
+        java.util.Collections.sort(out);
+        return out;
+    }
+
+    /** מקור להעתקה לרשימה, מתוך העץ t (בתכנון — העותק בזיכרון; בהרצה — העץ האמיתי). */
+    static Src source(Tree t, Side s, List<String> fsFiles, Library lib) {
+        Src out = new Src();
+        if (!s.list()) {                                                     // קבצים מהכונן ← מסלולים
+            for (String f : fsFiles) out.items.add(new VClip.Item(VClip.FILE, f, new File(f).getName()));
+            out.what = Words.files(out.items.size());
+            return out;
+        }
+        if (s.filesOf) {
+            String[] err = {null};
+            List<String> fs = files(t, s, lib, err);
+            if (fs == null) {
+                out.error = err[0];
+                return out;
+            }
+            for (String f : fs) out.items.add(new VClip.Item(VClip.FILE, f, new File(f).getName()));
+            out.what = Words.ListCmdW.filesOf(Words.files(fs.size()), s.label());
+            return out;
+        }
+        if (s.kind == SMART_LIST) {
+            SmartRef r = smart(t, s);
+            if (r == null) {
+                out.error = Words.ListCmdW.noSmart(s.raw);
+                return out;
+            }
+            if (r.tool != null) out.items.add(new VClip.Item(VClip.TOOL, r.tool.id, r.tool.name));
+            else {
+                out.from = r.from;
+                out.items.add(new VClip.Item(VClip.SMART, r.ref, r.name));
+            }
+            out.what = Words.ListCmdW.smartList(s.label());
+            return out;
+        }
+        if (s.home) {                                                        // "*" — הבית: רק התוכן
+            if (!s.content) {
+                out.error = Words.ListCmdW.HOME_ONLY_CONTENT;
+                return out;
+            }
+            for (Structure.Func f : Structure.load().direct) out.items.add(new VClip.Item(VClip.TOOL, f.id, f.name));
+            out.what = Words.ListCmdW.homeContent(out.items.size());
+            return out;
+        }
+        Tree.Node n = t.find(s.path);
+        if (n == null) {
+            out.error = Words.ListCmdW.noList(s.raw);
+            return out;
+        }
+        if (s.mask != null) {                                                // "א\*.pdf" — הקבצים ברשימה שמתאימים
+            out.from = s.path;
+            for (Tree.Entry e : n.entries)
+                if (Batch.wild(s.mask, new File(e.path).getName())) out.items.add(new VClip.Item(VClip.FILE, e.path, new File(e.path).getName()));
+            out.what = Words.files(out.items.size());
+            return out;
+        }
+        if (s.content) {
+            out.from = s.path;
+            contentOf(n, out);
+            out.what = Words.ListCmdW.contentOf(out.items.size(), s.label());
+            return out;
+        }
+        out.from = new ArrayList<String>(s.path.subList(0, s.path.size() - 1));
+        out.items.add(new VClip.Item(VClip.LIST, n.name, n.name));
+        out.what = Words.ListCmdW.list(s.label());
+        return out;
+    }
+
+    // ---------- תכנון ----------
+
+    /** העץ בזיכרון לתכנון — נטען פעם אחת לכל קובץ פקודות, ולא נשמר. */
+    static Tree simTree(Batch.Sim sim) {
+        if (sim.tree == null) sim.tree = Tree.load();
+        return sim.tree;
+    }
+
+    /**
+     * שורה עם מילות סוג. fsFiles — הקבצים של צד המקור שבכונן; fsDest — יעד בכונן (Batch מוצא אותם). התוצאה: s.op
+     * (רשימות), או קבצים ב-s.files ו-s.dest לביצוע הרגיל של Batch.
+     */
+    static void plan(final Batch.Step s, final String cmd, final Parsed p, List<String> sw, final Batch.Sim sim,
+                     final List<String> fsFiles, final File fsDest) {
+        for (String x : sw)
+            if (x.startsWith("/" + Batch.SW_DATE) || x.startsWith("/" + Batch.SW_SIZE)) {
+                s.error = Words.ListCmdW.NO_FILTER;
+                return;
+            }
+        final Tree t = simTree(sim);
+        final List<Side> sd = p.sides;
+        if (cmd.equals("MD")) {
+            if (sd.size() != 1) { s.error = Words.Cmd.usage(cmd); return; }
+            final Side a = sd.get(0);
+            if (a.kind == SMART_LIST) { s.error = Words.ListCmdW.MD_SMART; return; }
+            if (a.kind != LIST || a.content || a.filesOf || a.home || a.mask != null) { s.error = Words.ListCmdW.USAGE_MD; return; }
+            if (t.find(a.path) != null) {
+                s.noop = true;
+                s.describe = Words.ListCmdW.exists(a.label());
+                return;
+            }
+            Tree.Node n = t.root;
+            for (String part : a.path) {
+                Tree.Node c = n.child(Tree.cleanName(part));
+                n = c != null ? c : Tree.newChild(n, part);
+            }
+            s.describe = Words.ListCmdW.created(a.label());
+            s.op = new Op() {
+                @Override public String run(Library lib) {
+                    Verbs.ensureList(a.path);
+                    return Words.ListCmdW.created(a.label());
+                }
+            };
+            return;
+        }
+        if (cmd.equals("RD") || cmd.equals("DEL")) {
+            if (sd.size() != 1) { s.error = Words.Cmd.usage(cmd); return; }
+            final Side a = sd.get(0);
+            if (a.filesOf) {                                                 // הקבצים עצמם — לסל (הביצוע הרגיל)
+                if (cmd.equals("RD")) { s.error = Words.ListCmdW.RD_FILES; return; }
+                String[] err = {null};
+                List<String> fs = files(t, a, sim.lib, err);
+                if (fs == null) { s.error = err[0]; return; }
+                for (String f : fs) if (sim.isFile(new File(f))) s.files.add(new File(f).getAbsolutePath());
+                s.describe = Words.Cmd.toTrash(Words.files(s.files.size())) + Words.ListCmdW.FROM_DISK;
+                for (String f : s.files) {
+                    sim.gone.add(f);
+                    sim.added.remove(f);
+                }
+                return;
+            }
+            if (a.home) { s.error = Words.ListCmdW.HOME_NO_REMOVE; return; }
+            final Src src = removal(t, a);
+            if (src.error != null) { s.error = src.error; return; }
+            s.describe = Words.ListCmdW.removes(src.what);
+            if (src.tool == null) VClip.simulateRemove(t, src.from, src.items);
+            s.op = new Op() {
+                @Override public String run(Library lib) {
+                    Src now = removal(Tree.load(), a);
+                    if (now.error != null) return now.error;
+                    if (now.tool != null) ToolMenu.removeNow(java.util.Collections.singletonList(now.tool));
+                    else VClip.remove(now.from, now.items);
+                    return Words.ListCmdW.removed(now.what);
+                }
+            };
+            return;
+        }
+        if (cmd.equals("COPY")) {
+            if (sd.size() != 2) { s.error = Words.ListCmdW.USAGE; return; }
+            final Side a = sd.get(0), b = sd.get(1);
+            if (b.content || b.filesOf) { s.error = Words.ListCmdW.USAGE; return; }
+            if (b.kind == SMART_LIST) { s.error = Words.ListCmdW.INTO_SMART; return; }
+            if (b.kind == FS) {                                             // מרשימה לתיקייה — הקבצים עצמם (הביצוע הרגיל)
+                if (fsDest == null || !sim.isDir(fsDest)) { s.error = Words.Cmd.NO_DEST; return; }
+                String[] err = {null};
+                List<String> fs = files(t, a, sim.lib, err);
+                if (fs == null) { s.error = err[0]; return; }
+                s.dest = fsDest;
+                for (String f : fs) if (sim.isFile(new File(f))) s.files.add(new File(f).getAbsolutePath());
+                s.describe = Words.Cmd.transfer(true, Words.files(s.files.size()), Bidi.path(fsDest.getAbsolutePath()));
+                for (String f : s.files) sim.move(f, new File(fsDest, new File(f).getName()), true);
+                return;
+            }
+            if (!b.home && (b.mask != null || t.find(b.path) == null)) { s.error = Words.ListCmdW.noList(b.raw); return; }
+            final boolean full = a.list() && !a.filesOf;                     // רשימות — עותק עצמאי; קבצים — מסלולים
+            Src src = source(t, a, fsFiles, sim.lib);
+            if (src.error != null) { s.error = src.error; return; }
+            if (!b.home && a.kind == LIST && !a.content && !a.filesOf && a.mask == null) {
+                Tree.Node m = t.find(a.path), dn = t.find(b.path);
+                if (m != null && (m == dn || m.isAncestorOf(dn))) { s.error = Words.ListCmdW.INTO_ITSELF; return; }
+            }
+            s.describe = Words.ListCmdW.copy(src.what, b.label());
+            VClip.simulate(t, src.from, src.items, b.home ? null : b.path, full);
+            s.op = new Op() {
+                @Override public String run(Library lib) {
+                    Src now = source(Tree.load(), a, fsFiles, lib);
+                    if (now.error != null) return now.error;
+                    VClip.Result r = VClip.apply(now.from, now.items, full, b.home ? null : b.path);
+                    return Words.ListCmdW.copied(r.done, r.skipped, r.why, b.label());
+                }
+            };
+            return;
+        }
+        if (cmd.equals("MOVE")) {
+            boolean toList = sd.size() == 2 && sd.get(1).list();
+            s.error = toList && !sd.get(0).list() ? Words.ListCmdW.MOVE_TO_LIST : Words.ListCmdW.MOVE_LATER;
+            return;
+        }
+        s.error = Words.ListCmdW.notYet(cmd);
+    }
+
+    /** מה יוצא בהסרה: רשימה, חכמה (או כלי בבית), תוכן, או קבצים לפי תבנית. */
+    private static Src removal(Tree t, Side a) {
+        Src out = new Src();
+        if (a.kind == SMART_LIST) {
+            SmartRef r = smart(t, a);
+            if (r == null) {
+                out.error = Words.ListCmdW.noSmart(a.raw);
+                return out;
+            }
+            if (r.tool != null) out.tool = r.tool;
+            else {
+                out.from = r.from;
+                out.items.add(new VClip.Item(VClip.SMART, r.ref, r.name));
+            }
+            out.what = Words.ListCmdW.smartList(a.label());
+            return out;
+        }
+        Tree.Node n = t.find(a.path);
+        if (n == null) {
+            out.error = Words.ListCmdW.noList(a.raw);
+            return out;
+        }
+        if (a.mask != null || a.content) {
+            out.from = a.path;
+            if (a.content) contentOf(n, out);
+            else for (Tree.Entry e : n.entries)
+                if (Batch.wild(a.mask, new File(e.path).getName())) out.items.add(new VClip.Item(VClip.FILE, e.path, new File(e.path).getName()));
+            out.what = a.content ? Words.ListCmdW.contentOf(out.items.size(), a.label()) : Words.files(out.items.size());
+            return out;
+        }
+        out.from = new ArrayList<String>(a.path.subList(0, a.path.size() - 1));
+        out.items.add(new VClip.Item(VClip.LIST, n.name, n.name));
+        out.what = Words.ListCmdW.list(a.label());
+        return out;
     }
 }
 ===== קובץ: assets/commands/templates.txt =====

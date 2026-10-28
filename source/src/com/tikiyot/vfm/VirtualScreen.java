@@ -562,15 +562,6 @@ public class VirtualScreen extends ListScreen<VirtualScreen.Item> implements Top
         if (it.type == FOLDER) sel.longPressList(it.folder); else sel.longPress(it.entry.path);   // הכלל האחיד (59)
     }
 
-    /** הסרת שורה (קישור, רשימה חכמה, תיקייה מתעדכנת) מהרשימה n. הקבצים לא נוגעים. רשימה חכמה שכולה כאן — לסל. */
-    private boolean removeLine(Tree.Node n, String key) {
-        char k = key.charAt(1);
-        String v = key.substring(2);
-        if (k == 'r') return n.refs.remove(v);
-        if (k == 'l') return n.live.remove(v);
-        return n.smart.remove(v);
-    }
-
     /** 1.16.0: "הגדרות" של רשימה חכמה שבתוך הרשימה — הטופס שלה; הגדרה נפוצה — נפתחת (ההגדרות — שם). */
     private void smartSettings(Nested.Item si) {
         Structure.Func f = Structure.asTool(si.ref);
@@ -648,36 +639,11 @@ public class VirtualScreen extends ListScreen<VirtualScreen.Item> implements Top
                 Words.Manual.REMOVE, new Runnable() {
                     @Override
                     public void run() {
-                        if (!lists.isEmpty()) {
-                            BinBox.lists(path, lists);                   // 1.10.0: לסל — לפני ההסרה
-                            Files.backupNamed(Paths.tree(), Words.Manual.BEFORE_DELETING + lists.size() + Words.Manual.LISTS_SUFFIX);
-                            synchronized (Tree.LOCK) {                   // 92
-                                Tree t = Tree.load();
-                                Tree.Node n = t.find(path);
-                                if (n != null) for (String name : lists) {
-                                    Tree.Node c = n.child(name);
-                                    if (c != null) n.children.remove(c);
-                                }
-                                t.save();
-                            }
-                        }
-                        if (!lines.isEmpty()) {
-                            for (String k : lines) {                         // רשימה חכמה שכולה כאן — לסל, ואז נמחקת
-                                String ref = k.substring(2);
-                                if (k.charAt(1) != 's' || Nested.kindOf(ref) != Nested.Kind.INNER || Nested.uses(ref) > 1) continue;
-                                BinBox.smart(path, ref, lineItem(k).name);
-                                Structure.removeById(ref);
-                            }
-                            change(new Change() {
-                                @Override
-                                public boolean apply(Tree t, Tree.Node node) {
-                                    boolean ch = false;
-                                    for (String k : lines) ch |= removeLine(node, k);
-                                    return ch;
-                                }
-                            });
-                        }
-                        Tree.removeFiles(path, paths);
+                        List<VClip.Item> what = new ArrayList<VClip.Item>();          // 1.24.0: הסרה אחת — גם לפקודות
+                        for (String name : lists) what.add(new VClip.Item(VClip.LIST, name, name));
+                        for (String k : lines) what.add(lineItem(k));
+                        for (String p : paths) what.add(new VClip.Item(VClip.FILE, p, new File(p).getName()));
+                        VClip.remove(path, what);
                         stopSelecting();
                         refresh();
                     }

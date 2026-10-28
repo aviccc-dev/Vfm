@@ -102,6 +102,7 @@ public final class Tests {
         run("גרסה 1.23.0 — ממשק הפקודות: שורה לפי ההגדרה (CmdLine), פקודות נפוצות, קובץ הבדיקה", new Runnable() { public void run() { v1230(); } });
         run("גרסה 1.23.1 — שמירה אחת: העתקת הרבה רשימות חכמות בכתיבה אחת", new Runnable() { public void run() { v1231(); } });
         run("גרסה 1.23.3 — חזרה לבית אחרי העתקת הדוגמאות: מדידה", new Runnable() { public void run() { v1233(); } });
+        run("גרסה 1.24.0 — פקודות על רשימות: ידנית, חכמה, תוכן, קבצי", new Runnable() { public void run() { v1240(); } });
 
         System.out.println("בדיקות: " + passed + " עברו · " + failed + " נכשלו");
         for (String f : failures) System.out.println("  ✗ " + f);
@@ -3974,6 +3975,105 @@ public final class Tests {
             check("1.23.3: 30 יתומות קיימות — נמחקות בכתיבה אחת (עד כאן — 30)", gone == 30 && Structure.writes - w1 == 1);
         } catch (Throwable e) {
             check("1.23.3: " + e, false);
+        } finally {
+            Tree.testFile = null;
+            Structure.testFile = null;
+            VClip.clear();
+        }
+    }
+
+    /** 1.24.0: פקודות על רשימות — דרך מנוע הלוח; ההדמיה על עותק בזיכרון; הלוח של המשתמש לא נוגע. */
+    private static void v1240() {
+        File tf = new File(home, "מבנה-1240.txt"), sf = new File(home, "ראשי-1240.ini");
+        Tree.testFile = tf;
+        Structure.testFile = sf;
+        try {
+            String src0 = System.getProperty("vfm.src");
+            Files.writeAtomic(sf, Files.readUtf8(new File(src0, "assets/examples/main.ini")).replace("%פנימי%", "/x/y"));
+            Files.writeAtomic(tf, Files.readUtf8(new File(src0, "assets/examples/tree.txt")).replace("%פנימי%", "/x/y"));
+            File root = new File(home, "רשימות1240");
+            wipe(root);
+            mk(new File(root, "מקור"), "א.txt", 10);
+            mk(new File(root, "מקור"), "ב.txt", 20);
+            mk(new File(root, "מקור"), "ג.pdf", 30);
+            new File(root, "יעד").mkdirs();
+            Map<String, String> vars = new java.util.HashMap<String, String>();
+            int tools = Structure.load().direct.size();
+            List<VClip.Item> mine = Arrays.asList(new VClip.Item(VClip.FILE, "/שלי.pdf", "שלי.pdf"));
+            VClip.set(null, null, mine, false, false);
+
+            String text = "MD ידנית \"עומס\"\n"
+                    + "COPY תוכן ידנית \"*\" ידנית \"עומס\"\n"
+                    + "MD ידנית \"עומס\\2\"\n"
+                    + "COPY תוכן ידנית \"עומס\" ידנית \"עומס\\2\"\n"
+                    + "COPY \"" + root + "/מקור/*.txt\" ידנית \"עומס\"\n";
+            Batch.Plan pl = Batch.plan(text, root, vars);
+            check("1.24.0: תכנון — בלי שגיאות (" + pl.errors + ")", pl.errors == 0);
+            check("1.24.0: תכנון — הכול בזיכרון, העץ לא השתנה", Tree.load().find(Arrays.asList("עומס")) == null);
+            boolean rows = false;
+            for (Batch.AsIfRow r : Batch.asIfRows(pl)) rows |= r.icon.equals("🗂");
+            check("1.24.0: ההדמיה מראה את שורות הרשימות", rows);
+            List<String> rep = Batch.run(pl, null, null, null);
+            Tree t = Tree.load();
+            Tree.Node load = t.find(Arrays.asList("עומס")), two = t.find(Arrays.asList("עומס", "2"));
+            check("1.24.0: נוצרו עומס ועומס\\2", load != null && two != null);
+            int inLoad = load.children.size() + load.smart.size() + load.refs.size();
+            check("1.24.0: כל הבית הועתק (" + inLoad + " מתוך " + tools + " כלים)", inLoad >= tools - 1 && inLoad > 0);
+            check("1.24.0: התוכן הועתק לתת־הרשימה — בלי 2 עצמו (" + (two.children.size() + two.smart.size() + two.refs.size()) + ")",
+                    two.children.size() + two.smart.size() + two.refs.size() == inLoad - 1 && two.child("2") == null);
+            check("1.24.0: קבצים מהכונן — רק המסלולים (2)", load.entries.size() == 2 && new File(root, "מקור/א.txt").isFile());
+            check("1.24.0: הלוח של המשתמש — כמו שהיה", VClip.items().size() == 1 && VClip.items().get(0).value.equals("/שלי.pdf"));
+            check("1.24.0: דוח לכל שורה (" + rep.size() + ")", rep.size() == 5);
+
+            check("1.24.0: MD לרשימה קיימת — בלי שינוי", Batch.plan("MD ידנית \"עומס\"", root, vars).steps.get(0).noop);
+            check("1.24.0: העברה לרשימה — נעצרת עם הסבר", Words.ListCmdW.MOVE_TO_LIST.equals(
+                    Batch.plan("MOVE \"" + root + "/מקור/*.txt\" ידנית \"עומס\"", root, vars).steps.get(0).error));
+            check("1.24.0: לתוך חכמה — נעצר", Words.ListCmdW.INTO_SMART.equals(
+                    Batch.plan("COPY ידנית \"עומס\" חכמה \"x\"", root, vars).steps.get(0).error));
+            check("1.24.0: רשימה לתוך עצמה — נעצר", Words.ListCmdW.INTO_ITSELF.equals(
+                    Batch.plan("COPY ידנית \"עומס\" ידנית \"עומס\\2\"", root, vars).steps.get(0).error));
+            check("1.24.0: רשימה שאינה — שגיאה", Batch.plan("COPY ידנית \"אין כזו\" ידנית \"עומס\"", root, vars).errors == 1);
+            check("1.24.0: \"ידנית\" במרכאות — שם, לא מילה", Batch.plan("MD \"" + root + "/ידנית\"", root, vars).steps.get(0).op == null
+                    && Batch.plan("MD \"" + root + "/ידנית\"", root, vars).errors == 0);
+            check("1.24.0: סינון על רשימה — עדיין לא", Batch.plan("DEL ידנית \"עומס\\*.txt\" /גודל:>1", root, vars).errors == 1);
+
+            check("1.24.0: רשימה עם חכמות, בלי האינדקס — נעצר", Words.ListCmdW.INDEX_NOT_READY.equals(
+                    Batch.plan("COPY ידנית \"עומס\" תיקייה \"" + root + "/יעד\"", root, vars).steps.get(0).error));
+            Index ix40 = new Index("1240", "1240", root.getAbsolutePath());
+            ix40.scan(null);
+            Library lib40 = Library.forTests(new ArrayList<Index>(Collections.singletonList(ix40)));
+            Batch.run(Batch.plan("COPY ידנית \"עומס\\*.txt\" תיקייה \"" + root + "/יעד\"", root, vars, lib40), lib40, null, null);
+            check("1.24.0: מרשימה לתיקייה — הקבצים עצמם", new File(root, "יעד/א.txt").isFile() && new File(root, "יעד/ב.txt").isFile());
+
+            Batch.run(Batch.plan("DEL ידנית \"עומס\\*.txt\"", root, vars), null, null, null);
+            check("1.24.0: מחיקה מרשימה — רק המסלולים", Tree.load().find(Arrays.asList("עומס")).entries.isEmpty()
+                    && new File(root, "מקור/א.txt").isFile());
+
+            String smartName = "כל הספרים";
+            {
+                Batch.Plan cs = Batch.plan("MD ידנית \"חכמות\"\nCOPY חכמה \"א. ארגון לפי הבחנות\\" + smartName + "\" ידנית \"חכמות\"", root, vars);
+                check("1.24.0: חכמה ברשימה — נמצאת בשמה (" + cs.steps.get(1).error + ")", cs.errors == 0);
+                Batch.run(cs, null, null, null);
+                Tree.Node sm = Tree.load().find(Arrays.asList("חכמות"));
+                check("1.24.0: חכמה מהבית ← עותק עצמאי ברשימה", sm != null && sm.smart.size() == 1
+                        && Nested.kindOf(sm.smart.get(0)) == Nested.Kind.INNER);
+                Batch.Plan ds = Batch.plan("DEL חכמה \"חכמות\\" + smartName + "\"", root, vars);
+                check("1.24.0: מחיקת חכמה מרשימה — בשמה (" + ds.steps.get(0).error + ")", ds.errors == 0);
+                Batch.run(ds, null, null, null);
+                check("1.24.0: …יצאה", Tree.load().find(Arrays.asList("חכמות")).smart.isEmpty());
+            }
+            Batch.run(Batch.plan("MD ידנית \"קבצים\"\nCOPY \"" + root + "/מקור/*.*\" ידנית \"קבצים\"\n"
+                    + "MD ידנית \"קפוא\"\nCOPY קבצי ידנית \"קבצים\" ידנית \"קפוא\"", root, vars, lib40), lib40, null, null);
+            check("1.24.0: קבצי ידנית ← ידנית: המסלולים (3)", Tree.load().find(Arrays.asList("קפוא")).entries.size() == 3);
+            Batch.run(Batch.plan("DEL קבצי ידנית \"קפוא\\*.pdf\"", root, vars, lib40), lib40, null, null);
+            check("1.24.0: DEL קבצי — הקובץ עצמו לסל", !new File(root, "מקור/ג.pdf").exists() && new File(root, "מקור/א.txt").isFile());
+
+            Batch.Plan rd = Batch.plan("RD ידנית \"עומס\"", root, vars);
+            Batch.run(rd, null, null, null);
+            check("1.24.0: RD ידנית — הרשימה יצאה", Tree.load().find(Arrays.asList("עומס")) == null);
+        } catch (Throwable e) {
+            check("1.24.0: " + e, false);
+            e.printStackTrace();
         } finally {
             Tree.testFile = null;
             Structure.testFile = null;

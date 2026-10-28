@@ -2008,6 +2008,85 @@ public final class Words {
                 UNIFY = "לפני האיחוד (תיקיות מתעדכנות, הגדרות נפוצות) — ";   // 1.17.3
     }
 
+    /** 1.24.0: פקודות על רשימות (ListCmd) — claude/pkudot-reshimot.md. */
+    public static final class ListCmdW {
+        private ListCmdW() { }
+
+        public static final String HOME = "הבית",
+                USAGE = "צורה: COPY [ידנית | חכמה | תוכן ידנית | קבצי ידנית | קבצי חכמה] \"שם\" [ידנית | תיקייה] \"יעד\"",
+                USAGE_MD = "צורה: MD ידנית \"א\\ב\" — רשימה ידנית (חסרה — נוצרת בכל הדרך)",
+                CONTENT_SMART = "\"תוכן\" — רק לרשימה ידנית; לקבצים שרשימה חכמה מוצאת: קבצי חכמה",
+                INTO_SMART = "אי אפשר להכניס לתוך רשימה חכמה — היא מוצאת את הקבצים לבד, לפי התנאים שלה",
+                INTO_ITSELF = "אי אפשר להעתיק רשימה לתוך עצמה (או לתוך רשימה שבתוכה)",
+                MOVE_TO_LIST = "העברה לרשימה — אין לה מובן: לרשימה נכנסים רק המסלולים, והקבצים נשארים במקומם. להוספה — COPY",
+                MOVE_LATER = "העברה של רשימות — עדיין לא בפקודות; בינתיים — העתקה ואחריה מחיקה",
+                HOME_ONLY_CONTENT = "\"*\" הוא הבית — כמקור רק עם \"תוכן\": תוכן ידנית \"*\"",
+                HOME_FILES = "לבית אין קבצים משלו — אפשר לבחור רשימה",
+                HOME_NO_REMOVE = "את הבית אי אפשר למחוק בפקודה",
+                MD_SMART = "רשימה חכמה — יוצרים בטופס שלה; בפקודה — העתקה של חכמה קיימת",
+                RD_FILES = "למחיקת הקבצים שברשימה: DEL קבצי ידנית \"שם\"",
+                NO_FILTER = "סינון (/תאריך, /גודל) — עדיין לא חל על רשימות",
+                INDEX_NOT_READY = "האינדקס עוד לא מוכן (או שחלק מהרשימה לא ידוע) — אי אפשר לדעת אילו קבצים ברשימה",
+                FOLDER_TO_LIST = "תיקייה שלמה לרשימה — עדיין לא; לקבצים שבה: \"תיקייה\\*.*\"",
+                FROM_DISK = " — הקבצים עצמם, מהכונן";
+
+        public static String noList(String name) {
+            return "אין רשימה ידנית: \"" + name + "\"";
+        }
+
+        public static String noSmart(String name) {
+            return "אין רשימה חכמה: \"" + name + "\"";
+        }
+
+        public static String notYet(String cmd) {
+            return "הפקודה " + cmd + " — עדיין לא על רשימות";
+        }
+
+        public static String list(String label) {
+            return "הרשימה " + label;
+        }
+
+        public static String smartList(String label) {
+            return "הרשימה החכמה " + label;
+        }
+
+        public static String contentOf(int n, String label) {
+            return "התוכן של " + label + " (" + n + ")";
+        }
+
+        public static String homeContent(int n) {
+            return "כל מה שבבית (" + n + " כלים)";
+        }
+
+        public static String filesOf(String files, String label) {
+            return files + " מתוך " + label;
+        }
+
+        public static String created(String label) {
+            return "רשימה ידנית חדשה: " + label;
+        }
+
+        public static String exists(String label) {
+            return "הרשימה " + label + " כבר קיימת — בלי שינוי";
+        }
+
+        public static String removes(String what) {
+            return what + " — יוצא מהרשימות (לסל); הקבצים לא נוגעים";
+        }
+
+        public static String removed(String what) {
+            return what + " — יצא (לסל)";
+        }
+
+        public static String copy(String what, String to) {
+            return what + " ← לתוך " + to;
+        }
+
+        public static String copied(int done, int skipped, String why, String to) {
+            return "נכנסו ל" + to + ": " + done + (skipped > 0 ? " · לא נכנסו: " + skipped + (why != null ? " (" + why + ")" : "") : "");
+        }
+    }
+
     /** 1.14.0: הלוח הווירטואלי (VClip) */
     public static final class VClipW {
         private VClipW() { }

@@ -46,6 +46,13 @@ final class ListCount {
         return c;
     }
 
+    /** 1.24.0: הקבצים שהרשימה מצביעה עליהם, בכל העומק (מסלול → גודל); null — חלק לא ידוע (האינדקס לא מוכן). */
+    static Map<String, Long> filesOf(Tree t, Tree.Node n, Index index) {
+        ListCount c = new ListCount();
+        if (n != null) c.add(t, n, index, new HashSet<Tree.Node>());
+        return c.partial ? null : c.seenFiles;
+    }
+
     private void add(Tree t, Tree.Node n, Index ix, Set<Tree.Node> seen) {
         if (!seen.add(n)) return;
         items += n.entries.size();
