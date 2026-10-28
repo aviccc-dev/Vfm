@@ -3,7 +3,7 @@ package com.tikiyot.vfm;
 // 1.23.0: הפקודות הנפוצות (claude/mimshak-pkudot.md, החלטה 4): של התוכנה — מתוך ההתקנה (assets/commands/templates.txt),
 // קריאה בלבד, מתעדכנות עם הגרסה; שלי — קובצי פקודות בתיקייה "פקודות נפוצות" שבתיקיית התוכנה, שעדכון גרסה לא נוגע בה.
 // תבנית — שורה אחת או כמה, עם מקומות פתוחים (<מקור>, <יעד>…) שנשאלים לפני ההכנסה. בלי ממשק — נבדק.
-// גם: קובץ הבדיקה של הגרסה (נכתב בתיקייה "בדיקות"; נמחק בגרסה הבאה).
+// 1.23.1: קובץ הבדיקה של 1.23.0 — יצא; removeOldTest מוחק אותו מהמכשיר (בגרסה הבאה — למחוק גם אותה).
 
 import android.content.Context;
 
@@ -18,7 +18,7 @@ import java.util.regex.Pattern;
 
 final class CmdTemplates {
 
-    static final String ASSET = "commands/templates.txt", TEST_ASSET = "commands/test-1.23.0.vbat";
+    static final String ASSET = "commands/templates.txt";
     static final String MINE_DIR = "פקודות נפוצות", TEST_DIR = "בדיקות", TEST_FILE = "בדיקת הפקודות 1.23.0";  // בכונן
     private static final String HEAD = "=== ";   // תחביר
     /** מקום פתוח: <שם> — בלי רווח, בלי / \ : % (כך /תאריך:<שנה לא נתפס). */
@@ -149,19 +149,37 @@ final class CmdTemplates {
         return m;
     }
 
-    /** 1.23.0: קובץ הבדיקה — בתיקיית התוכנה / בדיקות. נכתב פעם אחת (אם נמחק — לא חוזר). הגרסה הבאה מוחקת אותו. */
-    static File writeTest(Context c) {
+    /**
+     * 1.23.1 (המשתמש: "תזכור למחוק בדיקות קודמות"): קובץ הבדיקה של 1.23.0 נמחק מהמכשיר — רק אם לא שונה (אותו
+     * גודל ואותו CRC32 כמו שנכתב); ששונה — נשאר. התיקייה "בדיקות" — רק אם התרוקנה. בגרסה הבאה — למחוק את הפונקציה.
+     */
+    static boolean removeOldTest() {
         File dir = new File(root(), TEST_DIR), f = new File(dir, TEST_FILE + "." + Batch.EXT), mark = new File(dir, ".1.23.0");
-        if (mark.exists()) return f;
+        boolean gone = false;
         try {
-            dir.mkdirs();
-            Files.writeAtomic(f, Examples.asset(c, TEST_ASSET));
-            Files.writeAtomic(mark, "1\n");
-            Library lib = Library.peek();
-            if (lib != null) lib.fileAdded(f);
+            if (f.isFile() && f.length() == OLD_TEST_LEN) {
+                java.util.zip.CRC32 crc = new java.util.zip.CRC32();                   // בלי java.nio.file — לא קיים לפני אנדרואיד 8
+                java.io.InputStream in = new java.io.FileInputStream(f);
+                try {
+                    byte[] b = new byte[4096];
+                    for (int n; (n = in.read(b)) > 0; ) crc.update(b, 0, n);
+                } finally {
+                    in.close();
+                }
+                if (crc.getValue() == OLD_TEST_CRC) gone = f.delete();
+            }
+            if (!f.exists()) {
+                mark.delete();
+                String[] left = dir.list();
+                if (left != null && left.length == 0) dir.delete();
+                Library lib = Library.peek();
+                if (lib != null && gone) lib.fileRemoved(f.getAbsolutePath());
+            }
         } catch (Throwable t) {
-            Log.e("קובץ הבדיקה 1.23.0", t);
+            Log.e("מחיקת קובץ הבדיקה 1.23.0", t);
         }
-        return f;
+        return gone;
     }
+
+    private static final long OLD_TEST_LEN = 1573, OLD_TEST_CRC = 3112421943L;
 }

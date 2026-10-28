@@ -52,8 +52,52 @@ public final class Structure {
     }
 
     public static synchronized Ini ini() {
+        if (inBatch() && pending != null) return pending;
         Ini.createIfMissing(file(), HEADER);
-        return Ini.load(file());
+        Ini i = Ini.load(file());
+        if (inBatch()) pending = i;
+        return i;
+    }
+
+    // ---------- 1.23.1: שמירה אחת (איחוד הליבה, שלב 1 — claude/duach-liba.md) ----------
+    // בתוך batch: הקובץ הראשי נקרא פעם אחת ונשאר בזיכרון; כל שמירה רק מסמנת; בסוף — כתיבה אחת ובנייה אחת של
+    // העותק הקריא. עד כאן: לכל רשימה חכמה שמועתקת — קריאה, כתיבה ובנייה מחדש של כל העותקים (הכבדות בהעתקה).
+
+    private static Ini pending;
+    private static int depth;
+    private static boolean dirty;
+    private static Thread batchThread;
+    /** לבדיקות: כמה פעמים הקובץ הראשי נכתב באמת. */
+    static int writes;
+
+    private static boolean inBatch() {
+        return depth > 0 && Thread.currentThread() == batchThread;
+    }
+
+    /** כל השינויים שבתוך r — כתיבה אחת בסוף. אפשר לקנן. */
+    static void batch(Runnable r) {
+        synchronized (Structure.class) {
+            if (depth++ == 0) batchThread = Thread.currentThread();
+            try {
+                r.run();
+            } finally {
+                if (--depth == 0) {
+                    Ini p = pending;
+                    boolean d = dirty;
+                    pending = null;
+                    dirty = false;
+                    batchThread = null;
+                    if (d && p != null) write(p);
+                }
+            }
+        }
+    }
+
+    private static void write(Ini ini) {
+        if (ini.saveQuiet()) {
+            writes++;
+            Mirror.rebuild();
+        }
     }
 
     // ---------- מודל ----------
@@ -163,7 +207,12 @@ public final class Structure {
     }
 
     static void save(Ini ini) {
-        if (ini.saveQuiet()) Mirror.rebuild();
+        if (inBatch()) {
+            pending = ini;
+            dirty = true;
+            return;
+        }
+        write(ini);
     }
 
     /** משלים מזהים לשורות שנכתבו ידנית. */

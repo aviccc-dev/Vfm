@@ -76,9 +76,12 @@ final class PasteBar {
     }
 
     private void paste() {
+        long t0 = System.currentTimeMillis();
         VClip.Result r = place.paste();
-        Ui.toast(a, Words.VClipW.PASTED + r.done + (r.skipped > 0 ? Words.VClipW.SKIPPED + r.skipped + " (" + r.why + ")" : ""));
         refresh();
         if (after != null) after.run();
+        long ms = System.currentTimeMillis() - t0;                            // 1.23.1: זמני — למדידה במכשיר (בגרסה הבאה — יוצא)
+        Ui.toast(a, Words.VClipW.PASTED + r.done + (r.skipped > 0 ? Words.VClipW.SKIPPED + r.skipped + " (" + r.why + ")" : "")
+                + Words.VClipW.took(ms));
     }
 }

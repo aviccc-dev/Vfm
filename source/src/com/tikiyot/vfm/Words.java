@@ -2012,6 +2012,11 @@ public final class Words {
     public static final class VClipW {
         private VClipW() { }
 
+        /** 1.23.1: זמני — כמה זמן לקחה ההדבקה (בדיקה במכשיר; בגרסה הבאה — יוצא). */
+        public static String took(long ms) {
+            return " · " + (ms < 1000 ? ms + " אלפיות שנייה" : String.format(java.util.Locale.ROOT, "%.1f שניות", ms / 1000.0));
+        }
+
         public static final String TO_COPY = " — לקישור", TO_MOVE = " — להעברה", TO_DUPLICATE = " — להעתקה",
                 FROM_MODE = " · מהאופן ", NOT_HERE = "אי אפשר להדביק את זה כאן",
                 TOOL_NOT_IN_LIST = "את הכלי הזה אי אפשר להכניס לרשימה",

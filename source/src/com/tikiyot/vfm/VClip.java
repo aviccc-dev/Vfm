@@ -107,11 +107,16 @@ final class VClip {
     }
 
     /** מדביק לתוך הרשימה dest באופן הפעיל. */
-    static synchronized Result pasteInto(List<String> dest) {
-        Result r = new Result();
+    static synchronized Result pasteInto(final List<String> dest) {
+        final Result r = new Result();
         if (items.isEmpty()) return r;
-        if (sameMode()) pasteIntoSame(dest, r);
-        else pasteIntoOther(dest, r);
+        Structure.batch(new Runnable() {                                       // 1.23.1: שמירה אחת לכל ההדבקה
+            @Override
+            public void run() {
+                if (sameMode()) pasteIntoSame(dest, r);
+                else pasteIntoOther(dest, r);
+            }
+        });
         if (r.done > 0) clear();
         return r;
     }
@@ -332,8 +337,16 @@ final class VClip {
         return it.kind != TOOL || !move || !sameMode();
     }
 
-    /** מדביק במסך הבית של האופן הפעיל. */
+    /** מדביק במסך הבית של האופן הפעיל — בשמירה אחת (1.23.1). */
     static synchronized Result pasteHome() {
+        final Result[] out = new Result[1];
+        Structure.batch(new Runnable() {
+            @Override public void run() { out[0] = pasteHomeNow(); }
+        });
+        return out[0];
+    }
+
+    private static Result pasteHomeNow() {
         Result r = new Result();
         if (items.isEmpty()) return r;
         boolean same = sameMode();

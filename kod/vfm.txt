@@ -2,8 +2,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="com.tikiyot.vfm"
-    android:versionCode="163"
-    android:versionName="1.23.0">
+    android:versionCode="164"
+    android:versionName="1.23.1">
     <uses-sdk android:minSdkVersion="21" android:targetSdkVersion="30" />
 
     <queries>
@@ -12333,7 +12333,7 @@ public class Home extends Activity {
         Reserved.ensureMode(Examples.MODE);                                   // 1.17.0: "שמור לתוכנה" — ברירות המחדל
         Reserved.ensureBackup(Modes.current());                               // 1.22.3: "שמור לתוכנה / גיבוי" גם באופן הפעיל
         Mirror.rebuild();                                                     // 1.17.5: העותק הקריא — תמיד מעודכן בפתיחה
-        CmdTemplates.writeTest(this);                                         // 1.23.0: קובץ הבדיקה (בגרסה הבאה — נמחק)
+        CmdTemplates.removeOldTest();                                         // 1.23.1: קובץ הבדיקה של 1.23.0 — נמחק (בגרסה הבאה — גם השורה)
         lib = Library.get(this);
         setTitle(Words.Main.APP_NAME);
 
@@ -18971,10 +18971,13 @@ final class PasteBar {
     }
 
     private void paste() {
+        long t0 = System.currentTimeMillis();
         VClip.Result r = place.paste();
-        Ui.toast(a, Words.VClipW.PASTED + r.done + (r.skipped > 0 ? Words.VClipW.SKIPPED + r.skipped + " (" + r.why + ")" : ""));
         refresh();
         if (after != null) after.run();
+        long ms = System.currentTimeMillis() - t0;                            // 1.23.1: זמני — למדידה במכשיר (בגרסה הבאה — יוצא)
+        Ui.toast(a, Words.VClipW.PASTED + r.done + (r.skipped > 0 ? Words.VClipW.SKIPPED + r.skipped + " (" + r.why + ")" : "")
+                + Words.VClipW.took(ms));
     }
 }
 ===== קובץ: src/com/tikiyot/vfm/Paths.java =====
@@ -27402,8 +27405,52 @@ public final class Structure {
     }
 
     public static synchronized Ini ini() {
+        if (inBatch() && pending != null) return pending;
         Ini.createIfMissing(file(), HEADER);
-        return Ini.load(file());
+        Ini i = Ini.load(file());
+        if (inBatch()) pending = i;
+        return i;
+    }
+
+    // ---------- 1.23.1: שמירה אחת (איחוד הליבה, שלב 1 — claude/duach-liba.md) ----------
+    // בתוך batch: הקובץ הראשי נקרא פעם אחת ונשאר בזיכרון; כל שמירה רק מסמנת; בסוף — כתיבה אחת ובנייה אחת של
+    // העותק הקריא. עד כאן: לכל רשימה חכמה שמועתקת — קריאה, כתיבה ובנייה מחדש של כל העותקים (הכבדות בהעתקה).
+
+    private static Ini pending;
+    private static int depth;
+    private static boolean dirty;
+    private static Thread batchThread;
+    /** לבדיקות: כמה פעמים הקובץ הראשי נכתב באמת. */
+    static int writes;
+
+    private static boolean inBatch() {
+        return depth > 0 && Thread.currentThread() == batchThread;
+    }
+
+    /** כל השינויים שבתוך r — כתיבה אחת בסוף. אפשר לקנן. */
+    static void batch(Runnable r) {
+        synchronized (Structure.class) {
+            if (depth++ == 0) batchThread = Thread.currentThread();
+            try {
+                r.run();
+            } finally {
+                if (--depth == 0) {
+                    Ini p = pending;
+                    boolean d = dirty;
+                    pending = null;
+                    dirty = false;
+                    batchThread = null;
+                    if (d && p != null) write(p);
+                }
+            }
+        }
+    }
+
+    private static void write(Ini ini) {
+        if (ini.saveQuiet()) {
+            writes++;
+            Mirror.rebuild();
+        }
     }
 
     // ---------- מודל ----------
@@ -27513,7 +27560,12 @@ public final class Structure {
     }
 
     static void save(Ini ini) {
-        if (ini.saveQuiet()) Mirror.rebuild();
+        if (inBatch()) {
+            pending = ini;
+            dirty = true;
+            return;
+        }
+        write(ini);
     }
 
     /** משלים מזהים לשורות שנכתבו ידנית. */
@@ -31739,11 +31791,16 @@ final class VClip {
     }
 
     /** מדביק לתוך הרשימה dest באופן הפעיל. */
-    static synchronized Result pasteInto(List<String> dest) {
-        Result r = new Result();
+    static synchronized Result pasteInto(final List<String> dest) {
+        final Result r = new Result();
         if (items.isEmpty()) return r;
-        if (sameMode()) pasteIntoSame(dest, r);
-        else pasteIntoOther(dest, r);
+        Structure.batch(new Runnable() {                                       // 1.23.1: שמירה אחת לכל ההדבקה
+            @Override
+            public void run() {
+                if (sameMode()) pasteIntoSame(dest, r);
+                else pasteIntoOther(dest, r);
+            }
+        });
         if (r.done > 0) clear();
         return r;
     }
@@ -31964,8 +32021,16 @@ final class VClip {
         return it.kind != TOOL || !move || !sameMode();
     }
 
-    /** מדביק במסך הבית של האופן הפעיל. */
+    /** מדביק במסך הבית של האופן הפעיל — בשמירה אחת (1.23.1). */
     static synchronized Result pasteHome() {
+        final Result[] out = new Result[1];
+        Structure.batch(new Runnable() {
+            @Override public void run() { out[0] = pasteHomeNow(); }
+        });
+        return out[0];
+    }
+
+    private static Result pasteHomeNow() {
         Result r = new Result();
         if (items.isEmpty()) return r;
         boolean same = sameMode();
@@ -35854,6 +35919,11 @@ public final class Words {
     public static final class VClipW {
         private VClipW() { }
 
+        /** 1.23.1: זמני — כמה זמן לקחה ההדבקה (בדיקה במכשיר; בגרסה הבאה — יוצא). */
+        public static String took(long ms) {
+            return " · " + (ms < 1000 ? ms + " אלפיות שנייה" : String.format(java.util.Locale.ROOT, "%.1f שניות", ms / 1000.0));
+        }
+
         public static final String TO_COPY = " — לקישור", TO_MOVE = " — להעברה", TO_DUPLICATE = " — להעתקה",
                 FROM_MODE = " · מהאופן ", NOT_HERE = "אי אפשר להדביק את זה כאן",
                 TOOL_NOT_IN_LIST = "את הכלי הזה אי אפשר להכניס לרשימה",
@@ -36903,6 +36973,7 @@ public final class Tests {
         run("גרסה 1.22.0 — COMP /רשימה: — רשימה (עם חכמות, תיקיות מתעדכנות ותתי־רשימות) כמקור, מכמה כוננים", new Runnable() { public void run() { v1220(); } });
         run("גרסה 1.22.5 — ההגדרה האחת של שפת הפקודות (Commands)", new Runnable() { public void run() { v1225(); } });
         run("גרסה 1.23.0 — ממשק הפקודות: שורה לפי ההגדרה (CmdLine), פקודות נפוצות, קובץ הבדיקה", new Runnable() { public void run() { v1230(); } });
+        run("גרסה 1.23.1 — שמירה אחת: העתקת הרבה רשימות חכמות בכתיבה אחת", new Runnable() { public void run() { v1231(); } });
 
         System.out.println("בדיקות: " + passed + " עברו · " + failed + " נכשלו");
         for (String f : failures) System.out.println("  ✗ " + f);
@@ -40730,6 +40801,75 @@ public final class Tests {
 
     /** 1.13.1 — תיקוני באגים. */
 
+    /** קובץ הבדיקה של 1.23.0, אות באות — לבדיקת המחיקה שלו. */
+    private static final String OLD_TEST = "הדמיה\nREM בדיקת ממשק הפקודות 1.23.0. לעבור על כל שורה בתפריט שלמעלה: לבחור, לקרוא את ההסבר והפרמטרים, ולנסות ▶ הדמיה.\nREM השורה הראשונה (הדמיה) — כל הקובץ רץ בכאילו, ושום דבר לא משתנה בכונן. הקובץ נמחק בגרסה הבאה.\nECHO מתחילים את הבדיקה\nMD \"%פנימי%\\בדיקת-פקודות\\א\"\nCOPY \"%הורדות%\\*.pdf\" \"%פנימי%\\בדיקת-פקודות\\א\" /תפוס:לדלג /תאריך:שנה\nCOPY \"%פנימי%\\Documents\" \"%פנימי%\\בדיקת-פקודות\\ב\" /S /יומן:\"%פנימי%\\בדיקת-פקודות\\יומן.txt\"\nMOVE \"%פנימי%\\בדיקת-פקודות\\א\\*.pdf\" \"%פנימי%\\בדיקת-פקודות\\ג\" /גודל:>1MB\nREN \"%פנימי%\\בדיקת-פקודות\\קובץ.txt\" חדש.txt\nCOMP \"%פנימי%\\בדיקת-פקודות\\א\" \"%פנימי%\\בדיקת-פקודות\\ב\"\nCOPY %רק-במקור% \"%פנימי%\\בדיקת-פקודות\\ב\" /תפוס:לעצור\nMOVE %רק-ביעד% \"%פנימי%\\בדיקת-פקודות\\היסטוריה\\%תאריך%\" /עד:20%\nCOMP /רשימה:גיבוי \"%פנימי%\\בדיקת-פקודות\\גיבוי\"\nDEL \"%פנימי%\\בדיקת-פקודות\\*.tmp\"\nRD \"%פנימי%\\בדיקת-פקודות\\ריקה\"\nRD \"%פנימי%\\בדיקת-פקודות\\ג\" /S\nCOPY \"%פנימי%\\גיבוי\" \"%פנימי%\\בדיקת-פקודות\\שחזור\" /מצב:\"28.10.2026\"\nSTART \"%פנימי%\\בדיקת-פקודות\"\nפתח מסך חיפוש\nמצא סוג:ספרים\n";
+
+    /** 1.23.1: איחוד הליבה, שלב 1 — הדבקה של רשימה עם 40 רשימות חכמות בתוכה: כתיבה אחת של הקובץ הראשי. */
+    private static void v1231() {
+        File tf = new File(home, "מבנה-שמירה-אחת.txt"), sf = new File(home, "ראשי-שמירה-אחת.ini");
+        tf.delete();
+        sf.delete();
+        Tree.testFile = tf;
+        Structure.testFile = sf;
+        try {
+            StringBuilder ini = new StringBuilder();
+            Tree t = Tree.load();
+            Tree.Node src = Tree.newChild(t.root, "מקור");
+            Tree.newChild(t.root, "יעד");
+            for (int i = 0; i < 40; i++) {
+                ini.append("[רשימה פנימית: מקור › חכמה ").append(i).append("]\nמזהה = p-בדיקה-").append(i)
+                        .append("\nסוג = חכמה\nתנאי = סוג:ספרים\n\n");
+                src.smart.add("p-בדיקה-" + i);
+            }
+            Files.writeAtomic(sf, ini.toString());
+            t.save();
+            int before = Structure.writes;
+            VClip.set(null, new ArrayList<String>(), Arrays.asList(new VClip.Item(VClip.LIST, "מקור", "מקור")), false, true);
+            long t0 = System.nanoTime();
+            VClip.Result r = VClip.pasteInto(Arrays.asList("יעד"));
+            long ms = (System.nanoTime() - t0) / 1000000;
+            System.out.println("  1.23.1: הדבקה של רשימה עם 40 חכמות — " + ms + " מ\"ש, כתיבות: " + (Structure.writes - before));
+            check("1.23.1: הודבקה", r.done == 1);
+            check("1.23.1: כתיבה אחת של הקובץ הראשי (עד כאן — 40)", Structure.writes - before == 1);
+            Tree after = Tree.load();
+            Tree.Node copy = after.find(Arrays.asList("יעד", "מקור"));
+            boolean fresh = copy != null && copy.smart.size() == 40;
+            if (fresh) for (String id : copy.smart) fresh &= !id.startsWith("p-בדיקה-") && Structure.indexOfId(Structure.ini(), id) >= 0;
+            check("1.23.1: 40 עותקים עצמאיים, כולם בקובץ הראשי", fresh);
+            check("1.23.1: המקור לא השתנה", after.find(Arrays.asList("מקור")).smart.size() == 40
+                    && Structure.indexOfId(Structure.ini(), "p-בדיקה-0") >= 0);
+            final int[] inside = {0};
+            Structure.batch(new Runnable() {
+                @Override
+                public void run() {
+                    Structure.batch(new Runnable() {
+                        @Override public void run() { Structure.removeById("p-בדיקה-1"); Structure.removeById("p-בדיקה-2"); }
+                    });
+                    inside[0] = Structure.writes;
+                }
+            });
+            check("1.23.1: קינון — הכתיבה רק בסוף החיצוני", inside[0] == Structure.writes - 1 && Structure.indexOfId(Structure.ini(), "p-בדיקה-1") < 0);
+            // מחיקת קובץ הבדיקה של 1.23.0: רק אם לא שונה
+            File root = drive("בדיקה-ישנה"), dir = new File(root, CmdTemplates.TEST_DIR);
+            dir.mkdirs();
+            File old = new File(dir, CmdTemplates.TEST_FILE + "." + Batch.EXT);
+            CmdTemplates.testRoot = root;
+            Files.writeAtomic(old, "שונה בידי המשתמש\n");
+            check("1.23.1: קובץ בדיקה ששונה — נשאר", !CmdTemplates.removeOldTest() && old.isFile());
+            java.io.FileOutputStream fo = new java.io.FileOutputStream(old);
+            fo.write(OLD_TEST.getBytes("UTF-8"));
+            fo.close();
+            check("1.23.1: קובץ הבדיקה המקורי — נמחק, והתיקייה הריקה איתו", CmdTemplates.removeOldTest() && !old.exists() && !dir.exists());
+            CmdTemplates.testRoot = null;
+        } catch (Throwable e) {
+            check("1.23.1: " + e, false);
+        } finally {
+            Tree.testFile = null;
+            Structure.testFile = null;
+            VClip.clear();
+        }
+    }
+
     /** 1.23.0: CmdLine — שינוי פרמטר אחד בלי לאבד דבר; התבניות; קובץ הבדיקה. */
     private static void v1230() {
         Commands.Def cp = Commands.get("COPY");
@@ -40786,10 +40926,9 @@ public final class Tests {
 
         // התבניות
         String src0 = System.getProperty("vfm.src");
-        String tplText = "", testText = "";
+        String tplText = "";
         try {
             tplText = Files.readUtf8(new File(src0, "assets/commands/templates.txt"));
-            testText = Files.readUtf8(new File(src0, "assets/commands/test-1.23.0.vbat"));
         } catch (Throwable t) {
             check("1.23.0: קבצי ההתקנה נקראו", false);
         }
@@ -40816,21 +40955,6 @@ public final class Tests {
         } finally {
             CmdTemplates.testRoot = null;
         }
-        // קובץ הבדיקה — כל שורה מוכרת, וכל שורת קבצים נשארת אות באות
-        boolean all = true, round = true, asIf = false;
-        for (String line : testText.replace("\r", "").split("\n")) {
-            String t = line.trim();
-            if (t.isEmpty()) continue;
-            if (t.equals(Batch.AS_IF2)) asIf = true;
-            boolean known = t.equals(Batch.AS_IF2) || Verbs.isVerb(t) || CmdLine.parse(t).def != null;
-            all &= known;
-            if (CmdLine.parse(t).def != null) round &= CmdLine.parse(t).text().equals(t);
-        }
-        check("1.23.0: קובץ הבדיקה — כל השורות מוכרות", all);
-        check("1.23.0: קובץ הבדיקה — בהדמיה", asIf);
-        check("1.23.0: קובץ הבדיקה — כל פקודות הקבצים בו", testText.contains("COPY") && testText.contains("MOVE") && testText.contains("DEL")
-                && testText.contains("REN") && testText.contains("MD") && testText.contains("RD") && testText.contains("COMP")
-                && testText.contains("START") && testText.contains("ECHO") && testText.contains("REM") && round);
     }
 
     /** 1.22.5: ההגדרה האחת — שלמה, תואמת למנוע, וכל פרמטר עם שם והסבר. */
@@ -43645,7 +43769,7 @@ package com.tikiyot.vfm;
 // 1.23.0: הפקודות הנפוצות (claude/mimshak-pkudot.md, החלטה 4): של התוכנה — מתוך ההתקנה (assets/commands/templates.txt),
 // קריאה בלבד, מתעדכנות עם הגרסה; שלי — קובצי פקודות בתיקייה "פקודות נפוצות" שבתיקיית התוכנה, שעדכון גרסה לא נוגע בה.
 // תבנית — שורה אחת או כמה, עם מקומות פתוחים (<מקור>, <יעד>…) שנשאלים לפני ההכנסה. בלי ממשק — נבדק.
-// גם: קובץ הבדיקה של הגרסה (נכתב בתיקייה "בדיקות"; נמחק בגרסה הבאה).
+// 1.23.1: קובץ הבדיקה של 1.23.0 — יצא; removeOldTest מוחק אותו מהמכשיר (בגרסה הבאה — למחוק גם אותה).
 
 import android.content.Context;
 
@@ -43660,7 +43784,7 @@ import java.util.regex.Pattern;
 
 final class CmdTemplates {
 
-    static final String ASSET = "commands/templates.txt", TEST_ASSET = "commands/test-1.23.0.vbat";
+    static final String ASSET = "commands/templates.txt";
     static final String MINE_DIR = "פקודות נפוצות", TEST_DIR = "בדיקות", TEST_FILE = "בדיקת הפקודות 1.23.0";  // בכונן
     private static final String HEAD = "=== ";   // תחביר
     /** מקום פתוח: <שם> — בלי רווח, בלי / \ : % (כך /תאריך:<שנה לא נתפס). */
@@ -43791,21 +43915,39 @@ final class CmdTemplates {
         return m;
     }
 
-    /** 1.23.0: קובץ הבדיקה — בתיקיית התוכנה / בדיקות. נכתב פעם אחת (אם נמחק — לא חוזר). הגרסה הבאה מוחקת אותו. */
-    static File writeTest(Context c) {
+    /**
+     * 1.23.1 (המשתמש: "תזכור למחוק בדיקות קודמות"): קובץ הבדיקה של 1.23.0 נמחק מהמכשיר — רק אם לא שונה (אותו
+     * גודל ואותו CRC32 כמו שנכתב); ששונה — נשאר. התיקייה "בדיקות" — רק אם התרוקנה. בגרסה הבאה — למחוק את הפונקציה.
+     */
+    static boolean removeOldTest() {
         File dir = new File(root(), TEST_DIR), f = new File(dir, TEST_FILE + "." + Batch.EXT), mark = new File(dir, ".1.23.0");
-        if (mark.exists()) return f;
+        boolean gone = false;
         try {
-            dir.mkdirs();
-            Files.writeAtomic(f, Examples.asset(c, TEST_ASSET));
-            Files.writeAtomic(mark, "1\n");
-            Library lib = Library.peek();
-            if (lib != null) lib.fileAdded(f);
+            if (f.isFile() && f.length() == OLD_TEST_LEN) {
+                java.util.zip.CRC32 crc = new java.util.zip.CRC32();                   // בלי java.nio.file — לא קיים לפני אנדרואיד 8
+                java.io.InputStream in = new java.io.FileInputStream(f);
+                try {
+                    byte[] b = new byte[4096];
+                    for (int n; (n = in.read(b)) > 0; ) crc.update(b, 0, n);
+                } finally {
+                    in.close();
+                }
+                if (crc.getValue() == OLD_TEST_CRC) gone = f.delete();
+            }
+            if (!f.exists()) {
+                mark.delete();
+                String[] left = dir.list();
+                if (left != null && left.length == 0) dir.delete();
+                Library lib = Library.peek();
+                if (lib != null && gone) lib.fileRemoved(f.getAbsolutePath());
+            }
         } catch (Throwable t) {
-            Log.e("קובץ הבדיקה 1.23.0", t);
+            Log.e("מחיקת קובץ הבדיקה 1.23.0", t);
         }
-        return f;
+        return gone;
     }
+
+    private static final long OLD_TEST_LEN = 1573, OLD_TEST_CRC = 3112421943L;
 }
 ===== קובץ: assets/commands/templates.txt =====
 === גיבוי: מראה והיסטוריה (תיקייה)
@@ -43830,24 +43972,3 @@ MOVE "%הורדות%\*.pdf" "<יעד>" /תפוס:לדלג
 DEL "<תיקייה>\*.tmp"
 === פתיחת תיקייה בסוף
 START "<תיקייה>"
-===== קובץ: assets/commands/test-1.23.0.vbat =====
-הדמיה
-REM בדיקת ממשק הפקודות 1.23.0. לעבור על כל שורה בתפריט שלמעלה: לבחור, לקרוא את ההסבר והפרמטרים, ולנסות ▶ הדמיה.
-REM השורה הראשונה (הדמיה) — כל הקובץ רץ בכאילו, ושום דבר לא משתנה בכונן. הקובץ נמחק בגרסה הבאה.
-ECHO מתחילים את הבדיקה
-MD "%פנימי%\בדיקת-פקודות\א"
-COPY "%הורדות%\*.pdf" "%פנימי%\בדיקת-פקודות\א" /תפוס:לדלג /תאריך:שנה
-COPY "%פנימי%\Documents" "%פנימי%\בדיקת-פקודות\ב" /S /יומן:"%פנימי%\בדיקת-פקודות\יומן.txt"
-MOVE "%פנימי%\בדיקת-פקודות\א\*.pdf" "%פנימי%\בדיקת-פקודות\ג" /גודל:>1MB
-REN "%פנימי%\בדיקת-פקודות\קובץ.txt" חדש.txt
-COMP "%פנימי%\בדיקת-פקודות\א" "%פנימי%\בדיקת-פקודות\ב"
-COPY %רק-במקור% "%פנימי%\בדיקת-פקודות\ב" /תפוס:לעצור
-MOVE %רק-ביעד% "%פנימי%\בדיקת-פקודות\היסטוריה\%תאריך%" /עד:20%
-COMP /רשימה:גיבוי "%פנימי%\בדיקת-פקודות\גיבוי"
-DEL "%פנימי%\בדיקת-פקודות\*.tmp"
-RD "%פנימי%\בדיקת-פקודות\ריקה"
-RD "%פנימי%\בדיקת-פקודות\ג" /S
-COPY "%פנימי%\גיבוי" "%פנימי%\בדיקת-פקודות\שחזור" /מצב:"28.10.2026"
-START "%פנימי%\בדיקת-פקודות"
-פתח מסך חיפוש
-מצא סוג:ספרים
