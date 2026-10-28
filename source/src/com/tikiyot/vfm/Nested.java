@@ -274,6 +274,14 @@ final class Nested {
      * הפניות: "רשימות בתוך" בכל סעיף, ו"@חכמה" בכל רשימה ידנית. מחזיר כמה נמחקו.
      */
     static int cleanup() {
+        final int[] n = {0};
+        Structure.batch(new Runnable() {                                       // 1.23.3: כתיבה אחת — לא אחת לכל יתומה
+            @Override public void run() { n[0] = cleanupNow(); }
+        });
+        return n[0];
+    }
+
+    private static int cleanupNow() {
         int removed = 0;
         synchronized (Structure.class) {
             synchronized (Tree.LOCK) {

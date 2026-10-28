@@ -101,6 +101,7 @@ public final class Tests {
         run("גרסה 1.22.5 — ההגדרה האחת של שפת הפקודות (Commands)", new Runnable() { public void run() { v1225(); } });
         run("גרסה 1.23.0 — ממשק הפקודות: שורה לפי ההגדרה (CmdLine), פקודות נפוצות, קובץ הבדיקה", new Runnable() { public void run() { v1230(); } });
         run("גרסה 1.23.1 — שמירה אחת: העתקת הרבה רשימות חכמות בכתיבה אחת", new Runnable() { public void run() { v1231(); } });
+        run("גרסה 1.23.3 — חזרה לבית אחרי העתקת הדוגמאות: מדידה", new Runnable() { public void run() { v1233(); } });
 
         System.out.println("בדיקות: " + passed + " עברו · " + failed + " נכשלו");
         for (String f : failures) System.out.println("  ✗ " + f);
@@ -3930,6 +3931,55 @@ public final class Tests {
 
     /** קובץ הבדיקה של 1.23.0, אות באות — לבדיקת המחיקה שלו. */
     private static final String OLD_TEST = "הדמיה\nREM בדיקת ממשק הפקודות 1.23.0. לעבור על כל שורה בתפריט שלמעלה: לבחור, לקרוא את ההסבר והפרמטרים, ולנסות ▶ הדמיה.\nREM השורה הראשונה (הדמיה) — כל הקובץ רץ בכאילו, ושום דבר לא משתנה בכונן. הקובץ נמחק בגרסה הבאה.\nECHO מתחילים את הבדיקה\nMD \"%פנימי%\\בדיקת-פקודות\\א\"\nCOPY \"%הורדות%\\*.pdf\" \"%פנימי%\\בדיקת-פקודות\\א\" /תפוס:לדלג /תאריך:שנה\nCOPY \"%פנימי%\\Documents\" \"%פנימי%\\בדיקת-פקודות\\ב\" /S /יומן:\"%פנימי%\\בדיקת-פקודות\\יומן.txt\"\nMOVE \"%פנימי%\\בדיקת-פקודות\\א\\*.pdf\" \"%פנימי%\\בדיקת-פקודות\\ג\" /גודל:>1MB\nREN \"%פנימי%\\בדיקת-פקודות\\קובץ.txt\" חדש.txt\nCOMP \"%פנימי%\\בדיקת-פקודות\\א\" \"%פנימי%\\בדיקת-פקודות\\ב\"\nCOPY %רק-במקור% \"%פנימי%\\בדיקת-פקודות\\ב\" /תפוס:לעצור\nMOVE %רק-ביעד% \"%פנימי%\\בדיקת-פקודות\\היסטוריה\\%תאריך%\" /עד:20%\nCOMP /רשימה:גיבוי \"%פנימי%\\בדיקת-פקודות\\גיבוי\"\nDEL \"%פנימי%\\בדיקת-פקודות\\*.tmp\"\nRD \"%פנימי%\\בדיקת-פקודות\\ריקה\"\nRD \"%פנימי%\\בדיקת-פקודות\\ג\" /S\nCOPY \"%פנימי%\\גיבוי\" \"%פנימי%\\בדיקת-פקודות\\שחזור\" /מצב:\"28.10.2026\"\nSTART \"%פנימי%\\בדיקת-פקודות\"\nפתח מסך חיפוש\nמצא סוג:ספרים\n";
+
+    /** 1.23.3: מה שקורה בחזרה לבית — על הדוגמאות האמיתיות, אחרי שהועתקו (כמו אצל המשתמש). מדידה לפי שלבים. */
+    private static void v1233() {
+        File tf = new File(home, "מבנה-דוגמאות.txt"), sf = new File(home, "ראשי-דוגמאות.ini");
+        Tree.testFile = tf;
+        Structure.testFile = sf;
+        try {
+            String src0 = System.getProperty("vfm.src");
+            Files.writeAtomic(sf, Files.readUtf8(new File(src0, "assets/examples/main.ini")).replace("%פנימי%", "/x/y"));
+            Files.writeAtomic(tf, Files.readUtf8(new File(src0, "assets/examples/tree.txt")).replace("%פנימי%", "/x/y"));
+            Tree t = Tree.load();
+            Tree.newChild(t.root, "הדוגמאות שלי");
+            t.save();
+            List<VClip.Item> all = new ArrayList<VClip.Item>();
+            for (Structure.Func f : Structure.load().direct) all.add(new VClip.Item(VClip.TOOL, f.id, f.name));
+            for (int round = 1; round <= 3; round++) {
+                VClip.set(null, null, all, false, true);
+                long a = System.nanoTime();
+                VClip.Result r = VClip.pasteInto(Arrays.asList("הדוגמאות שלי"));
+                long b = System.nanoTime();
+                int w0 = Structure.writes;
+                int removed = Nested.cleanup();
+                long c = System.nanoTime();
+                Structure.ensureIds();
+                Structure.Model m = Structure.load();
+                Tree tr = Tree.load();
+                long d = System.nanoTime();
+                int inner = 0;
+                for (Ini.Line l : Structure.ini().lines) if (l.isHeader() && l.headerName().startsWith(Nested.INNER)) inner++;
+                System.out.println("  1.23.3 סבב " + round + ": הודבקו " + r.done + " · הדבקה " + (b - a) / 1000000 + " מ\"ש · ניקוי יתומות "
+                        + (c - b) / 1000000 + " מ\"ש (" + removed + " נמחקו, " + (Structure.writes - w0) + " כתיבות) · טעינה " + (d - c) / 1000000
+                        + " מ\"ש · רשימות פנימיות " + inner + " · כלים " + m.direct.size() + " · קובץ ראשי " + sf.length() / 1024 + "KB · עץ " + tf.length() / 1024 + "KB");
+                check("1.23.3: סבב " + round + " — בלי יתומות אחרי הדבקה (גם כשהכלי של היעד נבחר)", removed == 0 && Structure.writes - w0 == 0);
+            }
+            String ini2 = Files.readUtf8(sf);
+            StringBuilder orph = new StringBuilder(ini2);
+            for (int i = 0; i < 30; i++) orph.append("\n[רשימה פנימית: יתומה ").append(i).append("]\nמזהה = p-יתומה-").append(i).append("\nסוג = חכמה\nתנאי = סוג:ספרים\n");
+            Files.writeAtomic(sf, orph.toString());
+            int w1 = Structure.writes;
+            int gone = Nested.cleanup();
+            check("1.23.3: 30 יתומות קיימות — נמחקות בכתיבה אחת (עד כאן — 30)", gone == 30 && Structure.writes - w1 == 1);
+        } catch (Throwable e) {
+            check("1.23.3: " + e, false);
+        } finally {
+            Tree.testFile = null;
+            Structure.testFile = null;
+            VClip.clear();
+        }
+    }
 
     /** 1.23.1: איחוד הליבה, שלב 1 — הדבקה של רשימה עם 40 רשימות חכמות בתוכה: כתיבה אחת של הקובץ הראשי. */
     private static void v1231() {

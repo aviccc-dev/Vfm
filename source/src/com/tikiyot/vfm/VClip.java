@@ -160,8 +160,10 @@ final class VClip {
                 return changed;
             }
         });
-        if (copies != null) for (Item it : tree)                              // עותק שלא נכנס — לא נשאר יתום
-            if (it.kind == SMART && !ok.contains(it) && copies.containsKey(it.value)) Structure.removeById(copies.get(it.value));
+        // 1.23.3 (באג): עותק שלא נכנס — לא נשאר יתום. עד כאן — רק רשימה חכמה בודדת; רשימה שלא נכנסה (למשל הרשימה
+        // שמדביקים לתוכה, כשגם הכלי שלה נבחר) השאירה את כל העותקים של החכמות שבה — יתומות, שנמחקו אחר כך אחת אחת
+        // בחזרה לבית ("האפליקציה לא מגיבה"). עכשיו — כל עותק שאינו בשימוש, בשמירה האחת של ההדבקה.
+        if (copies != null && !copies.isEmpty()) Nested.cleanup();
         for (String[] mvd : moved) FnVirtual.listMoved(child(src, mvd[0]), child(dest, mvd[1]));   // 88: הכלים עוברים איתה
         if (move) for (Item it : ok) {                                         // 1.15.1 (באג): רק מה שנכנס — יוצא מהבית
             Structure.Func f = tools.get(it);
