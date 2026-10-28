@@ -94,6 +94,7 @@ public final class Structure {
     }
 
     private static void write(Ini ini) {
+        ro = null;                                                              // 1.25.8
         if (ini.saveQuiet()) {
             writes++;
             Mirror.rebuild();
@@ -278,8 +279,44 @@ public final class Structure {
 
     /** הסעיף שזה המזהה שלו: שם (הכותרת כולה), ושאר המפתחות; או null. */
     public static synchronized Func byId(String id) {
-        return byId(ini(), id);
+        if (inBatch() && pending != null) return byId(pending, id);
+        File f = file();
+        if (ro == null || !f.equals(roFile) || f.lastModified() != roMod || f.length() != roLen) {
+            Ini.createIfMissing(f, HEADER);
+            ro = Ini.load(f);
+            roFile = f;
+            roMod = f.lastModified();
+            roLen = f.length();
+            roIdx = new java.util.HashMap<String, Integer>();
+            int header = -1;
+            for (int i = 0; i < ro.lines.size(); i++) {
+                Ini.Line l = ro.lines.get(i);
+                if (l.isHeader()) header = i;
+                else if (l.key != null && l.key.equals(ID) && l.value != null && !roIdx.containsKey(l.value)) roIdx.put(l.value, header);
+            }
+        }
+        Integer at = roIdx.get(id);
+        if (at == null || at < 0) return null;
+        Func fn = new Func();
+        fn.id = id;
+        fn.name = ro.lines.get(at).headerName();
+        int end = ro.sectionEnd(at);
+        for (int i = at + 1; i < end; i++) {
+            Ini.Line l = ro.lines.get(i);
+            if (l.key != null && !l.key.equals(ID)) fn.params.put(l.key, l.value == null ? "" : l.value);
+        }
+        return fn;
     }
+
+    /**
+     * 1.25.8 (ביצועים — בדיקת העומס: "מכין…" שלא נגמר): byId קרא את כל הקובץ הראשי מהכונן וסרק אותו בכל קריאה —
+     * ולכל רשימה חכמה פעמיים (סוג ותוכן). במאות רשימות ובקובץ של מגה־בתים — דקות. עכשיו: עותק לקריאה בלבד עם אינדקס
+     * לפי מזהה, שמתחדש כשהקובץ משתנה (תאריך או גודל) או כשנכתב מכאן.
+     */
+    private static Ini ro;
+    private static File roFile;
+    private static long roMod, roLen;
+    private static java.util.Map<String, Integer> roIdx;
 
     /**
      * 1.16.0: הסעיף כמו כלי — סוג, שם בלי הקידומת (ובפנימית — בלי הבעלים), תיאור, ושאר המפתחות; כך אותו טופס
@@ -578,14 +615,49 @@ public final class Structure {
 
     /** כותרת פנימית פנויה: "[רשימה פנימית: label]", ואם תפוסה — (2), (3)… */
     private static String innerHeader(Ini ini, String label) {
+        java.util.Set<String> names = aux(ini).names;                           // 1.25.8: סריקה אחת, לא סריקה לכל מספר
         String h = Nested.INNER + label;
-        boolean taken = true;
-        for (int i = 2; taken; i++) {
-            taken = false;
-            for (Ini.Line l : ini.lines) if (l.isHeader() && l.headerName().trim().equals(h.trim())) taken = true;
-            if (taken) h = Nested.INNER + label + " (" + i + ")";
-        }
+        for (int i = 2; names.contains(h.trim()); i++) h = Nested.INNER + label + " (" + i + ")";
         return h;
+    }
+
+    /**
+     * 1.25.8 (ביצועים — בדיקת העומס: כל סבב לקח פי 3 מהקודם): בהעתקה של הרבה רשימות חכמות, כל עותק סרק את כל הקובץ
+     * הראשי כדי למצוא את המקור, ועוד סריקה מלאה לכל מספר שבדק לשם פנוי ("(2)", "(3)"…) — בעשרות אלפי שורות ואלפי
+     * עותקים, ריבועי. עכשיו: אינדקס אחד (שמות ומזהים) לכל קובץ בזיכרון, שנבנה מחדש כשמספר השורות השתנה שלא דרכו.
+     */
+    private static final class Aux {
+        Ini ini;
+        int size = -1;
+        final java.util.Set<String> names = new java.util.HashSet<String>();
+        final java.util.Map<String, Integer> ids = new java.util.HashMap<String, Integer>();
+    }
+
+    private static Aux aux;
+
+    private static Aux aux(Ini ini) {
+        if (aux == null || aux.ini != ini || aux.size != ini.lines.size()) {
+            Aux a = new Aux();
+            a.ini = ini;
+            int header = -1;
+            for (int i = 0; i < ini.lines.size(); i++) {
+                Ini.Line l = ini.lines.get(i);
+                if (l.isHeader()) {
+                    header = i;
+                    a.names.add(l.headerName().trim());
+                } else if (l.key != null && l.key.equals(ID) && l.value != null && !a.ids.containsKey(l.value)) a.ids.put(l.value, header);
+            }
+            a.size = ini.lines.size();
+            aux = a;
+        }
+        return aux;
+    }
+
+    /** מזהה ← שורת הכותרת שלו, מהאינדקס (ובדיקה שהשורה עדיין שלו). */
+    private static int indexOfIdFast(Ini ini, String id) {
+        Integer at = aux(ini).ids.get(id);
+        if (at == null || at < 0 || at >= ini.lines.size() || !ini.lines.get(at).isHeader()) return indexOfId(ini, id);
+        return at;
     }
 
     /**
@@ -594,7 +666,7 @@ public final class Structure {
      */
     public static synchronized String copyInner(String id, String label) {
         Ini ini = ini();
-        int at = indexOfId(ini, id);
+        int at = indexOfIdFast(ini, id);
         if (at < 0) return null;
         String fresh = newId("p"), h = innerHeader(ini, label);
         List<Ini.Line> b = new ArrayList<Ini.Line>();
@@ -609,7 +681,13 @@ public final class Structure {
             b.add(Ini.line(l.key + " = " + l.value, h));
         }
         if (!kind) b.add(2 + 1, Ini.line("סוג = " + FnSmart.KIND, h));  // הגדרה נפוצה — בלי "סוג" // תחביר
-        ini.lines.addAll(ini.lines.size(), b);
+        int start = ini.lines.size();
+        ini.lines.addAll(start, b);
+        if (aux != null && aux.ini == ini && aux.size == start) {              // 1.25.8: האינדקס — מתעדכן, לא נבנה מחדש
+            aux.names.add(h.trim());
+            aux.ids.put(fresh, start + 1);
+            aux.size = ini.lines.size();
+        }
         save(ini);
         return fresh;
     }

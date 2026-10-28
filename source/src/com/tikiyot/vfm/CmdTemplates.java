@@ -144,7 +144,9 @@ final class CmdTemplates {
 
     /** ממלא את המקומות הפתוחים. מקום שלא מולא — נשאר כמו שהוא. */
     /** 1.25.2: סוג המקום הפתוח — לפי המילה שלפניו בשורה: מסלול (ברירת מחדל), רשימה ידנית, רשימה חכמה, מספר. */
-    static final int HOLE_PATH = 0, HOLE_MANUAL = 1, HOLE_SMART = 2, HOLE_NUMBER = 3;
+    static final int HOLE_PATH = 0, HOLE_MANUAL = 1, HOLE_SMART = 2, HOLE_NUMBER = 3, HOLE_MANY = 4;
+    /** 1.26.0: מקום ששמו מתחיל כך, אחרי "ידנית" — כמה רשימות. */
+    static final String MANY_PREFIX = "רשימות";   // תחביר
 
     static int holeKind(List<String> lines, String hole) {
         String mark = "<" + hole + ">";
@@ -156,7 +158,7 @@ final class CmdTemplates {
                 if (i == 1 && tk.get(0).text.equals(Batch.LOOP)) return HOLE_NUMBER;
                 if (i > 0 && !tk.get(i - 1).quoted) {
                     String w = tk.get(i - 1).text;
-                    if (w.equals(ListCmd.MANUAL)) return HOLE_MANUAL;
+                    if (w.equals(ListCmd.MANUAL)) return hole.startsWith(MANY_PREFIX) ? HOLE_MANY : HOLE_MANUAL;
                     if (w.equals(ListCmd.SMART)) return HOLE_SMART;
                 }
             }
@@ -167,15 +169,32 @@ final class CmdTemplates {
     static List<String> fill(List<String> lines, Map<String, String> values) {
         List<String> out = new ArrayList<String>();
         for (String l : lines) {
-            Matcher m = HOLE.matcher(l);
-            StringBuffer sb = new StringBuffer();
-            while (m.find()) {
-                String v = values.get(m.group(1));
-                m.appendReplacement(sb, Matcher.quoteReplacement(v == null || v.trim().isEmpty() ? m.group() : v.trim()));
+            String multi = null;                                               // 1.26.0: מקום עם כמה ערכים — השורה מוכפלת
+            Matcher f = HOLE.matcher(l);
+            while (f.find() && multi == null) {
+                String v = values.get(f.group(1));
+                if (v != null && many(v).size() > 1) multi = f.group(1);
             }
-            m.appendTail(sb);
-            out.add(sb.toString());
+            List<String> copies = multi == null ? java.util.Collections.singletonList((String) null) : many(values.get(multi));
+            for (String one : copies) {
+                Matcher m = HOLE.matcher(l);
+                StringBuffer sb = new StringBuffer();
+                while (m.find()) {
+                    String v = m.group(1).equals(multi) ? one : values.get(m.group(1));
+                    if (v != null && multi == null && many(v).size() == 1) v = many(v).get(0);
+                    m.appendReplacement(sb, Matcher.quoteReplacement(v == null || v.trim().isEmpty() ? m.group() : v.trim()));
+                }
+                m.appendTail(sb);
+                out.add(sb.toString());
+            }
         }
+        return out;
+    }
+
+    /** 1.26.0: ערך של כמה — שורה לכל אחד (ריקות יורדות). */
+    static List<String> many(String v) {
+        List<String> out = new ArrayList<String>();
+        if (v != null) for (String x : v.replace("\r", "").split("\n")) if (!x.trim().isEmpty()) out.add(x.trim());
         return out;
     }
 

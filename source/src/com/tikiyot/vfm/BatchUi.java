@@ -52,6 +52,10 @@ final class BatchUi {
             Ui.toast(a, Words.CANT_READ_FILE);
             return;
         }
+        if (!Batch.onlyOpens(text)) {                                          // 1.26.0: מסך ההרצה האחד
+            RunScreen.start(a, f);
+            return;
+        }
         final Map<String, String> vars0 = vars(a, f.getParentFile());
         List<String> lines = java.util.Arrays.asList(text.replace("\r", "").split("\n"));
         if (!CmdTemplates.holes(lines).isEmpty()) {                            // 1.25.6: מקומות פתוחים — נשאלים לפני ההרצה
@@ -192,7 +196,7 @@ final class BatchUi {
     }
 
     /** 216: מה ש־START ביקש — קובץ נפתח, תיקייה נפתחת במנהל הקבצים. */
-    private static void openStart(Activity a, File start) {
+    static void openStart(Activity a, File start) {
         if (start == null) return;
         if (Batch.isHome(start)) Home.go(a);                                  // 1.9.0
         else if (start.isFile()) Ui.open(a, start);

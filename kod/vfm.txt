@@ -2,8 +2,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="com.tikiyot.vfm"
-    android:versionCode="176"
-    android:versionName="1.25.7">
+    android:versionCode="177"
+    android:versionName="1.26.0">
     <uses-sdk android:minSdkVersion="21" android:targetSdkVersion="30" />
 
     <queries>
@@ -50,6 +50,7 @@
         <activity android:name=".TrashScreen" android:exported="false" />
         <activity android:name=".DiskScreen" android:exported="false" />
         <activity android:name=".AsIfScreen" android:exported="false" />
+        <activity android:name=".RunScreen" android:exported="false" android:configChanges="orientation|screenSize|keyboardHidden" />
         <activity android:name=".SettingsScreen" android:exported="false" />
         <activity android:name=".IniListScreen" android:exported="false" />
         <activity android:name=".IniEditScreen" android:exported="false" />
@@ -3604,6 +3605,10 @@ final class Batch {
         int[] loops, rounds;
         /** 1.25.0: מדידה — כמה זמן לקחה (אלפיות שנייה). */
         long ms = -1;
+        /** 1.26.0: בוצעה בהרצה (לא דולגה, לא נעצרה לפניה) — לסיכום. */
+        boolean ran;
+        /** 1.26.0: על מה השורה פועלת (רשימה / תיקייה) — לסיכום; null — מתוך describe. */
+        String target;
 
         /** "12" · בלולאה — "12 (סבב 3)". */
         String label() {
@@ -4156,6 +4161,7 @@ final class Batch {
                 plan.stopped = true;
                 break;
             }
+            if (progress != null) progress.step(li + 1, all.size(), 0, 0);    // 1.26.0: "בודק שורה X מתוך Y"
             Ln ln = all.get(li);
             prev = ln;
             if (clock.skip(plan, ln.loops, ln.rounds)) continue;               // לולאה שעברה את הגבול — גם בתכנון
@@ -4904,7 +4910,18 @@ final class Batch {
     }
 
     /** grey: ההגדרה "קובץ שנמחק — השאר באפור" (58), כמו בשאר המסכים (120). */
+    /** 1.26.0: מסך ההרצה — לפני כל שורה (מקום, כמה בסך הכול), ואחרי כל שורה (מה יצא). */
+    interface Listener {
+        void before(int index, int total, Step s);
+
+        void after(Step s, String line);
+    }
+
     static List<String> run(Plan plan, Library lib, Physical.Asker asker, Physical.Progress progress, boolean grey) {
+        return run(plan, lib, asker, progress, grey, null);
+    }
+
+    static List<String> run(Plan plan, Library lib, Physical.Asker asker, Physical.Progress progress, boolean grey, Listener listen) {
         List<String> report = new ArrayList<String>();
         Clock clock = new Clock();                                               // 1.25.0: לולאה — עצירה לפי זמן
         long all0 = System.nanoTime();
@@ -4916,6 +4933,7 @@ final class Batch {
                 prev.ms = (System.nanoTime() - t0) / 1000000;
                 if (report.size() > mark) report.set(report.size() - 1, report.get(report.size() - 1) + Words.Loop.took(prev.ms));
             }
+            if (prev != null && listen != null) listen.after(prev, report.size() > mark ? report.get(report.size() - 1) : null);
             mark = report.size();
             t0 = System.nanoTime();
             prev = null;
@@ -4934,6 +4952,8 @@ final class Batch {
                 continue;
             }
             prev = s;
+            s.ran = s.error == null;
+            if (listen != null) listen.before(si, plan.steps.size(), s);
             if (s.error != null) {
                 report.add(Words.Cmd.line(s.label(), Words.Cmd.skipped(s.error)));
                 plan.trouble = true;
@@ -4998,6 +5018,36 @@ final class Batch {
         }
         if (plan.measure) measured(plan, report, (System.nanoTime() - all0) / 1000000);
         return report;
+    }
+
+    /** 1.26.0: מה שורה עושה — לתצוגה המקדימה ולסיכום. */
+    static final int K_CREATE = 0, K_CHANGE = 1, K_DELETE = 2, K_READ = 3;
+
+    static int kind(Step s) {
+        if (s.cmd.equals("MD")) return K_CREATE;
+        if (s.cmd.equals("DEL") || s.cmd.equals("RD")) return K_DELETE;
+        if (s.cmd.equals("COPY") || s.cmd.equals("MOVE") || s.cmd.equals("REN")) return s.share ? K_READ : K_CHANGE;
+        return K_READ;
+    }
+
+    /** נוגעת בקבצים בכונן (לא ברשימות). */
+    static boolean disk(Step s) {
+        return s.op == null && !s.noop && (s.cmd.equals("COPY") || s.cmd.equals("MOVE") || s.cmd.equals("DEL") || s.cmd.equals("RD")
+                || s.cmd.equals("MD") || s.cmd.equals("REN"));
+    }
+
+    /** 1.26.0: רק פתיחת מסכים ורשימות (פקודות התפריט ⭐) — הרצה מהירה, בלי מסך ההרצה. */
+    static boolean onlyOpens(String text) {
+        for (String raw : Bidi.strip(text).replace("\r", "").split("\n")) {
+            String line = clean(raw);
+            if (line.isEmpty() || line.startsWith("::") || Program.isHeader(line)) continue;
+            if (isLoopStart(line) || isLoopEnd(line) || line.startsWith(MEASURE) || line.equals(AS_IF) || line.equals(AS_IF2)) return false;
+            if (Verbs.isVerb(line)) continue;
+            String w = tokens(line).isEmpty() ? "" : Commands.canonical(tokens(line).get(0));
+            if (w.equals("ECHO") || w.equals("ECHO.") || w.equals("START") || w.equals("REM")) continue;
+            return false;
+        }
+        return true;
     }
 
     /** 1.25.0: סיכום המדידה, ויומן (שורה לכל שורה בדוח, נוסף בכל ריצה). */
@@ -6474,6 +6524,10 @@ final class BatchUi {
             Ui.toast(a, Words.CANT_READ_FILE);
             return;
         }
+        if (!Batch.onlyOpens(text)) {                                          // 1.26.0: מסך ההרצה האחד
+            RunScreen.start(a, f);
+            return;
+        }
         final Map<String, String> vars0 = vars(a, f.getParentFile());
         List<String> lines = java.util.Arrays.asList(text.replace("\r", "").split("\n"));
         if (!CmdTemplates.holes(lines).isEmpty()) {                            // 1.25.6: מקומות פתוחים — נשאלים לפני ההרצה
@@ -6614,7 +6668,7 @@ final class BatchUi {
     }
 
     /** 216: מה ש־START ביקש — קובץ נפתח, תיקייה נפתחת במנהל הקבצים. */
-    private static void openStart(Activity a, File start) {
+    static void openStart(Activity a, File start) {
         if (start == null) return;
         if (Batch.isHome(start)) Home.go(a);                                  // 1.9.0
         else if (start.isFile()) Ui.open(a, start);
@@ -17050,8 +17104,11 @@ final class ListCount {
             partial = true;
             return;
         }
-        seenFiles.putAll(m);
+        if (merged.put(m, Boolean.TRUE) == null) seenFiles.putAll(m);            // 1.25.8: אותה רשימה (אותו תנאי) — פעם אחת
     }
+
+    /** 1.25.8: מה שכבר נוסף — לפי הזהות (רשימת הקבצים של תנאי, שמשותפת לכל העותקים). */
+    private final java.util.IdentityHashMap<Map<String, Long>, Boolean> merged = new java.util.IdentityHashMap<Map<String, Long>, Boolean>();
 
     /**
      * "3 רשימות · 12 פריטים · 4MB"; 1.23.4 — כשיש כפילות: "3 רשימות · 4,210 קבצים (109,138) · 18.2GB" —
@@ -28115,6 +28172,7 @@ public final class Structure {
     }
 
     private static void write(Ini ini) {
+        ro = null;                                                              // 1.25.8
         if (ini.saveQuiet()) {
             writes++;
             Mirror.rebuild();
@@ -28299,8 +28357,44 @@ public final class Structure {
 
     /** הסעיף שזה המזהה שלו: שם (הכותרת כולה), ושאר המפתחות; או null. */
     public static synchronized Func byId(String id) {
-        return byId(ini(), id);
+        if (inBatch() && pending != null) return byId(pending, id);
+        File f = file();
+        if (ro == null || !f.equals(roFile) || f.lastModified() != roMod || f.length() != roLen) {
+            Ini.createIfMissing(f, HEADER);
+            ro = Ini.load(f);
+            roFile = f;
+            roMod = f.lastModified();
+            roLen = f.length();
+            roIdx = new java.util.HashMap<String, Integer>();
+            int header = -1;
+            for (int i = 0; i < ro.lines.size(); i++) {
+                Ini.Line l = ro.lines.get(i);
+                if (l.isHeader()) header = i;
+                else if (l.key != null && l.key.equals(ID) && l.value != null && !roIdx.containsKey(l.value)) roIdx.put(l.value, header);
+            }
+        }
+        Integer at = roIdx.get(id);
+        if (at == null || at < 0) return null;
+        Func fn = new Func();
+        fn.id = id;
+        fn.name = ro.lines.get(at).headerName();
+        int end = ro.sectionEnd(at);
+        for (int i = at + 1; i < end; i++) {
+            Ini.Line l = ro.lines.get(i);
+            if (l.key != null && !l.key.equals(ID)) fn.params.put(l.key, l.value == null ? "" : l.value);
+        }
+        return fn;
     }
+
+    /**
+     * 1.25.8 (ביצועים — בדיקת העומס: "מכין…" שלא נגמר): byId קרא את כל הקובץ הראשי מהכונן וסרק אותו בכל קריאה —
+     * ולכל רשימה חכמה פעמיים (סוג ותוכן). במאות רשימות ובקובץ של מגה־בתים — דקות. עכשיו: עותק לקריאה בלבד עם אינדקס
+     * לפי מזהה, שמתחדש כשהקובץ משתנה (תאריך או גודל) או כשנכתב מכאן.
+     */
+    private static Ini ro;
+    private static File roFile;
+    private static long roMod, roLen;
+    private static java.util.Map<String, Integer> roIdx;
 
     /**
      * 1.16.0: הסעיף כמו כלי — סוג, שם בלי הקידומת (ובפנימית — בלי הבעלים), תיאור, ושאר המפתחות; כך אותו טופס
@@ -28599,14 +28693,49 @@ public final class Structure {
 
     /** כותרת פנימית פנויה: "[רשימה פנימית: label]", ואם תפוסה — (2), (3)… */
     private static String innerHeader(Ini ini, String label) {
+        java.util.Set<String> names = aux(ini).names;                           // 1.25.8: סריקה אחת, לא סריקה לכל מספר
         String h = Nested.INNER + label;
-        boolean taken = true;
-        for (int i = 2; taken; i++) {
-            taken = false;
-            for (Ini.Line l : ini.lines) if (l.isHeader() && l.headerName().trim().equals(h.trim())) taken = true;
-            if (taken) h = Nested.INNER + label + " (" + i + ")";
-        }
+        for (int i = 2; names.contains(h.trim()); i++) h = Nested.INNER + label + " (" + i + ")";
         return h;
+    }
+
+    /**
+     * 1.25.8 (ביצועים — בדיקת העומס: כל סבב לקח פי 3 מהקודם): בהעתקה של הרבה רשימות חכמות, כל עותק סרק את כל הקובץ
+     * הראשי כדי למצוא את המקור, ועוד סריקה מלאה לכל מספר שבדק לשם פנוי ("(2)", "(3)"…) — בעשרות אלפי שורות ואלפי
+     * עותקים, ריבועי. עכשיו: אינדקס אחד (שמות ומזהים) לכל קובץ בזיכרון, שנבנה מחדש כשמספר השורות השתנה שלא דרכו.
+     */
+    private static final class Aux {
+        Ini ini;
+        int size = -1;
+        final java.util.Set<String> names = new java.util.HashSet<String>();
+        final java.util.Map<String, Integer> ids = new java.util.HashMap<String, Integer>();
+    }
+
+    private static Aux aux;
+
+    private static Aux aux(Ini ini) {
+        if (aux == null || aux.ini != ini || aux.size != ini.lines.size()) {
+            Aux a = new Aux();
+            a.ini = ini;
+            int header = -1;
+            for (int i = 0; i < ini.lines.size(); i++) {
+                Ini.Line l = ini.lines.get(i);
+                if (l.isHeader()) {
+                    header = i;
+                    a.names.add(l.headerName().trim());
+                } else if (l.key != null && l.key.equals(ID) && l.value != null && !a.ids.containsKey(l.value)) a.ids.put(l.value, header);
+            }
+            a.size = ini.lines.size();
+            aux = a;
+        }
+        return aux;
+    }
+
+    /** מזהה ← שורת הכותרת שלו, מהאינדקס (ובדיקה שהשורה עדיין שלו). */
+    private static int indexOfIdFast(Ini ini, String id) {
+        Integer at = aux(ini).ids.get(id);
+        if (at == null || at < 0 || at >= ini.lines.size() || !ini.lines.get(at).isHeader()) return indexOfId(ini, id);
+        return at;
     }
 
     /**
@@ -28615,7 +28744,7 @@ public final class Structure {
      */
     public static synchronized String copyInner(String id, String label) {
         Ini ini = ini();
-        int at = indexOfId(ini, id);
+        int at = indexOfIdFast(ini, id);
         if (at < 0) return null;
         String fresh = newId("p"), h = innerHeader(ini, label);
         List<Ini.Line> b = new ArrayList<Ini.Line>();
@@ -28630,7 +28759,13 @@ public final class Structure {
             b.add(Ini.line(l.key + " = " + l.value, h));
         }
         if (!kind) b.add(2 + 1, Ini.line("סוג = " + FnSmart.KIND, h));  // הגדרה נפוצה — בלי "סוג" // תחביר
-        ini.lines.addAll(ini.lines.size(), b);
+        int start = ini.lines.size();
+        ini.lines.addAll(start, b);
+        if (aux != null && aux.ini == ini && aux.size == start) {              // 1.25.8: האינדקס — מתעדכן, לא נבנה מחדש
+            aux.names.add(h.trim());
+            aux.ids.put(fresh, start + 1);
+            aux.size = ini.lines.size();
+        }
         save(ini);
         return fresh;
     }
@@ -36641,7 +36776,7 @@ public final class Words {
                 TAG_HEADER = "כותרת", TAG_UNKNOWN = "?", NONE = "—", ON = "פעיל", PICK = "בחירה…", FILL = "השלמת התבנית",
                 VARS = "משתנים", EMPTY_FILE = "הקובץ ריק — בחר פקודה מהרשימה, והיא תיכנס לכאן",
                 ALREADY_AS_IF = "יש כבר הדמיה בראש הקובץ", ALREADY_MEASURE = "יש כבר מדידה בקובץ",
-                NO_SMART = "אין רשימות חכמות", PICK_FIRST = "בחר שורה בתפריט קודם";
+                NO_SMART = "אין רשימות חכמות", WHOLE_HOME = "★ כל מה שבבית", PICK_FIRST = "בחר שורה בתפריט קודם";
 
         /** 1.25.7: פקודת מערכת שנערכה — נשמרת כשלי. */
         public static String savedAsMine(String name) {
@@ -36654,6 +36789,7 @@ public final class Words {
                 case 1: return " — רשימה ידנית (קיימת, או שם חדש — תיווצר)";
                 case 2: return " — רשימה חכמה";
                 case 3: return " — מספר";
+                case 4: return " — כמה רשימות (שורה לכל אחת)";
                 default: return " — תיקייה";
             }
         }
@@ -36697,6 +36833,43 @@ public final class Words {
 
         public static final String BACKUP = "לפני הסבת הסביבות לרשימות — ",
                 UNIFY = "לפני האיחוד (תיקיות מתעדכנות, הגדרות נפוצות) — ";   // 1.17.3
+    }
+
+    /** 1.26.0: מסך ההרצה (claude/hartzat-pkudot.md). */
+    public static final class Run {
+        private Run() { }
+
+        public static final String TITLE = "הרצה: ", S_FILL = "מילוי", S_WHAT = "מה יקרה", S_RUN = "מריץ", S_SUM = "סיכום",
+                NOTHING_TO_FILL = "אין מה למלא", NEXT = "הלאה — מה יקרה", CHECKING = "בודק את השורות…",
+                WILL_CREATE = "ייווצרו", WILL_CHANGE = "יועתקו / ישתנו", WILL_DELETE = "יימחקו", DISK = "קבצים בכונן",
+                ERRORS = "שגיאות", DETAILS = "פרטים — ", LINES = " שורות", AS_IF = "הדמיה — שום דבר לא יבוצע (\"הדמיה\" בראש הקובץ)",
+                SHOW_AS_IF = "הצג את ההדמיה", RUN = "▶ הרץ", CREATED = "נוצרו", CHANGED = "הועתקו / השתנו", DELETED = "נמחקו",
+                SKIPPED = "דולגו", TIME = "זמן", FULL_REPORT = "הדוח המלא", JOURNAL = "יומן", NO_DISK = "לא נוגע",
+                STOPPED = " — נעצר באמצע", LINES_IN = " שורות: ";
+
+        public static String stage(int n) {
+            return "שלב " + n + " מתוך 4";
+        }
+
+        public static String checking(int line, int total) {
+            return "בודק שורה " + line + " מתוך " + total;
+        }
+
+        public static String at(int line, int total, int round) {
+            return "שורה " + line + " מתוך " + total + (round > 0 ? " · סבב " + round : "");
+        }
+
+        public static String diskLines(int n) {
+            return n + " שורות נוגעות בקבצים עצמם";
+        }
+
+        public static String ranIn(String time) {
+            return "הסתיים · " + time;
+        }
+
+        public static String open(String list) {
+            return "פתח את \"" + list + "\"";
+        }
     }
 
     /** 1.25.0: לולאה ומדידה בקובצי פקודות (claude/pkudot-reshimot.md). */
@@ -41844,6 +42017,7 @@ public final class Tests {
             check("1.25.2: הבוחר של החכמות — בשם שהפקודות מכירות", ListCmd.smartNames().contains("א. ארגון לפי הבחנות\\כל הספרים"));
             java.util.Map<String, String> hv = new java.util.HashMap<String, String>();
             hv.put("רשימה-חדשה", "עומס");
+            hv.put("רשימות", "*");
             hv.put("סבבים", "3");
             StringBuilder lt = new StringBuilder();
             for (String l : CmdTemplates.fill(load.lines, hv)) if (!l.startsWith("RD")) lt.append(l).append("\n");
@@ -41864,6 +42038,13 @@ public final class Tests {
             // 1.25.4: כמו במכשיר — כל התבנית (גם RD), עם המשתנים, והדמיה של התצוגה המקדימה
             StringBuilder full = new StringBuilder();
             hv.put("רשימה-חדשה", "עומס מלא");
+            hv.put("רשימות", "*\nא. ארגון לפי הבחנות");                       // 1.26.0: כמה רשימות — שורה לכל אחת
+            int copies = 0;
+            for (String l : CmdTemplates.fill(load.lines, hv)) if (l.startsWith("COPY ידנית")) copies++;
+            check("1.26.0: כמה רשימות — השורה מוכפלת (" + copies + ")", copies == 2
+                    && CmdTemplates.holeKind(load.lines, "רשימות") == CmdTemplates.HOLE_MANY);
+            check("1.26.0: רק פתיחות — הרצה מהירה; עם שינוי — מסך ההרצה", Batch.onlyOpens("צלמית ⚙\nשם הגדרות\nפתח מסך הגדרות\n")
+                    && !Batch.onlyOpens("MD x") && !Batch.onlyOpens("מדידה\nפתח מסך הגדרות"));
             for (String l : CmdTemplates.fill(load.lines, hv)) full.append(l).append("\n");
             Map<String, String> dv = Batch.vars(root, root.getAbsolutePath(), null);
             Batch.Plan fp = Batch.plan(full.toString(), root, dv, lib);
@@ -41871,6 +42052,15 @@ public final class Tests {
             for (Batch.Step x : fp.steps) if (x.error != null) fpErr += x.label() + ": " + x.error + " | ";
             check("1.25.4: התבנית המלאה — בלי שגיאות (" + fpErr + ")", fp.errors == 0 && fp.measure && fp.changes() > 0);
             List<String> frep = Batch.run(fp, lib, null, null);
+            for (int rr = 1; rr <= 2; rr++) {                                    // מדידה: הכנה מול הרצה, כשהרשימה כבר גדולה
+                long q0 = System.nanoTime();
+                Batch.Plan big = Batch.plan(full.toString().replace("חזור 3", "חזור " + (rr + 1)), root, dv, lib);
+                long q1 = System.nanoTime();
+                Batch.run(big, lib, null, null);
+                long q2 = System.nanoTime();
+                System.out.println("  פרופיל " + rr + ": הכנה " + (q1 - q0) / 1000000 + " מ\"ש · הרצה " + (q2 - q1) / 1000000 + " מ\"ש · שלבים " + big.steps.size()
+                        + " · עץ " + tf.length() / 1024 + "KB · ראשי " + sf.length() / 1024 + "KB");
+            }
             System.out.println("  1.25.4 דוח: " + frep.size() + " שורות · " + (frep.isEmpty() ? "" : frep.get(frep.size() - 1)));
             check("1.25.4: התבנית המלאה — דוח, והרשימה נשארת לראות (הניקוי — בהערה)", frep.size() > 5 && Tree.load().find(Arrays.asList("עומס מלא")) != null);
             Batch.Plan stopP = Batch.plan(full.toString(), root, dv, lib, new Physical.Progress() {
@@ -45146,7 +45336,9 @@ final class CmdTemplates {
 
     /** ממלא את המקומות הפתוחים. מקום שלא מולא — נשאר כמו שהוא. */
     /** 1.25.2: סוג המקום הפתוח — לפי המילה שלפניו בשורה: מסלול (ברירת מחדל), רשימה ידנית, רשימה חכמה, מספר. */
-    static final int HOLE_PATH = 0, HOLE_MANUAL = 1, HOLE_SMART = 2, HOLE_NUMBER = 3;
+    static final int HOLE_PATH = 0, HOLE_MANUAL = 1, HOLE_SMART = 2, HOLE_NUMBER = 3, HOLE_MANY = 4;
+    /** 1.26.0: מקום ששמו מתחיל כך, אחרי "ידנית" — כמה רשימות. */
+    static final String MANY_PREFIX = "רשימות";   // תחביר
 
     static int holeKind(List<String> lines, String hole) {
         String mark = "<" + hole + ">";
@@ -45158,7 +45350,7 @@ final class CmdTemplates {
                 if (i == 1 && tk.get(0).text.equals(Batch.LOOP)) return HOLE_NUMBER;
                 if (i > 0 && !tk.get(i - 1).quoted) {
                     String w = tk.get(i - 1).text;
-                    if (w.equals(ListCmd.MANUAL)) return HOLE_MANUAL;
+                    if (w.equals(ListCmd.MANUAL)) return hole.startsWith(MANY_PREFIX) ? HOLE_MANY : HOLE_MANUAL;
                     if (w.equals(ListCmd.SMART)) return HOLE_SMART;
                 }
             }
@@ -45169,15 +45361,32 @@ final class CmdTemplates {
     static List<String> fill(List<String> lines, Map<String, String> values) {
         List<String> out = new ArrayList<String>();
         for (String l : lines) {
-            Matcher m = HOLE.matcher(l);
-            StringBuffer sb = new StringBuffer();
-            while (m.find()) {
-                String v = values.get(m.group(1));
-                m.appendReplacement(sb, Matcher.quoteReplacement(v == null || v.trim().isEmpty() ? m.group() : v.trim()));
+            String multi = null;                                               // 1.26.0: מקום עם כמה ערכים — השורה מוכפלת
+            Matcher f = HOLE.matcher(l);
+            while (f.find() && multi == null) {
+                String v = values.get(f.group(1));
+                if (v != null && many(v).size() > 1) multi = f.group(1);
             }
-            m.appendTail(sb);
-            out.add(sb.toString());
+            List<String> copies = multi == null ? java.util.Collections.singletonList((String) null) : many(values.get(multi));
+            for (String one : copies) {
+                Matcher m = HOLE.matcher(l);
+                StringBuffer sb = new StringBuffer();
+                while (m.find()) {
+                    String v = m.group(1).equals(multi) ? one : values.get(m.group(1));
+                    if (v != null && multi == null && many(v).size() == 1) v = many(v).get(0);
+                    m.appendReplacement(sb, Matcher.quoteReplacement(v == null || v.trim().isEmpty() ? m.group() : v.trim()));
+                }
+                m.appendTail(sb);
+                out.add(sb.toString());
+            }
         }
+        return out;
+    }
+
+    /** 1.26.0: ערך של כמה — שורה לכל אחד (ריקות יורדות). */
+    static List<String> many(String v) {
+        List<String> out = new ArrayList<String>();
+        if (v != null) for (String x : v.replace("\r", "").split("\n")) if (!x.trim().isEmpty()) out.add(x.trim());
         return out;
     }
 
@@ -45360,6 +45569,15 @@ final class ListCmd {
         for (Tree.Node c : n.children) smartNames(c, prefix + c.name + "\\", out);
     }
 
+    /** 1.26.0: כל הרשימות הידניות, בכל העומק — "א", "א\ב"… (לבחירה מרובה). */
+    static void manualPaths(Tree.Node n, String prefix, List<String> out) {
+        for (Tree.Node c : n.children) {
+            String p = prefix + c.name;
+            out.add(p);
+            manualPaths(c, p + "\\", out);
+        }
+    }
+
     /** "א\ב" — כמו שהפקודות כותבות דרך לרשימה. */
     static String pathText(List<String> path) {
         StringBuilder sb = new StringBuilder();
@@ -45496,14 +45714,21 @@ final class ListCmd {
         @Override
         public Map<String, Long> smartFiles(String ref) {
             if (lib == null || !lib.ready) return null;
-            Nested.Item it = Nested.resolve(ref);
-            if (it.gone) return new java.util.HashMap<String, Long>();
-            if (it.dup != null) {
+            Integer st = state.get(ref);                                       // 1.25.8: כל הפניה נפתרת פעם אחת
+            if (st == null) {
+                Nested.Item it = Nested.resolve(ref);
+                state.put(ref, st = it.gone ? 1 : it.dup != null ? 2 : 0);
+            }
+            if (st == 1) return EMPTY;
+            if (st == 2) {
                 dups++;
-                return new java.util.HashMap<String, Long>();
+                return EMPTY;
             }
             return in.smartFiles(ref);                                         // לפי התנאי — FromLibrary (1.25.4)
         }
+
+        private final Map<String, Integer> state = new java.util.HashMap<String, Integer>();
+        private static final Map<String, Long> EMPTY = java.util.Collections.emptyMap();
 
         @Override public Map<String, Long> liveFiles(String folder) { return in.liveFiles(folder); }
     }
@@ -45541,11 +45766,7 @@ final class ListCmd {
             out.what = Words.ListCmdW.smartList(s.label());
             return out;
         }
-        if (s.home) {                                                        // "*" — הבית: רק התוכן
-            if (!s.content) {
-                out.error = Words.ListCmdW.HOME_ONLY_CONTENT;
-                return out;
-            }
+        if (s.home) {                                                        // "*" — הבית: התוכן (1.26.0: גם בלי "תוכן")
             for (Structure.Func f : Structure.load().direct) out.items.add(new VClip.Item(VClip.TOOL, f.id, f.name));
             out.what = Words.ListCmdW.homeContent(out.items.size());
             return out;
@@ -45611,6 +45832,7 @@ final class ListCmd {
                 n = c != null ? c : Tree.newChild(n, part);
             }
             s.describe = Words.ListCmdW.created(a.label());
+            s.target = a.label();
             s.op = new Op() {
                 @Override public String run(Library lib) {
                     Verbs.ensureList(a.path);
@@ -45639,6 +45861,7 @@ final class ListCmd {
             final Src src = removal(t, a);
             if (src.error != null) { s.error = src.error; return; }
             s.describe = Words.ListCmdW.removes(src.what);
+            s.target = a.label();
             if (src.tool == null) VClip.simulateRemove(t, src.from, src.items);
             s.op = new Op() {
                 @Override public String run(Library lib) {
@@ -45671,11 +45894,12 @@ final class ListCmd {
             final boolean full = a.list() && !a.filesOf;                     // רשימות — עותק עצמאי; קבצים — מסלולים
             Src src = source(t, a, fsFiles, sim.lib);
             if (src.error != null) { s.error = src.error; return; }
-            if (!b.home && a.kind == LIST && !a.content && !a.filesOf && a.mask == null) {
+            if (!b.home && !a.home && a.kind == LIST && !a.content && !a.filesOf && a.mask == null) {
                 Tree.Node m = t.find(a.path), dn = t.find(b.path);
                 if (m != null && (m == dn || m.isAncestorOf(dn))) { s.error = Words.ListCmdW.INTO_ITSELF; return; }
             }
             s.describe = Words.ListCmdW.copy(src.what, b.label());
+            s.target = b.label();
             VClip.simulate(t, src.from, src.items, b.home ? null : b.path, full);
             s.op = new Op() {
                 @Override public String run(Library lib) {
@@ -45791,12 +46015,15 @@ final class ListCmd {
 ===== קובץ: src/com/tikiyot/vfm/HoleForm.java =====
 package com.tikiyot.vfm;
 
-// 1.25.6: חלון המילוי של המקומות הפתוחים (<רשימה-חדשה>, <סבבים>, <יעד>) — אחד לעורך ולהרצה.
-// המשתמש: "כאשר אני מריץ ישר ומכניס רשימה ומספר — אין דוח": קובץ נפוצה שנפתח והורץ ישר רץ עם המקומות ריקים.
-// עכשיו גם ההרצה שואלת אותם (הקובץ עצמו לא משתנה). הבוחר — לפי סוג המקום (1.25.2).
-// אחראי: החלון בלבד; המילוי עצמו — CmdTemplates.
+// 1.25.6: המילוי של המקומות הפתוחים (<רשימה-חדשה>, <סבבים>, <יעד>) — אחד לעורך ולהרצה. הבוחר — לפי סוג המקום (1.25.2).
+// 1.26.0: גם בתוך מסך ההרצה (fields), ובחירה מרובה של רשימות — המשתמש: "אני רוצה שתביא לי כמה רשימות ולבחור איזה
+// מהם; הוא נותן לי לבחור אחת וזהו". מקום ששמו מתחיל ב"רשימות" אחרי "ידנית" — כמה רשימות, שורה לכל אחת; השורה
+// בקובץ מוכפלת לכל רשימה שנבחרה (CmdTemplates.fill).
+// אחראי: השדות והחלון בלבד; המילוי עצמו — CmdTemplates.
 
 import android.app.Activity;
+import android.app.AlertDialog;
+import android.content.DialogInterface;
 import android.text.InputType;
 import android.view.View;
 import android.widget.Button;
@@ -45814,26 +46041,51 @@ final class HoleForm {
         void ok(List<String> lines);
     }
 
+    /** השדות של המקומות הפתוחים — לחלון או למסך ההרצה. */
+    static final class Fields {
+        final LinearLayout view;
+        final List<String> holes;
+        final List<EditText> edits = new ArrayList<EditText>();
+
+        Fields(LinearLayout view, List<String> holes) {
+            this.view = view;
+            this.holes = holes;
+        }
+
+        /** הערכים; null — יש מקום ריק (ונאמר איזה). */
+        Map<String, String> values(Activity a) {
+            Map<String, String> v = CmdTemplates.empty(holes);
+            for (int i = 0; i < holes.size(); i++) {
+                String x = Bidi.strip(edits.get(i).getText().toString()).trim();
+                if (x.isEmpty()) {
+                    Ui.toast(a, Words.Ed.fillFirst(holes.get(i)));
+                    return null;
+                }
+                v.put(holes.get(i), x);
+            }
+            return v;
+        }
+    }
+
     private HoleForm() { }
 
-    /** שואל את כל המקומות הפתוחים, ומחזיר את השורות הממולאות. ביטול — לא כלום. */
-    static void ask(final Activity a, final String title, final List<String> lines, final Map<String, String> vars, final Filled cb) {
+    static Fields fields(final Activity a, final List<String> lines, final Map<String, String> vars) {
         final List<String> holes = CmdTemplates.holes(lines);
-        if (holes.isEmpty()) {
-            cb.ok(lines);
-            return;
-        }
         LinearLayout box = Ui.form(a);
-        final List<EditText> fields = new ArrayList<EditText>();
+        Fields out = new Fields(box, holes);
         for (final String h : holes) {
             final int kind = CmdTemplates.holeKind(lines, h);
             box.addView(Ui.label(a, h + Words.Ed.holeKind(kind)));
             final EditText e = Ui.field(a, "", "");
             e.setTextDirection(kind == CmdTemplates.HOLE_PATH ? View.TEXT_DIRECTION_LTR : View.TEXT_DIRECTION_FIRST_STRONG);
             if (kind == CmdTemplates.HOLE_NUMBER) e.setInputType(InputType.TYPE_CLASS_NUMBER);
+            if (kind == CmdTemplates.HOLE_MANY) {
+                e.setSingleLine(false);
+                e.setMinLines(2);
+            }
             Bidi.watch(e);
             box.addView(e);
-            fields.add(e);
+            out.edits.add(e);
             if (kind == CmdTemplates.HOLE_NUMBER) continue;
             Button b = new Button(a);
             b.setText(Words.Cmd.PICK);
@@ -45841,7 +46093,9 @@ final class HoleForm {
             b.setOnClickListener(new View.OnClickListener() {
                 @Override
                 public void onClick(View v) {
-                    if (kind == CmdTemplates.HOLE_MANUAL) {
+                    if (kind == CmdTemplates.HOLE_MANY) {
+                        pickMany(a, h, e);
+                    } else if (kind == CmdTemplates.HOLE_MANUAL) {
                         ListPicker.choose(a, h, null, new ArrayList<String>(), new ListPicker.Picked() {   // כל הרשימות
                             @Override public void ok(ArrayList<String> path) { e.setText(ListCmd.pathText(path)); }
                         });
@@ -45851,8 +46105,8 @@ final class HoleForm {
                             Ui.toast(a, Words.Ed.NO_SMART);
                             return;
                         }
-                        Ui.options(a, h, names.toArray(new String[0]), new android.content.DialogInterface.OnClickListener() {
-                            @Override public void onClick(android.content.DialogInterface d, int which) { e.setText(names.get(which)); }
+                        Ui.options(a, h, names.toArray(new String[0]), new DialogInterface.OnClickListener() {
+                            @Override public void onClick(DialogInterface d, int which) { e.setText(names.get(which)); }
                         });
                     } else {
                         FolderPicker.choose(a, h, true, new FolderPicker.Picked() {
@@ -45863,20 +46117,592 @@ final class HoleForm {
             });
             box.addView(b);
         }
-        Ui.askForm(a, Words.Ed.FILL + ": " + title, box, new Runnable() {
+        return out;
+    }
+
+    /** 1.26.0: כמה רשימות — כל הרשימות הידניות (בכל העומק), ובראש "כל הבית"; מה שכבר בשדה — מסומן. */
+    private static void pickMany(Activity a, String title, final EditText e) {
+        final List<String> all = new ArrayList<String>();
+        all.add(ListCmd.HOME);
+        ListCmd.manualPaths(Tree.load().root, "", all);
+        String[] shown = new String[all.size()];
+        final boolean[] on = new boolean[all.size()];
+        List<String> now = CmdTemplates.many(Bidi.strip(e.getText().toString()));
+        for (int i = 0; i < all.size(); i++) {
+            String p = all.get(i);
+            shown[i] = p.equals(ListCmd.HOME) ? Words.Ed.WHOLE_HOME : indent(p) + leaf(p);
+            on[i] = now.contains(p);
+        }
+        new AlertDialog.Builder(a).setTitle(title)
+                .setMultiChoiceItems(shown, on, new DialogInterface.OnMultiChoiceClickListener() {
+                    @Override public void onClick(DialogInterface d, int which, boolean checked) { on[which] = checked; }
+                })
+                .setPositiveButton(Words.OK, new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface d, int w) {
+                        StringBuilder sb = new StringBuilder();
+                        for (int i = 0; i < all.size(); i++) if (on[i]) sb.append(sb.length() > 0 ? "\n" : "").append(all.get(i));
+                        e.setText(sb.toString());
+                    }
+                })
+                .setNegativeButton(Words.CANCEL, null).show();
+    }
+
+    private static String indent(String path) {
+        StringBuilder sb = new StringBuilder();
+        for (int i = 0; i < path.length(); i++) if (path.charAt(i) == '\\') sb.append("    ");
+        return sb.toString();
+    }
+
+    private static String leaf(String path) {
+        int i = path.lastIndexOf('\\');
+        return i < 0 ? path : path.substring(i + 1);
+    }
+
+    /** שואל את כל המקומות הפתוחים בחלון, ומחזיר את השורות הממולאות. ביטול — לא כלום. */
+    static void ask(final Activity a, final String title, final List<String> lines, final Map<String, String> vars, final Filled cb) {
+        if (CmdTemplates.holes(lines).isEmpty()) {
+            cb.ok(lines);
+            return;
+        }
+        final Fields f = fields(a, lines, vars);
+        Ui.askForm(a, Words.Ed.FILL + ": " + title, f.view, new Runnable() {
             @Override
             public void run() {
-                Map<String, String> v = CmdTemplates.empty(holes);
-                for (int i = 0; i < holes.size(); i++) v.put(holes.get(i), Bidi.strip(fields.get(i).getText().toString()).trim());
-                for (String h : holes)
-                    if (v.get(h).isEmpty()) {                                  // ריק — שואלים שוב, לא מריצים עם "<…>"
-                        Ui.toast(a, Words.Ed.fillFirst(h));
-                        ask(a, title, lines, vars, cb);
-                        return;
-                    }
+                Map<String, String> v = f.values(a);
+                if (v == null) {                                               // ריק — שואלים שוב, לא מריצים עם "<…>"
+                    ask(a, title, lines, vars, cb);
+                    return;
+                }
                 cb.ok(CmdTemplates.fill(lines, v));
             }
         });
+    }
+}
+===== קובץ: src/com/tikiyot/vfm/RunScreen.java =====
+package com.tikiyot.vfm;
+
+// 1.26.0: מסך ההרצה האחד (claude/hartzat-pkudot.md). המשתמש: "לא הבנתי — הוא הריץ, ואז מה, חזר לעצמו? ואני צריך
+// להיות נביא מה הוא עשה, ומה נשאר, ומה מחק, ומה הדוח … הוא מתנהל באופן כאוטי." — אחרי סקיצה: "בסדר".
+// ארבעה שלבים זה מתחת לזה, על מסך אחד: מילוי ← מה יקרה ← מריץ ← סיכום. שום חלון לא קופץ ונעלם; הסיכום נשאר.
+// ההכנה וההרצה — ברקע, עם התקדמות ועצירה. אחראי: ההצגה בלבד; התכנון וההרצה — Batch, המילוי — HoleForm.
+
+import android.app.Activity;
+import android.content.Intent;
+import android.graphics.Typeface;
+import android.graphics.drawable.GradientDrawable;
+import android.os.Bundle;
+import android.os.Handler;
+import android.view.View;
+import android.widget.Button;
+import android.widget.LinearLayout;
+import android.widget.ProgressBar;
+import android.widget.ScrollView;
+import android.widget.TextView;
+
+import java.io.File;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+
+public class RunScreen extends Activity {
+
+    static final String EXTRA_FILE = "file";
+
+    private File file;
+    private String text;
+    private Map<String, String> vars;
+    private Library lib;
+    private List<String> lines;
+    private HoleForm.Fields fields;
+    private Batch.Plan plan;
+    private List<String> report = new ArrayList<String>();
+    private final Handler h = new Handler();
+    private volatile boolean stop, running;
+    private long started, took;
+
+    private TextView stageLabel;
+    private LinearLayout[] cards = new LinearLayout[4];
+    private LinearLayout[] bodies = new LinearLayout[4];
+    private TextView[] nums = new TextView[4];
+    private LinearLayout bottom;
+
+    static void start(Activity a, File f) {
+        a.startActivity(new Intent(a, RunScreen.class).putExtra(EXTRA_FILE, f.getAbsolutePath()));
+    }
+
+    @Override
+    protected void onCreate(Bundle b) {
+        super.onCreate(b);
+        String p = getIntent() != null ? getIntent().getStringExtra(EXTRA_FILE) : null;
+        if (p == null) {
+            finish();
+            return;
+        }
+        file = new File(p);
+        try {
+            text = Files.readUtf8(file);
+        } catch (Throwable t) {
+            Ui.toast(this, Words.CANT_READ_FILE);
+            finish();
+            return;
+        }
+        vars = BatchUi.vars(this, file.getParentFile());
+        lib = Library.get(this);
+        lines = Arrays.asList(text.replace("\r", "").split("\n"));
+        setTitle(Words.Run.TITLE + Text.stem(file.getName()));
+
+        LinearLayout root = Ui.screen(this);
+        LinearLayout head = new LinearLayout(this);
+        head.setPadding(Ui.dp(this, 14), Ui.dp(this, 10), Ui.dp(this, 14), Ui.dp(this, 4));
+        TextView name = new TextView(this);
+        name.setText(Words.Run.TITLE + Text.stem(file.getName()));
+        name.setTextSize(16);
+        name.setTypeface(Typeface.DEFAULT_BOLD);
+        name.setTextColor(Ui.TEXT);
+        head.addView(name, new LinearLayout.LayoutParams(0, -2, 1f));
+        stageLabel = Ui.info(this);
+        head.addView(stageLabel);
+        root.addView(head);
+
+        LinearLayout list = new LinearLayout(this);
+        list.setOrientation(LinearLayout.VERTICAL);
+        list.setPadding(Ui.dp(this, 10), Ui.dp(this, 4), Ui.dp(this, 10), Ui.dp(this, 10));
+        String[] titles = {Words.Run.S_FILL, Words.Run.S_WHAT, Words.Run.S_RUN, Words.Run.S_SUM};
+        for (int i = 0; i < 4; i++) list.addView(card(i, titles[i]));
+        ScrollView sv = new ScrollView(this);
+        sv.addView(list);
+        root.addView(sv, new LinearLayout.LayoutParams(-1, 0, 1f));
+
+        bottom = new LinearLayout(this);
+        bottom.setPadding(Ui.dp(this, 10), Ui.dp(this, 4), Ui.dp(this, 10), Ui.dp(this, 8));
+        root.addView(bottom);
+        setContentView(TopRow.wrap(this, root));
+
+        if (CmdTemplates.holes(lines).isEmpty()) {
+            bodies[0].addView(info(Words.Run.NOTHING_TO_FILL));
+            prepare(text);
+        } else {
+            stage(0);
+            fields = HoleForm.fields(this, lines, vars);
+            bodies[0].addView(fields.view);
+            buttons(btn(Words.Run.NEXT, new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    Map<String, String> val = fields.values(RunScreen.this);
+                    if (val == null) return;
+                    StringBuilder sb = new StringBuilder();
+                    for (String l : CmdTemplates.fill(lines, val)) sb.append(l).append('\n');
+                    fields.view.setEnabled(false);
+                    bodies[0].removeAllViews();
+                    for (String k : val.keySet()) bodies[0].addView(info(k + ": " + val.get(k).replace("\n", " · ")));
+                    prepare(sb.toString());
+                }
+            }), btn(Words.CANCEL, close()));
+        }
+    }
+
+    // ---------- שלב 2: מה יקרה ----------
+
+    private void prepare(final String body) {
+        stage(1);
+        final TextView pr = info(Words.Run.CHECKING);
+        bodies[1].addView(pr);
+        buttons(btn(Words.STOP, new View.OnClickListener() {
+            @Override public void onClick(View v) { stop = true; }
+        }));
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                Batch.Plan p = null;
+                Throwable err = null;
+                try {
+                    p = Batch.plan(body, file.getParentFile(), vars, lib, progress(pr, true));
+                } catch (Throwable t) {
+                    err = t;
+                    Log.e("הכנת קובץ פקודות: " + file, t);
+                }
+                final Batch.Plan done = p;
+                final Throwable e = err;
+                h.post(new Runnable() {
+                    @Override
+                    public void run() {
+                        if (isFinishing()) return;
+                        bodies[1].removeAllViews();
+                        if (e != null) {
+                            bodies[1].addView(info(Words.Cmd.PLAN_FAILED + ": " + e));
+                            buttons(btn(Words.CLOSE, close()));
+                        } else if (done.stopped) {
+                            bodies[1].addView(info(Words.Cmd.STOPPED_PREPARING));
+                            buttons(btn(Words.CLOSE, close()));
+                        } else {
+                            plan = done;
+                            preview();
+                        }
+                    }
+                });
+            }
+        }).start();
+    }
+
+    private void preview() {
+        List<Batch.Step> ok = new ArrayList<Batch.Step>();
+        for (Batch.Step s : plan.steps) if (s.error == null) ok.add(s);
+        for (String e : plan.echoes) bodies[1].addView(info("💬 " + e));
+        row(bodies[1], Words.Run.WILL_CREATE, names(ok, Batch.K_CREATE, false));
+        row(bodies[1], Words.Run.WILL_CHANGE, names(ok, Batch.K_CHANGE, false));
+        row(bodies[1], Words.Run.WILL_DELETE, names(ok, Batch.K_DELETE, false));
+        row(bodies[1], Words.Run.DISK, diskText(ok));
+        if (plan.errors > 0) row(bodies[1], Words.Run.ERRORS, String.valueOf(plan.errors));
+        for (String n : plan.notes) bodies[1].addView(info(n));
+        bodies[1].addView(details(Words.Run.DETAILS + plan.steps.size() + Words.Run.LINES, planLines()));
+        if (plan.asIf) {
+            bodies[1].addView(info(Words.Run.AS_IF));
+            buttons(btn(Words.Run.SHOW_AS_IF, new View.OnClickListener() {
+                @Override public void onClick(View v) { AsIfScreen.show(RunScreen.this, file, Batch.asIfRows(plan)); }
+            }), btn(Words.CLOSE, close()));
+            return;
+        }
+        if (plan.changes() == 0 && plan.start == null && plan.open == null) {
+            bodies[1].addView(info(Words.Cmd.NO_CHANGE));
+            buttons(btn(Words.CLOSE, close()));
+            return;
+        }
+        buttons(btn(Words.Run.RUN, new View.OnClickListener() {
+            @Override public void onClick(View v) { run(); }
+        }), btn(Words.CANCEL, close()));
+    }
+
+    // ---------- שלב 3: מריץ ----------
+
+    private void run() {
+        stage(2);
+        final TextView where = info(""), last = info(""), clock = info("");
+        final ProgressBar bar = new ProgressBar(this, null, android.R.attr.progressBarStyleHorizontal);
+        bar.setMax(Math.max(1, plan.steps.size()));
+        bodies[2].addView(where);
+        bodies[2].addView(bar, new LinearLayout.LayoutParams(-1, -2));
+        bodies[2].addView(clock);
+        bodies[2].addView(last);
+        buttons(btn(Words.STOP, new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                stop = true;
+                Ui.toast(RunScreen.this, Words.Disk.STOPPING);
+            }
+        }));
+        stop = false;
+        running = true;
+        started = System.currentTimeMillis();
+        h.post(new Runnable() {
+            @Override
+            public void run() {
+                if (!running) return;
+                clock.setText(Words.Loop.time(System.currentTimeMillis() - started));
+                h.postDelayed(this, 500);
+            }
+        });
+        final Batch.Listener listen = new Batch.Listener() {
+            @Override
+            public void before(final int index, final int total, final Batch.Step s) {
+                h.post(new Runnable() {
+                    @Override
+                    public void run() {
+                        where.setText(Words.Run.at(index + 1, total, s.rounds == null ? 0 : s.rounds[s.rounds.length - 1]) + "\n" + s.text);
+                        bar.setProgress(index + 1);
+                    }
+                });
+            }
+
+            @Override
+            public void after(Batch.Step s, final String line) {
+                if (line == null) return;
+                h.post(new Runnable() {
+                    @Override public void run() { last.setText(line); }
+                });
+            }
+        };
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                List<String> rep;
+                try {
+                    rep = Batch.run(plan, lib, new Physical.DialogAsker(RunScreen.this), progress(null, false), Acts.deletedStaysGrey(), listen);
+                } catch (Throwable t) {
+                    Log.e("הרצת קובץ פקודות: " + file, t);
+                    rep = new ArrayList<String>();
+                    rep.add(Words.Cmd.RUN_FAILED + t);
+                    plan.trouble = true;
+                }
+                report = rep;
+                took = System.currentTimeMillis() - started;
+                running = false;
+                Log.i("קובץ פקודות: " + file + " · " + (report.isEmpty() ? Words.Cmd.NO_CHANGE : report.toString()));
+                Ui.afterIndex(RunScreen.this, new Runnable() {
+                    @Override public void run() { summary(); }
+                });
+            }
+        }).start();
+    }
+
+    // ---------- שלב 4: סיכום ----------
+
+    private void summary() {
+        bodies[2].removeAllViews();
+        bodies[2].addView(info(Words.Run.ranIn(Words.Loop.time(took)) + (stop ? Words.Run.STOPPED : "")));
+        stage(3);
+        List<Batch.Step> ran = new ArrayList<Batch.Step>();
+        int skipped = 0;
+        for (Batch.Step s : plan.steps) {
+            if (s.ran && !s.noop) ran.add(s);
+            else if (!s.ran) skipped++;
+        }
+        for (String e : plan.echoes) bodies[3].addView(info("💬 " + e));
+        row(bodies[3], Words.Run.CREATED, names(ran, Batch.K_CREATE, true));
+        row(bodies[3], Words.Run.CHANGED, names(ran, Batch.K_CHANGE, true));
+        row(bodies[3], Words.Run.DELETED, names(ran, Batch.K_DELETE, true));
+        row(bodies[3], Words.Run.DISK, diskText(ran));
+        row(bodies[3], Words.Run.SKIPPED, skipped == 0 ? Words.Ed.NONE : String.valueOf(skipped));
+        row(bodies[3], Words.Run.TIME, Words.Loop.time(took));
+        bodies[3].addView(details(Words.Run.FULL_REPORT, report));
+
+        List<Button> bs = new ArrayList<Button>();
+        final List<String> open = firstList();
+        if (open != null)
+            bs.add(btn(Words.Run.open(ListCmd.pathText(open)), new View.OnClickListener() {
+                @Override public void onClick(View v) { Verbs.run(RunScreen.this, Verbs.openList(open), file.getParentFile()); }
+            }));
+        if (plan.open != null && !plan.trouble)
+            bs.add(btn("▶ " + Verbs.label(Verbs.parse(plan.open)), new View.OnClickListener() {
+                @Override public void onClick(View v) { Verbs.run(RunScreen.this, plan.open, file.getParentFile()); }
+            }));
+        if (plan.start != null)
+            bs.add(btn("▶ " + (Batch.isHome(plan.start) ? Words.Cmd.HOME_AT_END : plan.start.getName()), new View.OnClickListener() {
+                @Override public void onClick(View v) { BatchUi.openStart(RunScreen.this, plan.start); }
+            }));
+        if (plan.measureJournal != null && new File(plan.measureJournal).isFile())
+            bs.add(btn(Words.Run.JOURNAL, new View.OnClickListener() {
+                @Override public void onClick(View v) { Ui.open(RunScreen.this, new File(plan.measureJournal)); }
+            }));
+        bs.add(btn(Words.CLOSE, close()));
+        buttons(bs.toArray(new Button[0]));
+        if (!plan.shared.isEmpty()) {                                          // 203: כל מה שלשיתוף — שליחה אחת
+            Ui.toast(this, Words.Cmd.sending(plan.shared.size()));
+            Acts.sendReady(this, plan.shared);
+        }
+    }
+
+    /** הרשימה הראשונה שנוצרה או שהשתנתה (לכפתור "פתח"). */
+    private List<String> firstList() {
+        for (Batch.Step s : plan.steps)
+            if (s.ran && s.op != null && s.target != null && Batch.kind(s) != Batch.K_DELETE) {
+                String t = s.target.replace("\"", "").trim();
+                if (t.equals(Words.ListCmdW.HOME)) continue;
+                List<String> p = new ArrayList<String>();
+                for (String x : t.split("\\\\")) if (!x.trim().isEmpty()) p.add(x.trim());
+                if (Tree.load().find(p) != null) return p;
+            }
+        return null;
+    }
+
+    // ---------- עזר ----------
+
+    private String names(List<Batch.Step> steps, int kind, boolean after) {
+        Set<String> out = new LinkedHashSet<String>();
+        int n = 0;
+        for (Batch.Step s : steps) {
+            if (Batch.kind(s) != kind || s.noop) continue;
+            n++;
+            out.add(s.target != null ? s.target : s.dest != null && s.op == null && kind == Batch.K_CREATE ? s.dest.getName() : s.describe);
+        }
+        if (n == 0) return Words.Ed.NONE;
+        StringBuilder sb = new StringBuilder();
+        int k = 0;
+        for (String x : out) {
+            if (k++ == 3) {
+                sb.append(" · ").append(Words.andMore(out.size() - 3));
+                break;
+            }
+            sb.append(sb.length() > 0 ? " · " : "").append(x);
+        }
+        return (n > 1 ? n + Words.Run.LINES_IN : "") + sb;
+    }
+
+    private String diskText(List<Batch.Step> steps) {
+        int n = 0;
+        for (Batch.Step s : steps) if (Batch.disk(s)) n++;
+        return n == 0 ? Words.Run.NO_DISK : Words.Run.diskLines(n);
+    }
+
+    private List<String> planLines() {
+        List<String> out = new ArrayList<String>();
+        for (Batch.Step s : plan.steps) out.add(s.label() + ". " + (s.error != null ? "⚠ " + s.error + " — " + s.text : s.describe));
+        return out;
+    }
+
+    private Physical.Progress progress(final TextView t, final boolean planning) {
+        return new Physical.Progress() {
+            long last;
+
+            @Override
+            public void step(final int files, final int total, long bytes, long totalBytes) {
+                if (t == null) return;
+                long now = System.currentTimeMillis();
+                if (now - last < 200 && files < total) return;
+                last = now;
+                h.post(new Runnable() {
+                    @Override public void run() { t.setText(Words.Run.checking(files, total)); }
+                });
+            }
+
+            @Override
+            public boolean stopped() {
+                return stop;
+            }
+        };
+    }
+
+    private LinearLayout card(int i, String title) {
+        LinearLayout c = new LinearLayout(this);
+        c.setOrientation(LinearLayout.VERTICAL);
+        c.setPadding(Ui.dp(this, 12), Ui.dp(this, 8), Ui.dp(this, 12), Ui.dp(this, 10));
+        LinearLayout hd = new LinearLayout(this);
+        hd.setGravity(android.view.Gravity.CENTER_VERTICAL);
+        TextView n = new TextView(this);
+        n.setText(String.valueOf(i + 1));
+        n.setGravity(android.view.Gravity.CENTER);
+        n.setTextSize(12);
+        int d = Ui.dp(this, 22);
+        hd.addView(n, new LinearLayout.LayoutParams(d, d));
+        TextView t = new TextView(this);
+        t.setText(title);
+        t.setTextSize(15);
+        t.setTypeface(Typeface.DEFAULT_BOLD);
+        t.setTextColor(Ui.TEXT);
+        t.setPadding(Ui.dp(this, 8), 0, 0, 0);
+        hd.addView(t);
+        c.addView(hd);
+        LinearLayout body = new LinearLayout(this);
+        body.setOrientation(LinearLayout.VERTICAL);
+        body.setPadding(0, Ui.dp(this, 6), 0, 0);
+        c.addView(body);
+        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(-1, -2);
+        lp.setMargins(0, 0, 0, Ui.dp(this, 10));
+        c.setLayoutParams(lp);
+        cards[i] = c;
+        bodies[i] = body;
+        nums[i] = n;
+        paint(i, 2);
+        return c;
+    }
+
+    /** state: 0 — פעיל, 1 — נעשה, 2 — ממתין. */
+    private void paint(int i, int state) {
+        GradientDrawable g = new GradientDrawable();
+        g.setColor(Ui.BG);
+        g.setCornerRadius(Ui.dp(this, 12));
+        g.setStroke(Ui.dp(this, state == 0 ? 2 : 1), state == 0 ? Ui.ACCENT : Ui.RULE);
+        cards[i].setBackground(g);
+        GradientDrawable dot = new GradientDrawable();
+        dot.setShape(GradientDrawable.OVAL);
+        dot.setColor(state == 0 ? Ui.SELECTED : state == 1 ? 0xFFCEEAD6 : Ui.BG_SOFT);
+        nums[i].setBackground(dot);
+        nums[i].setText(state == 1 ? "✓" : String.valueOf(i + 1));
+        nums[i].setTextColor(state == 2 ? Ui.MUTED : Ui.TEXT);
+    }
+
+    private void stage(int i) {
+        for (int k = 0; k < 4; k++) paint(k, k < i ? 1 : k == i ? 0 : 2);
+        if (i == 3) paint(3, 1);
+        stageLabel.setText(Words.Run.stage(i + 1));
+    }
+
+    private TextView info(String s) {
+        TextView t = Ui.info(this);
+        t.setTextSize(13);
+        t.setText(s);
+        t.setPadding(0, Ui.dp(this, 2), 0, Ui.dp(this, 2));
+        return t;
+    }
+
+    private void row(LinearLayout into, String label, String value) {
+        LinearLayout r = new LinearLayout(this);
+        r.setPadding(0, Ui.dp(this, 3), 0, Ui.dp(this, 3));
+        TextView a = new TextView(this);
+        a.setText(label);
+        a.setTextSize(13);
+        a.setTextColor(Ui.SUB);
+        r.addView(a, new LinearLayout.LayoutParams(Ui.dp(this, 110), -2));
+        TextView b = new TextView(this);
+        b.setText(value);
+        b.setTextSize(13);
+        b.setTextColor(Ui.TEXT);
+        b.setTextDirection(View.TEXT_DIRECTION_FIRST_STRONG);
+        r.addView(b, new LinearLayout.LayoutParams(0, -2, 1f));
+        into.addView(r);
+    }
+
+    /** כפתור שפותח ומקפל רשימת שורות (פרטים / הדוח המלא). */
+    private View details(final String label, final List<String> ls) {
+        LinearLayout box = new LinearLayout(this);
+        box.setOrientation(LinearLayout.VERTICAL);
+        final TextView body = new TextView(this);
+        StringBuilder sb = new StringBuilder();
+        for (String l : ls) sb.append(l).append('\n');
+        body.setText(sb.toString().trim());
+        body.setTextSize(12);
+        body.setTextColor(Ui.TEXT);
+        body.setTextIsSelectable(true);
+        body.setTextDirection(View.TEXT_DIRECTION_FIRST_STRONG);
+        body.setVisibility(View.GONE);
+        final Button b = btn("▸ " + label, null);
+        b.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                boolean show = body.getVisibility() != View.VISIBLE;
+                body.setVisibility(show ? View.VISIBLE : View.GONE);
+                b.setText((show ? "▾ " : "▸ ") + label);
+            }
+        });
+        box.addView(b);
+        box.addView(body);
+        return box;
+    }
+
+    private Button btn(String label, View.OnClickListener l) {
+        Button b = new Button(this);
+        b.setText(label);
+        b.setAllCaps(false);
+        if (l != null) b.setOnClickListener(l);
+        return b;
+    }
+
+    private void buttons(Button... bs) {
+        bottom.removeAllViews();
+        android.widget.HorizontalScrollView hs = new android.widget.HorizontalScrollView(this);
+        LinearLayout row = new LinearLayout(this);
+        for (Button b : bs) row.addView(b);
+        hs.addView(row);
+        bottom.addView(hs);
+    }
+
+    private View.OnClickListener close() {
+        return new View.OnClickListener() {
+            @Override public void onClick(View v) { finish(); }
+        };
+    }
+
+    @Override
+    public void onBackPressed() {
+        if (running) {
+            stop = true;
+            Ui.toast(this, Words.Disk.STOPPING);
+            return;
+        }
+        super.onBackPressed();
     }
 }
 ===== קובץ: assets/commands/templates.txt =====
@@ -45903,10 +46729,11 @@ DEL "<תיקייה>\*.tmp"
 === פתיחת תיקייה בסוף
 START "<תיקייה>"
 === בדיקת עומס — רשימות (מדידה, לולאה, השוואה)
-:: רשימה חדשה לבדיקה (לא רשימה קיימת). בסוף — לפתוח אותה, ולמחוק בעצמך, או להוריד את ה־:: משורת הניקוי.
+:: <רשימות> — אילו רשימות להעתיק (אפשר כמה, או "כל מה שבבית"). <רשימה-חדשה> — רשימה חדשה לבדיקה.
+:: בסוף — לפתוח אותה, ולמחוק בעצמך (או להוריד את ה־:: משורת הניקוי).
 מדידה /יומן:"%כאן%\בדיקות\עומס.txt"
 MD ידנית "<רשימה-חדשה>"
-COPY תוכן ידנית "*" ידנית "<רשימה-חדשה>"
+COPY ידנית "<רשימות>" ידנית "<רשימה-חדשה>"
 חזור <סבבים> /עד:30שניות
 MD ידנית "<רשימה-חדשה>\%סבב%"
 COPY תוכן ידנית "<רשימה-חדשה>" ידנית "<רשימה-חדשה>\%סבב%"

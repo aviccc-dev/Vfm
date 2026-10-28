@@ -4047,6 +4047,7 @@ public final class Tests {
             check("1.25.2: הבוחר של החכמות — בשם שהפקודות מכירות", ListCmd.smartNames().contains("א. ארגון לפי הבחנות\\כל הספרים"));
             java.util.Map<String, String> hv = new java.util.HashMap<String, String>();
             hv.put("רשימה-חדשה", "עומס");
+            hv.put("רשימות", "*");
             hv.put("סבבים", "3");
             StringBuilder lt = new StringBuilder();
             for (String l : CmdTemplates.fill(load.lines, hv)) if (!l.startsWith("RD")) lt.append(l).append("\n");
@@ -4067,6 +4068,13 @@ public final class Tests {
             // 1.25.4: כמו במכשיר — כל התבנית (גם RD), עם המשתנים, והדמיה של התצוגה המקדימה
             StringBuilder full = new StringBuilder();
             hv.put("רשימה-חדשה", "עומס מלא");
+            hv.put("רשימות", "*\nא. ארגון לפי הבחנות");                       // 1.26.0: כמה רשימות — שורה לכל אחת
+            int copies = 0;
+            for (String l : CmdTemplates.fill(load.lines, hv)) if (l.startsWith("COPY ידנית")) copies++;
+            check("1.26.0: כמה רשימות — השורה מוכפלת (" + copies + ")", copies == 2
+                    && CmdTemplates.holeKind(load.lines, "רשימות") == CmdTemplates.HOLE_MANY);
+            check("1.26.0: רק פתיחות — הרצה מהירה; עם שינוי — מסך ההרצה", Batch.onlyOpens("צלמית ⚙\nשם הגדרות\nפתח מסך הגדרות\n")
+                    && !Batch.onlyOpens("MD x") && !Batch.onlyOpens("מדידה\nפתח מסך הגדרות"));
             for (String l : CmdTemplates.fill(load.lines, hv)) full.append(l).append("\n");
             Map<String, String> dv = Batch.vars(root, root.getAbsolutePath(), null);
             Batch.Plan fp = Batch.plan(full.toString(), root, dv, lib);
@@ -4074,6 +4082,15 @@ public final class Tests {
             for (Batch.Step x : fp.steps) if (x.error != null) fpErr += x.label() + ": " + x.error + " | ";
             check("1.25.4: התבנית המלאה — בלי שגיאות (" + fpErr + ")", fp.errors == 0 && fp.measure && fp.changes() > 0);
             List<String> frep = Batch.run(fp, lib, null, null);
+            for (int rr = 1; rr <= 2; rr++) {                                    // מדידה: הכנה מול הרצה, כשהרשימה כבר גדולה
+                long q0 = System.nanoTime();
+                Batch.Plan big = Batch.plan(full.toString().replace("חזור 3", "חזור " + (rr + 1)), root, dv, lib);
+                long q1 = System.nanoTime();
+                Batch.run(big, lib, null, null);
+                long q2 = System.nanoTime();
+                System.out.println("  פרופיל " + rr + ": הכנה " + (q1 - q0) / 1000000 + " מ\"ש · הרצה " + (q2 - q1) / 1000000 + " מ\"ש · שלבים " + big.steps.size()
+                        + " · עץ " + tf.length() / 1024 + "KB · ראשי " + sf.length() / 1024 + "KB");
+            }
             System.out.println("  1.25.4 דוח: " + frep.size() + " שורות · " + (frep.isEmpty() ? "" : frep.get(frep.size() - 1)));
             check("1.25.4: התבנית המלאה — דוח, והרשימה נשארת לראות (הניקוי — בהערה)", frep.size() > 5 && Tree.load().find(Arrays.asList("עומס מלא")) != null);
             Batch.Plan stopP = Batch.plan(full.toString(), root, dv, lib, new Physical.Progress() {

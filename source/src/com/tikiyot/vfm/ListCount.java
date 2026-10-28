@@ -92,8 +92,11 @@ final class ListCount {
             partial = true;
             return;
         }
-        seenFiles.putAll(m);
+        if (merged.put(m, Boolean.TRUE) == null) seenFiles.putAll(m);            // 1.25.8: אותה רשימה (אותו תנאי) — פעם אחת
     }
+
+    /** 1.25.8: מה שכבר נוסף — לפי הזהות (רשימת הקבצים של תנאי, שמשותפת לכל העותקים). */
+    private final java.util.IdentityHashMap<Map<String, Long>, Boolean> merged = new java.util.IdentityHashMap<Map<String, Long>, Boolean>();
 
     /**
      * "3 רשימות · 12 פריטים · 4MB"; 1.23.4 — כשיש כפילות: "3 רשימות · 4,210 קבצים (109,138) · 18.2GB" —

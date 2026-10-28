@@ -170,6 +170,15 @@ final class ListCmd {
         for (Tree.Node c : n.children) smartNames(c, prefix + c.name + "\\", out);
     }
 
+    /** 1.26.0: כל הרשימות הידניות, בכל העומק — "א", "א\ב"… (לבחירה מרובה). */
+    static void manualPaths(Tree.Node n, String prefix, List<String> out) {
+        for (Tree.Node c : n.children) {
+            String p = prefix + c.name;
+            out.add(p);
+            manualPaths(c, p + "\\", out);
+        }
+    }
+
     /** "א\ב" — כמו שהפקודות כותבות דרך לרשימה. */
     static String pathText(List<String> path) {
         StringBuilder sb = new StringBuilder();
@@ -306,14 +315,21 @@ final class ListCmd {
         @Override
         public Map<String, Long> smartFiles(String ref) {
             if (lib == null || !lib.ready) return null;
-            Nested.Item it = Nested.resolve(ref);
-            if (it.gone) return new java.util.HashMap<String, Long>();
-            if (it.dup != null) {
+            Integer st = state.get(ref);                                       // 1.25.8: כל הפניה נפתרת פעם אחת
+            if (st == null) {
+                Nested.Item it = Nested.resolve(ref);
+                state.put(ref, st = it.gone ? 1 : it.dup != null ? 2 : 0);
+            }
+            if (st == 1) return EMPTY;
+            if (st == 2) {
                 dups++;
-                return new java.util.HashMap<String, Long>();
+                return EMPTY;
             }
             return in.smartFiles(ref);                                         // לפי התנאי — FromLibrary (1.25.4)
         }
+
+        private final Map<String, Integer> state = new java.util.HashMap<String, Integer>();
+        private static final Map<String, Long> EMPTY = java.util.Collections.emptyMap();
 
         @Override public Map<String, Long> liveFiles(String folder) { return in.liveFiles(folder); }
     }
@@ -351,11 +367,7 @@ final class ListCmd {
             out.what = Words.ListCmdW.smartList(s.label());
             return out;
         }
-        if (s.home) {                                                        // "*" — הבית: רק התוכן
-            if (!s.content) {
-                out.error = Words.ListCmdW.HOME_ONLY_CONTENT;
-                return out;
-            }
+        if (s.home) {                                                        // "*" — הבית: התוכן (1.26.0: גם בלי "תוכן")
             for (Structure.Func f : Structure.load().direct) out.items.add(new VClip.Item(VClip.TOOL, f.id, f.name));
             out.what = Words.ListCmdW.homeContent(out.items.size());
             return out;
@@ -421,6 +433,7 @@ final class ListCmd {
                 n = c != null ? c : Tree.newChild(n, part);
             }
             s.describe = Words.ListCmdW.created(a.label());
+            s.target = a.label();
             s.op = new Op() {
                 @Override public String run(Library lib) {
                     Verbs.ensureList(a.path);
@@ -449,6 +462,7 @@ final class ListCmd {
             final Src src = removal(t, a);
             if (src.error != null) { s.error = src.error; return; }
             s.describe = Words.ListCmdW.removes(src.what);
+            s.target = a.label();
             if (src.tool == null) VClip.simulateRemove(t, src.from, src.items);
             s.op = new Op() {
                 @Override public String run(Library lib) {
@@ -481,11 +495,12 @@ final class ListCmd {
             final boolean full = a.list() && !a.filesOf;                     // רשימות — עותק עצמאי; קבצים — מסלולים
             Src src = source(t, a, fsFiles, sim.lib);
             if (src.error != null) { s.error = src.error; return; }
-            if (!b.home && a.kind == LIST && !a.content && !a.filesOf && a.mask == null) {
+            if (!b.home && !a.home && a.kind == LIST && !a.content && !a.filesOf && a.mask == null) {
                 Tree.Node m = t.find(a.path), dn = t.find(b.path);
                 if (m != null && (m == dn || m.isAncestorOf(dn))) { s.error = Words.ListCmdW.INTO_ITSELF; return; }
             }
             s.describe = Words.ListCmdW.copy(src.what, b.label());
+            s.target = b.label();
             VClip.simulate(t, src.from, src.items, b.home ? null : b.path, full);
             s.op = new Op() {
                 @Override public String run(Library lib) {

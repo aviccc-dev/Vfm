@@ -60,6 +60,10 @@ final class Batch {
         int[] loops, rounds;
         /** 1.25.0: מדידה — כמה זמן לקחה (אלפיות שנייה). */
         long ms = -1;
+        /** 1.26.0: בוצעה בהרצה (לא דולגה, לא נעצרה לפניה) — לסיכום. */
+        boolean ran;
+        /** 1.26.0: על מה השורה פועלת (רשימה / תיקייה) — לסיכום; null — מתוך describe. */
+        String target;
 
         /** "12" · בלולאה — "12 (סבב 3)". */
         String label() {
@@ -612,6 +616,7 @@ final class Batch {
                 plan.stopped = true;
                 break;
             }
+            if (progress != null) progress.step(li + 1, all.size(), 0, 0);    // 1.26.0: "בודק שורה X מתוך Y"
             Ln ln = all.get(li);
             prev = ln;
             if (clock.skip(plan, ln.loops, ln.rounds)) continue;               // לולאה שעברה את הגבול — גם בתכנון
@@ -1360,7 +1365,18 @@ final class Batch {
     }
 
     /** grey: ההגדרה "קובץ שנמחק — השאר באפור" (58), כמו בשאר המסכים (120). */
+    /** 1.26.0: מסך ההרצה — לפני כל שורה (מקום, כמה בסך הכול), ואחרי כל שורה (מה יצא). */
+    interface Listener {
+        void before(int index, int total, Step s);
+
+        void after(Step s, String line);
+    }
+
     static List<String> run(Plan plan, Library lib, Physical.Asker asker, Physical.Progress progress, boolean grey) {
+        return run(plan, lib, asker, progress, grey, null);
+    }
+
+    static List<String> run(Plan plan, Library lib, Physical.Asker asker, Physical.Progress progress, boolean grey, Listener listen) {
         List<String> report = new ArrayList<String>();
         Clock clock = new Clock();                                               // 1.25.0: לולאה — עצירה לפי זמן
         long all0 = System.nanoTime();
@@ -1372,6 +1388,7 @@ final class Batch {
                 prev.ms = (System.nanoTime() - t0) / 1000000;
                 if (report.size() > mark) report.set(report.size() - 1, report.get(report.size() - 1) + Words.Loop.took(prev.ms));
             }
+            if (prev != null && listen != null) listen.after(prev, report.size() > mark ? report.get(report.size() - 1) : null);
             mark = report.size();
             t0 = System.nanoTime();
             prev = null;
@@ -1390,6 +1407,8 @@ final class Batch {
                 continue;
             }
             prev = s;
+            s.ran = s.error == null;
+            if (listen != null) listen.before(si, plan.steps.size(), s);
             if (s.error != null) {
                 report.add(Words.Cmd.line(s.label(), Words.Cmd.skipped(s.error)));
                 plan.trouble = true;
@@ -1454,6 +1473,36 @@ final class Batch {
         }
         if (plan.measure) measured(plan, report, (System.nanoTime() - all0) / 1000000);
         return report;
+    }
+
+    /** 1.26.0: מה שורה עושה — לתצוגה המקדימה ולסיכום. */
+    static final int K_CREATE = 0, K_CHANGE = 1, K_DELETE = 2, K_READ = 3;
+
+    static int kind(Step s) {
+        if (s.cmd.equals("MD")) return K_CREATE;
+        if (s.cmd.equals("DEL") || s.cmd.equals("RD")) return K_DELETE;
+        if (s.cmd.equals("COPY") || s.cmd.equals("MOVE") || s.cmd.equals("REN")) return s.share ? K_READ : K_CHANGE;
+        return K_READ;
+    }
+
+    /** נוגעת בקבצים בכונן (לא ברשימות). */
+    static boolean disk(Step s) {
+        return s.op == null && !s.noop && (s.cmd.equals("COPY") || s.cmd.equals("MOVE") || s.cmd.equals("DEL") || s.cmd.equals("RD")
+                || s.cmd.equals("MD") || s.cmd.equals("REN"));
+    }
+
+    /** 1.26.0: רק פתיחת מסכים ורשימות (פקודות התפריט ⭐) — הרצה מהירה, בלי מסך ההרצה. */
+    static boolean onlyOpens(String text) {
+        for (String raw : Bidi.strip(text).replace("\r", "").split("\n")) {
+            String line = clean(raw);
+            if (line.isEmpty() || line.startsWith("::") || Program.isHeader(line)) continue;
+            if (isLoopStart(line) || isLoopEnd(line) || line.startsWith(MEASURE) || line.equals(AS_IF) || line.equals(AS_IF2)) return false;
+            if (Verbs.isVerb(line)) continue;
+            String w = tokens(line).isEmpty() ? "" : Commands.canonical(tokens(line).get(0));
+            if (w.equals("ECHO") || w.equals("ECHO.") || w.equals("START") || w.equals("REM")) continue;
+            return false;
+        }
+        return true;
     }
 
     /** 1.25.0: סיכום המדידה, ויומן (שורה לכל שורה בדוח, נוסף בכל ריצה). */

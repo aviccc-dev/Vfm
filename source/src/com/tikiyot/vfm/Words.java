@@ -1984,7 +1984,7 @@ public final class Words {
                 TAG_HEADER = "כותרת", TAG_UNKNOWN = "?", NONE = "—", ON = "פעיל", PICK = "בחירה…", FILL = "השלמת התבנית",
                 VARS = "משתנים", EMPTY_FILE = "הקובץ ריק — בחר פקודה מהרשימה, והיא תיכנס לכאן",
                 ALREADY_AS_IF = "יש כבר הדמיה בראש הקובץ", ALREADY_MEASURE = "יש כבר מדידה בקובץ",
-                NO_SMART = "אין רשימות חכמות", PICK_FIRST = "בחר שורה בתפריט קודם";
+                NO_SMART = "אין רשימות חכמות", WHOLE_HOME = "★ כל מה שבבית", PICK_FIRST = "בחר שורה בתפריט קודם";
 
         /** 1.25.7: פקודת מערכת שנערכה — נשמרת כשלי. */
         public static String savedAsMine(String name) {
@@ -1997,6 +1997,7 @@ public final class Words {
                 case 1: return " — רשימה ידנית (קיימת, או שם חדש — תיווצר)";
                 case 2: return " — רשימה חכמה";
                 case 3: return " — מספר";
+                case 4: return " — כמה רשימות (שורה לכל אחת)";
                 default: return " — תיקייה";
             }
         }
@@ -2040,6 +2041,43 @@ public final class Words {
 
         public static final String BACKUP = "לפני הסבת הסביבות לרשימות — ",
                 UNIFY = "לפני האיחוד (תיקיות מתעדכנות, הגדרות נפוצות) — ";   // 1.17.3
+    }
+
+    /** 1.26.0: מסך ההרצה (claude/hartzat-pkudot.md). */
+    public static final class Run {
+        private Run() { }
+
+        public static final String TITLE = "הרצה: ", S_FILL = "מילוי", S_WHAT = "מה יקרה", S_RUN = "מריץ", S_SUM = "סיכום",
+                NOTHING_TO_FILL = "אין מה למלא", NEXT = "הלאה — מה יקרה", CHECKING = "בודק את השורות…",
+                WILL_CREATE = "ייווצרו", WILL_CHANGE = "יועתקו / ישתנו", WILL_DELETE = "יימחקו", DISK = "קבצים בכונן",
+                ERRORS = "שגיאות", DETAILS = "פרטים — ", LINES = " שורות", AS_IF = "הדמיה — שום דבר לא יבוצע (\"הדמיה\" בראש הקובץ)",
+                SHOW_AS_IF = "הצג את ההדמיה", RUN = "▶ הרץ", CREATED = "נוצרו", CHANGED = "הועתקו / השתנו", DELETED = "נמחקו",
+                SKIPPED = "דולגו", TIME = "זמן", FULL_REPORT = "הדוח המלא", JOURNAL = "יומן", NO_DISK = "לא נוגע",
+                STOPPED = " — נעצר באמצע", LINES_IN = " שורות: ";
+
+        public static String stage(int n) {
+            return "שלב " + n + " מתוך 4";
+        }
+
+        public static String checking(int line, int total) {
+            return "בודק שורה " + line + " מתוך " + total;
+        }
+
+        public static String at(int line, int total, int round) {
+            return "שורה " + line + " מתוך " + total + (round > 0 ? " · סבב " + round : "");
+        }
+
+        public static String diskLines(int n) {
+            return n + " שורות נוגעות בקבצים עצמם";
+        }
+
+        public static String ranIn(String time) {
+            return "הסתיים · " + time;
+        }
+
+        public static String open(String list) {
+            return "פתח את \"" + list + "\"";
+        }
     }
 
     /** 1.25.0: לולאה ומדידה בקובצי פקודות (claude/pkudot-reshimot.md). */
