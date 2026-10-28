@@ -19,9 +19,18 @@ final class ListCount {
         long[] smart(String ref);
 
         long[] live(String folder);
+
+        /** 1.23.4: הקבצים עצמם (מסלול → גודל), לספירת קבצים שונים; null — לא ידוע. */
+        Map<String, Long> smartFiles(String ref);
+
+        Map<String, Long> liveFiles(String folder);
     }
 
     long lists, items, size;
+    /** 1.23.4: קבצים שונים — כל קובץ פעם אחת, ונפחם; -1 — לא ידוע (חלק מהחכמות או התיקיות לא נספרו). */
+    long unique = -1, uniqueSize;
+    private Map<String, Long> seenFiles = new HashMap<String, Long>();
+    private boolean partial;
 
     private ListCount() { }
 
@@ -29,13 +38,21 @@ final class ListCount {
     static ListCount of(Tree t, Tree.Node n, Index index) {
         ListCount c = new ListCount();
         if (n != null) c.add(t, n, index, new HashSet<Tree.Node>());
+        if (!c.partial) {
+            c.unique = c.seenFiles.size();
+            for (Long v : c.seenFiles.values()) if (v != null && v > 0) c.uniqueSize += v;
+        }
+        c.seenFiles = null;
         return c;
     }
 
     private void add(Tree t, Tree.Node n, Index ix, Set<Tree.Node> seen) {
         if (!seen.add(n)) return;
         items += n.entries.size();
-        for (Tree.Entry e : n.entries) if (e.size > 0) size += e.size;
+        for (Tree.Entry e : n.entries) {
+            if (e.size > 0) size += e.size;
+            if (!seenFiles.containsKey(e.path) || e.size > 0) seenFiles.put(e.path, e.size);
+        }
         for (Tree.Node c : n.children) {
             lists++;
             add(t, c, ix, seen);
@@ -43,10 +60,12 @@ final class ListCount {
         for (String r : n.smart) {
             lists++;
             plus(ix == null ? null : ix.smart(r));
+            files(ix == null ? null : ix.smartFiles(r));
         }
         for (String f : n.live) {
             lists++;
             plus(ix == null ? null : ix.live(f));
+            files(ix == null ? null : ix.liveFiles(f));
         }
         for (String r : n.refs) {
             lists++;
@@ -61,16 +80,31 @@ final class ListCount {
         size += filesAndSize[1];
     }
 
-    /** "3 רשימות · 12 פריטים · 4MB". */
+    private void files(Map<String, Long> m) {
+        if (m == null) {
+            partial = true;
+            return;
+        }
+        seenFiles.putAll(m);
+    }
+
+    /**
+     * "3 רשימות · 12 פריטים · 4MB"; 1.23.4 — כשיש כפילות: "3 רשימות · 4,210 קבצים (109,138) · 18.2GB" —
+     * הקבצים השונים ונפחם, ובסוגריים הסכום (המשתמש: "מדד לסיבוכיות של הרשימות החכמות").
+     */
     String text() {
-        return (lists > 0 ? lists + Words.Manual.LISTS_DOT : "") + items + Words.Manual.ITEMS_SUFFIX
-                + (size > 0 ? " · " + Files.size(size) : "");
+        String l = lists > 0 ? lists + Words.Manual.LISTS_DOT : "";
+        if (unique >= 0 && unique < items)
+            return l + Files.count(unique) + Words.StatsW.FILES + " (" + Files.count(items) + ")"
+                    + (uniqueSize > 0 ? " · " + Files.size(uniqueSize) : "");
+        return l + items + Words.Manual.ITEMS_SUFFIX + (size > 0 ? " · " + Files.size(size) : "");
     }
 
     /** מהאינדקס, עם זיכרון לכל ציור של המסך (חכמה שמופיעה בכמה רשימות — מחפשים פעם אחת). */
     static final class FromLibrary implements Index {
         private final Library lib;
         private final Map<String, long[]> cache = new HashMap<String, long[]>();
+        private final Map<String, Map<String, Long>> files = new HashMap<String, Map<String, Long>>();
 
         FromLibrary(Library lib) {
             this.lib = lib;
@@ -85,9 +119,27 @@ final class ListCount {
             if (it.gone || it.dup != null) return null;                       // כפולים — נספרים רק בפתיחה
             Library.Result r = lib.search(it.cond, false, true);
             long s = 0;
-            for (Library.Hit x : r.hits) if (x.rec != null) s += x.rec.size;
+            Map<String, Long> m = new HashMap<String, Long>();
+            for (Library.Hit x : r.hits) {
+                if (x.rec != null) s += x.rec.size;
+                m.put(x.path(), x.rec != null ? x.rec.size : 0L);
+            }
+            files.put(ref, m);
             cache.put(ref, v = new long[]{r.hits.size(), s});
             return v;
+        }
+
+        @Override
+        public Map<String, Long> smartFiles(String ref) {
+            return smart(ref) == null ? null : files.get(ref);
+        }
+
+        @Override
+        public Map<String, Long> liveFiles(String folder) {
+            if (lib == null || !lib.ready) return null;
+            Map<String, Long> m = files.get(folder);
+            if (m == null) files.put(folder, m = lib.treeFiles(folder));
+            return m;
         }
 
         @Override

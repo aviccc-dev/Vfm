@@ -148,38 +148,4 @@ final class CmdTemplates {
         for (String h : holes) m.put(h, "");
         return m;
     }
-
-    /**
-     * 1.23.1 (המשתמש: "תזכור למחוק בדיקות קודמות"): קובץ הבדיקה של 1.23.0 נמחק מהמכשיר — רק אם לא שונה (אותו
-     * גודל ואותו CRC32 כמו שנכתב); ששונה — נשאר. התיקייה "בדיקות" — רק אם התרוקנה. בגרסה הבאה — למחוק את הפונקציה.
-     */
-    static boolean removeOldTest() {
-        File dir = new File(root(), TEST_DIR), f = new File(dir, TEST_FILE + "." + Batch.EXT), mark = new File(dir, ".1.23.0");
-        boolean gone = false;
-        try {
-            if (f.isFile() && f.length() == OLD_TEST_LEN) {
-                java.util.zip.CRC32 crc = new java.util.zip.CRC32();                   // בלי java.nio.file — לא קיים לפני אנדרואיד 8
-                java.io.InputStream in = new java.io.FileInputStream(f);
-                try {
-                    byte[] b = new byte[4096];
-                    for (int n; (n = in.read(b)) > 0; ) crc.update(b, 0, n);
-                } finally {
-                    in.close();
-                }
-                if (crc.getValue() == OLD_TEST_CRC) gone = f.delete();
-            }
-            if (!f.exists()) {
-                mark.delete();
-                String[] left = dir.list();
-                if (left != null && left.length == 0) dir.delete();
-                Library lib = Library.peek();
-                if (lib != null && gone) lib.fileRemoved(f.getAbsolutePath());
-            }
-        } catch (Throwable t) {
-            Log.e("מחיקת קובץ הבדיקה 1.23.0", t);
-        }
-        return gone;
-    }
-
-    private static final long OLD_TEST_LEN = 1573, OLD_TEST_CRC = 3112421943L;
 }

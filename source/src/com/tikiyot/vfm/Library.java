@@ -1191,6 +1191,18 @@ public final class Library {
         return s;
     }
 
+    /** 1.23.4: הקבצים שבתיקייה ובכל תתי־התיקיות — מסלול → גודל. */
+    public java.util.Map<String, Long> treeFiles(String dir) {
+        java.util.Map<String, Long> m = new java.util.HashMap<String, Long>();
+        Index ix = owner(dir + "/");
+        if (ix == null) return m;
+        boolean[] in = subtree(ix, ix.dirId(dir));
+        if (in == null) return m;
+        for (Index.Rec r : ix.files)
+            if (!r.gone && r.dir >= 0 && in[r.dir]) m.put(ix.path(r), r.size);
+        return m;
+    }
+
     /** התיקיות שבתת־העץ (תיקייה-אם תמיד לפני בתה באינדקס). null אם אינה באינדקס. */
     static boolean[] subtree(Index ix, int id) {
         if (id == -2) return null;

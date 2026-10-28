@@ -58,7 +58,6 @@ public class Home extends Activity {
         Reserved.ensureMode(Examples.MODE);                                   // 1.17.0: "שמור לתוכנה" — ברירות המחדל
         Reserved.ensureBackup(Modes.current());                               // 1.22.3: "שמור לתוכנה / גיבוי" גם באופן הפעיל
         Mirror.rebuild();                                                     // 1.17.5: העותק הקריא — תמיד מעודכן בפתיחה
-        CmdTemplates.removeOldTest();                                         // 1.23.1: קובץ הבדיקה של 1.23.0 — נמחק (בגרסה הבאה — גם השורה)
         lib = Library.get(this);
         setTitle(Words.Main.APP_NAME);
 

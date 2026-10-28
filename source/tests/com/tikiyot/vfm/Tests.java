@@ -4026,18 +4026,6 @@ public final class Tests {
                 }
             });
             check("1.23.1: קינון — הכתיבה רק בסוף החיצוני", inside[0] == Structure.writes - 1 && Structure.indexOfId(Structure.ini(), "p-בדיקה-1") < 0);
-            // מחיקת קובץ הבדיקה של 1.23.0: רק אם לא שונה
-            File root = drive("בדיקה-ישנה"), dir = new File(root, CmdTemplates.TEST_DIR);
-            dir.mkdirs();
-            File old = new File(dir, CmdTemplates.TEST_FILE + "." + Batch.EXT);
-            CmdTemplates.testRoot = root;
-            Files.writeAtomic(old, "שונה בידי המשתמש\n");
-            check("1.23.1: קובץ בדיקה ששונה — נשאר", !CmdTemplates.removeOldTest() && old.isFile());
-            java.io.FileOutputStream fo = new java.io.FileOutputStream(old);
-            fo.write(OLD_TEST.getBytes("UTF-8"));
-            fo.close();
-            check("1.23.1: קובץ הבדיקה המקורי — נמחק, והתיקייה הריקה איתו", CmdTemplates.removeOldTest() && !old.exists() && !dir.exists());
-            CmdTemplates.testRoot = null;
         } catch (Throwable e) {
             check("1.23.1: " + e, false);
         } finally {
@@ -5072,10 +5060,26 @@ public final class Tests {
         ListCount cnt = ListCount.of(ct, ca, new ListCount.Index() {
             @Override public long[] smart(String ref) { return new long[]{5, 50}; }
             @Override public long[] live(String folder) { return new long[]{3, 30}; }
+            @Override public java.util.Map<String, Long> smartFiles(String ref) { return null; }
+            @Override public java.util.Map<String, Long> liveFiles(String folder) { return null; }
         });
         check("1.14.0: ספירה — הפניה, תיקייה וחכמה (" + cnt.lists + "/" + cnt.items + ")", cnt.lists == 4 && cnt.items == 9 && cnt.size == 90);
         ListCount bare = ListCount.of(ct, ca, null);
         check("1.14.0: בלי האינדקס — הרשימות נספרות, לא 0", bare.lists == 4 && bare.items == 1);
+        // 1.23.4: קבצים שונים — קובץ שמופיע בחכמה, בתיקייה וברשימה נספר פעם אחת; הסכום בסוגריים
+        final java.util.Map<String, Long> uSm = new java.util.HashMap<String, Long>();
+        uSm.put("/x/1.pdf", 10L); uSm.put("/x/d/2.pdf", 20L);
+        final java.util.Map<String, Long> uLm = new java.util.HashMap<String, Long>();
+        uLm.put("/x/d/2.pdf", 20L); uLm.put("/x/d/3.pdf", 30L);
+        ListCount u = ListCount.of(ct, ca, new ListCount.Index() {
+            @Override public long[] smart(String ref) { return new long[]{2, 30}; }
+            @Override public long[] live(String folder) { return new long[]{2, 50}; }
+            @Override public java.util.Map<String, Long> smartFiles(String ref) { return uSm; }
+            @Override public java.util.Map<String, Long> liveFiles(String folder) { return uLm; }
+        });
+        check("1.23.4: קבצים שונים (" + u.unique + "/" + u.items + ")", u.unique == 3 && u.uniqueSize == 60 && u.items == 5);
+        check("1.23.4: טקסט — שונים ובסוגריים הסכום (" + u.text() + ")", u.text().contains("3" + Words.StatsW.FILES + " (5)"));
+        check("1.23.4: חלק לא ידוע — בלי ספירת שונים", cnt.unique == -1 && !cnt.text().contains("("));
 
         // 1.14.1: רשימה חכמה והפניה בשורש "רשימות ידניות" — נשמרות (עד כאן — נשמטו בשמירה)
         File rf = new File(home, "שורש114.txt");

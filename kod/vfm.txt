@@ -2,8 +2,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="com.tikiyot.vfm"
-    android:versionCode="166"
-    android:versionName="1.23.3">
+    android:versionCode="167"
+    android:versionName="1.23.4">
     <uses-sdk android:minSdkVersion="21" android:targetSdkVersion="30" />
 
     <queries>
@@ -12337,7 +12337,6 @@ public class Home extends Activity {
         Reserved.ensureMode(Examples.MODE);                                   // 1.17.0: "שמור לתוכנה" — ברירות המחדל
         Reserved.ensureBackup(Modes.current());                               // 1.22.3: "שמור לתוכנה / גיבוי" גם באופן הפעיל
         Mirror.rebuild();                                                     // 1.17.5: העותק הקריא — תמיד מעודכן בפתיחה
-        CmdTemplates.removeOldTest();                                         // 1.23.1: קובץ הבדיקה של 1.23.0 — נמחק (בגרסה הבאה — גם השורה)
         lib = Library.get(this);
         setTitle(Words.Main.APP_NAME);
 
@@ -16109,6 +16108,18 @@ public final class Library {
         return s;
     }
 
+    /** 1.23.4: הקבצים שבתיקייה ובכל תתי־התיקיות — מסלול → גודל. */
+    public java.util.Map<String, Long> treeFiles(String dir) {
+        java.util.Map<String, Long> m = new java.util.HashMap<String, Long>();
+        Index ix = owner(dir + "/");
+        if (ix == null) return m;
+        boolean[] in = subtree(ix, ix.dirId(dir));
+        if (in == null) return m;
+        for (Index.Rec r : ix.files)
+            if (!r.gone && r.dir >= 0 && in[r.dir]) m.put(ix.path(r), r.size);
+        return m;
+    }
+
     /** התיקיות שבתת־העץ (תיקייה-אם תמיד לפני בתה באינדקס). null אם אינה באינדקס. */
     static boolean[] subtree(Index ix, int id) {
         if (id == -2) return null;
@@ -16427,9 +16438,18 @@ final class ListCount {
         long[] smart(String ref);
 
         long[] live(String folder);
+
+        /** 1.23.4: הקבצים עצמם (מסלול → גודל), לספירת קבצים שונים; null — לא ידוע. */
+        Map<String, Long> smartFiles(String ref);
+
+        Map<String, Long> liveFiles(String folder);
     }
 
     long lists, items, size;
+    /** 1.23.4: קבצים שונים — כל קובץ פעם אחת, ונפחם; -1 — לא ידוע (חלק מהחכמות או התיקיות לא נספרו). */
+    long unique = -1, uniqueSize;
+    private Map<String, Long> seenFiles = new HashMap<String, Long>();
+    private boolean partial;
 
     private ListCount() { }
 
@@ -16437,13 +16457,21 @@ final class ListCount {
     static ListCount of(Tree t, Tree.Node n, Index index) {
         ListCount c = new ListCount();
         if (n != null) c.add(t, n, index, new HashSet<Tree.Node>());
+        if (!c.partial) {
+            c.unique = c.seenFiles.size();
+            for (Long v : c.seenFiles.values()) if (v != null && v > 0) c.uniqueSize += v;
+        }
+        c.seenFiles = null;
         return c;
     }
 
     private void add(Tree t, Tree.Node n, Index ix, Set<Tree.Node> seen) {
         if (!seen.add(n)) return;
         items += n.entries.size();
-        for (Tree.Entry e : n.entries) if (e.size > 0) size += e.size;
+        for (Tree.Entry e : n.entries) {
+            if (e.size > 0) size += e.size;
+            if (!seenFiles.containsKey(e.path) || e.size > 0) seenFiles.put(e.path, e.size);
+        }
         for (Tree.Node c : n.children) {
             lists++;
             add(t, c, ix, seen);
@@ -16451,10 +16479,12 @@ final class ListCount {
         for (String r : n.smart) {
             lists++;
             plus(ix == null ? null : ix.smart(r));
+            files(ix == null ? null : ix.smartFiles(r));
         }
         for (String f : n.live) {
             lists++;
             plus(ix == null ? null : ix.live(f));
+            files(ix == null ? null : ix.liveFiles(f));
         }
         for (String r : n.refs) {
             lists++;
@@ -16469,16 +16499,31 @@ final class ListCount {
         size += filesAndSize[1];
     }
 
-    /** "3 רשימות · 12 פריטים · 4MB". */
+    private void files(Map<String, Long> m) {
+        if (m == null) {
+            partial = true;
+            return;
+        }
+        seenFiles.putAll(m);
+    }
+
+    /**
+     * "3 רשימות · 12 פריטים · 4MB"; 1.23.4 — כשיש כפילות: "3 רשימות · 4,210 קבצים (109,138) · 18.2GB" —
+     * הקבצים השונים ונפחם, ובסוגריים הסכום (המשתמש: "מדד לסיבוכיות של הרשימות החכמות").
+     */
     String text() {
-        return (lists > 0 ? lists + Words.Manual.LISTS_DOT : "") + items + Words.Manual.ITEMS_SUFFIX
-                + (size > 0 ? " · " + Files.size(size) : "");
+        String l = lists > 0 ? lists + Words.Manual.LISTS_DOT : "";
+        if (unique >= 0 && unique < items)
+            return l + Files.count(unique) + Words.StatsW.FILES + " (" + Files.count(items) + ")"
+                    + (uniqueSize > 0 ? " · " + Files.size(uniqueSize) : "");
+        return l + items + Words.Manual.ITEMS_SUFFIX + (size > 0 ? " · " + Files.size(size) : "");
     }
 
     /** מהאינדקס, עם זיכרון לכל ציור של המסך (חכמה שמופיעה בכמה רשימות — מחפשים פעם אחת). */
     static final class FromLibrary implements Index {
         private final Library lib;
         private final Map<String, long[]> cache = new HashMap<String, long[]>();
+        private final Map<String, Map<String, Long>> files = new HashMap<String, Map<String, Long>>();
 
         FromLibrary(Library lib) {
             this.lib = lib;
@@ -16493,9 +16538,27 @@ final class ListCount {
             if (it.gone || it.dup != null) return null;                       // כפולים — נספרים רק בפתיחה
             Library.Result r = lib.search(it.cond, false, true);
             long s = 0;
-            for (Library.Hit x : r.hits) if (x.rec != null) s += x.rec.size;
+            Map<String, Long> m = new HashMap<String, Long>();
+            for (Library.Hit x : r.hits) {
+                if (x.rec != null) s += x.rec.size;
+                m.put(x.path(), x.rec != null ? x.rec.size : 0L);
+            }
+            files.put(ref, m);
             cache.put(ref, v = new long[]{r.hits.size(), s});
             return v;
+        }
+
+        @Override
+        public Map<String, Long> smartFiles(String ref) {
+            return smart(ref) == null ? null : files.get(ref);
+        }
+
+        @Override
+        public Map<String, Long> liveFiles(String folder) {
+            if (lib == null || !lib.ready) return null;
+            Map<String, Long> m = files.get(folder);
+            if (m == null) files.put(folder, m = lib.treeFiles(folder));
+            return m;
         }
 
         @Override
@@ -19004,13 +19067,10 @@ final class PasteBar {
     }
 
     private void paste() {
-        long t0 = System.currentTimeMillis();
         VClip.Result r = place.paste();
         refresh();
         if (after != null) after.run();
-        long ms = System.currentTimeMillis() - t0;                            // 1.23.1: זמני — למדידה במכשיר (בגרסה הבאה — יוצא)
-        Ui.toast(a, Words.VClipW.PASTED + r.done + (r.skipped > 0 ? Words.VClipW.SKIPPED + r.skipped + " (" + r.why + ")" : "")
-                + Words.VClipW.took(ms));
+        Ui.toast(a, Words.VClipW.PASTED + r.done + (r.skipped > 0 ? Words.VClipW.SKIPPED + r.skipped + " (" + r.why + ")" : ""));
     }
 }
 ===== קובץ: src/com/tikiyot/vfm/Paths.java =====
@@ -35954,11 +36014,6 @@ public final class Words {
     public static final class VClipW {
         private VClipW() { }
 
-        /** 1.23.1: זמני — כמה זמן לקחה ההדבקה (בדיקה במכשיר; בגרסה הבאה — יוצא). */
-        public static String took(long ms) {
-            return " · " + (ms < 1000 ? ms + " אלפיות שנייה" : String.format(java.util.Locale.ROOT, "%.1f שניות", ms / 1000.0));
-        }
-
         public static final String TO_COPY = " — לקישור", TO_MOVE = " — להעברה", TO_DUPLICATE = " — להעתקה",
                 FROM_MODE = " · מהאופן ", NOT_HERE = "אי אפשר להדביק את זה כאן",
                 TOOL_NOT_IN_LIST = "את הכלי הזה אי אפשר להכניס לרשימה",
@@ -40934,18 +40989,6 @@ public final class Tests {
                 }
             });
             check("1.23.1: קינון — הכתיבה רק בסוף החיצוני", inside[0] == Structure.writes - 1 && Structure.indexOfId(Structure.ini(), "p-בדיקה-1") < 0);
-            // מחיקת קובץ הבדיקה של 1.23.0: רק אם לא שונה
-            File root = drive("בדיקה-ישנה"), dir = new File(root, CmdTemplates.TEST_DIR);
-            dir.mkdirs();
-            File old = new File(dir, CmdTemplates.TEST_FILE + "." + Batch.EXT);
-            CmdTemplates.testRoot = root;
-            Files.writeAtomic(old, "שונה בידי המשתמש\n");
-            check("1.23.1: קובץ בדיקה ששונה — נשאר", !CmdTemplates.removeOldTest() && old.isFile());
-            java.io.FileOutputStream fo = new java.io.FileOutputStream(old);
-            fo.write(OLD_TEST.getBytes("UTF-8"));
-            fo.close();
-            check("1.23.1: קובץ הבדיקה המקורי — נמחק, והתיקייה הריקה איתו", CmdTemplates.removeOldTest() && !old.exists() && !dir.exists());
-            CmdTemplates.testRoot = null;
         } catch (Throwable e) {
             check("1.23.1: " + e, false);
         } finally {
@@ -41980,10 +42023,26 @@ public final class Tests {
         ListCount cnt = ListCount.of(ct, ca, new ListCount.Index() {
             @Override public long[] smart(String ref) { return new long[]{5, 50}; }
             @Override public long[] live(String folder) { return new long[]{3, 30}; }
+            @Override public java.util.Map<String, Long> smartFiles(String ref) { return null; }
+            @Override public java.util.Map<String, Long> liveFiles(String folder) { return null; }
         });
         check("1.14.0: ספירה — הפניה, תיקייה וחכמה (" + cnt.lists + "/" + cnt.items + ")", cnt.lists == 4 && cnt.items == 9 && cnt.size == 90);
         ListCount bare = ListCount.of(ct, ca, null);
         check("1.14.0: בלי האינדקס — הרשימות נספרות, לא 0", bare.lists == 4 && bare.items == 1);
+        // 1.23.4: קבצים שונים — קובץ שמופיע בחכמה, בתיקייה וברשימה נספר פעם אחת; הסכום בסוגריים
+        final java.util.Map<String, Long> uSm = new java.util.HashMap<String, Long>();
+        uSm.put("/x/1.pdf", 10L); uSm.put("/x/d/2.pdf", 20L);
+        final java.util.Map<String, Long> uLm = new java.util.HashMap<String, Long>();
+        uLm.put("/x/d/2.pdf", 20L); uLm.put("/x/d/3.pdf", 30L);
+        ListCount u = ListCount.of(ct, ca, new ListCount.Index() {
+            @Override public long[] smart(String ref) { return new long[]{2, 30}; }
+            @Override public long[] live(String folder) { return new long[]{2, 50}; }
+            @Override public java.util.Map<String, Long> smartFiles(String ref) { return uSm; }
+            @Override public java.util.Map<String, Long> liveFiles(String folder) { return uLm; }
+        });
+        check("1.23.4: קבצים שונים (" + u.unique + "/" + u.items + ")", u.unique == 3 && u.uniqueSize == 60 && u.items == 5);
+        check("1.23.4: טקסט — שונים ובסוגריים הסכום (" + u.text() + ")", u.text().contains("3" + Words.StatsW.FILES + " (5)"));
+        check("1.23.4: חלק לא ידוע — בלי ספירת שונים", cnt.unique == -1 && !cnt.text().contains("("));
 
         // 1.14.1: רשימה חכמה והפניה בשורש "רשימות ידניות" — נשמרות (עד כאן — נשמטו בשמירה)
         File rf = new File(home, "שורש114.txt");
@@ -43999,40 +44058,6 @@ final class CmdTemplates {
         for (String h : holes) m.put(h, "");
         return m;
     }
-
-    /**
-     * 1.23.1 (המשתמש: "תזכור למחוק בדיקות קודמות"): קובץ הבדיקה של 1.23.0 נמחק מהמכשיר — רק אם לא שונה (אותו
-     * גודל ואותו CRC32 כמו שנכתב); ששונה — נשאר. התיקייה "בדיקות" — רק אם התרוקנה. בגרסה הבאה — למחוק את הפונקציה.
-     */
-    static boolean removeOldTest() {
-        File dir = new File(root(), TEST_DIR), f = new File(dir, TEST_FILE + "." + Batch.EXT), mark = new File(dir, ".1.23.0");
-        boolean gone = false;
-        try {
-            if (f.isFile() && f.length() == OLD_TEST_LEN) {
-                java.util.zip.CRC32 crc = new java.util.zip.CRC32();                   // בלי java.nio.file — לא קיים לפני אנדרואיד 8
-                java.io.InputStream in = new java.io.FileInputStream(f);
-                try {
-                    byte[] b = new byte[4096];
-                    for (int n; (n = in.read(b)) > 0; ) crc.update(b, 0, n);
-                } finally {
-                    in.close();
-                }
-                if (crc.getValue() == OLD_TEST_CRC) gone = f.delete();
-            }
-            if (!f.exists()) {
-                mark.delete();
-                String[] left = dir.list();
-                if (left != null && left.length == 0) dir.delete();
-                Library lib = Library.peek();
-                if (lib != null && gone) lib.fileRemoved(f.getAbsolutePath());
-            }
-        } catch (Throwable t) {
-            Log.e("מחיקת קובץ הבדיקה 1.23.0", t);
-        }
-        return gone;
-    }
-
-    private static final long OLD_TEST_LEN = 1573, OLD_TEST_CRC = 3112421943L;
 }
 ===== קובץ: assets/commands/templates.txt =====
 === גיבוי: מראה והיסטוריה (תיקייה)
