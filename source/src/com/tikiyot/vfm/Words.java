@@ -424,6 +424,11 @@ public final class Words {
             return "שורה " + line + ": " + out;
         }
 
+        /** 1.25.0: "שורה 12 (סבב 3): …". */
+        public static String line(String label, String out) {
+            return "שורה " + label + ": " + out;
+        }
+
         public static String skipped(String error) {
             return "דולגה — " + error;
         }
@@ -1965,7 +1970,7 @@ public final class Words {
                 ONE_OPEN = "⚠ רק פקודת פתיחה אחת נפתחת בסוף — האחרונה", NO_STEP = "השורה לא מבוצעת (הערה או כותרת)",
                 TAG_HEADER = "כותרת", TAG_UNKNOWN = "?", NONE = "—", ON = "פעיל", PICK = "בחירה…", FILL = "השלמת התבנית",
                 VARS = "משתנים", EMPTY_FILE = "הקובץ ריק — בחר פקודה מהרשימה, והיא תיכנס לכאן",
-                ALREADY_AS_IF = "יש כבר הדמיה בראש הקובץ", PICK_FIRST = "בחר שורה בתפריט קודם";
+                ALREADY_AS_IF = "יש כבר הדמיה בראש הקובץ", ALREADY_MEASURE = "יש כבר מדידה בקובץ", PICK_FIRST = "בחר שורה בתפריט קודם";
 
         public static String lineN(int n) {
             return "שורה " + n + " בקובץ";
@@ -2008,6 +2013,52 @@ public final class Words {
                 UNIFY = "לפני האיחוד (תיקיות מתעדכנות, הגדרות נפוצות) — ";   // 1.17.3
     }
 
+    /** 1.25.0: לולאה ומדידה בקובצי פקודות (claude/pkudot-reshimot.md). */
+    public static final class Loop {
+        private Loop() { }
+
+        public static final String TIMES_WORD = "פעמים",
+                NEED_NUMBER = "אחרי \"חזור\" — מספר הסבבים: חזור 5",
+                BAD_LIMIT = "גבול הזמן לא מובן — למשל /עד:30שניות או /עד:2דקות",
+                USAGE = "צורה: חזור <מספר> [/עד:<זמן>] … ובסוף: סוף",
+                NO_END = "חסרה שורת \"סוף\" ללולאה",
+                END_WITHOUT_START = "\"סוף\" בלי \"חזור\" לפניו",
+                JOURNAL_FAILED = "⚠ יומן המדידה לא נכתב",
+                WHAT_LOOP = "לולאה: השורות שבין \"חזור\" ל\"סוף\" רצות כמה פעמים. %סבב% — מספר הסבב (1, 2, 3…). "
+                        + "/עד:30שניות — עוצר כשסבב אחד לקח יותר. העריכה — בשורה עצמה.",
+                WHAT_END = "סוף הלולאה שנפתחה ב\"חזור\".",
+                WHAT_MEASURE = "כל הקובץ נמדד: זמן לכל שורה, סך הכול, והשורה האיטית. /יומן:\"קובץ\" — נשמר גם לקובץ, בכל ריצה.",
+                N_LOOP = "חזור — לולאה", N_END = "סוף לולאה", N_MEASURE = "מדידה";
+
+        public static String round(int r) {
+            return " (סבב " + r + ")";
+        }
+
+        public static String took(long ms) {
+            return " · ⏱ " + time(ms);
+        }
+
+        public static String time(long ms) {
+            return ms < 1000 ? ms + " אלפיות" : String.format(java.util.Locale.ROOT, "%.1f שניות", ms / 1000.0);
+        }
+
+        public static String total(long ms, String slowLine, long slowMs) {
+            return "⏱ סך הכול " + time(ms) + (slowLine != null ? " · האיטית: שורה " + slowLine + " (" + time(slowMs) + ")" : "");
+        }
+
+        public static String tooMany(int max) {
+            return "מספר הסבבים — בין 1 ל־" + max;
+        }
+
+        public static String tooLong(int max) {
+            return "יותר מדי שורות אחרי פריסת הלולאות (עד " + max + ")";
+        }
+
+        public static String stopped(int line, int round, long ms) {
+            return "⏹ הלולאה שבשורה " + line + " נעצרה אחרי סבב " + round + " — הוא לקח " + time(ms) + ", יותר מהגבול";
+        }
+    }
+
     /** 1.24.0: פקודות על רשימות (ListCmd) — claude/pkudot-reshimot.md. */
     public static final class ListCmdW {
         private ListCmdW() { }
@@ -2028,7 +2079,11 @@ public final class Words {
                 NO_FILTER = "סינון (/תאריך, /גודל) — עדיין לא חל על רשימות",
                 INDEX_NOT_READY = "האינדקס עוד לא מוכן (או שחלק מהרשימה לא ידוע) — אי אפשר לדעת אילו קבצים ברשימה",
                 FOLDER_TO_LIST = "תיקייה שלמה לרשימה — עדיין לא; לקבצים שבה: \"תיקייה\\*.*\"",
-                FROM_DISK = " — הקבצים עצמם, מהכונן";
+                FROM_DISK = " — הקבצים עצמם, מהכונן",
+                USAGE_COMP = "צורה: COMP ידנית \"א\" ידנית \"ב\" · COMP חכמה \"א\" חכמה \"ב\" [/תנאים] · COMP קבצי חכמה \"א\" ידנית \"ב\"",
+                COMP_FS = "השוואה בין רשימה לתיקייה — עדיין לא; בינתיים: COMP /רשימה:\"שם\" \"תיקייה\"",
+                CONDS_SMART = "/תנאים — רק בין שתי רשימות חכמות",
+                SAME_CONDS = "התנאים זהים";
 
         public static String noList(String name) {
             return "אין רשימה ידנית: \"" + name + "\"";
@@ -2080,6 +2135,22 @@ public final class Words {
 
         public static String copy(String what, String to) {
             return what + " ← לתוך " + to;
+        }
+
+        public static String compared(String a, int onlyA, String b, int onlyB, int both) {
+            return "השוואה לפי המסלולים — רק ב" + a + ": " + onlyA + " · רק ב" + b + ": " + onlyB + " · בשתיהן: " + both;
+        }
+
+        public static String conds(String a, String onlyA, String b, String onlyB) {
+            return "התנאים — רק ב" + a + ": " + onlyA + " · רק ב" + b + ": " + onlyB;
+        }
+
+        public static String dupSkipped(int n) {
+            return " (רשימות כפולים לא נספרו: " + n + ")";
+        }
+
+        public static String nowIn(long lists, long items) {
+            return " · עכשיו בה: " + lists + " רשימות, " + items + " פריטים";
         }
 
         public static String copied(int done, int skipped, String why, String to) {

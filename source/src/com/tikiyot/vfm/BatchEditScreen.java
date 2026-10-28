@@ -257,8 +257,15 @@ public class BatchEditScreen extends Activity {
         return Program.isHeader(line) || line.equals(Batch.AS_IF) || line.equals(Batch.AS_IF2);
     }
 
+    private static boolean isMeasure(String line) {
+        return line.equals(Batch.MEASURE) || line.startsWith(Batch.MEASURE + " ");
+    }
+
     /** ההגדרה של שורה: פקודת קבצים, פועל, או כותרת; null — לא מוכרת. */
     private static Commands.Def defOf(String line) {
+        if (Batch.isLoopStart(line)) return Commands.Defs.LOOP;               // 1.25.0
+        if (Batch.isLoopEnd(line)) return Commands.Defs.END;
+        if (isMeasure(line)) return Commands.Defs.MEASURE;
         if (isHeader(line)) return Commands.get(Batch.AS_IF2);
         if (Verbs.isVerb(line)) return Commands.get(line.split("\\s+")[0]);
         return CmdLine.parse(line).def;
@@ -342,21 +349,28 @@ public class BatchEditScreen extends Activity {
             e.setText(Words.Ed.EMPTY_FILE);
             menu.addView(e);
         }
+        int depth = 0;
         for (int i = 0; i < rows.size(); i++) {
             final int idx = i;
             String line = rows.get(i).text;
             Commands.Def d = defOf(line);
+            boolean start = d == Commands.Defs.LOOP, end = d == Commands.Defs.END;   // 1.25.0: לולאה — מוזחת
+            if (end && depth > 0) depth--;
+            String indent = "";
+            for (int k = 0; k < depth; k++) indent += "│ ";
+            if (start) depth++;
             if (!q.trim().isEmpty() && (d == null || !Commands.matches(d, q))) continue;
-            String name = d == null ? Words.Ed.TAG_UNKNOWN : d.family == Commands.Family.HEADER ? Words.Ed.TAG_HEADER : d.he;
+            String name = d == null ? Words.Ed.TAG_UNKNOWN : d.family == Commands.Family.HEADER && !start && !end && d != Commands.Defs.MEASURE
+                    ? Words.Ed.TAG_HEADER : d.he;
             boolean danger = d != null && d.family == Commands.Family.FILE && CmdLine.parse(line).destructive();
-            String body = (needsCompare(i) ? "⚠ " : "") + line;
+            String body = indent + (start ? "↻ " : end ? "└ " : "") + (needsCompare(i) ? "⚠ " : "") + line;
             menuRow(tag(name, danger), body, true, i == sel && draft == null && draftDef == null, new View.OnClickListener() {
                 @Override public void onClick(View v) { select(idx); }
             });
         }
         section(Words.Ed.MORE);
         for (final Commands.Def d : Commands.ALL) {
-            if (!Commands.matches(d, q)) continue;
+            if (d == Commands.Defs.END || !Commands.matches(d, q)) continue;
             boolean on = (draft != null && draft.def == d) || draftDef == d;
             String head = d.family == Commands.Family.FILE ? d.name + " · " : "";
             menuRow(tag(d.he, false), head + d.what, false, on, new View.OnClickListener() {
@@ -428,7 +442,8 @@ public class BatchEditScreen extends Activity {
         panel.addView(title);
         TextView what = Ui.info(this);
         what.setPadding(0, Ui.dp(this, 2), 0, Ui.dp(this, 4));
-        what.setText(d == null ? Words.Ed.NOT_UNDERSTOOD : d.what + (d.family == Commands.Family.HEADER ? "\n" + Words.Cmd.HEADER_HELP : ""));
+        what.setText(d == null ? Words.Ed.NOT_UNDERSTOOD : d.what + (d.family == Commands.Family.HEADER && d.name.equals(Batch.AS_IF2)
+                ? "\n" + Words.Cmd.HEADER_HELP : ""));
         panel.addView(what);
         if (!isNew && needsCompare(sel)) warn(Words.Ed.NEED_COMPARE);
         if (d != null && (d.family == Commands.Family.VERB || d.name.equals("START")) && opens() > 1) warn(Words.Ed.ONE_OPEN);
@@ -729,6 +744,23 @@ public class BatchEditScreen extends Activity {
 
     private void insertNew(Commands.Def d, EditText live) {
         String line = Bidi.strip(live.getText().toString()).trim();
+        if (d == Commands.Defs.LOOP) {                                         // 1.25.0: הלולאה נכנסת עם ה"סוף" שלה
+            insertLines(java.util.Arrays.asList(line.isEmpty() ? d.name : line, Batch.LOOP_END));
+            return;
+        }
+        if (d == Commands.Defs.MEASURE) {
+            for (Row r : rows)
+                if (isMeasure(r.text)) {
+                    Ui.toast(this, Words.Ed.ALREADY_MEASURE);
+                    return;
+                }
+            selfEdit = true;
+            text.getText().insert(0, Batch.MEASURE + "\n");
+            selfEdit = false;
+            computeRows();
+            select(0);
+            return;
+        }
         if (d.family == Commands.Family.HEADER) {
             if (plain().contains(Batch.AS_IF2) || plain().contains(Batch.AS_IF)) {
                 Ui.toast(this, Words.Ed.ALREADY_AS_IF);

@@ -103,6 +103,7 @@ public final class Tests {
         run("גרסה 1.23.1 — שמירה אחת: העתקת הרבה רשימות חכמות בכתיבה אחת", new Runnable() { public void run() { v1231(); } });
         run("גרסה 1.23.3 — חזרה לבית אחרי העתקת הדוגמאות: מדידה", new Runnable() { public void run() { v1233(); } });
         run("גרסה 1.24.0 — פקודות על רשימות: ידנית, חכמה, תוכן, קבצי", new Runnable() { public void run() { v1240(); } });
+        run("גרסה 1.25.0 — מדידה, לולאה, השוואת רשימות, בדיקת העומס", new Runnable() { public void run() { v1250(); } });
 
         System.out.println("בדיקות: " + passed + " עברו · " + failed + " נכשלו");
         for (String f : failures) System.out.println("  ✗ " + f);
@@ -3982,6 +3983,102 @@ public final class Tests {
         }
     }
 
+    /** 1.25.0: מדידה, לולאה (חזור … סוף), השוואת רשימות, ובדיקת העומס מהנפוצות. */
+    private static void v1250() {
+        File tf = new File(home, "מבנה-1250.txt"), sf = new File(home, "ראשי-1250.ini");
+        Tree.testFile = tf;
+        Structure.testFile = sf;
+        try {
+            String src0 = System.getProperty("vfm.src");
+            Files.writeAtomic(sf, Files.readUtf8(new File(src0, "assets/examples/main.ini")).replace("%פנימי%", "/x/y"));
+            Files.writeAtomic(tf, Files.readUtf8(new File(src0, "assets/examples/tree.txt")).replace("%פנימי%", "/x/y"));
+            File root = new File(home, "עומס1250");
+            wipe(root);
+            mk(new File(root, "מקור"), "א.pdf", 10);
+            Map<String, String> vars = new java.util.HashMap<String, String>();
+
+            // הפריסה
+            Batch.Plan p1 = Batch.plan("חזור 3\nMD ידנית \"ל\\%סבב%\"\nסוף", root, vars);
+            check("1.25.0: לולאה — 3 סבבים (" + p1.steps.size() + ")", p1.errors == 0 && p1.steps.size() == 3
+                    && p1.steps.get(2).describe.contains("3") && p1.steps.get(2).label().contains("3") && p1.steps.get(0).line == 2);
+            Batch.Plan p2 = Batch.plan("חזור 2\nחזור 3 פעמים\nMD ידנית \"מ\\%סבב%\"\nסוף\nסוף", root, vars);
+            check("1.25.0: לולאה בתוך לולאה — 6 (" + p2.steps.size() + ")", p2.errors == 0 && p2.steps.size() == 6);
+            check("1.25.0: בלי סוף — שגיאה", Batch.plan("חזור 2\nMD ידנית \"x\"", root, vars).errors == 1);
+            check("1.25.0: סוף בלי חזור — שגיאה", Batch.plan("סוף", root, vars).errors == 1);
+            check("1.25.0: 0 סבבים — שגיאה", Batch.plan("חזור 0\nסוף", root, vars).errors == 1);
+            check("1.25.0: גבול לא מובן — שגיאה", Batch.plan("חזור 2 /עד:מהר\nסוף", root, vars).errors == 1);
+            check("1.25.0: \"חזור\" לבד — הפועל (חזרה), לא לולאה", Batch.plan("חזור", root, vars).open != null);
+            check("1.25.0: גבול זמן", Batch.limitMs("30שניות") == 30000 && Batch.limitMs("2דקות") == 120000 && Batch.limitMs("500ms") == 500
+                    && Batch.limitMs("x") == -1);
+            check("1.25.0: /עד:30 שניות (עם רווח)", Batch.plan("חזור 2 /עד:30 שניות\nסוף", root, vars).errors == 0);
+
+            // עצירה לפי זמן
+            Batch.Plan cp = new Batch.Plan();
+            cp.loopLimit.add(1L);
+            cp.loopLine.add(7);
+            Batch.Clock ck = new Batch.Clock();
+            boolean first = ck.skip(cp, new int[]{0}, new int[]{1});
+            Thread.sleep(15);
+            boolean second = ck.skip(cp, new int[]{0}, new int[]{2}), third = ck.skip(cp, new int[]{0}, new int[]{3});
+            check("1.25.0: סבב שעבר את הגבול — הלולאה נעצרת, הודעה אחת", !first && second && third && ck.notes.size() == 1
+                    && ck.notes.get(0).contains("7"));
+
+            // מדידה
+            File jr = new File(root, "יומן/מדידה.txt");
+            Batch.Plan pm = Batch.plan("מדידה /יומן:\"" + jr.getAbsolutePath() + "\"\nMD ידנית \"נמדדת\"\nCOPY \"" + root
+                    + "/מקור/*.pdf\" ידנית \"נמדדת\"", root, vars);
+            List<String> rep = Batch.run(pm, null, null, null);
+            check("1.25.0: מדידה — זמן לכל שורה, וסיכום (" + rep + ")", pm.measure && rep.size() == 3 && rep.get(0).contains("⏱")
+                    && rep.get(2).contains("⏱") && rep.get(1).contains("עכשיו בה"));
+            check("1.25.0: יומן המדידה נכתב", jr.isFile() && Files.readUtf8(jr).contains("==="));
+            Batch.run(Batch.plan("מדידה /יומן:\"" + jr.getAbsolutePath() + "\"\nMD ידנית \"נמדדת\"", root, vars), null, null, null);
+            check("1.25.0: …ונוסף בכל ריצה", Files.readUtf8(jr).split("===").length == 3);
+
+            // בדיקת העומס — מהנפוצות, ממולאת
+            CmdTemplates.Tpl load = null;
+            for (CmdTemplates.Tpl t : CmdTemplates.parse(Files.readUtf8(new File(src0, "assets/commands/templates.txt"))))
+                if (t.name.startsWith("בדיקת עומס")) load = t;
+            check("1.25.0: בדיקת העומס — בנפוצות", load != null);
+            java.util.Map<String, String> hv = new java.util.HashMap<String, String>();
+            hv.put("רשימה", "עומס");
+            hv.put("סבבים", "3");
+            StringBuilder lt = new StringBuilder();
+            for (String l : CmdTemplates.fill(load.lines, hv)) if (!l.startsWith("RD")) lt.append(l).append("\n");
+            Index ix = new Index("1250", "1250", root.getAbsolutePath());
+            ix.scan(null);
+            Library lib = Library.forTests(new ArrayList<Index>(Collections.singletonList(ix)));
+            Batch.Plan pl = Batch.plan(lt.toString(), root, vars, lib);
+            String plErr = "";
+            for (Batch.Step x : pl.steps) if (x.error != null) plErr += x.line + ": " + x.error + " | " + x.text;
+            check("1.25.0: עומס — תכנון בלי שגיאות (" + plErr + ")", pl.errors == 0);
+            List<String> lr = Batch.run(pl, lib, null, null);
+            Tree t = Tree.load();
+            Tree.Node w = t.find(Arrays.asList("עומס"));
+            check("1.25.0: עומס — שלושה סבבים", w != null && w.child("1") != null && w.child("2") != null && w.child("3") != null);
+            int c1 = w.child("1").children.size() + w.child("1").smart.size(), c3 = w.child("3").children.size() + w.child("3").smart.size();
+            System.out.println("  1.25.0 עומס: " + lr.get(lr.size() - 1) + " · סבב 1: " + c1 + " · סבב 3: " + c3);
+            check("1.25.0: עומס — כל סבב גדל (" + c1 + " → " + c3 + ")", c3 > c1);
+            boolean compared = false;
+            for (String l : lr) compared |= l.contains("בשתיהן");
+            check("1.25.0: עומס — ההשוואה בדוח", compared);
+
+            // השוואה של חכמות, ותנאים
+            Batch.Plan pc = Batch.plan("COMP חכמה \"א. ארגון לפי הבחנות\\כל הספרים\" חכמה \"א. ארגון לפי הבחנות\\כל המסמכים\" /תנאים",
+                    root, vars, lib);
+            String d = pc.steps.get(0).describe;
+            check("1.25.0: COMP חכמה / חכמה /תנאים (" + pc.steps.get(0).error + ")", pc.errors == 0 && d.contains("בשתיהן") && d.contains("התנאים"));
+            check("1.25.0: /תנאים — רק בין חכמות", Batch.plan("COMP ידנית \"עומס\" ידנית \"עומס\\1\" /תנאים", root, vars).errors == 1);
+            check("1.25.0: תנאים זהים", ListCmd.condsDiff("סוג:ספרים", "סוג:ספרים", "א", "ב").equals(Words.ListCmdW.SAME_CONDS));
+        } catch (Throwable e) {
+            check("1.25.0: " + e, false);
+            e.printStackTrace();
+        } finally {
+            Tree.testFile = null;
+            Structure.testFile = null;
+            VClip.clear();
+        }
+    }
+
     /** 1.24.0: פקודות על רשימות — דרך מנוע הלוח; ההדמיה על עותק בזיכרון; הלוח של המשתמש לא נוגע. */
     private static void v1240() {
         File tf = new File(home, "מבנה-1240.txt"), sf = new File(home, "ראשי-1240.ini");
@@ -4206,7 +4303,8 @@ public final class Tests {
             for (String h : v.keySet()) v.put(h, "%פנימי%\\x");
             List<String> filled = CmdTemplates.fill(t.lines, v);
             boolean ok = CmdTemplates.holes(filled).isEmpty();
-            for (String fl : filled) ok &= CmdLine.parse(fl).def != null;
+            for (String fl : filled) ok &= CmdLine.parse(fl).def != null || Batch.isLoopStart(fl) || Batch.isLoopEnd(fl)
+                    || fl.startsWith(Batch.MEASURE);                                     // 1.25.0: שורות מבנה
             check("1.23.0: תבנית — ממולאת ומוכרת: " + t.name, ok);
         }
         File tr = drive("נפוצות");

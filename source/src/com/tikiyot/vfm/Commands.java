@@ -236,7 +236,17 @@ final class Commands {
             verb(Verbs.BACK, Words.Def.W_BACK),
             verb(Verbs.RUN, Words.Def.W_RUN),
             verb(Verbs.ADD, Words.Def.W_ADD),
-            new Def(Batch.AS_IF2, Batch.AS_IF2, new String[]{Batch.AS_IF}, Family.HEADER, Words.Def.W_AS_IF, new Param[0], null)));
+            new Def(Batch.AS_IF2, Batch.AS_IF2, new String[]{Batch.AS_IF}, Family.HEADER, Words.Def.W_AS_IF, new Param[0], null),
+            Defs.MEASURE, Defs.LOOP, Defs.END));
+
+    /** 1.25.0: מדידה ולולאה — שורות מבנה (לא פקודה עם פרמטרים): בעורך — הסבר, והעריכה בשורה עצמה. */
+    static final class Defs {
+        static final Def MEASURE = new Def(Batch.MEASURE, Words.Loop.N_MEASURE, null, Family.HEADER, Words.Loop.WHAT_MEASURE, new Param[0], null);
+        static final Def LOOP = new Def(Batch.LOOP + " 3", Words.Loop.N_LOOP, null, Family.HEADER, Words.Loop.WHAT_LOOP, new Param[0], null);
+        static final Def END = new Def(Batch.LOOP_END, Words.Loop.N_END, null, Family.HEADER, Words.Loop.WHAT_END, new Param[0], null);
+
+        private Defs() { }
+    }
 
     // ---------- שאילתות ----------
 

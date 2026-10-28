@@ -56,6 +56,15 @@ final class Batch {
         boolean noop;
         /** 1.24.0: שורה על רשימות (ListCmd) — מה שיתבצע בהרצה. */
         ListCmd.Op op;
+        /** 1.25.0: בתוך לולאה — הלולאות שסביב השורה (מזהים) והסבב בכל אחת; null — מחוץ ללולאה. */
+        int[] loops, rounds;
+        /** 1.25.0: מדידה — כמה זמן לקחה (אלפיות שנייה). */
+        long ms = -1;
+
+        /** "12" · בלולאה — "12 (סבב 3)". */
+        String label() {
+            return rounds == null ? String.valueOf(line) : line + Words.Loop.round(rounds[rounds.length - 1]);
+        }
         int total;              // לפני הסינון
         String describe;
     }
@@ -77,6 +86,14 @@ final class Batch {
         String open;
         /** 216: משהו בהרצה לא הלך חלק (שורה שדולגה, כשל, עצירה) — אז הדוח מוצג; אחרת — הודעה קצרה בלבד. */
         boolean trouble;
+        /** 1.25.0: שורת "מדידה" — זמן לכל שורה, סיכום, ויומן (אם נכתב /יומן:). */
+        boolean measure;
+        String measureJournal;
+        /** 1.25.0: הלולאות — לכל מזהה: הגבול לסבב (אלפיות שנייה; 0 — בלי) והשורה של "חזור". */
+        final List<Long> loopLimit = new ArrayList<Long>();
+        final List<Integer> loopLine = new ArrayList<Integer>();
+        /** 1.25.0: לולאה שנעצרה בתכנון (הסבב עבר את הגבול) — מוצג בתצוגה המקדימה. */
+        final List<String> notes = new ArrayList<String>();
 
         int changes() {
             int n = 0;
@@ -124,6 +141,10 @@ final class Batch {
     static final String AS_IF = "בכאילו";   // תחביר
     /** 1.13.0: "הדמיה" — שם נרדף לבכאילו, רשמי יותר (המשתמש: "זו מילה נרדפת לבכאילו, וגם יותר רשמית, פחות סלנג"). */
     static final String AS_IF2 = "הדמיה";   // תחביר
+    /** 1.25.0: "מדידה" — שורת כותרת: זמן לכל שורה (claude/pkudot-reshimot.md). לולאה: "חזור N [/עד:<זמן>]" … "סוף". */
+    static final String MEASURE = "מדידה", LOOP = "חזור", LOOP_END = "סוף", V_ROUND = "סבב";   // תחביר
+    /** הגבול לסבבים בלולאה, ולשורות אחרי הפריסה. */
+    static final int MAX_ROUNDS = 1000, MAX_LINES = 50000;
     /** 1.13.0: שלב של פקודת פתיחה בעברית (Verbs). */
     static final String OPEN = "OPEN";
 
@@ -393,6 +414,169 @@ final class Batch {
         return plan(text, here, vars, null);
     }
 
+    // ---------- 1.25.0: לולאה ----------
+
+    /** שורה אחרי פריסת הלולאות: הטקסט (עם %סבב%), המספר בקובץ, והלולאות שסביבה. */
+    static final class Ln {
+        String text, error;
+        int num;
+        int[] loops, rounds;
+    }
+
+    /** "חזור 6" · "חזור <סבבים>" — לולאה (בלי מספר — הפועל "חזור", חזרה למסך הקודם). */
+    static boolean isLoopStart(String line) {
+        List<String> tk = tokens(line);
+        if (tk.size() < 2 || !tk.get(0).equals(LOOP)) return false;
+        char c = tk.get(1).isEmpty() ? ' ' : tk.get(1).charAt(0);
+        return Character.isDigit(c) || c == '<' || c == '%';
+    }
+
+    static boolean isLoopEnd(String line) {
+        return line.equals(LOOP_END);
+    }
+
+    private static String clean(String raw) {
+        String line = raw.trim();
+        if (line.startsWith("@")) line = line.substring(1).trim();
+        return line;
+    }
+
+    /** הגבול לסבב: "30שניות", "30 שניות", "2דקות", "500ms"; -1 — לא מובן. */
+    static long limitMs(String v) {
+        String t = v.replace(" ", "").toLowerCase(Locale.ROOT);
+        int i = 0;
+        while (i < t.length() && (Character.isDigit(t.charAt(i)) || t.charAt(i) == '.')) i++;
+        if (i == 0) return -1;
+        double n;
+        try { n = Double.parseDouble(t.substring(0, i)); } catch (NumberFormatException e) { return -1; }
+        String u = t.substring(i);
+        if (u.isEmpty() || u.startsWith("שנ") || u.equals("ש") || u.equals("s") || u.equals("sec")) return (long) (n * 1000);   // תחביר
+        if (u.startsWith("דק") || u.equals("m") || u.equals("min")) return (long) (n * 60000);                                  // תחביר
+        if (u.equals("ms") || u.startsWith("אלפ")) return (long) n;                                                               // תחביר
+        return -1;
+    }
+
+    /** פורס את הלולאות: כל סבב — השורות שבתוכה, עם %סבב% = מספר הסבב (בלולאה פנימית — שלה). */
+    static List<Ln> expand(String[] lines, Plan plan) {
+        List<Ln> out = new ArrayList<Ln>();
+        expand(lines, 0, lines.length, new int[0], new int[0], null, plan, out);
+        return out;
+    }
+
+    private static void expand(String[] lines, int from, int to, int[] loops, int[] rounds, String round, Plan plan, List<Ln> out) {
+        for (int i = from; i < to; i++) {
+            if (out.size() > MAX_LINES) return;
+            String line = clean(lines[i]);
+            if (isLoopStart(line)) {
+                int depth = 0, end = -1;
+                for (int j = i + 1; j < to && end < 0; j++) {
+                    String x = clean(lines[j]);
+                    if (isLoopStart(x)) depth++;
+                    else if (isLoopEnd(x)) {
+                        if (depth == 0) end = j;
+                        else depth--;
+                    }
+                }
+                List<String> tk = tokens(round == null ? line : line.replace(var(V_ROUND), round));
+                int n = -1;
+                long limit = 0;
+                String err = null;
+                try { n = Integer.parseInt(tk.get(1)); } catch (NumberFormatException e) { err = Words.Loop.NEED_NUMBER; }
+                for (int k = 2; k < tk.size() && err == null; k++) {
+                    String x = tk.get(k);
+                    if (x.equals(Words.Loop.TIMES_WORD)) continue;
+                    if (x.startsWith(SW_LIMIT)) {
+                        String v = x.substring(SW_LIMIT.length());
+                        if (k + 1 < tk.size() && !tk.get(k + 1).isEmpty() && !Character.isDigit(tk.get(k + 1).charAt(0)) && !tk.get(k + 1).startsWith("/")
+                                && limitMs(v + tk.get(k + 1)) > 0) v += tk.get(++k);                 // "/עד:30 שניות"
+                        limit = limitMs(v);
+                        if (limit <= 0) err = Words.Loop.BAD_LIMIT;
+                    } else err = Words.Loop.USAGE;
+                }
+                if (err == null && (n < 1 || n > MAX_ROUNDS)) err = Words.Loop.tooMany(MAX_ROUNDS);
+                if (err == null && end < 0) err = Words.Loop.NO_END;
+                if (err != null) {
+                    Ln e = new Ln();
+                    e.num = i + 1;
+                    e.text = line;
+                    e.error = err;
+                    out.add(e);
+                    if (end < 0) continue;
+                    i = end;
+                    continue;
+                }
+                int id = plan.loopLimit.size();
+                plan.loopLimit.add(limit);
+                plan.loopLine.add(i + 1);
+                int[] l2 = java.util.Arrays.copyOf(loops, loops.length + 1), r2 = java.util.Arrays.copyOf(rounds, rounds.length + 1);
+                l2[loops.length] = id;
+                for (int r = 1; r <= n && out.size() <= MAX_LINES; r++) {
+                    r2 = r2.clone();
+                    r2[rounds.length] = r;
+                    expand(lines, i + 1, end, l2, r2, String.valueOf(r), plan, out);
+                }
+                i = end;
+                continue;
+            }
+            Ln x = new Ln();
+            x.num = i + 1;
+            x.text = round == null ? lines[i] : lines[i].replace(var(V_ROUND), round);
+            if (isLoopEnd(line)) x.error = Words.Loop.END_WITHOUT_START;
+            if (loops.length > 0) {
+                x.loops = loops;
+                x.rounds = rounds;
+            }
+            out.add(x);
+        }
+        if (out.size() > MAX_LINES && (out.isEmpty() || out.get(out.size() - 1).error == null)) {
+            Ln e = new Ln();
+            e.num = from + 1;
+            e.text = "";
+            e.error = Words.Loop.tooLong(MAX_LINES);
+            out.add(e);
+        }
+    }
+
+    /**
+     * עצירה לפי זמן: מעבר לסבב חדש בלולאה עם /עד: — אם הסבב הקודם עבר את הגבול, הלולאה נעצרת. מחזיר את מזהה
+     * הלולאה שנעצרה כעת (כדי לכתוב פעם אחת), או -1.
+     */
+    static final class Clock {
+        final Map<Integer, Integer> round = new java.util.HashMap<Integer, Integer>();
+        final Map<Integer, Long> start = new java.util.HashMap<Integer, Long>();
+        final java.util.Set<Integer> stopped = new java.util.HashSet<Integer>();
+        final List<String> notes = new ArrayList<String>();
+
+        /** true — השורה מדולגת (לולאה שסביבה נעצרה). */
+        boolean skip(Plan plan, int[] loops, int[] rounds) {
+            if (loops == null) return false;
+            long now = System.nanoTime();
+            for (int k = 0; k < loops.length; k++) {
+                int id = loops[k];
+                if (stopped.contains(id)) return true;
+                Integer cur = round.get(id);
+                if (cur == null || cur != rounds[k]) {
+                    if (cur != null) {
+                        long took = (now - start.get(id)) / 1000000;
+                        long lim = plan.loopLimit.get(id);
+                        if (lim > 0 && took > lim) {
+                            stopped.add(id);
+                            notes.add(Words.Loop.stopped(plan.loopLine.get(id), cur, took));
+                            return true;
+                        }
+                    }
+                    round.put(id, rounds[k]);
+                    start.put(id, now);
+                    for (int m = k + 1; m < loops.length; m++) {          // לולאות פנימיות — מתחילות מחדש
+                        round.remove(loops[m]);
+                        stopped.remove(loops[m]);
+                    }
+                }
+            }
+            return false;
+        }
+    }
+
     /** 1.20.0: עם האינדקס — ההשוואה לוקחת ממנו חתימות שכבר חושבו. */
     static Plan plan(String text, File here, Map<String, String> vars, Library lib) {
         Plan plan = new Plan();
@@ -400,12 +584,48 @@ final class Batch {
         sim.lib = lib;
         plan.sim = sim;
         String[] lines = Bidi.strip(text).replace("\r", "").split("\n");          // 204
-        for (int n = 0; n < lines.length; n++) {
-            String line = lines[n].trim();
-            if (line.startsWith("@")) line = line.substring(1).trim();
+        List<Ln> all = expand(lines, plan);                                    // 1.25.0: לולאות
+        Clock clock = new Clock();
+        int mark = 0;
+        Ln prev = null;
+        long t0 = System.nanoTime();
+        for (int li = 0; li <= all.size(); li++) {
+            for (int k = mark; k < plan.steps.size(); k++) {                   // 1.25.0: השורות שנוספו — מהשורה הקודמת
+                Step x = plan.steps.get(k);
+                x.loops = prev.loops;
+                x.rounds = prev.rounds;
+                if (plan.measure) x.ms = (System.nanoTime() - t0) / 1000000;
+            }
+            mark = plan.steps.size();
+            t0 = System.nanoTime();
+            if (li == all.size()) break;
+            Ln ln = all.get(li);
+            prev = ln;
+            if (clock.skip(plan, ln.loops, ln.rounds)) continue;               // לולאה שעברה את הגבול — גם בתכנון
+            int n = ln.num - 1;
+            String line = clean(ln.text);
+            if (ln.error != null) {
+                Step s = new Step();
+                s.line = ln.num;
+                s.text = line;
+                s.cmd = LOOP;
+                s.error = ln.error;
+                plan.errors++;
+                plan.steps.add(s);
+                continue;
+            }
             if (line.isEmpty() || line.startsWith("::")) continue;
             if (line.equals(AS_IF) || line.equals(AS_IF2)) {                  // 1.10.0: שורת כותרת — כל הקובץ בהדמיה
                 plan.asIf = true;
+                continue;
+            }
+            if (line.equals(MEASURE) || line.startsWith(MEASURE + " ")) {     // 1.25.0: שורת כותרת — מדידה
+                plan.measure = true;
+                for (String x : tokens(line))
+                    if (x.startsWith(SW_JOURNAL)) {
+                        String[] err = {null};
+                        plan.measureJournal = path(x.substring(SW_JOURNAL.length()).trim(), here, vars, err);
+                    }
                 continue;
             }
             if (Program.isHeader(line)) continue;                             // 1.13.0: צלמית / שם / למה — כותרת התוכנה
@@ -1129,25 +1349,47 @@ final class Batch {
     /** grey: ההגדרה "קובץ שנמחק — השאר באפור" (58), כמו בשאר המסכים (120). */
     static List<String> run(Plan plan, Library lib, Physical.Asker asker, Physical.Progress progress, boolean grey) {
         List<String> report = new ArrayList<String>();
-        for (Step s : plan.steps) {
+        Clock clock = new Clock();                                               // 1.25.0: לולאה — עצירה לפי זמן
+        long all0 = System.nanoTime();
+        Step prev = null;
+        int mark = 0;
+        long t0 = System.nanoTime();
+        for (int si = 0; si <= plan.steps.size(); si++) {
+            if (prev != null && plan.measure) {                                  // 1.25.0: מדידה — זמן השורה הקודמת
+                prev.ms = (System.nanoTime() - t0) / 1000000;
+                if (report.size() > mark) report.set(report.size() - 1, report.get(report.size() - 1) + Words.Loop.took(prev.ms));
+            }
+            mark = report.size();
+            t0 = System.nanoTime();
+            prev = null;
+            if (si == plan.steps.size()) break;
+            Step s = plan.steps.get(si);
             if (progress != null && progress.stopped()) {
                 report.add(Words.Cmd.stoppedBefore(s.line));
                 plan.trouble = true;
                 break;
             }
+            if (clock.skip(plan, s.loops, s.rounds)) {
+                if (!clock.notes.isEmpty()) {
+                    report.addAll(clock.notes);
+                    clock.notes.clear();
+                }
+                continue;
+            }
+            prev = s;
             if (s.error != null) {
-                report.add(Words.Cmd.line(s.line, Words.Cmd.skipped(s.error)));
+                report.add(Words.Cmd.line(s.label(), Words.Cmd.skipped(s.error)));
                 plan.trouble = true;
                 continue;
             }
             String out;
             if (s.cmd.equals("ECHO") || s.cmd.equals("START") || s.cmd.equals(OPEN) || s.noop) continue;
             if (s.op != null) {                                                // 1.24.0: רשימות
-                report.add(Words.Cmd.line(s.line, s.op.run(lib)));
+                report.add(Words.Cmd.line(s.label(), s.op.run(lib)));
                 continue;
             }
             if (s.cmd.equals("COMP")) {                                       // 1.20.0: חושב בתכנון — רק בדוח
-                report.add(Words.Cmd.line(s.line, s.describe));
+                report.add(Words.Cmd.line(s.label(), s.describe));
                 continue;
             }
             if (s.cmd.equals("MD")) {
@@ -1195,9 +1437,34 @@ final class Batch {
                 out = Words.Cmd.NOT_DONE;
                 plan.trouble = true;
             }
-            report.add(Words.Cmd.line(s.line, out));
+            report.add(Words.Cmd.line(s.label(), out));
         }
+        if (plan.measure) measured(plan, report, (System.nanoTime() - all0) / 1000000);
         return report;
+    }
+
+    /** 1.25.0: סיכום המדידה, ויומן (שורה לכל שורה בדוח, נוסף בכל ריצה). */
+    private static void measured(Plan plan, List<String> report, long total) {
+        Step slow = null;
+        for (Step x : plan.steps) if (x.ms >= 0 && (slow == null || x.ms > slow.ms)) slow = x;
+        report.add(Words.Loop.total(total, slow == null ? null : slow.label(), slow == null ? 0 : slow.ms));
+        if (plan.measureJournal == null) return;
+        try {
+            File j = new File(plan.measureJournal);
+            if (j.getParentFile() != null) j.getParentFile().mkdirs();
+            java.io.Writer w = new java.io.OutputStreamWriter(new java.io.FileOutputStream(j, true), "UTF-8");
+            try {
+                w.write("=== " + new java.text.SimpleDateFormat(NOW_FORMAT, Locale.ROOT).format(new java.util.Date()) + " · "
+                        + Log.version + "\n");
+                for (String r : report) w.write(r + "\n");
+                w.write("\n");
+            } finally {
+                w.close();
+            }
+        } catch (Throwable t) {
+            report.add(Words.Loop.JOURNAL_FAILED);
+            Log.e("מדידה — יומן", t);
+        }
     }
 
     /**

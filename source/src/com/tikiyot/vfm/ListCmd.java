@@ -17,6 +17,8 @@ final class ListCmd {
 
     static final String MANUAL = "ידנית", SMART = "חכמה", CONTENT = "תוכן", FILES_OF = "קבצי", FOLDER = "תיקייה";   // תחביר
     static final String HOME = "*";
+    /** 1.25.0: COMP של שתי רשימות חכמות — גם התנאים (המשתמש: "אולי פרמטר שיוסיף את השוואת התנאים"). */
+    static final String SW_CONDS = "/תנאים";   // תחביר
 
     static final int FS = 0, LIST = 1, SMART_LIST = 2;
 
@@ -106,7 +108,7 @@ final class ListCmd {
         Side cur = null;
         for (int i = 1; i < tk.size(); i++) {
             Tok t = tk.get(i);
-            if (!t.quoted && Batch.isSwitch(t.text)) {
+            if (!t.quoted && (Batch.isSwitch(t.text) || t.text.equals(SW_CONDS))) {
                 switches.add(t.text);
                 continue;
             }
@@ -209,7 +211,6 @@ final class ListCmd {
     /** הקבצים שהצד מצביע עליהם (ידנית — בכל העומק; חכמה — מה שהיא מוצאת עכשיו). */
     static List<String> files(Tree t, Side s, Library lib, String[] err) {
         List<String> out = new ArrayList<String>();
-        ListCount.Index ix = new ListCount.FromLibrary(lib);
         Map<String, Long> m;
         if (s.kind == SMART_LIST) {
             SmartRef r = smart(t, s);
@@ -238,14 +239,49 @@ final class ListCmd {
             for (Tree.Entry e : n.entries) if (!e.bad && Batch.wild(s.mask, new File(e.path).getName())) out.add(e.path);
             return out;
         }
-        m = ListCount.filesOf(t, n, ix);
+        Lenient len = new Lenient(lib);
+        m = ListCount.filesOf(t, n, len);
         if (m == null) {
             err[0] = Words.ListCmdW.INDEX_NOT_READY;
             return null;
         }
+        if (len.dups > 0 && err.length > 1) err[1] = Words.ListCmdW.dupSkipped(len.dups);
         out.addAll(m.keySet());
         java.util.Collections.sort(out);
         return out;
+    }
+
+    /**
+     * 1.25.0: הקבצים של רשימה לפקודות — חכמה שנמחקה: אין קבצים (לא "לא ידוע"); רשימת כפולים: לא נספרת (הקבצים שלה הם
+     * כפילויות של קבצים שבחכמות אחרות; לדעת אותם — רק בפתיחה), ונאמר כמה כאלה דולגו. האינדקס לא מוכן — לא ידוע.
+     */
+    static final class Lenient implements ListCount.Index {
+        private final ListCount.FromLibrary in;
+        private final Library lib;
+        int dups;
+
+        Lenient(Library lib) {
+            this.lib = lib;
+            in = new ListCount.FromLibrary(lib);
+        }
+
+        @Override public long[] smart(String ref) { return in.smart(ref); }
+
+        @Override public long[] live(String folder) { return in.live(folder); }
+
+        @Override
+        public Map<String, Long> smartFiles(String ref) {
+            if (lib == null || !lib.ready) return null;
+            Nested.Item it = Nested.resolve(ref);
+            if (it.gone) return new java.util.HashMap<String, Long>();
+            if (it.dup != null) {
+                dups++;
+                return new java.util.HashMap<String, Long>();
+            }
+            return in.smartFiles(ref);
+        }
+
+        @Override public Map<String, Long> liveFiles(String folder) { return in.liveFiles(folder); }
     }
 
     /** מקור להעתקה לרשימה, מתוך העץ t (בתכנון — העותק בזיכרון; בהרצה — העץ האמיתי). */
@@ -364,11 +400,11 @@ final class ListCmd {
             final Side a = sd.get(0);
             if (a.filesOf) {                                                 // הקבצים עצמם — לסל (הביצוע הרגיל)
                 if (cmd.equals("RD")) { s.error = Words.ListCmdW.RD_FILES; return; }
-                String[] err = {null};
+                String[] err = {null, null};
                 List<String> fs = files(t, a, sim.lib, err);
                 if (fs == null) { s.error = err[0]; return; }
                 for (String f : fs) if (sim.isFile(new File(f))) s.files.add(new File(f).getAbsolutePath());
-                s.describe = Words.Cmd.toTrash(Words.files(s.files.size())) + Words.ListCmdW.FROM_DISK;
+                s.describe = Words.Cmd.toTrash(Words.files(s.files.size())) + Words.ListCmdW.FROM_DISK + (err[1] != null ? err[1] : "");
                 for (String f : s.files) {
                     sim.gone.add(f);
                     sim.added.remove(f);
@@ -398,12 +434,12 @@ final class ListCmd {
             if (b.kind == SMART_LIST) { s.error = Words.ListCmdW.INTO_SMART; return; }
             if (b.kind == FS) {                                             // מרשימה לתיקייה — הקבצים עצמם (הביצוע הרגיל)
                 if (fsDest == null || !sim.isDir(fsDest)) { s.error = Words.Cmd.NO_DEST; return; }
-                String[] err = {null};
+                String[] err = {null, null};
                 List<String> fs = files(t, a, sim.lib, err);
                 if (fs == null) { s.error = err[0]; return; }
                 s.dest = fsDest;
                 for (String f : fs) if (sim.isFile(new File(f))) s.files.add(new File(f).getAbsolutePath());
-                s.describe = Words.Cmd.transfer(true, Words.files(s.files.size()), Bidi.path(fsDest.getAbsolutePath()));
+                s.describe = Words.Cmd.transfer(true, Words.files(s.files.size()), Bidi.path(fsDest.getAbsolutePath())) + (err[1] != null ? err[1] : "");
                 for (String f : s.files) sim.move(f, new File(fsDest, new File(f).getName()), true);
                 return;
             }
@@ -422,9 +458,36 @@ final class ListCmd {
                     Src now = source(Tree.load(), a, fsFiles, lib);
                     if (now.error != null) return now.error;
                     VClip.Result r = VClip.apply(now.from, now.items, full, b.home ? null : b.path);
-                    return Words.ListCmdW.copied(r.done, r.skipped, r.why, b.label());
+                    String size = "";
+                    if (!b.home) {                                           // 1.25.0: כמה יש ביעד עכשיו (לגידול בסבבים)
+                        Tree t2 = Tree.load();
+                        ListCount c = ListCount.of(t2, t2.find(b.path), null);
+                        size = Words.ListCmdW.nowIn(c.lists, c.items);
+                    }
+                    return Words.ListCmdW.copied(r.done, r.skipped, r.why, b.label()) + size;
                 }
             };
+            return;
+        }
+        if (cmd.equals("COMP")) {                                            // 1.25.0: השוואת רשימות — לפי המסלולים
+            if (sd.size() != 2) { s.error = Words.ListCmdW.USAGE_COMP; return; }
+            Side a = sd.get(0), b = sd.get(1);
+            if (!a.list() || !b.list()) { s.error = Words.ListCmdW.COMP_FS; return; }
+            if (a.content || b.content) { s.error = Words.ListCmdW.USAGE_COMP; return; }
+            boolean conds = sw.contains(SW_CONDS);
+            if (conds && (a.kind != SMART_LIST || b.kind != SMART_LIST || a.filesOf || b.filesOf)) { s.error = Words.ListCmdW.CONDS_SMART; return; }
+            String[] err = {null, null};
+            List<String> fa = files(t, a, sim.lib, err), fb = fa == null ? null : files(t, b, sim.lib, err);
+            if (fa == null || fb == null) { s.error = err[0]; return; }
+            String note = err[1] != null ? err[1] : "";
+            java.util.Set<String> sa = new java.util.LinkedHashSet<String>(fa), sb = new java.util.LinkedHashSet<String>(fb);
+            List<String> onlyA = new ArrayList<String>(), onlyB = new ArrayList<String>();
+            int both = 0;
+            for (String x : sa) if (sb.contains(x)) both++; else onlyA.add(x);
+            for (String x : sb) if (!sa.contains(x)) onlyB.add(x);
+            String text = Words.ListCmdW.compared(a.label(), onlyA.size(), b.label(), onlyB.size(), both) + note + examples(onlyA) + examples(onlyB);
+            if (conds) text += "\n" + condsDiff(smartCond(t, a), smartCond(t, b), a.label(), b.label());
+            s.describe = text;
             return;
         }
         if (cmd.equals("MOVE")) {
@@ -433,6 +496,36 @@ final class ListCmd {
             return;
         }
         s.error = Words.ListCmdW.notYet(cmd);
+    }
+
+    private static String examples(List<String> paths) {
+        if (paths.isEmpty()) return "";
+        StringBuilder sb = new StringBuilder("\n   ");
+        for (int i = 0; i < Math.min(3, paths.size()); i++) sb.append(i > 0 ? " · " : "").append(new File(paths.get(i)).getName());
+        if (paths.size() > 3) sb.append(" · ").append(Words.andMore(paths.size() - 3));
+        return sb.toString();
+    }
+
+    private static String smartCond(Tree t, Side s) {
+        SmartRef r = smart(t, s);
+        if (r == null) return "";
+        return r.tool != null ? SmartLists.resolve(r.tool.target())[0] : Nested.resolve(r.ref).cond;
+    }
+
+    /** התנאים — מילה מול מילה: מה רק באחת, מה רק בשנייה. */
+    static String condsDiff(String ca, String cb, String la, String lb) {
+        List<String> a = Batch.tokens(ca == null ? "" : ca), b = Batch.tokens(cb == null ? "" : cb);
+        List<String> onlyA = new ArrayList<String>(), onlyB = new ArrayList<String>();
+        for (String x : a) if (!b.contains(x)) onlyA.add(x);
+        for (String x : b) if (!a.contains(x)) onlyB.add(x);
+        if (onlyA.isEmpty() && onlyB.isEmpty()) return Words.ListCmdW.SAME_CONDS;
+        return Words.ListCmdW.conds(la, join(onlyA), lb, join(onlyB));
+    }
+
+    private static String join(List<String> xs) {
+        StringBuilder sb = new StringBuilder();
+        for (String x : xs) sb.append(sb.length() > 0 ? " " : "").append(x);
+        return sb.length() == 0 ? "—" : sb.toString();
     }
 
     /** מה יוצא בהסרה: רשימה, חכמה (או כלי בבית), תוכן, או קבצים לפי תבנית. */

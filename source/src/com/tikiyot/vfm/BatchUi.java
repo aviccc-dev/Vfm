@@ -78,7 +78,7 @@ final class BatchUi {
         }
         StringBuilder sb = new StringBuilder();
         for (Batch.Step s : plan.steps) {
-            sb.append(s.line).append(". ");
+            sb.append(s.label()).append(". ");
             sb.append(s.error != null ? "⚠ " + s.error + "\n     " + s.text : s.describe);
             if (s.error == null && (!s.files.isEmpty() || (s.share && !s.dirs.isEmpty()))
                     && (s.cmd.equals("DEL") || s.cmd.equals("MOVE") || s.cmd.equals("COPY"))) {
@@ -89,6 +89,7 @@ final class BatchUi {
             }
             sb.append("\n");
         }
+        for (String n : plan.notes) sb.append(n).append("\n");                // 1.25.0: לולאה שנעצרה כבר בתכנון
         if (plan.steps.isEmpty()) sb.append(Words.Cmd.NOTHING_TO_DO);
         boolean deletes = false;
         for (Batch.Step s : plan.steps) if (s.error == null && (s.cmd.equals("DEL") || s.cmd.equals("RD"))) deletes = true;
@@ -119,7 +120,7 @@ final class BatchUi {
                                 if (!plan.echoes.isEmpty()) r.append("\n");
                                 for (String line : report) r.append(line).append("\n");
                                 // 216: הלך חלק — הודעה קצרה, ו־START נפתח מיד; אחרת (או ECHO) — הדוח
-                                if (plan.trouble || !plan.echoes.isEmpty())
+                                if (plan.trouble || !plan.echoes.isEmpty() || plan.measure)   // 1.25.0: מדידה — תמיד הדוח
                                     show(a, Words.Cmd.done(f.getName()), r.length() == 0 ? Words.Cmd.DONE : r.toString(), plan.start);
                                 else {
                                     if (plan.changes() > 0) Ui.toast(a, Words.Cmd.doneShort(report.size()));
