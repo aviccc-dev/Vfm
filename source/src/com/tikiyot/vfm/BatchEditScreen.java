@@ -45,6 +45,7 @@ public class BatchEditScreen extends Activity {
     private File file;
     private Editor text;
     private EditText filter;
+    private ScrollView menuScroll;
     private LinearLayout menu, panel;
     private Button modeBtn;
     private String saved = "";
@@ -103,6 +104,9 @@ public class BatchEditScreen extends Activity {
             public void onClick(View v) {
                 templates = !templates;
                 modeBtn.setText(templates ? Words.Ed.COMMANDS : Words.Ed.TEMPLATES);
+                menuScroll.getLayoutParams().height = menuHeight();           // 1.25.1: בנפוצות — התפריט גבוה יותר
+                menuScroll.requestLayout();
+                menuScroll.scrollTo(0, 0);
                 renderMenu();
             }
         });
@@ -119,11 +123,11 @@ public class BatchEditScreen extends Activity {
 
         menu = new LinearLayout(this);
         menu.setOrientation(LinearLayout.VERTICAL);
-        ScrollView menuScroll = new ScrollView(this);
+        menuScroll = new ScrollView(this);
         menuScroll.setBackgroundColor(Ui.BG_SOFT);
+        menuScroll.setScrollbarFadingEnabled(false);                           // 1.25.1: רואים שיש עוד למטה
         menuScroll.addView(menu);
-        int h = getResources().getDisplayMetrics().heightPixels;
-        root.addView(menuScroll, new LinearLayout.LayoutParams(-1, (int) (h * 0.30f)));
+        root.addView(menuScroll, new LinearLayout.LayoutParams(-1, menuHeight()));
 
         LinearLayout body = new LinearLayout(this);
         body.setOrientation(LinearLayout.VERTICAL);
@@ -337,10 +341,11 @@ public class BatchEditScreen extends Activity {
         menu.removeAllViews();
         String q = filter.getText().toString();
         if (templates) {
-            section(Words.Ed.TPL_SYS);
-            for (final CmdTemplates.Tpl t : CmdTemplates.system(this)) templateRow(t, "★");
-            section(Words.Ed.TPL_MINE);
-            for (final CmdTemplates.Tpl t : CmdTemplates.mine()) templateRow(t, "☆");
+            List<CmdTemplates.Tpl> sys = CmdTemplates.system(this), mine = CmdTemplates.mine();
+            section(Words.Ed.TPL_SYS + " (" + sys.size() + ")");                 // 1.25.1: כמה יש — גם מה שמתחת לקו
+            for (final CmdTemplates.Tpl t : sys) templateRow(t, "★");
+            section(Words.Ed.TPL_MINE + " (" + mine.size() + ")");
+            for (final CmdTemplates.Tpl t : mine) templateRow(t, "☆");
             return;
         }
         section(Words.Ed.IN_FILE);
@@ -377,6 +382,15 @@ public class BatchEditScreen extends Activity {
                 @Override public void onClick(View v) { startNew(d); }
             });
         }
+    }
+
+    /**
+     * 1.25.1 (באג, המשתמש: "בכוכב אין בדיקת עומס רשימות — רק גיבוי ועוד משהו"): התפריט היה 30% מהמסך, ובנפוצות נראו
+     * רק שתיים, בלי סימן שיש עוד. בנפוצות — 60%, ופס הגלילה גלוי תמיד.
+     */
+    private int menuHeight() {
+        int h = getResources().getDisplayMetrics().heightPixels;
+        return (int) (h * (templates ? 0.60f : 0.30f));
     }
 
     private void templateRow(final CmdTemplates.Tpl t, String mark) {
