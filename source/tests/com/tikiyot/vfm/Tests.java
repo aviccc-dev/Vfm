@@ -4085,6 +4085,20 @@ public final class Tests {
             for (String l : lr) compared |= l.contains("בשתיהן");
             check("1.25.0: עומס — ההשוואה בדוח", compared);
 
+            // 1.25.4: עותקים רבים של אותה חכמה — חיפוש אחד (במכשיר: OutOfMemoryError)
+            StringBuilder many = new StringBuilder(Files.readUtf8(sf));
+            Tree mt = Tree.load();
+            Tree.Node mn = Tree.newChild(mt.root, "עותקים רבים");
+            for (int i = 0; i < 300; i++) {
+                many.append("\n[רשימה פנימית: עותקים › ").append(i).append("]\nמזהה = p-עותק-").append(i).append("\nסוג = חכמה\nתנאי = סוג:pdf\n");
+                mn.smart.add("p-עותק-" + i);
+            }
+            Files.writeAtomic(sf, many.toString());
+            mt.save();
+            ListCount.FromLibrary fl = new ListCount.FromLibrary(lib);
+            Map<String, Long> mf = ListCount.filesOf(Tree.load(), Tree.load().find(Arrays.asList("עותקים רבים")), fl);
+            check("1.25.4: 300 עותקים של אותה חכמה — חיפוש אחד (" + fl.searches + ")", mf != null && fl.searches == 1);
+
             // השוואה של חכמות, ותנאים
             Batch.Plan pc = Batch.plan("COMP חכמה \"א. ארגון לפי הבחנות\\כל הספרים\" חכמה \"א. ארגון לפי הבחנות\\כל המסמכים\" /תנאים",
                     root, vars, lib);

@@ -312,15 +312,8 @@ final class ListCmd {
                 dups++;
                 return new java.util.HashMap<String, Long>();
             }
-            Map<String, Long> m = byCond.get(it.cond);                        // 1.25.4: עותקים — אותו תנאי, חיפוש אחד
-            if (m == null) {
-                m = in.smartFiles(ref);
-                if (m != null) byCond.put(it.cond, m);
-            }
-            return m;
+            return in.smartFiles(ref);                                         // לפי התנאי — FromLibrary (1.25.4)
         }
-
-        private final Map<String, Map<String, Long>> byCond = new java.util.HashMap<String, Map<String, Long>>();
 
         @Override public Map<String, Long> liveFiles(String folder) { return in.liveFiles(folder); }
     }

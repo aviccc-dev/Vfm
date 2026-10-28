@@ -2,8 +2,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="com.tikiyot.vfm"
-    android:versionCode="173"
-    android:versionName="1.25.4">
+    android:versionCode="174"
+    android:versionName="1.25.5">
     <uses-sdk android:minSdkVersion="21" android:targetSdkVersion="30" />
 
     <queries>
@@ -5652,7 +5652,8 @@ public class BatchEditScreen extends Activity {
         if (d != null && (d.family == Commands.Family.VERB || d.name.equals("START")) && opens() > 1) warn(Words.Ed.ONE_OPEN);
 
         final EditText live = Ui.field(this, line, "");
-        if (d != null && d.family == Commands.Family.FILE) fileFields(isNew ? draft : CmdLine.parse(line), live);
+        CmdLine parsed = isNew ? draft : CmdLine.parse(line);
+        if (d != null && d.family == Commands.Family.FILE && parsed != null && parsed.def != null) fileFields(parsed, live);   // 1.25.4: הערה (::) — בלי שדות
         else if (d != null && d.family == Commands.Family.VERB) verbField(d, line, live);
 
         panel.addView(Ui.label(this, Words.Ed.THE_LINE));
@@ -6176,7 +6177,7 @@ public class BatchEditScreen extends Activity {
                 @Override
                 public void onClick(View v) {
                     if (kind == CmdTemplates.HOLE_MANUAL) {
-                        ListPicker.choose(BatchEditScreen.this, h, null, new ListPicker.Picked() {
+                        ListPicker.choose(BatchEditScreen.this, h, null, new ArrayList<String>(), new ListPicker.Picked() {   // 1.25.5: כל הרשימות
                             @Override public void ok(ArrayList<String> path) { e.setText(ListCmd.pathText(path)); }
                         });
                     } else if (kind == CmdTemplates.HOLE_SMART) {
@@ -17037,9 +17038,16 @@ final class ListCount {
         return l + items + Words.Manual.ITEMS_SUFFIX + (size > 0 ? " · " + Files.size(size) : "");
     }
 
-    /** מהאינדקס, עם זיכרון לכל ציור של המסך (חכמה שמופיעה בכמה רשימות — מחפשים פעם אחת). */
+    /**
+     * מהאינדקס, עם זיכרון לכל ציור של המסך. 1.25.4 (באג, יומן המכשיר: OutOfMemoryError בהכנת בדיקת העומס): הזיכרון —
+     * לפי התנאי, לא לפי ההפניה. עותקים של רשימה חכמה (אותו תנאי, הפניה אחרת) — חיפוש אחד ורשימת קבצים אחת; עד כאן —
+     * חיפוש ורשימה לכל עותק, ובמאות עותקים הזיכרון נגמר.
+     */
     static final class FromLibrary implements Index {
         private final Library lib;
+        private final Map<String, String> condOf = new HashMap<String, String>();
+        /** לבדיקות: כמה חיפושים נעשו. */
+        int searches;
         private final Map<String, long[]> cache = new HashMap<String, long[]>();
         private final Map<String, Map<String, Long>> files = new HashMap<String, Map<String, Long>>();
 
@@ -17047,44 +17055,58 @@ final class ListCount {
             this.lib = lib;
         }
 
+        /** התנאי של ההפניה; null — אין (נמחקה, או כפולים — נספרים רק בפתיחה). */
+        private String cond(String ref) {
+            if (condOf.containsKey(ref)) return condOf.get(ref);
+            Nested.Item it = Nested.resolve(ref);
+            String c = it.gone || it.dup != null ? null : it.cond;
+            condOf.put(ref, c);
+            return c;
+        }
+
         @Override
         public long[] smart(String ref) {
             if (lib == null || !lib.ready) return null;
-            long[] v = cache.get(ref);
+            String c = cond(ref);
+            if (c == null) return null;
+            long[] v = cache.get(c);
             if (v != null) return v;
-            Nested.Item it = Nested.resolve(ref);
-            if (it.gone || it.dup != null) return null;                       // כפולים — נספרים רק בפתיחה
-            Library.Result r = lib.search(it.cond, false, true);
+            Library.Result r = lib.search(c, false, true);
+            searches++;
             long s = 0;
             Map<String, Long> m = new HashMap<String, Long>();
             for (Library.Hit x : r.hits) {
                 if (x.rec != null) s += x.rec.size;
                 m.put(x.path(), x.rec != null ? x.rec.size : 0L);
             }
-            files.put(ref, m);
-            cache.put(ref, v = new long[]{r.hits.size(), s});
+            files.put(c, m);
+            cache.put(c, v = new long[]{r.hits.size(), s});
             return v;
         }
 
         @Override
         public Map<String, Long> smartFiles(String ref) {
-            return smart(ref) == null ? null : files.get(ref);
+            if (smart(ref) == null) return null;
+            return files.get(cond(ref));
+        }
+
+        private final Map<String, long[]> liveCache = new HashMap<String, long[]>();
+        private final Map<String, Map<String, Long>> liveFiles = new HashMap<String, Map<String, Long>>();
+
+        @Override
+        public long[] live(String folder) {
+            if (lib == null || !lib.ready) return null;
+            long[] v = liveCache.get(folder);
+            if (v == null) liveCache.put(folder, v = lib.treeStats(folder));
+            return v;
         }
 
         @Override
         public Map<String, Long> liveFiles(String folder) {
             if (lib == null || !lib.ready) return null;
-            Map<String, Long> m = files.get(folder);
-            if (m == null) files.put(folder, m = lib.treeFiles(folder));
+            Map<String, Long> m = liveFiles.get(folder);
+            if (m == null) liveFiles.put(folder, m = lib.treeFiles(folder));
             return m;
-        }
-
-        @Override
-        public long[] live(String folder) {
-            if (lib == null || !lib.ready) return null;
-            long[] v = cache.get(folder);
-            if (v == null) cache.put(folder, v = lib.treeStats(folder));
-            return v;
         }
     }
 }
@@ -41818,6 +41840,20 @@ public final class Tests {
             for (String l : lr) compared |= l.contains("בשתיהן");
             check("1.25.0: עומס — ההשוואה בדוח", compared);
 
+            // 1.25.4: עותקים רבים של אותה חכמה — חיפוש אחד (במכשיר: OutOfMemoryError)
+            StringBuilder many = new StringBuilder(Files.readUtf8(sf));
+            Tree mt = Tree.load();
+            Tree.Node mn = Tree.newChild(mt.root, "עותקים רבים");
+            for (int i = 0; i < 300; i++) {
+                many.append("\n[רשימה פנימית: עותקים › ").append(i).append("]\nמזהה = p-עותק-").append(i).append("\nסוג = חכמה\nתנאי = סוג:pdf\n");
+                mn.smart.add("p-עותק-" + i);
+            }
+            Files.writeAtomic(sf, many.toString());
+            mt.save();
+            ListCount.FromLibrary fl = new ListCount.FromLibrary(lib);
+            Map<String, Long> mf = ListCount.filesOf(Tree.load(), Tree.load().find(Arrays.asList("עותקים רבים")), fl);
+            check("1.25.4: 300 עותקים של אותה חכמה — חיפוש אחד (" + fl.searches + ")", mf != null && fl.searches == 1);
+
             // השוואה של חכמות, ותנאים
             Batch.Plan pc = Batch.plan("COMP חכמה \"א. ארגון לפי הבחנות\\כל הספרים\" חכמה \"א. ארגון לפי הבחנות\\כל המסמכים\" /תנאים",
                     root, vars, lib);
@@ -45418,15 +45454,8 @@ final class ListCmd {
                 dups++;
                 return new java.util.HashMap<String, Long>();
             }
-            Map<String, Long> m = byCond.get(it.cond);                        // 1.25.4: עותקים — אותו תנאי, חיפוש אחד
-            if (m == null) {
-                m = in.smartFiles(ref);
-                if (m != null) byCond.put(it.cond, m);
-            }
-            return m;
+            return in.smartFiles(ref);                                         // לפי התנאי — FromLibrary (1.25.4)
         }
-
-        private final Map<String, Map<String, Long>> byCond = new java.util.HashMap<String, Map<String, Long>>();
 
         @Override public Map<String, Long> liveFiles(String folder) { return in.liveFiles(folder); }
     }

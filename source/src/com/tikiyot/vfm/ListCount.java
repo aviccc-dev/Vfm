@@ -107,9 +107,16 @@ final class ListCount {
         return l + items + Words.Manual.ITEMS_SUFFIX + (size > 0 ? " · " + Files.size(size) : "");
     }
 
-    /** מהאינדקס, עם זיכרון לכל ציור של המסך (חכמה שמופיעה בכמה רשימות — מחפשים פעם אחת). */
+    /**
+     * מהאינדקס, עם זיכרון לכל ציור של המסך. 1.25.4 (באג, יומן המכשיר: OutOfMemoryError בהכנת בדיקת העומס): הזיכרון —
+     * לפי התנאי, לא לפי ההפניה. עותקים של רשימה חכמה (אותו תנאי, הפניה אחרת) — חיפוש אחד ורשימת קבצים אחת; עד כאן —
+     * חיפוש ורשימה לכל עותק, ובמאות עותקים הזיכרון נגמר.
+     */
     static final class FromLibrary implements Index {
         private final Library lib;
+        private final Map<String, String> condOf = new HashMap<String, String>();
+        /** לבדיקות: כמה חיפושים נעשו. */
+        int searches;
         private final Map<String, long[]> cache = new HashMap<String, long[]>();
         private final Map<String, Map<String, Long>> files = new HashMap<String, Map<String, Long>>();
 
@@ -117,44 +124,58 @@ final class ListCount {
             this.lib = lib;
         }
 
+        /** התנאי של ההפניה; null — אין (נמחקה, או כפולים — נספרים רק בפתיחה). */
+        private String cond(String ref) {
+            if (condOf.containsKey(ref)) return condOf.get(ref);
+            Nested.Item it = Nested.resolve(ref);
+            String c = it.gone || it.dup != null ? null : it.cond;
+            condOf.put(ref, c);
+            return c;
+        }
+
         @Override
         public long[] smart(String ref) {
             if (lib == null || !lib.ready) return null;
-            long[] v = cache.get(ref);
+            String c = cond(ref);
+            if (c == null) return null;
+            long[] v = cache.get(c);
             if (v != null) return v;
-            Nested.Item it = Nested.resolve(ref);
-            if (it.gone || it.dup != null) return null;                       // כפולים — נספרים רק בפתיחה
-            Library.Result r = lib.search(it.cond, false, true);
+            Library.Result r = lib.search(c, false, true);
+            searches++;
             long s = 0;
             Map<String, Long> m = new HashMap<String, Long>();
             for (Library.Hit x : r.hits) {
                 if (x.rec != null) s += x.rec.size;
                 m.put(x.path(), x.rec != null ? x.rec.size : 0L);
             }
-            files.put(ref, m);
-            cache.put(ref, v = new long[]{r.hits.size(), s});
+            files.put(c, m);
+            cache.put(c, v = new long[]{r.hits.size(), s});
             return v;
         }
 
         @Override
         public Map<String, Long> smartFiles(String ref) {
-            return smart(ref) == null ? null : files.get(ref);
+            if (smart(ref) == null) return null;
+            return files.get(cond(ref));
+        }
+
+        private final Map<String, long[]> liveCache = new HashMap<String, long[]>();
+        private final Map<String, Map<String, Long>> liveFiles = new HashMap<String, Map<String, Long>>();
+
+        @Override
+        public long[] live(String folder) {
+            if (lib == null || !lib.ready) return null;
+            long[] v = liveCache.get(folder);
+            if (v == null) liveCache.put(folder, v = lib.treeStats(folder));
+            return v;
         }
 
         @Override
         public Map<String, Long> liveFiles(String folder) {
             if (lib == null || !lib.ready) return null;
-            Map<String, Long> m = files.get(folder);
-            if (m == null) files.put(folder, m = lib.treeFiles(folder));
+            Map<String, Long> m = liveFiles.get(folder);
+            if (m == null) liveFiles.put(folder, m = lib.treeFiles(folder));
             return m;
-        }
-
-        @Override
-        public long[] live(String folder) {
-            if (lib == null || !lib.ready) return null;
-            long[] v = cache.get(folder);
-            if (v == null) cache.put(folder, v = lib.treeStats(folder));
-            return v;
         }
     }
 }

@@ -527,7 +527,8 @@ public class BatchEditScreen extends Activity {
         if (d != null && (d.family == Commands.Family.VERB || d.name.equals("START")) && opens() > 1) warn(Words.Ed.ONE_OPEN);
 
         final EditText live = Ui.field(this, line, "");
-        if (d != null && d.family == Commands.Family.FILE) fileFields(isNew ? draft : CmdLine.parse(line), live);
+        CmdLine parsed = isNew ? draft : CmdLine.parse(line);
+        if (d != null && d.family == Commands.Family.FILE && parsed != null && parsed.def != null) fileFields(parsed, live);   // 1.25.4: הערה (::) — בלי שדות
         else if (d != null && d.family == Commands.Family.VERB) verbField(d, line, live);
 
         panel.addView(Ui.label(this, Words.Ed.THE_LINE));
@@ -1051,7 +1052,7 @@ public class BatchEditScreen extends Activity {
                 @Override
                 public void onClick(View v) {
                     if (kind == CmdTemplates.HOLE_MANUAL) {
-                        ListPicker.choose(BatchEditScreen.this, h, null, new ListPicker.Picked() {
+                        ListPicker.choose(BatchEditScreen.this, h, null, new ArrayList<String>(), new ListPicker.Picked() {   // 1.25.5: כל הרשימות
                             @Override public void ok(ArrayList<String> path) { e.setText(ListCmd.pathText(path)); }
                         });
                     } else if (kind == CmdTemplates.HOLE_SMART) {
