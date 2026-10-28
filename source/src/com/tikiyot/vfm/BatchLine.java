@@ -10,7 +10,8 @@ import java.util.Map;
 
 final class BatchLine {
 
-    static final String[] COMMANDS = {"COPY", "MOVE", "DEL", "REN", "MD", "RD", "COMP", "START", "ECHO", "REM"};
+    /** פקודות הקבצים — מההגדרה האחת (1.22.5: Commands). */
+    static final String[] COMMANDS = Commands.fileNames();
 
     /** הסבר קצר לכל פקודה — לשורה שתחת העורך ולכותרת הטופס (מהמילון). */
     static String help(String cmd) {
@@ -45,11 +46,7 @@ final class BatchLine {
         if (l.startsWith("@")) l = l.substring(1).trim();
         List<String> tk = Batch.tokens(l);
         if (tk.isEmpty()) return b;
-        String c = tk.get(0).toUpperCase(Locale.ROOT);
-        if (c.equals("MKDIR")) c = "MD";
-        if (c.equals("RMDIR")) c = "RD";
-        if (c.equals("ERASE")) c = "DEL";
-        if (c.equals("RENAME")) c = "REN";
+        String c = Commands.canonical(tk.get(0));                          // 1.22.5: MKDIR ← MD וכו', מההגדרה האחת
         b.cmd = c;
         if (c.equals("ECHO") || c.equals("REM")) {
             b.text = l.length() > c.length() ? l.substring(c.length()).trim() : "";

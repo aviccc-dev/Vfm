@@ -98,6 +98,7 @@ public final class Tests {
         run("גרסה 1.20.0 — השוואה לפי מסלול (COMP), %רק-במקור% / %רק-ביעד%, /עד:, גיבוי מלא", new Runnable() { public void run() { v1200(); } });
         run("גרסה 1.21.0 — מצב בתאריך: תנאי חיפוש ושחזור (COPY /מצב:)", new Runnable() { public void run() { v1210(); } });
         run("גרסה 1.22.0 — COMP /רשימה: — רשימה (עם חכמות, תיקיות מתעדכנות ותתי־רשימות) כמקור, מכמה כוננים", new Runnable() { public void run() { v1220(); } });
+        run("גרסה 1.22.5 — ההגדרה האחת של שפת הפקודות (Commands)", new Runnable() { public void run() { v1225(); } });
 
         System.out.println("בדיקות: " + passed + " עברו · " + failed + " נכשלו");
         for (String f : failures) System.out.println("  ✗ " + f);
@@ -3924,6 +3925,56 @@ public final class Tests {
     }
 
     /** 1.13.1 — תיקוני באגים. */
+
+    /** 1.22.5: ההגדרה האחת — שלמה, תואמת למנוע, וכל פרמטר עם שם והסבר. */
+    private static void v1225() {
+        check("1.22.5: פקודות הקבצים — אותן ובאותו סדר",
+                java.util.Arrays.equals(BatchLine.COMMANDS, new String[]{"COPY", "MOVE", "DEL", "REN", "MD", "RD", "COMP", "START", "ECHO", "REM"}));
+        check("1.22.5: שמות נרדפים", Commands.canonical("MKDIR").equals("MD") && Commands.canonical("rmdir").equals("RD")
+                && Commands.canonical("ERASE").equals("DEL") && Commands.canonical("RENAME").equals("REN")
+                && Commands.canonical("copy").equals("COPY") && Commands.canonical("FORMAT").equals("FORMAT")
+                && Commands.canonical("ECHO.").equals("ECHO."));
+        check("1.22.5: שם נרדף בטופס", BatchLine.parse("MKDIR \"%פנימי%\\x\"").cmd.equals("MD"));
+        for (Commands.Def d : Commands.ALL) {
+            check("1.22.5: מה עושה — " + d.name, !d.what.isEmpty());
+            check("1.22.5: שימוש — " + d.name, !d.usage().isEmpty() && (d.family != Commands.Family.FILE || d.usage().startsWith(d.name)));
+            for (Commands.Param p : d.params) {
+                boolean ok = !p.label.isEmpty() && !p.help.isEmpty() && (!p.isSwitch() || Batch.isSwitch(p.key))
+                        && (p.type != Commands.Type.CHOICE || !p.options.isEmpty());
+                check("1.22.5: פרמטר — " + d.name + " " + (p.isSwitch() ? p.key : p.label), ok);
+            }
+        }
+        String[] verbs = {Verbs.OPEN, Verbs.CREATE, Verbs.UPDATE, Verbs.FIND, Verbs.BACK, Verbs.RUN, Verbs.ADD};
+        for (String v : verbs) {
+            Commands.Def d = Commands.get(v);
+            check("1.22.5: פועל בהגדרה — " + v, d != null && d.family == Commands.Family.VERB && Verbs.isVerb(v + " x"));
+        }
+        // כל מתג שהמנוע מכיר — שייך לפקודה בהגדרה
+        String[][] seen = {{"COPY", "/S"}, {"COPY", "/מסלול"}, {"COPY", "/Y"}, {"COPY", "/-Y"}, {"COPY", "/תפוס:לדלג"},
+                {"COPY", "/יומן:x.txt"}, {"COPY", "/עד:20%"}, {"COPY", "/מצב:26.10.2026"}, {"COPY", "/תאריך:שבוע"},
+                {"COPY", "/גודל:>1MB"}, {"COPY", "/A:H"}, {"COPY", "/A"}, {"COPY", "/D:1-1-2026"}, {"COPY", "/MAXAGE:3"},
+                {"COPY", "/MINAGE:3"}, {"COPY", "/MAX:5"}, {"COPY", "/MIN:5"}, {"COPY", "/Q"}, {"COPY", "/F"},
+                {"MOVE", "/עד:20%"}, {"DEL", "/תאריך:שבוע"}, {"RD", "/S"}, {"COMP", "/רשימה:גיבוי"}, {"COMP", "/A:H"}};
+        for (String[] x : seen) {
+            Commands.Def d = Commands.get(x[0]);
+            check("1.22.5: מתג בהגדרה — " + x[0] + " " + x[1], Batch.isSwitch(x[1]) && d.switchFor(x[1]) != null);
+        }
+        check("1.22.5: COPY בלי /רשימה:, COMP בלי /מצב:", Commands.get("COPY").switchFor("/רשימה:x") == null
+                && Commands.get("COMP").switchFor("/מצב:1.1.2026") == null);
+        String u = Words.Cmd.usage("COPY");
+        check("1.22.5: שימוש עם המתגים עצמם", u.contains(Batch.SW_TAKEN) && u.contains(Batch.SW_JOURNAL) && !u.contains("/MAXAGE"));
+        check("1.22.5: COMP — שתי הצורות", Words.Cmd.usage("COMP").contains(Batch.SW_LIST));
+        check("1.22.5: חזור — שימוש משלו", Words.Verb.usage("חזור").contains("חזור") && !Words.Verb.usage("חזור").contains("פתח"));
+        check("1.22.5: צור פקודה ופתח תפריט בשימוש", Words.Verb.usage("צור").contains("פקודה") && Words.Verb.usage("פתח").contains("תפריט"));
+        check("1.22.5: הדמיה — כותרת", Commands.get("בכאילו") != null && Commands.get("בכאילו").family == Commands.Family.HEADER);
+        File rr = drive("שינוי-שם-תיקייה");
+        new File(rr, "תיקייה").mkdirs();
+        Batch.Plan pr = Batch.plan("REN \"" + new File(rr, "תיקייה").getAbsolutePath() + "\" חדש", rr, new java.util.HashMap<String, String>());
+        check("1.22.5: REN על תיקייה — הודעה ברורה", pr.errors == 1 && Words.Cmd.REN_FOLDER.equals(pr.steps.get(0).error));
+        check("1.22.5: שימוש — ערך המתג לפי סוגו", Words.Cmd.usage("COPY").contains(Batch.SW_JOURNAL + Words.Def.V_FILE)
+                && Words.Cmd.usage("COPY").contains(Batch.SW_STATE + Words.Def.V_TIME));
+    }
+
     private static void v1220() {
         File r1 = drive("רשימה-פנימי"), r2 = drive("רשימה-כרטיס");
         write(new File(r1, "Docs"), "a.txt", "a1").setLastModified(1700000000000L);

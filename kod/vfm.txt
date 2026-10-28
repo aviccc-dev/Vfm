@@ -2,8 +2,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="com.tikiyot.vfm"
-    android:versionCode="161"
-    android:versionName="1.22.4">
+    android:versionCode="162"
+    android:versionName="1.22.5">
     <uses-sdk android:minSdkVersion="21" android:targetSdkVersion="30" />
 
     <queries>
@@ -3963,15 +3963,11 @@ final class Batch {
             }
             List<String> tk = tokens(line);
             if (tk.isEmpty()) continue;
-            String cmd = tk.get(0).toUpperCase(Locale.ROOT);
+            String cmd = Commands.canonical(tk.get(0));                       // 1.22.5: שמות נרדפים — מההגדרה האחת
             if (cmd.equals("REM")) continue;
             Step s = new Step();
             s.line = n + 1;
             s.text = line;
-            if (cmd.equals("MKDIR")) cmd = "MD";
-            if (cmd.equals("RMDIR")) cmd = "RD";
-            if (cmd.equals("ERASE")) cmd = "DEL";
-            if (cmd.equals("RENAME")) cmd = "REN";
             if (cmd.equals("ECHO.")) cmd = "ECHO";                   // 139: שורה ריקה, כמו ב-bat
             s.cmd = cmd;
             if (cmd.equals("ECHO")) {
@@ -4129,6 +4125,7 @@ final class Batch {
             }
             File f = new File(paths.get(0));
             if (args.get(0).contains("*") || args.get(0).contains("?")) { s.error = Words.Cmd.REN_WILD; return; }
+            if (sim.isDir(f)) { s.error = Words.Cmd.REN_FOLDER; return; }                  // 1.22.5
             if (!sim.isFile(f)) { s.error = Words.FILE_NOT_FOUND + ": " + args.get(0); return; }
             String bad = Physical.badName(args.get(1));
             if (bad != null) { s.error = bad; return; }
@@ -5222,7 +5219,8 @@ import java.util.Map;
 
 final class BatchLine {
 
-    static final String[] COMMANDS = {"COPY", "MOVE", "DEL", "REN", "MD", "RD", "COMP", "START", "ECHO", "REM"};
+    /** פקודות הקבצים — מההגדרה האחת (1.22.5: Commands). */
+    static final String[] COMMANDS = Commands.fileNames();
 
     /** הסבר קצר לכל פקודה — לשורה שתחת העורך ולכותרת הטופס (מהמילון). */
     static String help(String cmd) {
@@ -5257,11 +5255,7 @@ final class BatchLine {
         if (l.startsWith("@")) l = l.substring(1).trim();
         List<String> tk = Batch.tokens(l);
         if (tk.isEmpty()) return b;
-        String c = tk.get(0).toUpperCase(Locale.ROOT);
-        if (c.equals("MKDIR")) c = "MD";
-        if (c.equals("RMDIR")) c = "RD";
-        if (c.equals("ERASE")) c = "DEL";
-        if (c.equals("RENAME")) c = "REN";
+        String c = Commands.canonical(tk.get(0));                          // 1.22.5: MKDIR ← MD וכו', מההגדרה האחת
         b.cmd = c;
         if (c.equals("ECHO") || c.equals("REM")) {
             b.text = l.length() > c.length() ? l.substring(c.length()).trim() : "";
@@ -31084,9 +31078,9 @@ package com.tikiyot.vfm;
 // לאן מדביקים: לתוך רשימה ידנית, למסך הבית — גם באופן עבודה אחר (הלוח זוכר מאיזה אופן).
 // הכלל (המשתמש: "העתקת רשימה יכולה להיעשות — או העתקת כל הרשימה, ואז היא פיזי שבווירטואלי; או רק קישור לרשימה,
 // ואז זה וירטואלי"):
-//   העתקה — קישור: רשימה נהיית הפניה ↪, כלי — עוד כלי לאותה רשימה; הקובץ בכונן לא זז.
+//   (1.16.0, המילון) קישור — רשימה נהיית הפניה ↪, כלי — עוד כלי לאותה רשימה; הקובץ בכונן לא זז.
+//   העתקה (full) — עותק עצמאי עם כל מה שבו (גם הרשימות החכמות שבתוכו).
 //   העברה — הדבר עצמו עובר (ויוצא מהמקום הקודם).
-//   שכפול (full, מתפריט "פיזי") — עותק עצמאי עם כל מה שבו.
 //   לאופן אחר — אין קישור בין אופנים, ולכן תמיד עותק מלא (ModeCopy), והעברה — עותק ויציאה מהמקור.
 // אחראי: הלוח וההדבקה (בלי ממשק — נבדק). הממשק: VirtualScreen, Home, ToolMenu (PasteBar).
 
@@ -33512,35 +33506,16 @@ public final class Words {
         public static final String HEADER_HELP = "כותרת: צלמית — כאריח בבית הקובץ נראה כתוכנה (צלמית, שם ו\"למה\"; במקום אחר — קובץ טקסט) · הדמיה — הכול רץ בכאילו, בלי לשנות דבר";
 
 
-        /** מה כל פקודה עושה, ואיך כותבים אותה — לשורת ההסבר בעורך ולשגיאות. */
+        /** מה כל פקודה עושה — מההגדרה האחת (1.22.5: Commands). */
         public static String what(String cmd) {
-            switch (cmd) {
-                case "COPY": return "העתקת קבצים";
-                case "MOVE": return "העברת קבצים או תיקייה";
-                case "DEL": return "מחיקה (לסל המחזור)";
-                case "REN": return "שינוי שם";
-                case "MD": return "תיקייה חדשה";
-                case "RD": return "מחיקת תיקייה (לסל)";
-                case "COMP": return "השוואת שתי תיקיות לפי מסלול — אחריה: %רק-במקור% ו־%רק-ביעד% כמקור של COPY / MOVE";
-                case "START": return "פתיחה בסוף: תיקייה במנהל הקבצים, או קובץ (קובץ apk — התקנה; תבנית — החדש ביותר)";
-                case "ECHO": return "הודעה שתופיע בדוח";
-                case "REM": return "הערה, לא מתבצעת";
-                default: return "";
-            }
+            Commands.Def d = Commands.get(cmd);
+            return d == null ? "" : d.what;
         }
+
+        /** איך כותבים אותה — נבנה מההגדרה האחת (1.22.5: עם המתגים עצמם, במקום "[מתגים]"). */
         public static String usage(String cmd) {
-            switch (cmd) {
-                case "COPY": case "MOVE": return cmd + " <מקור> <יעד> [מתגים]";
-                case "DEL": return "DEL <קבצים> [מתגים]";
-                case "REN": return "REN <קובץ> <שם חדש>";
-                case "MD": return "MD <תיקייה>";
-                case "RD": return "RD <תיקייה> [/S — גם אם אינה ריקה]";
-                case "COMP": return "COMP <מקור> <יעד> [/A:H]  ·  COMP /רשימה:<רשימה> <יעד>";
-                case "START": return "START <תיקייה | קובץ | תבנית, למשל vfm-*.apk>";
-                case "ECHO": return "ECHO <טקסט>";
-                case "REM": return "REM <טקסט>";
-                default: return "";
-            }
+            Commands.Def d = Commands.get(cmd);
+            return d == null ? "" : d.usage();
         }
 
         /** "COPY — העתקת קבצים.  COPY <מקור> <יעד> [מתגים]". */
@@ -33623,6 +33598,8 @@ public final class Words {
             return n == 1 ? "תיקייה ריקה אחת" : n + " תיקיות ריקות";
         }
         public static final String REN_WILD = "REN עם * — לא נתמך עדיין";
+        /** 1.22.5: עד כאן — "לא נמצא", כאילו אין כזה. */
+        public static final String REN_FOLDER = "REN — רק לקובץ; שינוי שם לתיקייה — עדיין לא בפקודות (בתפריט: שינוי שם בכונן)";
 
         public static String unknownVar(String name) {
             return "המשתנה %" + name + "% לא מוכר";
@@ -35207,10 +35184,64 @@ public final class Words {
             if (verb.equals("מצא")) return "שימוש: מצא <תנאי>, למשל: מצא סוג:ספרים תאריך:שבוע";
             if (verb.equals("הרץ")) return "שימוש: הרץ <קובץ פקודות>";
             if (verb.equals("הוסף")) return "שימוש: הוסף מהכונן · הוסף מחיפוש";
-            if (verb.equals("צור")) return "שימוש: צור רשימה <שם> · צור רשימה חכמה \"שם\" <תנאי>";
+            if (verb.equals("צור")) return "שימוש: צור רשימה <שם> · צור רשימה חכמה \"שם\" <תנאי> · צור פקודה";   // 1.22.5: גם צור פקודה
             if (verb.equals("עדכן")) return "שימוש: עדכן רשימה חכמה \"שם\" <תנאי>";
-            return "שימוש: פתח מסך <מסך> · פתח רשימה <מסלול> · פתח רשימה חכמה <שם> · פתח תיקייה <מסלול>";
+            if (verb.equals("חזור")) return "שימוש: חזור";                                   // 1.22.5 (עד כאן — השימוש של פתח)
+            return "שימוש: פתח מסך <מסך> · פתח רשימה <מסלול> · פתח רשימה חכמה <שם> · פתח תיקייה <מסלול> · פתח תפריט <רשימה>";
         }
+    }
+
+    /**
+     * 1.22.5: הטקסטים של ההגדרה האחת של שפת הפקודות (Commands) — מה כל פקודה עושה, ושם והסבר לכל פרמטר.
+     * מכאן נבנים ההסבר בעורך, השגיאות, והממשק לפקודות.
+     */
+    public static final class Def {
+        private Def() { }
+
+        // פקודות הקבצים — מה הן עושות
+        public static final String W_COPY = "העתקת קבצים", W_MOVE = "העברת קבצים או תיקייה", W_DEL = "מחיקה (לסל המחזור)",
+                W_REN = "שינוי שם", W_MD = "תיקייה חדשה", W_RD = "מחיקת תיקייה (לסל)",
+                W_COMP = "השוואת שתי תיקיות לפי מסלול — אחריה: %רק-במקור% ו־%רק-ביעד% כמקור של COPY / MOVE",
+                W_START = "פתיחה בסוף: תיקייה במנהל הקבצים, או קובץ (קובץ apk — התקנה; תבנית — החדש ביותר)",
+                W_ECHO = "הודעה שתופיע בדוח", W_REM = "הערה, לא מתבצעת";
+        // הפעלים בעברית — מה הם עושים
+        public static final String W_OPEN = "פותח בסוף: מסך, רשימה, רשימה חכמה, תיקייה, או תפריט מ\"שמור לתוכנה\"",
+                W_CREATE = "יוצר רשימה, רשימה חכמה, או קובץ פקודות חדש", W_UPDATE = "משנה את התנאי של רשימה חכמה",
+                W_FIND = "פותח חיפוש עם תנאי", W_BACK = "חוזר למסך הקודם", W_RUN = "מריץ קובץ פקודות אחר",
+                W_ADD = "פותח הוספה לרשימה: מהכונן או מחיפוש";
+        // שורות כותרת
+        public static final String W_AS_IF = "בראש הקובץ: כל השורות רצות בהדמיה, בלי לשנות דבר";
+
+        // שמות הפרמטרים
+        public static final String P_SOURCE = "מקור", P_DEST = "יעד", P_FILES = "קבצים", P_FILE = "קובץ", P_NEW_NAME = "שם חדש",
+                P_FOLDER = "תיקייה", P_WHAT_OPEN = "מה לפתוח", P_TEXT = "טקסט", P_KEEP = "שמירת מסלול", P_TAKEN = "שם תפוס",
+                P_JOURNAL = "יומן", P_LIMIT = "עצירה מעל אחוז", P_STATE = "שחזור לפי זמן", P_DATE = "תאריך", P_SIZE = "גודל",
+                P_HIDDEN = "גם מוסתרים", P_LIST = "רשימה כמקור", P_NOT_EMPTY = "גם אם אינה ריקה", P_ARG = "מה";
+        // ההסברים
+        public static final String H_COPY_SRC = "הקבצים או התיקייה שמעתיקים (אפשר תבנית, למשל \\*.pdf), או %רק-במקור% / %רק-ביעד% אחרי COMP",
+                H_MOVE_SRC = "הקבצים או התיקייה שמעבירים (אפשר תבנית), או %רק-במקור% / %רק-ביעד% אחרי COMP",
+                H_DEST = "התיקייה שאליה הקבצים מגיעים",
+                H_DEL_SRC = "קובץ, או תבנית כמו \\*.tmp — עוברים לסל המחזור",
+                H_REN_SRC = "הקובץ ששמו משתנה (קובץ אחד, בלי * ו־?)", H_NEW_NAME = "רק השם, בלי מסלול",
+                H_MD = "התיקייה שתיווצר, כולל התיקיות שבדרך", H_RD = "התיקייה שעוברת לסל המחזור",
+                H_COMP_SRC = "התיקייה הראשונה (או במקומה /רשימה:)", H_COMP_DEST = "התיקייה השנייה",
+                H_START = "תיקייה, קובץ, תבנית (החדש ביותר מבין המתאימים), או %בית%",
+                H_TEXT = "מה שיופיע בדוח (ECHO), או הסבר לקורא הקובץ (REM)",
+                H_KEEP = "כל מה שבתיקייה, גם בתיקיות שבתוכה, נכתב ביעד באותו מבנה. בעברית: /מסלול",
+                H_TAKEN = "מה עושים כשביעד כבר יש קובץ באותו שם. /Y — כמו להחליף",
+                H_JOURNAL = "קובץ טקסט שבו נרשם מיד כל קובץ שהגיע ליעד (מסלול וגודל)",
+                H_LIMIT = "אחרי COMP: אם השורה מוציאה יותר מהאחוז הזה מהקבצים — שגיאה, ושום דבר לא זז",
+                H_STATE = "המקור הוא גיבוי (נוכחי / היסטוריה / יומן): נכתב המצב של אותו זמן — תאריך, או תאריך ושעה",
+                H_DATE = "רק קבצים לפי תאריך, למשל /תאריך:שבוע או /תאריך:<1.1.2026",
+                H_SIZE = "רק קבצים לפי גודל, למשל /גודל:>10MB",
+                H_HIDDEN = "כולל קבצים ותיקיות מוסתרים (שמתחילים בנקודה)",
+                H_LIST = "במקום תיקיית מקור: רשימה ידנית בכל העומק (קבצים, תתי־רשימות, תיקיות מתעדכנות, חכמות)",
+                H_NOT_EMPTY = "מסיר גם תיקייה שיש בה קבצים (לסל)",
+                H_COMPAT = "תחביר ישן (XCOPY / ROBOCOPY) — מובן, לא מוצג בטופס";
+        /** במקום "<מה לפתוח>" בשורת השימוש של START. */
+        public static final String U_START = "<תיקייה | קובץ | תבנית, למשל vfm-*.apk>";
+        /** ערך של מתג בשורת השימוש. */
+        public static final String V_FILE = "<קובץ>", V_TIME = "<זמן>", V_LIST = "<רשימה>";
     }
 
     /** 1.13.0: שורת "למה" (Why) */
@@ -36284,6 +36315,7 @@ public final class Tests {
         run("גרסה 1.20.0 — השוואה לפי מסלול (COMP), %רק-במקור% / %רק-ביעד%, /עד:, גיבוי מלא", new Runnable() { public void run() { v1200(); } });
         run("גרסה 1.21.0 — מצב בתאריך: תנאי חיפוש ושחזור (COPY /מצב:)", new Runnable() { public void run() { v1210(); } });
         run("גרסה 1.22.0 — COMP /רשימה: — רשימה (עם חכמות, תיקיות מתעדכנות ותתי־רשימות) כמקור, מכמה כוננים", new Runnable() { public void run() { v1220(); } });
+        run("גרסה 1.22.5 — ההגדרה האחת של שפת הפקודות (Commands)", new Runnable() { public void run() { v1225(); } });
 
         System.out.println("בדיקות: " + passed + " עברו · " + failed + " נכשלו");
         for (String f : failures) System.out.println("  ✗ " + f);
@@ -40110,6 +40142,56 @@ public final class Tests {
     }
 
     /** 1.13.1 — תיקוני באגים. */
+
+    /** 1.22.5: ההגדרה האחת — שלמה, תואמת למנוע, וכל פרמטר עם שם והסבר. */
+    private static void v1225() {
+        check("1.22.5: פקודות הקבצים — אותן ובאותו סדר",
+                java.util.Arrays.equals(BatchLine.COMMANDS, new String[]{"COPY", "MOVE", "DEL", "REN", "MD", "RD", "COMP", "START", "ECHO", "REM"}));
+        check("1.22.5: שמות נרדפים", Commands.canonical("MKDIR").equals("MD") && Commands.canonical("rmdir").equals("RD")
+                && Commands.canonical("ERASE").equals("DEL") && Commands.canonical("RENAME").equals("REN")
+                && Commands.canonical("copy").equals("COPY") && Commands.canonical("FORMAT").equals("FORMAT")
+                && Commands.canonical("ECHO.").equals("ECHO."));
+        check("1.22.5: שם נרדף בטופס", BatchLine.parse("MKDIR \"%פנימי%\\x\"").cmd.equals("MD"));
+        for (Commands.Def d : Commands.ALL) {
+            check("1.22.5: מה עושה — " + d.name, !d.what.isEmpty());
+            check("1.22.5: שימוש — " + d.name, !d.usage().isEmpty() && (d.family != Commands.Family.FILE || d.usage().startsWith(d.name)));
+            for (Commands.Param p : d.params) {
+                boolean ok = !p.label.isEmpty() && !p.help.isEmpty() && (!p.isSwitch() || Batch.isSwitch(p.key))
+                        && (p.type != Commands.Type.CHOICE || !p.options.isEmpty());
+                check("1.22.5: פרמטר — " + d.name + " " + (p.isSwitch() ? p.key : p.label), ok);
+            }
+        }
+        String[] verbs = {Verbs.OPEN, Verbs.CREATE, Verbs.UPDATE, Verbs.FIND, Verbs.BACK, Verbs.RUN, Verbs.ADD};
+        for (String v : verbs) {
+            Commands.Def d = Commands.get(v);
+            check("1.22.5: פועל בהגדרה — " + v, d != null && d.family == Commands.Family.VERB && Verbs.isVerb(v + " x"));
+        }
+        // כל מתג שהמנוע מכיר — שייך לפקודה בהגדרה
+        String[][] seen = {{"COPY", "/S"}, {"COPY", "/מסלול"}, {"COPY", "/Y"}, {"COPY", "/-Y"}, {"COPY", "/תפוס:לדלג"},
+                {"COPY", "/יומן:x.txt"}, {"COPY", "/עד:20%"}, {"COPY", "/מצב:26.10.2026"}, {"COPY", "/תאריך:שבוע"},
+                {"COPY", "/גודל:>1MB"}, {"COPY", "/A:H"}, {"COPY", "/A"}, {"COPY", "/D:1-1-2026"}, {"COPY", "/MAXAGE:3"},
+                {"COPY", "/MINAGE:3"}, {"COPY", "/MAX:5"}, {"COPY", "/MIN:5"}, {"COPY", "/Q"}, {"COPY", "/F"},
+                {"MOVE", "/עד:20%"}, {"DEL", "/תאריך:שבוע"}, {"RD", "/S"}, {"COMP", "/רשימה:גיבוי"}, {"COMP", "/A:H"}};
+        for (String[] x : seen) {
+            Commands.Def d = Commands.get(x[0]);
+            check("1.22.5: מתג בהגדרה — " + x[0] + " " + x[1], Batch.isSwitch(x[1]) && d.switchFor(x[1]) != null);
+        }
+        check("1.22.5: COPY בלי /רשימה:, COMP בלי /מצב:", Commands.get("COPY").switchFor("/רשימה:x") == null
+                && Commands.get("COMP").switchFor("/מצב:1.1.2026") == null);
+        String u = Words.Cmd.usage("COPY");
+        check("1.22.5: שימוש עם המתגים עצמם", u.contains(Batch.SW_TAKEN) && u.contains(Batch.SW_JOURNAL) && !u.contains("/MAXAGE"));
+        check("1.22.5: COMP — שתי הצורות", Words.Cmd.usage("COMP").contains(Batch.SW_LIST));
+        check("1.22.5: חזור — שימוש משלו", Words.Verb.usage("חזור").contains("חזור") && !Words.Verb.usage("חזור").contains("פתח"));
+        check("1.22.5: צור פקודה ופתח תפריט בשימוש", Words.Verb.usage("צור").contains("פקודה") && Words.Verb.usage("פתח").contains("תפריט"));
+        check("1.22.5: הדמיה — כותרת", Commands.get("בכאילו") != null && Commands.get("בכאילו").family == Commands.Family.HEADER);
+        File rr = drive("שינוי-שם-תיקייה");
+        new File(rr, "תיקייה").mkdirs();
+        Batch.Plan pr = Batch.plan("REN \"" + new File(rr, "תיקייה").getAbsolutePath() + "\" חדש", rr, new java.util.HashMap<String, String>());
+        check("1.22.5: REN על תיקייה — הודעה ברורה", pr.errors == 1 && Words.Cmd.REN_FOLDER.equals(pr.steps.get(0).error));
+        check("1.22.5: שימוש — ערך המתג לפי סוגו", Words.Cmd.usage("COPY").contains(Batch.SW_JOURNAL + Words.Def.V_FILE)
+                && Words.Cmd.usage("COPY").contains(Batch.SW_STATE + Words.Def.V_TIME));
+    }
+
     private static void v1220() {
         File r1 = drive("רשימה-פנימי"), r2 = drive("רשימה-כרטיס");
         write(new File(r1, "Docs"), "a.txt", "a1").setLastModified(1700000000000L);
@@ -42379,5 +42461,280 @@ final class State {
         long day = Cond.dateEdge(v);
         if (day == Long.MIN_VALUE || !v.matches("[\\d./-]+")) return Long.MIN_VALUE;
         return day + 24L * 3600 * 1000 - 1;                              // תאריך בלבד — סוף היום
+    }
+}
+===== קובץ: src/com/tikiyot/vfm/Commands.java =====
+package com.tikiyot.vfm;
+
+// 1.22.5: ההגדרה האחת של שפת הפקודות (המשתמש, 28.10: "זה היה צריך להיות מזמן כבר הסדר בכל התוכנה; אז תעשה לפחות
+// בפקודות"). כל פקודה כתובה כאן פעם אחת: השם, השמות הנרדפים, מה היא עושה, והפרמטרים — סוג, שם, הסבר, בסיסי או
+// מתקדם, והאפשרויות. מכאן לוקחים: המנוע (השמות הנרדפים), ההסבר והשימוש בעורך ובשגיאות, והממשק לפקודות (claude/mimshak-pkudot.md).
+// המילים של התחביר עצמו (/תפוס:, /יומן: …) — הקבועים של Batch; הטקסטים — Words.Def. בלי ממשק — נבדק.
+// אחראי: לתאר את השפה. אסור לו: לפענח שורות או להריץ (זה Batch, BatchLine, Verbs).
+
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
+import java.util.Locale;
+
+final class Commands {
+
+    /** משפחת הפקודה: קבצים (באנגלית, המנוע של Batch), פעלים בעברית (Verbs), או שורת כותרת. */
+    enum Family { FILE, VERB, HEADER }
+
+    /** סוג הפרמטר — קובע את הבוחר בממשק. */
+    enum Type { PATH, FILES, NAME, TEXT, FLAG, CHOICE, PERCENT, TIME, DATE, SIZE, LIST }
+
+    /** פרמטר אחד: מיקומי (key ריק) או מתג (key = "/S", "/תפוס:" …). */
+    static final class Param {
+        /** המתג כמו שנכתב ("/S", "/תפוס:"), או ריק — פרמטר לפי מקום. */
+        final String key;
+        /** שמות נרדפים למתג ("/מסלול", "/Y"…). */
+        final List<String> aliases;
+        final Type type;
+        final String label, help;
+        /** מתקדם — מקופל בממשק. */
+        final boolean advanced;
+        /** תחביר ישן (XCOPY / ROBOCOPY) — מובן, לא מוצג. */
+        final boolean compat;
+        /** האפשרויות של CHOICE. */
+        final List<String> options;
+        /** במקום "<שם>" בשורת השימוש (למשל START). */
+        final String placeholder;
+
+        Param(String key, String[] aliases, Type type, String label, String help, boolean advanced, boolean compat,
+              String[] options, String placeholder) {
+            this.key = key;
+            this.aliases = Collections.unmodifiableList(Arrays.asList(aliases == null ? new String[0] : aliases));
+            this.type = type;
+            this.label = label;
+            this.help = help;
+            this.advanced = advanced;
+            this.compat = compat;
+            this.options = Collections.unmodifiableList(Arrays.asList(options == null ? new String[0] : options));
+            this.placeholder = placeholder;
+        }
+
+        boolean isSwitch() {
+            return !key.isEmpty();
+        }
+
+        /** האם הטוקן הוא המתג הזה (או שם נרדף). מתג עם ערך ("/תפוס:לדלג") — לפי ההתחלה. */
+        boolean matches(String token) {
+            if (!isSwitch() || token == null) return false;
+            for (String k : all())
+                if (k.endsWith(":") ? token.regionMatches(true, 0, k, 0, k.length()) : token.equalsIgnoreCase(k)) return true;
+            return false;
+        }
+
+        List<String> all() {
+            List<String> out = new ArrayList<String>();
+            out.add(key);
+            out.addAll(aliases);
+            return out;
+        }
+
+        /** "[/תפוס:לשאול|לדלג…]" — לשורת השימוש. */
+        String usage() {
+            if (!isSwitch()) return placeholder != null ? placeholder : "<" + label + ">";
+            String v;
+            switch (type) {
+                case CHOICE: v = join(options, "|"); break;
+                case PERCENT: v = "N%"; break;
+                case FLAG: v = ""; break;
+                case PATH: v = Words.Def.V_FILE; break;
+                case TIME: v = Words.Def.V_TIME; break;
+                case LIST: v = Words.Def.V_LIST; break;
+                default: v = "…";
+            }
+            return "[" + key + v + "]";
+        }
+    }
+
+    /** פקודה אחת. */
+    static final class Def {
+        final String name;
+        final List<String> aliases;
+        final Family family;
+        /** מה היא עושה (Words.Def). */
+        final String what;
+        final List<Param> params;
+        /** צורה נוספת של אותה פקודה ("COMP /רשימה:<רשימה> <יעד>") — לשורת השימוש. */
+        final String alternative;
+
+        Def(String name, String[] aliases, Family family, String what, Param[] params, String alternative) {
+            this.name = name;
+            this.aliases = Collections.unmodifiableList(Arrays.asList(aliases == null ? new String[0] : aliases));
+            this.family = family;
+            this.what = what;
+            this.params = Collections.unmodifiableList(Arrays.asList(params == null ? new Param[0] : params));
+            this.alternative = alternative;
+        }
+
+        /** "COPY <מקור> <יעד> [/S] [/תפוס:…] …" — לפקודות הקבצים נבנה מהפרמטרים; לפעלים — מהמילון. */
+        String usage() {
+            if (family == Family.VERB) return Words.Verb.usage(name);
+            StringBuilder sb = new StringBuilder(name);
+            for (Param p : params) if (!p.compat) sb.append(' ').append(p.usage());
+            if (alternative != null) sb.append("  ·  ").append(alternative);
+            return sb.toString();
+        }
+
+        List<Param> positional() {
+            List<Param> out = new ArrayList<Param>();
+            for (Param p : params) if (!p.isSwitch()) out.add(p);
+            return out;
+        }
+
+        List<Param> switches() {
+            List<Param> out = new ArrayList<Param>();
+            for (Param p : params) if (p.isSwitch()) out.add(p);
+            return out;
+        }
+
+        /** המתג שהטוקן שייך לו, או null. */
+        Param switchFor(String token) {
+            for (Param p : params) if (p.matches(token)) return p;
+            return null;
+        }
+    }
+
+    private Commands() { }
+
+    // ---------- בניית ההגדרות ----------
+
+    private static Param pos(Type t, String label, String help) {
+        return new Param("", null, t, label, help, false, false, null, null);
+    }
+
+    private static Param pos(Type t, String label, String help, String placeholder) {
+        return new Param("", null, t, label, help, false, false, null, placeholder);
+    }
+
+    private static Param sw(String key, String[] aliases, Type t, String label, String help, String... options) {
+        return new Param(key, aliases, t, label, help, true, false, options, null);
+    }
+
+    private static Param compat(String key, Type t) {
+        return new Param(key, null, t, key, Words.Def.H_COMPAT, true, true, null, null);
+    }
+
+    /** /תאריך: /גודל: /A:H — הסינון של COPY / MOVE / DEL, והתחביר הישן שלו. */
+    private static List<Param> filters() {
+        return Arrays.asList(
+                sw("/" + Batch.SW_DATE, null, Type.DATE, Words.Def.P_DATE, Words.Def.H_DATE),
+                sw("/" + Batch.SW_SIZE, null, Type.SIZE, Words.Def.P_SIZE, Words.Def.H_SIZE),
+                hidden(),
+                compat("/D:", Type.DATE), compat("/MAXAGE:", Type.DATE), compat("/MINAGE:", Type.DATE),
+                compat("/MAX:", Type.SIZE), compat("/MIN:", Type.SIZE), compat("/Q", Type.FLAG), compat("/F", Type.FLAG));
+    }
+
+    private static Param hidden() {
+        return sw("/A:H", new String[]{"/A", "/A:"}, Type.FLAG, Words.Def.P_HIDDEN, Words.Def.H_HIDDEN);
+    }
+
+    private static Param taken() {
+        return sw(Batch.SW_TAKEN, new String[]{"/Y", "/-Y"}, Type.CHOICE, Words.Def.P_TAKEN, Words.Def.H_TAKEN,
+                Batch.TAKEN_ASK, Batch.TAKEN_SKIP, Batch.TAKEN_REPLACE, Batch.TAKEN_STOP);
+    }
+
+    private static Param[] list(Object... parts) {
+        List<Param> out = new ArrayList<Param>();
+        for (Object o : parts) {
+            if (o instanceof Param) out.add((Param) o);
+            else for (Object x : (List<?>) o) out.add((Param) x);
+        }
+        return out.toArray(new Param[0]);
+    }
+
+    private static Def transfer(String name, String srcHelp, boolean state) {
+        List<Param> ps = new ArrayList<Param>(Arrays.asList(
+                pos(Type.FILES, Words.Def.P_SOURCE, srcHelp),
+                pos(Type.PATH, Words.Def.P_DEST, Words.Def.H_DEST),
+                sw("/S", new String[]{Batch.SW_KEEP}, Type.FLAG, Words.Def.P_KEEP, Words.Def.H_KEEP),
+                taken(),
+                sw(Batch.SW_JOURNAL, null, Type.PATH, Words.Def.P_JOURNAL, Words.Def.H_JOURNAL),
+                sw(Batch.SW_LIMIT, null, Type.PERCENT, Words.Def.P_LIMIT, Words.Def.H_LIMIT)));
+        if (state) ps.add(sw(Batch.SW_STATE, null, Type.TIME, Words.Def.P_STATE, Words.Def.H_STATE));
+        ps.addAll(filters());
+        return new Def(name, null, Family.FILE, name.equals("COPY") ? Words.Def.W_COPY : Words.Def.W_MOVE,
+                ps.toArray(new Param[0]), null);
+    }
+
+    private static Def verb(String name, String what) {
+        return new Def(name, null, Family.VERB, what,
+                new Param[]{pos(Type.TEXT, Words.Def.P_ARG, Words.Verb.usage(name))}, null);
+    }
+
+    /** כל הפקודות — בסדר שבו הן מוצגות. */
+    static final List<Def> ALL = Collections.unmodifiableList(Arrays.asList(
+            transfer("COPY", Words.Def.H_COPY_SRC, true),
+            transfer("MOVE", Words.Def.H_MOVE_SRC, false),
+            new Def("DEL", new String[]{"ERASE"}, Family.FILE, Words.Def.W_DEL,
+                    list(pos(Type.FILES, Words.Def.P_FILES, Words.Def.H_DEL_SRC), filters()), null),
+            new Def("REN", new String[]{"RENAME"}, Family.FILE, Words.Def.W_REN, list(
+                    pos(Type.PATH, Words.Def.P_FILE, Words.Def.H_REN_SRC),
+                    pos(Type.NAME, Words.Def.P_NEW_NAME, Words.Def.H_NEW_NAME)), null),
+            new Def("MD", new String[]{"MKDIR"}, Family.FILE, Words.Def.W_MD,
+                    list(pos(Type.PATH, Words.Def.P_FOLDER, Words.Def.H_MD)), null),
+            new Def("RD", new String[]{"RMDIR"}, Family.FILE, Words.Def.W_RD, list(
+                    pos(Type.PATH, Words.Def.P_FOLDER, Words.Def.H_RD),
+                    sw("/S", null, Type.FLAG, Words.Def.P_NOT_EMPTY, Words.Def.H_NOT_EMPTY)), null),
+            new Def("COMP", null, Family.FILE, Words.Def.W_COMP, list(
+                    pos(Type.PATH, Words.Def.P_SOURCE, Words.Def.H_COMP_SRC),
+                    pos(Type.PATH, Words.Def.P_DEST, Words.Def.H_COMP_DEST),
+                    hidden(),
+                    sw(Batch.SW_LIST, null, Type.LIST, Words.Def.P_LIST, Words.Def.H_LIST)),
+                    "COMP " + Batch.SW_LIST + "<" + Words.Def.P_LIST + "> <" + Words.Def.P_DEST + ">"),
+            new Def("START", null, Family.FILE, Words.Def.W_START,
+                    list(pos(Type.PATH, Words.Def.P_WHAT_OPEN, Words.Def.H_START, Words.Def.U_START)), null),
+            new Def("ECHO", null, Family.FILE, Words.Def.W_ECHO, list(pos(Type.TEXT, Words.Def.P_TEXT, Words.Def.H_TEXT)), null),
+            new Def("REM", null, Family.FILE, Words.Def.W_REM, list(pos(Type.TEXT, Words.Def.P_TEXT, Words.Def.H_TEXT)), null),
+            verb(Verbs.OPEN, Words.Def.W_OPEN),
+            verb(Verbs.CREATE, Words.Def.W_CREATE),
+            verb(Verbs.UPDATE, Words.Def.W_UPDATE),
+            verb(Verbs.FIND, Words.Def.W_FIND),
+            verb(Verbs.BACK, Words.Def.W_BACK),
+            verb(Verbs.RUN, Words.Def.W_RUN),
+            verb(Verbs.ADD, Words.Def.W_ADD),
+            new Def(Batch.AS_IF2, new String[]{Batch.AS_IF}, Family.HEADER, Words.Def.W_AS_IF, new Param[0], null)));
+
+    // ---------- שאילתות ----------
+
+    /** הפקודה לפי שם או שם נרדף (אנגלית — בלי תלות באותיות גדולות). null — לא מוכרת. */
+    static Def get(String word) {
+        if (word == null) return null;
+        String w = word.trim(), u = w.toUpperCase(Locale.ROOT);
+        for (Def d : ALL) {
+            if (d.name.equals(u) || d.name.equals(w)) return d;
+            for (String a : d.aliases) if (a.equals(u) || a.equals(w)) return d;
+        }
+        return null;
+    }
+
+    /** השם הקבוע של פקודה ("MKDIR" ← "MD"). מילה לא מוכרת — כמו שהיא, באותיות גדולות. */
+    static String canonical(String word) {
+        Def d = get(word);
+        return d != null && d.family == Family.FILE ? d.name : word.toUpperCase(Locale.ROOT);
+    }
+
+    /** שמות פקודות הקבצים, בסדר. */
+    static String[] fileNames() {
+        List<String> out = new ArrayList<String>();
+        for (Def d : ALL) if (d.family == Family.FILE) out.add(d.name);
+        return out.toArray(new String[0]);
+    }
+
+    static List<Def> of(Family f) {
+        List<Def> out = new ArrayList<Def>();
+        for (Def d : ALL) if (d.family == f) out.add(d);
+        return out;
+    }
+
+    private static String join(List<String> l, String sep) {
+        StringBuilder sb = new StringBuilder();
+        for (String s : l) sb.append(sb.length() > 0 ? sep : "").append(s);
+        return sb.toString();
     }
 }

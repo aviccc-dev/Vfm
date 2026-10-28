@@ -419,15 +419,11 @@ final class Batch {
             }
             List<String> tk = tokens(line);
             if (tk.isEmpty()) continue;
-            String cmd = tk.get(0).toUpperCase(Locale.ROOT);
+            String cmd = Commands.canonical(tk.get(0));                       // 1.22.5: שמות נרדפים — מההגדרה האחת
             if (cmd.equals("REM")) continue;
             Step s = new Step();
             s.line = n + 1;
             s.text = line;
-            if (cmd.equals("MKDIR")) cmd = "MD";
-            if (cmd.equals("RMDIR")) cmd = "RD";
-            if (cmd.equals("ERASE")) cmd = "DEL";
-            if (cmd.equals("RENAME")) cmd = "REN";
             if (cmd.equals("ECHO.")) cmd = "ECHO";                   // 139: שורה ריקה, כמו ב-bat
             s.cmd = cmd;
             if (cmd.equals("ECHO")) {
@@ -585,6 +581,7 @@ final class Batch {
             }
             File f = new File(paths.get(0));
             if (args.get(0).contains("*") || args.get(0).contains("?")) { s.error = Words.Cmd.REN_WILD; return; }
+            if (sim.isDir(f)) { s.error = Words.Cmd.REN_FOLDER; return; }                  // 1.22.5
             if (!sim.isFile(f)) { s.error = Words.FILE_NOT_FOUND + ": " + args.get(0); return; }
             String bad = Physical.badName(args.get(1));
             if (bad != null) { s.error = bad; return; }
