@@ -342,6 +342,10 @@ public class BatchEditScreen extends Activity {
         String q = filter.getText().toString();
         if (templates) {
             List<CmdTemplates.Tpl> sys = CmdTemplates.system(this), mine = CmdTemplates.mine();
+            TextView hint = Ui.info(this);                                     // 1.25.3
+            hint.setText(Words.Ed.TPL_HINT);
+            hint.setPadding(Ui.dp(this, 10), Ui.dp(this, 4), Ui.dp(this, 10), 0);
+            menu.addView(hint);
             section(Words.Ed.TPL_SYS + " (" + sys.size() + ")");                 // 1.25.1: כמה יש — גם מה שמתחת לקו
             for (final CmdTemplates.Tpl t : sys) templateRow(t, "★");
             section(Words.Ed.TPL_MINE + " (" + mine.size() + ")");
@@ -394,9 +398,68 @@ public class BatchEditScreen extends Activity {
     }
 
     private void templateRow(final CmdTemplates.Tpl t, String mark) {
-        menuRow(tag(mark, false), t.name + "  ·  " + Words.Ed.lines(t.lines.size()), false, false, new View.OnClickListener() {
+        LinearLayout r = menuRow(tag(mark, false), t.name + "  ·  " + Words.Ed.lines(t.lines.size()), false, false, new View.OnClickListener() {
             @Override public void onClick(View v) { useTemplate(t); }
         });
+        r.setOnLongClickListener(new View.OnLongClickListener() {               // 1.25.3: עריכה, שם, מחיקה
+            @Override
+            public boolean onLongClick(View v) {
+                templateMenu(t);
+                return true;
+            }
+        });
+    }
+
+    /**
+     * 1.25.3 (המשתמש: "אין דרך לערוך את הנפוצות — רק להכניס פרמטרים ולהריץ"; "כן" — עותק לנפוצה של התוכנה):
+     * של התוכנה — "ערוך" יוצר עותק אצל שלי ופותח אותו; שלי — עריכה בעורך, שינוי שם, מחיקה לסל.
+     */
+    private void templateMenu(final CmdTemplates.Tpl t) {
+        final boolean mine = t.file != null;
+        String[] items = mine ? new String[]{Words.Ed.TPL_EDIT, Words.Ed.TPL_RENAME, Words.Ed.TPL_DELETE}
+                : new String[]{Words.Ed.TPL_EDIT_COPY};
+        Ui.options(this, t.name, items, new android.content.DialogInterface.OnClickListener() {
+            @Override
+            public void onClick(android.content.DialogInterface d, int which) {
+                if (!mine) {
+                    File f = CmdTemplates.copyToMine(t);
+                    if (f == null) Ui.toast(BatchEditScreen.this, Words.SAVE_FAILED);
+                    else openTemplate(f);
+                } else if (which == 0) {
+                    openTemplate(t.file);
+                } else if (which == 1) {
+                    Ui.askText(BatchEditScreen.this, Words.Ed.TPL_NAME, t.name, "", new Ui.Text1() {
+                        @Override
+                        public void ok(String name) {
+                            if (CmdTemplates.rename(t, name) == null) Ui.toast(BatchEditScreen.this, Words.Ed.TPL_NAME_BAD);
+                            renderMenu();
+                        }
+                    });
+                } else {
+                    Ui.ask(BatchEditScreen.this, Words.Ed.TPL_DELETE + ": " + t.name, t.file.getName(), null, Words.Box.IN_BIN, Words.Ed.TPL_DELETE,
+                            new Runnable() {
+                                @Override
+                                public void run() {
+                                    Physical.Result r = Physical.delete(Library.get(BatchEditScreen.this),
+                                            java.util.Collections.singletonList(t.file.getAbsolutePath()), false);
+                                    if (r.failed > 0 || t.file.exists()) Ui.toast(BatchEditScreen.this, Words.Ed.TPL_DELETE_FAILED);
+                                    renderMenu();
+                                }
+                            });
+                }
+            }
+        });
+    }
+
+    /** נפוצה שלי — נפתחת בעורך הפקודות (מסך נוסף; בחזרה — התפריט מתעדכן). */
+    private void openTemplate(File f) {
+        startActivity(new android.content.Intent(this, BatchEditScreen.class).putExtra(EXTRA_FILE, f.getAbsolutePath()));
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        if (menu != null && templates) renderMenu();                           // 1.25.3: אחרי עריכת נפוצה
     }
 
     // ---------- בחירה ----------
@@ -929,13 +992,34 @@ public class BatchEditScreen extends Activity {
     // ---------- נפוצות ----------
 
     private void saveTemplate() {
-        if (sel < 0) return;
+        if (sel < 0 || rows.isEmpty()) {
+            saveTemplateAs(allLines(), Text.stem(file.getName()));
+            return;
+        }
         final String line = rows.get(sel).text;
-        Commands.Def d = defOf(line);
-        Ui.askText(this, Words.Ed.TPL_NAME, d == null ? "" : d.he, "", new Ui.Text1() {
+        final Commands.Def d = defOf(line);
+        Ui.options(this, Words.Ed.SAVE_TPL, new String[]{Words.Ed.TPL_THIS_LINE, Words.Ed.TPL_WHOLE_FILE},   // 1.25.3: גם כל הקובץ
+                new android.content.DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(android.content.DialogInterface di, int which) {
+                        if (which == 0) saveTemplateAs(lines(line), d == null ? "" : d.he);
+                        else saveTemplateAs(allLines(), Text.stem(file.getName()));
+                    }
+                });
+    }
+
+    private List<String> allLines() {
+        List<String> out = new ArrayList<String>();
+        for (Row r : rows) out.add(r.text);
+        return out;
+    }
+
+    private void saveTemplateAs(final List<String> ls, String suggested) {
+        if (ls.isEmpty()) return;
+        Ui.askText(this, Words.Ed.TPL_NAME, suggested, "", new Ui.Text1() {
             @Override
             public void ok(String name) {
-                if (CmdTemplates.save(name, lines(line)) != null) Ui.toast(BatchEditScreen.this, Words.Ed.TPL_SAVED);
+                if (CmdTemplates.save(name, ls) != null) Ui.toast(BatchEditScreen.this, Words.Ed.TPL_SAVED);
                 else Ui.toast(BatchEditScreen.this, Words.SAVE_FAILED);
             }
         });

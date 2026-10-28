@@ -117,6 +117,21 @@ final class CmdTemplates {
         }
     }
 
+    /** 1.25.3: עריכת נפוצה של התוכנה — עותק אצל "שלי" (המקור נשאר ומתעדכן עם הגרסאות). */
+    static File copyToMine(Tpl t) {
+        return save(t.name + Words.Ed.MINE_SUFFIX, t.lines);
+    }
+
+    /** 1.25.3: שינוי שם לנפוצה שלי. null — לא הצליח (שם לא תקין או תפוס). */
+    static File rename(Tpl t, String name) {
+        if (t.file == null || name == null) return null;
+        String n = name.trim();
+        if (n.isEmpty() || Physical.badName(n) != null) return null;
+        File to = new File(t.file.getParentFile(), n + "." + Batch.EXT);
+        if (to.exists() && !to.getName().equalsIgnoreCase(t.file.getName())) return null;
+        return t.file.renameTo(to) ? to : null;
+    }
+
     /** המקומות הפתוחים, בסדר, כל אחד פעם אחת. */
     static List<String> holes(List<String> lines) {
         List<String> out = new ArrayList<String>();

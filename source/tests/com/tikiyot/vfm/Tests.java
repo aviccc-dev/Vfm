@@ -4321,6 +4321,13 @@ public final class Tests {
             check("1.23.0: שלי — נשמרה, ושם תפוס מקבל מספר", a != null && b != null && !a.equals(b) && mine.size() == 2
                     && mine.get(0).lines.get(0).equals("COPY a b"));
             check("1.23.0: שם עם תווים אסורים", CmdTemplates.save("א/ב", Arrays.asList("MD x")) != null);
+            File cpy = CmdTemplates.copyToMine(ts.get(0));                      // 1.25.3
+            check("1.25.3: עריכת נפוצה של התוכנה — עותק אצל שלי", cpy != null && cpy.getName().contains("(שלי)")
+                    && cpy.length() > 0);
+            CmdTemplates.Tpl first = CmdTemplates.mine().get(0);
+            File rn = CmdTemplates.rename(first, "שם חדש");
+            check("1.25.3: שינוי שם לשלי", rn != null && rn.isFile() && !first.file.exists());
+            check("1.25.3: שם תפוס — לא", CmdTemplates.rename(CmdTemplates.mine().get(0), Text.stem(CmdTemplates.mine().get(1).file.getName())) == null);
         } finally {
             CmdTemplates.testRoot = null;
         }
