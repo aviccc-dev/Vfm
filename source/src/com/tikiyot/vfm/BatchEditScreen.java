@@ -1062,6 +1062,7 @@ public class BatchEditScreen extends Activity {
     private boolean save() {
         String now = plain();                                                  // 204: נשמר בלי סימני הכיוון
         if (now.equals(saved)) return true;
+        if (Reserved.isSystem(file)) return saveMine(now);                    // 1.25.7
         try {
             Files.writeAtomic(file, now);
             saved = now;
@@ -1070,6 +1071,47 @@ public class BatchEditScreen extends Activity {
             return true;
         } catch (Throwable t) {
             Log.e("שמירת קובץ פקודות", t);
+            Ui.toast(this, Words.SAVE_FAILED);
+            return false;
+        }
+    }
+
+    /**
+     * 1.25.7 (באג, המשתמש: "אני כותב לערוך, ואז כוכב … שומר, מריץ … והוא מריץ את הקובץ שפתחתי מחדש"): פקודת מערכת
+     * ("פקודה חדשה", "סל המחזור"…) נכתבת מחדש בכל פתיחה של תפריט הפקודות — מה שנשמר בה חזר למקור, והורץ המקור
+     * ("לא ישתנה דבר בכונן"). עכשיו: שינוי בפקודת מערכת נשמר כפקודה חדשה ב"שלי" (כמו "שמירה בשם" בתפריט), והעורך
+     * ממשיך איתה — ההרצה מריצה את מה שנכתב.
+     */
+    private boolean saveMine(String now) {
+        Program p = Program.read(file);
+        String name = p.title(file) + Words.CmdM.MINE_SUFFIX;
+        StringBuilder body = new StringBuilder();
+        for (String l : now.split("\n")) {
+            if (l.startsWith(Program.NAME + " ")) continue;                    // השם — החדש
+            body.append(l).append('\n');
+        }
+        File dir = Shortcuts.dir();
+        String base = name.replaceAll("[/\\\\:*?\"<>|\n\t]", " ").trim();
+        File f = new File(dir, base + "." + Batch.EXT);
+        for (int i = 2; f.exists(); i++) f = new File(dir, base + " (" + i + ")." + Batch.EXT);
+        try {
+            if (!dir.isDirectory()) dir.mkdirs();
+            String text2 = Program.NAME + " " + name + "\n" + body;
+            Files.writeAtomic(f, text2);
+            file = f;
+            selfEdit = true;                                                   // בעורך — אותו טקסט שנשמר (עם השם החדש)
+            text.setText(Bidi.mark(text2));
+            selfEdit = false;
+            saved = text2;
+            computeRows();
+            sel = -1;
+            renderMenu();
+            Reserved.addToMine(f);
+            Library.get(this).fileAdded(f);
+            Ui.toast(this, Words.Ed.savedAsMine(name));
+            return true;
+        } catch (Throwable t) {
+            Log.e("שמירת פקודת מערכת כשלי", t);
             Ui.toast(this, Words.SAVE_FAILED);
             return false;
         }

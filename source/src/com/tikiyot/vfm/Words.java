@@ -1986,6 +1986,11 @@ public final class Words {
                 ALREADY_AS_IF = "יש כבר הדמיה בראש הקובץ", ALREADY_MEASURE = "יש כבר מדידה בקובץ",
                 NO_SMART = "אין רשימות חכמות", PICK_FIRST = "בחר שורה בתפריט קודם";
 
+        /** 1.25.7: פקודת מערכת שנערכה — נשמרת כשלי. */
+        public static String savedAsMine(String name) {
+            return "פקודות המערכת לא משתנות — נשמר כ\"" + name + "\" ב\"שלי\", וממשיכים איתה";
+        }
+
         /** 1.25.2: מה מבקשים במקום הפתוח. */
         public static String holeKind(int kind) {
             switch (kind) {
