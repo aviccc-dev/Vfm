@@ -2294,8 +2294,8 @@ public final class Words {
 
         public static final String APP_NAME_M = "מנהל קבצים וירטואלי · מ";
         public static final String MENU = "מסד נתונים (מ)";
-        public static final String TITLE = "מסד נתונים · מ0.2";
-        public static final String NOTICE = "מנוע המסד בבנייה, ועדיין בלי גיבוי (מ0.5). \"העתקה מהישן\" רק קוראת מהמנוע הישן ולא משנה בו דבר — אפשר להעתיק שוב, ומה שכבר הועתק מתעדכן ולא מוכפל.";
+        public static final String TITLE = "מסד נתונים · מ0.2.1";
+        public static final String NOTICE = "מנוע המסד בבנייה, ועדיין בלי גיבוי (מ0.5). \"העתקה מהישן\" רק קוראת מהמנוע הישן ולא משנה בו דבר. לכל אופן עבודה מסד משלו — כל אופן נכנס למסד של אותו אופן. אפשר להעתיק שוב: מה שכבר הועתק מתעדכן ולא מוכפל.";
         public static final String NEED_ACCESS = "כדי לשמור את מונה המזהים בתיקיית הנתונים, התוכנה צריכה הרשאת גישה לכל הקבצים.";
         public static final String ALL_LISTS = "כל הרשימות";
         public static final String CRUMB_SEP = " › ";
@@ -2324,10 +2324,16 @@ public final class Words {
         public static final String SELF_TEST_TITLE = "בדיקה עצמית של המסד";
         public static final String ALREADY_THERE = "הפריט כבר ברשימה";
 
+        public static final String MODE_PICK = "אופן עבודה (לכל אופן מסד משלו)";
+
+        public static String modeButton(String mode) {
+            return "אופן עבודה: " + mode + " ▾";
+        }
+
         public static final String IMPORT = "📥 העתקה מהישן";
         public static final String IMPORT_TITLE = "העתקה מהמנוע הישן";
         public static final String IMPORT_NO_OLD = "לא נמצאו רשימות של המנוע הישן בתיקיית \"מנהל קבצים וירטואלי\" (אופני עבודה ← מבנה.txt). ההעתקה קוראת משם בלבד.";
-        public static final String IMPORT_PICK = "מאיזה אופן עבודה להעתיק?";
+        public static final String IMPORT_PICK = "האופן הפתוח אינו קיים במנוע הישן. איזה אופן להעתיק (למסד של אותו אופן)?";
         public static final String IMPORT_READING = "קורא את המנוע הישן ובודק מה יועתק…";
         public static final String IMPORT_COPYING = "מעתיק…";
         public static final String IMPORT_YES = "העתקה";

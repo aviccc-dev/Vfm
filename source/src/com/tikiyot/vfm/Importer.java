@@ -7,7 +7,7 @@ package com.tikiyot.vfm;
 //  - מה מועתק: רשימות ידניות בעץ (עם הסדר), צלמית/תיאור/עיצוב/"למה", קבצים (מסלול, כונן, גודל ותאריך, חתימה).
 //  - לא מועתק בגרסה זו, ונספר בדוח: הפניות בין רשימות (@רשימה — מ0.4), רשימות חכמות (@חכמה — מ0.3), תיקיות חיות
 //    (@תיקייה), שורות פגומות. שום דבר לא נמחק או משתנה במקור.
-//  - העתקה חוזרת = עדכון, לא כפילות: רשימה מזוהה לפי המסלול שלה במקור (origin_key), קובץ לפי המסלול שלו.
+//  - העתקה חוזרת = עדכון, לא כפילות: רשימה מזוהה לפי האופן והמסלול שלה במקור (origin_key), קובץ לפי המסלול שלו.
 //    רשימה שכבר הועתקה לא משתנה במבנה; מאפיין ריק בה מתמלא, מאפיין שיש לא נדרס. קבצים חדשים נוספים לסוף.
 //    מה שנמחק במקור לא נמחק במסד.
 //  - התצוגה המקדימה היא אותה ריצה בדיוק בלי שמירה (Store.atomic עם keep=false) — הדוח שלה זהה לדוח ההעתקה.
@@ -24,17 +24,24 @@ final class Importer {
 
     private Importer() { }
 
-    /** מפתח המקור של רשימה שהועתקה מהמנוע הישן: הקידומת ואחריה המסלול המלא ("א / ב"). */
-    static final String ORIGIN_LIST = "tree:L:";  // תחביר
+    /**
+     * מפתח המקור של רשימה שהועתקה מהמנוע הישן: שם האופן ואחריו המסלול המלא ("א / ב"). שם האופן חלק מהמפתח — שתי רשימות
+     * באותו מסלול באופנים שונים הן שתי רשימות (באג שנתפס במכשיר: בלי השם הן התמזגו). מ־מ0.2: מסד נפרד לכל אופן, והמפתח מגן גם אם טעו ביעד.
+     */
+    static String originOf(String mode, String listPath) {
+        return "tree:" + mode + ":L:" + listPath;  // תחביר
+    }
     /** כונן שלא זוהה ממסלולו. */
     static final String UNKNOWN_DRIVE = "?";
 
     /** מה נקרא מהמקור. */
     static final class Source {
+        final String mode;
         final Tree tree;
         final Map<String, Sig.Entry> sigs;
 
-        Source(Tree tree, Map<String, Sig.Entry> sigs) {
+        Source(String mode, Tree tree, Map<String, Sig.Entry> sigs) {
+            this.mode = mode;
             this.tree = tree;
             this.sigs = sigs;
         }
@@ -87,7 +94,7 @@ final class Importer {
         if (!t.isFile()) throw new Store.Failure("no tree file: " + t);
         Tree tree = Tree.loadFrom(t);
         if (tree.unreadable) throw new Store.Failure("tree file unreadable: " + t);
-        return new Source(tree, Sig.read(new File(modeDir, Sig.FILE)));
+        return new Source(modeDir.getName(), tree, Sig.read(new File(modeDir, Sig.FILE)));
     }
 
     // ---------- ההעתקה ----------
@@ -154,7 +161,7 @@ final class Importer {
 
         void list(Tree.Node n, long parent) {
             count(n);
-            String key = ORIGIN_LIST + Tree.fullLabel(n.path());
+            String key = originOf(src.mode, Tree.fullLabel(n.path()));
             long id = s.findByOrigin(key);
             if (id == 0) {
                 id = s.createList(n.name, parent);

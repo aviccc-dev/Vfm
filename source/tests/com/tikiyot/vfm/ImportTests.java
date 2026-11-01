@@ -104,11 +104,15 @@ final class ImportTests {
     }
 
     private static long listBy(Store s, String path) {
-        return s.findByOrigin(Importer.ORIGIN_LIST + path);
+        return s.findByOrigin(Importer.originOf("עבודה", path));
+    }
+
+    private static long listIn(Store s, String mode, String path) {
+        return s.findByOrigin(Importer.originOf(mode, path));
     }
 
     void run(Store s, File dir) throws Exception {
-        File m1 = new File(dir, "mode1"), m2 = new File(dir, "mode2");
+        File m1 = new File(dir, "v1/עבודה"), m2 = new File(dir, "v2/עבודה");   // אותו אופן בשתי גרסאות
         write(new File(m1, Paths.TREE), TREE1);
         write(new File(m1, Sig.FILE), SIGS1);
         write(new File(m2, Paths.TREE), TREE2);
@@ -172,6 +176,19 @@ final class ImportTests {
         ck("עדכון: חמישה קישורים ישנים נשארו, אחד חדש", r2.linksAdded == 1 && r2.linksKnown == 4);
         ck("עדכון: המסד תקין", s.check() == null);
 
+        // שני אופנים עם אותה רשימה באותו מסלול: שתי רשימות, בלי ערבוב קבצים (באג שנתפס במכשיר)
+        File other = new File(dir, "v4/ניסוי");
+        write(new File(other, Paths.TREE), "#1 ספרים\n" + D + " | 40\n");
+        int before = s.lists().size();
+        long booksOther;
+        Importer.Report ro = Importer.run(s, Importer.load(other), true);
+        booksOther = listIn(s, "ניסוי", "ספרים");
+        ck("שני אופנים: הרשימה של האופן השני נוצרה בנפרד", ro.listsNew == 1 && ro.listsKnown == 0 && s.lists().size() == before + 1
+                && booksOther != 0 && booksOther != books);
+        ck("שני אופנים: הקבצים לא התערבבו", names(s, booksOther).equals(Arrays.asList("ד.pdf")) && !s.listsOf(fb).contains(booksOther));
+        ck("שני אופנים: הרשימה של האופן הראשון לא השתנתה", s.count(books) == 3 && s.listsOf(fa).contains(books));
+        ck("שני אופנים: אותו קובץ הוא פריט אחד בשני האופנים", s.listsOf(s.findFile(D)).contains(booksOther) && s.findFile(D) == fd);
+
         // כישלון באמצע: הכול חוזר
         final Store real = s;
         final int[] calls = {0};
@@ -193,11 +210,11 @@ final class ImportTests {
                 }
             }
         });
-        write(new File(dir, "mode3/" + Paths.TREE), "#1 חדשה אחת\n/x/1 | 1\n/x/2 | 2\n/x/3 | 3\n");
+        write(new File(dir, "v3/עבודה/" + Paths.TREE), "#1 חדשה אחת\n/x/1 | 1\n/x/2 | 2\n/x/3 | 3\n");
         int listsBefore = s.lists().size();
         boolean threw = false;
         try {
-            Importer.run(flaky, Importer.load(new File(dir, "mode3")), true);
+            Importer.run(flaky, Importer.load(new File(dir, "v3/עבודה")), true);
         } catch (Store.Failure e) {
             threw = true;
         }

@@ -21,17 +21,65 @@ import java.util.List;
 
 public class DbScreen extends Activity {
 
-    static final String DB_FILE = "vfm-m.db";                       // בכונן הפרטי של התוכנה, לא בתיקייה הגלויה
+    /** מסד לכל אופן עבודה, באחסון הפרטי של התוכנה (לא בתיקייה הגלויה): vfm-m-<אופן>.db. */
+    static final String DB_PREFIX = "vfm-m-", DB_SUFFIX = ".db";
+    private static final String PREFS = "m", PREF_MODE = "mode";
 
     private SqlStore store;
+    private String mode = "";
+    private Button modeButton;
     private TextView status, crumb, hint;
     private LinearLayout rows, buttons;
     private ScrollView sv;
     /** נתיב הרשימות הפתוחות; ריק = "כל הרשימות". */
     private final ArrayList<Long> path = new ArrayList<Long>();
 
-    static File dbFile(android.content.Context c) {
-        return c.getDatabasePath(DB_FILE);
+    static File dbFile(android.content.Context c, String mode) {
+        return c.getDatabasePath(DB_PREFIX + mode + DB_SUFFIX);
+    }
+
+    /** האופנים שיש להם מסד כבר. */
+    private List<String> dbModes() {
+        List<String> out = new ArrayList<String>();
+        File[] k = dbFile(this, "x").getParentFile().listFiles();
+        if (k != null)
+            for (File f : k) {
+                String n = f.getName();
+                if (n.startsWith(DB_PREFIX) && n.endsWith(DB_SUFFIX) && n.length() > DB_PREFIX.length() + DB_SUFFIX.length())
+                    out.add(n.substring(DB_PREFIX.length(), n.length() - DB_SUFFIX.length()));
+            }
+        java.util.Collections.sort(out);
+        return out;
+    }
+
+    /** האופן הפתוח: מה שנבחר בפעם הקודמת, ואם אין — האופן הפעיל במנוע הישן. */
+    private String loadMode() {
+        String m = getSharedPreferences(PREFS, MODE_PRIVATE).getString(PREF_MODE, "");
+        return m.isEmpty() ? Importer.activeMode(oldData()) : m;
+    }
+
+    private void switchMode(String m) {
+        mode = m;
+        getSharedPreferences(PREFS, MODE_PRIVATE).edit().putString(PREF_MODE, m).apply();
+        if (store != null) store.close();
+        store = null;
+        path.clear();
+        refresh();
+    }
+
+    private void pickMode() {
+        java.util.TreeSet<String> all = new java.util.TreeSet<String>(dbModes());
+        all.addAll(Importer.modes(oldData()));
+        all.add(mode);
+        final List<String> names = new ArrayList<String>(all);
+        List<String> labels = new ArrayList<String>();
+        for (String n : names) labels.add(Words.Db.modeLine(n, n.equals(mode)));
+        Ui.list(this, Words.Db.MODE_PICK, labels, new DialogInterface.OnClickListener() {
+            @Override
+            public void onClick(DialogInterface d, int which) {
+                if (!names.get(which).equals(mode)) switchMode(names.get(which));
+            }
+        });
     }
 
     /** קובץ המונה — בתיקיית הנתונים הגלויה, כדי ששחזור המסד מגיבוי ישן לא יחזיר מספר זיהוי. */
@@ -49,6 +97,12 @@ public class DbScreen extends Activity {
         root.addView(notice);
         status = Ui.info(this);
         root.addView(status);
+        modeButton = new Button(this);
+        modeButton.setAllCaps(false);
+        modeButton.setOnClickListener(new View.OnClickListener() {
+            @Override public void onClick(View v) { pickMode(); }
+        });
+        root.addView(modeButton);
         crumb = new TextView(this);
         crumb.setTextSize(16);
         crumb.setTypeface(Typeface.DEFAULT_BOLD);
@@ -73,6 +127,11 @@ public class DbScreen extends Activity {
     @Override
     protected void onResume() {
         super.onResume();
+        refresh();
+    }
+
+    /** פותח את מסד האופן הנבחר (אם עוד לא פתוח) ומציג. */
+    private void refresh() {
         if (!Ui.hasFiles(this)) {
             status.setText(Words.Db.NEED_ACCESS);
             rows.removeAllViews();
@@ -82,9 +141,11 @@ public class DbScreen extends Activity {
             }));
             return;
         }
+        if (mode.isEmpty()) mode = loadMode();
+        modeButton.setText(Words.Db.modeButton(mode));
         if (store == null) {
             try {
-                store = SqlStore.open(dbFile(this), new IdCounter(counterFile()));
+                store = SqlStore.open(dbFile(this, mode), new IdCounter(counterFile()));
             } catch (Throwable t) {
                 Log.e("DbScreen.open", t);
                 status.setText(Words.Db.openFailed(String.valueOf(t.getMessage())));
@@ -322,16 +383,18 @@ public class DbScreen extends Activity {
                     .setPositiveButton(Words.OK, null).show();
             return;
         }
-        final String active = Importer.activeMode(old);
-        if (modes.size() == 1) {
-            importPreview(old, modes.get(0));
+        // כל אופן נכנס למסד של אותו אופן (באג שנתפס במכשיר: שלושה אופנים במסד אחד התערבבו)
+        if (modes.contains(mode)) {
+            importPreview(old, mode);
             return;
         }
+        final String active = Importer.activeMode(old);
         final List<String> labels = new ArrayList<String>();
         for (String m : modes) labels.add(Words.Db.modeLine(m, m.equals(active)));
         Ui.list(this, Words.Db.IMPORT_PICK, labels, new DialogInterface.OnClickListener() {
             @Override
             public void onClick(DialogInterface d, int which) {
+                switchMode(modes.get(which));
                 importPreview(old, modes.get(which));
             }
         });

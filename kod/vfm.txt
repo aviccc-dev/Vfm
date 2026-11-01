@@ -932,7 +932,7 @@ cd $S; rm -rf out gen bld
 [ "$S" != "$DIR" ] && rm -rf $S
 ls -la $OUT
 ===== קובץ: build/m-version.txt =====
-2 מ0.2
+3 מ0.2.1
 ===== קובץ: build/test.sh =====
 #!/bin/bash
 # בדיקות על המחשב (80). יוצא בכישלון אם בדיקה אחת נכשלה — ואז build.sh לא בונה.
@@ -8196,17 +8196,65 @@ import java.util.List;
 
 public class DbScreen extends Activity {
 
-    static final String DB_FILE = "vfm-m.db";                       // בכונן הפרטי של התוכנה, לא בתיקייה הגלויה
+    /** מסד לכל אופן עבודה, באחסון הפרטי של התוכנה (לא בתיקייה הגלויה): vfm-m-<אופן>.db. */
+    static final String DB_PREFIX = "vfm-m-", DB_SUFFIX = ".db";
+    private static final String PREFS = "m", PREF_MODE = "mode";
 
     private SqlStore store;
+    private String mode = "";
+    private Button modeButton;
     private TextView status, crumb, hint;
     private LinearLayout rows, buttons;
     private ScrollView sv;
     /** נתיב הרשימות הפתוחות; ריק = "כל הרשימות". */
     private final ArrayList<Long> path = new ArrayList<Long>();
 
-    static File dbFile(android.content.Context c) {
-        return c.getDatabasePath(DB_FILE);
+    static File dbFile(android.content.Context c, String mode) {
+        return c.getDatabasePath(DB_PREFIX + mode + DB_SUFFIX);
+    }
+
+    /** האופנים שיש להם מסד כבר. */
+    private List<String> dbModes() {
+        List<String> out = new ArrayList<String>();
+        File[] k = dbFile(this, "x").getParentFile().listFiles();
+        if (k != null)
+            for (File f : k) {
+                String n = f.getName();
+                if (n.startsWith(DB_PREFIX) && n.endsWith(DB_SUFFIX) && n.length() > DB_PREFIX.length() + DB_SUFFIX.length())
+                    out.add(n.substring(DB_PREFIX.length(), n.length() - DB_SUFFIX.length()));
+            }
+        java.util.Collections.sort(out);
+        return out;
+    }
+
+    /** האופן הפתוח: מה שנבחר בפעם הקודמת, ואם אין — האופן הפעיל במנוע הישן. */
+    private String loadMode() {
+        String m = getSharedPreferences(PREFS, MODE_PRIVATE).getString(PREF_MODE, "");
+        return m.isEmpty() ? Importer.activeMode(oldData()) : m;
+    }
+
+    private void switchMode(String m) {
+        mode = m;
+        getSharedPreferences(PREFS, MODE_PRIVATE).edit().putString(PREF_MODE, m).apply();
+        if (store != null) store.close();
+        store = null;
+        path.clear();
+        refresh();
+    }
+
+    private void pickMode() {
+        java.util.TreeSet<String> all = new java.util.TreeSet<String>(dbModes());
+        all.addAll(Importer.modes(oldData()));
+        all.add(mode);
+        final List<String> names = new ArrayList<String>(all);
+        List<String> labels = new ArrayList<String>();
+        for (String n : names) labels.add(Words.Db.modeLine(n, n.equals(mode)));
+        Ui.list(this, Words.Db.MODE_PICK, labels, new DialogInterface.OnClickListener() {
+            @Override
+            public void onClick(DialogInterface d, int which) {
+                if (!names.get(which).equals(mode)) switchMode(names.get(which));
+            }
+        });
     }
 
     /** קובץ המונה — בתיקיית הנתונים הגלויה, כדי ששחזור המסד מגיבוי ישן לא יחזיר מספר זיהוי. */
@@ -8224,6 +8272,12 @@ public class DbScreen extends Activity {
         root.addView(notice);
         status = Ui.info(this);
         root.addView(status);
+        modeButton = new Button(this);
+        modeButton.setAllCaps(false);
+        modeButton.setOnClickListener(new View.OnClickListener() {
+            @Override public void onClick(View v) { pickMode(); }
+        });
+        root.addView(modeButton);
         crumb = new TextView(this);
         crumb.setTextSize(16);
         crumb.setTypeface(Typeface.DEFAULT_BOLD);
@@ -8248,6 +8302,11 @@ public class DbScreen extends Activity {
     @Override
     protected void onResume() {
         super.onResume();
+        refresh();
+    }
+
+    /** פותח את מסד האופן הנבחר (אם עוד לא פתוח) ומציג. */
+    private void refresh() {
         if (!Ui.hasFiles(this)) {
             status.setText(Words.Db.NEED_ACCESS);
             rows.removeAllViews();
@@ -8257,9 +8316,11 @@ public class DbScreen extends Activity {
             }));
             return;
         }
+        if (mode.isEmpty()) mode = loadMode();
+        modeButton.setText(Words.Db.modeButton(mode));
         if (store == null) {
             try {
-                store = SqlStore.open(dbFile(this), new IdCounter(counterFile()));
+                store = SqlStore.open(dbFile(this, mode), new IdCounter(counterFile()));
             } catch (Throwable t) {
                 Log.e("DbScreen.open", t);
                 status.setText(Words.Db.openFailed(String.valueOf(t.getMessage())));
@@ -8497,16 +8558,18 @@ public class DbScreen extends Activity {
                     .setPositiveButton(Words.OK, null).show();
             return;
         }
-        final String active = Importer.activeMode(old);
-        if (modes.size() == 1) {
-            importPreview(old, modes.get(0));
+        // כל אופן נכנס למסד של אותו אופן (באג שנתפס במכשיר: שלושה אופנים במסד אחד התערבבו)
+        if (modes.contains(mode)) {
+            importPreview(old, mode);
             return;
         }
+        final String active = Importer.activeMode(old);
         final List<String> labels = new ArrayList<String>();
         for (String m : modes) labels.add(Words.Db.modeLine(m, m.equals(active)));
         Ui.list(this, Words.Db.IMPORT_PICK, labels, new DialogInterface.OnClickListener() {
             @Override
             public void onClick(DialogInterface d, int which) {
+                switchMode(modes.get(which));
                 importPreview(old, modes.get(which));
             }
         });
@@ -13901,7 +13964,7 @@ package com.tikiyot.vfm;
 //  - מה מועתק: רשימות ידניות בעץ (עם הסדר), צלמית/תיאור/עיצוב/"למה", קבצים (מסלול, כונן, גודל ותאריך, חתימה).
 //  - לא מועתק בגרסה זו, ונספר בדוח: הפניות בין רשימות (@רשימה — מ0.4), רשימות חכמות (@חכמה — מ0.3), תיקיות חיות
 //    (@תיקייה), שורות פגומות. שום דבר לא נמחק או משתנה במקור.
-//  - העתקה חוזרת = עדכון, לא כפילות: רשימה מזוהה לפי המסלול שלה במקור (origin_key), קובץ לפי המסלול שלו.
+//  - העתקה חוזרת = עדכון, לא כפילות: רשימה מזוהה לפי האופן והמסלול שלה במקור (origin_key), קובץ לפי המסלול שלו.
 //    רשימה שכבר הועתקה לא משתנה במבנה; מאפיין ריק בה מתמלא, מאפיין שיש לא נדרס. קבצים חדשים נוספים לסוף.
 //    מה שנמחק במקור לא נמחק במסד.
 //  - התצוגה המקדימה היא אותה ריצה בדיוק בלי שמירה (Store.atomic עם keep=false) — הדוח שלה זהה לדוח ההעתקה.
@@ -13918,17 +13981,24 @@ final class Importer {
 
     private Importer() { }
 
-    /** מפתח המקור של רשימה שהועתקה מהמנוע הישן: הקידומת ואחריה המסלול המלא ("א / ב"). */
-    static final String ORIGIN_LIST = "tree:L:";  // תחביר
+    /**
+     * מפתח המקור של רשימה שהועתקה מהמנוע הישן: שם האופן ואחריו המסלול המלא ("א / ב"). שם האופן חלק מהמפתח — שתי רשימות
+     * באותו מסלול באופנים שונים הן שתי רשימות (באג שנתפס במכשיר: בלי השם הן התמזגו). מ־מ0.2: מסד נפרד לכל אופן, והמפתח מגן גם אם טעו ביעד.
+     */
+    static String originOf(String mode, String listPath) {
+        return "tree:" + mode + ":L:" + listPath;  // תחביר
+    }
     /** כונן שלא זוהה ממסלולו. */
     static final String UNKNOWN_DRIVE = "?";
 
     /** מה נקרא מהמקור. */
     static final class Source {
+        final String mode;
         final Tree tree;
         final Map<String, Sig.Entry> sigs;
 
-        Source(Tree tree, Map<String, Sig.Entry> sigs) {
+        Source(String mode, Tree tree, Map<String, Sig.Entry> sigs) {
+            this.mode = mode;
             this.tree = tree;
             this.sigs = sigs;
         }
@@ -13981,7 +14051,7 @@ final class Importer {
         if (!t.isFile()) throw new Store.Failure("no tree file: " + t);
         Tree tree = Tree.loadFrom(t);
         if (tree.unreadable) throw new Store.Failure("tree file unreadable: " + t);
-        return new Source(tree, Sig.read(new File(modeDir, Sig.FILE)));
+        return new Source(modeDir.getName(), tree, Sig.read(new File(modeDir, Sig.FILE)));
     }
 
     // ---------- ההעתקה ----------
@@ -14048,7 +14118,7 @@ final class Importer {
 
         void list(Tree.Node n, long parent) {
             count(n);
-            String key = ORIGIN_LIST + Tree.fullLabel(n.path());
+            String key = originOf(src.mode, Tree.fullLabel(n.path()));
             long id = s.findByOrigin(key);
             if (id == 0) {
                 id = s.createList(n.name, parent);
@@ -40510,8 +40580,8 @@ public final class Words {
 
         public static final String APP_NAME_M = "מנהל קבצים וירטואלי · מ";
         public static final String MENU = "מסד נתונים (מ)";
-        public static final String TITLE = "מסד נתונים · מ0.2";
-        public static final String NOTICE = "מנוע המסד בבנייה, ועדיין בלי גיבוי (מ0.5). \"העתקה מהישן\" רק קוראת מהמנוע הישן ולא משנה בו דבר — אפשר להעתיק שוב, ומה שכבר הועתק מתעדכן ולא מוכפל.";
+        public static final String TITLE = "מסד נתונים · מ0.2.1";
+        public static final String NOTICE = "מנוע המסד בבנייה, ועדיין בלי גיבוי (מ0.5). \"העתקה מהישן\" רק קוראת מהמנוע הישן ולא משנה בו דבר. לכל אופן עבודה מסד משלו — כל אופן נכנס למסד של אותו אופן. אפשר להעתיק שוב: מה שכבר הועתק מתעדכן ולא מוכפל.";
         public static final String NEED_ACCESS = "כדי לשמור את מונה המזהים בתיקיית הנתונים, התוכנה צריכה הרשאת גישה לכל הקבצים.";
         public static final String ALL_LISTS = "כל הרשימות";
         public static final String CRUMB_SEP = " › ";
@@ -40540,10 +40610,16 @@ public final class Words {
         public static final String SELF_TEST_TITLE = "בדיקה עצמית של המסד";
         public static final String ALREADY_THERE = "הפריט כבר ברשימה";
 
+        public static final String MODE_PICK = "אופן עבודה (לכל אופן מסד משלו)";
+
+        public static String modeButton(String mode) {
+            return "אופן עבודה: " + mode + " ▾";
+        }
+
         public static final String IMPORT = "📥 העתקה מהישן";
         public static final String IMPORT_TITLE = "העתקה מהמנוע הישן";
         public static final String IMPORT_NO_OLD = "לא נמצאו רשימות של המנוע הישן בתיקיית \"מנהל קבצים וירטואלי\" (אופני עבודה ← מבנה.txt). ההעתקה קוראת משם בלבד.";
-        public static final String IMPORT_PICK = "מאיזה אופן עבודה להעתיק?";
+        public static final String IMPORT_PICK = "האופן הפתוח אינו קיים במנוע הישן. איזה אופן להעתיק (למסד של אותו אופן)?";
         public static final String IMPORT_READING = "קורא את המנוע הישן ובודק מה יועתק…";
         public static final String IMPORT_COPYING = "מעתיק…";
         public static final String IMPORT_YES = "העתקה";
@@ -41711,11 +41787,15 @@ final class ImportTests {
     }
 
     private static long listBy(Store s, String path) {
-        return s.findByOrigin(Importer.ORIGIN_LIST + path);
+        return s.findByOrigin(Importer.originOf("עבודה", path));
+    }
+
+    private static long listIn(Store s, String mode, String path) {
+        return s.findByOrigin(Importer.originOf(mode, path));
     }
 
     void run(Store s, File dir) throws Exception {
-        File m1 = new File(dir, "mode1"), m2 = new File(dir, "mode2");
+        File m1 = new File(dir, "v1/עבודה"), m2 = new File(dir, "v2/עבודה");   // אותו אופן בשתי גרסאות
         write(new File(m1, Paths.TREE), TREE1);
         write(new File(m1, Sig.FILE), SIGS1);
         write(new File(m2, Paths.TREE), TREE2);
@@ -41779,6 +41859,19 @@ final class ImportTests {
         ck("עדכון: חמישה קישורים ישנים נשארו, אחד חדש", r2.linksAdded == 1 && r2.linksKnown == 4);
         ck("עדכון: המסד תקין", s.check() == null);
 
+        // שני אופנים עם אותה רשימה באותו מסלול: שתי רשימות, בלי ערבוב קבצים (באג שנתפס במכשיר)
+        File other = new File(dir, "v4/ניסוי");
+        write(new File(other, Paths.TREE), "#1 ספרים\n" + D + " | 40\n");
+        int before = s.lists().size();
+        long booksOther;
+        Importer.Report ro = Importer.run(s, Importer.load(other), true);
+        booksOther = listIn(s, "ניסוי", "ספרים");
+        ck("שני אופנים: הרשימה של האופן השני נוצרה בנפרד", ro.listsNew == 1 && ro.listsKnown == 0 && s.lists().size() == before + 1
+                && booksOther != 0 && booksOther != books);
+        ck("שני אופנים: הקבצים לא התערבבו", names(s, booksOther).equals(Arrays.asList("ד.pdf")) && !s.listsOf(fb).contains(booksOther));
+        ck("שני אופנים: הרשימה של האופן הראשון לא השתנתה", s.count(books) == 3 && s.listsOf(fa).contains(books));
+        ck("שני אופנים: אותו קובץ הוא פריט אחד בשני האופנים", s.listsOf(s.findFile(D)).contains(booksOther) && s.findFile(D) == fd);
+
         // כישלון באמצע: הכול חוזר
         final Store real = s;
         final int[] calls = {0};
@@ -41800,11 +41893,11 @@ final class ImportTests {
                 }
             }
         });
-        write(new File(dir, "mode3/" + Paths.TREE), "#1 חדשה אחת\n/x/1 | 1\n/x/2 | 2\n/x/3 | 3\n");
+        write(new File(dir, "v3/עבודה/" + Paths.TREE), "#1 חדשה אחת\n/x/1 | 1\n/x/2 | 2\n/x/3 | 3\n");
         int listsBefore = s.lists().size();
         boolean threw = false;
         try {
-            Importer.run(flaky, Importer.load(new File(dir, "mode3")), true);
+            Importer.run(flaky, Importer.load(new File(dir, "v3/עבודה")), true);
         } catch (Store.Failure e) {
             threw = true;
         }
