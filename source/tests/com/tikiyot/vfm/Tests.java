@@ -104,10 +104,19 @@ public final class Tests {
         run("גרסה 1.23.3 — חזרה לבית אחרי העתקת הדוגמאות: מדידה", new Runnable() { public void run() { v1233(); } });
         run("גרסה 1.24.0 — פקודות על רשימות: ידנית, חכמה, תוכן, קבצי", new Runnable() { public void run() { v1240(); } });
         run("גרסה 1.25.0 — מדידה, לולאה, השוואת רשימות, בדיקת העומס", new Runnable() { public void run() { v1250(); } });
+        run("מ0.1 — מונה המזהים, שתי הבניות, שכבת האחסון (MemStore, SqlStore)", new Runnable() { public void run() { storeM01(); } });
 
         System.out.println("בדיקות: " + passed + " עברו · " + failed + " נכשלו");
         for (String f : failures) System.out.println("  ✗ " + f);
         System.exit(failed == 0 ? 0 : 1);
+    }
+
+    /** מ0.1: הבדיקות בקובץ נפרד (StoreTests); כאן רק מצרפים את התוצאה. */
+    private static void storeM01() {
+        String src = System.getProperty("vfm.src");
+        StoreTests.Out o = StoreTests.run(home, src == null ? null : new File(src));
+        passed += o.passed;
+        for (String f : o.failed) check("מ0.1: " + f, false);
     }
 
     private static void run(String name, Runnable r) {

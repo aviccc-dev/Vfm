@@ -59,7 +59,7 @@ public class Home extends Activity {
         Reserved.ensureBackup(Modes.current());                               // 1.22.3: "שמור לתוכנה / גיבוי" גם באופן הפעיל
         Mirror.rebuild();                                                     // 1.17.5: העותק הקריא — תמיד מעודכן בפתיחה
         lib = Library.get(this);
-        setTitle(Words.Main.APP_NAME);
+        setTitle(Flavor.M ? Words.Db.APP_NAME_M : Words.Main.APP_NAME);
 
         LinearLayout root = Ui.screen(this);
         int p = Ui.dp(this, 12);
@@ -587,6 +587,7 @@ public class Home extends Activity {
         menu.add(0, 2, 0, Words.BATCH_MENU);
         menu.add(0, 1, 1, Words.Main.SETTINGS);
         menu.add(0, 3, 2, Words.DesignW.MENU);                         // 1.12.0
+        if (Flavor.M) menu.add(0, 4, 3, Words.Db.MENU);                // מ0.1: מנוע המסד — רק בבניית מ
         return true;
     }
 
@@ -594,6 +595,10 @@ public class Home extends Activity {
     public boolean onOptionsItemSelected(MenuItem item) {
         if (item.getItemId() == 1) {
             startActivity(new Intent(this, SettingsScreen.class));
+            return true;
+        }
+        if (item.getItemId() == 4) {
+            startActivity(new Intent(this, DbScreen.class));
             return true;
         }
         if (item.getItemId() == 3) {                                    // 1.12.0: עיצוב למסך הבית

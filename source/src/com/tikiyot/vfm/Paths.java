@@ -8,7 +8,7 @@ import java.io.File;
 
 public final class Paths {
 
-    public static final String APP_DIR = "מנהל קבצים וירטואלי";  // בכונן
+    public static final String APP_DIR = Flavor.appDir(Flavor.M);  // בכונן (מ0.1: בבניית מ — תיקייה נפרדת)
     /** השמות בכונן, בתוך תיקיית אופן העבודה — מקום אחד (131). */
     public static final String TREE = "מבנה.txt", SETTINGS = "הגדרות", SYSTEM = ".מערכת", BACKUPS = ".גיבויים",  // בכונן
             MAIN = "מבנה התוכנה.ini";  // בכונן

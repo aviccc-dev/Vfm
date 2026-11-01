@@ -15,7 +15,7 @@ import java.io.FileNotFoundException;
 
 public class Provider extends ContentProvider {
 
-    public static final String AUTHORITY = "com.tikiyot.vfm.files";
+    public static final String AUTHORITY = Flavor.authority(Flavor.M);
 
     public static Uri uriFor(File f) {
         return new Uri.Builder().scheme("content").authority(AUTHORITY).path(f.getAbsolutePath()).build();

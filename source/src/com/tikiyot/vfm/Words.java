@@ -2287,4 +2287,70 @@ public final class Words {
             return "נוסף לבית: " + name;
         }
     }
+
+    /** מ0.1: מנוע המסד — המסך (DbScreen) והבנייה השנייה (Flavor). */
+    public static final class Db {
+        private Db() { }
+
+        public static final String APP_NAME_M = "מנהל קבצים וירטואלי · מ";
+        public static final String MENU = "מסד נתונים (מ)";
+        public static final String TITLE = "מסד נתונים · מ0.1";
+        public static final String NOTICE = "שלד מנוע המסד. המסד כאן לבדיקות בלבד ובלי גיבוי עד מ0.5; הנתונים האמיתיים נשארים במנוע הישן.";
+        public static final String NEED_ACCESS = "כדי לשמור את מונה המזהים בתיקיית הנתונים, התוכנה צריכה הרשאת גישה לכל הקבצים.";
+        public static final String ALL_LISTS = "כל הרשימות";
+        public static final String CRUMB_SEP = " › ";
+        public static final String NEW_LIST = "➕ רשימה חדשה";
+        public static final String NEW_SUBLIST = "➕ רשימה בתוך הרשימה";
+        public static final String NEW_NOTE = "➕ רעיון";
+        public static final String SELF_TEST = "בדיקה עצמית";
+        public static final String EMPTY = "אין עדיין רשימות";
+        public static final String EMPTY_LIST = "הרשימה ריקה";
+        public static final String HINT = "נגיעה: פתיחה · נגיעה ארוכה: עוד פעולות";
+        public static final String LIST_NAME = "שם הרשימה";
+        public static final String NOTE_TEXT = "הרעיון";
+        public static final String NEW_LIST_TITLE = "רשימה חדשה";
+        public static final String NEW_NOTE_TITLE = "רעיון חדש";
+        public static final String RENAME = "שינוי שם";
+        public static final String MOVE_UP = "הזזה למעלה";
+        public static final String MOVE_DOWN = "הזזה למטה";
+        public static final String REMOVE = "הסרה מהרשימה";
+        public static final String DELETE_LIST = "מחיקת הרשימה";
+        public static final String DELETE_YES = "מחיקה";
+        public static final String DELETE_DETAIL = "הפריטים שבתוכה נשארים, בלי רשימה. מספר הזיהוי לא יחזור.";
+        public static final String KIND_LIST = "רשימה";
+        public static final String KIND_NOTE = "רעיון";
+        public static final String RUNNING = "מריץ בדיקה עצמית…";
+        public static final String SELF_TEST_TITLE = "בדיקה עצמית של המסד";
+        public static final String ALREADY_THERE = "הפריט כבר ברשימה";
+
+        public static String status(int lists, long last, String code, String info) {
+            return Words.lists(lists) + " · מספר זיהוי אחרון " + last + " · קוד מערכת " + code + "\n" + info;
+        }
+
+        public static String kindLine(String kind, long id, String more) {
+            return kind + " · מספר " + id + (more.isEmpty() ? "" : " · " + more);
+        }
+
+        public static String deleteQuestion(String name, long id) {
+            return "למחוק את הרשימה \"" + name + "\" (מספר זיהוי " + id + ")?";
+        }
+
+        public static String openFailed(String why) {
+            return "פתיחת המסד נכשלה: " + why;
+        }
+
+        public static String failed(String why) {
+            return "הפעולה נכשלה: " + why;
+        }
+
+        public static String selfTestOk(int passed, long ms, String info) {
+            return "תקין — עברו " + passed + " בדיקות, בלי כישלון.\nזמן: " + ms + " מ״ש\nSQLite: " + info;
+        }
+
+        public static String selfTestBad(int passed, java.util.List<String> failed, String info) {
+            StringBuilder sb = new StringBuilder("נמצאו כשלונות: " + failed.size() + " (עברו " + passed + ")\n");
+            for (String f : failed) sb.append("✗ ").append(f).append('\n');
+            return sb.append("SQLite: ").append(info).toString();
+        }
+    }
 }
