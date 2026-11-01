@@ -153,6 +153,8 @@ final class Batch {
     static final String AS_IF2 = "הדמיה";   // תחביר
     /** 1.25.0: "מדידה" — שורת כותרת: זמן לכל שורה (claude/pkudot-reshimot.md). לולאה: "חזור N [/עד:<זמן>]" … "סוף". */
     static final String MEASURE = "מדידה", LOOP = "חזור", LOOP_END = "סוף", V_ROUND = "סבב";   // תחביר
+    /** 1.28.0: "בדיקה" — שורת כותרת: הקובץ רץ במסך ההרצה, בשלבים ובאישור. בלעדיה — רץ מיד. */
+    static final String CHECK = "בדיקה";   // תחביר
     /** הגבול לסבבים בלולאה, ולשורות אחרי הפריסה. */
     static final int MAX_ROUNDS = 1000, MAX_LINES = 50000;
     /** 1.13.0: שלב של פקודת פתיחה בעברית (Verbs). */
@@ -641,6 +643,7 @@ final class Batch {
                 plan.asIf = true;
                 continue;
             }
+            if (line.equals(CHECK)) continue;                                  // 1.28.0: שורת כותרת — מסך ההרצה (BatchUi)
             if (line.equals(MEASURE) || line.startsWith(MEASURE + " ")) {     // 1.25.0: שורת כותרת — מדידה
                 plan.measure = true;
                 for (String x : tokens(line))
@@ -1497,6 +1500,15 @@ final class Batch {
     static boolean disk(Step s) {
         return s.op == null && !s.noop && (s.cmd.equals("COPY") || s.cmd.equals("MOVE") || s.cmd.equals("DEL") || s.cmd.equals("RD")
                 || s.cmd.equals("MD") || s.cmd.equals("REN"));
+    }
+
+    /**
+     * 1.28.0 (המשתמש: "את הבדיקות שהוספת לאחרונה תשים באופציה בפקודה — קובץ שירצה יריץ את הבדיקות האלה; אין צורך שכל
+     * פקודה תעבור את המבחן הזה תמיד"): מסך ההרצה — רק לקובץ שיש בו שורת "בדיקה".
+     */
+    static boolean wantsCheck(String text) {
+        for (String raw : Bidi.strip(text).replace("\r", "").split("\n")) if (clean(raw).equals(CHECK)) return true;
+        return false;
     }
 
     /** 1.26.0: רק פתיחת מסכים ורשימות (פקודות התפריט ⭐) — הרצה מהירה, בלי מסך ההרצה. */

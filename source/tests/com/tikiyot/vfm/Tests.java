@@ -3679,7 +3679,7 @@ public final class Tests {
         check("157: בהתקנה — המשתנה הוחלף בכונן האמיתי", written.contains("/x/y/Download") && !written.contains(Examples.IN));
         Tree exT = Tree.loadFrom(new File(dir, Paths.TREE));
         Tree.Node exC = exT.find(Reserved.CMDS_PATH);
-        check("1.17.0: בהתקנת הדוגמאות — \"שמור לתוכנה\" בשורש", exC != null && exC.entries.size() == 9 && exC.child(Reserved.MINE) != null);
+        check("1.17.0: בהתקנת הדוגמאות — \"שמור לתוכנה\" בשורש", exC != null && exC.entries.size() == 10 && exC.child(Reserved.MINE) != null);
         boolean exTool = false;
         try { exTool = Reserved.hasTool(Ini.load(main)); } catch (Exception e) { }
         check("1.17.3 (באג): …ובבית — כלי שלה (בלי כלי אין דרך להגיע אליה)", exTool);
@@ -4073,6 +4073,10 @@ public final class Tests {
             for (String l : CmdTemplates.fill(load.lines, hv)) if (l.startsWith("COPY ידנית")) copies++;
             check("1.26.0: כמה רשימות — השורה מוכפלת (" + copies + ")", copies == 2
                     && CmdTemplates.holeKind(load.lines, "רשימות") == CmdTemplates.HOLE_MANY);
+            check("1.28.0: \"בדיקה\" — מסך ההרצה; בלעדיה — רץ מיד", Batch.wantsCheck("בדיקה\nMD x") && !Batch.wantsCheck("MD x")
+                    && Batch.plan("בדיקה\nMD ידנית \"x1\"", root, vars).errors == 0);
+            check("1.28.0: \"פתח עורך פקודות\" — פקודה תקינה", Verbs.parse("פתח עורך פקודות").error == null
+                    && Verbs.parse("פתח מסך עורך פקודות").error == null);
             check("1.26.0: רק פתיחות — הרצה מהירה; עם שינוי — מסך ההרצה", Batch.onlyOpens("צלמית ⚙\nשם הגדרות\nפתח מסך הגדרות\n")
                     && !Batch.onlyOpens("MD x") && !Batch.onlyOpens("מדידה\nפתח מסך הגדרות"));
             for (String l : CmdTemplates.fill(load.lines, hv)) full.append(l).append("\n");
@@ -4368,7 +4372,7 @@ public final class Tests {
             List<String> filled = CmdTemplates.fill(t.lines, v);
             boolean ok = CmdTemplates.holes(filled).isEmpty();
             for (String fl : filled) ok &= CmdLine.parse(fl).def != null || Batch.isLoopStart(fl) || Batch.isLoopEnd(fl)
-                    || fl.startsWith(Batch.MEASURE) || fl.startsWith("::");             // 1.25.0: שורות מבנה; הערה
+                    || fl.startsWith(Batch.MEASURE) || fl.startsWith("::") || fl.equals(Batch.CHECK);             // 1.25.0: שורות מבנה; הערה
             check("1.23.0: תבנית — ממולאת ומוכרת: " + t.name, ok);
         }
         File tr = drive("נפוצות");
@@ -5370,7 +5374,7 @@ public final class Tests {
                 && Ui.kindColor(Ui.LINK) != Ui.kindColor(Ui.MANUAL) && Ui.kindColor("PDF") == Ui.typeColor("PDF"));
         boolean readyOk = true;
         for (String[] r : CmdMenu.system()) if (!Verbs.isVerb(r[2]) || Verbs.parse(r[2]).error != null) readyOk = false;
-        check("1.16.1: פקודות המערכת — שמונה, וכולן פקודות תקינות (טקסט)", readyOk && CmdMenu.system().size() == 8);
+        check("1.16.1: פקודות המערכת — תשע (1.28.0: + עורך הפקודות), וכולן פקודות תקינות (טקסט)", readyOk && CmdMenu.system().size() == 9);
         // 1.17.6: שורה בעברית — בלי סימני כיוון (מימין לשמאל); אנגלית — עם הסימנים (משמאל לימין)
         check("1.17.6: פקודה בעברית — כמו שהיא", Bidi.mark("פתח תיקייה %הורדות%/ספרים").equals("פתח תיקייה %הורדות%/ספרים")
                 && Bidi.hebrew("צלמית ▶") && !Bidi.hebrew("COPY %הורדות%\\א ב"));
@@ -5467,8 +5471,8 @@ public final class Tests {
             ModeCopy.Side rs = new ModeCopy.Side(Ini.load(resI), Tree.loadFrom(resT));
             check("1.17.0: שמור לתוכנה — נוצר", Reserved.ensure(rs));
             Tree.Node cm = rs.tree.find(Reserved.CMDS_PATH), mn = rs.tree.find(Reserved.MINE_PATH);
-            check("1.17.0: …פקודות המערכת ו\"פקודה חדשה\" — קבצים, לפי הסדר", cm != null && cm.entries.size() == 9
-                    && cm.entries.get(0).path.endsWith(Words.Top.HOME + "." + Batch.EXT) && Reserved.isNew(new File(cm.entries.get(8).path))
+            check("1.17.0: …פקודות המערכת ו\"פקודה חדשה\" — קבצים, לפי הסדר", cm != null && cm.entries.size() == 10
+                    && cm.entries.get(0).path.endsWith(Words.Top.HOME + "." + Batch.EXT) && Reserved.isNew(new File(cm.entries.get(9).path))
                     && new File(cm.entries.get(0).path).isFile());
             check("1.17.0: …\"הפקודות שלי\" מהשורש עברה פנימה", mn != null && Tree.contains(mn.entries, "/x/שלי.vbat")
                     && rs.tree.root.child(Reserved.MINE) == null);
@@ -5499,7 +5503,7 @@ public final class Tests {
             int alls = 0;
             for (String r : cm2.smart) if (Structure.byId(now.ini, r) != null && Structure.byId(now.ini, r).name.endsWith(Reserved.ALL)) alls++;
             check("1.17.0: חזרה לברירת מחדל — התוספות נשארות, ו\"כל הפקודות\" אחת", Tree.contains(cm2.entries, "/x/עוד.vbat")
-                    && now.tree.find(Arrays.asList(Reserved.ROOT, "תפריט שלי")) != null && alls == 1 && cm2.entries.size() == 10);
+                    && now.tree.find(Arrays.asList(Reserved.ROOT, "תפריט שלי")) != null && alls == 1 && cm2.entries.size() == 11);
         } catch (Exception e) {
             throw new RuntimeException(e);
         } finally {

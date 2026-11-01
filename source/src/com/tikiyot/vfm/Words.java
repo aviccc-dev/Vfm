@@ -1789,7 +1789,7 @@ public final class Words {
         public static final String ANCHOR = "כפתור עוגן — אפשר לשנות שם, סמל ומקום, אבל לא להסיר";
         public static final String UNKNOWN = "פעולה לא מוכרת בכפתור: ";
         /** 1.13.0 */
-        public static final String VIRTUAL = "קבצים וירטואליים", TRASH = "סל המחזור";
+        public static final String VIRTUAL = "קבצים וירטואליים", TRASH = "סל המחזור", EDITOR = "עורך הפקודות";
         public static final String STALE = "השורות שונו במסך אחר — רועננו. אפשר לנסות שוב";
         public static final String SAVED_AS = "נשמר: ";
 
@@ -1984,8 +1984,10 @@ public final class Words {
                 ONE_OPEN = "⚠ רק פקודת פתיחה אחת נפתחת בסוף — האחרונה", NO_STEP = "השורה לא מבוצעת (הערה או כותרת)",
                 TAG_HEADER = "כותרת", TAG_UNKNOWN = "?", NONE = "—", ON = "פעיל", PICK = "בחירה…", FILL = "השלמת התבנית",
                 VARS = "משתנים", EMPTY_FILE = "הקובץ ריק — בחר פקודה מהרשימה, והיא תיכנס לכאן",
-                ALREADY_AS_IF = "יש כבר הדמיה בראש הקובץ", ALREADY_MEASURE = "יש כבר מדידה בקובץ",
-                NO_SMART = "אין רשימות חכמות", WHOLE_HOME = "★ כל מה שבבית", PICK_FIRST = "בחר שורה בתפריט קודם";
+                ALREADY_AS_IF = "יש כבר הדמיה בראש הקובץ", ALREADY_MEASURE = "השורה הזו כבר בראש הקובץ",
+                NO_SMART = "אין רשימות חכמות", WHOLE_HOME = "★ כל מה שבבית",
+                DRAFT = "פקודה חדשה (עוד לא נשמרה)", DRAFT_NAME = "שם לקובץ הפקודות (נשמר ב\"שלי\")",
+                FORM_ON = "☰ טופס", FORM_OFF = "✕ טופס", PICK_FIRST = "בחר שורה בתפריט קודם";
 
         /** 1.25.7: פקודת מערכת שנערכה — נשמרת כשלי. */
         public static String savedAsMine(String name) {
@@ -2105,7 +2107,8 @@ public final class Words {
                         + "/עד:30שניות — עוצר כשסבב אחד לקח יותר. העריכה — בשורה עצמה.",
                 WHAT_END = "סוף הלולאה שנפתחה ב\"חזור\".",
                 WHAT_MEASURE = "כל הקובץ נמדד: זמן לכל שורה, סך הכול, והשורה האיטית. /יומן:\"קובץ\" — נשמר גם לקובץ, בכל ריצה.",
-                N_LOOP = "חזור — לולאה", N_END = "סוף לולאה", N_MEASURE = "מדידה";
+                N_LOOP = "חזור — לולאה", N_END = "סוף לולאה", N_MEASURE = "מדידה",
+                N_CHECK = "בדיקה", WHAT_CHECK = "הקובץ רץ במסך ההרצה, בשלבים: מילוי ← מה יקרה (בדיקה של כל שורה, ואישור) ← מריץ ← סיכום שנשאר. בלי השורה הזו — הקובץ רץ מיד.";
 
         public static String round(int r) {
             return " (סבב " + r + ")";

@@ -31,8 +31,8 @@ final class Verbs {
     /** 1.17.0: "פתח תפריט <רשימה ב'שמור לתוכנה'>" · "צור פקודה" (המילון, 23). */
     static final String MENU = "תפריט", CMD_WORD = "פקודה";   // תחביר
     static final String S_HOME = "הבית", S_SEARCH = "חיפוש", S_COMMANDS = "פקודות", S_DISK = "קבצים פיזיים",   // תחביר
-            S_VIRTUAL = "קבצים וירטואליים", S_SETTINGS = "הגדרות", S_TRASH = "סל";   // תחביר
-    static final String[] SCREENS = {S_HOME, S_SEARCH, S_COMMANDS, S_DISK, S_VIRTUAL, S_SETTINGS, S_TRASH};
+            S_VIRTUAL = "קבצים וירטואליים", S_SETTINGS = "הגדרות", S_TRASH = "סל", S_EDITOR = "עורך פקודות";   // תחביר
+    static final String[] SCREENS = {S_HOME, S_SEARCH, S_COMMANDS, S_DISK, S_VIRTUAL, S_SETTINGS, S_TRASH, S_EDITOR};
     static final String A_DRIVE = "מהכונן", A_SEARCH = "מחיפוש";   // תחביר
     static final String SORT = "מיון:";   // תחביר
 
@@ -126,6 +126,9 @@ final class Verbs {
                         c.cond = unquote(after(r, sc));                         // קבצים פיזיים / וירטואליים — תיקייה (לא חובה)
                     }
                 if (c.arg.isEmpty()) c.error = Words.Verb.unknownScreen(r);
+            } else if (starts(rest, S_EDITOR)) {                              // 1.28.0: "פתח עורך פקודות" (גם בלי "מסך")
+                c.kind = K_SCREEN;
+                c.arg = S_EDITOR;
             } else if (starts(rest, MENU)) {                                  // 1.17.0
                 c.kind = K_MENU;
                 c.arg = unquote(after(rest, MENU));
@@ -337,6 +340,7 @@ final class Verbs {
         else if (s.equals(S_VIRTUAL)) a.startActivity(SearchScreen.fileManager(a, "", c.cond.isEmpty() ? null : c.cond, null));
         else if (s.equals(S_SETTINGS)) a.startActivity(new Intent(a, SettingsScreen.class));
         else if (s.equals(S_TRASH)) a.startActivity(new Intent(a, TrashScreen.class));
+        else if (s.equals(S_EDITOR)) a.startActivity(new Intent(a, BatchEditScreen.class));   // 1.28.0: בלי קובץ — טיוטה
     }
 
     static void openSmart(Activity a, SmartLists.Named n, String sort) {

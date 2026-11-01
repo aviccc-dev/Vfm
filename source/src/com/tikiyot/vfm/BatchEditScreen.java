@@ -46,6 +46,11 @@ public class BatchEditScreen extends Activity {
     private Editor text;
     private EditText filter;
     private ScrollView menuScroll;
+    /** 1.28.0: הטופס (חיפוש, תפריט, פרמטרים) — מוצג רק כשמבקשים; נזכר בין פתיחות. */
+    private boolean form;
+    private Button formBtn;
+    private View filterView;
+    private static final String PREF = "batch-editor", PREF_FORM = "form";
     private LinearLayout menu, panel;
     private Button modeBtn;
     private String saved = "";
@@ -80,28 +85,31 @@ public class BatchEditScreen extends Activity {
     protected void onCreate(Bundle b) {
         super.onCreate(b);
         String p = getIntent() != null ? getIntent().getStringExtra(EXTRA_FILE) : null;
-        if (p == null) {
-            finish();
-            return;
-        }
-        file = new File(p);
-        vars = BatchUi.vars(this, file.getParentFile());
-        setTitle("📜 " + file.getName());
+        file = p == null ? null : new File(p);                                 // 1.28.0: בלי קובץ — טיוטה, ושם בשמירה
+        vars = BatchUi.vars(this, here());
+        setTitle("📜 " + name());
         LinearLayout root = Ui.screen(this);
 
         LinearLayout top = new LinearLayout(this);
         top.addView(button(Words.Cmd.SAVE_BTN, new View.OnClickListener() {
-            @Override public void onClick(View v) { save(); }
+            @Override public void onClick(View v) { saveThen(null); }
         }));
         top.addView(button(Words.Cmd.PREVIEW_AND_RUN, new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                if (save()) BatchUi.run(BatchEditScreen.this, file);
+                saveThen(new Runnable() {
+                    @Override public void run() { BatchUi.run(BatchEditScreen.this, file); }
+                });
             }
         }));
+        formBtn = button("", new View.OnClickListener() {                      // 1.28.0: הטופס — רק כשמבקשים
+            @Override public void onClick(View v) { showForm(!form); }
+        });
+        top.addView(formBtn);
         modeBtn = button(Words.Ed.TEMPLATES, new View.OnClickListener() {
             @Override
             public void onClick(View v) {
+                if (!form) showForm(true);
                 templates = !templates;
                 modeBtn.setText(templates ? Words.Ed.COMMANDS : Words.Ed.TEMPLATES);
                 menuScroll.getLayoutParams().height = menuHeight();           // 1.25.1: בנפוצות — התפריט גבוה יותר
@@ -128,6 +136,7 @@ public class BatchEditScreen extends Activity {
         menuScroll.setScrollbarFadingEnabled(false);                           // 1.25.1: רואים שיש עוד למטה
         menuScroll.addView(menu);
         root.addView(menuScroll, new LinearLayout.LayoutParams(-1, menuHeight()));
+        filterView = filter;
 
         LinearLayout body = new LinearLayout(this);
         body.setOrientation(LinearLayout.VERTICAL);
@@ -148,7 +157,7 @@ public class BatchEditScreen extends Activity {
         text.setHorizontallyScrolling(false);
         text.setMinLines(6);
         try {
-            saved = Files.readUtf8(file);
+            saved = file == null ? "" : Files.readUtf8(file);
         } catch (Throwable t) {
             saved = "";
         }
@@ -205,6 +214,11 @@ public class BatchEditScreen extends Activity {
         hs.addView(chips);
         root.addView(hs);
         setContentView(TopRow.wrap(this, root));                   // 1.9.0: שורת הכפתורים העליונה
+        boolean f0 = false;
+        try {
+            f0 = getSharedPreferences(PREF, MODE_PRIVATE).getBoolean(PREF_FORM, false);
+        } catch (Throwable ignored) { }
+        showForm(f0);
 
         computeRows();
         renderMenu();
@@ -277,6 +291,7 @@ public class BatchEditScreen extends Activity {
         if (Batch.isLoopStart(line)) return Commands.Defs.LOOP;               // 1.25.0
         if (Batch.isLoopEnd(line)) return Commands.Defs.END;
         if (isMeasure(line)) return Commands.Defs.MEASURE;
+        if (line.equals(Batch.CHECK)) return Commands.Defs.CHECK;
         if (isHeader(line)) return Commands.get(Batch.AS_IF2);
         if (Verbs.isVerb(line)) return Commands.get(line.split("\\s+")[0]);
         return CmdLine.parse(line).def;
@@ -376,7 +391,7 @@ public class BatchEditScreen extends Activity {
             for (int k = 0; k < depth; k++) indent += "│ ";
             if (start) depth++;
             if (!q.trim().isEmpty() && (d == null || !Commands.matches(d, q))) continue;
-            String name = d == null ? Words.Ed.TAG_UNKNOWN : d.family == Commands.Family.HEADER && !start && !end && d != Commands.Defs.MEASURE
+            String name = d == null ? Words.Ed.TAG_UNKNOWN : d.family == Commands.Family.HEADER && !start && !end && d != Commands.Defs.MEASURE && d != Commands.Defs.CHECK
                     ? Words.Ed.TAG_HEADER : d.he;
             boolean danger = d != null && d.family == Commands.Family.FILE && CmdLine.parse(line).destructive();
             String body = indent + (start ? "↻ " : end ? "└ " : "") + (needsCompare(i) ? "⚠ " : "") + line;
@@ -839,14 +854,14 @@ public class BatchEditScreen extends Activity {
             insertLines(java.util.Arrays.asList(line.isEmpty() ? d.name : line, Batch.LOOP_END));
             return;
         }
-        if (d == Commands.Defs.MEASURE) {
+        if (d == Commands.Defs.MEASURE || d == Commands.Defs.CHECK) {          // 1.28.0: גם "בדיקה" — בראש הקובץ
             for (Row r : rows)
-                if (isMeasure(r.text)) {
+                if (d == Commands.Defs.MEASURE ? isMeasure(r.text) : r.text.equals(Batch.CHECK)) {
                     Ui.toast(this, Words.Ed.ALREADY_MEASURE);
                     return;
                 }
             selfEdit = true;
-            text.getText().insert(0, Batch.MEASURE + "\n");
+            text.getText().insert(0, d.name + "\n");
             selfEdit = false;
             computeRows();
             select(0);
@@ -946,7 +961,7 @@ public class BatchEditScreen extends Activity {
             return;
         }
         selfEdit = true;
-        text.getText().insert(0, Program.ICON + " ▶\n" + Program.NAME + " " + Text.stem(file.getName()) + "\n" + Program.WHY + " \n");
+        text.getText().insert(0, Program.ICON + " ▶\n" + Program.NAME + " " + Text.stem(name()) + "\n" + Program.WHY + " \n");
         selfEdit = false;
         computeRows();
         renderMenu();
@@ -970,7 +985,7 @@ public class BatchEditScreen extends Activity {
                 String msg;
                 boolean bad = false;
                 try {
-                    Batch.Plan plan = Batch.plan(all, file.getParentFile(), vars, lib);
+                    Batch.Plan plan = Batch.plan(all, here(), vars, lib);
                     Batch.Step step = null;
                     for (Batch.Step s : plan.steps) if (s.line == line) step = s;
                     if (step == null) msg = Words.Ed.NO_STEP;
@@ -1007,7 +1022,7 @@ public class BatchEditScreen extends Activity {
 
     private void saveTemplate() {
         if (sel < 0 || rows.isEmpty()) {
-            saveTemplateAs(allLines(), Text.stem(file.getName()));
+            saveTemplateAs(allLines(), Text.stem(name()));
             return;
         }
         final String line = rows.get(sel).text;
@@ -1017,7 +1032,7 @@ public class BatchEditScreen extends Activity {
                     @Override
                     public void onClick(android.content.DialogInterface di, int which) {
                         if (which == 0) saveTemplateAs(lines(line), d == null ? "" : d.he);
-                        else saveTemplateAs(allLines(), Text.stem(file.getName()));
+                        else saveTemplateAs(allLines(), Text.stem(name()));
                     }
                 });
     }
@@ -1067,6 +1082,7 @@ public class BatchEditScreen extends Activity {
     /** שמירה של הקובץ שהמשתמש עורך (כפתור מפורש — הוא השינוי שביקש). */
     private boolean save() {
         String now = plain();                                                  // 204: נשמר בלי סימני הכיוון
+        if (file == null) return false;                                        // 1.28.0: טיוטה — saveThen שואל שם
         if (now.equals(saved)) return true;
         if (Reserved.isSystem(file)) return saveMine(now);                    // 1.25.7
         try {
@@ -1079,6 +1095,65 @@ public class BatchEditScreen extends Activity {
             Log.e("שמירת קובץ פקודות", t);
             Ui.toast(this, Words.SAVE_FAILED);
             return false;
+        }
+    }
+
+    /** 1.28.0: התיקייה של הקובץ; טיוטה — תיקיית הפקודות שלי. */
+    private File here() {
+        return file != null ? file.getParentFile() : Shortcuts.dir();
+    }
+
+    private String name() {
+        return file != null ? file.getName() : Words.Ed.DRAFT;
+    }
+
+    /** שמירה, ואחריה next (או כלום). טיוטה — שואלים שם, נשמרת ב"שלי", והעורך ממשיך איתה. */
+    private void saveThen(final Runnable next) {
+        if (file != null) {
+            if (save() && next != null) next.run();
+            return;
+        }
+        Ui.askText(this, Words.Ed.DRAFT_NAME, "", Words.Short.NAME_HINT, new Ui.Text1() {
+            @Override
+            public void ok(String n) {
+                String base = n.replaceAll("[/\\\\:*?\"<>|\n\t]", " ").trim();
+                if (base.isEmpty()) return;
+                File dir = Shortcuts.dir();
+                File f = new File(dir, base + "." + Batch.EXT);
+                for (int i = 2; f.exists(); i++) f = new File(dir, base + " (" + i + ")." + Batch.EXT);
+                try {
+                    if (!dir.isDirectory()) dir.mkdirs();
+                    String now = plain();
+                    Files.writeAtomic(f, now);
+                    file = f;
+                    saved = now;
+                    setTitle("📜 " + f.getName());
+                    Reserved.addToMine(f);
+                    Library.get(BatchEditScreen.this).fileAdded(f);
+                    Ui.toast(BatchEditScreen.this, Words.SAVED);
+                    if (next != null) next.run();
+                } catch (Throwable t) {
+                    Log.e("שמירת טיוטת פקודות", t);
+                    Ui.toast(BatchEditScreen.this, Words.SAVE_FAILED);
+                }
+            }
+        });
+    }
+
+    /** 1.28.0 (המשתמש: "את הטופס לעריכת הפקודות תעביר לאופציה — רק כאשר אבקש אותו, שלא יופיע כל הזמן"). */
+    private void showForm(boolean on) {
+        form = on;
+        try {
+            getSharedPreferences(PREF, MODE_PRIVATE).edit().putBoolean(PREF_FORM, on).apply();
+        } catch (Throwable ignored) { }
+        int v = on ? View.VISIBLE : View.GONE;
+        filterView.setVisibility(v);
+        menuScroll.setVisibility(v);
+        panel.setVisibility(v);
+        formBtn.setText(on ? Words.Ed.FORM_OFF : Words.Ed.FORM_ON);
+        if (!on && templates) {
+            templates = false;
+            modeBtn.setText(Words.Ed.TEMPLATES);
         }
     }
 
@@ -1126,10 +1201,12 @@ public class BatchEditScreen extends Activity {
     @Override
     public void onBackPressed() {
         if (!plain().equals(saved)) {
-            Ui.ask(this, Words.Cmd.ASK_SAVE, Words.Cmd.fileNamed(file.getName()), null, null, Words.SAVE, new Runnable() {
+            Ui.ask(this, Words.Cmd.ASK_SAVE, Words.Cmd.fileNamed(name()), null, null, Words.SAVE, new Runnable() {
                 @Override
                 public void run() {
-                    if (save()) finish();
+                    saveThen(new Runnable() {
+                        @Override public void run() { finish(); }
+                    });
                 }
             }, Words.Cmd.DONT_SAVE, new Runnable() {
                 @Override public void run() { finish(); }

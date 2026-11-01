@@ -35,6 +35,7 @@ final class CmdMenu {
                 new String[]{"⭐", Words.Top.COMMANDS, Verbs.openScreen(Verbs.S_COMMANDS)},
                 new String[]{"📂", Words.Top.FILES, Verbs.openScreen(Verbs.S_DISK)},
                 new String[]{"🗂", Words.Top.VIRTUAL, Verbs.openScreen(Verbs.S_VIRTUAL)},
+                new String[]{"✎", Words.Top.EDITOR, Verbs.OPEN + " " + Verbs.S_EDITOR},       // 1.28.0
                 new String[]{"⚙", Words.Top.SETTINGS, Verbs.openScreen(Verbs.S_SETTINGS)},
                 new String[]{"🗑", Words.Top.TRASH, Verbs.openScreen(Verbs.S_TRASH)});
     }

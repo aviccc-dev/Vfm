@@ -52,7 +52,7 @@ final class BatchUi {
             Ui.toast(a, Words.CANT_READ_FILE);
             return;
         }
-        if (!Batch.onlyOpens(text)) {                                          // 1.26.0: מסך ההרצה האחד
+        if (Batch.wantsCheck(text)) {                                          // 1.28.0: מסך ההרצה — רק עם "בדיקה"
             RunScreen.start(a, f);
             return;
         }
@@ -192,7 +192,7 @@ final class BatchUi {
             go.run();
             return;
         }
-        Ui.ask(a, Words.Cmd.runTitle(f.getName()), files, sb.toString().trim(), undo.isEmpty() ? null : undo, Words.Cmd.RUN, go);
+        go.run();                                                              // 1.28.0: בלי "בדיקה" — רץ מיד, בלי אישור
     }
 
     /** 216: מה ש־START ביקש — קובץ נפתח, תיקייה נפתחת במנהל הקבצים. */
