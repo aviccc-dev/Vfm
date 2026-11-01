@@ -113,6 +113,14 @@ public class Lab extends Activity {
             }
         }, false));
 
+        section(root, "1.5 — מסד נתונים: איפה לשמור אותו");
+        root.addView(text("כותב מסד SQLite במקום פרטי של האפליקציה, בתיקיית האפליקציה בכרטיס, ובתיקייה גלויה (\"מעבדה-מסד\"), "
+                + "בשתי שיטות יומן ובשלוש צורות כתיבה. בודק מהירות ושלמות. לא נוגע בקבצים שלכם; הקבצים הזמניים נמחקים.", 13, 0xFF777777));
+        Button db = button("▶ מדידת מסד נתונים · 3 סבבים (כמה דקות)", new Runnable() {
+            @Override public void run() { dbBench(); }
+        }, true);
+        db.setTypeface(Typeface.DEFAULT_BOLD);
+        root.addView(db);
         section(root, "1.4 — המאגר של אנדרואיד");
         root.addView(text("לאנדרואיד יש מאגר משלו של הקבצים. האם הוא שלם, וכמה מהר — מול הסריקה שלנו?", 13, 0xFF777777));
         Button st = button("▶ המאגר של אנדרואיד מול הסריקה (כחצי דקה)", new Runnable() {
@@ -169,6 +177,78 @@ public class Lab extends Activity {
         for (Exp e : ALONE) run(e);
         for (Exp e : TOGETHER) run(e);
         refresh();
+        line("✔ סיום");
+    }
+
+    // ---------- 1.5: מסד נתונים ----------
+
+    private void dbBench() {
+        final String[] names = new String[3];
+        final File[] dirs = new File[3];
+        names[0] = "פרטי"; dirs[0] = getDatabasePath("bench.db").getParentFile();
+        names[1] = "בכרטיס-אפליקציה"; File ext = getExternalFilesDir(null); dirs[1] = ext == null ? null : new File(ext, "מסד");
+        names[2] = "תיקייה-גלויה"; dirs[2] = new File(Environment.getExternalStorageDirectory(), "מעבדה-מסד");
+        String[] modes = {"DELETE", "WAL"};
+        Map<String, List<Long>> times = new HashMap<String, List<Long>>();
+        Map<String, List<Long>> reads = new HashMap<String, List<Long>>();
+        Map<String, String> sides = new HashMap<String, String>();
+        Map<String, String> setup = new HashMap<String, String>();
+        List<String> fails = new ArrayList<String>();
+        int total = 0, good = 0;
+        for (int round = 0; round < RUNS; round++) {
+            line("━━ סבב " + (round + 1) + " מתוך " + RUNS);
+            for (int k = 0; k < 3; k++) {
+                int pl = (k + round) % 3;
+                if (dirs[pl] == null) { if (round == 0 && k == 0) line("(אין תיקיית כרטיס לאפליקציה — מדלג)"); continue; }
+                for (int m = 0; m < 2; m++) for (int sh = 0; sh < 3; sh++) {
+                    DbBench.Result r = DbBench.run(dirs[pl], m == 1, sh);
+                    String key = pl + "|" + m + "|" + sh;
+                    total++;
+                    String head = names[pl] + " · " + modes[m] + " · " + DbPlan.SHAPES[sh];
+                    if (r.ok) {
+                        good++;
+                        if (!times.containsKey(key)) { times.put(key, new ArrayList<Long>()); reads.put(key, new ArrayList<Long>()); }
+                        times.get(key).add(r.insertNs);
+                        reads.get(key).add(r.readNs);
+                        if (!sides.containsKey(key) && r.side.length() > 0) sides.put(key, r.side);
+                        setup.put(pl + "|" + m, "יומן=" + r.journal + " סנכרון=" + r.sync);
+                        line(head + ": כתיבה " + DbPlan.ms(r.insertNs) + " מ״ש · קריאה " + DbPlan.ms(r.readNs) + " מ״ש"
+                                + (r.side.length() > 0 ? " · קבצים לצד: " + r.side : ""));
+                    } else {
+                        fails.add(head + " (סבב " + (round + 1) + "): " + r.err);
+                        line("❗ " + head + ": " + r.err);
+                    }
+                }
+            }
+        }
+        summary.append("מסד נתונים · ").append(RUNS).append(" סבבים (כתיבה, האמצעי; בסוגריים: לשורה, ויחס לפרטי)\n");
+        for (int sh = 0; sh < 3; sh++) for (int m = 0; m < 2; m++) {
+            summary.append("— ").append(DbPlan.SHAPES[sh]).append(" (").append(DbPlan.rows(sh)).append(" שורות) · ").append(modes[m]).append("\n");
+            long base = 0;
+            for (int pl = 0; pl < 3; pl++) {
+                List<Long> t = times.get(pl + "|" + m + "|" + sh);
+                if (dirs[pl] == null) continue;
+                if (t == null || t.isEmpty()) { summary.append("   ").append(names[pl]).append(": נכשל\n"); continue; }
+                long[] a = new long[t.size()];
+                for (int i = 0; i < a.length; i++) a[i] = t.get(i);
+                long med = DbPlan.median(a);
+                if (pl == 0) base = med;
+                summary.append("   ").append(names[pl]).append(": ").append(DbPlan.ms(med)).append(" מ״ש (")
+                        .append(DbPlan.perRow(med, DbPlan.rows(sh))).append(" לשורה")
+                        .append(pl == 0 || base == 0 ? "" : " · " + DbPlan.ratio(med, base)).append(")\n");
+            }
+        }
+        summary.append("שלמות: ").append(good).append(" מתוך ").append(total).append(" ריצות עברו הכול (ספירה, סכומים, integrity_check, פתיחה מחדש)\n");
+        for (String f : fails) summary.append("❗ ").append(f).append("\n");
+        for (int pl = 0; pl < 3; pl++) for (int m = 0; m < 2; m++) {
+            String st = setup.get(pl + "|" + m);
+            if (st != null) summary.append(names[pl]).append(" · ").append(modes[m]).append(": ").append(st).append("\n");
+        }
+        for (int pl = 0; pl < 3; pl++) {
+            String sd = sides.get(pl + "|1|2");
+            if (sd != null) summary.append("WAL ב").append(names[pl]).append(" — קבצים לצד המסד בזמן הכתיבה: ").append(sd).append("\n");
+        }
+        showSummary();
         line("✔ סיום");
     }
 
@@ -482,7 +562,7 @@ public class Lab extends Activity {
 
     private void copy() {
         ClipboardManager cm = (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
-        cm.setPrimaryClip(ClipData.newPlainText("מעבדת זירוזים", "מעבדת זירוזים 1.4 · אנדרואיד " + Build.VERSION.RELEASE
+        cm.setPrimaryClip(ClipData.newPlainText("מעבדת זירוזים", "מעבדת זירוזים 1.5 · אנדרואיד " + Build.VERSION.RELEASE
                 + "\nסיכום (שניות):\n" + summary + "\n" + all));
         Toast.makeText(this, "הועתק", Toast.LENGTH_SHORT).show();
     }
@@ -530,7 +610,7 @@ public class Lab extends Activity {
             @Override
             public void run() {
                 for (Button b : buttons) b.setEnabled(on);
-                setTitle(on ? "מעבדת זירוזים 1.4" : "מעבדת זירוזים — רץ…");
+                setTitle(on ? "מעבדת זירוזים 1.5" : "מעבדת זירוזים — רץ…");
             }
         });
     }
