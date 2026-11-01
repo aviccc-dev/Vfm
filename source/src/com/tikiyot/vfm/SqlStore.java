@@ -1,11 +1,14 @@
 package com.tikiyot.vfm;
 
 // Store על SQLite. אחראי: טבלאות, עסקאות, יומן WAL, בדיקת תקינות בפתיחה. אסור לו: מסכים.
-// גרסת הטבלאות — PRAGMA user_version (עכשיו 1). מסד של גרסה חדשה יותר — לא נפתח (לא נוגעים במה שלא מכירים).
+// גרסת הטבלאות — PRAGMA user_version (עכשיו 2; 1 → 2 במעבר אוטומטי בפתיחה, בעסקה אחת). מסד של גרסה חדשה יותר — לא נפתח (לא נוגעים במה שלא מכירים).
 //
-// הטבלאות (מ0.1):
-//   items   — מספר זיהוי (מוחלט, לא חוזר), סוג, שם, שדה לתוכן לפי סוג (עוד לא בשימוש), נוצר/שונה, ושני שדות מקור
-//             נסתרים (קוד המערכת + המספר המקורי) לנתונים שהגיעו ממערכת אחרת (עוד לא בשימוש).
+// הטבלאות:
+//   items   — מספר זיהוי (מוחלט, לא חוזר), סוג, שם, שדה לתוכן לפי סוג (עוד לא בשימוש), נוצר/שונה, ושדות מקור
+//             לנתונים שהגיעו ממערכת אחרת: קוד המערכת + המספר המקורי (עוד לא בשימוש), ומ0.2 גם origin_key —
+//             מפתח טקסטואלי (למנוע הישן אין מספרי זיהוי), מאונדקס.
+//   props   — (מ0.2) מאפיינים של פריט: מפתח וערך. לרשימה: צלמית, תיאור, עיצוב, "למה".
+//   files   — (מ0.2) פרטי פריט קובץ: מסלול (ייחודי), כונן, גודל ותאריך כפי שהיו בחישוב החתימה, והחתימה.
 //   members — רשימה, פריט, מקום (צפוף מ־0), מתי נוסף. פריט פעם אחת בכל רשימה.
 //   meta    — המונה הבא, קוד המערכת.
 
@@ -19,7 +22,7 @@ import java.util.List;
 
 public final class SqlStore implements Store {
 
-    public static final int VERSION = 1;
+    public static final int VERSION = 2;
 
     private final SQLiteDatabase db;
     private final IdCounter counter;
@@ -42,6 +45,7 @@ public final class SqlStore implements Store {
             int v = db.getVersion();
             if (v > VERSION) throw new Failure("database is newer: " + v);
             if (v == 0) create(db);
+            else if (v == 1) upgradeTo2(db);
             return new SqlStore(db, counter);
         } catch (RuntimeException e) {
             db.close();
@@ -54,15 +58,40 @@ public final class SqlStore implements Store {
         try {
             db.execSQL("CREATE TABLE meta(k TEXT PRIMARY KEY, v TEXT NOT NULL)");
             db.execSQL("CREATE TABLE items(id INTEGER PRIMARY KEY, type INTEGER NOT NULL, name TEXT NOT NULL, extra TEXT, "
-                    + "created INTEGER NOT NULL, changed INTEGER NOT NULL, origin_sys TEXT, origin_id INTEGER)");
+                    + "created INTEGER NOT NULL, changed INTEGER NOT NULL, origin_sys TEXT, origin_id INTEGER, origin_key TEXT)");
             db.execSQL("CREATE TABLE members(list_id INTEGER NOT NULL REFERENCES items(id) ON DELETE CASCADE, "
                     + "item_id INTEGER NOT NULL REFERENCES items(id) ON DELETE CASCADE, "
                     + "position INTEGER NOT NULL, added INTEGER NOT NULL, PRIMARY KEY(list_id, item_id)) WITHOUT ROWID");
             db.execSQL("CREATE INDEX members_pos ON members(list_id, position)");
             db.execSQL("CREATE INDEX members_item ON members(item_id)");
+            addV2Tables(db);
             db.execSQL("INSERT INTO meta(k, v) VALUES('next_id', '1')");
             db.execSQL("INSERT INTO meta(k, v) VALUES('system_code', ?)", new Object[]{Stores.newSystemCode()});
             db.setVersion(VERSION);
+            db.setTransactionSuccessful();
+        } finally {
+            db.endTransaction();
+        }
+    }
+
+    /** הטבלאות והאינדקסים שנוספו בגרסה 2 (גם ביצירה חדשה). */
+    private static void addV2Tables(SQLiteDatabase db) {
+        db.execSQL("CREATE INDEX items_origin ON items(origin_key)");
+        db.execSQL("CREATE TABLE props(item_id INTEGER NOT NULL REFERENCES items(id) ON DELETE CASCADE, "
+                + "k TEXT NOT NULL, v TEXT NOT NULL, PRIMARY KEY(item_id, k)) WITHOUT ROWID");
+        db.execSQL("CREATE TABLE files(item_id INTEGER PRIMARY KEY REFERENCES items(id) ON DELETE CASCADE, "
+                + "path TEXT NOT NULL, drive TEXT NOT NULL, size INTEGER NOT NULL, mtime INTEGER NOT NULL, sig TEXT)");
+        db.execSQL("CREATE UNIQUE INDEX files_path ON files(path)");
+        db.execSQL("CREATE INDEX files_sig ON files(sig)");
+    }
+
+    /** 1 → 2: עמודת מקור + props + files. הנתונים הקיימים לא משתנים. */
+    private static void upgradeTo2(SQLiteDatabase db) {
+        db.beginTransaction();
+        try {
+            db.execSQL("ALTER TABLE items ADD COLUMN origin_key TEXT");
+            addV2Tables(db);
+            db.setVersion(2);
             db.setTransactionSuccessful();
         } finally {
             db.endTransaction();
@@ -197,7 +226,10 @@ public final class SqlStore implements Store {
             Item it = read(item);
             if (it == null) throw new Failure("no such item " + item);
             Stores.noListInList(it);
-            if (num("SELECT COUNT(*) FROM members WHERE list_id=? AND item_id=?", s(list), s(item)) > 0) return false;
+            if (num("SELECT COUNT(*) FROM members WHERE list_id=? AND item_id=?", s(list), s(item)) > 0) {
+                db.setTransactionSuccessful();   // "כבר שם" אינו כישלון: בלי הסימון, עסקה חיצונית (atomic) הייתה מתבטלת כולה
+                return false;
+            }
             append(list, item, System.currentTimeMillis());
             db.setTransactionSuccessful();
             return true;
@@ -214,7 +246,10 @@ public final class SqlStore implements Store {
             Cursor c = db.rawQuery("SELECT position FROM members WHERE list_id=? AND item_id=?", new String[]{s(list), s(item)});
             long pos;
             try {
-                if (!c.moveToFirst()) return false;
+                if (!c.moveToFirst()) {
+                    db.setTransactionSuccessful();   // "לא היה שם" אינו כישלון (ראו addMember)
+                    return false;
+                }
                 pos = c.getLong(0);
             } finally {
                 c.close();
@@ -279,6 +314,96 @@ public final class SqlStore implements Store {
             db.execSQL("DELETE FROM items WHERE id=?", new Object[]{list});     // החברויות — במחיקה מדורגת
             for (long[] p : parents) closeGap(p[0], p[1]);
             db.setTransactionSuccessful();
+        } finally {
+            db.endTransaction();
+        }
+    }
+
+    @Override
+    public long createFile(FileInfo f) {
+        Stores.checkFile(f);
+        db.beginTransaction();
+        try {
+            if (findFile(f.path) != 0) throw new Failure("file already exists: " + f.path);
+            long id = create(FILE, Stores.fileName(f.path));
+            db.execSQL("INSERT INTO files(item_id, path, drive, size, mtime, sig) VALUES(?,?,?,?,?,?)",
+                    new Object[]{id, f.path, f.drive, f.size, f.mtime, f.sig});
+            db.setTransactionSuccessful();
+            return id;
+        } finally {
+            db.endTransaction();
+        }
+    }
+
+    @Override
+    public FileInfo file(long item) {
+        Cursor c = db.rawQuery("SELECT path, drive, size, mtime, sig FROM files WHERE item_id=?", new String[]{s(item)});
+        try {
+            return c.moveToFirst() ? new FileInfo(c.getString(0), c.getString(1), c.getLong(2), c.getLong(3), c.getString(4)) : null;
+        } finally {
+            c.close();
+        }
+    }
+
+    @Override
+    public void updateFile(long item, long size, long mtime, String sig) {
+        if (file(item) == null) throw new Failure("not a file: " + item);
+        db.beginTransaction();
+        try {
+            db.execSQL("UPDATE files SET size=?, mtime=?, sig=? WHERE item_id=?", new Object[]{size, mtime, sig, item});
+            db.execSQL("UPDATE items SET changed=? WHERE id=?", new Object[]{System.currentTimeMillis(), item});
+            db.setTransactionSuccessful();
+        } finally {
+            db.endTransaction();
+        }
+    }
+
+    @Override
+    public long findFile(String path) {
+        return num("SELECT item_id FROM files WHERE path=?", path);
+    }
+
+    @Override
+    public long findByOrigin(String key) {
+        return num("SELECT id FROM items WHERE origin_key=? ORDER BY id LIMIT 1", key);
+    }
+
+    @Override
+    public void setOrigin(long item, String key) {
+        String k = Stores.clean(key, "origin");
+        if (read(item) == null) throw new Failure("no such item " + item);
+        db.execSQL("UPDATE items SET origin_key=? WHERE id=?", new Object[]{k, item});
+    }
+
+    @Override
+    public String prop(long item, String key) {
+        return text("SELECT v FROM props WHERE item_id=? AND k=?", s(item), key);
+    }
+
+    @Override
+    public void setProp(long item, String key, String value) {
+        Stores.clean(key, "key");
+        if (read(item) == null) throw new Failure("no such item " + item);
+        db.beginTransaction();
+        try {
+            if (value == null || value.isEmpty()) {
+                db.execSQL("DELETE FROM props WHERE item_id=? AND k=?", new Object[]{item, key});
+            } else {
+                db.execSQL("INSERT OR REPLACE INTO props(item_id, k, v) VALUES(?,?,?)", new Object[]{item, key, value});
+                db.execSQL("UPDATE items SET changed=? WHERE id=?", new Object[]{System.currentTimeMillis(), item});
+            }
+            db.setTransactionSuccessful();
+        } finally {
+            db.endTransaction();
+        }
+    }
+
+    @Override
+    public void atomic(Work w, boolean keep) {
+        db.beginTransaction();
+        try {
+            w.run(this);
+            if (keep) db.setTransactionSuccessful();
         } finally {
             db.endTransaction();
         }

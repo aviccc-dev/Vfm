@@ -43,6 +43,8 @@ final class StoreTests {
                     return SqlStore.open(new File(dbDir, "c" + (n[0]++) + ".db"), new IdCounter(counter));
                 }
             }, dir);
+            t.migration(dir);
+            ImportTests.pure(t.o, dir);
             String p = SqlStore.persistenceCheck(dir);
             t.ck("שמירה בין פתיחות, WAL, גרסה עתידית לא נפתחת" + (p == null ? "" : ": " + p), p == null);
         } catch (Throwable x) {
@@ -57,7 +59,68 @@ final class StoreTests {
         StoreContract.Result r = StoreContract.run(opener, sub);
         o.passed += r.passed;
         for (String f : r.failed) o.failed.add(name + " — " + f);
-        ck(name + ": החוזה רץ (לפחות 40 בדיקות)", r.passed + r.failed.size() >= 40);
+        ck(name + ": החוזה רץ (לפחות 80 בדיקות)", r.passed + r.failed.size() >= 80);
+        try {
+            Store s = opener.fresh(new File(sub, "import-counter.txt"));
+            try {
+                new ImportTests(o, name).run(s, new File(sub, "import"));
+            } finally {
+                s.close();
+            }
+        } catch (Throwable x) {
+            o.failed.add(name + " — העתקה: חריגה " + x);
+        }
+    }
+
+    /** מסד מגרסה 1 (כמו שנוצר ב־מ0.1) נפתח, עובר לגרסה 2 ולא מאבד דבר. */
+    private void migration(File dir) {
+        File f = new File(dir, "v1.db");
+        File cf = new File(dir, "v1-counter.txt");
+        android.database.sqlite.SQLiteDatabase.deleteDatabase(f);
+        try {
+            android.database.sqlite.SQLiteDatabase db = android.database.sqlite.SQLiteDatabase.openOrCreateDatabase(f, null);
+            db.enableWriteAheadLogging();
+            db.setForeignKeyConstraintsEnabled(true);
+            db.execSQL("CREATE TABLE meta(k TEXT PRIMARY KEY, v TEXT NOT NULL)");
+            db.execSQL("CREATE TABLE items(id INTEGER PRIMARY KEY, type INTEGER NOT NULL, name TEXT NOT NULL, extra TEXT, "
+                    + "created INTEGER NOT NULL, changed INTEGER NOT NULL, origin_sys TEXT, origin_id INTEGER)");
+            db.execSQL("CREATE TABLE members(list_id INTEGER NOT NULL REFERENCES items(id) ON DELETE CASCADE, "
+                    + "item_id INTEGER NOT NULL REFERENCES items(id) ON DELETE CASCADE, "
+                    + "position INTEGER NOT NULL, added INTEGER NOT NULL, PRIMARY KEY(list_id, item_id)) WITHOUT ROWID");
+            db.execSQL("CREATE INDEX members_pos ON members(list_id, position)");
+            db.execSQL("CREATE INDEX members_item ON members(item_id)");
+            db.execSQL("INSERT INTO meta(k, v) VALUES('next_id', '3')");
+            db.execSQL("INSERT INTO meta(k, v) VALUES('system_code', 'abcd1234')");
+            db.execSQL("INSERT INTO items(id,type,name,created,changed) VALUES(1,1,'old list',5,5)");
+            db.execSQL("INSERT INTO items(id,type,name,created,changed) VALUES(2,2,'old note',6,6)");
+            db.execSQL("INSERT INTO members(list_id,item_id,position,added) VALUES(1,2,0,7)");
+            db.setVersion(1);
+            db.close();
+            SqlStore s = SqlStore.open(f, new IdCounter(cf));
+            try {
+                ck("מעבר 1→2: הגרסה עלתה", s.getVersionForTest() == 2);
+                ck("מעבר 1→2: הנתונים הישנים שלמים", s.item(1) != null && s.item(1).name.equals("old list") && s.members(1).size() == 1
+                        && s.members(1).get(0).item.name.equals("old note") && s.systemCode().equals("abcd1234") && s.lastId() == 2);
+                long fi = s.createFile(new Store.FileInfo("/a/b.txt", "x", 1, 2, "2:aa"));
+                s.setOrigin(1, "k");
+                s.setProp(1, Store.P_ICON, "i");
+                ck("מעבר 1→2: הטבלאות החדשות עובדות", fi == 3 && s.file(fi).sig.equals("2:aa") && s.findByOrigin("k") == 1 && "i".equals(s.prop(1, Store.P_ICON)));
+                ck("מעבר 1→2: המסד תקין", s.check() == null);
+            } finally {
+                s.close();
+            }
+            SqlStore again = SqlStore.open(f, new IdCounter(cf));
+            try {
+                ck("מעבר 1→2: פתיחה שנייה לא מעבירה שוב", again.getVersionForTest() == 2 && again.findFile("/a/b.txt") == 3);
+            } finally {
+                again.close();
+            }
+        } catch (Throwable x) {
+            o.failed.add("מעבר 1→2: חריגה " + x);
+        } finally {
+            android.database.sqlite.SQLiteDatabase.deleteDatabase(f);
+            cf.delete();
+        }
     }
 
     private static String read(File f) throws IOException {

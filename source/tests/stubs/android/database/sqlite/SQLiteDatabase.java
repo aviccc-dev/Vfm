@@ -20,7 +20,10 @@ public class SQLiteDatabase {
     private final Process proc;
     private final BufferedReader in;
     private final BufferedWriter out;
-    private boolean inTx, txOk;
+    // כמו באנדרואיד: עסקאות מקוננות; עסקה פנימית שלא סומנה כמוצלחת מבטלת את כולן.
+    private int depth;
+    private boolean txFailed;
+    private final java.util.ArrayList<Boolean> txOk = new java.util.ArrayList<Boolean>();
 
     private SQLiteDatabase(Process p) throws IOException {
         proc = p;
@@ -111,19 +114,25 @@ public class SQLiteDatabase {
     }
 
     public void beginTransaction() {
-        call("begin");
-        inTx = true;
-        txOk = false;
+        if (depth == 0) {
+            call("begin");
+            txFailed = false;
+        }
+        depth++;
+        txOk.add(Boolean.FALSE);
     }
 
     public void setTransactionSuccessful() {
-        txOk = true;
+        if (depth == 0) throw new IllegalStateException("no transaction");
+        txOk.set(txOk.size() - 1, Boolean.TRUE);
     }
 
     public void endTransaction() {
-        if (!inTx) throw new IllegalStateException("no transaction");
-        inTx = false;
-        call(txOk ? "commit" : "rollback");
+        if (depth == 0) throw new IllegalStateException("no transaction");
+        boolean ok = txOk.remove(txOk.size() - 1).booleanValue();
+        depth--;
+        if (!ok) txFailed = true;
+        if (depth == 0) call(txFailed ? "rollback" : "commit");
     }
 
     public void execSQL(String sql) {

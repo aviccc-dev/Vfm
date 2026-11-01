@@ -2294,8 +2294,8 @@ public final class Words {
 
         public static final String APP_NAME_M = "מנהל קבצים וירטואלי · מ";
         public static final String MENU = "מסד נתונים (מ)";
-        public static final String TITLE = "מסד נתונים · מ0.1";
-        public static final String NOTICE = "שלד מנוע המסד. המסד כאן לבדיקות בלבד ובלי גיבוי עד מ0.5; הנתונים האמיתיים נשארים במנוע הישן.";
+        public static final String TITLE = "מסד נתונים · מ0.2";
+        public static final String NOTICE = "מנוע המסד בבנייה, ועדיין בלי גיבוי (מ0.5). \"העתקה מהישן\" רק קוראת מהמנוע הישן ולא משנה בו דבר — אפשר להעתיק שוב, ומה שכבר הועתק מתעדכן ולא מוכפל.";
         public static final String NEED_ACCESS = "כדי לשמור את מונה המזהים בתיקיית הנתונים, התוכנה צריכה הרשאת גישה לכל הקבצים.";
         public static final String ALL_LISTS = "כל הרשימות";
         public static final String CRUMB_SEP = " › ";
@@ -2319,9 +2319,51 @@ public final class Words {
         public static final String DELETE_DETAIL = "הפריטים שבתוכה נשארים, בלי רשימה. מספר הזיהוי לא יחזור.";
         public static final String KIND_LIST = "רשימה";
         public static final String KIND_NOTE = "רעיון";
+        public static final String KIND_FILE = "קובץ";
         public static final String RUNNING = "מריץ בדיקה עצמית…";
         public static final String SELF_TEST_TITLE = "בדיקה עצמית של המסד";
         public static final String ALREADY_THERE = "הפריט כבר ברשימה";
+
+        public static final String IMPORT = "📥 העתקה מהישן";
+        public static final String IMPORT_TITLE = "העתקה מהמנוע הישן";
+        public static final String IMPORT_NO_OLD = "לא נמצאו רשימות של המנוע הישן בתיקיית \"מנהל קבצים וירטואלי\" (אופני עבודה ← מבנה.txt). ההעתקה קוראת משם בלבד.";
+        public static final String IMPORT_PICK = "מאיזה אופן עבודה להעתיק?";
+        public static final String IMPORT_READING = "קורא את המנוע הישן ובודק מה יועתק…";
+        public static final String IMPORT_COPYING = "מעתיק…";
+        public static final String IMPORT_YES = "העתקה";
+        public static final String IMPORT_NOTHING = "אין מה להעתיק — כל מה שבמקור כבר במסד, באותו מצב.";
+        public static final String IMPORT_DONE_TITLE = "ההעתקה הסתיימה";
+        public static final String IMPORT_PREVIEW_TITLE = "מה ייעשה (עדיין לא נשמר דבר)";
+
+        public static String modeLine(String name, boolean active) {
+            return active ? name + " (הפעיל)" : name;
+        }
+
+        public static String importFailed(String why) {
+            return "ההעתקה נכשלה, ולא השתנה דבר במסד: " + why;
+        }
+
+        /** הדוח. בתצוגה מקדימה — "ייווספו"; אחרי ההעתקה — "נוספו". */
+        public static String importReport(boolean done, String mode, int listsNew, int listsKnown, int filesNew, int filesKnown,
+                                          int filesUpdated, int linksAdded, int propsSet, int rootFiles,
+                                          int bad, int refs, int smart, int live) {
+            StringBuilder sb = new StringBuilder("מקור: " + mode + "\n");
+            sb.append("רשימות: ").append(listsNew).append(done ? " נוספו" : " ייווספו").append(" · ").append(listsKnown).append(" כבר היו\n");
+            sb.append("קבצים: ").append(filesNew).append(done ? " נוספו" : " ייווספו").append(" · ").append(filesKnown + filesUpdated).append(" כבר היו");
+            if (filesUpdated > 0) sb.append(" (").append(filesUpdated).append(done ? " עודכנו" : " יעודכנו").append(" לפי החתימה במקור)");
+            sb.append('\n').append(linksAdded).append(done ? " קבצים נוספו" : " קבצים ייווספו").append(" לרשימות");
+            if (propsSet > 0) sb.append(" · ").append(propsSet).append(done ? " פרטי רשימה הושלמו" : " פרטי רשימה יושלמו");
+            if (rootFiles > 0) sb.append("\n").append(rootFiles).append(" קבצים בלי רשימה (היו בשורש הרשימות)");
+            if (bad + refs + smart + live > 0) {
+                sb.append("\n\nלא מועתק בגרסה הזו (נשאר במנוע הישן, לא נמחק):");
+                if (refs > 0) sb.append("\n").append(refs).append(" הפניות בין רשימות (מ0.4)");
+                if (smart > 0) sb.append("\n").append(smart).append(" רשימות חכמות בתוך רשימות (מ0.3)");
+                if (live > 0) sb.append("\n").append(live).append(" תיקיות חיות");
+                if (bad > 0) sb.append("\n").append(bad).append(" שורות פגומות בקובץ הרשימות");
+            }
+            sb.append("\n\nגם הכלים, הפקודות וההגדרות עדיין לא מועתקים.");
+            return sb.toString();
+        }
 
         public static String status(int lists, long last, String code, String info) {
             return Words.lists(lists) + " · מספר זיהוי אחרון " + last + " · קוד מערכת " + code + "\n" + info;

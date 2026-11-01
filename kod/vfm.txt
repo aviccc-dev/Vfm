@@ -932,7 +932,7 @@ cd $S; rm -rf out gen bld
 [ "$S" != "$DIR" ] && rm -rf $S
 ls -la $OUT
 ===== קובץ: build/m-version.txt =====
-1 מ0.1
+2 מ0.2
 ===== קובץ: build/test.sh =====
 #!/bin/bash
 # בדיקות על המחשב (80). יוצא בכישלון אם בדיקה אחת נכשלה — ואז build.sh לא בונה.
@@ -8175,14 +8175,15 @@ final class DateSize {
 ===== קובץ: src/com/tikiyot/vfm/DbScreen.java =====
 package com.tikiyot.vfm;
 
-// מסך מנוע המסד (מ0.1): רשימות ופריטים בסיסיים מעל Store. אחראי: להציג ולהפעיל את הפעולות הבסיסיות.
-// אסור לו: לדעת איך הנתונים נשמרים (Store), או לגעת במנוע הישן. המסד כאן לבדיקות — עד מ0.2 לא נכנסים אליו נתונים אמיתיים.
+// מסך מנוע המסד (מ0.1–מ0.2): רשימות ופריטים בסיסיים מעל Store, והעתקה מהמנוע הישן (Importer).
+// אחראי: להציג ולהפעיל. אסור לו: לדעת איך הנתונים נשמרים (Store), או לכתוב למנוע הישן (קורא בלבד).
 
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.content.DialogInterface;
 import android.graphics.Typeface;
 import android.os.Bundle;
+import android.os.Environment;
 import android.view.View;
 import android.widget.Button;
 import android.widget.LinearLayout;
@@ -8315,6 +8316,9 @@ public class DbScreen extends Activity {
                 buttons.addView(button(Words.Db.NEW_LIST, new Runnable() {
                     @Override public void run() { newList(0); }
                 }));
+                buttons.addView(button(Words.Db.IMPORT, new Runnable() {
+                    @Override public void run() { importStart(); }
+                }));
             } else {
                 buttons.addView(button(Words.Db.NEW_SUBLIST, new Runnable() {
                     @Override public void run() { newList(current()); }
@@ -8362,8 +8366,8 @@ public class DbScreen extends Activity {
         TextView sub = new TextView(this);
         sub.setTextSize(12);
         sub.setTextColor(Ui.SUB);
-        sub.setText(Words.Db.kindLine(it.type == Store.LIST ? Words.Db.KIND_LIST : Words.Db.KIND_NOTE, it.id,
-                count >= 0 ? Words.items(count) : ""));
+        sub.setText(Words.Db.kindLine(it.type == Store.LIST ? Words.Db.KIND_LIST : it.type == Store.FILE ? Words.Db.KIND_FILE : Words.Db.KIND_NOTE,
+                it.id, count >= 0 ? Words.items(count) : ""));
         r.addView(name);
         r.addView(sub);
         r.setBackgroundColor(Ui.BG);
@@ -8419,8 +8423,10 @@ public class DbScreen extends Activity {
     private void more(final Store.Item it, final int position, final int size) {
         final List<String> labels = new ArrayList<String>();
         final List<Integer> codes = new ArrayList<Integer>();
-        labels.add(Words.Db.RENAME);
-        codes.add(0);
+        if (it.type != Store.FILE) {                                 // שם הקובץ הוא שמו בכונן — לא משנים אותו כאן
+            labels.add(Words.Db.RENAME);
+            codes.add(0);
+        }
         if (position >= 0) {                                         // בתוך רשימה: הזזה והסרה
             if (position > 0) { labels.add(Words.Db.MOVE_UP); codes.add(1); }
             if (position < size - 1) { labels.add(Words.Db.MOVE_DOWN); codes.add(2); }
@@ -8475,6 +8481,93 @@ public class DbScreen extends Activity {
             Ui.toast(this, Words.Db.failed(f.getMessage()));
         }
         show();
+    }
+
+    // ---------- מ0.2: העתקה מהמנוע הישן ----------
+
+    private static File oldData() {
+        return new File(Environment.getExternalStorageDirectory(), Flavor.oldAppDir());
+    }
+
+    private void importStart() {
+        final File old = oldData();
+        final List<String> modes = Importer.modes(old);
+        if (modes.isEmpty()) {
+            new AlertDialog.Builder(this).setTitle(Words.Db.IMPORT_TITLE).setMessage(Words.Db.IMPORT_NO_OLD)
+                    .setPositiveButton(Words.OK, null).show();
+            return;
+        }
+        final String active = Importer.activeMode(old);
+        if (modes.size() == 1) {
+            importPreview(old, modes.get(0));
+            return;
+        }
+        final List<String> labels = new ArrayList<String>();
+        for (String m : modes) labels.add(Words.Db.modeLine(m, m.equals(active)));
+        Ui.list(this, Words.Db.IMPORT_PICK, labels, new DialogInterface.OnClickListener() {
+            @Override
+            public void onClick(DialogInterface d, int which) {
+                importPreview(old, modes.get(which));
+            }
+        });
+    }
+
+    /** קורא את המקור ומריץ את ההעתקה בלי לשמור: אותה ריצה, אותו דוח. */
+    private void importPreview(final File old, final String mode) {
+        importRun(old, mode, false, Words.Db.IMPORT_READING);
+    }
+
+    private void importRun(final File old, final String mode, final boolean keep, String message) {
+        final AlertDialog wait = new AlertDialog.Builder(this).setTitle(Words.Db.IMPORT_TITLE).setMessage(message)
+                .setCancelable(false).show();
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                String err = null;
+                Importer.Report rep = null;
+                try {
+                    Importer.Source src = Importer.load(new File(new File(old, Modes.DIR), mode));
+                    rep = Importer.run(store, src, keep);
+                } catch (Throwable t) {
+                    Log.e("DbScreen.import", t);
+                    err = Words.Db.importFailed(String.valueOf(t.getMessage()));
+                }
+                final String error = err;
+                final Importer.Report report = rep;
+                runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        wait.dismiss();
+                        if (isFinishing()) return;
+                        if (error != null) {
+                            new AlertDialog.Builder(DbScreen.this).setTitle(Words.Db.IMPORT_TITLE).setMessage(error)
+                                    .setPositiveButton(Words.OK, null).show();
+                        } else if (keep) {
+                            new AlertDialog.Builder(DbScreen.this).setTitle(Words.Db.IMPORT_DONE_TITLE).setMessage(reportText(true, mode, report))
+                                    .setPositiveButton(Words.OK, null).show();
+                            show();
+                        } else if (report.nothingToDo()) {
+                            new AlertDialog.Builder(DbScreen.this).setTitle(Words.Db.IMPORT_TITLE)
+                                    .setMessage(Words.Db.IMPORT_NOTHING + (report.skippedAny() ? "\n\n" + reportText(false, mode, report) : ""))
+                                    .setPositiveButton(Words.OK, null).show();
+                        } else {
+                            new AlertDialog.Builder(DbScreen.this).setTitle(Words.Db.IMPORT_PREVIEW_TITLE).setMessage(reportText(false, mode, report))
+                                    .setPositiveButton(Words.Db.IMPORT_YES, new DialogInterface.OnClickListener() {
+                                        @Override
+                                        public void onClick(DialogInterface d, int w) {
+                                            importRun(old, mode, true, Words.Db.IMPORT_COPYING);
+                                        }
+                                    }).setNegativeButton(Words.CANCEL, null).show();
+                        }
+                    }
+                });
+            }
+        }).start();
+    }
+
+    private static String reportText(boolean done, String mode, Importer.Report r) {
+        return Words.Db.importReport(done, mode, r.listsNew, r.listsKnown, r.filesNew, r.filesKnown, r.filesUpdated,
+                r.linksAdded, r.propsSet, r.rootFiles, r.badLines, r.refs, r.smart, r.live);
     }
 
     // ---------- בדיקה עצמית ----------
@@ -13795,6 +13888,251 @@ public final class IdCounter {
         if (!tmp.renameTo(f)) {
             f.delete();
             if (!tmp.renameTo(f)) throw new IOException("cannot replace " + f.getPath());
+        }
+    }
+}
+===== קובץ: src/com/tikiyot/vfm/Importer.java =====
+package com.tikiyot.vfm;
+
+// מ0.2 — העתקה מהמנוע הישן (מבנה.txt + חתימות.txt) אל המסד. אחראי: לקרוא מקור, ולהעתיק ל־Store בעסקה אחת.
+// אסור לו: לשנות את הקבצים הישנים (קורא בלבד), לדעת איך Store שומר, או להציג דבר למשתמש (המסך עושה את זה).
+//
+// כללים (claude/masad-mipuy-haataka.md):
+//  - מה מועתק: רשימות ידניות בעץ (עם הסדר), צלמית/תיאור/עיצוב/"למה", קבצים (מסלול, כונן, גודל ותאריך, חתימה).
+//  - לא מועתק בגרסה זו, ונספר בדוח: הפניות בין רשימות (@רשימה — מ0.4), רשימות חכמות (@חכמה — מ0.3), תיקיות חיות
+//    (@תיקייה), שורות פגומות. שום דבר לא נמחק או משתנה במקור.
+//  - העתקה חוזרת = עדכון, לא כפילות: רשימה מזוהה לפי המסלול שלה במקור (origin_key), קובץ לפי המסלול שלו.
+//    רשימה שכבר הועתקה לא משתנה במבנה; מאפיין ריק בה מתמלא, מאפיין שיש לא נדרס. קבצים חדשים נוספים לסוף.
+//    מה שנמחק במקור לא נמחק במסד.
+//  - התצוגה המקדימה היא אותה ריצה בדיוק בלי שמירה (Store.atomic עם keep=false) — הדוח שלה זהה לדוח ההעתקה.
+
+import java.io.File;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+
+final class Importer {
+
+    private Importer() { }
+
+    /** מפתח המקור של רשימה שהועתקה מהמנוע הישן: הקידומת ואחריה המסלול המלא ("א / ב"). */
+    static final String ORIGIN_LIST = "tree:L:";  // תחביר
+    /** כונן שלא זוהה ממסלולו. */
+    static final String UNKNOWN_DRIVE = "?";
+
+    /** מה נקרא מהמקור. */
+    static final class Source {
+        final Tree tree;
+        final Map<String, Sig.Entry> sigs;
+
+        Source(Tree tree, Map<String, Sig.Entry> sigs) {
+            this.tree = tree;
+            this.sigs = sigs;
+        }
+    }
+
+    /** הדוח: מה נעשה (או מה היה נעשה, בתצוגה מקדימה). */
+    static final class Report {
+        int listsNew, listsKnown;
+        int filesNew, filesKnown, filesUpdated, filesWithSig;
+        int linksAdded, linksKnown, rootFiles;
+        int propsSet;
+        int badLines, refs, smart, live;
+
+        boolean nothingToDo() {
+            return listsNew == 0 && filesNew == 0 && filesUpdated == 0 && linksAdded == 0 && propsSet == 0;
+        }
+
+        boolean skippedAny() {
+            return badLines + refs + smart + live > 0;
+        }
+    }
+
+    // ---------- מקור ----------
+
+    /** כל תיקיות האופנים הישנים שיש בהן מבנה.txt, לפי שם. */
+    static List<String> modes(File oldData) {
+        List<String> out = new ArrayList<String>();
+        File[] k = new File(oldData, Modes.DIR).listFiles();
+        if (k != null)
+            for (File f : k)
+                if (f.isDirectory() && !f.getName().startsWith(".") && new File(f, Paths.TREE).isFile()) out.add(f.getName());
+        java.util.Collections.sort(out);
+        return out;
+    }
+
+    /** שם האופן הפעיל בתיקייה הישנה (כמו Modes.current, אבל לתיקייה נתונה). */
+    static String activeMode(File oldData) {
+        String m = "";
+        try {
+            m = Files.readUtf8(Modes.pointer(oldData)).trim();
+        } catch (Throwable ignored) {
+        }
+        m = Modes.clean(m);
+        return m.isEmpty() ? Modes.FIRST : m;
+    }
+
+    /** קורא מקור מתיקיית אופן. @throws Store.Failure אם אין מבנה.txt או שאי אפשר לקרוא אותו (ואז לא מעתיקים כלום). */
+    static Source load(File modeDir) {
+        File t = new File(modeDir, Paths.TREE);
+        if (!t.isFile()) throw new Store.Failure("no tree file: " + t);
+        Tree tree = Tree.loadFrom(t);
+        if (tree.unreadable) throw new Store.Failure("tree file unreadable: " + t);
+        return new Source(tree, Sig.read(new File(modeDir, Sig.FILE)));
+    }
+
+    // ---------- ההעתקה ----------
+
+    /** הכונן לפי המסלול: "פנימי", או שם הכרטיס (/storage/XXXX-XXXX/…), או "?". */
+    static String driveOf(String path) {
+        if (Drive.internalPath(path)) return Drive.INTERNAL;
+        if (path.startsWith("/storage/")) {
+            int e = path.indexOf('/', 9);
+            String v = e < 0 ? path.substring(9) : path.substring(9, e);
+            if (!v.isEmpty() && !v.equals("emulated") && !v.equals("self")) return v;
+        }
+        return UNKNOWN_DRIVE;
+    }
+
+    /**
+     * מעתיק (keep=true) או רק בודק מה היה קורה (keep=false) — בעסקה אחת: כישלון באמצע = שום שינוי.
+     * @throws Store.Failure / RuntimeException אם נכשל (ואז המסד כמו שהיה)
+     */
+    static Report run(Store store, final Source src, boolean keep) {
+        final Report r = new Report();
+        store.atomic(new Store.Work() {
+            @Override
+            public void run(Store s) {
+                Ctx c = new Ctx(s, src, r);
+                c.top(src.tree.root);
+            }
+        }, keep);
+        return r;
+    }
+
+    private static final class Ctx {
+        final Store s;
+        final Source src;
+        final Report r;
+        /** מסלול ← פריט, לריצה הזו (קובץ שבכמה רשימות — פריט אחד). */
+        final Map<String, Long> files = new HashMap<String, Long>();
+
+        Ctx(Store s, Source src, Report r) {
+            this.s = s;
+            this.src = src;
+            this.r = r;
+        }
+
+        /** השורש: אין לו רשימה — הקבצים שבו נשארים בלי רשימה, והרשימות שלו עומדות לעצמן. */
+        void top(Tree.Node root) {
+            count(root);
+            for (Tree.Node c : root.children) list(c, 0);
+            for (Tree.Entry e : root.entries) {
+                if (e.bad) {
+                    r.badLines++;
+                    continue;
+                }
+                file(e);
+                r.rootFiles++;
+            }
+        }
+
+        void count(Tree.Node n) {
+            r.refs += n.refs.size();
+            r.smart += n.smart.size();
+            r.live += n.live.size();
+        }
+
+        void list(Tree.Node n, long parent) {
+            count(n);
+            String key = ORIGIN_LIST + Tree.fullLabel(n.path());
+            long id = s.findByOrigin(key);
+            if (id == 0) {
+                id = s.createList(n.name, parent);
+                s.setOrigin(id, key);
+                r.listsNew++;
+                prop(id, Store.P_ICON, n.icon, true);
+                prop(id, Store.P_DESC, n.desc, true);
+                prop(id, Store.P_DESIGN, n.design, true);
+                prop(id, Store.P_WHY, n.why, true);
+            } else {
+                r.listsKnown++;
+                prop(id, Store.P_ICON, n.icon, false);
+                prop(id, Store.P_DESC, n.desc, false);
+                prop(id, Store.P_DESIGN, n.design, false);
+                prop(id, Store.P_WHY, n.why, false);
+            }
+            for (Object o : order(n)) {
+                if (o instanceof Tree.Node) {
+                    list((Tree.Node) o, id);
+                } else {
+                    Tree.Entry e = (Tree.Entry) o;
+                    if (e.bad) {
+                        r.badLines++;
+                        continue;
+                    }
+                    if (s.addMember(id, file(e))) r.linksAdded++;
+                    else r.linksKnown++;
+                }
+            }
+        }
+
+        void prop(long id, String k, String v, boolean isNew) {
+            if (v == null || v.isEmpty()) return;
+            if (!isNew && s.prop(id, k) != null) return;
+            s.setProp(id, k, v);
+            if (!isNew) r.propsSet++;
+        }
+
+        /** פריט הקובץ של הרשומה: קיים — מתעדכן אם החתימה במקור שונה; חדש — נוצר. */
+        long file(Tree.Entry e) {
+            Long seen = files.get(e.path);
+            if (seen != null) return seen;
+            Sig.Entry g = src.sigs.get(e.path);
+            long size = g != null ? g.size : e.size;
+            long mtime = g != null ? g.mtime : 0;
+            String sig = g != null ? g.sig : null;
+            long id = s.findFile(e.path);
+            if (id == 0) {
+                id = s.createFile(new Store.FileInfo(e.path, driveOf(e.path), size, mtime, sig));
+                r.filesNew++;
+                if (sig != null) r.filesWithSig++;
+            } else {
+                Store.FileInfo f = s.file(id);
+                boolean differs = g != null && (f.sig == null || !f.sig.equals(sig) || f.size != size || f.mtime != mtime);
+                if (differs) {
+                    s.updateFile(id, size, mtime, sig);
+                    r.filesUpdated++;
+                } else {
+                    r.filesKnown++;
+                }
+                if (sig != null) r.filesWithSig++;
+            }
+            files.put(e.path, id);
+            return id;
+        }
+
+        /**
+         * סדר הפריטים ברשימה: אם יש סדר חופשי (@סדר) — לפיו (רשימה: "c"+שם, קובץ: "f"+מסלול; מפתחות של סוגים שלא
+         * מועתקים מדולגים); מה שלא נזכר בו — אחריו, בסדר הרגיל: תת־רשימות ואז קבצים.
+         */
+        List<Object> order(Tree.Node n) {
+            List<Object> out = new ArrayList<Object>();
+            Set<Object> used = new HashSet<Object>();
+            for (String k : n.order) {
+                if (k.length() < 2) continue;
+                String v = k.substring(1);
+                Object o = null;
+                if (k.charAt(0) == 'c') o = n.child(v);
+                else if (k.charAt(0) == 'f') for (Tree.Entry e : n.entries) if (e.path.equals(v)) { o = e; break; }
+                if (o != null && used.add(o)) out.add(o);
+            }
+            for (Tree.Node c : n.children) if (used.add(c)) out.add(c);
+            for (Tree.Entry e : n.entries) if (used.add(e)) out.add(e);
+            return out;
         }
     }
 }
@@ -19284,6 +19622,9 @@ public final class MemStore implements Store {
     private final Map<Long, Item> items = new TreeMap<Long, Item>();
     /** רשימה ← (פריט ← מתי נוסף), בסדר המקומות. */
     private final Map<Long, LinkedHashMap<Long, Long>> members = new TreeMap<Long, LinkedHashMap<Long, Long>>();
+    private final Map<Long, FileInfo> files = new TreeMap<Long, FileInfo>();
+    private final Map<Long, String> origins = new TreeMap<Long, String>();
+    private final Map<Long, Map<String, String>> props = new TreeMap<Long, Map<String, String>>();
     private final String code = Stores.newSystemCode();
     private long next;
 
@@ -19376,7 +19717,102 @@ public final class MemStore implements Store {
         listOf(list);
         members.remove(list);
         items.remove(list);
+        props.remove(list);
+        origins.remove(list);
         for (LinkedHashMap<Long, Long> l : members.values()) l.remove(list);
+    }
+
+    @Override
+    public long createFile(FileInfo f) {
+        Stores.checkFile(f);
+        if (findFile(f.path) != 0) throw new Failure("file already exists: " + f.path);
+        Item it = make(FILE, Stores.fileName(f.path));
+        files.put(it.id, f);
+        return it.id;
+    }
+
+    @Override
+    public FileInfo file(long item) {
+        return files.get(item);
+    }
+
+    @Override
+    public void updateFile(long item, long size, long mtime, String sig) {
+        FileInfo f = files.get(item);
+        if (f == null) throw new Failure("not a file: " + item);
+        files.put(item, new FileInfo(f.path, f.drive, size, mtime, sig));
+        touch(item);
+    }
+
+    @Override
+    public long findFile(String path) {
+        for (Map.Entry<Long, FileInfo> e : files.entrySet()) if (e.getValue().path.equals(path)) return e.getKey();
+        return 0;
+    }
+
+    @Override
+    public long findByOrigin(String key) {
+        for (Map.Entry<Long, String> e : origins.entrySet()) if (e.getValue().equals(key)) return e.getKey();
+        return 0;
+    }
+
+    @Override
+    public void setOrigin(long item, String key) {
+        if (items.get(item) == null) throw new Failure("no such item " + item);
+        origins.put(item, Stores.clean(key, "origin"));
+    }
+
+    @Override
+    public String prop(long item, String key) {
+        Map<String, String> m = props.get(item);
+        return m == null ? null : m.get(key);
+    }
+
+    @Override
+    public void setProp(long item, String key, String value) {
+        if (items.get(item) == null) throw new Failure("no such item " + item);
+        Stores.clean(key, "key");
+        Map<String, String> m = props.get(item);
+        if (value == null || value.isEmpty()) {
+            if (m != null) m.remove(key);
+            return;
+        }
+        if (m == null) props.put(item, m = new java.util.HashMap<String, String>());
+        m.put(key, value);
+        touch(item);
+    }
+
+    private void touch(long id) {
+        Item it = items.get(id);
+        items.put(id, new Item(it.id, it.type, it.name, it.created, System.currentTimeMillis()));
+    }
+
+    @Override
+    public void atomic(Work w, boolean keep) {
+        Map<Long, Item> i0 = new TreeMap<Long, Item>(items);
+        Map<Long, LinkedHashMap<Long, Long>> m0 = new TreeMap<Long, LinkedHashMap<Long, Long>>();
+        for (Map.Entry<Long, LinkedHashMap<Long, Long>> e : members.entrySet())
+            m0.put(e.getKey(), new LinkedHashMap<Long, Long>(e.getValue()));
+        Map<Long, FileInfo> f0 = new TreeMap<Long, FileInfo>(files);
+        Map<Long, String> o0 = new TreeMap<Long, String>(origins);
+        Map<Long, Map<String, String>> p0 = new TreeMap<Long, Map<String, String>>();
+        for (Map.Entry<Long, Map<String, String>> e : props.entrySet())
+            p0.put(e.getKey(), new java.util.HashMap<String, String>(e.getValue()));
+        long n0 = next;
+        boolean ok = false;
+        try {
+            w.run(this);
+            ok = keep;
+        } finally {
+            if (!ok) {
+                items.clear(); items.putAll(i0);
+                members.clear(); members.putAll(m0);
+                files.clear(); files.putAll(f0);
+                origins.clear(); origins.putAll(o0);
+                props.clear(); props.putAll(p0);
+                next = n0;
+            }
+        }
     }
 
     @Override
@@ -27504,25 +27940,31 @@ final class Sig {
     private static File loadedFrom;
     private static boolean dirty;
 
+    /** מה שכתוב בקובץ חתימות (של האופן הפעיל או של אחר — מ0.2): מסלול ← חתימה. שורה פגומה או בגרסה אחרת — מדלגים. */
+    static Map<String, Entry> read(File f) {
+        Map<String, Entry> out = new LinkedHashMap<String, Entry>();
+        try {
+            if (f.exists())
+                for (String l : Files.readUtf8(f).split("\n")) {
+                    String[] p = l.split("\t", 4);
+                    if (p.length < 4 || !p[0].startsWith(VER)) continue;
+                    try {
+                        out.put(p[3], new Entry(Long.parseLong(p[1]), Long.parseLong(p[2]), p[0]));
+                    } catch (NumberFormatException ignored) {
+                    }
+                }
+        } catch (Throwable t) {
+            Log.e("קריאת החתימות", t);
+        }
+        return out;
+    }
+
     private static Map<String, Entry> map() {
         File f = file();
         if (map == null || !f.equals(loadedFrom)) {
-            map = new LinkedHashMap<String, Entry>();
+            map = read(f);
             loadedFrom = f;
             dirty = false;
-            try {
-                if (f.exists())
-                    for (String l : Files.readUtf8(f).split("\n")) {
-                        String[] p = l.split("\t", 4);
-                        if (p.length < 4 || !p[0].startsWith(VER)) continue;
-                        try {
-                            map.put(p[3], new Entry(Long.parseLong(p[1]), Long.parseLong(p[2]), p[0]));
-                        } catch (NumberFormatException ignored) {
-                        }
-                    }
-            } catch (Throwable t) {
-                Log.e("קריאת החתימות", t);
-            }
         }
         return map;
     }
@@ -29597,11 +30039,14 @@ public final class Sources {
 package com.tikiyot.vfm;
 
 // Store על SQLite. אחראי: טבלאות, עסקאות, יומן WAL, בדיקת תקינות בפתיחה. אסור לו: מסכים.
-// גרסת הטבלאות — PRAGMA user_version (עכשיו 1). מסד של גרסה חדשה יותר — לא נפתח (לא נוגעים במה שלא מכירים).
+// גרסת הטבלאות — PRAGMA user_version (עכשיו 2; 1 → 2 במעבר אוטומטי בפתיחה, בעסקה אחת). מסד של גרסה חדשה יותר — לא נפתח (לא נוגעים במה שלא מכירים).
 //
-// הטבלאות (מ0.1):
-//   items   — מספר זיהוי (מוחלט, לא חוזר), סוג, שם, שדה לתוכן לפי סוג (עוד לא בשימוש), נוצר/שונה, ושני שדות מקור
-//             נסתרים (קוד המערכת + המספר המקורי) לנתונים שהגיעו ממערכת אחרת (עוד לא בשימוש).
+// הטבלאות:
+//   items   — מספר זיהוי (מוחלט, לא חוזר), סוג, שם, שדה לתוכן לפי סוג (עוד לא בשימוש), נוצר/שונה, ושדות מקור
+//             לנתונים שהגיעו ממערכת אחרת: קוד המערכת + המספר המקורי (עוד לא בשימוש), ומ0.2 גם origin_key —
+//             מפתח טקסטואלי (למנוע הישן אין מספרי זיהוי), מאונדקס.
+//   props   — (מ0.2) מאפיינים של פריט: מפתח וערך. לרשימה: צלמית, תיאור, עיצוב, "למה".
+//   files   — (מ0.2) פרטי פריט קובץ: מסלול (ייחודי), כונן, גודל ותאריך כפי שהיו בחישוב החתימה, והחתימה.
 //   members — רשימה, פריט, מקום (צפוף מ־0), מתי נוסף. פריט פעם אחת בכל רשימה.
 //   meta    — המונה הבא, קוד המערכת.
 
@@ -29615,7 +30060,7 @@ import java.util.List;
 
 public final class SqlStore implements Store {
 
-    public static final int VERSION = 1;
+    public static final int VERSION = 2;
 
     private final SQLiteDatabase db;
     private final IdCounter counter;
@@ -29638,6 +30083,7 @@ public final class SqlStore implements Store {
             int v = db.getVersion();
             if (v > VERSION) throw new Failure("database is newer: " + v);
             if (v == 0) create(db);
+            else if (v == 1) upgradeTo2(db);
             return new SqlStore(db, counter);
         } catch (RuntimeException e) {
             db.close();
@@ -29650,15 +30096,40 @@ public final class SqlStore implements Store {
         try {
             db.execSQL("CREATE TABLE meta(k TEXT PRIMARY KEY, v TEXT NOT NULL)");
             db.execSQL("CREATE TABLE items(id INTEGER PRIMARY KEY, type INTEGER NOT NULL, name TEXT NOT NULL, extra TEXT, "
-                    + "created INTEGER NOT NULL, changed INTEGER NOT NULL, origin_sys TEXT, origin_id INTEGER)");
+                    + "created INTEGER NOT NULL, changed INTEGER NOT NULL, origin_sys TEXT, origin_id INTEGER, origin_key TEXT)");
             db.execSQL("CREATE TABLE members(list_id INTEGER NOT NULL REFERENCES items(id) ON DELETE CASCADE, "
                     + "item_id INTEGER NOT NULL REFERENCES items(id) ON DELETE CASCADE, "
                     + "position INTEGER NOT NULL, added INTEGER NOT NULL, PRIMARY KEY(list_id, item_id)) WITHOUT ROWID");
             db.execSQL("CREATE INDEX members_pos ON members(list_id, position)");
             db.execSQL("CREATE INDEX members_item ON members(item_id)");
+            addV2Tables(db);
             db.execSQL("INSERT INTO meta(k, v) VALUES('next_id', '1')");
             db.execSQL("INSERT INTO meta(k, v) VALUES('system_code', ?)", new Object[]{Stores.newSystemCode()});
             db.setVersion(VERSION);
+            db.setTransactionSuccessful();
+        } finally {
+            db.endTransaction();
+        }
+    }
+
+    /** הטבלאות והאינדקסים שנוספו בגרסה 2 (גם ביצירה חדשה). */
+    private static void addV2Tables(SQLiteDatabase db) {
+        db.execSQL("CREATE INDEX items_origin ON items(origin_key)");
+        db.execSQL("CREATE TABLE props(item_id INTEGER NOT NULL REFERENCES items(id) ON DELETE CASCADE, "
+                + "k TEXT NOT NULL, v TEXT NOT NULL, PRIMARY KEY(item_id, k)) WITHOUT ROWID");
+        db.execSQL("CREATE TABLE files(item_id INTEGER PRIMARY KEY REFERENCES items(id) ON DELETE CASCADE, "
+                + "path TEXT NOT NULL, drive TEXT NOT NULL, size INTEGER NOT NULL, mtime INTEGER NOT NULL, sig TEXT)");
+        db.execSQL("CREATE UNIQUE INDEX files_path ON files(path)");
+        db.execSQL("CREATE INDEX files_sig ON files(sig)");
+    }
+
+    /** 1 → 2: עמודת מקור + props + files. הנתונים הקיימים לא משתנים. */
+    private static void upgradeTo2(SQLiteDatabase db) {
+        db.beginTransaction();
+        try {
+            db.execSQL("ALTER TABLE items ADD COLUMN origin_key TEXT");
+            addV2Tables(db);
+            db.setVersion(2);
             db.setTransactionSuccessful();
         } finally {
             db.endTransaction();
@@ -29793,7 +30264,10 @@ public final class SqlStore implements Store {
             Item it = read(item);
             if (it == null) throw new Failure("no such item " + item);
             Stores.noListInList(it);
-            if (num("SELECT COUNT(*) FROM members WHERE list_id=? AND item_id=?", s(list), s(item)) > 0) return false;
+            if (num("SELECT COUNT(*) FROM members WHERE list_id=? AND item_id=?", s(list), s(item)) > 0) {
+                db.setTransactionSuccessful();   // "כבר שם" אינו כישלון: בלי הסימון, עסקה חיצונית (atomic) הייתה מתבטלת כולה
+                return false;
+            }
             append(list, item, System.currentTimeMillis());
             db.setTransactionSuccessful();
             return true;
@@ -29810,7 +30284,10 @@ public final class SqlStore implements Store {
             Cursor c = db.rawQuery("SELECT position FROM members WHERE list_id=? AND item_id=?", new String[]{s(list), s(item)});
             long pos;
             try {
-                if (!c.moveToFirst()) return false;
+                if (!c.moveToFirst()) {
+                    db.setTransactionSuccessful();   // "לא היה שם" אינו כישלון (ראו addMember)
+                    return false;
+                }
                 pos = c.getLong(0);
             } finally {
                 c.close();
@@ -29875,6 +30352,96 @@ public final class SqlStore implements Store {
             db.execSQL("DELETE FROM items WHERE id=?", new Object[]{list});     // החברויות — במחיקה מדורגת
             for (long[] p : parents) closeGap(p[0], p[1]);
             db.setTransactionSuccessful();
+        } finally {
+            db.endTransaction();
+        }
+    }
+
+    @Override
+    public long createFile(FileInfo f) {
+        Stores.checkFile(f);
+        db.beginTransaction();
+        try {
+            if (findFile(f.path) != 0) throw new Failure("file already exists: " + f.path);
+            long id = create(FILE, Stores.fileName(f.path));
+            db.execSQL("INSERT INTO files(item_id, path, drive, size, mtime, sig) VALUES(?,?,?,?,?,?)",
+                    new Object[]{id, f.path, f.drive, f.size, f.mtime, f.sig});
+            db.setTransactionSuccessful();
+            return id;
+        } finally {
+            db.endTransaction();
+        }
+    }
+
+    @Override
+    public FileInfo file(long item) {
+        Cursor c = db.rawQuery("SELECT path, drive, size, mtime, sig FROM files WHERE item_id=?", new String[]{s(item)});
+        try {
+            return c.moveToFirst() ? new FileInfo(c.getString(0), c.getString(1), c.getLong(2), c.getLong(3), c.getString(4)) : null;
+        } finally {
+            c.close();
+        }
+    }
+
+    @Override
+    public void updateFile(long item, long size, long mtime, String sig) {
+        if (file(item) == null) throw new Failure("not a file: " + item);
+        db.beginTransaction();
+        try {
+            db.execSQL("UPDATE files SET size=?, mtime=?, sig=? WHERE item_id=?", new Object[]{size, mtime, sig, item});
+            db.execSQL("UPDATE items SET changed=? WHERE id=?", new Object[]{System.currentTimeMillis(), item});
+            db.setTransactionSuccessful();
+        } finally {
+            db.endTransaction();
+        }
+    }
+
+    @Override
+    public long findFile(String path) {
+        return num("SELECT item_id FROM files WHERE path=?", path);
+    }
+
+    @Override
+    public long findByOrigin(String key) {
+        return num("SELECT id FROM items WHERE origin_key=? ORDER BY id LIMIT 1", key);
+    }
+
+    @Override
+    public void setOrigin(long item, String key) {
+        String k = Stores.clean(key, "origin");
+        if (read(item) == null) throw new Failure("no such item " + item);
+        db.execSQL("UPDATE items SET origin_key=? WHERE id=?", new Object[]{k, item});
+    }
+
+    @Override
+    public String prop(long item, String key) {
+        return text("SELECT v FROM props WHERE item_id=? AND k=?", s(item), key);
+    }
+
+    @Override
+    public void setProp(long item, String key, String value) {
+        Stores.clean(key, "key");
+        if (read(item) == null) throw new Failure("no such item " + item);
+        db.beginTransaction();
+        try {
+            if (value == null || value.isEmpty()) {
+                db.execSQL("DELETE FROM props WHERE item_id=? AND k=?", new Object[]{item, key});
+            } else {
+                db.execSQL("INSERT OR REPLACE INTO props(item_id, k, v) VALUES(?,?,?)", new Object[]{item, key, value});
+                db.execSQL("UPDATE items SET changed=? WHERE id=?", new Object[]{System.currentTimeMillis(), item});
+            }
+            db.setTransactionSuccessful();
+        } finally {
+            db.endTransaction();
+        }
+    }
+
+    @Override
+    public void atomic(Work w, boolean keep) {
+        db.beginTransaction();
+        try {
+            w.run(this);
+            if (keep) db.setTransactionSuccessful();
         } finally {
             db.endTransaction();
         }
@@ -30248,8 +30815,11 @@ import java.util.List;
 
 public interface Store {
 
-    /** סוגי פריט. בהמשך יתווספו (קובץ, כותרת, פקודה…); המספרים נשמרים במסד ולא משתנים. */
-    int LIST = 1, NOTE = 2;
+    /** סוגי פריט. בהמשך יתווספו (כותרת, פקודה…); המספרים נשמרים במסד ולא משתנים. */
+    int LIST = 1, NOTE = 2, FILE = 3;
+
+    /** מפתחות המאפיינים של רשימה (מ0.2): צלמית, תיאור, עיצוב, "למה". */
+    String P_ICON = "icon", P_DESC = "desc", P_DESIGN = "design", P_WHY = "why";
 
     /** שגיאת שימוש או אחסון. ההודעה — לאנשי הפיתוח (אנגלית); המסך מציג הודעה משלו. */
     final class Failure extends RuntimeException {
@@ -30277,6 +30847,28 @@ public interface Store {
         }
     }
 
+    /**
+     * פרטי פריט קובץ (מ0.2): המסלול והכונן בלבד — התוכן נשאר בקובץ עצמו. size/mtime הם מה שהיה כשהחתימה חושבה
+     * (חתימה תקפה = הקובץ היום באותו גודל ובאותו תאריך); בלי חתימה — size מה שנרשם ברשימה (-1: לא ידוע), mtime 0.
+     */
+    final class FileInfo {
+        public final String path, drive, sig;
+        public final long size, mtime;
+
+        public FileInfo(String path, String drive, long size, long mtime, String sig) {
+            this.path = path;
+            this.drive = drive;
+            this.size = size;
+            this.mtime = mtime;
+            this.sig = sig;
+        }
+    }
+
+    /** עבודה שרצה כולה או לא בכלל (Store.atomic). */
+    interface Work {
+        void run(Store s);
+    }
+
     /** פריט בתוך רשימה: מקומו (מ־0, צפוף) ומתי נוסף. */
     final class Member {
         public final Item item;
@@ -30295,6 +30887,35 @@ public interface Store {
 
     /** רעיון/הערה חדשים בסוף רשימה. */
     long addNote(long list, String text);
+
+    /** פריט קובץ חדש (בלי רשימה). השם — שם הקובץ מהמסלול. מסלול שכבר יש לו פריט — Failure; מחפשים קודם ב־findFile. */
+    long createFile(FileInfo f);
+
+    /** פרטי הקובץ, או null אם הפריט אינו קובץ (או אינו קיים). */
+    FileInfo file(long item);
+
+    /** מעדכן גודל, תאריך וחתימה (sig יכול להיות null). */
+    void updateFile(long item, long size, long mtime, String sig);
+
+    /** מספר הפריט של קובץ במסלול הזה, או 0. */
+    long findFile(String path);
+
+    /** מקור הפריט, כשהגיע ממערכת אחרת (מ0.2: "tree:L:מסלול הרשימה" מהמנוע הטקסטואלי הישן). 0 — אין. */
+    long findByOrigin(String key);
+
+    void setOrigin(long item, String key);
+
+    /** מאפיין של פריט, או null. */
+    String prop(long item, String key);
+
+    /** קובע מאפיין; ערך ריק או null מוחק אותו. */
+    void setProp(long item, String key, String value);
+
+    /**
+     * מריץ את w כעסקה אחת: כל מה שעשה נשמר רק אם סיים בלי חריגה ו־keep אמת; אחרת הכול חוזר כמו שהיה (מוני המזהים
+     * שבקובץ לא חוזרים — מספר לא יוונפק פעמיים). משמש להעתקה ולתצוגה המקדימה שלה, שהיא אותה ריצה בדיוק, בלי שמירה.
+     */
+    void atomic(Work w, boolean keep);
 
     /** מוסיף פריט קיים לסוף רשימה. false אם כבר שם. בגרסה זו לא מוסיפים רשימה לרשימה אחרת (בדיקת מעגלים — מ0.4). */
     boolean addMember(long list, long item);
@@ -30424,6 +31045,8 @@ public final class StoreContract {
             lists();
             unicode();
             restore();
+            files();
+            atomicity();
             randomOps();
         } catch (Throwable t) {
             r.failed.add("contract crashed: " + t);
@@ -30568,6 +31191,143 @@ public final class StoreContract {
         }
     }
 
+    // ---------- מ0.2: קבצים, מקור, מאפיינים, עסקה אחת ----------
+
+    private static Store.FileInfo info(String path, long size, long mtime, String sig) {
+        return new Store.FileInfo(path, "\u05e4\u05e0\u05d9\u05de\u05d9", size, mtime, sig);
+    }
+
+    private void files() throws Exception {
+        final Store s = opener.fresh(counterFile());
+        try {
+            final long l1 = s.createList("l1", 0), l2 = s.createList("l2", 0);
+            String hp = "/storage/emulated/0/\u05de\u05e1\u05de\u05db\u05d9\u05dd/\u05e7\u05d5\u05d1\u05e5 1.pdf";
+            long f1 = s.createFile(info(hp, 1234, 1700000000000L, "2:00112233445566ff"));
+            ck("file item is typed and named by its file name", s.item(f1).type == Store.FILE && s.item(f1).name.equals("\u05e7\u05d5\u05d1\u05e5 1.pdf"));
+            Store.FileInfo fi = s.file(f1);
+            ck("file info round trip", fi != null && fi.path.equals(hp) && fi.drive.equals("\u05e4\u05e0\u05d9\u05de\u05d9") && fi.size == 1234
+                    && fi.mtime == 1700000000000L && "2:00112233445566ff".equals(fi.sig));
+            ck("findFile by path", s.findFile(hp) == f1 && s.findFile("/nope") == 0);
+            final String hpf = hp;
+            fails("same path twice", new Act() { public void run() { s.createFile(info(hpf, 1, 1, null)); } });
+            fails("empty path", new Act() { public void run() { s.createFile(info("  ", 1, 1, null)); } });
+            fails("empty drive", new Act() { public void run() { s.createFile(new Store.FileInfo("/a", "", 1, 1, null)); } });
+            long f2 = s.createFile(info("/storage/ABCD-1234/a.txt", -1, 0, null));
+            ck("unknown size and no signature are kept", s.file(f2).size == -1 && s.file(f2).sig == null && s.file(f2).mtime == 0);
+            ck("a file joins a list", s.addMember(l1, f1) && s.addMember(l1, f2) && s.addMember(l2, f1));
+            ck("a file sits in two lists", s.listsOf(f1).equals(java.util.Arrays.asList(l1, l2)) && dense(s, l1));
+            ck("members show the file type", s.members(l1).get(0).item.type == Store.FILE);
+            ck("file() of a list is null", s.file(l1) == null && s.file(999) == null);
+            final long f1f = f1, l1f = l1;
+            s.updateFile(f2, 55, 66, "2:aa");
+            ck("updateFile", s.file(f2).size == 55 && s.file(f2).mtime == 66 && "2:aa".equals(s.file(f2).sig));
+            s.updateFile(f2, 55, 66, null);
+            ck("updateFile can clear the signature", s.file(f2).sig == null);
+            fails("updateFile of a list", new Act() { public void run() { s.updateFile(l1f, 1, 1, null); } });
+            fails("updateFile of a missing item", new Act() { public void run() { s.updateFile(999, 1, 1, null); } });
+            // מקור
+            ck("no origin yet", s.findByOrigin("tree:L:x") == 0);
+            s.setOrigin(l1, "tree:L:x");
+            ck("origin found", s.findByOrigin("tree:L:x") == l1 && s.findByOrigin("tree:L:y") == 0);
+            fails("origin of a missing item", new Act() { public void run() { s.setOrigin(999, "k"); } });
+            fails("empty origin", new Act() { public void run() { s.setOrigin(l1f, " "); } });
+            // מאפיינים
+            ck("no prop yet", s.prop(l1, Store.P_ICON) == null);
+            s.setProp(l1, Store.P_ICON, "\ud83d\udcd8");
+            s.setProp(l1, Store.P_DESC, "a\nb \u05d0");
+            ck("props round trip (emoji, newline, Hebrew)", "\ud83d\udcd8".equals(s.prop(l1, Store.P_ICON)) && "a\nb \u05d0".equals(s.prop(l1, Store.P_DESC)));
+            s.setProp(l1, Store.P_ICON, "x");
+            ck("prop is overwritten", "x".equals(s.prop(l1, Store.P_ICON)));
+            s.setProp(l1, Store.P_ICON, "");
+            ck("empty value removes the prop", s.prop(l1, Store.P_ICON) == null && s.prop(l1, Store.P_DESC) != null);
+            s.setProp(l1, Store.P_DESC, null);
+            ck("null value removes the prop", s.prop(l1, Store.P_DESC) == null);
+            ck("props are per item", s.prop(l2, Store.P_ICON) == null);
+            fails("prop of a missing item", new Act() { public void run() { s.setProp(999, "k", "v"); } });
+            // מחיקת רשימה: המאפיינים והמקור הולכים איתה, הקבצים נשארים
+            s.setProp(l1, Store.P_WHY, "w");
+            s.deleteList(l1);
+            ck("deleting a list drops its origin", s.findByOrigin("tree:L:x") == 0);
+            ck("files stay after their list is deleted", s.file(f1f) != null && s.listsOf(f1f).equals(java.util.Arrays.asList(l2)));
+            ck("check is clean after files", s.check() == null);
+        } finally {
+            s.close();
+        }
+    }
+
+    private void atomicity() throws Exception {
+        final Store s = opener.fresh(counterFile());
+        try {
+            final long keepList = s.createList("keep", 0);
+            final long keepFile = s.createFile(info("/keep.txt", 1, 1, null));
+            s.addMember(keepList, keepFile);
+            s.setOrigin(keepList, "o:keep");
+            s.setProp(keepList, Store.P_WHY, "w");
+            final long last = s.lastId();
+            final long[] made = new long[2];
+            s.atomic(new Store.Work() {
+                public void run(Store x) {
+                    made[0] = x.createList("inside", 0);
+                    made[1] = x.createFile(info("/inside.txt", 2, 2, "2:bb"));
+                    x.addMember(made[0], made[1]);
+                    x.setOrigin(made[0], "o:inside");
+                    x.setProp(made[0], Store.P_ICON, "i");
+                }
+            }, true);
+            ck("atomic keep=true commits everything", s.item(made[0]) != null && s.findFile("/inside.txt") == made[1]
+                    && s.count(made[0]) == 1 && s.findByOrigin("o:inside") == made[0] && "i".equals(s.prop(made[0], Store.P_ICON)));
+            // "כבר שם" ו"לא היה שם" אינם כישלון: עסקה חיצונית נשמרת למרות שפעולה פנימית החזירה false
+            final long[] again = new long[1];
+            s.atomic(new Store.Work() {
+                public void run(Store x) {
+                    boolean a = x.addMember(keepList, keepFile);
+                    boolean b = x.removeMember(keepList, made[0]);
+                    if (!a && !b) again[0] = x.createList("after-false", 0);
+                }
+            }, true);
+            ck("false results inside atomic do not cancel it", again[0] != 0 && s.item(again[0]) != null);
+            s.deleteList(again[0]);
+            final long last2 = s.lastId();
+            ck("atomic ids moved on", last2 > last);
+            // תצוגה מקדימה: אותה עבודה, בלי שמירה
+            s.atomic(new Store.Work() {
+                public void run(Store x) {
+                    long l = x.createList("dry", 0);
+                    long f = x.createFile(info("/dry.txt", 3, 3, null));
+                    x.addMember(l, f);
+                    x.addMember(keepList, f);
+                    x.setOrigin(l, "o:dry");
+                    x.setProp(keepList, Store.P_WHY, "changed");
+                    x.updateFile(keepFile, 9, 9, "2:cc");
+                    x.rename(keepList, "renamed");
+                    x.removeMember(keepList, keepFile);
+                }
+            }, false);
+            ck("atomic keep=false leaves nothing", s.lists().size() == 2 && s.findFile("/dry.txt") == 0 && s.findByOrigin("o:dry") == 0
+                    && s.lastId() == last2 && s.count(keepList) == 1 && "w".equals(s.prop(keepList, Store.P_WHY))
+                    && s.file(keepFile).size == 1 && s.item(keepList).name.equals("keep"));
+            // חריגה באמצע: הכול חוזר, והחריגה מגיעה למי שקרא
+            boolean threw = false;
+            try {
+                s.atomic(new Store.Work() {
+                    public void run(Store x) {
+                        x.createList("half", 0);
+                        x.createFile(info("/half.txt", 1, 1, null));
+                        x.createFile(info("/half.txt", 1, 1, null));
+                    }
+                }, true);
+            } catch (Store.Failure e) {
+                threw = true;
+            }
+            ck("a failure inside atomic propagates", threw);
+            ck("a failure inside atomic undoes all of it", s.lists().size() == 2 && s.findFile("/half.txt") == 0 && s.lastId() == last2);
+            long after = s.createList("after", 0);
+            ck("work continues after a rollback", s.item(after) != null && s.check() == null);
+        } finally {
+            s.close();
+        }
+    }
+
     private void restore() throws Exception {
         File cf = counterFile();
         Store a = opener.fresh(cf);
@@ -30670,6 +31430,18 @@ final class Stores {
 
     static void noListInList(Store.Item item) {
         if (item.type == Store.LIST) throw new Store.Failure("list in list: not yet");
+    }
+
+    /** שם הקובץ מהמסלול (החלק האחרון). */
+    static String fileName(String path) {
+        int i = path.lastIndexOf('/');
+        return i >= 0 && i < path.length() - 1 ? path.substring(i + 1) : path;
+    }
+
+    static void checkFile(Store.FileInfo f) {
+        if (f == null) throw new Store.Failure("no file info");
+        clean(f.path, "path");
+        clean(f.drive, "drive");
     }
 
     static String newSystemCode() {
@@ -39738,8 +40510,8 @@ public final class Words {
 
         public static final String APP_NAME_M = "מנהל קבצים וירטואלי · מ";
         public static final String MENU = "מסד נתונים (מ)";
-        public static final String TITLE = "מסד נתונים · מ0.1";
-        public static final String NOTICE = "שלד מנוע המסד. המסד כאן לבדיקות בלבד ובלי גיבוי עד מ0.5; הנתונים האמיתיים נשארים במנוע הישן.";
+        public static final String TITLE = "מסד נתונים · מ0.2";
+        public static final String NOTICE = "מנוע המסד בבנייה, ועדיין בלי גיבוי (מ0.5). \"העתקה מהישן\" רק קוראת מהמנוע הישן ולא משנה בו דבר — אפשר להעתיק שוב, ומה שכבר הועתק מתעדכן ולא מוכפל.";
         public static final String NEED_ACCESS = "כדי לשמור את מונה המזהים בתיקיית הנתונים, התוכנה צריכה הרשאת גישה לכל הקבצים.";
         public static final String ALL_LISTS = "כל הרשימות";
         public static final String CRUMB_SEP = " › ";
@@ -39763,9 +40535,51 @@ public final class Words {
         public static final String DELETE_DETAIL = "הפריטים שבתוכה נשארים, בלי רשימה. מספר הזיהוי לא יחזור.";
         public static final String KIND_LIST = "רשימה";
         public static final String KIND_NOTE = "רעיון";
+        public static final String KIND_FILE = "קובץ";
         public static final String RUNNING = "מריץ בדיקה עצמית…";
         public static final String SELF_TEST_TITLE = "בדיקה עצמית של המסד";
         public static final String ALREADY_THERE = "הפריט כבר ברשימה";
+
+        public static final String IMPORT = "📥 העתקה מהישן";
+        public static final String IMPORT_TITLE = "העתקה מהמנוע הישן";
+        public static final String IMPORT_NO_OLD = "לא נמצאו רשימות של המנוע הישן בתיקיית \"מנהל קבצים וירטואלי\" (אופני עבודה ← מבנה.txt). ההעתקה קוראת משם בלבד.";
+        public static final String IMPORT_PICK = "מאיזה אופן עבודה להעתיק?";
+        public static final String IMPORT_READING = "קורא את המנוע הישן ובודק מה יועתק…";
+        public static final String IMPORT_COPYING = "מעתיק…";
+        public static final String IMPORT_YES = "העתקה";
+        public static final String IMPORT_NOTHING = "אין מה להעתיק — כל מה שבמקור כבר במסד, באותו מצב.";
+        public static final String IMPORT_DONE_TITLE = "ההעתקה הסתיימה";
+        public static final String IMPORT_PREVIEW_TITLE = "מה ייעשה (עדיין לא נשמר דבר)";
+
+        public static String modeLine(String name, boolean active) {
+            return active ? name + " (הפעיל)" : name;
+        }
+
+        public static String importFailed(String why) {
+            return "ההעתקה נכשלה, ולא השתנה דבר במסד: " + why;
+        }
+
+        /** הדוח. בתצוגה מקדימה — "ייווספו"; אחרי ההעתקה — "נוספו". */
+        public static String importReport(boolean done, String mode, int listsNew, int listsKnown, int filesNew, int filesKnown,
+                                          int filesUpdated, int linksAdded, int propsSet, int rootFiles,
+                                          int bad, int refs, int smart, int live) {
+            StringBuilder sb = new StringBuilder("מקור: " + mode + "\n");
+            sb.append("רשימות: ").append(listsNew).append(done ? " נוספו" : " ייווספו").append(" · ").append(listsKnown).append(" כבר היו\n");
+            sb.append("קבצים: ").append(filesNew).append(done ? " נוספו" : " ייווספו").append(" · ").append(filesKnown + filesUpdated).append(" כבר היו");
+            if (filesUpdated > 0) sb.append(" (").append(filesUpdated).append(done ? " עודכנו" : " יעודכנו").append(" לפי החתימה במקור)");
+            sb.append('\n').append(linksAdded).append(done ? " קבצים נוספו" : " קבצים ייווספו").append(" לרשימות");
+            if (propsSet > 0) sb.append(" · ").append(propsSet).append(done ? " פרטי רשימה הושלמו" : " פרטי רשימה יושלמו");
+            if (rootFiles > 0) sb.append("\n").append(rootFiles).append(" קבצים בלי רשימה (היו בשורש הרשימות)");
+            if (bad + refs + smart + live > 0) {
+                sb.append("\n\nלא מועתק בגרסה הזו (נשאר במנוע הישן, לא נמחק):");
+                if (refs > 0) sb.append("\n").append(refs).append(" הפניות בין רשימות (מ0.4)");
+                if (smart > 0) sb.append("\n").append(smart).append(" רשימות חכמות בתוך רשימות (מ0.3)");
+                if (live > 0) sb.append("\n").append(live).append(" תיקיות חיות");
+                if (bad > 0) sb.append("\n").append(bad).append(" שורות פגומות בקובץ הרשימות");
+            }
+            sb.append("\n\nגם הכלים, הפקודות וההגדרות עדיין לא מועתקים.");
+            return sb.toString();
+        }
 
         public static String status(int lists, long last, String code, String info) {
             return Words.lists(lists) + " · מספר זיהוי אחרון " + last + " · קוד מערכת " + code + "\n" + info;
@@ -40790,6 +41604,248 @@ def main():
 
 
 main()
+===== קובץ: tests/com/tikiyot/vfm/ImportTests.java =====
+package com.tikiyot.vfm;
+
+// בדיקות מ0.2 על המחשב: ההעתקה מהמנוע הישן אל המסד — על MemStore ועל SqlStore (מול SQLite אמיתי), אותן בדיקות.
+// המקור נכתב לקבצים אמיתיים (מבנה.txt, חתימות.txt) ונקרא בדיוק כמו במכשיר.
+
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.lang.reflect.InvocationHandler;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
+import java.lang.reflect.Proxy;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+
+final class ImportTests {
+
+    private final StoreTests.Out o;
+    private final String label;
+
+    ImportTests(StoreTests.Out o, String label) {
+        this.o = o;
+        this.label = label;
+    }
+
+    private void ck(String what, boolean ok) {
+        if (ok) o.passed++;
+        else o.failed.add(label + " — " + what);
+    }
+
+    private static void write(File f, String text) throws IOException {
+        f.getParentFile().mkdirs();
+        FileOutputStream out = new FileOutputStream(f);
+        try {
+            out.write(text.getBytes("UTF-8"));
+        } finally {
+            out.close();
+        }
+    }
+
+    static final String A = "/storage/emulated/0/ספרים/א.pdf";
+    static final String B = "/storage/emulated/0/ספרים/ב.pdf";
+    static final String C = "/storage/ABCD-1234/ג.pdf";
+    static final String D = "/storage/emulated/0/ספרים/ד.pdf";
+
+    /** המקור הראשון: ארבע רשימות, שלושה קבצים, ומה שלא מועתק (שורה פגומה, הפניה, רשימה חכמה, תיקייה חיה). */
+    static final String TREE1 = ""
+            + "#1 ספרים\n"
+            + "@צלמית 📘\n"
+            + "@תיאור ספרי לימוד\n"
+            + "@למה ללמוד\n"
+            + "@סדר f" + B + "\n"
+            + "@סדר cהלכה\n"
+            + A + " | 100\n"
+            + B + " | ?\n"
+            + "שורה פגומה בלי נתיב\n"
+            + "@רשימה מועדים / פסח\n"
+            + "@חכמה s-abc\n"
+            + "@תיקייה /storage/emulated/0/x\n"
+            + "#2 ספרים / הלכה\n"
+            + A + " | 100\n"
+            + C + " | 5\n"
+            + "#1 מועדים\n"
+            + "#2 מועדים / פסח\n"
+            + B + " | 7\n";
+
+    static final String SIGS1 = ""
+            + "2:00000000000000aa\t100\t1700\t" + A + "\n"
+            + "1:ffffffffffffffff\t5\t9\t" + C + "\n"          // גרסה אחרת — מדלגים
+            + "2:zz\tabc\t1\t" + B + "\n"                       // פגומה — מדלגים
+            + "שורה פגומה\n";
+
+    /** מקור מאוחר: קובץ חדש, חתימה לג׳, צלמית לרשימה שהייתה בלי, צלמית אחרת לרשימה שיש לה, רשימה חדשה, ו־א׳ יצא מהלכה. */
+    static final String TREE2 = ""
+            + "#1 ספרים\n"
+            + "@צלמית 📕\n"
+            + "@סדר f" + B + "\n"
+            + "@סדר cהלכה\n"
+            + A + " | 100\n"
+            + B + " | ?\n"
+            + "#2 ספרים / הלכה\n"
+            + "@צלמית 🕯\n"
+            + C + " | 5\n"
+            + D + " | 40\n"
+            + "#1 מועדים\n"
+            + "#2 מועדים / פסח\n"
+            + B + " | 7\n"
+            + "#1 חדשה\n";
+
+    static final String SIGS2 = SIGS1 + "2:00000000000000cc\t5\t9\t" + C + "\n";
+
+    private static boolean same(Importer.Report a, Importer.Report b) {
+        return a.listsNew == b.listsNew && a.listsKnown == b.listsKnown && a.filesNew == b.filesNew && a.filesKnown == b.filesKnown
+                && a.filesUpdated == b.filesUpdated && a.filesWithSig == b.filesWithSig && a.linksAdded == b.linksAdded
+                && a.linksKnown == b.linksKnown && a.rootFiles == b.rootFiles && a.propsSet == b.propsSet
+                && a.badLines == b.badLines && a.refs == b.refs && a.smart == b.smart && a.live == b.live;
+    }
+
+    private static List<String> names(Store s, long list) {
+        List<String> out = new ArrayList<String>();
+        for (Store.Member m : s.members(list)) out.add(m.item.name);
+        return out;
+    }
+
+    private static long listBy(Store s, String path) {
+        return s.findByOrigin(Importer.ORIGIN_LIST + path);
+    }
+
+    void run(Store s, File dir) throws Exception {
+        File m1 = new File(dir, "mode1"), m2 = new File(dir, "mode2");
+        write(new File(m1, Paths.TREE), TREE1);
+        write(new File(m1, Sig.FILE), SIGS1);
+        write(new File(m2, Paths.TREE), TREE2);
+        write(new File(m2, Sig.FILE), SIGS2);
+        Importer.Source src1 = Importer.load(m1);
+
+        // מקור: החתימות — רק תקינות ובגרסה הנוכחית
+        ck("חתימות: נקראת רק שורה תקינה בגרסה הנוכחית", src1.sigs.size() == 1 && src1.sigs.get(A) != null
+                && src1.sigs.get(A).size == 100 && src1.sigs.get(A).mtime == 1700 && src1.sigs.get(A).sig.equals("2:00000000000000aa"));
+
+        // תצוגה מקדימה: הדוח מלא, והמסד נשאר ריק
+        Importer.Report pre = Importer.run(s, src1, false);
+        ck("תצוגה מקדימה: לא נשמר דבר", s.lists().isEmpty() && s.lastId() == 0 && s.findFile(A) == 0);
+        ck("תצוגה מקדימה: ארבע רשימות חדשות, שלושה קבצים, חמישה קישורים", pre.listsNew == 4 && pre.listsKnown == 0
+                && pre.filesNew == 3 && pre.linksAdded == 5 && pre.linksKnown == 0);
+        ck("תצוגה מקדימה: מה שלא מועתק נספר", pre.badLines == 1 && pre.refs == 1 && pre.smart == 1 && pre.live == 1 && pre.skippedAny());
+        ck("תצוגה מקדימה: קובץ עם חתימה נספר", pre.filesWithSig == 1);
+
+        // העתקה
+        Importer.Report r = Importer.run(s, src1, true);
+        ck("העתקה: הדוח זהה לתצוגה המקדימה", same(pre, r));
+        ck("העתקה: ארבע רשימות", s.lists().size() == 4);
+        long books = listBy(s, "ספרים"), halacha = listBy(s, "ספרים / הלכה"), moadim = listBy(s, "מועדים"), pesach = listBy(s, "מועדים / פסח");
+        ck("העתקה: כל רשימה נמצאה לפי מקורה", books != 0 && halacha != 0 && moadim != 0 && pesach != 0);
+        ck("העתקה: השם הוא השם האחרון, לא המסלול", s.item(halacha).name.equals("הלכה") && s.item(pesach).name.equals("פסח"));
+        ck("העתקה: תת־רשימה בתוך האב", s.listsOf(halacha).equals(Arrays.asList(books)) && s.listsOf(pesach).equals(Arrays.asList(moadim)));
+        ck("העתקה: רשימה עליונה עומדת לעצמה", s.listsOf(books).isEmpty() && s.listsOf(moadim).isEmpty());
+        ck("העתקה: הסדר החופשי — קובץ, רשימה, ואז מה שלא נזכר", names(s, books).equals(Arrays.asList("ב.pdf", "הלכה", "א.pdf")));
+        ck("העתקה: צלמית, תיאור ו\"למה\"", "📘".equals(s.prop(books, Store.P_ICON)) && "ספרי לימוד".equals(s.prop(books, Store.P_DESC))
+                && "ללמוד".equals(s.prop(books, Store.P_WHY)) && s.prop(books, Store.P_DESIGN) == null && s.prop(halacha, Store.P_ICON) == null);
+        long fa = s.findFile(A), fb = s.findFile(B), fc = s.findFile(C);
+        ck("העתקה: קובץ שבשתי רשימות הוא פריט אחד", fa != 0 && s.listsOf(fa).equals(Arrays.asList(books, halacha))
+                && s.listsOf(fb).equals(Arrays.asList(books, pesach)));
+        ck("העתקה: חתימה, גודל ותאריך מהקובץ שלהן", "2:00000000000000aa".equals(s.file(fa).sig) && s.file(fa).size == 100 && s.file(fa).mtime == 1700);
+        ck("העתקה: בלי חתימה — הגודל מהרשימה, בלי תאריך", s.file(fc).sig == null && s.file(fc).size == 5 && s.file(fc).mtime == 0);
+        ck("העתקה: הכונן", s.file(fa).drive.equals(Drive.INTERNAL) && s.file(fc).drive.equals("ABCD-1234"));
+        ck("העתקה: המסד תקין", s.check() == null);
+
+        // העתקה חוזרת של אותו מקור: אין מה לעשות, ושום דבר לא משתנה
+        long last = s.lastId();
+        Importer.Report again = Importer.run(s, src1, true);
+        ck("חוזרת: אין שינוי", again.nothingToDo() && again.listsKnown == 4 && again.filesKnown == 3 && again.linksKnown == 5);
+        ck("חוזרת: לא נוצרו מספרי זיהוי", s.lastId() == last && s.lists().size() == 4);
+
+        // המשתמש שינה במסד; המקור התקדם
+        s.rename(books, "ספרים שלי");
+        s.setProp(pesach, Store.P_DESC, "שלי");
+        Importer.Source src2 = Importer.load(m2);
+        Importer.Report pre2 = Importer.run(s, src2, false);
+        Importer.Report r2 = Importer.run(s, src2, true);
+        ck("עדכון: התצוגה המקדימה זהה להעתקה", same(pre2, r2));
+        ck("עדכון: רשימה חדשה וקובץ חדש", r2.listsNew == 1 && r2.filesNew == 1 && r2.listsKnown == 4);
+        ck("עדכון: חתימה חדשה עדכנה קובץ קיים", r2.filesUpdated == 1 && "2:00000000000000cc".equals(s.file(fc).sig) && s.file(fc).mtime == 9);
+        ck("עדכון: שם שהמשתמש שינה לא נדרס, והרשימה זוהתה", s.item(books).name.equals("ספרים שלי") && listBy(s, "ספרים") == books);
+        ck("עדכון: מאפיין ריק התמלא, מאפיין שיש לא נדרס", "🕯".equals(s.prop(halacha, Store.P_ICON)) && "📘".equals(s.prop(books, Store.P_ICON))
+                && r2.propsSet == 1);
+        ck("עדכון: מה שהמשתמש כתב במסד נשמר", "שלי".equals(s.prop(pesach, Store.P_DESC)));
+        ck("עדכון: מה שיצא מהמקור לא נמחק מהמסד", s.listsOf(fa).contains(halacha));
+        long fd = s.findFile(D);
+        ck("עדכון: הקובץ החדש נוסף לסוף הרשימה", fd != 0 && names(s, halacha).get(names(s, halacha).size() - 1).equals("ד.pdf"));
+        ck("עדכון: חמישה קישורים ישנים נשארו, אחד חדש", r2.linksAdded == 1 && r2.linksKnown == 4);
+        ck("עדכון: המסד תקין", s.check() == null);
+
+        // כישלון באמצע: הכול חוזר
+        final Store real = s;
+        final int[] calls = {0};
+        Store flaky = (Store) Proxy.newProxyInstance(Store.class.getClassLoader(), new Class<?>[]{Store.class}, new InvocationHandler() {
+            @Override
+            public Object invoke(final Object proxy, Method m, Object[] args) throws Throwable {
+                if (m.getName().equals("atomic")) {
+                    final Store.Work w = (Store.Work) args[0];
+                    real.atomic(new Store.Work() {
+                        @Override public void run(Store x) { w.run((Store) proxy); }
+                    }, ((Boolean) args[1]).booleanValue());
+                    return null;
+                }
+                if (m.getName().equals("createFile") && ++calls[0] == 2) throw new Store.Failure("injected");
+                try {
+                    return m.invoke(real, args);
+                } catch (InvocationTargetException e) {
+                    throw e.getCause();
+                }
+            }
+        });
+        write(new File(dir, "mode3/" + Paths.TREE), "#1 חדשה אחת\n/x/1 | 1\n/x/2 | 2\n/x/3 | 3\n");
+        int listsBefore = s.lists().size();
+        boolean threw = false;
+        try {
+            Importer.run(flaky, Importer.load(new File(dir, "mode3")), true);
+        } catch (Store.Failure e) {
+            threw = true;
+        }
+        ck("כישלון באמצע: ההודעה מגיעה למי שקרא", threw);
+        ck("כישלון באמצע: שום דבר לא נשאר", s.lists().size() == listsBefore && s.findFile("/x/1") == 0 && listBy(s, "חדשה אחת") == 0);
+    }
+
+    // ---------- בלי Store ----------
+
+    static void pure(StoreTests.Out o, File dir) throws Exception {
+        ImportTests t = new ImportTests(o, "העתקה");
+        t.drives();
+        t.modes(dir);
+    }
+
+    private void drives() {
+        ck("כונן: פנימי", Importer.driveOf("/storage/emulated/0/x/y.txt").equals(Drive.INTERNAL));
+        ck("כונן: כרטיס לפי מזהה", Importer.driveOf("/storage/ABCD-1234/x.txt").equals("ABCD-1234"));
+        ck("כונן: כרטיס בלי תת־תיקייה", Importer.driveOf("/storage/ABCD-1234").equals("ABCD-1234"));
+        ck("כונן: לא מזוהה", Importer.driveOf("/mnt/x").equals(Importer.UNKNOWN_DRIVE) && Importer.driveOf("/storage/self/p").equals(Importer.UNKNOWN_DRIVE));
+    }
+
+    private void modes(File dir) throws Exception {
+        File old = new File(dir, "olddata");
+        ck("אופנים: אין תיקייה — אין אופנים, ואופן ברירת מחדל", Importer.modes(old).isEmpty() && Importer.activeMode(old).equals(Modes.FIRST));
+        write(new File(old, Modes.DIR + "/עבודה אמיתית/" + Paths.TREE), "");
+        write(new File(old, Modes.DIR + "/ניסוי/" + Paths.TREE), "");
+        write(new File(old, Modes.DIR + "/.מוסתר/" + Paths.TREE), "");
+        write(new File(old, Modes.DIR + "/בלי מבנה/אחר.txt"), "");
+        ck("אופנים: רק אלה שיש בהם מבנה.txt, בלי מוסתרים, לפי שם", Importer.modes(old).equals(Arrays.asList("ניסוי", "עבודה אמיתית")));
+        write(Modes.pointer(old), "ניסוי\n");
+        ck("אופנים: האופן הפעיל נקרא מהמצביע", Importer.activeMode(old).equals("ניסוי"));
+        boolean threw = false;
+        try {
+            Importer.load(new File(old, Modes.DIR + "/בלי מבנה"));
+        } catch (Store.Failure e) {
+            threw = true;
+        }
+        ck("מקור: אין מבנה.txt — עוצר", threw);
+    }
+}
 ===== קובץ: tests/com/tikiyot/vfm/StoreTests.java =====
 package com.tikiyot.vfm;
 
@@ -40836,6 +41892,8 @@ final class StoreTests {
                     return SqlStore.open(new File(dbDir, "c" + (n[0]++) + ".db"), new IdCounter(counter));
                 }
             }, dir);
+            t.migration(dir);
+            ImportTests.pure(t.o, dir);
             String p = SqlStore.persistenceCheck(dir);
             t.ck("שמירה בין פתיחות, WAL, גרסה עתידית לא נפתחת" + (p == null ? "" : ": " + p), p == null);
         } catch (Throwable x) {
@@ -40850,7 +41908,68 @@ final class StoreTests {
         StoreContract.Result r = StoreContract.run(opener, sub);
         o.passed += r.passed;
         for (String f : r.failed) o.failed.add(name + " — " + f);
-        ck(name + ": החוזה רץ (לפחות 40 בדיקות)", r.passed + r.failed.size() >= 40);
+        ck(name + ": החוזה רץ (לפחות 80 בדיקות)", r.passed + r.failed.size() >= 80);
+        try {
+            Store s = opener.fresh(new File(sub, "import-counter.txt"));
+            try {
+                new ImportTests(o, name).run(s, new File(sub, "import"));
+            } finally {
+                s.close();
+            }
+        } catch (Throwable x) {
+            o.failed.add(name + " — העתקה: חריגה " + x);
+        }
+    }
+
+    /** מסד מגרסה 1 (כמו שנוצר ב־מ0.1) נפתח, עובר לגרסה 2 ולא מאבד דבר. */
+    private void migration(File dir) {
+        File f = new File(dir, "v1.db");
+        File cf = new File(dir, "v1-counter.txt");
+        android.database.sqlite.SQLiteDatabase.deleteDatabase(f);
+        try {
+            android.database.sqlite.SQLiteDatabase db = android.database.sqlite.SQLiteDatabase.openOrCreateDatabase(f, null);
+            db.enableWriteAheadLogging();
+            db.setForeignKeyConstraintsEnabled(true);
+            db.execSQL("CREATE TABLE meta(k TEXT PRIMARY KEY, v TEXT NOT NULL)");
+            db.execSQL("CREATE TABLE items(id INTEGER PRIMARY KEY, type INTEGER NOT NULL, name TEXT NOT NULL, extra TEXT, "
+                    + "created INTEGER NOT NULL, changed INTEGER NOT NULL, origin_sys TEXT, origin_id INTEGER)");
+            db.execSQL("CREATE TABLE members(list_id INTEGER NOT NULL REFERENCES items(id) ON DELETE CASCADE, "
+                    + "item_id INTEGER NOT NULL REFERENCES items(id) ON DELETE CASCADE, "
+                    + "position INTEGER NOT NULL, added INTEGER NOT NULL, PRIMARY KEY(list_id, item_id)) WITHOUT ROWID");
+            db.execSQL("CREATE INDEX members_pos ON members(list_id, position)");
+            db.execSQL("CREATE INDEX members_item ON members(item_id)");
+            db.execSQL("INSERT INTO meta(k, v) VALUES('next_id', '3')");
+            db.execSQL("INSERT INTO meta(k, v) VALUES('system_code', 'abcd1234')");
+            db.execSQL("INSERT INTO items(id,type,name,created,changed) VALUES(1,1,'old list',5,5)");
+            db.execSQL("INSERT INTO items(id,type,name,created,changed) VALUES(2,2,'old note',6,6)");
+            db.execSQL("INSERT INTO members(list_id,item_id,position,added) VALUES(1,2,0,7)");
+            db.setVersion(1);
+            db.close();
+            SqlStore s = SqlStore.open(f, new IdCounter(cf));
+            try {
+                ck("מעבר 1→2: הגרסה עלתה", s.getVersionForTest() == 2);
+                ck("מעבר 1→2: הנתונים הישנים שלמים", s.item(1) != null && s.item(1).name.equals("old list") && s.members(1).size() == 1
+                        && s.members(1).get(0).item.name.equals("old note") && s.systemCode().equals("abcd1234") && s.lastId() == 2);
+                long fi = s.createFile(new Store.FileInfo("/a/b.txt", "x", 1, 2, "2:aa"));
+                s.setOrigin(1, "k");
+                s.setProp(1, Store.P_ICON, "i");
+                ck("מעבר 1→2: הטבלאות החדשות עובדות", fi == 3 && s.file(fi).sig.equals("2:aa") && s.findByOrigin("k") == 1 && "i".equals(s.prop(1, Store.P_ICON)));
+                ck("מעבר 1→2: המסד תקין", s.check() == null);
+            } finally {
+                s.close();
+            }
+            SqlStore again = SqlStore.open(f, new IdCounter(cf));
+            try {
+                ck("מעבר 1→2: פתיחה שנייה לא מעבירה שוב", again.getVersionForTest() == 2 && again.findFile("/a/b.txt") == 3);
+            } finally {
+                again.close();
+            }
+        } catch (Throwable x) {
+            o.failed.add("מעבר 1→2: חריגה " + x);
+        } finally {
+            android.database.sqlite.SQLiteDatabase.deleteDatabase(f);
+            cf.delete();
+        }
     }
 
     private static String read(File f) throws IOException {
@@ -47478,7 +48597,10 @@ public class SQLiteDatabase {
     private final Process proc;
     private final BufferedReader in;
     private final BufferedWriter out;
-    private boolean inTx, txOk;
+    // כמו באנדרואיד: עסקאות מקוננות; עסקה פנימית שלא סומנה כמוצלחת מבטלת את כולן.
+    private int depth;
+    private boolean txFailed;
+    private final java.util.ArrayList<Boolean> txOk = new java.util.ArrayList<Boolean>();
 
     private SQLiteDatabase(Process p) throws IOException {
         proc = p;
@@ -47569,19 +48691,25 @@ public class SQLiteDatabase {
     }
 
     public void beginTransaction() {
-        call("begin");
-        inTx = true;
-        txOk = false;
+        if (depth == 0) {
+            call("begin");
+            txFailed = false;
+        }
+        depth++;
+        txOk.add(Boolean.FALSE);
     }
 
     public void setTransactionSuccessful() {
-        txOk = true;
+        if (depth == 0) throw new IllegalStateException("no transaction");
+        txOk.set(txOk.size() - 1, Boolean.TRUE);
     }
 
     public void endTransaction() {
-        if (!inTx) throw new IllegalStateException("no transaction");
-        inTx = false;
-        call(txOk ? "commit" : "rollback");
+        if (depth == 0) throw new IllegalStateException("no transaction");
+        boolean ok = txOk.remove(txOk.size() - 1).booleanValue();
+        depth--;
+        if (!ok) txFailed = true;
+        if (depth == 0) call(txFailed ? "rollback" : "commit");
     }
 
     public void execSQL(String sql) {

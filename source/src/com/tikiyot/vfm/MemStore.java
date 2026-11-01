@@ -15,6 +15,9 @@ public final class MemStore implements Store {
     private final Map<Long, Item> items = new TreeMap<Long, Item>();
     /** רשימה ← (פריט ← מתי נוסף), בסדר המקומות. */
     private final Map<Long, LinkedHashMap<Long, Long>> members = new TreeMap<Long, LinkedHashMap<Long, Long>>();
+    private final Map<Long, FileInfo> files = new TreeMap<Long, FileInfo>();
+    private final Map<Long, String> origins = new TreeMap<Long, String>();
+    private final Map<Long, Map<String, String>> props = new TreeMap<Long, Map<String, String>>();
     private final String code = Stores.newSystemCode();
     private long next;
 
@@ -107,7 +110,102 @@ public final class MemStore implements Store {
         listOf(list);
         members.remove(list);
         items.remove(list);
+        props.remove(list);
+        origins.remove(list);
         for (LinkedHashMap<Long, Long> l : members.values()) l.remove(list);
+    }
+
+    @Override
+    public long createFile(FileInfo f) {
+        Stores.checkFile(f);
+        if (findFile(f.path) != 0) throw new Failure("file already exists: " + f.path);
+        Item it = make(FILE, Stores.fileName(f.path));
+        files.put(it.id, f);
+        return it.id;
+    }
+
+    @Override
+    public FileInfo file(long item) {
+        return files.get(item);
+    }
+
+    @Override
+    public void updateFile(long item, long size, long mtime, String sig) {
+        FileInfo f = files.get(item);
+        if (f == null) throw new Failure("not a file: " + item);
+        files.put(item, new FileInfo(f.path, f.drive, size, mtime, sig));
+        touch(item);
+    }
+
+    @Override
+    public long findFile(String path) {
+        for (Map.Entry<Long, FileInfo> e : files.entrySet()) if (e.getValue().path.equals(path)) return e.getKey();
+        return 0;
+    }
+
+    @Override
+    public long findByOrigin(String key) {
+        for (Map.Entry<Long, String> e : origins.entrySet()) if (e.getValue().equals(key)) return e.getKey();
+        return 0;
+    }
+
+    @Override
+    public void setOrigin(long item, String key) {
+        if (items.get(item) == null) throw new Failure("no such item " + item);
+        origins.put(item, Stores.clean(key, "origin"));
+    }
+
+    @Override
+    public String prop(long item, String key) {
+        Map<String, String> m = props.get(item);
+        return m == null ? null : m.get(key);
+    }
+
+    @Override
+    public void setProp(long item, String key, String value) {
+        if (items.get(item) == null) throw new Failure("no such item " + item);
+        Stores.clean(key, "key");
+        Map<String, String> m = props.get(item);
+        if (value == null || value.isEmpty()) {
+            if (m != null) m.remove(key);
+            return;
+        }
+        if (m == null) props.put(item, m = new java.util.HashMap<String, String>());
+        m.put(key, value);
+        touch(item);
+    }
+
+    private void touch(long id) {
+        Item it = items.get(id);
+        items.put(id, new Item(it.id, it.type, it.name, it.created, System.currentTimeMillis()));
+    }
+
+    @Override
+    public void atomic(Work w, boolean keep) {
+        Map<Long, Item> i0 = new TreeMap<Long, Item>(items);
+        Map<Long, LinkedHashMap<Long, Long>> m0 = new TreeMap<Long, LinkedHashMap<Long, Long>>();
+        for (Map.Entry<Long, LinkedHashMap<Long, Long>> e : members.entrySet())
+            m0.put(e.getKey(), new LinkedHashMap<Long, Long>(e.getValue()));
+        Map<Long, FileInfo> f0 = new TreeMap<Long, FileInfo>(files);
+        Map<Long, String> o0 = new TreeMap<Long, String>(origins);
+        Map<Long, Map<String, String>> p0 = new TreeMap<Long, Map<String, String>>();
+        for (Map.Entry<Long, Map<String, String>> e : props.entrySet())
+            p0.put(e.getKey(), new java.util.HashMap<String, String>(e.getValue()));
+        long n0 = next;
+        boolean ok = false;
+        try {
+            w.run(this);
+            ok = keep;
+        } finally {
+            if (!ok) {
+                items.clear(); items.putAll(i0);
+                members.clear(); members.putAll(m0);
+                files.clear(); files.putAll(f0);
+                origins.clear(); origins.putAll(o0);
+                props.clear(); props.putAll(p0);
+                next = n0;
+            }
+        }
     }
 
     @Override

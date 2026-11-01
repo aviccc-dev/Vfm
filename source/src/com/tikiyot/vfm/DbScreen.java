@@ -1,13 +1,14 @@
 package com.tikiyot.vfm;
 
-// מסך מנוע המסד (מ0.1): רשימות ופריטים בסיסיים מעל Store. אחראי: להציג ולהפעיל את הפעולות הבסיסיות.
-// אסור לו: לדעת איך הנתונים נשמרים (Store), או לגעת במנוע הישן. המסד כאן לבדיקות — עד מ0.2 לא נכנסים אליו נתונים אמיתיים.
+// מסך מנוע המסד (מ0.1–מ0.2): רשימות ופריטים בסיסיים מעל Store, והעתקה מהמנוע הישן (Importer).
+// אחראי: להציג ולהפעיל. אסור לו: לדעת איך הנתונים נשמרים (Store), או לכתוב למנוע הישן (קורא בלבד).
 
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.content.DialogInterface;
 import android.graphics.Typeface;
 import android.os.Bundle;
+import android.os.Environment;
 import android.view.View;
 import android.widget.Button;
 import android.widget.LinearLayout;
@@ -140,6 +141,9 @@ public class DbScreen extends Activity {
                 buttons.addView(button(Words.Db.NEW_LIST, new Runnable() {
                     @Override public void run() { newList(0); }
                 }));
+                buttons.addView(button(Words.Db.IMPORT, new Runnable() {
+                    @Override public void run() { importStart(); }
+                }));
             } else {
                 buttons.addView(button(Words.Db.NEW_SUBLIST, new Runnable() {
                     @Override public void run() { newList(current()); }
@@ -187,8 +191,8 @@ public class DbScreen extends Activity {
         TextView sub = new TextView(this);
         sub.setTextSize(12);
         sub.setTextColor(Ui.SUB);
-        sub.setText(Words.Db.kindLine(it.type == Store.LIST ? Words.Db.KIND_LIST : Words.Db.KIND_NOTE, it.id,
-                count >= 0 ? Words.items(count) : ""));
+        sub.setText(Words.Db.kindLine(it.type == Store.LIST ? Words.Db.KIND_LIST : it.type == Store.FILE ? Words.Db.KIND_FILE : Words.Db.KIND_NOTE,
+                it.id, count >= 0 ? Words.items(count) : ""));
         r.addView(name);
         r.addView(sub);
         r.setBackgroundColor(Ui.BG);
@@ -244,8 +248,10 @@ public class DbScreen extends Activity {
     private void more(final Store.Item it, final int position, final int size) {
         final List<String> labels = new ArrayList<String>();
         final List<Integer> codes = new ArrayList<Integer>();
-        labels.add(Words.Db.RENAME);
-        codes.add(0);
+        if (it.type != Store.FILE) {                                 // שם הקובץ הוא שמו בכונן — לא משנים אותו כאן
+            labels.add(Words.Db.RENAME);
+            codes.add(0);
+        }
         if (position >= 0) {                                         // בתוך רשימה: הזזה והסרה
             if (position > 0) { labels.add(Words.Db.MOVE_UP); codes.add(1); }
             if (position < size - 1) { labels.add(Words.Db.MOVE_DOWN); codes.add(2); }
@@ -300,6 +306,93 @@ public class DbScreen extends Activity {
             Ui.toast(this, Words.Db.failed(f.getMessage()));
         }
         show();
+    }
+
+    // ---------- מ0.2: העתקה מהמנוע הישן ----------
+
+    private static File oldData() {
+        return new File(Environment.getExternalStorageDirectory(), Flavor.oldAppDir());
+    }
+
+    private void importStart() {
+        final File old = oldData();
+        final List<String> modes = Importer.modes(old);
+        if (modes.isEmpty()) {
+            new AlertDialog.Builder(this).setTitle(Words.Db.IMPORT_TITLE).setMessage(Words.Db.IMPORT_NO_OLD)
+                    .setPositiveButton(Words.OK, null).show();
+            return;
+        }
+        final String active = Importer.activeMode(old);
+        if (modes.size() == 1) {
+            importPreview(old, modes.get(0));
+            return;
+        }
+        final List<String> labels = new ArrayList<String>();
+        for (String m : modes) labels.add(Words.Db.modeLine(m, m.equals(active)));
+        Ui.list(this, Words.Db.IMPORT_PICK, labels, new DialogInterface.OnClickListener() {
+            @Override
+            public void onClick(DialogInterface d, int which) {
+                importPreview(old, modes.get(which));
+            }
+        });
+    }
+
+    /** קורא את המקור ומריץ את ההעתקה בלי לשמור: אותה ריצה, אותו דוח. */
+    private void importPreview(final File old, final String mode) {
+        importRun(old, mode, false, Words.Db.IMPORT_READING);
+    }
+
+    private void importRun(final File old, final String mode, final boolean keep, String message) {
+        final AlertDialog wait = new AlertDialog.Builder(this).setTitle(Words.Db.IMPORT_TITLE).setMessage(message)
+                .setCancelable(false).show();
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                String err = null;
+                Importer.Report rep = null;
+                try {
+                    Importer.Source src = Importer.load(new File(new File(old, Modes.DIR), mode));
+                    rep = Importer.run(store, src, keep);
+                } catch (Throwable t) {
+                    Log.e("DbScreen.import", t);
+                    err = Words.Db.importFailed(String.valueOf(t.getMessage()));
+                }
+                final String error = err;
+                final Importer.Report report = rep;
+                runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        wait.dismiss();
+                        if (isFinishing()) return;
+                        if (error != null) {
+                            new AlertDialog.Builder(DbScreen.this).setTitle(Words.Db.IMPORT_TITLE).setMessage(error)
+                                    .setPositiveButton(Words.OK, null).show();
+                        } else if (keep) {
+                            new AlertDialog.Builder(DbScreen.this).setTitle(Words.Db.IMPORT_DONE_TITLE).setMessage(reportText(true, mode, report))
+                                    .setPositiveButton(Words.OK, null).show();
+                            show();
+                        } else if (report.nothingToDo()) {
+                            new AlertDialog.Builder(DbScreen.this).setTitle(Words.Db.IMPORT_TITLE)
+                                    .setMessage(Words.Db.IMPORT_NOTHING + (report.skippedAny() ? "\n\n" + reportText(false, mode, report) : ""))
+                                    .setPositiveButton(Words.OK, null).show();
+                        } else {
+                            new AlertDialog.Builder(DbScreen.this).setTitle(Words.Db.IMPORT_PREVIEW_TITLE).setMessage(reportText(false, mode, report))
+                                    .setPositiveButton(Words.Db.IMPORT_YES, new DialogInterface.OnClickListener() {
+                                        @Override
+                                        public void onClick(DialogInterface d, int w) {
+                                            importRun(old, mode, true, Words.Db.IMPORT_COPYING);
+                                        }
+                                    }).setNegativeButton(Words.CANCEL, null).show();
+                        }
+                    }
+                });
+            }
+        }).start();
+    }
+
+    private static String reportText(boolean done, String mode, Importer.Report r) {
+        return Words.Db.importReport(done, mode, r.listsNew, r.listsKnown, r.filesNew, r.filesKnown, r.filesUpdated,
+                r.linksAdded, r.propsSet, r.rootFiles, r.badLines, r.refs, r.smart, r.live);
     }
 
     // ---------- בדיקה עצמית ----------

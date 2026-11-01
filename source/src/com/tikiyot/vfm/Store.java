@@ -8,8 +8,11 @@ import java.util.List;
 
 public interface Store {
 
-    /** סוגי פריט. בהמשך יתווספו (קובץ, כותרת, פקודה…); המספרים נשמרים במסד ולא משתנים. */
-    int LIST = 1, NOTE = 2;
+    /** סוגי פריט. בהמשך יתווספו (כותרת, פקודה…); המספרים נשמרים במסד ולא משתנים. */
+    int LIST = 1, NOTE = 2, FILE = 3;
+
+    /** מפתחות המאפיינים של רשימה (מ0.2): צלמית, תיאור, עיצוב, "למה". */
+    String P_ICON = "icon", P_DESC = "desc", P_DESIGN = "design", P_WHY = "why";
 
     /** שגיאת שימוש או אחסון. ההודעה — לאנשי הפיתוח (אנגלית); המסך מציג הודעה משלו. */
     final class Failure extends RuntimeException {
@@ -37,6 +40,28 @@ public interface Store {
         }
     }
 
+    /**
+     * פרטי פריט קובץ (מ0.2): המסלול והכונן בלבד — התוכן נשאר בקובץ עצמו. size/mtime הם מה שהיה כשהחתימה חושבה
+     * (חתימה תקפה = הקובץ היום באותו גודל ובאותו תאריך); בלי חתימה — size מה שנרשם ברשימה (-1: לא ידוע), mtime 0.
+     */
+    final class FileInfo {
+        public final String path, drive, sig;
+        public final long size, mtime;
+
+        public FileInfo(String path, String drive, long size, long mtime, String sig) {
+            this.path = path;
+            this.drive = drive;
+            this.size = size;
+            this.mtime = mtime;
+            this.sig = sig;
+        }
+    }
+
+    /** עבודה שרצה כולה או לא בכלל (Store.atomic). */
+    interface Work {
+        void run(Store s);
+    }
+
     /** פריט בתוך רשימה: מקומו (מ־0, צפוף) ומתי נוסף. */
     final class Member {
         public final Item item;
@@ -55,6 +80,35 @@ public interface Store {
 
     /** רעיון/הערה חדשים בסוף רשימה. */
     long addNote(long list, String text);
+
+    /** פריט קובץ חדש (בלי רשימה). השם — שם הקובץ מהמסלול. מסלול שכבר יש לו פריט — Failure; מחפשים קודם ב־findFile. */
+    long createFile(FileInfo f);
+
+    /** פרטי הקובץ, או null אם הפריט אינו קובץ (או אינו קיים). */
+    FileInfo file(long item);
+
+    /** מעדכן גודל, תאריך וחתימה (sig יכול להיות null). */
+    void updateFile(long item, long size, long mtime, String sig);
+
+    /** מספר הפריט של קובץ במסלול הזה, או 0. */
+    long findFile(String path);
+
+    /** מקור הפריט, כשהגיע ממערכת אחרת (מ0.2: "tree:L:מסלול הרשימה" מהמנוע הטקסטואלי הישן). 0 — אין. */
+    long findByOrigin(String key);
+
+    void setOrigin(long item, String key);
+
+    /** מאפיין של פריט, או null. */
+    String prop(long item, String key);
+
+    /** קובע מאפיין; ערך ריק או null מוחק אותו. */
+    void setProp(long item, String key, String value);
+
+    /**
+     * מריץ את w כעסקה אחת: כל מה שעשה נשמר רק אם סיים בלי חריגה ו־keep אמת; אחרת הכול חוזר כמו שהיה (מוני המזהים
+     * שבקובץ לא חוזרים — מספר לא יוונפק פעמיים). משמש להעתקה ולתצוגה המקדימה שלה, שהיא אותה ריצה בדיוק, בלי שמירה.
+     */
+    void atomic(Work w, boolean keep);
 
     /** מוסיף פריט קיים לסוף רשימה. false אם כבר שם. בגרסה זו לא מוסיפים רשימה לרשימה אחרת (בדיקת מעגלים — מ0.4). */
     boolean addMember(long list, long item);

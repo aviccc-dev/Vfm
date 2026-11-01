@@ -92,25 +92,31 @@ final class Sig {
     private static File loadedFrom;
     private static boolean dirty;
 
+    /** מה שכתוב בקובץ חתימות (של האופן הפעיל או של אחר — מ0.2): מסלול ← חתימה. שורה פגומה או בגרסה אחרת — מדלגים. */
+    static Map<String, Entry> read(File f) {
+        Map<String, Entry> out = new LinkedHashMap<String, Entry>();
+        try {
+            if (f.exists())
+                for (String l : Files.readUtf8(f).split("\n")) {
+                    String[] p = l.split("\t", 4);
+                    if (p.length < 4 || !p[0].startsWith(VER)) continue;
+                    try {
+                        out.put(p[3], new Entry(Long.parseLong(p[1]), Long.parseLong(p[2]), p[0]));
+                    } catch (NumberFormatException ignored) {
+                    }
+                }
+        } catch (Throwable t) {
+            Log.e("קריאת החתימות", t);
+        }
+        return out;
+    }
+
     private static Map<String, Entry> map() {
         File f = file();
         if (map == null || !f.equals(loadedFrom)) {
-            map = new LinkedHashMap<String, Entry>();
+            map = read(f);
             loadedFrom = f;
             dirty = false;
-            try {
-                if (f.exists())
-                    for (String l : Files.readUtf8(f).split("\n")) {
-                        String[] p = l.split("\t", 4);
-                        if (p.length < 4 || !p[0].startsWith(VER)) continue;
-                        try {
-                            map.put(p[3], new Entry(Long.parseLong(p[1]), Long.parseLong(p[2]), p[0]));
-                        } catch (NumberFormatException ignored) {
-                        }
-                    }
-            } catch (Throwable t) {
-                Log.e("קריאת החתימות", t);
-            }
         }
         return map;
     }

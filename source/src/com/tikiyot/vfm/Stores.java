@@ -24,6 +24,18 @@ final class Stores {
         if (item.type == Store.LIST) throw new Store.Failure("list in list: not yet");
     }
 
+    /** שם הקובץ מהמסלול (החלק האחרון). */
+    static String fileName(String path) {
+        int i = path.lastIndexOf('/');
+        return i >= 0 && i < path.length() - 1 ? path.substring(i + 1) : path;
+    }
+
+    static void checkFile(Store.FileInfo f) {
+        if (f == null) throw new Store.Failure("no file info");
+        clean(f.path, "path");
+        clean(f.drive, "drive");
+    }
+
     static String newSystemCode() {
         byte[] b = new byte[4];
         new SecureRandom().nextBytes(b);

@@ -86,6 +86,8 @@ public final class StoreContract {
             lists();
             unicode();
             restore();
+            files();
+            atomicity();
             randomOps();
         } catch (Throwable t) {
             r.failed.add("contract crashed: " + t);
@@ -225,6 +227,143 @@ public final class StoreContract {
             ck("text round-trips exactly", same);
             ck("tricky list name round-trips", s.item(l).name.equals("\u05e8\u05e9\u05d9\u05de\u05d4 \"\u05d1\u05d3\u05d9\u05e7\u05d4\" '\u05d2' ; -- DROP TABLE items"));
             ck("tables survive", s.check() == null && s.lists().size() == 1);
+        } finally {
+            s.close();
+        }
+    }
+
+    // ---------- מ0.2: קבצים, מקור, מאפיינים, עסקה אחת ----------
+
+    private static Store.FileInfo info(String path, long size, long mtime, String sig) {
+        return new Store.FileInfo(path, "\u05e4\u05e0\u05d9\u05de\u05d9", size, mtime, sig);
+    }
+
+    private void files() throws Exception {
+        final Store s = opener.fresh(counterFile());
+        try {
+            final long l1 = s.createList("l1", 0), l2 = s.createList("l2", 0);
+            String hp = "/storage/emulated/0/\u05de\u05e1\u05de\u05db\u05d9\u05dd/\u05e7\u05d5\u05d1\u05e5 1.pdf";
+            long f1 = s.createFile(info(hp, 1234, 1700000000000L, "2:00112233445566ff"));
+            ck("file item is typed and named by its file name", s.item(f1).type == Store.FILE && s.item(f1).name.equals("\u05e7\u05d5\u05d1\u05e5 1.pdf"));
+            Store.FileInfo fi = s.file(f1);
+            ck("file info round trip", fi != null && fi.path.equals(hp) && fi.drive.equals("\u05e4\u05e0\u05d9\u05de\u05d9") && fi.size == 1234
+                    && fi.mtime == 1700000000000L && "2:00112233445566ff".equals(fi.sig));
+            ck("findFile by path", s.findFile(hp) == f1 && s.findFile("/nope") == 0);
+            final String hpf = hp;
+            fails("same path twice", new Act() { public void run() { s.createFile(info(hpf, 1, 1, null)); } });
+            fails("empty path", new Act() { public void run() { s.createFile(info("  ", 1, 1, null)); } });
+            fails("empty drive", new Act() { public void run() { s.createFile(new Store.FileInfo("/a", "", 1, 1, null)); } });
+            long f2 = s.createFile(info("/storage/ABCD-1234/a.txt", -1, 0, null));
+            ck("unknown size and no signature are kept", s.file(f2).size == -1 && s.file(f2).sig == null && s.file(f2).mtime == 0);
+            ck("a file joins a list", s.addMember(l1, f1) && s.addMember(l1, f2) && s.addMember(l2, f1));
+            ck("a file sits in two lists", s.listsOf(f1).equals(java.util.Arrays.asList(l1, l2)) && dense(s, l1));
+            ck("members show the file type", s.members(l1).get(0).item.type == Store.FILE);
+            ck("file() of a list is null", s.file(l1) == null && s.file(999) == null);
+            final long f1f = f1, l1f = l1;
+            s.updateFile(f2, 55, 66, "2:aa");
+            ck("updateFile", s.file(f2).size == 55 && s.file(f2).mtime == 66 && "2:aa".equals(s.file(f2).sig));
+            s.updateFile(f2, 55, 66, null);
+            ck("updateFile can clear the signature", s.file(f2).sig == null);
+            fails("updateFile of a list", new Act() { public void run() { s.updateFile(l1f, 1, 1, null); } });
+            fails("updateFile of a missing item", new Act() { public void run() { s.updateFile(999, 1, 1, null); } });
+            // מקור
+            ck("no origin yet", s.findByOrigin("tree:L:x") == 0);
+            s.setOrigin(l1, "tree:L:x");
+            ck("origin found", s.findByOrigin("tree:L:x") == l1 && s.findByOrigin("tree:L:y") == 0);
+            fails("origin of a missing item", new Act() { public void run() { s.setOrigin(999, "k"); } });
+            fails("empty origin", new Act() { public void run() { s.setOrigin(l1f, " "); } });
+            // מאפיינים
+            ck("no prop yet", s.prop(l1, Store.P_ICON) == null);
+            s.setProp(l1, Store.P_ICON, "\ud83d\udcd8");
+            s.setProp(l1, Store.P_DESC, "a\nb \u05d0");
+            ck("props round trip (emoji, newline, Hebrew)", "\ud83d\udcd8".equals(s.prop(l1, Store.P_ICON)) && "a\nb \u05d0".equals(s.prop(l1, Store.P_DESC)));
+            s.setProp(l1, Store.P_ICON, "x");
+            ck("prop is overwritten", "x".equals(s.prop(l1, Store.P_ICON)));
+            s.setProp(l1, Store.P_ICON, "");
+            ck("empty value removes the prop", s.prop(l1, Store.P_ICON) == null && s.prop(l1, Store.P_DESC) != null);
+            s.setProp(l1, Store.P_DESC, null);
+            ck("null value removes the prop", s.prop(l1, Store.P_DESC) == null);
+            ck("props are per item", s.prop(l2, Store.P_ICON) == null);
+            fails("prop of a missing item", new Act() { public void run() { s.setProp(999, "k", "v"); } });
+            // מחיקת רשימה: המאפיינים והמקור הולכים איתה, הקבצים נשארים
+            s.setProp(l1, Store.P_WHY, "w");
+            s.deleteList(l1);
+            ck("deleting a list drops its origin", s.findByOrigin("tree:L:x") == 0);
+            ck("files stay after their list is deleted", s.file(f1f) != null && s.listsOf(f1f).equals(java.util.Arrays.asList(l2)));
+            ck("check is clean after files", s.check() == null);
+        } finally {
+            s.close();
+        }
+    }
+
+    private void atomicity() throws Exception {
+        final Store s = opener.fresh(counterFile());
+        try {
+            final long keepList = s.createList("keep", 0);
+            final long keepFile = s.createFile(info("/keep.txt", 1, 1, null));
+            s.addMember(keepList, keepFile);
+            s.setOrigin(keepList, "o:keep");
+            s.setProp(keepList, Store.P_WHY, "w");
+            final long last = s.lastId();
+            final long[] made = new long[2];
+            s.atomic(new Store.Work() {
+                public void run(Store x) {
+                    made[0] = x.createList("inside", 0);
+                    made[1] = x.createFile(info("/inside.txt", 2, 2, "2:bb"));
+                    x.addMember(made[0], made[1]);
+                    x.setOrigin(made[0], "o:inside");
+                    x.setProp(made[0], Store.P_ICON, "i");
+                }
+            }, true);
+            ck("atomic keep=true commits everything", s.item(made[0]) != null && s.findFile("/inside.txt") == made[1]
+                    && s.count(made[0]) == 1 && s.findByOrigin("o:inside") == made[0] && "i".equals(s.prop(made[0], Store.P_ICON)));
+            // "כבר שם" ו"לא היה שם" אינם כישלון: עסקה חיצונית נשמרת למרות שפעולה פנימית החזירה false
+            final long[] again = new long[1];
+            s.atomic(new Store.Work() {
+                public void run(Store x) {
+                    boolean a = x.addMember(keepList, keepFile);
+                    boolean b = x.removeMember(keepList, made[0]);
+                    if (!a && !b) again[0] = x.createList("after-false", 0);
+                }
+            }, true);
+            ck("false results inside atomic do not cancel it", again[0] != 0 && s.item(again[0]) != null);
+            s.deleteList(again[0]);
+            final long last2 = s.lastId();
+            ck("atomic ids moved on", last2 > last);
+            // תצוגה מקדימה: אותה עבודה, בלי שמירה
+            s.atomic(new Store.Work() {
+                public void run(Store x) {
+                    long l = x.createList("dry", 0);
+                    long f = x.createFile(info("/dry.txt", 3, 3, null));
+                    x.addMember(l, f);
+                    x.addMember(keepList, f);
+                    x.setOrigin(l, "o:dry");
+                    x.setProp(keepList, Store.P_WHY, "changed");
+                    x.updateFile(keepFile, 9, 9, "2:cc");
+                    x.rename(keepList, "renamed");
+                    x.removeMember(keepList, keepFile);
+                }
+            }, false);
+            ck("atomic keep=false leaves nothing", s.lists().size() == 2 && s.findFile("/dry.txt") == 0 && s.findByOrigin("o:dry") == 0
+                    && s.lastId() == last2 && s.count(keepList) == 1 && "w".equals(s.prop(keepList, Store.P_WHY))
+                    && s.file(keepFile).size == 1 && s.item(keepList).name.equals("keep"));
+            // חריגה באמצע: הכול חוזר, והחריגה מגיעה למי שקרא
+            boolean threw = false;
+            try {
+                s.atomic(new Store.Work() {
+                    public void run(Store x) {
+                        x.createList("half", 0);
+                        x.createFile(info("/half.txt", 1, 1, null));
+                        x.createFile(info("/half.txt", 1, 1, null));
+                    }
+                }, true);
+            } catch (Store.Failure e) {
+                threw = true;
+            }
+            ck("a failure inside atomic propagates", threw);
+            ck("a failure inside atomic undoes all of it", s.lists().size() == 2 && s.findFile("/half.txt") == 0 && s.lastId() == last2);
+            long after = s.createList("after", 0);
+            ck("work continues after a rollback", s.item(after) != null && s.check() == null);
         } finally {
             s.close();
         }
