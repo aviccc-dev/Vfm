@@ -932,7 +932,7 @@ cd $S; rm -rf out gen bld
 [ "$S" != "$DIR" ] && rm -rf $S
 ls -la $OUT
 ===== קובץ: build/m-version.txt =====
-3 מ0.2.1
+4 מ0.2.2
 ===== קובץ: build/test.sh =====
 #!/bin/bash
 # בדיקות על המחשב (80). יוצא בכישלון אם בדיקה אחת נכשלה — ואז build.sh לא בונה.
@@ -8388,8 +8388,8 @@ public class DbScreen extends Activity {
                     @Override public void run() { newNote(); }
                 }));
             }
-            buttons.addView(button(Words.Db.SELF_TEST, new Runnable() {
-                @Override public void run() { selfTest(); }
+            buttons.addView(button(Words.Db.FULL_CHECK, new Runnable() {
+                @Override public void run() { fullCheck(); }
             }));
             rows.removeAllViews();
             if (path.isEmpty()) {
@@ -8633,37 +8633,109 @@ public class DbScreen extends Activity {
                 r.linksAdded, r.propsSet, r.rootFiles, r.badLines, r.refs, r.smart, r.live);
     }
 
-    // ---------- בדיקה עצמית ----------
+    // ---------- בדיקה מלאה (מ0.2.2) ----------
 
-    /** אותן בדיקות שרצות במחשב (StoreContract), על SQLite האמיתי של המכשיר, במסד זמני נפרד. */
-    private void selfTest() {
-        final ProgressHolder p = new ProgressHolder(new AlertDialog.Builder(this).setTitle(Words.Db.SELF_TEST_TITLE)
-                .setMessage(Words.Db.RUNNING).setCancelable(false).show());
+    /** כל הבדיקות במקום אחד: דוח טקסט אחד, שמועתק ללוח ואפשר לשלוח. */
+    private void fullCheck() {
+        final AlertDialog wait = new AlertDialog.Builder(this).setTitle(Words.Db.FULL_CHECK_TITLE)
+                .setMessage(Words.Db.FULL_CHECK_RUNNING).setCancelable(false).show();
         new Thread(new Runnable() {
             @Override
             public void run() {
-                final String text = selfTestText();
+                String text;
+                try {
+                    text = FullCheck.run(oldData(), checkEnv());
+                } catch (Throwable t) {
+                    Log.e("DbScreen.fullCheck", t);
+                    text = Words.Db.failed(String.valueOf(t));
+                }
+                deleteAll(new File(getCacheDir(), "mfull"));
+                final String report = text;
                 runOnUiThread(new Runnable() {
                     @Override
                     public void run() {
-                        p.dialog.dismiss();
-                        new AlertDialog.Builder(DbScreen.this).setTitle(Words.Db.SELF_TEST_TITLE).setMessage(text)
-                                .setPositiveButton(Words.OK, null).show();
+                        wait.dismiss();
+                        if (!isFinishing()) showReport(report);
                     }
                 });
             }
         }).start();
     }
 
-    private static final class ProgressHolder {
-        final AlertDialog dialog;
+    private void showReport(final String report) {
+        copy(report);
+        TextView t = new TextView(this);
+        t.setText(report);
+        t.setTextSize(13);
+        t.setTextColor(Ui.TEXT);
+        t.setTextIsSelectable(true);
+        t.setPadding(Ui.dp(this, 16), Ui.dp(this, 8), Ui.dp(this, 16), Ui.dp(this, 8));
+        ScrollView sc = new ScrollView(this);
+        sc.addView(t);
+        final AlertDialog d = new AlertDialog.Builder(this).setTitle(Words.Db.FULL_CHECK_TITLE).setView(sc)
+                .setPositiveButton(Words.Db.COPY_REPORT, null).setNegativeButton(Words.CLOSE, null).show();
+        d.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(new View.OnClickListener() {
+            @Override public void onClick(View v) { copy(report); }
+        });
+        show();
+    }
 
-        ProgressHolder(AlertDialog d) {
-            dialog = d;
+    private void copy(String text) {
+        try {
+            android.content.ClipboardManager cm = (android.content.ClipboardManager) getSystemService(CLIPBOARD_SERVICE);
+            cm.setPrimaryClip(android.content.ClipData.newPlainText(Words.Db.FULL_CHECK_TITLE, text));
+            Ui.toast(this, Words.Db.REPORT_COPIED);
+        } catch (Throwable t) {
+            Log.e("DbScreen.copy", t);
         }
     }
 
-    private String selfTestText() {
+    private FullCheck.Env checkEnv() {
+        final File tmp = new File(getCacheDir(), "mfull");
+        deleteAll(tmp);
+        tmp.mkdirs();
+        final String[] selfText = {""};
+        final boolean[] selfOk = {false};
+        final int[] seq = {0};
+        return new FullCheck.Env() {
+            @Override
+            public String header() {
+                String v = "?";
+                try {
+                    v = getPackageManager().getPackageInfo(getPackageName(), 0).versionName;
+                } catch (Throwable ignored) {
+                }
+                return Words.Db.headerLine(v, android.os.Build.VERSION.RELEASE, android.os.Build.MODEL, android.os.Build.VERSION.SDK_INT);
+            }
+
+            @Override
+            public String selfTest() {
+                String text = selfTestText(selfOk);
+                selfText[0] = Words.Db.selfTestLine(selfOk[0], text);
+                return selfText[0];
+            }
+
+            @Override
+            public boolean selfTestOk() {
+                return selfOk[0];
+            }
+
+            @Override
+            public Store openTemp() throws Exception {
+                int n = seq[0]++;
+                return SqlStore.open(new File(tmp, "t" + n + ".db"), new IdCounter(new File(tmp, "t" + n + "-counter.txt")));
+            }
+
+            @Override
+            public Store openReal(String mode) throws Exception {
+                File f = dbFile(DbScreen.this, mode);
+                return f.exists() ? SqlStore.open(f, new IdCounter(counterFile())) : null;
+            }
+        };
+    }
+
+    /** אותן בדיקות שרצות במחשב (StoreContract), על SQLite האמיתי של המכשיר, במסד זמני נפרד. ok[0] — האם עברו. */
+    private String selfTestText(boolean[] ok) {
         final File dir = new File(getCacheDir(), "mselftest");
         deleteAll(dir);
         dir.mkdirs();
@@ -8687,9 +8759,11 @@ public class DbScreen extends Activity {
                 s.close();
             }
             long ms = System.currentTimeMillis() - t0;
-            return r.failed.isEmpty() ? Words.Db.selfTestOk(r.passed, ms, info) : Words.Db.selfTestBad(r.passed, r.failed, info);
+            ok[0] = r.failed.isEmpty();
+            return ok[0] ? Words.Db.selfTestOk(r.passed, ms, info) : Words.Db.selfTestBad(r.passed, r.failed, info);
         } catch (Throwable t) {
             Log.e("DbScreen.selfTest", t);
+            ok[0] = false;
             return Words.Db.failed(String.valueOf(t));
         } finally {
             deleteAll(dir);
@@ -12871,6 +12945,231 @@ final class FolderView {
             } else if (!out.contains(s)) out.add(s);
         }
         return out;
+    }
+}
+===== קובץ: src/com/tikiyot/vfm/FullCheck.java =====
+package com.tikiyot.vfm;
+
+// בדיקה מלאה אחת (מ0.2.2): מריצה הכול ומחזירה דוח טקסט אחד, שאפשר להעתיק ולשלוח.
+// אחראי: לבדוק את שכבת האחסון (בדיקה עצמית), ולכל אופן עבודה במנוע הישן — העתקה מלאה למסד זמני ובדיקה מול המקור
+// (רשימות, חברות, קבצים, חתימות, העתקה חוזרת, רשימות ריקות), ואת המסד האמיתי של אותו אופן מול המקור (בלי לשנות אותו).
+// אסור לו: לשנות את המנוע הישן, או את המסדים האמיתיים (רק תצוגה מקדימה עליהם).
+
+import java.io.File;
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
+
+final class FullCheck {
+
+    private FullCheck() { }
+
+    /** מה שהסביבה נותנת: מידע על המכשיר, בדיקה עצמית, ומסדים. */
+    interface Env {
+        String header();
+
+        /** תוצאת הבדיקה העצמית: [0] — הטקסט; השורה הראשונה מתחילה ב־"✅" או "❌". */
+        String selfTest();
+
+        boolean selfTestOk();
+
+        /** מסד זמני חדש וריק (נמחק אחרי הבדיקה). */
+        Store openTemp() throws Exception;
+
+        /** המסד האמיתי של האופן, או null אם עוד אין. לא יוצרים אותו. */
+        Store openReal(String mode) throws Exception;
+    }
+
+    private static final int EXAMPLES = 6;
+
+    /** הדוח כולו. לא זורק — כל כישלון נכנס לדוח כבעיה. */
+    static String run(File oldData, Env env) {
+        List<String> problems = new ArrayList<String>();
+        StringBuilder body = new StringBuilder();
+        long t0 = System.currentTimeMillis();
+        body.append(env.header()).append("\n\n");
+        body.append(env.selfTest()).append("\n");
+        if (!env.selfTestOk()) problems.add(Words.Db.pSelfTest());
+        List<String> modes = Importer.modes(oldData);
+        if (modes.isEmpty()) {
+            body.append("\n").append(Words.Db.IMPORT_NO_OLD).append("\n");
+        }
+        for (String mode : modes) {
+            body.append("\n");
+            try {
+                mode(oldData, mode, env, body, problems);
+            } catch (Throwable t) {
+                Log.e("FullCheck.mode", t);
+                problems.add(Words.Db.pCrash(mode, String.valueOf(t)));
+                body.append(Words.Db.pCrash(mode, String.valueOf(t))).append("\n");
+            }
+        }
+        StringBuilder out = new StringBuilder();
+        out.append(problems.isEmpty() ? Words.Db.VERDICT_OK : Words.Db.verdictBad(problems.size())).append("\n");
+        for (String p : problems) out.append("• ").append(p).append("\n");
+        out.append("\n").append(body);
+        out.append("\n").append(Words.Db.checkTotal(System.currentTimeMillis() - t0));
+        return out.toString();
+    }
+
+    // ---------- אופן אחד ----------
+
+    private static void mode(File oldData, String mode, Env env, StringBuilder out, List<String> problems) throws Exception {
+        long t0 = System.currentTimeMillis();
+        Importer.Source src = Importer.load(new File(new File(oldData, Modes.DIR), mode));
+        List<Tree.Node> nodes = new ArrayList<Tree.Node>();
+        collect(src.tree.root, nodes);
+        Set<String> paths = new HashSet<String>();
+        int bad = 0, refs = 0, smart = 0, live = 0;
+        for (Tree.Node n : nodes) {
+            bad += count(n, paths);
+            refs += n.refs.size();
+            smart += n.smart.size();
+            live += n.live.size();
+        }
+        out.append(Words.Db.modeHead(mode)).append("\n");
+        out.append(Words.Db.modeSource(nodes.size() - 1, paths.size(), refs, smart, live, bad)).append("\n");
+
+        // 1. העתקה מלאה למסד זמני ובדיקה מול המקור
+        Store t = env.openTemp();
+        try {
+            Importer.Report r = Importer.run(t, src, true);
+            Found f = verify(t, src, nodes, paths, true);
+            Importer.Report again = Importer.run(t, src, false);
+            long ms = System.currentTimeMillis() - t0;
+            out.append(Words.Db.modeTemp(t.lists().size(), r.filesNew, f.lists, f.membersWrong, f.filesMissing, f.sigWrong,
+                    again.nothingToDo(), t.check() == null, ms)).append("\n");
+            add(problems, mode, f, nodes.size() - 1, t.lists().size(), again.nothingToDo(), t.check());
+            empties(out, src, nodes, t);
+        } finally {
+            t.close();
+        }
+
+        // 2. המסד האמיתי של האופן, מול המקור — בלי לכתוב אליו
+        Store real = env.openReal(mode);
+        if (real == null) {
+            out.append(Words.Db.REAL_NONE).append("\n");
+            return;
+        }
+        try {
+            Found f = verify(real, src, nodes, paths, false);
+            Importer.Report pre = Importer.run(real, src, false);
+            out.append(Words.Db.modeReal(real.lists().size(), nodes.size() - 1, f.lists, f.membersWrong, f.filesMissing,
+                    pre.listsNew, pre.filesNew, pre.filesUpdated, pre.linksAdded, real.check() == null)).append("\n");
+            if (pre.listsNew + pre.filesNew + pre.filesUpdated + pre.linksAdded > 0 || f.listsMissing > 0 || f.filesMissing > 0)
+                problems.add(Words.Db.pRealBehind(mode, pre.listsNew, pre.filesNew, pre.filesUpdated, pre.linksAdded));
+            if (real.check() != null) problems.add(Words.Db.pCheck(mode, real.check()));
+            for (String e : f.examples) out.append("   ").append(e).append("\n");
+        } finally {
+            real.close();
+        }
+    }
+
+    private static void add(List<String> problems, String mode, Found f, int expectedLists, int gotLists, boolean again, String check) {
+        if (gotLists != expectedLists) problems.add(Words.Db.pListCount(mode, expectedLists, gotLists));
+        if (f.membersWrong > 0) problems.add(Words.Db.pMembers(mode, f.membersWrong));
+        if (f.filesMissing > 0) problems.add(Words.Db.pFiles(mode, f.filesMissing));
+        if (f.sigWrong > 0) problems.add(Words.Db.pSig(mode, f.sigWrong));
+        if (!again) problems.add(Words.Db.pAgain(mode));
+        if (check != null) problems.add(Words.Db.pCheck(mode, check));
+    }
+
+    // ---------- המקור ----------
+
+    /** כל הרשימות בעץ, כולל השורש (הראשון). */
+    private static void collect(Tree.Node n, List<Tree.Node> out) {
+        out.add(n);
+        for (Tree.Node c : n.children) collect(c, out);
+    }
+
+    /** מוסיף את מסלולי הקבצים התקינים של הרשימה; מחזיר כמה שורות פגומות. */
+    private static int count(Tree.Node n, Set<String> paths) {
+        int bad = 0;
+        for (Tree.Entry e : n.entries) {
+            if (e.bad) bad++;
+            else paths.add(e.path);
+        }
+        return bad;
+    }
+
+    // ---------- בדיקה מול המקור ----------
+
+    private static final class Found {
+        int lists, listsMissing, membersWrong, filesMissing, sigWrong;
+        final List<String> examples = new ArrayList<String>();
+    }
+
+    /**
+     * לכל רשימה במקור: נמצאת במסד, וחבריה (תת־רשימות וקבצים) הם בדיוק מה שבמקור (exact) או לפחות מה שבמקור.
+     * לכל קובץ: נמצא, ואם יש לו חתימה במקור — היא זהה.
+     */
+    private static Found verify(Store s, Importer.Source src, List<Tree.Node> nodes, Set<String> paths, boolean exact) {
+        Found f = new Found();
+        for (int i = 1; i < nodes.size(); i++) {
+            Tree.Node n = nodes.get(i);
+            long id = s.findByOrigin(Importer.originOf(src.mode, Tree.fullLabel(n.path())));
+            if (id == 0) {
+                f.listsMissing++;
+                example(f, Words.Db.exListMissing(Tree.fullLabel(n.path())));
+                continue;
+            }
+            f.lists++;
+            Set<Long> want = new HashSet<Long>();
+            for (Tree.Node c : n.children) want.add(s.findByOrigin(Importer.originOf(src.mode, Tree.fullLabel(c.path()))));
+            for (Tree.Entry e : n.entries) if (!e.bad) want.add(s.findFile(e.path));
+            Set<Long> got = new HashSet<Long>();
+            for (Store.Member m : s.members(id)) got.add(m.item.id);
+            boolean ok = got.containsAll(want) && !want.contains(0L) && (!exact || want.containsAll(got));
+            if (!ok) {
+                f.membersWrong++;
+                example(f, Words.Db.exMembers(Tree.fullLabel(n.path()), want.size(), got.size()));
+            }
+        }
+        for (String p : paths) {
+            long fid = s.findFile(p);
+            if (fid == 0) {
+                f.filesMissing++;
+                example(f, Words.Db.exFileMissing(p));
+                continue;
+            }
+            Sig.Entry g = src.sigs.get(p);
+            Store.FileInfo fi = s.file(fid);
+            if (g != null && (fi == null || !g.sig.equals(fi.sig))) f.sigWrong++;
+        }
+        return f;
+    }
+
+    private static void example(Found f, String text) {
+        if (f.examples.size() < EXAMPLES) f.examples.add(text);
+    }
+
+    // ---------- רשימות ריקות ----------
+
+    /** רשימות שאין בהן כלום במסד: האם גם במקור הן ריקות, או שיש בהן משהו שעוד לא מועתק. */
+    private static void empties(StringBuilder out, Importer.Source src, List<Tree.Node> nodes, Store t) {
+        int total = 0, truly = 0, pending = 0;
+        List<String> names = new ArrayList<String>();
+        for (int i = 1; i < nodes.size(); i++) {
+            Tree.Node n = nodes.get(i);
+            long id = t.findByOrigin(Importer.originOf(src.mode, Tree.fullLabel(n.path())));
+            if (id == 0 || t.count(id) > 0) continue;
+            total++;
+            if (n.refs.size() + n.smart.size() + n.live.size() + badIn(n) > 0) {
+                pending++;
+            } else {
+                truly++;
+                if (names.size() < EXAMPLES) names.add(Tree.fullLabel(n.path()));
+            }
+        }
+        out.append(Words.Db.modeEmpty(total, truly, pending)).append("\n");
+        for (String nm : names) out.append("   ").append(nm).append("\n");
+    }
+
+    private static int badIn(Tree.Node n) {
+        int b = 0;
+        for (Tree.Entry e : n.entries) if (e.bad) b++;
+        return b;
     }
 }
 ===== קובץ: src/com/tikiyot/vfm/Func.java =====
@@ -40580,7 +40879,7 @@ public final class Words {
 
         public static final String APP_NAME_M = "מנהל קבצים וירטואלי · מ";
         public static final String MENU = "מסד נתונים (מ)";
-        public static final String TITLE = "מסד נתונים · מ0.2.1";
+        public static final String TITLE = "מסד נתונים · מ0.2.2";
         public static final String NOTICE = "מנוע המסד בבנייה, ועדיין בלי גיבוי (מ0.5). \"העתקה מהישן\" רק קוראת מהמנוע הישן ולא משנה בו דבר. לכל אופן עבודה מסד משלו — כל אופן נכנס למסד של אותו אופן. אפשר להעתיק שוב: מה שכבר הועתק מתעדכן ולא מוכפל.";
         public static final String NEED_ACCESS = "כדי לשמור את מונה המזהים בתיקיית הנתונים, התוכנה צריכה הרשאת גישה לכל הקבצים.";
         public static final String ALL_LISTS = "כל הרשימות";
@@ -40588,7 +40887,6 @@ public final class Words {
         public static final String NEW_LIST = "➕ רשימה חדשה";
         public static final String NEW_SUBLIST = "➕ רשימה בתוך הרשימה";
         public static final String NEW_NOTE = "➕ רעיון";
-        public static final String SELF_TEST = "בדיקה עצמית";
         public static final String EMPTY = "אין עדיין רשימות";
         public static final String EMPTY_LIST = "הרשימה ריקה";
         public static final String HINT = "נגיעה: פתיחה · נגיעה ארוכה: עוד פעולות";
@@ -40606,8 +40904,6 @@ public final class Words {
         public static final String KIND_LIST = "רשימה";
         public static final String KIND_NOTE = "רעיון";
         public static final String KIND_FILE = "קובץ";
-        public static final String RUNNING = "מריץ בדיקה עצמית…";
-        public static final String SELF_TEST_TITLE = "בדיקה עצמית של המסד";
         public static final String ALREADY_THERE = "הפריט כבר ברשימה";
 
         public static final String MODE_PICK = "אופן עבודה (לכל אופן מסד משלו)";
@@ -40675,6 +40971,110 @@ public final class Words {
 
         public static String failed(String why) {
             return "הפעולה נכשלה: " + why;
+        }
+
+        public static final String FULL_CHECK = "🧪 בדיקה מלאה";
+        public static final String FULL_CHECK_TITLE = "בדיקה מלאה";
+        public static final String FULL_CHECK_RUNNING = "מריץ בדיקה מלאה — בודק את המסד, ומעתיק כל אופן למסד זמני ומשווה למקור. כמה שניות…";
+        public static final String COPY_REPORT = "📋 העתקה";
+        public static final String REPORT_COPIED = "הדוח הועתק. הדביקו אותו לי בשיחה.";
+        public static final String VERDICT_OK = "✅ הכול תקין";
+        public static final String REAL_NONE = "המסד האמיתי של האופן: עוד לא נוצר (לא הועתק)";
+
+        public static String verdictBad(int n) {
+            return "❌ נמצאו " + n + " בעיות:";
+        }
+
+        public static String checkTotal(long ms) {
+            return "זמן הבדיקה: " + ms + " מ״ש";
+        }
+
+        public static String headerLine(String app, String android, String model, int sdk) {
+            return "דוח בדיקה מלאה · " + app + " · אנדרואיד " + android + " (API " + sdk + ") · " + model;
+        }
+
+        public static String selfTestLine(boolean ok, String text) {
+            return (ok ? "✅ " : "❌ ") + "בדיקה עצמית של שכבת האחסון: " + text;
+        }
+
+        public static String modeHead(String mode) {
+            return "━━ אופן: " + mode + " ━━";
+        }
+
+        public static String modeSource(int lists, int files, int refs, int smart, int live, int bad) {
+            return "במקור: " + lists + " רשימות · " + files + " קבצים · לא מועתק בגרסה הזו: " + refs + " הפניות, " + smart
+                    + " רשימות חכמות, " + live + " תיקיות חיות, " + bad + " שורות פגומות";
+        }
+
+        private static String yn(boolean b) {
+            return b ? "כן" : "לא";
+        }
+
+        public static String modeTemp(int lists, int files, int found, int membersWrong, int filesMissing, int sigWrong,
+                                      boolean againOk, boolean checkOk, long ms) {
+            return "העתקה לבדיקה (מסד זמני): " + lists + " רשימות, " + files + " קבצים · רשימות שנמצאו: " + found
+                    + " · חברות שגויה: " + membersWrong + " · קבצים חסרים: " + filesMissing + " · חתימות שגויות: " + sigWrong
+                    + " · העתקה חוזרת בלי שינוי: " + yn(againOk) + " · המסד תקין: " + yn(checkOk) + " · " + ms + " מ״ש";
+        }
+
+        public static String modeReal(int dbLists, int srcLists, int found, int membersWrong, int filesMissing, int newLists,
+                                      int newFiles, int updated, int links, boolean checkOk) {
+            return "המסד האמיתי: " + dbLists + " רשימות (במקור " + srcLists + ") · נמצאו " + found + " מהרשימות של המקור · חברות שגויה: "
+                    + membersWrong + " · קבצים חסרים: " + filesMissing + " · מה שעוד יתווסף אם נעתיק שוב: " + newLists + " רשימות, "
+                    + newFiles + " קבצים, " + updated + " עדכוני חתימה, " + links + " קישורים · המסד תקין: " + yn(checkOk);
+        }
+
+        public static String modeEmpty(int total, int truly, int pending) {
+            return "רשימות ריקות במסד: " + total + " · ריקות גם במקור: " + truly + " · יש בהן משהו שעוד לא מועתק: " + pending;
+        }
+
+        public static String pSelfTest() {
+            return "הבדיקה העצמית של שכבת האחסון נכשלה";
+        }
+
+        public static String pCrash(String mode, String why) {
+            return "אופן " + mode + ": הבדיקה עצמה נכשלה — " + why;
+        }
+
+        public static String pListCount(String mode, int expected, int got) {
+            return "אופן " + mode + ": במקור " + expected + " רשימות ובהעתקה " + got;
+        }
+
+        public static String pMembers(String mode, int n) {
+            return "אופן " + mode + ": ב־" + n + " רשימות החברים שונים ממה שבמקור";
+        }
+
+        public static String pFiles(String mode, int n) {
+            return "אופן " + mode + ": " + n + " קבצים מהמקור לא הועתקו";
+        }
+
+        public static String pSig(String mode, int n) {
+            return "אופן " + mode + ": " + n + " חתימות לא הועתקו נכון";
+        }
+
+        public static String pAgain(String mode) {
+            return "אופן " + mode + ": העתקה חוזרת עדיין שינתה משהו";
+        }
+
+        public static String pCheck(String mode, String why) {
+            return "אופן " + mode + ": בדיקת התקינות של המסד נכשלה — " + why;
+        }
+
+        public static String pRealBehind(String mode, int lists, int files, int updated, int links) {
+            return "אופן " + mode + ": המסד האמיתי לא תואם למקור — חסרים " + lists + " רשימות, " + files + " קבצים, "
+                    + updated + " עדכוני חתימה, " + links + " קישורים (העתקה חוזרת תשלים)";
+        }
+
+        public static String exListMissing(String path) {
+            return "חסרה רשימה: " + path;
+        }
+
+        public static String exMembers(String path, int want, int got) {
+            return "חברים שונים ברשימה \"" + path + "\": במקור " + want + ", במסד " + got;
+        }
+
+        public static String exFileMissing(String path) {
+            return "חסר קובץ: " + path;
         }
 
         public static String selfTestOk(int passed, long ms, String info) {
@@ -41905,6 +42305,51 @@ final class ImportTests {
         ck("כישלון באמצע: שום דבר לא נשאר", s.lists().size() == listsBefore && s.findFile("/x/1") == 0 && listBy(s, "חדשה אחת") == 0);
     }
 
+
+    // ---------- הבדיקה המלאה (FullCheck) ----------
+
+    /** opener — יוצר Store חדש. sabotage — האם המסד ה"אמיתי" חסר קישור אחד. */
+    private String fullReport(final StoreContract.Opener opener, File dir, final boolean sabotage, final boolean selfOk) throws Exception {
+        final File old = new File(dir, "olddata-" + sabotage + selfOk);
+        write(new File(old, Modes.DIR + "/ראשון/" + Paths.TREE), TREE1);
+        write(new File(old, Modes.DIR + "/ראשון/" + Sig.FILE), SIGS1);
+        write(new File(old, Modes.DIR + "/שני/" + Paths.TREE), TREE2);
+        write(new File(old, Modes.DIR + "/שני/" + Sig.FILE), SIGS2);
+        final int[] n = {0};
+        final File ctr = dir;
+        return FullCheck.run(old, new FullCheck.Env() {
+            @Override public String header() { return "HEADER"; }
+            @Override public String selfTest() { return "SELFTEST"; }
+            @Override public boolean selfTestOk() { return selfOk; }
+            @Override public Store openTemp() throws Exception { return opener.fresh(new File(ctr, "fc-" + (n[0]++) + ".txt")); }
+            @Override
+            public Store openReal(String mode) throws Exception {
+                if (!mode.equals("ראשון")) return null;
+                Store s = opener.fresh(new File(ctr, "fc-" + (n[0]++) + ".txt"));
+                Importer.run(s, Importer.load(new File(old, Modes.DIR + "/ראשון")), true);
+                if (sabotage) {
+                    long books = s.findByOrigin(Importer.originOf("ראשון", "ספרים"));
+                    s.removeMember(books, s.findFile(A));
+                }
+                return s;
+            }
+        });
+    }
+
+    void fullCheck(StoreContract.Opener opener, File dir) throws Exception {
+        String ok = fullReport(opener, dir, false, true);
+        ck("בדיקה מלאה: הכול תקין — פסק דין ירוק", ok.startsWith(Words.Db.VERDICT_OK));
+        ck("בדיקה מלאה: הדוח כולל כותרת, בדיקה עצמית ושני אופנים", ok.contains("HEADER") && ok.contains("SELFTEST")
+                && ok.contains(Words.Db.modeHead("ראשון")) && ok.contains(Words.Db.modeHead("שני")));
+        ck("בדיקה מלאה: אופן בלי מסד אמיתי מדווח כך", ok.contains(Words.Db.REAL_NONE));
+        ck("בדיקה מלאה: מה שלא מועתק מופיע", ok.contains("1 הפניות") && ok.contains("1 רשימות חכמות"));
+        ck("בדיקה מלאה: רשימה ריקה בלי סיבה מוצגת בשמה", ok.contains(Words.Db.modeEmpty(1, 1, 0)) && ok.contains("   חדשה") && ok.contains(Words.Db.modeEmpty(0, 0, 0)));
+        String bad = fullReport(opener, dir, true, true);
+        ck("בדיקה מלאה: מסד אמיתי שחסר בו קישור — פסק דין אדום", bad.startsWith(Words.Db.verdictBad(1)) && bad.contains(Words.Db.pRealBehind("ראשון", 0, 0, 0, 1)));
+        String self = fullReport(opener, dir, false, false);
+        ck("בדיקה מלאה: בדיקה עצמית שנכשלה — פסק דין אדום", self.startsWith(Words.Db.verdictBad(1)) && self.contains(Words.Db.pSelfTest()));
+    }
+
     // ---------- בלי Store ----------
 
     static void pure(StoreTests.Out o, File dir) throws Exception {
@@ -42009,6 +42454,7 @@ final class StoreTests {
             } finally {
                 s.close();
             }
+            new ImportTests(o, name).fullCheck(opener, new File(sub, "full"));
         } catch (Throwable x) {
             o.failed.add(name + " — העתקה: חריגה " + x);
         }

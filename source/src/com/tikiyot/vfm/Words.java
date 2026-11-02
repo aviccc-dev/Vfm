@@ -2294,7 +2294,7 @@ public final class Words {
 
         public static final String APP_NAME_M = "מנהל קבצים וירטואלי · מ";
         public static final String MENU = "מסד נתונים (מ)";
-        public static final String TITLE = "מסד נתונים · מ0.2.1";
+        public static final String TITLE = "מסד נתונים · מ0.2.2";
         public static final String NOTICE = "מנוע המסד בבנייה, ועדיין בלי גיבוי (מ0.5). \"העתקה מהישן\" רק קוראת מהמנוע הישן ולא משנה בו דבר. לכל אופן עבודה מסד משלו — כל אופן נכנס למסד של אותו אופן. אפשר להעתיק שוב: מה שכבר הועתק מתעדכן ולא מוכפל.";
         public static final String NEED_ACCESS = "כדי לשמור את מונה המזהים בתיקיית הנתונים, התוכנה צריכה הרשאת גישה לכל הקבצים.";
         public static final String ALL_LISTS = "כל הרשימות";
@@ -2302,7 +2302,6 @@ public final class Words {
         public static final String NEW_LIST = "➕ רשימה חדשה";
         public static final String NEW_SUBLIST = "➕ רשימה בתוך הרשימה";
         public static final String NEW_NOTE = "➕ רעיון";
-        public static final String SELF_TEST = "בדיקה עצמית";
         public static final String EMPTY = "אין עדיין רשימות";
         public static final String EMPTY_LIST = "הרשימה ריקה";
         public static final String HINT = "נגיעה: פתיחה · נגיעה ארוכה: עוד פעולות";
@@ -2320,8 +2319,6 @@ public final class Words {
         public static final String KIND_LIST = "רשימה";
         public static final String KIND_NOTE = "רעיון";
         public static final String KIND_FILE = "קובץ";
-        public static final String RUNNING = "מריץ בדיקה עצמית…";
-        public static final String SELF_TEST_TITLE = "בדיקה עצמית של המסד";
         public static final String ALREADY_THERE = "הפריט כבר ברשימה";
 
         public static final String MODE_PICK = "אופן עבודה (לכל אופן מסד משלו)";
@@ -2389,6 +2386,110 @@ public final class Words {
 
         public static String failed(String why) {
             return "הפעולה נכשלה: " + why;
+        }
+
+        public static final String FULL_CHECK = "🧪 בדיקה מלאה";
+        public static final String FULL_CHECK_TITLE = "בדיקה מלאה";
+        public static final String FULL_CHECK_RUNNING = "מריץ בדיקה מלאה — בודק את המסד, ומעתיק כל אופן למסד זמני ומשווה למקור. כמה שניות…";
+        public static final String COPY_REPORT = "📋 העתקה";
+        public static final String REPORT_COPIED = "הדוח הועתק. הדביקו אותו לי בשיחה.";
+        public static final String VERDICT_OK = "✅ הכול תקין";
+        public static final String REAL_NONE = "המסד האמיתי של האופן: עוד לא נוצר (לא הועתק)";
+
+        public static String verdictBad(int n) {
+            return "❌ נמצאו " + n + " בעיות:";
+        }
+
+        public static String checkTotal(long ms) {
+            return "זמן הבדיקה: " + ms + " מ״ש";
+        }
+
+        public static String headerLine(String app, String android, String model, int sdk) {
+            return "דוח בדיקה מלאה · " + app + " · אנדרואיד " + android + " (API " + sdk + ") · " + model;
+        }
+
+        public static String selfTestLine(boolean ok, String text) {
+            return (ok ? "✅ " : "❌ ") + "בדיקה עצמית של שכבת האחסון: " + text;
+        }
+
+        public static String modeHead(String mode) {
+            return "━━ אופן: " + mode + " ━━";
+        }
+
+        public static String modeSource(int lists, int files, int refs, int smart, int live, int bad) {
+            return "במקור: " + lists + " רשימות · " + files + " קבצים · לא מועתק בגרסה הזו: " + refs + " הפניות, " + smart
+                    + " רשימות חכמות, " + live + " תיקיות חיות, " + bad + " שורות פגומות";
+        }
+
+        private static String yn(boolean b) {
+            return b ? "כן" : "לא";
+        }
+
+        public static String modeTemp(int lists, int files, int found, int membersWrong, int filesMissing, int sigWrong,
+                                      boolean againOk, boolean checkOk, long ms) {
+            return "העתקה לבדיקה (מסד זמני): " + lists + " רשימות, " + files + " קבצים · רשימות שנמצאו: " + found
+                    + " · חברות שגויה: " + membersWrong + " · קבצים חסרים: " + filesMissing + " · חתימות שגויות: " + sigWrong
+                    + " · העתקה חוזרת בלי שינוי: " + yn(againOk) + " · המסד תקין: " + yn(checkOk) + " · " + ms + " מ״ש";
+        }
+
+        public static String modeReal(int dbLists, int srcLists, int found, int membersWrong, int filesMissing, int newLists,
+                                      int newFiles, int updated, int links, boolean checkOk) {
+            return "המסד האמיתי: " + dbLists + " רשימות (במקור " + srcLists + ") · נמצאו " + found + " מהרשימות של המקור · חברות שגויה: "
+                    + membersWrong + " · קבצים חסרים: " + filesMissing + " · מה שעוד יתווסף אם נעתיק שוב: " + newLists + " רשימות, "
+                    + newFiles + " קבצים, " + updated + " עדכוני חתימה, " + links + " קישורים · המסד תקין: " + yn(checkOk);
+        }
+
+        public static String modeEmpty(int total, int truly, int pending) {
+            return "רשימות ריקות במסד: " + total + " · ריקות גם במקור: " + truly + " · יש בהן משהו שעוד לא מועתק: " + pending;
+        }
+
+        public static String pSelfTest() {
+            return "הבדיקה העצמית של שכבת האחסון נכשלה";
+        }
+
+        public static String pCrash(String mode, String why) {
+            return "אופן " + mode + ": הבדיקה עצמה נכשלה — " + why;
+        }
+
+        public static String pListCount(String mode, int expected, int got) {
+            return "אופן " + mode + ": במקור " + expected + " רשימות ובהעתקה " + got;
+        }
+
+        public static String pMembers(String mode, int n) {
+            return "אופן " + mode + ": ב־" + n + " רשימות החברים שונים ממה שבמקור";
+        }
+
+        public static String pFiles(String mode, int n) {
+            return "אופן " + mode + ": " + n + " קבצים מהמקור לא הועתקו";
+        }
+
+        public static String pSig(String mode, int n) {
+            return "אופן " + mode + ": " + n + " חתימות לא הועתקו נכון";
+        }
+
+        public static String pAgain(String mode) {
+            return "אופן " + mode + ": העתקה חוזרת עדיין שינתה משהו";
+        }
+
+        public static String pCheck(String mode, String why) {
+            return "אופן " + mode + ": בדיקת התקינות של המסד נכשלה — " + why;
+        }
+
+        public static String pRealBehind(String mode, int lists, int files, int updated, int links) {
+            return "אופן " + mode + ": המסד האמיתי לא תואם למקור — חסרים " + lists + " רשימות, " + files + " קבצים, "
+                    + updated + " עדכוני חתימה, " + links + " קישורים (העתקה חוזרת תשלים)";
+        }
+
+        public static String exListMissing(String path) {
+            return "חסרה רשימה: " + path;
+        }
+
+        public static String exMembers(String path, int want, int got) {
+            return "חברים שונים ברשימה \"" + path + "\": במקור " + want + ", במסד " + got;
+        }
+
+        public static String exFileMissing(String path) {
+            return "חסר קובץ: " + path;
         }
 
         public static String selfTestOk(int passed, long ms, String info) {

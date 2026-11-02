@@ -213,8 +213,8 @@ public class DbScreen extends Activity {
                     @Override public void run() { newNote(); }
                 }));
             }
-            buttons.addView(button(Words.Db.SELF_TEST, new Runnable() {
-                @Override public void run() { selfTest(); }
+            buttons.addView(button(Words.Db.FULL_CHECK, new Runnable() {
+                @Override public void run() { fullCheck(); }
             }));
             rows.removeAllViews();
             if (path.isEmpty()) {
@@ -458,37 +458,109 @@ public class DbScreen extends Activity {
                 r.linksAdded, r.propsSet, r.rootFiles, r.badLines, r.refs, r.smart, r.live);
     }
 
-    // ---------- בדיקה עצמית ----------
+    // ---------- בדיקה מלאה (מ0.2.2) ----------
 
-    /** אותן בדיקות שרצות במחשב (StoreContract), על SQLite האמיתי של המכשיר, במסד זמני נפרד. */
-    private void selfTest() {
-        final ProgressHolder p = new ProgressHolder(new AlertDialog.Builder(this).setTitle(Words.Db.SELF_TEST_TITLE)
-                .setMessage(Words.Db.RUNNING).setCancelable(false).show());
+    /** כל הבדיקות במקום אחד: דוח טקסט אחד, שמועתק ללוח ואפשר לשלוח. */
+    private void fullCheck() {
+        final AlertDialog wait = new AlertDialog.Builder(this).setTitle(Words.Db.FULL_CHECK_TITLE)
+                .setMessage(Words.Db.FULL_CHECK_RUNNING).setCancelable(false).show();
         new Thread(new Runnable() {
             @Override
             public void run() {
-                final String text = selfTestText();
+                String text;
+                try {
+                    text = FullCheck.run(oldData(), checkEnv());
+                } catch (Throwable t) {
+                    Log.e("DbScreen.fullCheck", t);
+                    text = Words.Db.failed(String.valueOf(t));
+                }
+                deleteAll(new File(getCacheDir(), "mfull"));
+                final String report = text;
                 runOnUiThread(new Runnable() {
                     @Override
                     public void run() {
-                        p.dialog.dismiss();
-                        new AlertDialog.Builder(DbScreen.this).setTitle(Words.Db.SELF_TEST_TITLE).setMessage(text)
-                                .setPositiveButton(Words.OK, null).show();
+                        wait.dismiss();
+                        if (!isFinishing()) showReport(report);
                     }
                 });
             }
         }).start();
     }
 
-    private static final class ProgressHolder {
-        final AlertDialog dialog;
+    private void showReport(final String report) {
+        copy(report);
+        TextView t = new TextView(this);
+        t.setText(report);
+        t.setTextSize(13);
+        t.setTextColor(Ui.TEXT);
+        t.setTextIsSelectable(true);
+        t.setPadding(Ui.dp(this, 16), Ui.dp(this, 8), Ui.dp(this, 16), Ui.dp(this, 8));
+        ScrollView sc = new ScrollView(this);
+        sc.addView(t);
+        final AlertDialog d = new AlertDialog.Builder(this).setTitle(Words.Db.FULL_CHECK_TITLE).setView(sc)
+                .setPositiveButton(Words.Db.COPY_REPORT, null).setNegativeButton(Words.CLOSE, null).show();
+        d.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(new View.OnClickListener() {
+            @Override public void onClick(View v) { copy(report); }
+        });
+        show();
+    }
 
-        ProgressHolder(AlertDialog d) {
-            dialog = d;
+    private void copy(String text) {
+        try {
+            android.content.ClipboardManager cm = (android.content.ClipboardManager) getSystemService(CLIPBOARD_SERVICE);
+            cm.setPrimaryClip(android.content.ClipData.newPlainText(Words.Db.FULL_CHECK_TITLE, text));
+            Ui.toast(this, Words.Db.REPORT_COPIED);
+        } catch (Throwable t) {
+            Log.e("DbScreen.copy", t);
         }
     }
 
-    private String selfTestText() {
+    private FullCheck.Env checkEnv() {
+        final File tmp = new File(getCacheDir(), "mfull");
+        deleteAll(tmp);
+        tmp.mkdirs();
+        final String[] selfText = {""};
+        final boolean[] selfOk = {false};
+        final int[] seq = {0};
+        return new FullCheck.Env() {
+            @Override
+            public String header() {
+                String v = "?";
+                try {
+                    v = getPackageManager().getPackageInfo(getPackageName(), 0).versionName;
+                } catch (Throwable ignored) {
+                }
+                return Words.Db.headerLine(v, android.os.Build.VERSION.RELEASE, android.os.Build.MODEL, android.os.Build.VERSION.SDK_INT);
+            }
+
+            @Override
+            public String selfTest() {
+                String text = selfTestText(selfOk);
+                selfText[0] = Words.Db.selfTestLine(selfOk[0], text);
+                return selfText[0];
+            }
+
+            @Override
+            public boolean selfTestOk() {
+                return selfOk[0];
+            }
+
+            @Override
+            public Store openTemp() throws Exception {
+                int n = seq[0]++;
+                return SqlStore.open(new File(tmp, "t" + n + ".db"), new IdCounter(new File(tmp, "t" + n + "-counter.txt")));
+            }
+
+            @Override
+            public Store openReal(String mode) throws Exception {
+                File f = dbFile(DbScreen.this, mode);
+                return f.exists() ? SqlStore.open(f, new IdCounter(counterFile())) : null;
+            }
+        };
+    }
+
+    /** אותן בדיקות שרצות במחשב (StoreContract), על SQLite האמיתי של המכשיר, במסד זמני נפרד. ok[0] — האם עברו. */
+    private String selfTestText(boolean[] ok) {
         final File dir = new File(getCacheDir(), "mselftest");
         deleteAll(dir);
         dir.mkdirs();
@@ -512,9 +584,11 @@ public class DbScreen extends Activity {
                 s.close();
             }
             long ms = System.currentTimeMillis() - t0;
-            return r.failed.isEmpty() ? Words.Db.selfTestOk(r.passed, ms, info) : Words.Db.selfTestBad(r.passed, r.failed, info);
+            ok[0] = r.failed.isEmpty();
+            return ok[0] ? Words.Db.selfTestOk(r.passed, ms, info) : Words.Db.selfTestBad(r.passed, r.failed, info);
         } catch (Throwable t) {
             Log.e("DbScreen.selfTest", t);
+            ok[0] = false;
             return Words.Db.failed(String.valueOf(t));
         } finally {
             deleteAll(dir);

@@ -222,6 +222,51 @@ final class ImportTests {
         ck("כישלון באמצע: שום דבר לא נשאר", s.lists().size() == listsBefore && s.findFile("/x/1") == 0 && listBy(s, "חדשה אחת") == 0);
     }
 
+
+    // ---------- הבדיקה המלאה (FullCheck) ----------
+
+    /** opener — יוצר Store חדש. sabotage — האם המסד ה"אמיתי" חסר קישור אחד. */
+    private String fullReport(final StoreContract.Opener opener, File dir, final boolean sabotage, final boolean selfOk) throws Exception {
+        final File old = new File(dir, "olddata-" + sabotage + selfOk);
+        write(new File(old, Modes.DIR + "/ראשון/" + Paths.TREE), TREE1);
+        write(new File(old, Modes.DIR + "/ראשון/" + Sig.FILE), SIGS1);
+        write(new File(old, Modes.DIR + "/שני/" + Paths.TREE), TREE2);
+        write(new File(old, Modes.DIR + "/שני/" + Sig.FILE), SIGS2);
+        final int[] n = {0};
+        final File ctr = dir;
+        return FullCheck.run(old, new FullCheck.Env() {
+            @Override public String header() { return "HEADER"; }
+            @Override public String selfTest() { return "SELFTEST"; }
+            @Override public boolean selfTestOk() { return selfOk; }
+            @Override public Store openTemp() throws Exception { return opener.fresh(new File(ctr, "fc-" + (n[0]++) + ".txt")); }
+            @Override
+            public Store openReal(String mode) throws Exception {
+                if (!mode.equals("ראשון")) return null;
+                Store s = opener.fresh(new File(ctr, "fc-" + (n[0]++) + ".txt"));
+                Importer.run(s, Importer.load(new File(old, Modes.DIR + "/ראשון")), true);
+                if (sabotage) {
+                    long books = s.findByOrigin(Importer.originOf("ראשון", "ספרים"));
+                    s.removeMember(books, s.findFile(A));
+                }
+                return s;
+            }
+        });
+    }
+
+    void fullCheck(StoreContract.Opener opener, File dir) throws Exception {
+        String ok = fullReport(opener, dir, false, true);
+        ck("בדיקה מלאה: הכול תקין — פסק דין ירוק", ok.startsWith(Words.Db.VERDICT_OK));
+        ck("בדיקה מלאה: הדוח כולל כותרת, בדיקה עצמית ושני אופנים", ok.contains("HEADER") && ok.contains("SELFTEST")
+                && ok.contains(Words.Db.modeHead("ראשון")) && ok.contains(Words.Db.modeHead("שני")));
+        ck("בדיקה מלאה: אופן בלי מסד אמיתי מדווח כך", ok.contains(Words.Db.REAL_NONE));
+        ck("בדיקה מלאה: מה שלא מועתק מופיע", ok.contains("1 הפניות") && ok.contains("1 רשימות חכמות"));
+        ck("בדיקה מלאה: רשימה ריקה בלי סיבה מוצגת בשמה", ok.contains(Words.Db.modeEmpty(1, 1, 0)) && ok.contains("   חדשה") && ok.contains(Words.Db.modeEmpty(0, 0, 0)));
+        String bad = fullReport(opener, dir, true, true);
+        ck("בדיקה מלאה: מסד אמיתי שחסר בו קישור — פסק דין אדום", bad.startsWith(Words.Db.verdictBad(1)) && bad.contains(Words.Db.pRealBehind("ראשון", 0, 0, 0, 1)));
+        String self = fullReport(opener, dir, false, false);
+        ck("בדיקה מלאה: בדיקה עצמית שנכשלה — פסק דין אדום", self.startsWith(Words.Db.verdictBad(1)) && self.contains(Words.Db.pSelfTest()));
+    }
+
     // ---------- בלי Store ----------
 
     static void pure(StoreTests.Out o, File dir) throws Exception {

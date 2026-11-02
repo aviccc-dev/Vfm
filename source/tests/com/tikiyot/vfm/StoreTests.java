@@ -67,6 +67,7 @@ final class StoreTests {
             } finally {
                 s.close();
             }
+            new ImportTests(o, name).fullCheck(opener, new File(sub, "full"));
         } catch (Throwable x) {
             o.failed.add(name + " — העתקה: חריגה " + x);
         }
