@@ -1,6 +1,6 @@
 package com.tikiyot.vfm;
 
-// מסך מנוע המסד (מ0.1–מ0.5): רשימות, רשימות חכמות ("לא משויכים" כרשימה מיוחדת) ופריטים מעל Store, העתקה מהמנוע הישן,
+// מסך מנוע המסד (מ0.1–מ0.6): רשימות, רשימות חכמות ("לא משויכים" כרשימה מיוחדת) ופריטים מעל Store, העתקה מהמנוע הישן,
 // וגיבוי (מ0.5): עותק יומי ברקע כשנפתח המסד, עותק לפני פעולה מוחקת, "גיבוי עכשיו", שחזור, ומסד פגום שלא נפתח.
 // אחראי: להציג ולהפעיל. אסור לו: לדעת איך הנתונים נשמרים (Store, Backups), או לכתוב למנוע הישן (קורא בלבד).
 
@@ -276,7 +276,9 @@ public class DbScreen extends Activity {
                     t.setText(Words.Db.EMPTY);
                     rows.addView(t);
                 }
-                for (Store.Item it : all) rows.addView(row(it, store.count(it.id), -1, 0));
+                long home = Importer.home(store);                             // מ0.6: הבית — ראשון
+                for (Store.Item it : all) if (it.id == home) rows.addView(row(it, store.count(it.id), -1, 0));
+                for (Store.Item it : all) if (it.id != home) rows.addView(row(it, store.count(it.id), -1, 0));
                 for (Store.Item it : smarts) rows.addView(row(it, -1, -1, 0));
             } else if (cur == UNASSIGNED_ID) {
                 List<Store.Item> un = store.unassigned();
@@ -473,6 +475,7 @@ public class DbScreen extends Activity {
     /** מה מוצג כשם: חבורה — לפי הכותרת שבה, ואם אין — לפי החבר הראשון; כותרת — בין קווים. */
     private String label(Store.Item it) {
         if (it.type == Store.TITLE) return "── " + it.name + " ──";
+        if (it.type == Store.LIST && "1".equals(store.prop(it.id, Store.P_HOME))) return Words.Db.HOME_MARK + it.name;
         if (!isGroup(it)) return it.name;
         List<Store.Member> ms = store.members(it.id);
         String head = null;
@@ -1114,7 +1117,8 @@ public class DbScreen extends Activity {
 
     private static String reportText(boolean done, String mode, Importer.Report r) {
         return Words.Db.importReport(done, mode, r.listsNew, r.listsKnown, r.smartNew, r.smartKnown, r.filesNew, r.filesKnown,
-                r.filesUpdated, r.linksAdded, r.refsAdded, r.propsSet, r.rootFiles, r.badLines, r.refCycles, r.refMissing, r.smart, r.nested, r.live);
+                r.filesUpdated, r.linksAdded, r.refsAdded, r.propsSet, r.rootFiles, r.badLines, r.refCycles, r.refMissing, r.smart, r.nested, r.live)
+                + Words.Db.importHome(done, r.homeNew, r.homeTools, r.homeAdded, r.homeKnown, r.homeSkipped, r.homeMissing);
     }
 
     // ---------- בדיקה מלאה (מ0.2.2) ----------

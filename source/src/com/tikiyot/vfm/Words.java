@@ -2294,7 +2294,9 @@ public final class Words {
 
         public static final String APP_NAME_M = "מנהל קבצים וירטואלי · מ";
         public static final String MENU = "מסד נתונים (מ)";
-        public static final String TITLE = "מסד נתונים · מ0.5.1";
+        public static final String TITLE = "מסד נתונים · מ0.6";
+        /** מ0.6: שם רשימת הבית במסד (בתצוגה — עם 🏠). */
+        public static final String HOME_NAME = "בית", HOME_MARK = "🏠 ";
         public static final String NOTICE = "מנוע המסד בבנייה. גיבוי: עותק יומי כשיש שינוי, וגם לפני העתקה, מחיקת רשימה ומחיקה לצמיתות — בתיקייה \"גיבוי מסד\" שבתיקיית התוכנה. \"העתקה מהישן\" רק קוראת מהמנוע הישן ולא משנה בו דבר. לכל אופן עבודה מסד משלו — כל אופן נכנס למסד של אותו אופן. אפשר להעתיק שוב: מה שכבר הועתק מתעדכן ולא מוכפל. רשימה חכמה שומרת רק את התנאי — הקבצים נמצאים בכל פתיחה מהאינדקס.";
         public static final String NEED_ACCESS = "כדי לשמור את מונה המזהים בתיקיית הנתונים, התוכנה צריכה הרשאת גישה לכל הקבצים.";
         public static final String ALL_LISTS = "כל הרשימות";
@@ -2445,7 +2447,18 @@ public final class Words {
                 if (live > 0) sb.append("\n").append(live).append(" תיקיות חיות");
                 if (bad > 0) sb.append("\n").append(bad).append(" שורות פגומות בקובץ הרשימות");
             }
-            sb.append("\n\nגם הכלים, הפקודות וההגדרות עדיין לא מועתקים.");
+            sb.append("\n\nההגדרות הכלליות והעיצובים נשארים בקובצי טקסט (לא במסד).");
+            return sb.toString();
+        }
+
+        /** מ0.6: שורות מסך הבית בדוח ההעתקה. tools = 0 — אין כלים במקור (אין מה להוסיף). */
+        public static String importHome(boolean done, boolean isNew, int tools, int added, int known, int skipped, int missing) {
+            if (tools == 0) return "";
+            StringBuilder sb = new StringBuilder("\n\nמסך הבית: " + tools + " כלים במקור");
+            if (isNew) sb.append(done ? " · רשימת הבית נוצרה" : " · רשימת הבית תיווצר");
+            sb.append("\n").append(added).append(done ? " נכנסו לבית" : " ייכנסו לבית").append(" · ").append(known).append(" כבר היו בו");
+            if (skipped > 0) sb.append("\n").append(skipped).append(" כלים מסוג שלא מועתק (כפולים, פס, אפליקציה, סל, הגדרות)");
+            if (missing > 0) sb.append("\n").append(missing).append(" כלים שהרשימה או קובץ הפקודות שלהם לא קיימים");
             return sb.toString();
         }
 
@@ -2607,6 +2620,24 @@ public final class Words {
         public static String pRealBehind(String mode, int lists, int files, int updated, int links, int smart, int refs) {
             return "אופן " + mode + ": המסד האמיתי לא תואם למקור — חסרים " + lists + " רשימות, " + files + " קבצים, "
                     + updated + " עדכוני חתימה, " + links + " קישורים, " + smart + " רשימות חכמות, " + refs + " הפניות (העתקה חוזרת תשלים)";
+        }
+
+        /** מ0.6: הבית בבדיקה המלאה. */
+        public static String modeHome(int tools, int expected, int got, int skipped, int missing, boolean orderOk) {
+            return "   מסך הבית: כלים במקור " + tools + " · צפויים בבית " + expected + " · נמצאו " + got + " · סוג שלא מועתק " + skipped
+                    + " · בלי רשימה או קובץ " + missing + " · הסדר זהה: " + yn(orderOk);
+        }
+
+        public static String modeRealHome(int expected, int got, int behind) {
+            return "   מסך הבית במסד האמיתי: צפויים " + expected + " · נמצאו " + got + " · העתקה חוזרת תוסיף " + behind;
+        }
+
+        public static String pHome(String mode, int expected, int got) {
+            return "אופן " + mode + ": מסך הבית לא הועתק נכון — צפויים " + expected + " כלים, בבית " + got + " (או בסדר אחר)";
+        }
+
+        public static String pHomeBehind(String mode, int n) {
+            return "אופן " + mode + ": במסד האמיתי חסרים " + n + " כלים בבית (העתקה חוזרת תשלים)";
         }
 
         public static String pSmartMissing(String mode, int n) {

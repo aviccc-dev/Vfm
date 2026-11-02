@@ -20,6 +20,9 @@ public interface Store {
     /** מ0.4: רשימה שהיא חבורה (רשימה מוטמעת, "1"). */
     String P_GROUP = "group";
 
+    /** מ0.6: הרשימה שהיא מסך הבית של האופן ("1"). אחת לכל מסד; החברים שלה — הכלים, לפי הסדר. */
+    String P_HOME = "home";
+
     /** מ0.4, פנימי: פריט בסל המחזור (מתי) ומאיפה הוא יצא ("רשימה:מקום,…"). מנוהלים רק בידי trash/restore. */
     String P_TRASHED = "trashed", P_TRASH_FROM = "trash_from";
 

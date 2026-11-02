@@ -932,7 +932,7 @@ cd $S; rm -rf out gen bld
 [ "$S" != "$DIR" ] && rm -rf $S
 ls -la $OUT
 ===== קובץ: build/m-version.txt =====
-8 מ0.5.1
+9 מ0.6
 ===== קובץ: build/test.sh =====
 #!/bin/bash
 # בדיקות על המחשב (80). יוצא בכישלון אם בדיקה אחת נכשלה — ואז build.sh לא בונה.
@@ -9637,7 +9637,7 @@ final class DbDump {
 ===== קובץ: src/com/tikiyot/vfm/DbScreen.java =====
 package com.tikiyot.vfm;
 
-// מסך מנוע המסד (מ0.1–מ0.5): רשימות, רשימות חכמות ("לא משויכים" כרשימה מיוחדת) ופריטים מעל Store, העתקה מהמנוע הישן,
+// מסך מנוע המסד (מ0.1–מ0.6): רשימות, רשימות חכמות ("לא משויכים" כרשימה מיוחדת) ופריטים מעל Store, העתקה מהמנוע הישן,
 // וגיבוי (מ0.5): עותק יומי ברקע כשנפתח המסד, עותק לפני פעולה מוחקת, "גיבוי עכשיו", שחזור, ומסד פגום שלא נפתח.
 // אחראי: להציג ולהפעיל. אסור לו: לדעת איך הנתונים נשמרים (Store, Backups), או לכתוב למנוע הישן (קורא בלבד).
 
@@ -9913,7 +9913,9 @@ public class DbScreen extends Activity {
                     t.setText(Words.Db.EMPTY);
                     rows.addView(t);
                 }
-                for (Store.Item it : all) rows.addView(row(it, store.count(it.id), -1, 0));
+                long home = Importer.home(store);                             // מ0.6: הבית — ראשון
+                for (Store.Item it : all) if (it.id == home) rows.addView(row(it, store.count(it.id), -1, 0));
+                for (Store.Item it : all) if (it.id != home) rows.addView(row(it, store.count(it.id), -1, 0));
                 for (Store.Item it : smarts) rows.addView(row(it, -1, -1, 0));
             } else if (cur == UNASSIGNED_ID) {
                 List<Store.Item> un = store.unassigned();
@@ -10110,6 +10112,7 @@ public class DbScreen extends Activity {
     /** מה מוצג כשם: חבורה — לפי הכותרת שבה, ואם אין — לפי החבר הראשון; כותרת — בין קווים. */
     private String label(Store.Item it) {
         if (it.type == Store.TITLE) return "── " + it.name + " ──";
+        if (it.type == Store.LIST && "1".equals(store.prop(it.id, Store.P_HOME))) return Words.Db.HOME_MARK + it.name;
         if (!isGroup(it)) return it.name;
         List<Store.Member> ms = store.members(it.id);
         String head = null;
@@ -10751,7 +10754,8 @@ public class DbScreen extends Activity {
 
     private static String reportText(boolean done, String mode, Importer.Report r) {
         return Words.Db.importReport(done, mode, r.listsNew, r.listsKnown, r.smartNew, r.smartKnown, r.filesNew, r.filesKnown,
-                r.filesUpdated, r.linksAdded, r.refsAdded, r.propsSet, r.rootFiles, r.badLines, r.refCycles, r.refMissing, r.smart, r.nested, r.live);
+                r.filesUpdated, r.linksAdded, r.refsAdded, r.propsSet, r.rootFiles, r.badLines, r.refCycles, r.refMissing, r.smart, r.nested, r.live)
+                + Words.Db.importHome(done, r.homeNew, r.homeTools, r.homeAdded, r.homeKnown, r.homeSkipped, r.homeMissing);
     }
 
     // ---------- בדיקה מלאה (מ0.2.2) ----------
@@ -15098,7 +15102,7 @@ package com.tikiyot.vfm;
 // אחראי: לבדוק את שכבת האחסון (בדיקה עצמית), ולכל אופן עבודה במנוע הישן — העתקה מלאה למסד זמני ובדיקה מול המקור
 // (רשימות, חברות, קבצים, חתימות, רשימות חכמות ותנאיהן, "לא משויכים", העתקה חוזרת, רשימות ריקות), הערכת התנאים מול האינדקס
 // (מ0.3), ואת המסד האמיתי של אותו אופן מול המקור (בלי לשנות אותו). מ0.5: עותק, גיבוי טקסט ושחזור של המסד האמיתי —
-// הכול על עותקים זמניים — ובדיקת הגיבויים שבתיקייה מול הרישום.
+// הכול על עותקים זמניים — ובדיקת הגיבויים שבתיקייה מול הרישום. מ0.6: מסך הבית — אותם כלים ובאותו סדר.
 // אסור לו: לשנות את המנוע הישן, את המסדים האמיתיים (רק תצוגה מקדימה עליהם) או את הגיבויים (רק קריאה).
 
 import java.io.File;
@@ -15195,10 +15199,14 @@ final class FullCheck {
             Found f = verify(t, src, nodes, paths, defs, true);
             Importer.Report again = Importer.run(t, src, false);
             long ms = System.currentTimeMillis() - t0;
-            out.append(Words.Db.modeTemp(t.lists().size(), r.filesNew, f.lists, f.membersWrong, f.filesMissing, f.sigWrong,
+            int tLists = t.lists().size() - (Importer.home(t) != 0 ? 1 : 0);   // מ0.6: רשימת הבית אינה רשימה מהעץ
+            out.append(Words.Db.modeTemp(tLists, r.filesNew, f.lists, f.membersWrong, f.filesMissing, f.sigWrong,
                     again.nothingToDo(), t.check() == null, ms)).append("\n");
-            add(problems, mode, f, nodes.size() - 1, t.lists().size(), again.nothingToDo(), t.check());
-            int[] un = unassigned(t, nodes);
+            add(problems, mode, f, nodes.size() - 1, tLists, again.nothingToDo(), t.check());
+            Home hm = home(t, src);
+            out.append(Words.Db.modeHome(hm.tools, hm.expected.size(), hm.got.size(), hm.skipped, hm.missing, hm.exact())).append("\n");
+            if (!hm.exact() || r.homeAdded != hm.expected.size()) problems.add(Words.Db.pHome(mode, hm.expected.size(), hm.got.size()));
+            int[] un = unassigned(t, nodes, hm.commandFiles);
             out.append(Words.Db.modeTempSmart(defs.size(), f.smartFound, f.smartWrong, un[0], un[1])).append("\n");
             int[] rf = refs(t, src, nodes, f);
             int cyc = cycles(t);
@@ -15209,7 +15217,15 @@ final class FullCheck {
             if (un[0] != un[1] || un[2] != 0) problems.add(Words.Db.pUnassigned(mode, un[0], un[1] + un[2]));
             if (f.smartMissing > 0) problems.add(Words.Db.pSmartMissing(mode, f.smartMissing));
             if (f.smartWrong > 0) problems.add(Words.Db.pSmartWrong(mode, f.smartWrong));
-            evaluate(out, problems, mode, defs, env.finder());
+            List<Importer.Smart> all = new ArrayList<Importer.Smart>(defs);   // מ0.6: גם התנאים של הכלים החכמים שבבית
+            Set<String> keys = new HashSet<String>();
+            for (Importer.Smart d : defs) keys.add(d.key);
+            for (Structure.Func tf : src.tools())
+                if (FnSmart.KIND.equals(tf.kind)) {
+                    Importer.Smart d = src.toolSmart(tf);
+                    if (keys.add(d.key)) all.add(d);
+                }
+            evaluate(out, problems, mode, all, env.finder());
             empties(out, src, nodes, t);
         } finally {
             t.close();
@@ -15239,6 +15255,9 @@ final class FullCheck {
             int[] rf = refs(real, src, nodes, f);
             int cyc = cycles(real);
             out.append(Words.Db.modeRealRefs(rf[0], cyc)).append("\n");
+            Home hm = home(real, src);
+            out.append(Words.Db.modeRealHome(hm.expected.size(), hm.got.size(), pre.homeAdded)).append("\n");
+            if (pre.homeAdded > 0 || !hm.present()) problems.add(Words.Db.pHomeBehind(mode, Math.max(pre.homeAdded, 1)));
             if (rf[3] > 0 && pre.refsAdded == 0) problems.add(Words.Db.pRefs(mode, rf[3]));   // חסרות שהעתקה חוזרת תשלים — כבר ב"לא תואם"
             if (cyc > 0) problems.add(Words.Db.pCycles(mode, cyc));
             if (pre.listsNew + pre.filesNew + pre.filesUpdated + pre.linksAdded + pre.smartNew + pre.refsAdded > 0 || f.listsMissing > 0
@@ -15419,6 +15438,54 @@ final class FullCheck {
         return f;
     }
 
+    // ---------- מ0.6: מסך הבית ----------
+
+    /** מה שבבית מול מה שצפוי מהכלים במקור. expected — לפי סדר הכלים, בלי כפילות; 0 = כלי שהפריט שלו לא נמצא במסד. */
+    private static final class Home {
+        int tools, skipped, missing;
+        final List<Long> expected = new ArrayList<Long>(), got = new ArrayList<Long>();
+        final Set<String> commandFiles = new HashSet<String>();
+
+        /** בדיוק אותם כלים ובאותו סדר (במסד שנוצר עכשיו מההעתקה). */
+        boolean exact() {
+            return !expected.contains(0L) && got.equals(expected);
+        }
+
+        /** כל הצפויים נמצאים (במסד האמיתי — המשתמש רשאי לסדר ולהוסיף). */
+        boolean present() {
+            return !expected.contains(0L) && got.containsAll(expected);
+        }
+    }
+
+    /** מחפש כל כלי במסד בדרך משלו (לפי מקור או מסלול) — לא דרך ההעתקה — ומשווה לחברי רשימת הבית. */
+    private static Home home(Store s, Importer.Source src) {
+        Home h = new Home();
+        java.util.LinkedHashSet<Long> want = new java.util.LinkedHashSet<Long>();
+        for (Structure.Func f : src.tools()) {
+            h.tools++;
+            if (FnVirtual.KIND.equals(f.kind)) {
+                long id = s.findByOrigin(Importer.originOf(src.mode, Tree.fullLabel(Importer.toolList(f))));
+                if (id == 0) h.missing++;
+                else want.add(id);
+            } else if (FnSmart.KIND.equals(f.kind)) {
+                want.add(s.findByOrigin(Importer.smartOrigin(src.mode, src.toolSmart(f).key)));
+            } else if (FnCommand.KIND.equals(f.kind)) {
+                String p = Importer.toolFile(f);
+                if (p.isEmpty()) h.missing++;
+                else {
+                    h.commandFiles.add(p);
+                    want.add(s.findFile(p));
+                }
+            } else {
+                h.skipped++;
+            }
+        }
+        h.expected.addAll(want);
+        long id = Importer.home(s);
+        if (id != 0) for (Store.Member m : s.members(id)) h.got.add(m.item.id);
+        return h;
+    }
+
     private static boolean eq(String a, String b) {
         return (a == null ? "" : a).equals(b == null ? "" : b);
     }
@@ -15427,8 +15494,8 @@ final class FullCheck {
      * "לא משויכים" במסד הזמני מול המצופה: קבצים שבשורש המקור ואינם באף רשימה. מחזיר [צפוי, נמצא, פריטים שאינם קבצים].
      * (רעיון בלי רשימה אינו אמור להיווצר מהעתקה.)
      */
-    private static int[] unassigned(Store t, List<Tree.Node> nodes) {
-        Set<String> inLists = new HashSet<String>(), root = new HashSet<String>();
+    private static int[] unassigned(Store t, List<Tree.Node> nodes, Set<String> inHome) {
+        Set<String> inLists = new HashSet<String>(inHome), root = new HashSet<String>();   // מ0.6: קובץ פקודות בבית — משויך
         for (Tree.Entry e : nodes.get(0).entries) if (!e.bad) root.add(e.path);
         for (int i = 1; i < nodes.size(); i++) for (Tree.Entry e : nodes.get(i).entries) if (!e.bad) inLists.add(e.path);
         root.removeAll(inLists);
@@ -16676,6 +16743,7 @@ package com.tikiyot.vfm;
 //    ומ־מ0.3 גם רשימות חכמות: כל ההגדרות הנפוצות (עצמאיות), וכל @חכמה ברשימה ידנית — חברות של הרשימה החכמה בה
 //    (פנימית שמקושרת להגדרה נפוצה = אותו פריט, כמו בישן). התנאי נשמר כטקסט, כפי שהוא.
 //    ומ־מ0.4 הפניות בין רשימות (@רשימה): אותה רשימה נכנסת גם לרשימה המפנה (חברות, בלי "הורה").
+//    ומ־מ0.6 מסך הבית: רשימה אחת מסומנת (P_HOME), והכלים בה לפי הסדר — רשימה ידנית (אותה רשימה), חכמה, קובץ פקודות.
 //  - לא מועתק, ונספר בדוח: הפניה שהייתה סוגרת מעגל (במנוע הישן ייתכן; במסד לא), הפניה לרשימה שאינה קיימת,
 //    @חכמה שאינה מובילה להגדרה (נמחקה, כלי, כפולים), "רשימות בתוך" שבתוך חכמה, תיקיות חיות (@תיקייה), שורות
 //    פגומות. שום דבר לא נמחק או משתנה במקור.
@@ -16711,6 +16779,30 @@ final class Importer {
     /** מפתח המקור של רשימה חכמה: האופן ומזהה ההגדרה בקובץ הראשי (s-… נפוצה, p-… פנימית) — המזהה יציב במנוע הישן. */
     static String smartOrigin(String mode, String key) {
         return "ini:" + mode + ":S:" + key;  // תחביר
+    }
+
+    /** מ0.6: מפתח המקור של רשימת הבית של האופן. */
+    static String homeOrigin(String mode) {
+        return "ini:" + mode + ":H";  // תחביר
+    }
+
+    /** מ0.6: רשימת הבית במסד (לפי הסימון, לא לפי המקור — גם בית שלא הגיע מהעתקה), או 0. */
+    static long home(Store s) {
+        for (Store.Item it : s.lists()) if ("1".equals(s.prop(it.id, Store.P_HOME))) return it.id;
+        return 0;
+    }
+
+    /** מ0.6: מסלול הרשימה של כלי רשימה ידנית. כלי ישן בלי רשימה — הרשימה בשמו (כמו FnVirtual.ensureOwn). */
+    static List<String> toolList(Structure.Func f) {
+        String p = f.params.get(FnVirtual.LIST);
+        return Tree.parsePath(p == null || p.trim().isEmpty() ? f.name : p);
+    }
+
+    /** מ0.6: מסלול קובץ הפקודות של כלי פקודה, או "" (אין / לא מסלול מלא). */
+    static String toolFile(Structure.Func f) {
+        String p = f.params.get(FnCommand.FILE);
+        p = p == null ? "" : p.trim();
+        return p.startsWith("/") ? p : "";
     }
 
     /** הגדרה של רשימה חכמה במנוע הישן: מה שמועתק. nested = כמה "רשימות בתוך" יש בה (לא מועתקות במ0.3). */
@@ -16823,6 +16915,22 @@ final class Importer {
             for (Tree.Node c : n.children) wanted(c, out);
         }
 
+        /** מ0.6: הכלים שבמסך הבית, לפי הסדר במסך (הסביבות הישנות כבר הוסבו לרשימות בפתיחת התוכנה הישנה). */
+        List<Structure.Func> tools() {
+            if (ini == null) return new ArrayList<Structure.Func>();
+            return Structure.parse(ini).direct;
+        }
+
+        /** מ0.6: ההגדרה של כלי רשימה חכמה בבית: מקושר להגדרה נפוצה — אותו פריט כמו הנפוצה; אחרת — ההגדרות שבכלי עצמו. */
+        Smart toolSmart(Structure.Func f) {
+            String link = f.params.get(SmartLists.LINK);
+            if (link != null && !link.isEmpty()) {
+                Structure.Func c = Structure.byId(ini, link);
+                if (c != null && c.name.startsWith(SmartLists.SECTION)) return resolve(link);
+            }
+            return new Smart(f.id, f.name, f.params);
+        }
+
         /** כמה הפניות @חכמה אינן מובילות להגדרה (ולכן לא מועתקות). */
         int skippedSmart() {
             return skipped(tree.root);
@@ -16848,13 +16956,20 @@ final class Importer {
         int badLines, smart, live, nested;
         /** הפניות בין רשימות (מ0.4): נוספו / כבר היו / לא הועתקו כי היו סוגרות מעגל / לרשימה שלא קיימת. */
         int refsAdded, refsKnown, refCycles, refMissing;
+        /**
+         * מסך הבית (מ0.6): כלים במקור / נכנסו לבית / כבר היו בו / סוג שלא מועתק (כפולים, פס, אפליקציה, סל, הגדרות) /
+         * הרשימה או הקובץ שלהם לא קיימים (או שהיו סוגרים מעגל). homeNew — רשימת הבית נוצרה בריצה הזו.
+         */
+        int homeTools, homeAdded, homeKnown, homeSkipped, homeMissing;
+        boolean homeNew;
 
         boolean nothingToDo() {
-            return listsNew == 0 && smartNew == 0 && refsAdded == 0 && filesNew == 0 && filesUpdated == 0 && linksAdded == 0 && propsSet == 0;
+            return listsNew == 0 && smartNew == 0 && refsAdded == 0 && filesNew == 0 && filesUpdated == 0 && linksAdded == 0 && propsSet == 0
+                    && homeAdded == 0 && !homeNew;
         }
 
         boolean skippedAny() {
-            return badLines + refCycles + refMissing + smart + live + nested > 0;
+            return badLines + refCycles + refMissing + smart + live + nested + homeSkipped + homeMissing > 0;
         }
     }
 
@@ -16972,6 +17087,62 @@ final class Importer {
                 file(e);
                 r.rootFiles++;
             }
+            home();
+        }
+
+        /**
+         * מ0.6, אחרון — כשכל הרשימות, החכמות והקבצים כבר קיימים: רשימת הבית, והכלים בה לפי הסדר. רשימה ידנית — אותה רשימה
+         * (הפניה); חכמה — הפריט שלה; פקודה — פריט הקובץ של קובץ הפקודות. שאר הסוגים לא מועתקים (נספרים). כמו בכל רשימה
+         * שכבר הועתקה: מה שכבר בבית נשאר במקומו, וכלי חדש נוסף לסוף.
+         */
+        void home() {
+            long h = s.findByOrigin(homeOrigin(src.mode));
+            if (h == 0) h = Importer.home(s);
+            for (Structure.Func f : src.tools()) {
+                r.homeTools++;
+                long id = tool(f);
+                if (id == 0) continue;
+                if (h == 0) {                                                 // נוצרת רק כשיש מה להכניס — לא בית ריק
+                    h = s.createList(Words.Db.HOME_NAME, 0);
+                    s.setOrigin(h, homeOrigin(src.mode));
+                    s.setProp(h, Store.P_HOME, "1");
+                    r.homeNew = true;
+                }
+                if (s.makesCycle(h, id)) {
+                    r.homeMissing++;
+                    continue;
+                }
+                if (s.addMember(h, id)) r.homeAdded++;
+                else r.homeKnown++;
+            }
+        }
+
+        /** הפריט שהכלי מצביע עליו, או 0 (ואז נספר: סוג שלא מועתק, או שאין למה להצביע). */
+        long tool(Structure.Func f) {
+            if (FnVirtual.KIND.equals(f.kind)) {
+                long id = s.findByOrigin(originOf(src.mode, Tree.fullLabel(toolList(f))));
+                if (id == 0) {
+                    r.homeMissing++;
+                    return 0;
+                }
+                prop(id, Store.P_DESC, f.description, false);
+                return id;
+            }
+            if (FnSmart.KIND.equals(f.kind)) {
+                long id = smart(src.toolSmart(f));
+                prop(id, Store.P_DESC, f.description, false);
+                return id;
+            }
+            if (FnCommand.KIND.equals(f.kind)) {
+                String p = toolFile(f);
+                if (p.isEmpty()) {
+                    r.homeMissing++;
+                    return 0;
+                }
+                return file(p, -1);
+            }
+            r.homeSkipped++;
+            return 0;
         }
 
         void count(Tree.Node n) {
@@ -17074,15 +17245,20 @@ final class Importer {
 
         /** פריט הקובץ של הרשומה: קיים — מתעדכן אם החתימה במקור שונה; חדש — נוצר. */
         long file(Tree.Entry e) {
-            Long seen = files.get(e.path);
+            return file(e.path, e.size);
+        }
+
+        /** כמו file(Entry), למסלול (מ0.6: גם קובץ פקודות שבבית). listedSize — הגודל שנרשם, -1 לא ידוע. */
+        long file(String path, long listedSize) {
+            Long seen = files.get(path);
             if (seen != null) return seen;
-            Sig.Entry g = src.sigs.get(e.path);
-            long size = g != null ? g.size : e.size;
+            Sig.Entry g = src.sigs.get(path);
+            long size = g != null ? g.size : listedSize;
             long mtime = g != null ? g.mtime : 0;
             String sig = g != null ? g.sig : null;
-            long id = s.findFile(e.path);
+            long id = s.findFile(path);
             if (id == 0) {
-                id = s.createFile(new Store.FileInfo(e.path, driveOf(e.path), size, mtime, sig));
+                id = s.createFile(new Store.FileInfo(path, driveOf(path), size, mtime, sig));
                 r.filesNew++;
                 if (sig != null) r.filesWithSig++;
             } else {
@@ -17096,7 +17272,7 @@ final class Importer {
                 }
                 if (sig != null) r.filesWithSig++;
             }
-            files.put(e.path, id);
+            files.put(path, id);
             return id;
         }
 
@@ -34422,6 +34598,9 @@ public interface Store {
     /** מ0.4: רשימה שהיא חבורה (רשימה מוטמעת, "1"). */
     String P_GROUP = "group";
 
+    /** מ0.6: הרשימה שהיא מסך הבית של האופן ("1"). אחת לכל מסד; החברים שלה — הכלים, לפי הסדר. */
+    String P_HOME = "home";
+
     /** מ0.4, פנימי: פריט בסל המחזור (מתי) ומאיפה הוא יצא ("רשימה:מקום,…"). מנוהלים רק בידי trash/restore. */
     String P_TRASHED = "trashed", P_TRASH_FROM = "trash_from";
 
@@ -44336,7 +44515,9 @@ public final class Words {
 
         public static final String APP_NAME_M = "מנהל קבצים וירטואלי · מ";
         public static final String MENU = "מסד נתונים (מ)";
-        public static final String TITLE = "מסד נתונים · מ0.5.1";
+        public static final String TITLE = "מסד נתונים · מ0.6";
+        /** מ0.6: שם רשימת הבית במסד (בתצוגה — עם 🏠). */
+        public static final String HOME_NAME = "בית", HOME_MARK = "🏠 ";
         public static final String NOTICE = "מנוע המסד בבנייה. גיבוי: עותק יומי כשיש שינוי, וגם לפני העתקה, מחיקת רשימה ומחיקה לצמיתות — בתיקייה \"גיבוי מסד\" שבתיקיית התוכנה. \"העתקה מהישן\" רק קוראת מהמנוע הישן ולא משנה בו דבר. לכל אופן עבודה מסד משלו — כל אופן נכנס למסד של אותו אופן. אפשר להעתיק שוב: מה שכבר הועתק מתעדכן ולא מוכפל. רשימה חכמה שומרת רק את התנאי — הקבצים נמצאים בכל פתיחה מהאינדקס.";
         public static final String NEED_ACCESS = "כדי לשמור את מונה המזהים בתיקיית הנתונים, התוכנה צריכה הרשאת גישה לכל הקבצים.";
         public static final String ALL_LISTS = "כל הרשימות";
@@ -44487,7 +44668,18 @@ public final class Words {
                 if (live > 0) sb.append("\n").append(live).append(" תיקיות חיות");
                 if (bad > 0) sb.append("\n").append(bad).append(" שורות פגומות בקובץ הרשימות");
             }
-            sb.append("\n\nגם הכלים, הפקודות וההגדרות עדיין לא מועתקים.");
+            sb.append("\n\nההגדרות הכלליות והעיצובים נשארים בקובצי טקסט (לא במסד).");
+            return sb.toString();
+        }
+
+        /** מ0.6: שורות מסך הבית בדוח ההעתקה. tools = 0 — אין כלים במקור (אין מה להוסיף). */
+        public static String importHome(boolean done, boolean isNew, int tools, int added, int known, int skipped, int missing) {
+            if (tools == 0) return "";
+            StringBuilder sb = new StringBuilder("\n\nמסך הבית: " + tools + " כלים במקור");
+            if (isNew) sb.append(done ? " · רשימת הבית נוצרה" : " · רשימת הבית תיווצר");
+            sb.append("\n").append(added).append(done ? " נכנסו לבית" : " ייכנסו לבית").append(" · ").append(known).append(" כבר היו בו");
+            if (skipped > 0) sb.append("\n").append(skipped).append(" כלים מסוג שלא מועתק (כפולים, פס, אפליקציה, סל, הגדרות)");
+            if (missing > 0) sb.append("\n").append(missing).append(" כלים שהרשימה או קובץ הפקודות שלהם לא קיימים");
             return sb.toString();
         }
 
@@ -44649,6 +44841,24 @@ public final class Words {
         public static String pRealBehind(String mode, int lists, int files, int updated, int links, int smart, int refs) {
             return "אופן " + mode + ": המסד האמיתי לא תואם למקור — חסרים " + lists + " רשימות, " + files + " קבצים, "
                     + updated + " עדכוני חתימה, " + links + " קישורים, " + smart + " רשימות חכמות, " + refs + " הפניות (העתקה חוזרת תשלים)";
+        }
+
+        /** מ0.6: הבית בבדיקה המלאה. */
+        public static String modeHome(int tools, int expected, int got, int skipped, int missing, boolean orderOk) {
+            return "   מסך הבית: כלים במקור " + tools + " · צפויים בבית " + expected + " · נמצאו " + got + " · סוג שלא מועתק " + skipped
+                    + " · בלי רשימה או קובץ " + missing + " · הסדר זהה: " + yn(orderOk);
+        }
+
+        public static String modeRealHome(int expected, int got, int behind) {
+            return "   מסך הבית במסד האמיתי: צפויים " + expected + " · נמצאו " + got + " · העתקה חוזרת תוסיף " + behind;
+        }
+
+        public static String pHome(String mode, int expected, int got) {
+            return "אופן " + mode + ": מסך הבית לא הועתק נכון — צפויים " + expected + " כלים, בבית " + got + " (או בסדר אחר)";
+        }
+
+        public static String pHomeBehind(String mode, int n) {
+            return "אופן " + mode + ": במסד האמיתי חסרים " + n + " כלים בבית (העתקה חוזרת תשלים)";
         }
 
         public static String pSmartMissing(String mode, int n) {
@@ -45909,7 +46119,9 @@ final class ImportTests {
                 && a.filesUpdated == b.filesUpdated && a.filesWithSig == b.filesWithSig && a.linksAdded == b.linksAdded
                 && a.linksKnown == b.linksKnown && a.rootFiles == b.rootFiles && a.propsSet == b.propsSet
                 && a.badLines == b.badLines && a.refsAdded == b.refsAdded && a.refsKnown == b.refsKnown && a.refCycles == b.refCycles
-                && a.refMissing == b.refMissing && a.smart == b.smart && a.live == b.live;
+                && a.refMissing == b.refMissing && a.smart == b.smart && a.live == b.live
+                && a.homeTools == b.homeTools && a.homeAdded == b.homeAdded && a.homeKnown == b.homeKnown
+                && a.homeSkipped == b.homeSkipped && a.homeMissing == b.homeMissing && a.homeNew == b.homeNew;
     }
 
     private static List<String> names(Store s, long list) {
@@ -46140,6 +46352,102 @@ final class ImportTests {
         ck("חכמות: קישור בין שתי פנימיות לא נתקע — כל אחת היא הגדרה בפני עצמה", lp.wanted().size() == 1 && "x".equals(lp.wanted().get(0).cond));
     }
 
+    // ---------- מסך הבית (מ0.6) ----------
+
+    static final String CMD = "/x/גיבוי.vbat";
+
+    /** קובץ הפקודות של הבית נמצא גם בשורש הרשימות — כדי לבדוק שהוא לא נספר ב"לא משויכים". */
+    static final String HOME_TREE = "#1 ספרים\n/x/a.pdf | 1\n#1 מועדים\n#2 מועדים / פסח\n" + CMD + " | 3\n";
+
+    /** עשרה כלים: שתי רשימות, חכמה מקושרת וחכמה עצמאית, כפולים, פקודה, רשימה שאינה, פקודה בלי קובץ, אותה רשימה שוב, ישן בלי רשימה. */
+    static final String HOME_INI = ""
+            + "[הגדרה נפוצה: אחרונים]\nמזהה = s-rec\nתנאי = תאריך:שבוע\n\n"
+            + "[פונקציה: פסח]\nמזהה = f-1\nסוג = וירטואלי\nתיאור = לחג\nרשימה = מועדים/פסח\n\n"
+            + "[פונקציה: ספרים]\nמזהה = f-2\nסוג = וירטואלי\nרשימה = ספרים\n\n"
+            + "[פונקציה: חדשים]\nמזהה = f-3\nסוג = חכמה\nהגדרה נפוצה = s-rec\n\n"
+            + "[פונקציה: תמונות]\nמזהה = f-4\nסוג = חכמה\nתנאי = סוג:תמונות\nמיון = שם\n\n"
+            + "[פונקציה: כפולים]\nמזהה = f-5\nסוג = כפולים\n\n"
+            + "[פונקציה: גיבוי]\nמזהה = f-6\nסוג = פקודה\nקובץ = " + CMD + "\n\n"
+            + "[פונקציה: חסרה]\nמזהה = f-7\nסוג = וירטואלי\nרשימה = אין כזו\n\n"
+            + "[פונקציה: פקודה ריקה]\nמזהה = f-8\nסוג = פקודה\n\n"
+            + "[פונקציה: שוב ספרים]\nמזהה = f-9\nסוג = וירטואלי\nרשימה = ספרים\n\n"
+            + "[פונקציה: ישן]\nמזהה = f-10\nסוג = וירטואלי\n";
+
+    static void writeHomeMode(File mode) throws IOException {
+        write(new File(mode, Paths.TREE), HOME_TREE);
+        write(new File(new File(mode, Paths.SETTINGS), Paths.MAIN), HOME_INI);
+    }
+
+    /** מסד חדש: הבית נוצר עם הכלים לפי הסדר; מה שלא מועתק נספר; העתקה חוזרת; מה שהמשתמש שינה; בית שנמחק; מעגל. */
+    void home(Store s, File dir) throws Exception {
+        File m = new File(dir, "בית");
+        writeHomeMode(m);
+        Importer.Source src = Importer.load(m);
+        ck("בית: נקראו עשרה כלים לפי הסדר", src.tools().size() == 10 && src.tools().get(0).name.equals("פסח") && src.tools().get(9).name.equals("ישן"));
+        ck("בית: כלי חכם מקושר — אותה הגדרה כמו הנפוצה; עצמאי — ההגדרה שבו", src.toolSmart(src.tools().get(2)).key.equals("s-rec")
+                && src.toolSmart(src.tools().get(3)).key.equals("f-4") && "סוג:תמונות".equals(src.toolSmart(src.tools().get(3)).cond));
+
+        Importer.Report pre = Importer.run(s, src, false);
+        ck("בית: תצוגה מקדימה לא שומרת", s.lists().isEmpty() && Importer.home(s) == 0 && pre.homeNew);
+        Importer.Report r = Importer.run(s, src, true);
+        ck("בית: הדוח זהה לתצוגה המקדימה", same(pre, r));
+        ck("בית: 10 כלים — 5 נכנסו, אחד כבר היה (אותה רשימה פעמיים), סוג אחד לא מועתק, 3 בלי רשימה או קובץ",
+                r.homeTools == 10 && r.homeAdded == 5 && r.homeKnown == 1 && r.homeSkipped == 1 && r.homeMissing == 3 && r.homeNew && r.skippedAny());
+        long h = Importer.home(s);
+        ck("בית: רשימה אחת מסומנת, בשם בית, ומקורה האופן", h != 0 && s.item(h).name.equals(Words.Db.HOME_NAME)
+                && s.findByOrigin(Importer.homeOrigin("בית")) == h && "1".equals(s.prop(h, Store.P_HOME)));
+        ck("בית: הכלים לפי הסדר", names(s, h).equals(Arrays.asList("פסח", "ספרים", "אחרונים", "תמונות", "גיבוי.vbat")));
+        long pesach = listIn(s, "בית", "מועדים / פסח"), books = listIn(s, "בית", "ספרים");
+        long rec = s.findByOrigin(Importer.smartOrigin("בית", "s-rec")), img = s.findByOrigin(Importer.smartOrigin("בית", "f-4"));
+        ck("בית: רשימה — אותה רשימה (גם במקומה), לא עותק", s.members(h).get(0).item.id == pesach && s.listsOf(pesach).size() == 2
+                && s.members(h).get(1).item.id == books);
+        ck("בית: חכמה מקושרת — הפריט של הנפוצה, בלי פריט משלה", s.members(h).get(2).item.id == rec
+                && s.findByOrigin(Importer.smartOrigin("בית", "f-3")) == 0);
+        ck("בית: חכמה עצמאית — פריט משלה עם התנאי והמיון", img != 0 && s.item(img).type == Store.SMART && s.item(img).name.equals("תמונות")
+                && "סוג:תמונות".equals(s.prop(img, Store.P_COND)) && "שם".equals(s.prop(img, Store.P_SORT)));
+        ck("בית: פקודה — פריט הקובץ (אותו פריט כמו בשורש הרשימות)", s.members(h).get(4).item.id == s.findFile(CMD) && s.item(s.findFile(CMD)).type == Store.FILE);
+        ck("בית: קובץ הפקודות בבית אינו \"לא משויך\"", s.unassigned().isEmpty());
+        ck("בית: התיאור של הכלי עבר לרשימה שלא היה לה", "לחג".equals(s.prop(pesach, Store.P_DESC)));
+        ck("בית: המסד תקין", s.check() == null);
+
+        long last = s.lastId();
+        Importer.Report again = Importer.run(s, src, true);
+        ck("בית חוזרת: אין שינוי ואין מספרים חדשים", again.nothingToDo() && again.homeKnown == 6 && again.homeAdded == 0 && !again.homeNew
+                && s.lastId() == last);
+
+        // המשתמש מסדר ומוציא: הסדר שלו נשמר, ומה שהוציא חוזר לסוף
+        s.move(h, img, 0);
+        s.removeMember(h, s.findFile(CMD));
+        Importer.Report upd = Importer.run(s, src, true);
+        ck("בית: הסדר של המשתמש נשמר, והפקודה שהוצאה חוזרת לסוף", upd.homeAdded == 1
+                && names(s, h).equals(Arrays.asList("תמונות", "פסח", "ספרים", "אחרונים", "גיבוי.vbat")));
+
+        // הבית נמחק: חוזר בהעתקה חוזרת, והרשימות עצמן לא נפגעו
+        s.deleteList(h);
+        ck("בית: מחיקת הבית לא מוחקת את הרשימות שבו", s.item(pesach) != null && s.item(books) != null && Importer.home(s) == 0);
+        Importer.Report back = Importer.run(s, src, true);
+        long h2 = Importer.home(s);
+        ck("בית: בית שנמחק נוצר שוב, עם כל הכלים", back.homeNew && h2 != 0 && h2 != h && names(s, h2).size() == 5);
+
+        // בית מסומן בלי מקור (לא מהעתקה) — משמש, לא נוצר שני; ומעגל נחסם
+        s.deleteList(h2);
+        long mine = s.createList("הבית שלי", 0);
+        s.setProp(mine, Store.P_HOME, "1");
+        s.addMember(pesach, mine);
+        Importer.Report cyc = Importer.run(s, src, true);
+        ck("בית: בית מסומן קיים — משמש, ולא נוצר בית שני", !cyc.homeNew && Importer.home(s) == mine && s.findByOrigin(Importer.homeOrigin("בית")) == 0);
+        ck("בית: רשימה שהבית בתוכה — לא נכנסת לבית (מעגל), נספרת", cyc.homeMissing == 4 && !names(s, mine).contains("פסח")
+                && names(s, mine).equals(Arrays.asList("ספרים", "אחרונים", "תמונות", "גיבוי.vbat")));
+        ck("בית: המסד תקין בסוף", s.check() == null);
+
+        // רק כלים שלא מועתקים — אין בית
+        File only = new File(dir, "רק-כפולים/אחר");
+        write(new File(only, Paths.TREE), "#1 א\n");
+        write(new File(new File(only, Paths.SETTINGS), Paths.MAIN), "[פונקציה: כפולים]\nמזהה = f-1\nסוג = כפולים\n");
+        Importer.Report none = Importer.run(s, Importer.load(only), false);
+        ck("בית: רק כלים שלא מועתקים — לא נוצר בית", !none.homeNew && none.homeTools == 1 && none.homeSkipped == 1 && none.homeAdded == 0);
+    }
+
     // ---------- הפניות בין רשימות (מ0.4) ----------
 
     /** הפניות: לרשימה מאוחרת בקובץ (ג), לעצמה, לרשימה שלא קיימת, לאב, ושרשרת שנסגרת (ג ← ב ← א ← ג). */
@@ -46204,8 +46512,15 @@ final class ImportTests {
 
     private String fullReport(final StoreContract.Opener opener, File dir, final boolean sabotage, final boolean selfOk,
                               final boolean badCond) throws Exception {
-        final File old = new File(dir, "olddata-" + sabotage + selfOk + badCond);
+        return fullReport(opener, dir, sabotage, selfOk, badCond, 0);
+    }
+
+    /** homeReal: 0 — לאופן "בית" אין מסד אמיתי; 1 — יש, מועתק; 2 — יש, וחסר בו כלי בבית. */
+    private String fullReport(final StoreContract.Opener opener, File dir, final boolean sabotage, final boolean selfOk,
+                              final boolean badCond, final int homeReal) throws Exception {
+        final File old = new File(dir, "olddata-" + sabotage + selfOk + badCond + homeReal);
         writeSmartMode(new File(old, Modes.DIR + "/חכם"));
+        writeHomeMode(new File(old, Modes.DIR + "/בית"));
         write(new File(old, Modes.DIR + "/הפניות/" + Paths.TREE), REF_TREE);
         write(new File(old, Modes.DIR + "/ראשון/" + Paths.TREE), TREE1);
         write(new File(old, Modes.DIR + "/ראשון/" + Sig.FILE), SIGS1);
@@ -46223,6 +46538,12 @@ final class ImportTests {
             @Override public Backups backups(String mode) { return mode.equals("ראשון") ? new Backups(new File(ctr, "backups-" + mode), new File(ctr, "bk-tmp")) : null; }
             @Override
             public Store openReal(String mode) throws Exception {
+                if (mode.equals("בית") && homeReal > 0) {
+                    Store s = opener.fresh(new File(ctr, "fc-" + (n[0]++) + "-" + badCond + "h.txt"));
+                    Importer.run(s, Importer.load(new File(old, Modes.DIR + "/בית")), true);
+                    if (homeReal == 2) s.removeMember(Importer.home(s), s.findFile(CMD));
+                    return s;
+                }
                 if (!mode.equals("ראשון")) return null;
                 Store s = opener.fresh(new File(ctr, "fc-" + (n[0]++) + "-" + badCond + "r.txt"));
                 Importer.run(s, Importer.load(new File(old, Modes.DIR + "/ראשון")), true);
@@ -46254,6 +46575,14 @@ final class ImportTests {
         ck("בדיקה מלאה: הפניות — 6 במקור, 2 הועתקו, 3 נחסמו כמעגל, 1 לא קיימת, אפס שגויות, אפס מעגלים במסד",
                 ok.contains(Words.Db.modeRefs(6, 2, 3, 1, 0, 0)));
         ck("בדיקה מלאה: הפניה מהמנוע הישן — מועתקת", ok.contains(Words.Db.modeRefs(1, 1, 0, 0, 0, 0)));
+        ck("בדיקה מלאה: מסך הבית — 10 כלים, 5 צפויים ונמצאו, אחד לא מועתק, 3 בלי רשימה או קובץ, אותו סדר",
+                ok.contains(Words.Db.modeHome(10, 5, 5, 1, 3, true)));
+        ck("בדיקה מלאה: אופן בלי כלים — בית ריק בלי בעיה", ok.contains(Words.Db.modeHome(0, 0, 0, 0, 0, true)));
+        String hok = fullReport(opener, dir, false, true, false, 1);
+        ck("בדיקה מלאה: בית במסד האמיתי — הכול נמצא", hok.startsWith(Words.Db.VERDICT_OK) && hok.contains(Words.Db.modeRealHome(5, 5, 0)));
+        String hbad = fullReport(opener, dir, false, true, false, 2);
+        ck("בדיקה מלאה: חסר כלי בבית במסד האמיתי — פסק דין אדום, בעיה אחת", hbad.startsWith(Words.Db.verdictBad(1))
+                && hbad.contains(Words.Db.pHomeBehind("בית", 1)) && hbad.contains(Words.Db.modeRealHome(5, 4, 1)));
         String badc = fullReport(opener, dir, false, true, true);
         ck("בדיקה מלאה: תנאי שהמנוע לא הבין — פסק דין אדום", badc.startsWith(Words.Db.verdictBad(1)) && badc.contains(Words.Db.pSmartCond("חכם", 1))
                 && badc.contains(Words.Db.evalBad("צילומי מסך", "לא הובן")));
@@ -46409,6 +46738,12 @@ final class StoreTests {
                 new ImportTests(o, name).refs(rs, new File(sub, "refs"));
             } finally {
                 rs.close();
+            }
+            Store hs = opener.fresh(new File(sub, "home-counter.txt"));
+            try {
+                new ImportTests(o, name).home(hs, new File(sub, "home"));
+            } finally {
+                hs.close();
             }
             new ImportTests(o, name).fullCheck(opener, new File(sub, "full"));
         } catch (Throwable x) {

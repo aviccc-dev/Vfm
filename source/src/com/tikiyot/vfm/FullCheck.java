@@ -4,7 +4,7 @@ package com.tikiyot.vfm;
 // אחראי: לבדוק את שכבת האחסון (בדיקה עצמית), ולכל אופן עבודה במנוע הישן — העתקה מלאה למסד זמני ובדיקה מול המקור
 // (רשימות, חברות, קבצים, חתימות, רשימות חכמות ותנאיהן, "לא משויכים", העתקה חוזרת, רשימות ריקות), הערכת התנאים מול האינדקס
 // (מ0.3), ואת המסד האמיתי של אותו אופן מול המקור (בלי לשנות אותו). מ0.5: עותק, גיבוי טקסט ושחזור של המסד האמיתי —
-// הכול על עותקים זמניים — ובדיקת הגיבויים שבתיקייה מול הרישום.
+// הכול על עותקים זמניים — ובדיקת הגיבויים שבתיקייה מול הרישום. מ0.6: מסך הבית — אותם כלים ובאותו סדר.
 // אסור לו: לשנות את המנוע הישן, את המסדים האמיתיים (רק תצוגה מקדימה עליהם) או את הגיבויים (רק קריאה).
 
 import java.io.File;
@@ -101,10 +101,14 @@ final class FullCheck {
             Found f = verify(t, src, nodes, paths, defs, true);
             Importer.Report again = Importer.run(t, src, false);
             long ms = System.currentTimeMillis() - t0;
-            out.append(Words.Db.modeTemp(t.lists().size(), r.filesNew, f.lists, f.membersWrong, f.filesMissing, f.sigWrong,
+            int tLists = t.lists().size() - (Importer.home(t) != 0 ? 1 : 0);   // מ0.6: רשימת הבית אינה רשימה מהעץ
+            out.append(Words.Db.modeTemp(tLists, r.filesNew, f.lists, f.membersWrong, f.filesMissing, f.sigWrong,
                     again.nothingToDo(), t.check() == null, ms)).append("\n");
-            add(problems, mode, f, nodes.size() - 1, t.lists().size(), again.nothingToDo(), t.check());
-            int[] un = unassigned(t, nodes);
+            add(problems, mode, f, nodes.size() - 1, tLists, again.nothingToDo(), t.check());
+            Home hm = home(t, src);
+            out.append(Words.Db.modeHome(hm.tools, hm.expected.size(), hm.got.size(), hm.skipped, hm.missing, hm.exact())).append("\n");
+            if (!hm.exact() || r.homeAdded != hm.expected.size()) problems.add(Words.Db.pHome(mode, hm.expected.size(), hm.got.size()));
+            int[] un = unassigned(t, nodes, hm.commandFiles);
             out.append(Words.Db.modeTempSmart(defs.size(), f.smartFound, f.smartWrong, un[0], un[1])).append("\n");
             int[] rf = refs(t, src, nodes, f);
             int cyc = cycles(t);
@@ -115,7 +119,15 @@ final class FullCheck {
             if (un[0] != un[1] || un[2] != 0) problems.add(Words.Db.pUnassigned(mode, un[0], un[1] + un[2]));
             if (f.smartMissing > 0) problems.add(Words.Db.pSmartMissing(mode, f.smartMissing));
             if (f.smartWrong > 0) problems.add(Words.Db.pSmartWrong(mode, f.smartWrong));
-            evaluate(out, problems, mode, defs, env.finder());
+            List<Importer.Smart> all = new ArrayList<Importer.Smart>(defs);   // מ0.6: גם התנאים של הכלים החכמים שבבית
+            Set<String> keys = new HashSet<String>();
+            for (Importer.Smart d : defs) keys.add(d.key);
+            for (Structure.Func tf : src.tools())
+                if (FnSmart.KIND.equals(tf.kind)) {
+                    Importer.Smart d = src.toolSmart(tf);
+                    if (keys.add(d.key)) all.add(d);
+                }
+            evaluate(out, problems, mode, all, env.finder());
             empties(out, src, nodes, t);
         } finally {
             t.close();
@@ -145,6 +157,9 @@ final class FullCheck {
             int[] rf = refs(real, src, nodes, f);
             int cyc = cycles(real);
             out.append(Words.Db.modeRealRefs(rf[0], cyc)).append("\n");
+            Home hm = home(real, src);
+            out.append(Words.Db.modeRealHome(hm.expected.size(), hm.got.size(), pre.homeAdded)).append("\n");
+            if (pre.homeAdded > 0 || !hm.present()) problems.add(Words.Db.pHomeBehind(mode, Math.max(pre.homeAdded, 1)));
             if (rf[3] > 0 && pre.refsAdded == 0) problems.add(Words.Db.pRefs(mode, rf[3]));   // חסרות שהעתקה חוזרת תשלים — כבר ב"לא תואם"
             if (cyc > 0) problems.add(Words.Db.pCycles(mode, cyc));
             if (pre.listsNew + pre.filesNew + pre.filesUpdated + pre.linksAdded + pre.smartNew + pre.refsAdded > 0 || f.listsMissing > 0
@@ -325,6 +340,54 @@ final class FullCheck {
         return f;
     }
 
+    // ---------- מ0.6: מסך הבית ----------
+
+    /** מה שבבית מול מה שצפוי מהכלים במקור. expected — לפי סדר הכלים, בלי כפילות; 0 = כלי שהפריט שלו לא נמצא במסד. */
+    private static final class Home {
+        int tools, skipped, missing;
+        final List<Long> expected = new ArrayList<Long>(), got = new ArrayList<Long>();
+        final Set<String> commandFiles = new HashSet<String>();
+
+        /** בדיוק אותם כלים ובאותו סדר (במסד שנוצר עכשיו מההעתקה). */
+        boolean exact() {
+            return !expected.contains(0L) && got.equals(expected);
+        }
+
+        /** כל הצפויים נמצאים (במסד האמיתי — המשתמש רשאי לסדר ולהוסיף). */
+        boolean present() {
+            return !expected.contains(0L) && got.containsAll(expected);
+        }
+    }
+
+    /** מחפש כל כלי במסד בדרך משלו (לפי מקור או מסלול) — לא דרך ההעתקה — ומשווה לחברי רשימת הבית. */
+    private static Home home(Store s, Importer.Source src) {
+        Home h = new Home();
+        java.util.LinkedHashSet<Long> want = new java.util.LinkedHashSet<Long>();
+        for (Structure.Func f : src.tools()) {
+            h.tools++;
+            if (FnVirtual.KIND.equals(f.kind)) {
+                long id = s.findByOrigin(Importer.originOf(src.mode, Tree.fullLabel(Importer.toolList(f))));
+                if (id == 0) h.missing++;
+                else want.add(id);
+            } else if (FnSmart.KIND.equals(f.kind)) {
+                want.add(s.findByOrigin(Importer.smartOrigin(src.mode, src.toolSmart(f).key)));
+            } else if (FnCommand.KIND.equals(f.kind)) {
+                String p = Importer.toolFile(f);
+                if (p.isEmpty()) h.missing++;
+                else {
+                    h.commandFiles.add(p);
+                    want.add(s.findFile(p));
+                }
+            } else {
+                h.skipped++;
+            }
+        }
+        h.expected.addAll(want);
+        long id = Importer.home(s);
+        if (id != 0) for (Store.Member m : s.members(id)) h.got.add(m.item.id);
+        return h;
+    }
+
     private static boolean eq(String a, String b) {
         return (a == null ? "" : a).equals(b == null ? "" : b);
     }
@@ -333,8 +396,8 @@ final class FullCheck {
      * "לא משויכים" במסד הזמני מול המצופה: קבצים שבשורש המקור ואינם באף רשימה. מחזיר [צפוי, נמצא, פריטים שאינם קבצים].
      * (רעיון בלי רשימה אינו אמור להיווצר מהעתקה.)
      */
-    private static int[] unassigned(Store t, List<Tree.Node> nodes) {
-        Set<String> inLists = new HashSet<String>(), root = new HashSet<String>();
+    private static int[] unassigned(Store t, List<Tree.Node> nodes, Set<String> inHome) {
+        Set<String> inLists = new HashSet<String>(inHome), root = new HashSet<String>();   // מ0.6: קובץ פקודות בבית — משויך
         for (Tree.Entry e : nodes.get(0).entries) if (!e.bad) root.add(e.path);
         for (int i = 1; i < nodes.size(); i++) for (Tree.Entry e : nodes.get(i).entries) if (!e.bad) inLists.add(e.path);
         root.removeAll(inLists);

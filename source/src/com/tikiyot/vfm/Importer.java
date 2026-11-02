@@ -8,6 +8,7 @@ package com.tikiyot.vfm;
 //    ומ־מ0.3 גם רשימות חכמות: כל ההגדרות הנפוצות (עצמאיות), וכל @חכמה ברשימה ידנית — חברות של הרשימה החכמה בה
 //    (פנימית שמקושרת להגדרה נפוצה = אותו פריט, כמו בישן). התנאי נשמר כטקסט, כפי שהוא.
 //    ומ־מ0.4 הפניות בין רשימות (@רשימה): אותה רשימה נכנסת גם לרשימה המפנה (חברות, בלי "הורה").
+//    ומ־מ0.6 מסך הבית: רשימה אחת מסומנת (P_HOME), והכלים בה לפי הסדר — רשימה ידנית (אותה רשימה), חכמה, קובץ פקודות.
 //  - לא מועתק, ונספר בדוח: הפניה שהייתה סוגרת מעגל (במנוע הישן ייתכן; במסד לא), הפניה לרשימה שאינה קיימת,
 //    @חכמה שאינה מובילה להגדרה (נמחקה, כלי, כפולים), "רשימות בתוך" שבתוך חכמה, תיקיות חיות (@תיקייה), שורות
 //    פגומות. שום דבר לא נמחק או משתנה במקור.
@@ -43,6 +44,30 @@ final class Importer {
     /** מפתח המקור של רשימה חכמה: האופן ומזהה ההגדרה בקובץ הראשי (s-… נפוצה, p-… פנימית) — המזהה יציב במנוע הישן. */
     static String smartOrigin(String mode, String key) {
         return "ini:" + mode + ":S:" + key;  // תחביר
+    }
+
+    /** מ0.6: מפתח המקור של רשימת הבית של האופן. */
+    static String homeOrigin(String mode) {
+        return "ini:" + mode + ":H";  // תחביר
+    }
+
+    /** מ0.6: רשימת הבית במסד (לפי הסימון, לא לפי המקור — גם בית שלא הגיע מהעתקה), או 0. */
+    static long home(Store s) {
+        for (Store.Item it : s.lists()) if ("1".equals(s.prop(it.id, Store.P_HOME))) return it.id;
+        return 0;
+    }
+
+    /** מ0.6: מסלול הרשימה של כלי רשימה ידנית. כלי ישן בלי רשימה — הרשימה בשמו (כמו FnVirtual.ensureOwn). */
+    static List<String> toolList(Structure.Func f) {
+        String p = f.params.get(FnVirtual.LIST);
+        return Tree.parsePath(p == null || p.trim().isEmpty() ? f.name : p);
+    }
+
+    /** מ0.6: מסלול קובץ הפקודות של כלי פקודה, או "" (אין / לא מסלול מלא). */
+    static String toolFile(Structure.Func f) {
+        String p = f.params.get(FnCommand.FILE);
+        p = p == null ? "" : p.trim();
+        return p.startsWith("/") ? p : "";
     }
 
     /** הגדרה של רשימה חכמה במנוע הישן: מה שמועתק. nested = כמה "רשימות בתוך" יש בה (לא מועתקות במ0.3). */
@@ -155,6 +180,22 @@ final class Importer {
             for (Tree.Node c : n.children) wanted(c, out);
         }
 
+        /** מ0.6: הכלים שבמסך הבית, לפי הסדר במסך (הסביבות הישנות כבר הוסבו לרשימות בפתיחת התוכנה הישנה). */
+        List<Structure.Func> tools() {
+            if (ini == null) return new ArrayList<Structure.Func>();
+            return Structure.parse(ini).direct;
+        }
+
+        /** מ0.6: ההגדרה של כלי רשימה חכמה בבית: מקושר להגדרה נפוצה — אותו פריט כמו הנפוצה; אחרת — ההגדרות שבכלי עצמו. */
+        Smart toolSmart(Structure.Func f) {
+            String link = f.params.get(SmartLists.LINK);
+            if (link != null && !link.isEmpty()) {
+                Structure.Func c = Structure.byId(ini, link);
+                if (c != null && c.name.startsWith(SmartLists.SECTION)) return resolve(link);
+            }
+            return new Smart(f.id, f.name, f.params);
+        }
+
         /** כמה הפניות @חכמה אינן מובילות להגדרה (ולכן לא מועתקות). */
         int skippedSmart() {
             return skipped(tree.root);
@@ -180,13 +221,20 @@ final class Importer {
         int badLines, smart, live, nested;
         /** הפניות בין רשימות (מ0.4): נוספו / כבר היו / לא הועתקו כי היו סוגרות מעגל / לרשימה שלא קיימת. */
         int refsAdded, refsKnown, refCycles, refMissing;
+        /**
+         * מסך הבית (מ0.6): כלים במקור / נכנסו לבית / כבר היו בו / סוג שלא מועתק (כפולים, פס, אפליקציה, סל, הגדרות) /
+         * הרשימה או הקובץ שלהם לא קיימים (או שהיו סוגרים מעגל). homeNew — רשימת הבית נוצרה בריצה הזו.
+         */
+        int homeTools, homeAdded, homeKnown, homeSkipped, homeMissing;
+        boolean homeNew;
 
         boolean nothingToDo() {
-            return listsNew == 0 && smartNew == 0 && refsAdded == 0 && filesNew == 0 && filesUpdated == 0 && linksAdded == 0 && propsSet == 0;
+            return listsNew == 0 && smartNew == 0 && refsAdded == 0 && filesNew == 0 && filesUpdated == 0 && linksAdded == 0 && propsSet == 0
+                    && homeAdded == 0 && !homeNew;
         }
 
         boolean skippedAny() {
-            return badLines + refCycles + refMissing + smart + live + nested > 0;
+            return badLines + refCycles + refMissing + smart + live + nested + homeSkipped + homeMissing > 0;
         }
     }
 
@@ -304,6 +352,62 @@ final class Importer {
                 file(e);
                 r.rootFiles++;
             }
+            home();
+        }
+
+        /**
+         * מ0.6, אחרון — כשכל הרשימות, החכמות והקבצים כבר קיימים: רשימת הבית, והכלים בה לפי הסדר. רשימה ידנית — אותה רשימה
+         * (הפניה); חכמה — הפריט שלה; פקודה — פריט הקובץ של קובץ הפקודות. שאר הסוגים לא מועתקים (נספרים). כמו בכל רשימה
+         * שכבר הועתקה: מה שכבר בבית נשאר במקומו, וכלי חדש נוסף לסוף.
+         */
+        void home() {
+            long h = s.findByOrigin(homeOrigin(src.mode));
+            if (h == 0) h = Importer.home(s);
+            for (Structure.Func f : src.tools()) {
+                r.homeTools++;
+                long id = tool(f);
+                if (id == 0) continue;
+                if (h == 0) {                                                 // נוצרת רק כשיש מה להכניס — לא בית ריק
+                    h = s.createList(Words.Db.HOME_NAME, 0);
+                    s.setOrigin(h, homeOrigin(src.mode));
+                    s.setProp(h, Store.P_HOME, "1");
+                    r.homeNew = true;
+                }
+                if (s.makesCycle(h, id)) {
+                    r.homeMissing++;
+                    continue;
+                }
+                if (s.addMember(h, id)) r.homeAdded++;
+                else r.homeKnown++;
+            }
+        }
+
+        /** הפריט שהכלי מצביע עליו, או 0 (ואז נספר: סוג שלא מועתק, או שאין למה להצביע). */
+        long tool(Structure.Func f) {
+            if (FnVirtual.KIND.equals(f.kind)) {
+                long id = s.findByOrigin(originOf(src.mode, Tree.fullLabel(toolList(f))));
+                if (id == 0) {
+                    r.homeMissing++;
+                    return 0;
+                }
+                prop(id, Store.P_DESC, f.description, false);
+                return id;
+            }
+            if (FnSmart.KIND.equals(f.kind)) {
+                long id = smart(src.toolSmart(f));
+                prop(id, Store.P_DESC, f.description, false);
+                return id;
+            }
+            if (FnCommand.KIND.equals(f.kind)) {
+                String p = toolFile(f);
+                if (p.isEmpty()) {
+                    r.homeMissing++;
+                    return 0;
+                }
+                return file(p, -1);
+            }
+            r.homeSkipped++;
+            return 0;
         }
 
         void count(Tree.Node n) {
@@ -406,15 +510,20 @@ final class Importer {
 
         /** פריט הקובץ של הרשומה: קיים — מתעדכן אם החתימה במקור שונה; חדש — נוצר. */
         long file(Tree.Entry e) {
-            Long seen = files.get(e.path);
+            return file(e.path, e.size);
+        }
+
+        /** כמו file(Entry), למסלול (מ0.6: גם קובץ פקודות שבבית). listedSize — הגודל שנרשם, -1 לא ידוע. */
+        long file(String path, long listedSize) {
+            Long seen = files.get(path);
             if (seen != null) return seen;
-            Sig.Entry g = src.sigs.get(e.path);
-            long size = g != null ? g.size : e.size;
+            Sig.Entry g = src.sigs.get(path);
+            long size = g != null ? g.size : listedSize;
             long mtime = g != null ? g.mtime : 0;
             String sig = g != null ? g.sig : null;
-            long id = s.findFile(e.path);
+            long id = s.findFile(path);
             if (id == 0) {
-                id = s.createFile(new Store.FileInfo(e.path, driveOf(e.path), size, mtime, sig));
+                id = s.createFile(new Store.FileInfo(path, driveOf(path), size, mtime, sig));
                 r.filesNew++;
                 if (sig != null) r.filesWithSig++;
             } else {
@@ -428,7 +537,7 @@ final class Importer {
                 }
                 if (sig != null) r.filesWithSig++;
             }
-            files.put(e.path, id);
+            files.put(path, id);
             return id;
         }
 
