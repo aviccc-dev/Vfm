@@ -31,10 +31,18 @@ public final class IdCounter {
         return Math.max(dbNext, ceiling + 1);
     }
 
-    /** לפני שמשתמשים במספר: מבטיח שהקובץ כבר מכסה אותו (כותב בלוק חדש רק כשצריך). */
+    /**
+     * לפני שמשתמשים במספר: מבטיח שהקובץ כבר מכסה אותו (כותב בלוק חדש רק כשצריך). מ0.5.1: קודם קוראים את הקובץ שוב —
+     * מונה אחר על אותו קובץ (מסד של אופן אחר, הבדיקה המלאה, השחזור) אולי כבר העלה אותו; התקרה בקובץ לעולם לא יורדת.
+     */
     public void reserve(long id) throws IOException {
         if (id <= ceiling) return;
-        long next = id + BLOCK - 1;
+        long now = read(file);
+        if (id <= now) {
+            ceiling = now;
+            return;
+        }
+        long next = Math.max(id + BLOCK - 1, now);
         write(file, next);
         ceiling = next;
     }

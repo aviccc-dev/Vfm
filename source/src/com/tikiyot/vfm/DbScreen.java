@@ -548,9 +548,16 @@ public class DbScreen extends Activity {
     /** חבורה: רשימה מוטמעת בתוך הרשימה הפתוחה — נפתחת מיד כדי להכניס לה פריטים. */
     private void newGroup() {
         try {
-            long id = store.createList(Words.Db.GROUP_NAME, current());
-            store.setProp(id, Store.P_GROUP, "1");
-            path.add(id);
+            final long into = current();
+            final long[] id = new long[1];
+            store.atomic(new Store.Work() {                                     // רשימה וסימון — יחד או לא בכלל
+                @Override
+                public void run(Store s) {
+                    id[0] = s.createList(Words.Db.GROUP_NAME, into);
+                    s.setProp(id[0], Store.P_GROUP, "1");
+                }
+            }, true);
+            path.add(id[0]);
         } catch (Store.Failure f) {
             Ui.toast(this, Words.Db.failed(f.getMessage()));
         }
@@ -582,10 +589,15 @@ public class DbScreen extends Activity {
             public void ok(final String name) {
                 Ui.askText(DbScreen.this, Words.Db.NEW_SMART_TITLE, "", Words.Db.SMART_COND, new Ui.Text1() {
                     @Override
-                    public void ok(String cond) {
+                    public void ok(final String cond) {
                         try {
-                            long id = store.createSmart(name, parent);
-                            store.setProp(id, Store.P_COND, cond.trim());
+                            store.atomic(new Store.Work() {                     // הרשימה והתנאי — יחד או לא בכלל
+                                @Override
+                                public void run(Store s) {
+                                    long id = s.createSmart(name, parent);
+                                    s.setProp(id, Store.P_COND, cond.trim());
+                                }
+                            }, true);
                         } catch (Store.Failure f) {
                             Ui.toast(DbScreen.this, Words.Db.failed(f.getMessage()));
                         }
@@ -924,7 +936,7 @@ public class DbScreen extends Activity {
                 Backups.Built b = null;
                 String err = null;
                 try {
-                    b = Backups.build(e.file, built, new IdCounter(counterFile()));
+                    b = Backups.build(e.file, built, new IdCounter(counterFile()), e.content);
                 } catch (Throwable t) {
                     Log.e("DbScreen.restore.build", t);
                     err = String.valueOf(t.getMessage());

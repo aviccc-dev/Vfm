@@ -159,6 +159,14 @@ final class StoreTests {
         ck("מונה: נקרא בחזרה מהקובץ", again.ceiling() == 200 && again.first(5) == 201);
         ck("מונה: מסד קדימה מהתקרה — נשאר", again.first(1000) == 1000);
         ck("מונה: אין קובץ זמני שנשאר", !new File(f.getPath() + ".tmp").exists());
+        // מ0.5.1: שני מונים על אותו קובץ — זה שקרא מוקדם לא מוריד את התקרה שהשני העלה
+        File sf = new File(dir, "ids/shared.txt");
+        IdCounter early = new IdCounter(sf), late = new IdCounter(sf);
+        late.reserve(450);
+        early.reserve(201);
+        ck("מונה: מונה ישן לא מוריד את התקרה בקובץ (" + read(sf) + ")", Long.parseLong(read(sf)) >= 549 && early.ceiling() >= 549);
+        early.reserve(600);
+        ck("מונה: ממשיך מעל התקרה המשותפת", Long.parseLong(read(sf)) == 699);
         for (String bad : new String[]{"abc", "", "-5", "12x"}) {
             File b = new File(dir, "ids/bad.txt");
             FileOutputStream out = new FileOutputStream(b);

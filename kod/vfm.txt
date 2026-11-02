@@ -932,7 +932,7 @@ cd $S; rm -rf out gen bld
 [ "$S" != "$DIR" ] && rm -rf $S
 ls -la $OUT
 ===== קובץ: build/m-version.txt =====
-7 מ0.5
+8 מ0.5.1
 ===== קובץ: build/test.sh =====
 #!/bin/bash
 # בדיקות על המחשב (80). יוצא בכישלון אם בדיקה אחת נכשלה — ואז build.sh לא בונה.
@@ -1908,6 +1908,49 @@ public final class BackupContract {
         retention();
         names();
         swap();
+        review();
+    }
+
+    /** מ0.5.1 — מה שנמצא בבדיקת הבאגים. */
+    private void review() throws Exception {
+        File dbf = fresh("review");
+        SqlStore a = SqlStore.open(dbf, counter("review"));
+        try {
+            long l = a.createList("one", 0);
+            Backups bk = new Backups(f("review-backups"), f("review-tmp"));
+            // הגיבוי "האחרון" — לפי מתי נעשה באמת, לא לפי השם (ביומי אין שעה בשם)
+            a.addNote(l, "a");
+            bk.before(a, Backups.OP_DELETE, NOW - 2 * 3600000L);
+            a.addNote(l, "b");
+            ck("review: daily after an earlier before-copy", bk.daily(a, NOW).copied);
+            ck("review: nothing changed since the daily — no before-copy (the newest is the daily)",
+                    bk.before(a, Backups.OP_DELETE, NOW + 60000L) == null);
+            // עותק רשום שהתוכן שלו שונה, אבל הוא עדיין מסד תקין — לא משוחזר
+            Backups.Entry daily = null;
+            for (Backups.Entry e : bk.list()) if (e.kind.equals(Backups.DAILY)) daily = e;
+            File tampered = f("review-tampered.db");
+            SqlStore.copyFile(daily.file, tampered);
+            SqlStore t = SqlStore.open(tampered, counter("review-t"));
+            t.rename(l, "changed");
+            t.close();
+            final File tf = tampered;
+            final String want = daily.content;
+            fails("review: restore of a copy whose content differs from the record is refused", Store.Failure.class, new Act() {
+                @Override public void run() throws Exception { Backups.build(tf, f("review-built.db"), counter("review-b"), want); }
+            });
+            ck("review: the refused restore leaves nothing", !f("review-built.db").exists());
+            Backups.Built ok = Backups.build(daily.file, f("review-built2.db"), counter("review-b2"), daily.content);
+            ck("review: the untouched copy restores with the record check", ok.lists == 1);
+            // עותק זמני שנשאר מריצה שנקטעה — נמחק
+            File stale = new File(f("review-tmp"), "snap-old.db");
+            writeLines(stale, java.util.Arrays.asList("x"));
+            stale.setLastModified(NOW + 2 * DAY - 7200000L);
+            a.addNote(l, "c");
+            bk.daily(a, NOW + 2 * DAY);
+            ck("review: a temporary copy left by an interrupted run is swept", !stale.exists());
+        } finally {
+            a.close();
+        }
     }
 
     /** מסד עם כל הסוגים, ותווים שצריך לשמור עליהם: טאב, שורה חדשה, קו נטוי, "\N" כטקסט, אמוג'י. */
@@ -2390,6 +2433,11 @@ final class Backups {
         boolean recorded() {
             return sha != null;
         }
+
+        /** מתי נעשה באמת: מהרישום; אם אינו רשום — מהשם (ביומי ובטקסט — רק היום, בלי שעה). */
+        long time() {
+            return made > 0 ? made : when;
+        }
     }
 
     /** כל הגיבויים המוכרים בתיקייה, החדש קודם. */
@@ -2421,7 +2469,8 @@ final class Backups {
     private static final Comparator<Entry> NEWEST_FIRST = new Comparator<Entry>() {
         @Override
         public int compare(Entry a, Entry b) {
-            return a.when != b.when ? (a.when > b.when ? -1 : 1) : b.name.compareTo(a.name);
+            long x = a.time(), y = b.time();
+            return x != y ? (x > y ? -1 : 1) : b.name.compareTo(a.name);
         }
     };
 
@@ -2477,6 +2526,14 @@ final class Backups {
         }
     }
 
+    /** עותקים זמניים שנשארו מריצה שנקטעה (התוכנה נסגרה באמצע) — נמחקים אחרי שעה. */
+    private void sweep(long now) {
+        File[] k = tmp.listFiles();
+        if (k == null) return;
+        for (File f : k)
+            if ((f.getName().startsWith("snap-") || f.getName().startsWith("verify-")) && now - f.lastModified() > 3600000L) f.delete();
+    }
+
     /** מה נעשה בגיבוי היומי — לדוח וליומן. */
     static final class Daily {
         boolean checkedAlready, copied, texted;
@@ -2491,6 +2548,7 @@ final class Backups {
         synchronized (LOCK) {
             Daily r = new Daily();
             String today = day(now);
+            sweep(now);
             Record rec = readRecord();
             if (today.equals(rec.checked)) {
                 r.checkedAlready = true;
@@ -2720,6 +2778,14 @@ final class Backups {
      * שמספר זיהוי שכבר ניתן לא יחזור. גיבוי פגום, קטוע או שונה — חריגה, ושום דבר לא נשאר.
      */
     static Built build(File source, File target, IdCounter counter) throws IOException {
+        return build(source, target, counter, null);
+    }
+
+    /**
+     * כמו build, ו־expected — חתימת התוכן מהרישום (null: לא רשום). עותק שהתוכן שלו שונה ממה שנרשם — לא משוחזר, גם אם הוא
+     * תקין כמסד (שינוי בערך אחד לא נתפס בבדיקת התקינות). הבדיקה לפני הפתיחה עם המונה, שמעלה את "המספר הבא".
+     */
+    static Built build(File source, File target, IdCounter counter, String expected) throws IOException {
         android.database.sqlite.SQLiteDatabase.deleteDatabase(target);
         try {
             SqlStore s;
@@ -2727,6 +2793,7 @@ final class Backups {
                 DbDump.Data d = DbDump.read(source);
                 s = SqlStore.open(target, counter);
                 try {
+                    if (expected != null && !expected.equals(d.hash)) throw new Store.Failure("content differs from the record");
                     DbDump.load(d, s);
                     if (!DbDump.hash(s).equals(d.hash)) throw new Store.Failure("restored content differs from the text backup");
                 } catch (RuntimeException e) {
@@ -2736,6 +2803,14 @@ final class Backups {
                 s.close();
             } else {
                 SqlStore.copyFile(source, target);
+                if (expected != null) {
+                    SqlStore ro = SqlStore.openReadOnly(target);
+                    try {
+                        if (!expected.equals(DbDump.hash(ro))) throw new Store.Failure("content differs from the record");
+                    } finally {
+                        ro.close();
+                    }
+                }
             }
             s = SqlStore.open(target, counter);                                // בדיקת תקינות, שדרוג טבלאות, ומונה לא יורד
             try {
@@ -10110,9 +10185,16 @@ public class DbScreen extends Activity {
     /** חבורה: רשימה מוטמעת בתוך הרשימה הפתוחה — נפתחת מיד כדי להכניס לה פריטים. */
     private void newGroup() {
         try {
-            long id = store.createList(Words.Db.GROUP_NAME, current());
-            store.setProp(id, Store.P_GROUP, "1");
-            path.add(id);
+            final long into = current();
+            final long[] id = new long[1];
+            store.atomic(new Store.Work() {                                     // רשימה וסימון — יחד או לא בכלל
+                @Override
+                public void run(Store s) {
+                    id[0] = s.createList(Words.Db.GROUP_NAME, into);
+                    s.setProp(id[0], Store.P_GROUP, "1");
+                }
+            }, true);
+            path.add(id[0]);
         } catch (Store.Failure f) {
             Ui.toast(this, Words.Db.failed(f.getMessage()));
         }
@@ -10144,10 +10226,15 @@ public class DbScreen extends Activity {
             public void ok(final String name) {
                 Ui.askText(DbScreen.this, Words.Db.NEW_SMART_TITLE, "", Words.Db.SMART_COND, new Ui.Text1() {
                     @Override
-                    public void ok(String cond) {
+                    public void ok(final String cond) {
                         try {
-                            long id = store.createSmart(name, parent);
-                            store.setProp(id, Store.P_COND, cond.trim());
+                            store.atomic(new Store.Work() {                     // הרשימה והתנאי — יחד או לא בכלל
+                                @Override
+                                public void run(Store s) {
+                                    long id = s.createSmart(name, parent);
+                                    s.setProp(id, Store.P_COND, cond.trim());
+                                }
+                            }, true);
                         } catch (Store.Failure f) {
                             Ui.toast(DbScreen.this, Words.Db.failed(f.getMessage()));
                         }
@@ -10486,7 +10573,7 @@ public class DbScreen extends Activity {
                 Backups.Built b = null;
                 String err = null;
                 try {
-                    b = Backups.build(e.file, built, new IdCounter(counterFile()));
+                    b = Backups.build(e.file, built, new IdCounter(counterFile()), e.content);
                 } catch (Throwable t) {
                     Log.e("DbScreen.restore.build", t);
                     err = String.valueOf(t.getMessage());
@@ -16524,10 +16611,18 @@ public final class IdCounter {
         return Math.max(dbNext, ceiling + 1);
     }
 
-    /** לפני שמשתמשים במספר: מבטיח שהקובץ כבר מכסה אותו (כותב בלוק חדש רק כשצריך). */
+    /**
+     * לפני שמשתמשים במספר: מבטיח שהקובץ כבר מכסה אותו (כותב בלוק חדש רק כשצריך). מ0.5.1: קודם קוראים את הקובץ שוב —
+     * מונה אחר על אותו קובץ (מסד של אופן אחר, הבדיקה המלאה, השחזור) אולי כבר העלה אותו; התקרה בקובץ לעולם לא יורדת.
+     */
     public void reserve(long id) throws IOException {
         if (id <= ceiling) return;
-        long next = id + BLOCK - 1;
+        long now = read(file);
+        if (id <= now) {
+            ceiling = now;
+            return;
+        }
+        long next = Math.max(id + BLOCK - 1, now);
         write(file, next);
         ceiling = next;
     }
@@ -44241,7 +44336,7 @@ public final class Words {
 
         public static final String APP_NAME_M = "מנהל קבצים וירטואלי · מ";
         public static final String MENU = "מסד נתונים (מ)";
-        public static final String TITLE = "מסד נתונים · מ0.5";
+        public static final String TITLE = "מסד נתונים · מ0.5.1";
         public static final String NOTICE = "מנוע המסד בבנייה. גיבוי: עותק יומי כשיש שינוי, וגם לפני העתקה, מחיקת רשימה ומחיקה לצמיתות — בתיקייה \"גיבוי מסד\" שבתיקיית התוכנה. \"העתקה מהישן\" רק קוראת מהמנוע הישן ולא משנה בו דבר. לכל אופן עבודה מסד משלו — כל אופן נכנס למסד של אותו אופן. אפשר להעתיק שוב: מה שכבר הועתק מתעדכן ולא מוכפל. רשימה חכמה שומרת רק את התנאי — הקבצים נמצאים בכל פתיחה מהאינדקס.";
         public static final String NEED_ACCESS = "כדי לשמור את מונה המזהים בתיקיית הנתונים, התוכנה צריכה הרשאת גישה לכל הקבצים.";
         public static final String ALL_LISTS = "כל הרשימות";
@@ -46391,6 +46486,14 @@ final class StoreTests {
         ck("מונה: נקרא בחזרה מהקובץ", again.ceiling() == 200 && again.first(5) == 201);
         ck("מונה: מסד קדימה מהתקרה — נשאר", again.first(1000) == 1000);
         ck("מונה: אין קובץ זמני שנשאר", !new File(f.getPath() + ".tmp").exists());
+        // מ0.5.1: שני מונים על אותו קובץ — זה שקרא מוקדם לא מוריד את התקרה שהשני העלה
+        File sf = new File(dir, "ids/shared.txt");
+        IdCounter early = new IdCounter(sf), late = new IdCounter(sf);
+        late.reserve(450);
+        early.reserve(201);
+        ck("מונה: מונה ישן לא מוריד את התקרה בקובץ (" + read(sf) + ")", Long.parseLong(read(sf)) >= 549 && early.ceiling() >= 549);
+        early.reserve(600);
+        ck("מונה: ממשיך מעל התקרה המשותפת", Long.parseLong(read(sf)) == 699);
         for (String bad : new String[]{"abc", "", "-5", "12x"}) {
             File b = new File(dir, "ids/bad.txt");
             FileOutputStream out = new FileOutputStream(b);

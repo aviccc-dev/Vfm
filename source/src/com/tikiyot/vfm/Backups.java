@@ -92,6 +92,11 @@ final class Backups {
         boolean recorded() {
             return sha != null;
         }
+
+        /** מתי נעשה באמת: מהרישום; אם אינו רשום — מהשם (ביומי ובטקסט — רק היום, בלי שעה). */
+        long time() {
+            return made > 0 ? made : when;
+        }
     }
 
     /** כל הגיבויים המוכרים בתיקייה, החדש קודם. */
@@ -123,7 +128,8 @@ final class Backups {
     private static final Comparator<Entry> NEWEST_FIRST = new Comparator<Entry>() {
         @Override
         public int compare(Entry a, Entry b) {
-            return a.when != b.when ? (a.when > b.when ? -1 : 1) : b.name.compareTo(a.name);
+            long x = a.time(), y = b.time();
+            return x != y ? (x > y ? -1 : 1) : b.name.compareTo(a.name);
         }
     };
 
@@ -179,6 +185,14 @@ final class Backups {
         }
     }
 
+    /** עותקים זמניים שנשארו מריצה שנקטעה (התוכנה נסגרה באמצע) — נמחקים אחרי שעה. */
+    private void sweep(long now) {
+        File[] k = tmp.listFiles();
+        if (k == null) return;
+        for (File f : k)
+            if ((f.getName().startsWith("snap-") || f.getName().startsWith("verify-")) && now - f.lastModified() > 3600000L) f.delete();
+    }
+
     /** מה נעשה בגיבוי היומי — לדוח וליומן. */
     static final class Daily {
         boolean checkedAlready, copied, texted;
@@ -193,6 +207,7 @@ final class Backups {
         synchronized (LOCK) {
             Daily r = new Daily();
             String today = day(now);
+            sweep(now);
             Record rec = readRecord();
             if (today.equals(rec.checked)) {
                 r.checkedAlready = true;
@@ -422,6 +437,14 @@ final class Backups {
      * שמספר זיהוי שכבר ניתן לא יחזור. גיבוי פגום, קטוע או שונה — חריגה, ושום דבר לא נשאר.
      */
     static Built build(File source, File target, IdCounter counter) throws IOException {
+        return build(source, target, counter, null);
+    }
+
+    /**
+     * כמו build, ו־expected — חתימת התוכן מהרישום (null: לא רשום). עותק שהתוכן שלו שונה ממה שנרשם — לא משוחזר, גם אם הוא
+     * תקין כמסד (שינוי בערך אחד לא נתפס בבדיקת התקינות). הבדיקה לפני הפתיחה עם המונה, שמעלה את "המספר הבא".
+     */
+    static Built build(File source, File target, IdCounter counter, String expected) throws IOException {
         android.database.sqlite.SQLiteDatabase.deleteDatabase(target);
         try {
             SqlStore s;
@@ -429,6 +452,7 @@ final class Backups {
                 DbDump.Data d = DbDump.read(source);
                 s = SqlStore.open(target, counter);
                 try {
+                    if (expected != null && !expected.equals(d.hash)) throw new Store.Failure("content differs from the record");
                     DbDump.load(d, s);
                     if (!DbDump.hash(s).equals(d.hash)) throw new Store.Failure("restored content differs from the text backup");
                 } catch (RuntimeException e) {
@@ -438,6 +462,14 @@ final class Backups {
                 s.close();
             } else {
                 SqlStore.copyFile(source, target);
+                if (expected != null) {
+                    SqlStore ro = SqlStore.openReadOnly(target);
+                    try {
+                        if (!expected.equals(DbDump.hash(ro))) throw new Store.Failure("content differs from the record");
+                    } finally {
+                        ro.close();
+                    }
+                }
             }
             s = SqlStore.open(target, counter);                                // בדיקת תקינות, שדרוג טבלאות, ומונה לא יורד
             try {

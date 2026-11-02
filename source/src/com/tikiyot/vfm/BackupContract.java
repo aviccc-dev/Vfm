@@ -90,6 +90,49 @@ public final class BackupContract {
         retention();
         names();
         swap();
+        review();
+    }
+
+    /** מ0.5.1 — מה שנמצא בבדיקת הבאגים. */
+    private void review() throws Exception {
+        File dbf = fresh("review");
+        SqlStore a = SqlStore.open(dbf, counter("review"));
+        try {
+            long l = a.createList("one", 0);
+            Backups bk = new Backups(f("review-backups"), f("review-tmp"));
+            // הגיבוי "האחרון" — לפי מתי נעשה באמת, לא לפי השם (ביומי אין שעה בשם)
+            a.addNote(l, "a");
+            bk.before(a, Backups.OP_DELETE, NOW - 2 * 3600000L);
+            a.addNote(l, "b");
+            ck("review: daily after an earlier before-copy", bk.daily(a, NOW).copied);
+            ck("review: nothing changed since the daily — no before-copy (the newest is the daily)",
+                    bk.before(a, Backups.OP_DELETE, NOW + 60000L) == null);
+            // עותק רשום שהתוכן שלו שונה, אבל הוא עדיין מסד תקין — לא משוחזר
+            Backups.Entry daily = null;
+            for (Backups.Entry e : bk.list()) if (e.kind.equals(Backups.DAILY)) daily = e;
+            File tampered = f("review-tampered.db");
+            SqlStore.copyFile(daily.file, tampered);
+            SqlStore t = SqlStore.open(tampered, counter("review-t"));
+            t.rename(l, "changed");
+            t.close();
+            final File tf = tampered;
+            final String want = daily.content;
+            fails("review: restore of a copy whose content differs from the record is refused", Store.Failure.class, new Act() {
+                @Override public void run() throws Exception { Backups.build(tf, f("review-built.db"), counter("review-b"), want); }
+            });
+            ck("review: the refused restore leaves nothing", !f("review-built.db").exists());
+            Backups.Built ok = Backups.build(daily.file, f("review-built2.db"), counter("review-b2"), daily.content);
+            ck("review: the untouched copy restores with the record check", ok.lists == 1);
+            // עותק זמני שנשאר מריצה שנקטעה — נמחק
+            File stale = new File(f("review-tmp"), "snap-old.db");
+            writeLines(stale, java.util.Arrays.asList("x"));
+            stale.setLastModified(NOW + 2 * DAY - 7200000L);
+            a.addNote(l, "c");
+            bk.daily(a, NOW + 2 * DAY);
+            ck("review: a temporary copy left by an interrupted run is swept", !stale.exists());
+        } finally {
+            a.close();
+        }
     }
 
     /** מסד עם כל הסוגים, ותווים שצריך לשמור עליהם: טאב, שורה חדשה, קו נטוי, "\N" כטקסט, אמוג'י. */
