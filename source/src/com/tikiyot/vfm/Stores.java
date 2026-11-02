@@ -20,6 +20,12 @@ final class Stores {
         if (it.type != Store.LIST) throw new Store.Failure("not a list: " + id);
     }
 
+    /** רשימה ידנית או חכמה (למחיקה). */
+    static void mustBeListOrSmart(Store.Item it, long id) {
+        if (it == null) throw new Store.Failure("no such item " + id);
+        if (it.type != Store.LIST && it.type != Store.SMART) throw new Store.Failure("not a list: " + id);
+    }
+
     static void noListInList(Store.Item item) {
         if (item.type == Store.LIST) throw new Store.Failure("list in list: not yet");
     }

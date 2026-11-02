@@ -932,7 +932,7 @@ cd $S; rm -rf out gen bld
 [ "$S" != "$DIR" ] && rm -rf $S
 ls -la $OUT
 ===== קובץ: build/m-version.txt =====
-4 מ0.2.2
+5 מ0.3
 ===== קובץ: build/test.sh =====
 #!/bin/bash
 # בדיקות על המחשב (80). יוצא בכישלון אם בדיקה אחת נכשלה — ואז build.sh לא בונה.
@@ -8175,7 +8175,7 @@ final class DateSize {
 ===== קובץ: src/com/tikiyot/vfm/DbScreen.java =====
 package com.tikiyot.vfm;
 
-// מסך מנוע המסד (מ0.1–מ0.2): רשימות ופריטים בסיסיים מעל Store, והעתקה מהמנוע הישן (Importer).
+// מסך מנוע המסד (מ0.1–מ0.3): רשימות, רשימות חכמות ("לא משויכים" כרשימה מיוחדת) ופריטים מעל Store, והעתקה מהמנוע הישן.
 // אחראי: להציג ולהפעיל. אסור לו: לדעת איך הנתונים נשמרים (Store), או לכתוב למנוע הישן (קורא בלבד).
 
 import android.app.Activity;
@@ -8206,8 +8206,13 @@ public class DbScreen extends Activity {
     private TextView status, crumb, hint;
     private LinearLayout rows, buttons;
     private ScrollView sv;
-    /** נתיב הרשימות הפתוחות; ריק = "כל הרשימות". */
+    /** נתיב הרשימות הפתוחות; ריק = "כל הרשימות". UNASSIGNED_ID = "לא משויכים" (רשימה מחושבת, לא פריט). */
     private final ArrayList<Long> path = new ArrayList<Long>();
+    private static final long UNASSIGNED_ID = -1L;
+    /** מספר ההצגה הנוכחית; הערכה של רשימה חכמה שהסתיימה אחרי שעזבו אותה — מתעלמים ממנה. */
+    private int token;
+    private final android.os.Handler ui = new android.os.Handler(android.os.Looper.getMainLooper());
+    private static final int SMART_ROWS = 300;
 
     static File dbFile(android.content.Context c, String mode) {
         return c.getDatabasePath(DB_PREFIX + mode + DB_SUFFIX);
@@ -8366,23 +8371,55 @@ public class DbScreen extends Activity {
     }
 
     private void show() {
+        token++;
         try {
             List<Store.Item> all = store.lists();
             status.setText(Words.Db.status(all.size(), store.lastId(), store.systemCode(), store.info()));
             StringBuilder c = new StringBuilder(Words.Db.ALL_LISTS);
-            for (Long id : path) c.append(Words.Db.CRUMB_SEP).append(store.item(id).name);
+            for (Long id : new ArrayList<Long>(path)) {
+                if (id == UNASSIGNED_ID) {
+                    c.append(Words.Db.CRUMB_SEP).append(Words.Db.UNASSIGNED);
+                    continue;
+                }
+                Store.Item it = store.item(id);
+                if (it == null) {
+                    path.remove(id);
+                    continue;
+                }
+                c.append(Words.Db.CRUMB_SEP).append(it.type == Store.SMART ? "⚡ " : "").append(it.name);
+            }
             crumb.setText(c.toString());
+            final long cur = current();
+            Store.Item curItem = cur > 0 ? store.item(cur) : null;
+            final boolean inSmart = curItem != null && curItem.type == Store.SMART;
             buttons.removeAllViews();
             if (path.isEmpty()) {
                 buttons.addView(button(Words.Db.NEW_LIST, new Runnable() {
                     @Override public void run() { newList(0); }
                 }));
+                buttons.addView(button(Words.Db.NEW_SMART, new Runnable() {
+                    @Override public void run() { newSmart(0); }
+                }));
                 buttons.addView(button(Words.Db.IMPORT, new Runnable() {
                     @Override public void run() { importStart(); }
                 }));
-            } else {
+            } else if (inSmart) {
+                final Store.Item sm = curItem;
+                buttons.addView(button(Words.Db.EDIT_COND, new Runnable() {
+                    @Override public void run() { act(sm, -1, 5); }
+                }));
+                buttons.addView(button(Words.Db.RENAME, new Runnable() {
+                    @Override public void run() { act(sm, -1, 0); }
+                }));
+                buttons.addView(button(Words.Db.DELETE_YES, new Runnable() {
+                    @Override public void run() { act(sm, -1, 4); }
+                }));
+            } else if (cur != UNASSIGNED_ID) {
                 buttons.addView(button(Words.Db.NEW_SUBLIST, new Runnable() {
                     @Override public void run() { newList(current()); }
+                }));
+                buttons.addView(button(Words.Db.NEW_SMART, new Runnable() {
+                    @Override public void run() { newSmart(current()); }
                 }));
                 buttons.addView(button(Words.Db.NEW_NOTE, new Runnable() {
                     @Override public void run() { newNote(); }
@@ -8391,14 +8428,28 @@ public class DbScreen extends Activity {
             buttons.addView(button(Words.Db.FULL_CHECK, new Runnable() {
                 @Override public void run() { fullCheck(); }
             }));
+            hint.setText(cur == UNASSIGNED_ID ? Words.Db.UNASSIGNED_HINT : Words.Db.HINT);
             rows.removeAllViews();
             if (path.isEmpty()) {
-                if (all.isEmpty()) {
+                rows.addView(unassignedRow(store.unassigned().size()));
+                List<Store.Item> smarts = store.smarts();
+                if (all.isEmpty() && smarts.isEmpty()) {
                     TextView t = Ui.info(this);
                     t.setText(Words.Db.EMPTY);
                     rows.addView(t);
                 }
                 for (Store.Item it : all) rows.addView(row(it, store.count(it.id), -1, 0));
+                for (Store.Item it : smarts) rows.addView(row(it, -1, -1, 0));
+            } else if (cur == UNASSIGNED_ID) {
+                List<Store.Item> un = store.unassigned();
+                if (un.isEmpty()) {
+                    TextView t = Ui.info(this);
+                    t.setText(Words.Db.UNASSIGNED_EMPTY);
+                    rows.addView(t);
+                }
+                for (Store.Item it : un) rows.addView(row(it, -1, -1, 0));
+            } else if (inSmart) {
+                showSmart(curItem);
             } else {
                 List<Store.Member> ms = store.members(current());
                 if (ms.isEmpty()) {
@@ -8415,6 +8466,104 @@ public class DbScreen extends Activity {
         }
     }
 
+    /** "לא משויכים": שורה מיוחדת בראש הרשימות — מחושבת בכל פעם, לא נשמרת. */
+    private View unassignedRow(int count) {
+        LinearLayout r = new LinearLayout(this);
+        r.setOrientation(LinearLayout.VERTICAL);
+        r.setPadding(Ui.dp(this, 12), Ui.dp(this, 10), Ui.dp(this, 12), Ui.dp(this, 10));
+        TextView name = new TextView(this);
+        name.setText(Words.Db.UNASSIGNED);
+        name.setTextSize(16);
+        name.setTextColor(Ui.TEXT);
+        TextView sub = new TextView(this);
+        sub.setTextSize(12);
+        sub.setTextColor(Ui.SUB);
+        sub.setText(Words.Db.UNASSIGNED_SUB + " · " + Words.items(count));
+        r.addView(name);
+        r.addView(sub);
+        r.setBackgroundColor(Ui.BG);
+        r.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                path.add(UNASSIGNED_ID);
+                show();
+            }
+        });
+        return r;
+    }
+
+    /** רשימה חכמה פתוחה: התוצאות מחושבות עכשיו מהאינדקס (ברקע), לקריאה בלבד. */
+    private void showSmart(final Store.Item sm) {
+        final String cond = store.prop(sm.id, Store.P_COND) == null ? "" : store.prop(sm.id, Store.P_COND);
+        final String sort = store.prop(sm.id, Store.P_SORT) == null ? "" : store.prop(sm.id, Store.P_SORT);
+        final TextView head = Ui.info(this);
+        rows.addView(head);
+        if (cond.isEmpty()) {
+            head.setText(Words.Db.smartInfo(cond, 0, 0) + "\n" + Words.Db.SMART_NO_COND);
+            return;
+        }
+        final Library lib = Library.get(this);
+        lib.start(null);
+        final int mine = token;
+        head.setText(Words.Db.smartInfo(cond, 0, 0));
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                Smarts.Result r;
+                try {
+                    r = Smarts.over(lib).find(cond, sort, SMART_ROWS);
+                } catch (Throwable t) {
+                    Log.e("DbScreen.smart", t);
+                    r = Smarts.Result.notReady();
+                }
+                final Smarts.Result res = r;
+                runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        if (isFinishing() || mine != token) return;
+                        if (!res.ready) {
+                            head.setText(Words.Db.smartInfo(cond, 0, 0) + "\n" + Words.Db.INDEX_NOT_READY);
+                            ui.postDelayed(new Runnable() {
+                                @Override public void run() { if (!isFinishing() && mine == token) show(); }
+                            }, 1500);
+                            return;
+                        }
+                        head.setText(Words.Db.smartInfo(cond, res.count, res.size)
+                                + (res.note.isEmpty() ? "" : "\n" + Words.Db.smartNote(res.note)));
+                        if (res.count == 0) {
+                            TextView t = Ui.info(DbScreen.this);
+                            t.setText(Words.Db.SMART_EMPTY);
+                            rows.addView(t);
+                            return;
+                        }
+                        for (Smarts.Row w : res.rows) rows.addView(resultRow(w));
+                        TextView more = Ui.info(DbScreen.this);
+                        more.setText(res.count > res.rows.size() ? Words.Db.smartMore(res.rows.size(), res.count) : Words.Db.SMART_READONLY);
+                        rows.addView(more);
+                    }
+                });
+            }
+        }).start();
+    }
+
+    private View resultRow(Smarts.Row w) {
+        LinearLayout r = new LinearLayout(this);
+        r.setOrientation(LinearLayout.VERTICAL);
+        r.setPadding(Ui.dp(this, 12), Ui.dp(this, 8), Ui.dp(this, 12), Ui.dp(this, 8));
+        TextView name = new TextView(this);
+        name.setText((w.dir ? "📁 " : "") + w.name);
+        name.setTextSize(15);
+        name.setTextColor(Ui.TEXT);
+        TextView sub = new TextView(this);
+        sub.setTextSize(12);
+        sub.setTextColor(Ui.SUB);
+        sub.setText(w.folder + (w.size > 0 ? " · " + Files.size(w.size) : ""));
+        r.addView(name);
+        r.addView(sub);
+        r.setBackgroundColor(Ui.BG);
+        return r;
+    }
+
     /** שורה: שם, ומתחתיו סוג, מספר זיהוי וכמה פריטים (ברשימה). */
     private View row(final Store.Item it, int count, final int position, final int size) {
         LinearLayout r = new LinearLayout(this);
@@ -8427,15 +8576,21 @@ public class DbScreen extends Activity {
         TextView sub = new TextView(this);
         sub.setTextSize(12);
         sub.setTextColor(Ui.SUB);
-        sub.setText(Words.Db.kindLine(it.type == Store.LIST ? Words.Db.KIND_LIST : it.type == Store.FILE ? Words.Db.KIND_FILE : Words.Db.KIND_NOTE,
-                it.id, count >= 0 ? Words.items(count) : ""));
+        if (it.type == Store.SMART) {
+            String cond = store.prop(it.id, Store.P_COND) == null ? "" : store.prop(it.id, Store.P_COND);
+            sub.setText(Words.Db.smartLine(it.id, cond.length() > 70 ? cond.substring(0, 70) + "…" : cond));
+            name.setText("⚡ " + it.name);
+        } else {
+            sub.setText(Words.Db.kindLine(it.type == Store.LIST ? Words.Db.KIND_LIST : it.type == Store.FILE ? Words.Db.KIND_FILE : Words.Db.KIND_NOTE,
+                    it.id, count >= 0 ? Words.items(count) : ""));
+        }
         r.addView(name);
         r.addView(sub);
         r.setBackgroundColor(Ui.BG);
         r.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                if (it.type == Store.LIST) {
+                if (it.type == Store.LIST || it.type == Store.SMART) {
                     path.add(it.id);
                     show();
                 }
@@ -8459,6 +8614,48 @@ public class DbScreen extends Activity {
             public void ok(String value) {
                 try {
                     store.createList(value, parent);
+                } catch (Store.Failure f) {
+                    Ui.toast(DbScreen.this, Words.Db.failed(f.getMessage()));
+                }
+                show();
+            }
+        });
+    }
+
+    private void newSmart(final long parent) {
+        Ui.askText(this, Words.Db.NEW_SMART_TITLE, "", Words.Db.SMART_NAME, new Ui.Text1() {
+            @Override
+            public void ok(final String name) {
+                Ui.askText(DbScreen.this, Words.Db.NEW_SMART_TITLE, "", Words.Db.SMART_COND, new Ui.Text1() {
+                    @Override
+                    public void ok(String cond) {
+                        try {
+                            long id = store.createSmart(name, parent);
+                            store.setProp(id, Store.P_COND, cond.trim());
+                        } catch (Store.Failure f) {
+                            Ui.toast(DbScreen.this, Words.Db.failed(f.getMessage()));
+                        }
+                        show();
+                    }
+                });
+            }
+        });
+    }
+
+    /** מוסיף פריט (קובץ, רעיון, רשימה חכמה) לרשימה ידנית שבוחרים. */
+    private void addToList(final Store.Item it) {
+        final List<Store.Item> lists = store.lists();
+        if (lists.isEmpty()) {
+            Ui.toast(this, Words.Db.NO_LISTS);
+            return;
+        }
+        List<String> labels = new ArrayList<String>();
+        for (Store.Item l : lists) labels.add(l.name + " · " + l.id);
+        Ui.list(this, Words.Db.ADD_TO_LIST_TITLE, labels, new DialogInterface.OnClickListener() {
+            @Override
+            public void onClick(DialogInterface d, int which) {
+                try {
+                    if (!store.addMember(lists.get(which).id, it.id)) Ui.toast(DbScreen.this, Words.Db.ALREADY_THERE);
                 } catch (Store.Failure f) {
                     Ui.toast(DbScreen.this, Words.Db.failed(f.getMessage()));
                 }
@@ -8494,7 +8691,9 @@ public class DbScreen extends Activity {
             labels.add(Words.Db.REMOVE);
             codes.add(3);
         }
-        if (it.type == Store.LIST) { labels.add(Words.Db.DELETE_LIST); codes.add(4); }
+        if (it.type == Store.SMART) { labels.add(Words.Db.EDIT_COND); codes.add(5); }
+        if (it.type != Store.LIST) { labels.add(Words.Db.ADD_TO_LIST); codes.add(6); }
+        if (it.type == Store.LIST || it.type == Store.SMART) { labels.add(Words.Db.DELETE_LIST); codes.add(4); }
         Ui.list(this, it.name, labels, new DialogInterface.OnClickListener() {
             @Override
             public void onClick(DialogInterface d, int which) {
@@ -8522,8 +8721,26 @@ public class DbScreen extends Activity {
             if (code == 1) store.move(current(), it.id, position - 1);
             else if (code == 2) store.move(current(), it.id, position + 1);
             else if (code == 3) store.removeMember(current(), it.id);
-            else if (code == 4) {
-                Ui.confirm(this, Words.Db.DELETE_LIST, Words.Db.deleteQuestion(it.name, it.id) + "\n" + Words.Db.DELETE_DETAIL,
+            else if (code == 5) {
+                Ui.askText(this, Words.Db.EDIT_COND_TITLE, store.prop(it.id, Store.P_COND) == null ? "" : store.prop(it.id, Store.P_COND),
+                        Words.Db.SMART_COND, new Ui.Text1() {
+                            @Override
+                            public void ok(String value) {
+                                try {
+                                    store.setProp(it.id, Store.P_COND, value.trim());
+                                } catch (Store.Failure f) {
+                                    Ui.toast(DbScreen.this, Words.Db.failed(f.getMessage()));
+                                }
+                                show();
+                            }
+                        });
+                return;
+            } else if (code == 6) {
+                addToList(it);
+                return;
+            } else if (code == 4) {
+                Ui.confirm(this, Words.Db.DELETE_LIST, Words.Db.deleteQuestion(it.name, it.id) + "\n"
+                                + (it.type == Store.SMART ? Words.Db.DELETE_SMART_DETAIL : Words.Db.DELETE_DETAIL),
                         Words.Db.DELETE_YES, new Runnable() {
                             @Override
                             public void run() {
@@ -8629,8 +8846,8 @@ public class DbScreen extends Activity {
     }
 
     private static String reportText(boolean done, String mode, Importer.Report r) {
-        return Words.Db.importReport(done, mode, r.listsNew, r.listsKnown, r.filesNew, r.filesKnown, r.filesUpdated,
-                r.linksAdded, r.propsSet, r.rootFiles, r.badLines, r.refs, r.smart, r.live);
+        return Words.Db.importReport(done, mode, r.listsNew, r.listsKnown, r.smartNew, r.smartKnown, r.filesNew, r.filesKnown,
+                r.filesUpdated, r.linksAdded, r.propsSet, r.rootFiles, r.badLines, r.refs, r.smart, r.nested, r.live);
     }
 
     // ---------- בדיקה מלאה (מ0.2.2) ----------
@@ -8724,6 +8941,13 @@ public class DbScreen extends Activity {
             public Store openTemp() throws Exception {
                 int n = seq[0]++;
                 return SqlStore.open(new File(tmp, "t" + n + ".db"), new IdCounter(new File(tmp, "t" + n + "-counter.txt")));
+            }
+
+            @Override
+            public Smarts.Finder finder() {
+                Library lib = Library.get(DbScreen.this);
+                lib.start(null);
+                return Smarts.over(lib);
             }
 
             @Override
@@ -12952,7 +13176,8 @@ package com.tikiyot.vfm;
 
 // בדיקה מלאה אחת (מ0.2.2): מריצה הכול ומחזירה דוח טקסט אחד, שאפשר להעתיק ולשלוח.
 // אחראי: לבדוק את שכבת האחסון (בדיקה עצמית), ולכל אופן עבודה במנוע הישן — העתקה מלאה למסד זמני ובדיקה מול המקור
-// (רשימות, חברות, קבצים, חתימות, העתקה חוזרת, רשימות ריקות), ואת המסד האמיתי של אותו אופן מול המקור (בלי לשנות אותו).
+// (רשימות, חברות, קבצים, חתימות, רשימות חכמות ותנאיהן, "לא משויכים", העתקה חוזרת, רשימות ריקות), הערכת התנאים מול האינדקס
+// (מ0.3), ואת המסד האמיתי של אותו אופן מול המקור (בלי לשנות אותו).
 // אסור לו: לשנות את המנוע הישן, או את המסדים האמיתיים (רק תצוגה מקדימה עליהם).
 
 import java.io.File;
@@ -12979,6 +13204,9 @@ final class FullCheck {
 
         /** המסד האמיתי של האופן, או null אם עוד אין. לא יוצרים אותו. */
         Store openReal(String mode) throws Exception;
+
+        /** מנוע ההערכה של רשימות חכמות (האינדקס); null — אין (למשל בבדיקות במחשב בלי אינדקס). */
+        Smarts.Finder finder();
     }
 
     private static final int EXAMPLES = 6;
@@ -13021,26 +13249,34 @@ final class FullCheck {
         List<Tree.Node> nodes = new ArrayList<Tree.Node>();
         collect(src.tree.root, nodes);
         Set<String> paths = new HashSet<String>();
-        int bad = 0, refs = 0, smart = 0, live = 0;
+        int bad = 0, refs = 0, live = 0;
         for (Tree.Node n : nodes) {
             bad += count(n, paths);
             refs += n.refs.size();
-            smart += n.smart.size();
             live += n.live.size();
         }
+        List<Importer.Smart> defs = src.wanted();
+        int nested = 0;
+        for (Importer.Smart d : defs) nested += d.nested;
         out.append(Words.Db.modeHead(mode)).append("\n");
-        out.append(Words.Db.modeSource(nodes.size() - 1, paths.size(), refs, smart, live, bad)).append("\n");
+        out.append(Words.Db.modeSource(nodes.size() - 1, paths.size(), defs.size(), refs, src.skippedSmart(), nested, live, bad)).append("\n");
 
         // 1. העתקה מלאה למסד זמני ובדיקה מול המקור
         Store t = env.openTemp();
         try {
             Importer.Report r = Importer.run(t, src, true);
-            Found f = verify(t, src, nodes, paths, true);
+            Found f = verify(t, src, nodes, paths, defs, true);
             Importer.Report again = Importer.run(t, src, false);
             long ms = System.currentTimeMillis() - t0;
             out.append(Words.Db.modeTemp(t.lists().size(), r.filesNew, f.lists, f.membersWrong, f.filesMissing, f.sigWrong,
                     again.nothingToDo(), t.check() == null, ms)).append("\n");
             add(problems, mode, f, nodes.size() - 1, t.lists().size(), again.nothingToDo(), t.check());
+            int[] un = unassigned(t, nodes);
+            out.append(Words.Db.modeTempSmart(defs.size(), f.smartFound, f.smartWrong, un[0], un[1])).append("\n");
+            if (un[0] != un[1] || un[2] != 0) problems.add(Words.Db.pUnassigned(mode, un[0], un[1] + un[2]));
+            if (f.smartMissing > 0) problems.add(Words.Db.pSmartMissing(mode, f.smartMissing));
+            if (f.smartWrong > 0) problems.add(Words.Db.pSmartWrong(mode, f.smartWrong));
+            evaluate(out, problems, mode, defs, env.finder());
             empties(out, src, nodes, t);
         } finally {
             t.close();
@@ -13053,12 +13289,14 @@ final class FullCheck {
             return;
         }
         try {
-            Found f = verify(real, src, nodes, paths, false);
+            Found f = verify(real, src, nodes, paths, defs, false);
             Importer.Report pre = Importer.run(real, src, false);
             out.append(Words.Db.modeReal(real.lists().size(), nodes.size() - 1, f.lists, f.membersWrong, f.filesMissing,
-                    pre.listsNew, pre.filesNew, pre.filesUpdated, pre.linksAdded, real.check() == null)).append("\n");
-            if (pre.listsNew + pre.filesNew + pre.filesUpdated + pre.linksAdded > 0 || f.listsMissing > 0 || f.filesMissing > 0)
-                problems.add(Words.Db.pRealBehind(mode, pre.listsNew, pre.filesNew, pre.filesUpdated, pre.linksAdded));
+                    pre.listsNew, pre.filesNew, pre.filesUpdated, pre.linksAdded, pre.smartNew, real.check() == null)).append("\n");
+            out.append(Words.Db.modeRealUnassigned(real.unassigned().size())).append("\n");
+            if (pre.listsNew + pre.filesNew + pre.filesUpdated + pre.linksAdded + pre.smartNew > 0 || f.listsMissing > 0
+                    || f.filesMissing > 0 || f.smartMissing > 0)
+                problems.add(Words.Db.pRealBehind(mode, pre.listsNew, pre.filesNew, pre.filesUpdated, pre.linksAdded, pre.smartNew));
             if (real.check() != null) problems.add(Words.Db.pCheck(mode, real.check()));
             for (String e : f.examples) out.append("   ").append(e).append("\n");
         } finally {
@@ -13097,6 +13335,8 @@ final class FullCheck {
 
     private static final class Found {
         int lists, listsMissing, membersWrong, filesMissing, sigWrong;
+        /** רשימות חכמות: נמצאו / חסרות / תנאי או מיון שונה (רק בבדיקה מדויקת). */
+        int smartFound, smartMissing, smartWrong;
         final List<String> examples = new ArrayList<String>();
     }
 
@@ -13104,8 +13344,20 @@ final class FullCheck {
      * לכל רשימה במקור: נמצאת במסד, וחבריה (תת־רשימות וקבצים) הם בדיוק מה שבמקור (exact) או לפחות מה שבמקור.
      * לכל קובץ: נמצא, ואם יש לו חתימה במקור — היא זהה.
      */
-    private static Found verify(Store s, Importer.Source src, List<Tree.Node> nodes, Set<String> paths, boolean exact) {
+    private static Found verify(Store s, Importer.Source src, List<Tree.Node> nodes, Set<String> paths, List<Importer.Smart> defs,
+                                boolean exact) {
         Found f = new Found();
+        for (Importer.Smart d : defs) {
+            long sid = s.findByOrigin(Importer.smartOrigin(src.mode, d.key));
+            if (sid == 0) {
+                f.smartMissing++;
+                example(f, Words.Db.exSmartMissing(d.name));
+                continue;
+            }
+            f.smartFound++;
+            if (exact && !(eq(s.prop(sid, Store.P_COND), d.cond) && eq(s.prop(sid, Store.P_SORT), d.sort)
+                    && eq(s.prop(sid, Store.P_DIR), d.dir) && eq(s.prop(sid, Store.P_VIEW), d.view))) f.smartWrong++;
+        }
         for (int i = 1; i < nodes.size(); i++) {
             Tree.Node n = nodes.get(i);
             long id = s.findByOrigin(Importer.originOf(src.mode, Tree.fullLabel(n.path())));
@@ -13117,6 +13369,10 @@ final class FullCheck {
             f.lists++;
             Set<Long> want = new HashSet<Long>();
             for (Tree.Node c : n.children) want.add(s.findByOrigin(Importer.originOf(src.mode, Tree.fullLabel(c.path()))));
+            for (String ref : n.smart) {
+                Importer.Smart d = src.smart(ref);
+                if (d != null) want.add(s.findByOrigin(Importer.smartOrigin(src.mode, d.key)));
+            }
             for (Tree.Entry e : n.entries) if (!e.bad) want.add(s.findFile(e.path));
             Set<Long> got = new HashSet<Long>();
             for (Store.Member m : s.members(id)) got.add(m.item.id);
@@ -13140,6 +13396,82 @@ final class FullCheck {
         return f;
     }
 
+    private static boolean eq(String a, String b) {
+        return (a == null ? "" : a).equals(b == null ? "" : b);
+    }
+
+    /**
+     * "לא משויכים" במסד הזמני מול המצופה: קבצים שבשורש המקור ואינם באף רשימה. מחזיר [צפוי, נמצא, פריטים שאינם קבצים].
+     * (רעיון בלי רשימה אינו אמור להיווצר מהעתקה.)
+     */
+    private static int[] unassigned(Store t, List<Tree.Node> nodes) {
+        Set<String> inLists = new HashSet<String>(), root = new HashSet<String>();
+        for (Tree.Entry e : nodes.get(0).entries) if (!e.bad) root.add(e.path);
+        for (int i = 1; i < nodes.size(); i++) for (Tree.Entry e : nodes.get(i).entries) if (!e.bad) inLists.add(e.path);
+        root.removeAll(inLists);
+        int got = 0, other = 0, wrong = 0;
+        for (Store.Item it : t.unassigned()) {
+            Store.FileInfo fi = it.type == Store.FILE ? t.file(it.id) : null;
+            if (fi == null) other++;
+            else {
+                got++;
+                if (!root.contains(fi.path)) wrong++;
+            }
+        }
+        return new int[]{root.size(), got, other + wrong};
+    }
+
+    /** הערכת התנאים שהועתקו מול האינדקס: כל תנאי פעם אחת. תנאי שלא הובן הוא בעיה; בלי תוצאות — לידיעה בלבד. */
+    private static void evaluate(StringBuilder out, List<String> problems, String mode, List<Importer.Smart> defs, Smarts.Finder fd) {
+        if (fd == null || defs.isEmpty()) return;
+        long t0 = System.currentTimeMillis();
+        Set<String> seen = new HashSet<String>();
+        int checked = 0, withHits = 0, noHits = 0, bad = 0, noCond = 0;
+        long files = 0;
+        List<String> none = new ArrayList<String>(), badLines = new ArrayList<String>();
+        for (Importer.Smart d : defs) {
+            if (d.cond.isEmpty()) {
+                noCond++;
+                continue;
+            }
+            if (!seen.add(d.cond)) continue;
+            Smarts.Result r;
+            try {
+                r = fd.find(d.cond, "", 0);
+            } catch (Throwable t) {                                            // תנאי אחד שהפיל את המנוע — בעיה, לא קריסת האופן
+                Log.e("FullCheck.evaluate", t);
+                bad++;
+                if (badLines.size() < EXAMPLES) badLines.add(Words.Db.evalBad(d.name, String.valueOf(t)));
+                continue;
+            }
+            if (!r.ready) {
+                out.append(Words.Db.evalNone()).append("\n");
+                return;
+            }
+            checked++;
+            files += r.count;
+            if (!r.note.isEmpty()) {
+                bad++;
+                if (badLines.size() < EXAMPLES) badLines.add(Words.Db.evalBad(d.name, r.note));
+            } else if (r.count > 0) {
+                withHits++;
+            } else {
+                noHits++;
+                if (none.size() < EXAMPLES) none.add(d.name);
+            }
+        }
+        out.append(Words.Db.evalLine(checked, withHits, noHits, bad, noCond, files, System.currentTimeMillis() - t0)).append("\n");
+        if (!none.isEmpty()) out.append(Words.Db.evalNoHits(join(none))).append("\n");
+        for (String l : badLines) out.append(l).append("\n");
+        if (bad > 0) problems.add(Words.Db.pSmartCond(mode, bad));
+    }
+
+    private static String join(List<String> l) {
+        StringBuilder sb = new StringBuilder();
+        for (String x : l) sb.append(sb.length() > 0 ? ", " : "").append(x);
+        return sb.toString();
+    }
+
     private static void example(Found f, String text) {
         if (f.examples.size() < EXAMPLES) f.examples.add(text);
     }
@@ -13155,7 +13487,7 @@ final class FullCheck {
             long id = t.findByOrigin(Importer.originOf(src.mode, Tree.fullLabel(n.path())));
             if (id == 0 || t.count(id) > 0) continue;
             total++;
-            if (n.refs.size() + n.smart.size() + n.live.size() + badIn(n) > 0) {
+            if (n.refs.size() + skippedIn(src, n) + n.live.size() + badIn(n) > 0) {
                 pending++;
             } else {
                 truly++;
@@ -13164,6 +13496,12 @@ final class FullCheck {
         }
         out.append(Words.Db.modeEmpty(total, truly, pending)).append("\n");
         for (String nm : names) out.append("   ").append(nm).append("\n");
+    }
+
+    private static int skippedIn(Importer.Source src, Tree.Node n) {
+        int k = 0;
+        for (String ref : n.smart) if (src.smart(ref) == null) k++;
+        return k;
     }
 
     private static int badIn(Tree.Node n) {
@@ -14260,9 +14598,11 @@ package com.tikiyot.vfm;
 // אסור לו: לשנות את הקבצים הישנים (קורא בלבד), לדעת איך Store שומר, או להציג דבר למשתמש (המסך עושה את זה).
 //
 // כללים (claude/masad-mipuy-haataka.md):
-//  - מה מועתק: רשימות ידניות בעץ (עם הסדר), צלמית/תיאור/עיצוב/"למה", קבצים (מסלול, כונן, גודל ותאריך, חתימה).
-//  - לא מועתק בגרסה זו, ונספר בדוח: הפניות בין רשימות (@רשימה — מ0.4), רשימות חכמות (@חכמה — מ0.3), תיקיות חיות
-//    (@תיקייה), שורות פגומות. שום דבר לא נמחק או משתנה במקור.
+//  - מה מועתק: רשימות ידניות בעץ (עם הסדר), צלמית/תיאור/עיצוב/"למה", קבצים (מסלול, כונן, גודל ותאריך, חתימה),
+//    ומ־מ0.3 גם רשימות חכמות: כל ההגדרות הנפוצות (עצמאיות), וכל @חכמה ברשימה ידנית — חברות של הרשימה החכמה בה
+//    (פנימית שמקושרת להגדרה נפוצה = אותו פריט, כמו בישן). התנאי נשמר כטקסט, כפי שהוא.
+//  - לא מועתק, ונספר בדוח: הפניות בין רשימות (@רשימה — מ0.4), @חכמה שאינה מובילה להגדרה (נמחקה, כלי, כפולים),
+//    "רשימות בתוך" שבתוך חכמה (מ0.4), תיקיות חיות (@תיקייה), שורות פגומות. שום דבר לא נמחק או משתנה במקור.
 //  - העתקה חוזרת = עדכון, לא כפילות: רשימה מזוהה לפי האופן והמסלול שלה במקור (origin_key), קובץ לפי המסלול שלו.
 //    רשימה שכבר הועתקה לא משתנה במבנה; מאפיין ריק בה מתמלא, מאפיין שיש לא נדרס. קבצים חדשים נוספים לסוף.
 //    מה שנמחק במקור לא נמחק במסד.
@@ -14290,33 +14630,151 @@ final class Importer {
     /** כונן שלא זוהה ממסלולו. */
     static final String UNKNOWN_DRIVE = "?";
 
+    /** מפתח המקור של רשימה חכמה: האופן ומזהה ההגדרה בקובץ הראשי (s-… נפוצה, p-… פנימית) — המזהה יציב במנוע הישן. */
+    static String smartOrigin(String mode, String key) {
+        return "ini:" + mode + ":S:" + key;  // תחביר
+    }
+
+    /** הגדרה של רשימה חכמה במנוע הישן: מה שמועתק. nested = כמה "רשימות בתוך" יש בה (לא מועתקות במ0.3). */
+    static final class Smart {
+        final String key, name, cond, sort, dir, view;
+        final int nested;
+
+        Smart(String key, String name, Map<String, String> p) {
+            this.key = key;
+            this.name = name;
+            this.cond = val(p, SmartLists.COND);
+            this.sort = val(p, SmartLists.SORT);
+            this.dir = val(p, SmartLists.DIR);
+            this.view = val(p, SmartLists.VIEW);
+            int n = 0;
+            for (String x : val(p, Nested.KEY).split("\\|")) if (!x.trim().isEmpty()) n++;
+            this.nested = n;
+        }
+
+        private static String val(Map<String, String> p, String k) {
+            String v = p.get(k);
+            return v == null ? "" : v.trim();
+        }
+    }
+
     /** מה נקרא מהמקור. */
     static final class Source {
         final String mode;
         final Tree tree;
         final Map<String, Sig.Entry> sigs;
+        /** הקובץ הראשי של האופן (הגדרות נפוצות ורשימות פנימיות); null — אין. */
+        final Ini ini;
+        private final Map<String, Smart> cache = new HashMap<String, Smart>();
 
         Source(String mode, Tree tree, Map<String, Sig.Entry> sigs) {
+            this(mode, tree, sigs, null);
+        }
+
+        Source(String mode, Tree tree, Map<String, Sig.Entry> sigs, Ini ini) {
             this.mode = mode;
             this.tree = tree;
             this.sigs = sigs;
+            this.ini = ini;
+        }
+
+        /** כל ההגדרות הנפוצות, לפי הסדר בקובץ. */
+        List<Smart> commons() {
+            List<Smart> out = new ArrayList<Smart>();
+            if (ini == null) return out;
+            String id = "", name = "";
+            Map<String, String> params = null;
+            for (Ini.Line l : ini.lines) {
+                if (l.isHeader()) {
+                    if (params != null && !id.isEmpty()) out.add(new Smart(id, name, params));
+                    params = null;
+                    id = "";
+                    if (l.headerName().startsWith(SmartLists.SECTION)) {
+                        name = l.headerName().substring(SmartLists.SECTION.length()).trim();
+                        params = new java.util.LinkedHashMap<String, String>();
+                    }
+                    continue;
+                }
+                if (params == null || l.key == null) continue;
+                if (l.key.equals(Structure.ID)) id = l.value == null ? "" : l.value;
+                else params.put(l.key, l.value == null ? "" : l.value);
+            }
+            if (params != null && !id.isEmpty()) out.add(new Smart(id, name, params));
+            return out;
+        }
+
+        /** ההגדרה שההפניה (@חכמה) מובילה אליה, או null: נמחקה, כלי, כפולים. */
+        Smart smart(String ref) {
+            if (ini == null || ref == null || ref.isEmpty()) return null;
+            if (cache.containsKey(ref)) return cache.get(ref);
+            Smart out = resolve(ref);
+            cache.put(ref, out);
+            return out;
+        }
+
+        private Smart resolve(String ref) {
+            Structure.Func f = Structure.byId(ini, ref);
+            if (f == null) return null;
+            if (f.name.startsWith(SmartLists.SECTION))
+                return new Smart(ref, f.name.substring(SmartLists.SECTION.length()).trim(), f.params);
+            if (!f.name.startsWith(Nested.INNER)) return null;
+            if (FnDup.KIND.equals(f.params.get("סוג"))) return null;  // תחביר
+            String link = f.params.get(SmartLists.LINK);
+            if (link != null && !link.isEmpty()) {
+                Structure.Func c = Structure.byId(ini, link);
+                if (c != null && c.name.startsWith(SmartLists.SECTION)) return resolve(link);   // מקושרת — אותו פריט
+            }
+            String h = f.name.substring(Nested.INNER.length());
+            int cut = h.lastIndexOf(" › ");
+            return new Smart(ref, (cut >= 0 ? h.substring(cut + 3) : h).trim(), f.params);
+        }
+
+        /** כל ההגדרות להעתקה: הנפוצות, ואחריהן מה שהרשימות מצביעות עליו — בלי כפילויות, לפי סדר העץ. */
+        List<Smart> wanted() {
+            Map<String, Smart> out = new java.util.LinkedHashMap<String, Smart>();
+            for (Smart c : commons()) out.put(c.key, c);
+            wanted(tree.root, out);
+            return new ArrayList<Smart>(out.values());
+        }
+
+        private void wanted(Tree.Node n, Map<String, Smart> out) {
+            for (String ref : n.smart) {
+                Smart sm = smart(ref);
+                if (sm != null && !out.containsKey(sm.key)) out.put(sm.key, sm);
+            }
+            for (Tree.Node c : n.children) wanted(c, out);
+        }
+
+        /** כמה הפניות @חכמה אינן מובילות להגדרה (ולכן לא מועתקות). */
+        int skippedSmart() {
+            return skipped(tree.root);
+        }
+
+        private int skipped(Tree.Node n) {
+            int k = 0;
+            for (String ref : n.smart) if (smart(ref) == null) k++;
+            for (Tree.Node c : n.children) k += skipped(c);
+            return k;
         }
     }
 
     /** הדוח: מה נעשה (או מה היה נעשה, בתצוגה מקדימה). */
     static final class Report {
         int listsNew, listsKnown;
+        /** רשימות חכמות (מ0.3): הגדרות חדשות / שכבר הועתקו. */
+        int smartNew, smartKnown;
         int filesNew, filesKnown, filesUpdated, filesWithSig;
         int linksAdded, linksKnown, rootFiles;
         int propsSet;
-        int badLines, refs, smart, live;
+        /** smart = הפניות @חכמה שלא הועתקו; nested = "רשימות בתוך" חכמה שלא הועתקו (מ0.4). */
+        int badLines, refs, smart, live, nested;
 
         boolean nothingToDo() {
-            return listsNew == 0 && filesNew == 0 && filesUpdated == 0 && linksAdded == 0 && propsSet == 0;
+            return listsNew == 0 && smartNew == 0 && filesNew == 0 && filesUpdated == 0 && linksAdded == 0 && propsSet == 0;
         }
 
         boolean skippedAny() {
-            return badLines + refs + smart + live > 0;
+            return badLines + refs + smart + live + nested > 0;
         }
     }
 
@@ -14350,7 +14808,8 @@ final class Importer {
         if (!t.isFile()) throw new Store.Failure("no tree file: " + t);
         Tree tree = Tree.loadFrom(t);
         if (tree.unreadable) throw new Store.Failure("tree file unreadable: " + t);
-        return new Source(modeDir.getName(), tree, Sig.read(new File(modeDir, Sig.FILE)));
+        Ini ini = Ini.load(new File(new File(modeDir, Paths.SETTINGS), Paths.MAIN));
+        return new Source(modeDir.getName(), tree, Sig.read(new File(modeDir, Sig.FILE)), ini.unreadable ? null : ini);
     }
 
     // ---------- ההעתקה ----------
@@ -14388,6 +14847,8 @@ final class Importer {
         final Report r;
         /** מסלול ← פריט, לריצה הזו (קובץ שבכמה רשימות — פריט אחד). */
         final Map<String, Long> files = new HashMap<String, Long>();
+        /** מזהה הגדרה ← פריט, לריצה הזו (פנימית מקושרת ונפוצה — פריט אחד). */
+        final Map<String, Long> smarts = new HashMap<String, Long>();
 
         Ctx(Store s, Source src, Report r) {
             this.s = s;
@@ -14398,6 +14859,12 @@ final class Importer {
         /** השורש: אין לו רשימה — הקבצים שבו נשארים בלי רשימה, והרשימות שלו עומדות לעצמן. */
         void top(Tree.Node root) {
             count(root);
+            for (Smart c : src.commons()) smart(c);                           // הנפוצות עומדות לעצמן
+            for (String ref : root.smart) {
+                Smart sm = src.smart(ref);
+                if (sm == null) r.smart++;
+                else smart(sm);
+            }
             for (Tree.Node c : root.children) list(c, 0);
             for (Tree.Entry e : root.entries) {
                 if (e.bad) {
@@ -14411,7 +14878,6 @@ final class Importer {
 
         void count(Tree.Node n) {
             r.refs += n.refs.size();
-            r.smart += n.smart.size();
             r.live += n.live.size();
         }
 
@@ -14437,6 +14903,14 @@ final class Importer {
             for (Object o : order(n)) {
                 if (o instanceof Tree.Node) {
                     list((Tree.Node) o, id);
+                } else if (o instanceof String) {
+                    Smart sm = src.smart((String) o);
+                    if (sm == null) {
+                        r.smart++;
+                        continue;
+                    }
+                    if (s.addMember(id, smart(sm))) r.linksAdded++;
+                    else r.linksKnown++;
                 } else {
                     Tree.Entry e = (Tree.Entry) o;
                     if (e.bad) {
@@ -14447,6 +14921,29 @@ final class Importer {
                     else r.linksKnown++;
                 }
             }
+        }
+
+        /** פריט הרשימה החכמה: קיים — רק מאפיינים ריקים מתמלאים (עריכת המשתמש נשמרת); חדש — נוצר. */
+        long smart(Smart sm) {
+            Long seen = smarts.get(sm.key);
+            if (seen != null) return seen;
+            String key = smartOrigin(src.mode, sm.key);
+            long id = s.findByOrigin(key);
+            boolean isNew = id == 0;
+            if (isNew) {
+                id = s.createSmart(sm.name, 0);
+                s.setOrigin(id, key);
+                r.smartNew++;
+            } else {
+                r.smartKnown++;
+            }
+            prop(id, Store.P_COND, sm.cond, isNew);
+            prop(id, Store.P_SORT, sm.sort, isNew);
+            prop(id, Store.P_DIR, sm.dir, isNew);
+            prop(id, Store.P_VIEW, sm.view, isNew);
+            r.nested += sm.nested;
+            smarts.put(sm.key, id);
+            return id;
         }
 
         void prop(long id, String k, String v, boolean isNew) {
@@ -14486,7 +14983,7 @@ final class Importer {
 
         /**
          * סדר הפריטים ברשימה: אם יש סדר חופשי (@סדר) — לפיו (רשימה: "c"+שם, קובץ: "f"+מסלול; מפתחות של סוגים שלא
-         * מועתקים מדולגים); מה שלא נזכר בו — אחריו, בסדר הרגיל: תת־רשימות ואז קבצים.
+         * מועתקים מדולגים); מה שלא נזכר בו — אחריו, בסדר הרגיל: תת־רשימות, רשימות חכמות ואז קבצים.
          */
         List<Object> order(Tree.Node n) {
             List<Object> out = new ArrayList<Object>();
@@ -14496,10 +14993,12 @@ final class Importer {
                 String v = k.substring(1);
                 Object o = null;
                 if (k.charAt(0) == 'c') o = n.child(v);
+                else if (k.charAt(0) == 's') { if (n.smart.contains(v)) o = v; }
                 else if (k.charAt(0) == 'f') for (Tree.Entry e : n.entries) if (e.path.equals(v)) { o = e; break; }
                 if (o != null && used.add(o)) out.add(o);
             }
             for (Tree.Node c : n.children) if (used.add(c)) out.add(c);
+            for (String ref : n.smart) if (used.add(ref)) out.add(ref);
             for (Tree.Entry e : n.entries) if (used.add(e)) out.add(e);
             return out;
         }
@@ -20036,6 +20535,15 @@ public final class MemStore implements Store {
     }
 
     @Override
+    public long createSmart(String name, long parent) {
+        String n = Stores.clean(name, "name");
+        LinkedHashMap<Long, Long> p = parent == 0 ? null : listOf(parent);
+        Item it = make(SMART, n);
+        if (p != null) p.put(it.id, it.created);
+        return it.id;
+    }
+
+    @Override
     public long addNote(long list, String text) {
         String t = Stores.clean(text, "text");
         LinkedHashMap<Long, Long> l = listOf(list);
@@ -20083,7 +20591,7 @@ public final class MemStore implements Store {
 
     @Override
     public void deleteList(long list) {
-        listOf(list);
+        Stores.mustBeListOrSmart(items.get(list), list);
         members.remove(list);
         items.remove(list);
         props.remove(list);
@@ -20193,6 +20701,25 @@ public final class MemStore implements Store {
     public List<Item> lists() {
         List<Item> out = new ArrayList<Item>();
         for (Item it : items.values()) if (it.type == LIST) out.add(it);
+        return out;
+    }
+
+    @Override
+    public List<Item> smarts() {
+        List<Item> out = new ArrayList<Item>();
+        for (Item it : items.values()) if (it.type == SMART) out.add(it);
+        return out;
+    }
+
+    @Override
+    public List<Item> unassigned() {
+        List<Item> out = new ArrayList<Item>();
+        for (Item it : items.values()) {
+            if (it.type != FILE && it.type != NOTE) continue;
+            boolean in = false;
+            for (LinkedHashMap<Long, Long> l : members.values()) if (l.containsKey(it.id)) { in = true; break; }
+            if (!in) out.add(it);
+        }
         return out;
     }
 
@@ -29931,6 +30458,104 @@ final class SmartLists {
         return !link.isEmpty() && byId(link) == null;
     }
 }
+===== קובץ: src/com/tikiyot/vfm/Smarts.java =====
+package com.tikiyot.vfm;
+
+// מ0.3 — הערכת רשימה חכמה: תנאי (טקסט) ← הקבצים שמנוע החיפוש הקיים מוצא באינדקס. אחראי: להפעיל את החיפוש ולהחזיר תוצאה
+// קטנה וברורה (ספירה, מקבץ שורות, הערה אם התנאי לא הובן). אסור לו: לשמור דבר, לגעת במסד, או להציג — המסך עושה זאת.
+// האינדקס עצמו נשאר מחוץ למסד (קובץ בינארי לכל כונן, כמו בישן).
+
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.List;
+
+final class Smarts {
+
+    private Smarts() { }
+
+    /** שורה בתוצאה. */
+    static final class Row {
+        final String name, folder, path;
+        final long size, mtime;
+        final boolean dir;
+
+        Row(String name, String folder, String path, long size, long mtime, boolean dir) {
+            this.name = name;
+            this.folder = folder;
+            this.path = path;
+            this.size = size;
+            this.mtime = mtime;
+            this.dir = dir;
+        }
+    }
+
+    /** תוצאה. ready=false: האינדקס עוד לא מוכן (אז count=0 ואין לדעת). note לא ריק: חלק מהתנאי לא הובן. */
+    static final class Result {
+        final boolean ready;
+        final int count;
+        final long size;
+        final String note;
+        /** עד limit שורות, כבר ממוינות. */
+        final List<Row> rows;
+
+        Result(boolean ready, int count, long size, String note, List<Row> rows) {
+            this.ready = ready;
+            this.count = count;
+            this.size = size;
+            this.note = note == null ? "" : note;
+            this.rows = rows;
+        }
+
+        static Result notReady() {
+            return new Result(false, 0, 0, "", new ArrayList<Row>());
+        }
+    }
+
+    interface Finder {
+        /** מוצא לפי התנאי; sort — שם מיון מ־Sort (ריק: כפי שנמצא); limit — כמה שורות להחזיר (הספירה תמיד מלאה). */
+        Result find(String cond, String sort, int limit);
+    }
+
+    /** המנוע האמיתי: החיפוש של Library. lib null או לא מוכן — notReady. */
+    static Finder over(final Library lib) {
+        return new Finder() {
+            @Override
+            public Result find(String cond, String sort, int limit) {
+                if (lib == null || !lib.ready || cond == null || cond.trim().isEmpty()) return Result.notReady();
+                Library.Result r = lib.search(cond, false, true);
+                List<Library.Hit> hits = new ArrayList<Library.Hit>(r.hits);
+                long total = 0;
+                for (Library.Hit h : hits) if (h.rec != null) total += h.rec.size;
+                sort(hits, sort);
+                List<Row> rows = new ArrayList<Row>();
+                for (int i = 0; i < hits.size() && i < limit; i++) {
+                    Library.Hit h = hits.get(i);
+                    rows.add(new Row(h.name(), h.parentPath(), h.path(), h.rec != null ? h.rec.size : 0,
+                            h.rec != null ? h.rec.mtime : 0, h.isDir()));
+                }
+                return new Result(true, hits.size(), total, r.note, rows);
+            }
+        };
+    }
+
+    private static void sort(List<Library.Hit> hits, String sort) {
+        if (Sort.NAME.equals(sort)) {
+            Collections.sort(hits, new Comparator<Library.Hit>() {
+                @Override public int compare(Library.Hit a, Library.Hit b) { return a.name().compareToIgnoreCase(b.name()); }
+            });
+        } else if (Sort.DATE.equals(sort) || Sort.SIZE.equals(sort)) {
+            final boolean date = Sort.DATE.equals(sort);
+            Collections.sort(hits, new Comparator<Library.Hit>() {
+                @Override
+                public int compare(Library.Hit a, Library.Hit b) {
+                    long x = a.rec == null ? 0 : date ? a.rec.mtime : a.rec.size, y = b.rec == null ? 0 : date ? b.rec.mtime : b.rec.size;
+                    return x < y ? 1 : x > y ? -1 : 0;                         // החדש / הגדול קודם
+                }
+            });
+        }
+    }
+}
 ===== קובץ: src/com/tikiyot/vfm/Sort.java =====
 package com.tikiyot.vfm;
 
@@ -30611,6 +31236,21 @@ public final class SqlStore implements Store {
     }
 
     @Override
+    public long createSmart(String name, long parent) {
+        String n = Stores.clean(name, "name");
+        db.beginTransaction();
+        try {
+            if (parent != 0) mustBeList(parent);
+            long id = create(SMART, n);
+            if (parent != 0) append(parent, id, System.currentTimeMillis());
+            db.setTransactionSuccessful();
+            return id;
+        } finally {
+            db.endTransaction();
+        }
+    }
+
+    @Override
     public long addNote(long list, String text) {
         String t = Stores.clean(text, "text");
         db.beginTransaction();
@@ -30710,7 +31350,7 @@ public final class SqlStore implements Store {
     public void deleteList(long list) {
         db.beginTransaction();
         try {
-            mustBeList(list);
+            Stores.mustBeListOrSmart(read(list), list);
             Cursor c = db.rawQuery("SELECT list_id, position FROM members WHERE item_id=?", new String[]{s(list)});
             List<long[]> parents = new ArrayList<long[]>();
             try {
@@ -30831,6 +31471,27 @@ public final class SqlStore implements Store {
             c.close();
         }
         return out;
+    }
+
+    private List<Item> itemsWhere(String where, String... args) {
+        List<Item> out = new ArrayList<Item>();
+        Cursor c = db.rawQuery("SELECT id, type, name, created, changed FROM items WHERE " + where + " ORDER BY id", args);
+        try {
+            while (c.moveToNext()) out.add(row(c));
+        } finally {
+            c.close();
+        }
+        return out;
+    }
+
+    @Override
+    public List<Item> smarts() {
+        return itemsWhere("type=?", s(SMART));
+    }
+
+    @Override
+    public List<Item> unassigned() {
+        return itemsWhere("type IN (?,?) AND id NOT IN (SELECT item_id FROM members)", s(FILE), s(NOTE));
     }
 
     @Override
@@ -31185,10 +31846,13 @@ import java.util.List;
 public interface Store {
 
     /** סוגי פריט. בהמשך יתווספו (כותרת, פקודה…); המספרים נשמרים במסד ולא משתנים. */
-    int LIST = 1, NOTE = 2, FILE = 3;
+    int LIST = 1, NOTE = 2, FILE = 3, SMART = 4;
 
     /** מפתחות המאפיינים של רשימה (מ0.2): צלמית, תיאור, עיצוב, "למה". */
     String P_ICON = "icon", P_DESC = "desc", P_DESIGN = "design", P_WHY = "why";
+
+    /** מאפייני רשימה חכמה (מ0.3): התנאי כטקסט (התחביר של מנוע החיפוש), מיון, כיוון, תצוגה. */
+    String P_COND = "cond", P_SORT = "sort", P_DIR = "dir", P_VIEW = "view";
 
     /** שגיאת שימוש או אחסון. ההודעה — לאנשי הפיתוח (אנגלית); המסך מציג הודעה משלו. */
     final class Failure extends RuntimeException {
@@ -31254,6 +31918,12 @@ public interface Store {
     /** רשימה חדשה. parent = 0: עומדת לעצמה; אחרת היא נכנסת לסוף הרשימה parent. מחזיר את מספר הזיהוי. */
     long createList(String name, long parent);
 
+    /**
+     * רשימה חכמה חדשה (מ0.3): שאילתה ולא אוסף — אין לה חברים; התנאי נקבע ב־P_COND. parent = 0: עומדת לעצמה;
+     * אחרת היא נכנסת לסוף הרשימה הידנית parent.
+     */
+    long createSmart(String name, long parent);
+
     /** רעיון/הערה חדשים בסוף רשימה. */
     long addNote(long list, String text);
 
@@ -31297,7 +31967,7 @@ public interface Store {
 
     void rename(long item, String name);
 
-    /** מוחק רשימה ואת החברויות שלה; הפריטים שהיו בה נשארים (בלי רשימה). המספר לא יחזור. */
+    /** מוחק רשימה (או רשימה חכמה) ואת החברויות שלה; הפריטים שהיו בה נשארים (בלי רשימה). המספר לא יחזור. */
     void deleteList(long list);
 
     /** null אם אין. */
@@ -31305,6 +31975,12 @@ public interface Store {
 
     /** כל הרשימות, לפי מספר זיהוי. */
     List<Item> lists();
+
+    /** כל הרשימות החכמות, לפי מספר זיהוי. */
+    List<Item> smarts();
+
+    /** "לא משויכים" (מ0.3): קבצים ורעיונות שאינם באף רשימה, לפי מספר זיהוי. רשימות ורשימות חכמות לא נספרות. */
+    List<Item> unassigned();
 
     /** חברי הרשימה לפי המקום. */
     List<Member> members(long list);
@@ -31415,6 +32091,7 @@ public final class StoreContract {
             unicode();
             restore();
             files();
+            smarts();
             atomicity();
             randomOps();
         } catch (Throwable t) {
@@ -31624,6 +32301,64 @@ public final class StoreContract {
         }
     }
 
+    private static List<Long> idsOf(List<Store.Item> items) {
+        List<Long> out = new ArrayList<Long>();
+        for (Store.Item it : items) out.add(it.id);
+        return out;
+    }
+
+    private void smarts() throws Exception {
+        final Store s = opener.fresh(counterFile());
+        try {
+            final long l = s.createList("l", 0);
+            final long s1 = s.createSmart("recent", 0);
+            final long s2 = s.createSmart("inside", l);
+            ck("smart items are typed", s.item(s1).type == Store.SMART && s.item(s2).type == Store.SMART);
+            ck("smarts() lists the smarts only", idsOf(s.smarts()).equals(java.util.Arrays.asList(s1, s2)));
+            ck("lists() leaves the smarts out", idsOf(s.lists()).equals(java.util.Arrays.asList(l)));
+            ck("a smart created inside a list is a member", s.count(l) == 1 && s.members(l).get(0).item.id == s2
+                    && s.members(l).get(0).item.type == Store.SMART);
+            ck("an existing smart joins a list", s.addMember(l, s1) && !s.addMember(l, s1) && s.count(l) == 2 && dense(s, l));
+            ck("a smart sits in two lists", s.addMember(s.createList("l2", 0), s1) && s.listsOf(s1).size() == 2);
+            s.setProp(s1, Store.P_COND, "type:x \u05e9\u05d1\u05d5\u05e2");
+            s.setProp(s1, Store.P_SORT, "date");
+            ck("a smart keeps its condition and sort", "type:x \u05e9\u05d1\u05d5\u05e2".equals(s.prop(s1, Store.P_COND)) && "date".equals(s.prop(s1, Store.P_SORT)));
+            s.setOrigin(s1, "ini:m:S:s-1");
+            ck("a smart is found by origin", s.findByOrigin("ini:m:S:s-1") == s1);
+            fails("a smart has no members", new Act() { public void run() { s.members(s1); } });
+            fails("a smart has no count", new Act() { public void run() { s.count(s1); } });
+            fails("a note cannot go in a smart", new Act() { public void run() { s.addNote(s1, "x"); } });
+            fails("a list cannot be created in a smart", new Act() { public void run() { s.createList("x", s1); } });
+            fails("a smart cannot be created in a smart", new Act() { public void run() { s.createSmart("x", s1); } });
+            fails("empty smart name", new Act() { public void run() { s.createSmart("  ", 0); } });
+            fails("a file cannot be deleted as a list", new Act() {
+                public void run() { s.deleteList(s.createFile(info("/storage/emulated/0/f.txt", 1, 1, null))); }
+            });
+            // unassigned: files and notes that are in no list
+            long f2 = s.createFile(info("/storage/emulated/0/g.txt", 2, 2, null));
+            long l3 = s.createList("l3", 0);
+            long n3 = s.addNote(l3, "orphan soon");
+            long nIn = s.addNote(l, "kept");
+            long f3 = s.findFile("/storage/emulated/0/f.txt");
+            ck("a file or note in no list is unassigned", idsOf(s.unassigned()).equals(java.util.Arrays.asList(f3, f2)));
+            s.deleteList(l3);
+            ck("a note stays, unassigned, when its list is deleted", idsOf(s.unassigned()).equals(java.util.Arrays.asList(f3, f2, n3)));
+            ck("lists and smarts are never unassigned", !idsOf(s.unassigned()).contains(l) && !idsOf(s.unassigned()).contains(s1));
+            s.addMember(l, f2);
+            ck("joining a list takes an item out", idsOf(s.unassigned()).equals(java.util.Arrays.asList(f3, n3)));
+            s.removeMember(l, f2);
+            ck("leaving the last list brings it back", idsOf(s.unassigned()).equals(java.util.Arrays.asList(f3, f2, n3)));
+            ck("a note in a list is not unassigned", !idsOf(s.unassigned()).contains(nIn));
+            s.deleteList(s2);
+            ck("deleting a smart removes it from its lists", s.smarts().size() == 1 && dense(s, l) && s.item(s2) == null);
+            s.deleteList(s1);
+            ck("deleting a smart drops its props and origin", s.item(s1) == null && s.findByOrigin("ini:m:S:s-1") == 0 && s.smarts().isEmpty());
+            ck("check is clean after smarts", s.check() == null);
+        } finally {
+            s.close();
+        }
+    }
+
     private void atomicity() throws Exception {
         final Store s = opener.fresh(counterFile());
         try {
@@ -31795,6 +32530,12 @@ final class Stores {
     static void mustBeList(Store.Item it, long id) {
         if (it == null) throw new Store.Failure("no such item " + id);
         if (it.type != Store.LIST) throw new Store.Failure("not a list: " + id);
+    }
+
+    /** רשימה ידנית או חכמה (למחיקה). */
+    static void mustBeListOrSmart(Store.Item it, long id) {
+        if (it == null) throw new Store.Failure("no such item " + id);
+        if (it.type != Store.LIST && it.type != Store.SMART) throw new Store.Failure("not a list: " + id);
     }
 
     static void noListInList(Store.Item item) {
@@ -40879,8 +41620,8 @@ public final class Words {
 
         public static final String APP_NAME_M = "מנהל קבצים וירטואלי · מ";
         public static final String MENU = "מסד נתונים (מ)";
-        public static final String TITLE = "מסד נתונים · מ0.2.2";
-        public static final String NOTICE = "מנוע המסד בבנייה, ועדיין בלי גיבוי (מ0.5). \"העתקה מהישן\" רק קוראת מהמנוע הישן ולא משנה בו דבר. לכל אופן עבודה מסד משלו — כל אופן נכנס למסד של אותו אופן. אפשר להעתיק שוב: מה שכבר הועתק מתעדכן ולא מוכפל.";
+        public static final String TITLE = "מסד נתונים · מ0.3";
+        public static final String NOTICE = "מנוע המסד בבנייה, ועדיין בלי גיבוי (מ0.5). \"העתקה מהישן\" רק קוראת מהמנוע הישן ולא משנה בו דבר. לכל אופן עבודה מסד משלו — כל אופן נכנס למסד של אותו אופן. אפשר להעתיק שוב: מה שכבר הועתק מתעדכן ולא מוכפל. רשימה חכמה שומרת רק את התנאי — הקבצים נמצאים בכל פתיחה מהאינדקס.";
         public static final String NEED_ACCESS = "כדי לשמור את מונה המזהים בתיקיית הנתונים, התוכנה צריכה הרשאת גישה לכל הקבצים.";
         public static final String ALL_LISTS = "כל הרשימות";
         public static final String CRUMB_SEP = " › ";
@@ -40904,6 +41645,41 @@ public final class Words {
         public static final String KIND_LIST = "רשימה";
         public static final String KIND_NOTE = "רעיון";
         public static final String KIND_FILE = "קובץ";
+        public static final String KIND_SMART = "רשימה חכמה";
+        public static final String NEW_SMART = "⚡ חכמה חדשה";
+        public static final String UNASSIGNED = "📥 לא משויכים";
+        public static final String UNASSIGNED_SUB = "קבצים ורעיונות שאינם באף רשימה · מתעדכנת לבד";
+        public static final String UNASSIGNED_EMPTY = "אין פריטים בלי רשימה.";
+        public static final String UNASSIGNED_HINT = "נגיעה ארוכה על פריט: הוספה לרשימה.";
+        public static final String ADD_TO_LIST = "הוספה לרשימה…";
+        public static final String ADD_TO_LIST_TITLE = "הוספה לרשימה";
+        public static final String NO_LISTS = "אין עדיין רשימות — צרו רשימה קודם.";
+        public static final String SMART_NAME = "שם הרשימה החכמה";
+        public static final String SMART_COND = "התנאי (כמו בחיפוש, למשל: סוג:תמונות תאריך:שבוע)";
+        public static final String NEW_SMART_TITLE = "רשימה חכמה חדשה";
+        public static final String EDIT_COND = "עריכת התנאי";
+        public static final String EDIT_COND_TITLE = "התנאי של הרשימה החכמה";
+        public static final String SMART_NO_COND = "אין תנאי — הרשימה לא מוצאת כלום. אפשר להגדיר אותו בעריכת התנאי.";
+        public static final String INDEX_NOT_READY = "האינדקס עוד נבנה — התוצאות יופיעו כשיסתיים. אפשר לחזור בעוד רגע.";
+        public static final String SMART_EMPTY = "הרשימה לא מצאה כלום.";
+        public static final String SMART_READONLY = "קריאה בלבד — הרשימה החכמה מוצאת לבד לפי התנאי.";
+        public static final String DELETE_SMART_DETAIL = "התנאי נמחק, והיא יוצאת מכל הרשימות שהיא בהן. הקבצים עצמם לא נפגעים. מספר הזיהוי לא יחזור.";
+
+        public static String smartLine(long id, String cond) {
+            return KIND_SMART + " · מספר " + id + (cond.isEmpty() ? " · בלי תנאי" : " · " + cond);
+        }
+
+        public static String smartInfo(String cond, int count, long size) {
+            return "תנאי: " + (cond.isEmpty() ? "—" : cond) + " · " + Words.items(count) + (size > 0 ? " · " + Files.size(size) : "");
+        }
+
+        public static String smartNote(String note) {
+            return "⚠ " + note;
+        }
+
+        public static String smartMore(int shown, int total) {
+            return "מוצגים " + shown + " הראשונים מתוך " + total + ". " + SMART_READONLY;
+        }
         public static final String ALREADY_THERE = "הפריט כבר ברשימה";
 
         public static final String MODE_PICK = "אופן עבודה (לכל אופן מסד משלו)";
@@ -40932,20 +41708,23 @@ public final class Words {
         }
 
         /** הדוח. בתצוגה מקדימה — "ייווספו"; אחרי ההעתקה — "נוספו". */
-        public static String importReport(boolean done, String mode, int listsNew, int listsKnown, int filesNew, int filesKnown,
+        public static String importReport(boolean done, String mode, int listsNew, int listsKnown, int smartNew, int smartKnown,
+                                          int filesNew, int filesKnown,
                                           int filesUpdated, int linksAdded, int propsSet, int rootFiles,
-                                          int bad, int refs, int smart, int live) {
+                                          int bad, int refs, int smart, int nested, int live) {
             StringBuilder sb = new StringBuilder("מקור: " + mode + "\n");
             sb.append("רשימות: ").append(listsNew).append(done ? " נוספו" : " ייווספו").append(" · ").append(listsKnown).append(" כבר היו\n");
+            sb.append("רשימות חכמות: ").append(smartNew).append(done ? " נוספו" : " ייווספו").append(" · ").append(smartKnown).append(" כבר היו\n");
             sb.append("קבצים: ").append(filesNew).append(done ? " נוספו" : " ייווספו").append(" · ").append(filesKnown + filesUpdated).append(" כבר היו");
             if (filesUpdated > 0) sb.append(" (").append(filesUpdated).append(done ? " עודכנו" : " יעודכנו").append(" לפי החתימה במקור)");
-            sb.append('\n').append(linksAdded).append(done ? " קבצים נוספו" : " קבצים ייווספו").append(" לרשימות");
+            sb.append('\n').append(linksAdded).append(done ? " קישורים נוספו" : " קישורים ייווספו").append(" (קבצים ורשימות חכמות) לרשימות");
             if (propsSet > 0) sb.append(" · ").append(propsSet).append(done ? " פרטי רשימה הושלמו" : " פרטי רשימה יושלמו");
             if (rootFiles > 0) sb.append("\n").append(rootFiles).append(" קבצים בלי רשימה (היו בשורש הרשימות)");
-            if (bad + refs + smart + live > 0) {
+            if (bad + refs + smart + nested + live > 0) {
                 sb.append("\n\nלא מועתק בגרסה הזו (נשאר במנוע הישן, לא נמחק):");
                 if (refs > 0) sb.append("\n").append(refs).append(" הפניות בין רשימות (מ0.4)");
-                if (smart > 0) sb.append("\n").append(smart).append(" רשימות חכמות בתוך רשימות (מ0.3)");
+                if (smart > 0) sb.append("\n").append(smart).append(" הפניות לרשימות חכמות שלא נמצאו או שאינן הגדרה (נמחקו, כלי, כפולים)");
+                if (nested > 0) sb.append("\n").append(nested).append(" \"רשימות בתוך\" שבתוך רשימות חכמות (מ0.4)");
                 if (live > 0) sb.append("\n").append(live).append(" תיקיות חיות");
                 if (bad > 0) sb.append("\n").append(bad).append(" שורות פגומות בקובץ הרשימות");
             }
@@ -41001,9 +41780,35 @@ public final class Words {
             return "━━ אופן: " + mode + " ━━";
         }
 
-        public static String modeSource(int lists, int files, int refs, int smart, int live, int bad) {
-            return "במקור: " + lists + " רשימות · " + files + " קבצים · לא מועתק בגרסה הזו: " + refs + " הפניות, " + smart
-                    + " רשימות חכמות, " + live + " תיקיות חיות, " + bad + " שורות פגומות";
+        public static String modeSource(int lists, int files, int defs, int refs, int smart, int nested, int live, int bad) {
+            return "במקור: " + lists + " רשימות · " + files + " קבצים · " + defs + " רשימות חכמות · לא מועתק בגרסה הזו: " + refs + " הפניות, "
+                    + smart + " הפניות חכמות שלא נמצאו, " + nested + " רשימות בתוך חכמות, " + live + " תיקיות חיות, " + bad + " שורות פגומות";
+        }
+
+        public static String modeTempSmart(int defs, int found, int wrong, int unExpected, int unGot) {
+            return "   רשימות חכמות: במקור " + defs + " · נמצאו " + found + " · תנאי או מיון שונה: " + wrong
+                    + " · לא משויכים: צפוי " + unExpected + ", במסד " + unGot;
+        }
+
+        public static String modeRealUnassigned(int n) {
+            return "   לא משויכים במסד האמיתי: " + n;
+        }
+
+        public static String evalNone() {
+            return "הערכת רשימות חכמות: האינדקס עוד לא מוכן — ההערכה דולגה (נסו שוב בעוד רגע)";
+        }
+
+        public static String evalLine(int checked, int withHits, int noHits, int notUnderstood, int noCond, long files, long ms) {
+            return "הערכת רשימות חכמות מול האינדקס: נבדקו " + checked + " תנאים · עם תוצאות: " + withHits + " · בלי תוצאות: " + noHits
+                    + " · לא הובנו: " + notUnderstood + " · בלי תנאי: " + noCond + " · סה״כ " + files + " קבצים · " + ms + " מ״ש";
+        }
+
+        public static String evalNoHits(String names) {
+            return "   בלי תוצאות: " + names;
+        }
+
+        public static String evalBad(String name, String note) {
+            return "   לא הובן: " + name + " — " + note;
         }
 
         private static String yn(boolean b) {
@@ -41018,10 +41823,11 @@ public final class Words {
         }
 
         public static String modeReal(int dbLists, int srcLists, int found, int membersWrong, int filesMissing, int newLists,
-                                      int newFiles, int updated, int links, boolean checkOk) {
+                                      int newFiles, int updated, int links, int smartMissing, boolean checkOk) {
             return "המסד האמיתי: " + dbLists + " רשימות (במקור " + srcLists + ") · נמצאו " + found + " מהרשימות של המקור · חברות שגויה: "
                     + membersWrong + " · קבצים חסרים: " + filesMissing + " · מה שעוד יתווסף אם נעתיק שוב: " + newLists + " רשימות, "
-                    + newFiles + " קבצים, " + updated + " עדכוני חתימה, " + links + " קישורים · המסד תקין: " + yn(checkOk);
+                    + newFiles + " קבצים, " + updated + " עדכוני חתימה, " + links + " קישורים, " + smartMissing
+                    + " רשימות חכמות · המסד תקין: " + yn(checkOk);
         }
 
         public static String modeEmpty(int total, int truly, int pending) {
@@ -41060,9 +41866,29 @@ public final class Words {
             return "אופן " + mode + ": בדיקת התקינות של המסד נכשלה — " + why;
         }
 
-        public static String pRealBehind(String mode, int lists, int files, int updated, int links) {
+        public static String pRealBehind(String mode, int lists, int files, int updated, int links, int smart) {
             return "אופן " + mode + ": המסד האמיתי לא תואם למקור — חסרים " + lists + " רשימות, " + files + " קבצים, "
-                    + updated + " עדכוני חתימה, " + links + " קישורים (העתקה חוזרת תשלים)";
+                    + updated + " עדכוני חתימה, " + links + " קישורים, " + smart + " רשימות חכמות (העתקה חוזרת תשלים)";
+        }
+
+        public static String pSmartMissing(String mode, int n) {
+            return "אופן " + mode + ": " + n + " רשימות חכמות מהמקור לא הועתקו";
+        }
+
+        public static String pSmartWrong(String mode, int n) {
+            return "אופן " + mode + ": ב־" + n + " רשימות חכמות התנאי או המיון לא הועתקו נכון";
+        }
+
+        public static String pUnassigned(String mode, int expected, int got) {
+            return "אופן " + mode + ": \"לא משויכים\" שונה ממה שצפוי — צפוי " + expected + ", במסד " + got;
+        }
+
+        public static String pSmartCond(String mode, int n) {
+            return "אופן " + mode + ": מנוע החיפוש לא הבין חלק מהתנאים ב־" + n + " רשימות חכמות";
+        }
+
+        public static String exSmartMissing(String name) {
+            return "חסרה רשימה חכמה: " + name;
         }
 
         public static String exListMissing(String path) {
@@ -42174,7 +43000,8 @@ final class ImportTests {
     static final String SIGS2 = SIGS1 + "2:00000000000000cc\t5\t9\t" + C + "\n";
 
     private static boolean same(Importer.Report a, Importer.Report b) {
-        return a.listsNew == b.listsNew && a.listsKnown == b.listsKnown && a.filesNew == b.filesNew && a.filesKnown == b.filesKnown
+        return a.listsNew == b.listsNew && a.listsKnown == b.listsKnown && a.smartNew == b.smartNew && a.smartKnown == b.smartKnown
+                && a.nested == b.nested && a.filesNew == b.filesNew && a.filesKnown == b.filesKnown
                 && a.filesUpdated == b.filesUpdated && a.filesWithSig == b.filesWithSig && a.linksAdded == b.linksAdded
                 && a.linksKnown == b.linksKnown && a.rootFiles == b.rootFiles && a.propsSet == b.propsSet
                 && a.badLines == b.badLines && a.refs == b.refs && a.smart == b.smart && a.live == b.live;
@@ -42306,11 +43133,130 @@ final class ImportTests {
     }
 
 
+    // ---------- רשימות חכמות (מ0.3) ----------
+
+    static final String E = "/storage/emulated/0/ש.pdf";
+
+    /** עץ עם חכמות: מקושרת לנפוצה (p-link), פנימית (p-shot), נפוצה (s-img, גם בתת־רשימה), כלי (f-1), ונמחקה (s-gone). */
+    static final String SMART_TREE = ""
+            + E + " | 3\n"
+            + "#1 ספרים\n"
+            + "@חכמה p-link\n"
+            + "@חכמה p-shot\n"
+            + "@חכמה s-img\n"
+            + "@חכמה f-1\n"
+            + "@חכמה s-gone\n"
+            + "@סדר ss-img\n"
+            + "@סדר cהלכה\n"
+            + A + " | 100\n"
+            + "#2 ספרים / הלכה\n"
+            + "@חכמה s-img\n"
+            + B + " | 7\n";
+
+    static final String SMART_INI = ""
+            + "[הגדרה נפוצה: אחרונים]\nמזהה = s-rec\nתנאי = תאריך:שבוע\nמיון = תאריך\nתצוגה = ברצף\n\n"
+            + "[הגדרה נפוצה: תמונות]\nמזהה = s-img\nתנאי = סוג:תמונות\nמיון = שם\n\n"
+            + "[הגדרה נפוצה: ריקה]\nמזהה = s-empty\nתנאי =\n\n"
+            + "[רשימה פנימית: ספרים › אחרונים שלי]\nמזהה = p-link\nהגדרה נפוצה = s-rec\n\n"
+            + "[רשימה פנימית: ספרים › צילומי מסך]\nמזהה = p-shot\nתנאי = סוג:תמונות צילום\nמיון = גודל\nרשימות בתוך = m:ספרים|s-img\n\n"
+            + "[פונקציה: כלי]\nמזהה = f-1\nסוג = חיפוש\nתנאי = x\n";
+
+    static void writeSmartMode(File mode) throws IOException {
+        write(new File(mode, Paths.TREE), SMART_TREE);
+        write(new File(new File(mode, Paths.SETTINGS), Paths.MAIN), SMART_INI);
+    }
+
+    /** מסד חדש לחלוטין (מופע Store משלו): העתקת חכמות, חברות וסדר, "לא משויכים", עדכון בלי דריסה, ומה שנמחק חוזר. */
+    void smart(Store s, File dir) throws Exception {
+        File m = new File(dir, "חכם");
+        writeSmartMode(m);
+        Importer.Source src = Importer.load(m);
+        ck("חכמות: נקראו 4 הגדרות — הנפוצות ואחריהן הפנימית שאינה מקושרת", src.wanted().size() == 4
+                && src.wanted().get(0).key.equals("s-rec") && src.wanted().get(3).key.equals("p-shot"));
+        ck("חכמות: פנימית מקושרת היא אותה הגדרה כמו הנפוצה", src.smart("p-link") != null && src.smart("p-link").key.equals("s-rec"));
+        ck("חכמות: כלי ונמחקה אינן הגדרה", src.smart("f-1") == null && src.smart("s-gone") == null && src.skippedSmart() == 2);
+
+        Importer.Report pre = Importer.run(s, src, false);
+        ck("חכמות: תצוגה מקדימה לא שומרת", s.smarts().isEmpty() && s.lists().isEmpty() && s.lastId() == 0);
+        Importer.Report r = Importer.run(s, src, true);
+        ck("חכמות: הדוח זהה לתצוגה המקדימה", same(pre, r));
+        ck("חכמות: ארבע חדשות, שתי רשימות, 6 קישורים (קובץ וחכמה), 3 קבצים", r.smartNew == 4 && r.smartKnown == 0 && r.listsNew == 2
+                && r.linksAdded == 6 && r.filesNew == 3 && r.rootFiles == 1);
+        ck("חכמות: מה שלא מועתק — שתי הפניות, ושתי \"רשימות בתוך\"", r.smart == 2 && r.nested == 2 && r.skippedAny());
+        ck("חכמות: ארבעה פריטים חכמים במסד", s.smarts().size() == 4 && s.lists().size() == 2);
+        long books = s.findByOrigin(Importer.originOf("חכם", "ספרים")), halacha = s.findByOrigin(Importer.originOf("חכם", "ספרים / הלכה"));
+        long rec = s.findByOrigin(Importer.smartOrigin("חכם", "s-rec")), img = s.findByOrigin(Importer.smartOrigin("חכם", "s-img"));
+        long shot = s.findByOrigin(Importer.smartOrigin("חכם", "p-shot")), empty = s.findByOrigin(Importer.smartOrigin("חכם", "s-empty"));
+        ck("חכמות: כל אחת נמצאת לפי מקורה; המקושרת לא קיבלה פריט משלה", rec != 0 && img != 0 && shot != 0 && empty != 0
+                && s.findByOrigin(Importer.smartOrigin("חכם", "p-link")) == 0);
+        ck("חכמות: סוג, שם ותנאי", s.item(rec).type == Store.SMART && s.item(rec).name.equals("אחרונים") && "תאריך:שבוע".equals(s.prop(rec, Store.P_COND))
+                && "תאריך".equals(s.prop(rec, Store.P_SORT)) && "ברצף".equals(s.prop(rec, Store.P_VIEW)) && s.prop(rec, Store.P_DIR) == null);
+        ck("חכמות: פנימית — שם אחרי החץ, תנאי ומיון", s.item(shot).name.equals("צילומי מסך") && "סוג:תמונות צילום".equals(s.prop(shot, Store.P_COND))
+                && "גודל".equals(s.prop(shot, Store.P_SORT)));
+        ck("חכמות: נפוצה בלי תנאי נוצרת, בלי תנאי", s.item(empty) != null && s.prop(empty, Store.P_COND) == null);
+        ck("חכמות: הנפוצות עומדות לעצמן", s.listsOf(rec).equals(Arrays.asList(books)) && s.listsOf(empty).isEmpty());
+        ck("חכמות: הסדר — מה ש־@סדר קבע, אחריו תת־רשימות, חכמות ואז קבצים",
+                names(s, books).equals(Arrays.asList("תמונות", "הלכה", "אחרונים", "צילומי מסך", "א.pdf")));
+        ck("חכמות: אותה חכמה בשתי רשימות — פריט אחד", s.listsOf(img).equals(Arrays.asList(books, halacha))
+                && names(s, halacha).equals(Arrays.asList("תמונות", "ב.pdf")));
+        ck("חכמות: לא משויכים — רק הקובץ מהשורש", names(s, books).size() == 5 && s.unassigned().size() == 1
+                && s.unassigned().get(0).name.equals("ש.pdf") && s.findFile(E) == s.unassigned().get(0).id);
+        ck("חכמות: המסד תקין", s.check() == null);
+
+        long last = s.lastId();
+        Importer.Report again = Importer.run(s, src, true);
+        ck("חכמות חוזרת: אין שינוי ואין מספרים חדשים", again.nothingToDo() && again.smartKnown == 4 && again.linksKnown == 6 && s.lastId() == last);
+
+        // המשתמש עורך: התנאי שלו לא נדרס; מאפיין שנמחק חוזר; חכמה שנמחקה חוזרת
+        s.setProp(rec, Store.P_COND, "משלי");
+        s.rename(rec, "אחרונים שלי");
+        s.setProp(img, Store.P_SORT, "");
+        Importer.Report upd = Importer.run(s, src, true);
+        ck("חכמות עדכון: התנאי והשם של המשתמש נשארים", "משלי".equals(s.prop(rec, Store.P_COND)) && s.item(rec).name.equals("אחרונים שלי"));
+        ck("חכמות עדכון: מאפיין ריק התמלא פעם אחת", "שם".equals(s.prop(img, Store.P_SORT)) && upd.propsSet == 1 && upd.smartNew == 0);
+        s.deleteList(img);
+        Importer.Report back = Importer.run(s, src, true);
+        long img2 = s.findByOrigin(Importer.smartOrigin("חכם", "s-img"));
+        ck("חכמות: חכמה שנמחקה במסד חוזרת בהעתקה חוזרת, ומתחברת מחדש לשתי הרשימות", back.smartNew == 1 && img2 != 0 && img2 != img
+                && s.listsOf(img2).size() == 2 && back.linksAdded == 2);
+        ck("חכמות: המסד תקין בסוף", s.check() == null);
+
+        // בלי קובץ ראשי: ההפניות נספרות כלא־נמצאו, ושום דבר לא קורס
+        File bare = new File(dir, "בלי-ראשי/חכם2");
+        write(new File(bare, Paths.TREE), SMART_TREE);
+        Importer.Source noIni = Importer.load(bare);
+        ck("חכמות: בלי קובץ ראשי — אין הגדרות, וכל ההפניות לא נמצאו", noIni.ini != null && noIni.wanted().isEmpty() && noIni.skippedSmart() == 6);
+        // קובץ ראשי עם הפניה מעגלית של פנימית שמקשרת לפנימית אחרת (לא נפוצה): לא נתקע
+        File loop = new File(dir, "מעגל/חכם3");
+        write(new File(loop, Paths.TREE), "#1 א\n@חכמה p-a\n");
+        write(new File(new File(loop, Paths.SETTINGS), Paths.MAIN),
+                "[רשימה פנימית: א › אחת]\nמזהה = p-a\nהגדרה נפוצה = p-b\nתנאי = x\n\n[רשימה פנימית: א › שתיים]\nמזהה = p-b\nהגדרה נפוצה = p-a\nתנאי = y\n");
+        Importer.Source lp = Importer.load(loop);
+        ck("חכמות: קישור בין שתי פנימיות לא נתקע — כל אחת היא הגדרה בפני עצמה", lp.wanted().size() == 1 && "x".equals(lp.wanted().get(0).cond));
+    }
+
     // ---------- הבדיקה המלאה (FullCheck) ----------
 
     /** opener — יוצר Store חדש. sabotage — האם המסד ה"אמיתי" חסר קישור אחד. */
     private String fullReport(final StoreContract.Opener opener, File dir, final boolean sabotage, final boolean selfOk) throws Exception {
-        final File old = new File(dir, "olddata-" + sabotage + selfOk);
+        return fullReport(opener, dir, sabotage, selfOk, false);
+    }
+
+    /** מנוע הערכה מדומה: "סוג:תמונות" — 3, "סוג:תמונות צילום" — 2 (או הערה "לא הובן" כש־badCond), כל השאר — 0. */
+    static Smarts.Finder fake(final boolean badCond) {
+        return new Smarts.Finder() {
+            @Override
+            public Smarts.Result find(String cond, String sort, int limit) {
+                int n = cond.equals("סוג:תמונות") ? 3 : cond.equals("סוג:תמונות צילום") ? 2 : 0;
+                return new Smarts.Result(true, n, n * 10L, badCond && cond.contains("צילום") ? "לא הובן" : "", new ArrayList<Smarts.Row>());
+            }
+        };
+    }
+
+    private String fullReport(final StoreContract.Opener opener, File dir, final boolean sabotage, final boolean selfOk,
+                              final boolean badCond) throws Exception {
+        final File old = new File(dir, "olddata-" + sabotage + selfOk + badCond);
+        writeSmartMode(new File(old, Modes.DIR + "/חכם"));
         write(new File(old, Modes.DIR + "/ראשון/" + Paths.TREE), TREE1);
         write(new File(old, Modes.DIR + "/ראשון/" + Sig.FILE), SIGS1);
         write(new File(old, Modes.DIR + "/שני/" + Paths.TREE), TREE2);
@@ -42321,11 +43267,12 @@ final class ImportTests {
             @Override public String header() { return "HEADER"; }
             @Override public String selfTest() { return "SELFTEST"; }
             @Override public boolean selfTestOk() { return selfOk; }
-            @Override public Store openTemp() throws Exception { return opener.fresh(new File(ctr, "fc-" + (n[0]++) + ".txt")); }
+            @Override public Store openTemp() throws Exception { return opener.fresh(new File(ctr, "fc-" + (n[0]++) + "-" + badCond + ".txt")); }
+            @Override public Smarts.Finder finder() { return fake(badCond); }
             @Override
             public Store openReal(String mode) throws Exception {
                 if (!mode.equals("ראשון")) return null;
-                Store s = opener.fresh(new File(ctr, "fc-" + (n[0]++) + ".txt"));
+                Store s = opener.fresh(new File(ctr, "fc-" + (n[0]++) + "-" + badCond + "r.txt"));
                 Importer.run(s, Importer.load(new File(old, Modes.DIR + "/ראשון")), true);
                 if (sabotage) {
                     long books = s.findByOrigin(Importer.originOf("ראשון", "ספרים"));
@@ -42342,10 +43289,18 @@ final class ImportTests {
         ck("בדיקה מלאה: הדוח כולל כותרת, בדיקה עצמית ושני אופנים", ok.contains("HEADER") && ok.contains("SELFTEST")
                 && ok.contains(Words.Db.modeHead("ראשון")) && ok.contains(Words.Db.modeHead("שני")));
         ck("בדיקה מלאה: אופן בלי מסד אמיתי מדווח כך", ok.contains(Words.Db.REAL_NONE));
-        ck("בדיקה מלאה: מה שלא מועתק מופיע", ok.contains("1 הפניות") && ok.contains("1 רשימות חכמות"));
+        ck("בדיקה מלאה: מה שלא מועתק מופיע", ok.contains("1 הפניות") && ok.contains("1 הפניות חכמות שלא נמצאו"));
         ck("בדיקה מלאה: רשימה ריקה בלי סיבה מוצגת בשמה", ok.contains(Words.Db.modeEmpty(1, 1, 0)) && ok.contains("   חדשה") && ok.contains(Words.Db.modeEmpty(0, 0, 0)));
         String bad = fullReport(opener, dir, true, true);
-        ck("בדיקה מלאה: מסד אמיתי שחסר בו קישור — פסק דין אדום", bad.startsWith(Words.Db.verdictBad(1)) && bad.contains(Words.Db.pRealBehind("ראשון", 0, 0, 0, 1)));
+        ck("בדיקה מלאה: מסד אמיתי שחסר בו קישור — פסק דין אדום", bad.startsWith(Words.Db.verdictBad(1)) && bad.contains(Words.Db.pRealBehind("ראשון", 0, 0, 0, 1, 0)));
+        ck("בדיקה מלאה: רשימות חכמות — במקור 4, נמצאו 4, אפס שגויות; לא משויכים צפוי 1 ונמצא 1",
+                ok.contains(Words.Db.modeTempSmart(4, 4, 0, 1, 1)));
+        ck("בדיקה מלאה: הערכה מול האינדקס — 3 תנאים, 2 עם תוצאות, אחד בלי, אחד בלי תנאי",
+                ok.contains("נבדקו 3 תנאים · עם תוצאות: 2 · בלי תוצאות: 1 · לא הובנו: 0 · בלי תנאי: 1 · סה״כ 5 קבצים")
+                        && ok.contains(Words.Db.evalNoHits("אחרונים")));
+        String badc = fullReport(opener, dir, false, true, true);
+        ck("בדיקה מלאה: תנאי שהמנוע לא הבין — פסק דין אדום", badc.startsWith(Words.Db.verdictBad(1)) && badc.contains(Words.Db.pSmartCond("חכם", 1))
+                && badc.contains(Words.Db.evalBad("צילומי מסך", "לא הובן")));
         String self = fullReport(opener, dir, false, false);
         ck("בדיקה מלאה: בדיקה עצמית שנכשלה — פסק דין אדום", self.startsWith(Words.Db.verdictBad(1)) && self.contains(Words.Db.pSelfTest()));
     }
@@ -42453,6 +43408,12 @@ final class StoreTests {
                 new ImportTests(o, name).run(s, new File(sub, "import"));
             } finally {
                 s.close();
+            }
+            Store sm = opener.fresh(new File(sub, "smart-counter.txt"));
+            try {
+                new ImportTests(o, name).smart(sm, new File(sub, "smart"));
+            } finally {
+                sm.close();
             }
             new ImportTests(o, name).fullCheck(opener, new File(sub, "full"));
         } catch (Throwable x) {
@@ -42666,6 +43627,7 @@ public final class Tests {
         run("גרסה 1.24.0 — פקודות על רשימות: ידנית, חכמה, תוכן, קבצי", new Runnable() { public void run() { v1240(); } });
         run("גרסה 1.25.0 — מדידה, לולאה, השוואת רשימות, בדיקת העומס", new Runnable() { public void run() { v1250(); } });
         run("מ0.1 — מונה המזהים, שתי הבניות, שכבת האחסון (MemStore, SqlStore)", new Runnable() { public void run() { storeM01(); } });
+        run("מ0.3 — הערכת רשימה חכמה מעל האינדקס (Smarts)", new Runnable() { public void run() { smartsM03(); } });
 
         System.out.println("בדיקות: " + passed + " עברו · " + failed + " נכשלו");
         for (String f : failures) System.out.println("  ✗ " + f);
@@ -42678,6 +43640,66 @@ public final class Tests {
         StoreTests.Out o = StoreTests.run(home, src == null ? null : new File(src));
         passed += o.passed;
         for (String f : o.failed) check("מ0.1: " + f, false);
+    }
+
+    /** מ0.3: Smarts.over — ספירה מלאה, שורות מוגבלות וממוינות, הערה לתנאי שלא הובן, אינדקס שלא מוכן. */
+    private static void smartsM03() {
+        File root = drive("פנימי-חכמות");
+        Index ix = built("פנימי-חכמות", root);
+        Library lib = Library.forTests(Collections.singletonList(ix));
+        Smarts.Finder f = Smarts.over(lib);
+        Smarts.Result all = f.find("pdf", "", 100);
+        check("חכמה: אינדקס מוכן, נמצאו קבצים", all.ready && all.count >= 4 && all.rows.size() == all.count);
+        Smarts.Result few = f.find("pdf", Sort.NAME, 2);
+        check("חכמה: הספירה מלאה גם כשהשורות מוגבלות", few.count == all.count && few.rows.size() == 2);
+        check("חכמה: מיון לפי שם", few.rows.get(0).name.compareToIgnoreCase(few.rows.get(1).name) <= 0);
+        Smarts.Result bySize = f.find("pdf", Sort.SIZE, 100);
+        boolean desc = true;
+        for (int i = 1; i < bySize.rows.size(); i++) desc &= bySize.rows.get(i - 1).size >= bySize.rows.get(i).size;
+        check("חכמה: מיון לפי גודל — הגדול קודם", desc && bySize.rows.get(0).size == 2L * 1024 * 1024);
+        check("חכמה: לשורה יש תיקייה ומסלול", all.rows.get(0).path.endsWith(all.rows.get(0).name) && !all.rows.get(0).folder.isEmpty());
+        check("חכמה: סכום הגדלים", all.size >= 2L * 1024 * 1024);
+        Smarts.Result none = f.find("אין-כזה-בכלל", "", 10);
+        check("חכמה: בלי תוצאות — מוכן, אפס", none.ready && none.count == 0 && none.rows.isEmpty() && none.note.isEmpty());
+        Smarts.Result bad = f.find("ספר גודל:2MB", "", 10);
+        check("חכמה: תנאי שלא הובן — הערה", bad.ready && !bad.note.isEmpty());
+        check("חכמה: תנאי ריק — לא מוכן", !f.find("  ", "", 10).ready);
+        check("חכמה: בלי אינדקס — לא מוכן", !Smarts.over(null).find("pdf", "", 10).ready);
+        Library cold = Library.forTests(Collections.singletonList(ix));
+        cold.ready = false;
+        check("חכמה: אינדקס שעוד נבנה — לא מוכן", !Smarts.over(cold).find("pdf", "", 10).ready);
+
+        // הקובץ הראשי נכתב בידי הקוד האמיתי (SmartLists.save, Nested.newInner) ונקרא בידי ההעתקה — לא רק מקובץ שכתבתי ביד
+        File ini = new File(home, "מבנה-חכמות.ini");
+        ini.delete();
+        Structure.testFile = ini;
+        String common, inner;
+        try {
+            common = SmartLists.save("אחרונים", "תאריך:שבוע", Sort.DATE, "", FolderView.FLAT);
+            inner = Nested.newInner("ספרים", "צילומים", "סוג:תמונות", Sort.NAME, "");
+        } finally {
+            Structure.testFile = null;
+        }
+        File mode = new File(home, "חכמות-אמיתי/עבודה");
+        wipe(mode.getParentFile());
+        mk(mode, "מבנה.txt", 0);
+        File settings = new File(mode, Paths.SETTINGS);
+        settings.mkdirs();
+        try {
+            java.nio.file.Files.write(new File(mode, Paths.TREE).toPath(),
+                    ("#1 ספרים\n@חכמה " + common + "\n@חכמה " + inner + "\n").getBytes("UTF-8"));
+            java.nio.file.Files.copy(ini.toPath(), new File(settings, Paths.MAIN).toPath(), java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+        } catch (java.io.IOException e) {
+            throw new RuntimeException(e);
+        }
+        Importer.Source real = Importer.load(mode);
+        check("חכמה: קובץ ראשי אמיתי — שתי הגדרות", real.wanted().size() == 2);
+        check("חכמה: הנפוצה נקראה עם התנאי והמיון", real.smart(common) != null && real.smart(common).name.equals("אחרונים")
+                && real.smart(common).cond.equals("תאריך:שבוע") && real.smart(common).sort.equals(Sort.DATE)
+                && real.smart(common).view.equals(FolderView.FLAT));
+        check("חכמה: הפנימית נקראה, והשם — אחרי החץ", real.smart(inner) != null && real.smart(inner).name.equals("צילומים")
+                && real.smart(inner).cond.equals("סוג:תמונות") && real.smart(inner).sort.equals(Sort.NAME));
+        check("חכמה: ההפניות נפתרות והאחת לא נספרת כחסרה", real.skippedSmart() == 0);
     }
 
     private static void run(String name, Runnable r) {

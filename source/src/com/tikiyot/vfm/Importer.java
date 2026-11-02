@@ -4,9 +4,11 @@ package com.tikiyot.vfm;
 // אסור לו: לשנות את הקבצים הישנים (קורא בלבד), לדעת איך Store שומר, או להציג דבר למשתמש (המסך עושה את זה).
 //
 // כללים (claude/masad-mipuy-haataka.md):
-//  - מה מועתק: רשימות ידניות בעץ (עם הסדר), צלמית/תיאור/עיצוב/"למה", קבצים (מסלול, כונן, גודל ותאריך, חתימה).
-//  - לא מועתק בגרסה זו, ונספר בדוח: הפניות בין רשימות (@רשימה — מ0.4), רשימות חכמות (@חכמה — מ0.3), תיקיות חיות
-//    (@תיקייה), שורות פגומות. שום דבר לא נמחק או משתנה במקור.
+//  - מה מועתק: רשימות ידניות בעץ (עם הסדר), צלמית/תיאור/עיצוב/"למה", קבצים (מסלול, כונן, גודל ותאריך, חתימה),
+//    ומ־מ0.3 גם רשימות חכמות: כל ההגדרות הנפוצות (עצמאיות), וכל @חכמה ברשימה ידנית — חברות של הרשימה החכמה בה
+//    (פנימית שמקושרת להגדרה נפוצה = אותו פריט, כמו בישן). התנאי נשמר כטקסט, כפי שהוא.
+//  - לא מועתק, ונספר בדוח: הפניות בין רשימות (@רשימה — מ0.4), @חכמה שאינה מובילה להגדרה (נמחקה, כלי, כפולים),
+//    "רשימות בתוך" שבתוך חכמה (מ0.4), תיקיות חיות (@תיקייה), שורות פגומות. שום דבר לא נמחק או משתנה במקור.
 //  - העתקה חוזרת = עדכון, לא כפילות: רשימה מזוהה לפי האופן והמסלול שלה במקור (origin_key), קובץ לפי המסלול שלו.
 //    רשימה שכבר הועתקה לא משתנה במבנה; מאפיין ריק בה מתמלא, מאפיין שיש לא נדרס. קבצים חדשים נוספים לסוף.
 //    מה שנמחק במקור לא נמחק במסד.
@@ -34,33 +36,151 @@ final class Importer {
     /** כונן שלא זוהה ממסלולו. */
     static final String UNKNOWN_DRIVE = "?";
 
+    /** מפתח המקור של רשימה חכמה: האופן ומזהה ההגדרה בקובץ הראשי (s-… נפוצה, p-… פנימית) — המזהה יציב במנוע הישן. */
+    static String smartOrigin(String mode, String key) {
+        return "ini:" + mode + ":S:" + key;  // תחביר
+    }
+
+    /** הגדרה של רשימה חכמה במנוע הישן: מה שמועתק. nested = כמה "רשימות בתוך" יש בה (לא מועתקות במ0.3). */
+    static final class Smart {
+        final String key, name, cond, sort, dir, view;
+        final int nested;
+
+        Smart(String key, String name, Map<String, String> p) {
+            this.key = key;
+            this.name = name;
+            this.cond = val(p, SmartLists.COND);
+            this.sort = val(p, SmartLists.SORT);
+            this.dir = val(p, SmartLists.DIR);
+            this.view = val(p, SmartLists.VIEW);
+            int n = 0;
+            for (String x : val(p, Nested.KEY).split("\\|")) if (!x.trim().isEmpty()) n++;
+            this.nested = n;
+        }
+
+        private static String val(Map<String, String> p, String k) {
+            String v = p.get(k);
+            return v == null ? "" : v.trim();
+        }
+    }
+
     /** מה נקרא מהמקור. */
     static final class Source {
         final String mode;
         final Tree tree;
         final Map<String, Sig.Entry> sigs;
+        /** הקובץ הראשי של האופן (הגדרות נפוצות ורשימות פנימיות); null — אין. */
+        final Ini ini;
+        private final Map<String, Smart> cache = new HashMap<String, Smart>();
 
         Source(String mode, Tree tree, Map<String, Sig.Entry> sigs) {
+            this(mode, tree, sigs, null);
+        }
+
+        Source(String mode, Tree tree, Map<String, Sig.Entry> sigs, Ini ini) {
             this.mode = mode;
             this.tree = tree;
             this.sigs = sigs;
+            this.ini = ini;
+        }
+
+        /** כל ההגדרות הנפוצות, לפי הסדר בקובץ. */
+        List<Smart> commons() {
+            List<Smart> out = new ArrayList<Smart>();
+            if (ini == null) return out;
+            String id = "", name = "";
+            Map<String, String> params = null;
+            for (Ini.Line l : ini.lines) {
+                if (l.isHeader()) {
+                    if (params != null && !id.isEmpty()) out.add(new Smart(id, name, params));
+                    params = null;
+                    id = "";
+                    if (l.headerName().startsWith(SmartLists.SECTION)) {
+                        name = l.headerName().substring(SmartLists.SECTION.length()).trim();
+                        params = new java.util.LinkedHashMap<String, String>();
+                    }
+                    continue;
+                }
+                if (params == null || l.key == null) continue;
+                if (l.key.equals(Structure.ID)) id = l.value == null ? "" : l.value;
+                else params.put(l.key, l.value == null ? "" : l.value);
+            }
+            if (params != null && !id.isEmpty()) out.add(new Smart(id, name, params));
+            return out;
+        }
+
+        /** ההגדרה שההפניה (@חכמה) מובילה אליה, או null: נמחקה, כלי, כפולים. */
+        Smart smart(String ref) {
+            if (ini == null || ref == null || ref.isEmpty()) return null;
+            if (cache.containsKey(ref)) return cache.get(ref);
+            Smart out = resolve(ref);
+            cache.put(ref, out);
+            return out;
+        }
+
+        private Smart resolve(String ref) {
+            Structure.Func f = Structure.byId(ini, ref);
+            if (f == null) return null;
+            if (f.name.startsWith(SmartLists.SECTION))
+                return new Smart(ref, f.name.substring(SmartLists.SECTION.length()).trim(), f.params);
+            if (!f.name.startsWith(Nested.INNER)) return null;
+            if (FnDup.KIND.equals(f.params.get("סוג"))) return null;  // תחביר
+            String link = f.params.get(SmartLists.LINK);
+            if (link != null && !link.isEmpty()) {
+                Structure.Func c = Structure.byId(ini, link);
+                if (c != null && c.name.startsWith(SmartLists.SECTION)) return resolve(link);   // מקושרת — אותו פריט
+            }
+            String h = f.name.substring(Nested.INNER.length());
+            int cut = h.lastIndexOf(" › ");
+            return new Smart(ref, (cut >= 0 ? h.substring(cut + 3) : h).trim(), f.params);
+        }
+
+        /** כל ההגדרות להעתקה: הנפוצות, ואחריהן מה שהרשימות מצביעות עליו — בלי כפילויות, לפי סדר העץ. */
+        List<Smart> wanted() {
+            Map<String, Smart> out = new java.util.LinkedHashMap<String, Smart>();
+            for (Smart c : commons()) out.put(c.key, c);
+            wanted(tree.root, out);
+            return new ArrayList<Smart>(out.values());
+        }
+
+        private void wanted(Tree.Node n, Map<String, Smart> out) {
+            for (String ref : n.smart) {
+                Smart sm = smart(ref);
+                if (sm != null && !out.containsKey(sm.key)) out.put(sm.key, sm);
+            }
+            for (Tree.Node c : n.children) wanted(c, out);
+        }
+
+        /** כמה הפניות @חכמה אינן מובילות להגדרה (ולכן לא מועתקות). */
+        int skippedSmart() {
+            return skipped(tree.root);
+        }
+
+        private int skipped(Tree.Node n) {
+            int k = 0;
+            for (String ref : n.smart) if (smart(ref) == null) k++;
+            for (Tree.Node c : n.children) k += skipped(c);
+            return k;
         }
     }
 
     /** הדוח: מה נעשה (או מה היה נעשה, בתצוגה מקדימה). */
     static final class Report {
         int listsNew, listsKnown;
+        /** רשימות חכמות (מ0.3): הגדרות חדשות / שכבר הועתקו. */
+        int smartNew, smartKnown;
         int filesNew, filesKnown, filesUpdated, filesWithSig;
         int linksAdded, linksKnown, rootFiles;
         int propsSet;
-        int badLines, refs, smart, live;
+        /** smart = הפניות @חכמה שלא הועתקו; nested = "רשימות בתוך" חכמה שלא הועתקו (מ0.4). */
+        int badLines, refs, smart, live, nested;
 
         boolean nothingToDo() {
-            return listsNew == 0 && filesNew == 0 && filesUpdated == 0 && linksAdded == 0 && propsSet == 0;
+            return listsNew == 0 && smartNew == 0 && filesNew == 0 && filesUpdated == 0 && linksAdded == 0 && propsSet == 0;
         }
 
         boolean skippedAny() {
-            return badLines + refs + smart + live > 0;
+            return badLines + refs + smart + live + nested > 0;
         }
     }
 
@@ -94,7 +214,8 @@ final class Importer {
         if (!t.isFile()) throw new Store.Failure("no tree file: " + t);
         Tree tree = Tree.loadFrom(t);
         if (tree.unreadable) throw new Store.Failure("tree file unreadable: " + t);
-        return new Source(modeDir.getName(), tree, Sig.read(new File(modeDir, Sig.FILE)));
+        Ini ini = Ini.load(new File(new File(modeDir, Paths.SETTINGS), Paths.MAIN));
+        return new Source(modeDir.getName(), tree, Sig.read(new File(modeDir, Sig.FILE)), ini.unreadable ? null : ini);
     }
 
     // ---------- ההעתקה ----------
@@ -132,6 +253,8 @@ final class Importer {
         final Report r;
         /** מסלול ← פריט, לריצה הזו (קובץ שבכמה רשימות — פריט אחד). */
         final Map<String, Long> files = new HashMap<String, Long>();
+        /** מזהה הגדרה ← פריט, לריצה הזו (פנימית מקושרת ונפוצה — פריט אחד). */
+        final Map<String, Long> smarts = new HashMap<String, Long>();
 
         Ctx(Store s, Source src, Report r) {
             this.s = s;
@@ -142,6 +265,12 @@ final class Importer {
         /** השורש: אין לו רשימה — הקבצים שבו נשארים בלי רשימה, והרשימות שלו עומדות לעצמן. */
         void top(Tree.Node root) {
             count(root);
+            for (Smart c : src.commons()) smart(c);                           // הנפוצות עומדות לעצמן
+            for (String ref : root.smart) {
+                Smart sm = src.smart(ref);
+                if (sm == null) r.smart++;
+                else smart(sm);
+            }
             for (Tree.Node c : root.children) list(c, 0);
             for (Tree.Entry e : root.entries) {
                 if (e.bad) {
@@ -155,7 +284,6 @@ final class Importer {
 
         void count(Tree.Node n) {
             r.refs += n.refs.size();
-            r.smart += n.smart.size();
             r.live += n.live.size();
         }
 
@@ -181,6 +309,14 @@ final class Importer {
             for (Object o : order(n)) {
                 if (o instanceof Tree.Node) {
                     list((Tree.Node) o, id);
+                } else if (o instanceof String) {
+                    Smart sm = src.smart((String) o);
+                    if (sm == null) {
+                        r.smart++;
+                        continue;
+                    }
+                    if (s.addMember(id, smart(sm))) r.linksAdded++;
+                    else r.linksKnown++;
                 } else {
                     Tree.Entry e = (Tree.Entry) o;
                     if (e.bad) {
@@ -191,6 +327,29 @@ final class Importer {
                     else r.linksKnown++;
                 }
             }
+        }
+
+        /** פריט הרשימה החכמה: קיים — רק מאפיינים ריקים מתמלאים (עריכת המשתמש נשמרת); חדש — נוצר. */
+        long smart(Smart sm) {
+            Long seen = smarts.get(sm.key);
+            if (seen != null) return seen;
+            String key = smartOrigin(src.mode, sm.key);
+            long id = s.findByOrigin(key);
+            boolean isNew = id == 0;
+            if (isNew) {
+                id = s.createSmart(sm.name, 0);
+                s.setOrigin(id, key);
+                r.smartNew++;
+            } else {
+                r.smartKnown++;
+            }
+            prop(id, Store.P_COND, sm.cond, isNew);
+            prop(id, Store.P_SORT, sm.sort, isNew);
+            prop(id, Store.P_DIR, sm.dir, isNew);
+            prop(id, Store.P_VIEW, sm.view, isNew);
+            r.nested += sm.nested;
+            smarts.put(sm.key, id);
+            return id;
         }
 
         void prop(long id, String k, String v, boolean isNew) {
@@ -230,7 +389,7 @@ final class Importer {
 
         /**
          * סדר הפריטים ברשימה: אם יש סדר חופשי (@סדר) — לפיו (רשימה: "c"+שם, קובץ: "f"+מסלול; מפתחות של סוגים שלא
-         * מועתקים מדולגים); מה שלא נזכר בו — אחריו, בסדר הרגיל: תת־רשימות ואז קבצים.
+         * מועתקים מדולגים); מה שלא נזכר בו — אחריו, בסדר הרגיל: תת־רשימות, רשימות חכמות ואז קבצים.
          */
         List<Object> order(Tree.Node n) {
             List<Object> out = new ArrayList<Object>();
@@ -240,10 +399,12 @@ final class Importer {
                 String v = k.substring(1);
                 Object o = null;
                 if (k.charAt(0) == 'c') o = n.child(v);
+                else if (k.charAt(0) == 's') { if (n.smart.contains(v)) o = v; }
                 else if (k.charAt(0) == 'f') for (Tree.Entry e : n.entries) if (e.path.equals(v)) { o = e; break; }
                 if (o != null && used.add(o)) out.add(o);
             }
             for (Tree.Node c : n.children) if (used.add(c)) out.add(c);
+            for (String ref : n.smart) if (used.add(ref)) out.add(ref);
             for (Tree.Entry e : n.entries) if (used.add(e)) out.add(e);
             return out;
         }

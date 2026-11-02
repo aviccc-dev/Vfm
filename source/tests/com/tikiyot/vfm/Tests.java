@@ -105,6 +105,7 @@ public final class Tests {
         run("גרסה 1.24.0 — פקודות על רשימות: ידנית, חכמה, תוכן, קבצי", new Runnable() { public void run() { v1240(); } });
         run("גרסה 1.25.0 — מדידה, לולאה, השוואת רשימות, בדיקת העומס", new Runnable() { public void run() { v1250(); } });
         run("מ0.1 — מונה המזהים, שתי הבניות, שכבת האחסון (MemStore, SqlStore)", new Runnable() { public void run() { storeM01(); } });
+        run("מ0.3 — הערכת רשימה חכמה מעל האינדקס (Smarts)", new Runnable() { public void run() { smartsM03(); } });
 
         System.out.println("בדיקות: " + passed + " עברו · " + failed + " נכשלו");
         for (String f : failures) System.out.println("  ✗ " + f);
@@ -117,6 +118,66 @@ public final class Tests {
         StoreTests.Out o = StoreTests.run(home, src == null ? null : new File(src));
         passed += o.passed;
         for (String f : o.failed) check("מ0.1: " + f, false);
+    }
+
+    /** מ0.3: Smarts.over — ספירה מלאה, שורות מוגבלות וממוינות, הערה לתנאי שלא הובן, אינדקס שלא מוכן. */
+    private static void smartsM03() {
+        File root = drive("פנימי-חכמות");
+        Index ix = built("פנימי-חכמות", root);
+        Library lib = Library.forTests(Collections.singletonList(ix));
+        Smarts.Finder f = Smarts.over(lib);
+        Smarts.Result all = f.find("pdf", "", 100);
+        check("חכמה: אינדקס מוכן, נמצאו קבצים", all.ready && all.count >= 4 && all.rows.size() == all.count);
+        Smarts.Result few = f.find("pdf", Sort.NAME, 2);
+        check("חכמה: הספירה מלאה גם כשהשורות מוגבלות", few.count == all.count && few.rows.size() == 2);
+        check("חכמה: מיון לפי שם", few.rows.get(0).name.compareToIgnoreCase(few.rows.get(1).name) <= 0);
+        Smarts.Result bySize = f.find("pdf", Sort.SIZE, 100);
+        boolean desc = true;
+        for (int i = 1; i < bySize.rows.size(); i++) desc &= bySize.rows.get(i - 1).size >= bySize.rows.get(i).size;
+        check("חכמה: מיון לפי גודל — הגדול קודם", desc && bySize.rows.get(0).size == 2L * 1024 * 1024);
+        check("חכמה: לשורה יש תיקייה ומסלול", all.rows.get(0).path.endsWith(all.rows.get(0).name) && !all.rows.get(0).folder.isEmpty());
+        check("חכמה: סכום הגדלים", all.size >= 2L * 1024 * 1024);
+        Smarts.Result none = f.find("אין-כזה-בכלל", "", 10);
+        check("חכמה: בלי תוצאות — מוכן, אפס", none.ready && none.count == 0 && none.rows.isEmpty() && none.note.isEmpty());
+        Smarts.Result bad = f.find("ספר גודל:2MB", "", 10);
+        check("חכמה: תנאי שלא הובן — הערה", bad.ready && !bad.note.isEmpty());
+        check("חכמה: תנאי ריק — לא מוכן", !f.find("  ", "", 10).ready);
+        check("חכמה: בלי אינדקס — לא מוכן", !Smarts.over(null).find("pdf", "", 10).ready);
+        Library cold = Library.forTests(Collections.singletonList(ix));
+        cold.ready = false;
+        check("חכמה: אינדקס שעוד נבנה — לא מוכן", !Smarts.over(cold).find("pdf", "", 10).ready);
+
+        // הקובץ הראשי נכתב בידי הקוד האמיתי (SmartLists.save, Nested.newInner) ונקרא בידי ההעתקה — לא רק מקובץ שכתבתי ביד
+        File ini = new File(home, "מבנה-חכמות.ini");
+        ini.delete();
+        Structure.testFile = ini;
+        String common, inner;
+        try {
+            common = SmartLists.save("אחרונים", "תאריך:שבוע", Sort.DATE, "", FolderView.FLAT);
+            inner = Nested.newInner("ספרים", "צילומים", "סוג:תמונות", Sort.NAME, "");
+        } finally {
+            Structure.testFile = null;
+        }
+        File mode = new File(home, "חכמות-אמיתי/עבודה");
+        wipe(mode.getParentFile());
+        mk(mode, "מבנה.txt", 0);
+        File settings = new File(mode, Paths.SETTINGS);
+        settings.mkdirs();
+        try {
+            java.nio.file.Files.write(new File(mode, Paths.TREE).toPath(),
+                    ("#1 ספרים\n@חכמה " + common + "\n@חכמה " + inner + "\n").getBytes("UTF-8"));
+            java.nio.file.Files.copy(ini.toPath(), new File(settings, Paths.MAIN).toPath(), java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+        } catch (java.io.IOException e) {
+            throw new RuntimeException(e);
+        }
+        Importer.Source real = Importer.load(mode);
+        check("חכמה: קובץ ראשי אמיתי — שתי הגדרות", real.wanted().size() == 2);
+        check("חכמה: הנפוצה נקראה עם התנאי והמיון", real.smart(common) != null && real.smart(common).name.equals("אחרונים")
+                && real.smart(common).cond.equals("תאריך:שבוע") && real.smart(common).sort.equals(Sort.DATE)
+                && real.smart(common).view.equals(FolderView.FLAT));
+        check("חכמה: הפנימית נקראה, והשם — אחרי החץ", real.smart(inner) != null && real.smart(inner).name.equals("צילומים")
+                && real.smart(inner).cond.equals("סוג:תמונות") && real.smart(inner).sort.equals(Sort.NAME));
+        check("חכמה: ההפניות נפתרות והאחת לא נספרת כחסרה", real.skippedSmart() == 0);
     }
 
     private static void run(String name, Runnable r) {

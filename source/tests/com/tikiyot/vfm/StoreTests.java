@@ -67,6 +67,12 @@ final class StoreTests {
             } finally {
                 s.close();
             }
+            Store sm = opener.fresh(new File(sub, "smart-counter.txt"));
+            try {
+                new ImportTests(o, name).smart(sm, new File(sub, "smart"));
+            } finally {
+                sm.close();
+            }
             new ImportTests(o, name).fullCheck(opener, new File(sub, "full"));
         } catch (Throwable x) {
             o.failed.add(name + " — העתקה: חריגה " + x);

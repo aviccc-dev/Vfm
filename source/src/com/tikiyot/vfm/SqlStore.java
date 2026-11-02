@@ -204,6 +204,21 @@ public final class SqlStore implements Store {
     }
 
     @Override
+    public long createSmart(String name, long parent) {
+        String n = Stores.clean(name, "name");
+        db.beginTransaction();
+        try {
+            if (parent != 0) mustBeList(parent);
+            long id = create(SMART, n);
+            if (parent != 0) append(parent, id, System.currentTimeMillis());
+            db.setTransactionSuccessful();
+            return id;
+        } finally {
+            db.endTransaction();
+        }
+    }
+
+    @Override
     public long addNote(long list, String text) {
         String t = Stores.clean(text, "text");
         db.beginTransaction();
@@ -303,7 +318,7 @@ public final class SqlStore implements Store {
     public void deleteList(long list) {
         db.beginTransaction();
         try {
-            mustBeList(list);
+            Stores.mustBeListOrSmart(read(list), list);
             Cursor c = db.rawQuery("SELECT list_id, position FROM members WHERE item_id=?", new String[]{s(list)});
             List<long[]> parents = new ArrayList<long[]>();
             try {
@@ -424,6 +439,27 @@ public final class SqlStore implements Store {
             c.close();
         }
         return out;
+    }
+
+    private List<Item> itemsWhere(String where, String... args) {
+        List<Item> out = new ArrayList<Item>();
+        Cursor c = db.rawQuery("SELECT id, type, name, created, changed FROM items WHERE " + where + " ORDER BY id", args);
+        try {
+            while (c.moveToNext()) out.add(row(c));
+        } finally {
+            c.close();
+        }
+        return out;
+    }
+
+    @Override
+    public List<Item> smarts() {
+        return itemsWhere("type=?", s(SMART));
+    }
+
+    @Override
+    public List<Item> unassigned() {
+        return itemsWhere("type IN (?,?) AND id NOT IN (SELECT item_id FROM members)", s(FILE), s(NOTE));
     }
 
     @Override

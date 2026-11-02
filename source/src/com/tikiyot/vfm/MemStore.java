@@ -60,6 +60,15 @@ public final class MemStore implements Store {
     }
 
     @Override
+    public long createSmart(String name, long parent) {
+        String n = Stores.clean(name, "name");
+        LinkedHashMap<Long, Long> p = parent == 0 ? null : listOf(parent);
+        Item it = make(SMART, n);
+        if (p != null) p.put(it.id, it.created);
+        return it.id;
+    }
+
+    @Override
     public long addNote(long list, String text) {
         String t = Stores.clean(text, "text");
         LinkedHashMap<Long, Long> l = listOf(list);
@@ -107,7 +116,7 @@ public final class MemStore implements Store {
 
     @Override
     public void deleteList(long list) {
-        listOf(list);
+        Stores.mustBeListOrSmart(items.get(list), list);
         members.remove(list);
         items.remove(list);
         props.remove(list);
@@ -217,6 +226,25 @@ public final class MemStore implements Store {
     public List<Item> lists() {
         List<Item> out = new ArrayList<Item>();
         for (Item it : items.values()) if (it.type == LIST) out.add(it);
+        return out;
+    }
+
+    @Override
+    public List<Item> smarts() {
+        List<Item> out = new ArrayList<Item>();
+        for (Item it : items.values()) if (it.type == SMART) out.add(it);
+        return out;
+    }
+
+    @Override
+    public List<Item> unassigned() {
+        List<Item> out = new ArrayList<Item>();
+        for (Item it : items.values()) {
+            if (it.type != FILE && it.type != NOTE) continue;
+            boolean in = false;
+            for (LinkedHashMap<Long, Long> l : members.values()) if (l.containsKey(it.id)) { in = true; break; }
+            if (!in) out.add(it);
+        }
         return out;
     }
 

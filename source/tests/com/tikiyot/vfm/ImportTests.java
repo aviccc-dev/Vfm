@@ -91,7 +91,8 @@ final class ImportTests {
     static final String SIGS2 = SIGS1 + "2:00000000000000cc\t5\t9\t" + C + "\n";
 
     private static boolean same(Importer.Report a, Importer.Report b) {
-        return a.listsNew == b.listsNew && a.listsKnown == b.listsKnown && a.filesNew == b.filesNew && a.filesKnown == b.filesKnown
+        return a.listsNew == b.listsNew && a.listsKnown == b.listsKnown && a.smartNew == b.smartNew && a.smartKnown == b.smartKnown
+                && a.nested == b.nested && a.filesNew == b.filesNew && a.filesKnown == b.filesKnown
                 && a.filesUpdated == b.filesUpdated && a.filesWithSig == b.filesWithSig && a.linksAdded == b.linksAdded
                 && a.linksKnown == b.linksKnown && a.rootFiles == b.rootFiles && a.propsSet == b.propsSet
                 && a.badLines == b.badLines && a.refs == b.refs && a.smart == b.smart && a.live == b.live;
@@ -223,11 +224,130 @@ final class ImportTests {
     }
 
 
+    // ---------- רשימות חכמות (מ0.3) ----------
+
+    static final String E = "/storage/emulated/0/ש.pdf";
+
+    /** עץ עם חכמות: מקושרת לנפוצה (p-link), פנימית (p-shot), נפוצה (s-img, גם בתת־רשימה), כלי (f-1), ונמחקה (s-gone). */
+    static final String SMART_TREE = ""
+            + E + " | 3\n"
+            + "#1 ספרים\n"
+            + "@חכמה p-link\n"
+            + "@חכמה p-shot\n"
+            + "@חכמה s-img\n"
+            + "@חכמה f-1\n"
+            + "@חכמה s-gone\n"
+            + "@סדר ss-img\n"
+            + "@סדר cהלכה\n"
+            + A + " | 100\n"
+            + "#2 ספרים / הלכה\n"
+            + "@חכמה s-img\n"
+            + B + " | 7\n";
+
+    static final String SMART_INI = ""
+            + "[הגדרה נפוצה: אחרונים]\nמזהה = s-rec\nתנאי = תאריך:שבוע\nמיון = תאריך\nתצוגה = ברצף\n\n"
+            + "[הגדרה נפוצה: תמונות]\nמזהה = s-img\nתנאי = סוג:תמונות\nמיון = שם\n\n"
+            + "[הגדרה נפוצה: ריקה]\nמזהה = s-empty\nתנאי =\n\n"
+            + "[רשימה פנימית: ספרים › אחרונים שלי]\nמזהה = p-link\nהגדרה נפוצה = s-rec\n\n"
+            + "[רשימה פנימית: ספרים › צילומי מסך]\nמזהה = p-shot\nתנאי = סוג:תמונות צילום\nמיון = גודל\nרשימות בתוך = m:ספרים|s-img\n\n"
+            + "[פונקציה: כלי]\nמזהה = f-1\nסוג = חיפוש\nתנאי = x\n";
+
+    static void writeSmartMode(File mode) throws IOException {
+        write(new File(mode, Paths.TREE), SMART_TREE);
+        write(new File(new File(mode, Paths.SETTINGS), Paths.MAIN), SMART_INI);
+    }
+
+    /** מסד חדש לחלוטין (מופע Store משלו): העתקת חכמות, חברות וסדר, "לא משויכים", עדכון בלי דריסה, ומה שנמחק חוזר. */
+    void smart(Store s, File dir) throws Exception {
+        File m = new File(dir, "חכם");
+        writeSmartMode(m);
+        Importer.Source src = Importer.load(m);
+        ck("חכמות: נקראו 4 הגדרות — הנפוצות ואחריהן הפנימית שאינה מקושרת", src.wanted().size() == 4
+                && src.wanted().get(0).key.equals("s-rec") && src.wanted().get(3).key.equals("p-shot"));
+        ck("חכמות: פנימית מקושרת היא אותה הגדרה כמו הנפוצה", src.smart("p-link") != null && src.smart("p-link").key.equals("s-rec"));
+        ck("חכמות: כלי ונמחקה אינן הגדרה", src.smart("f-1") == null && src.smart("s-gone") == null && src.skippedSmart() == 2);
+
+        Importer.Report pre = Importer.run(s, src, false);
+        ck("חכמות: תצוגה מקדימה לא שומרת", s.smarts().isEmpty() && s.lists().isEmpty() && s.lastId() == 0);
+        Importer.Report r = Importer.run(s, src, true);
+        ck("חכמות: הדוח זהה לתצוגה המקדימה", same(pre, r));
+        ck("חכמות: ארבע חדשות, שתי רשימות, 6 קישורים (קובץ וחכמה), 3 קבצים", r.smartNew == 4 && r.smartKnown == 0 && r.listsNew == 2
+                && r.linksAdded == 6 && r.filesNew == 3 && r.rootFiles == 1);
+        ck("חכמות: מה שלא מועתק — שתי הפניות, ושתי \"רשימות בתוך\"", r.smart == 2 && r.nested == 2 && r.skippedAny());
+        ck("חכמות: ארבעה פריטים חכמים במסד", s.smarts().size() == 4 && s.lists().size() == 2);
+        long books = s.findByOrigin(Importer.originOf("חכם", "ספרים")), halacha = s.findByOrigin(Importer.originOf("חכם", "ספרים / הלכה"));
+        long rec = s.findByOrigin(Importer.smartOrigin("חכם", "s-rec")), img = s.findByOrigin(Importer.smartOrigin("חכם", "s-img"));
+        long shot = s.findByOrigin(Importer.smartOrigin("חכם", "p-shot")), empty = s.findByOrigin(Importer.smartOrigin("חכם", "s-empty"));
+        ck("חכמות: כל אחת נמצאת לפי מקורה; המקושרת לא קיבלה פריט משלה", rec != 0 && img != 0 && shot != 0 && empty != 0
+                && s.findByOrigin(Importer.smartOrigin("חכם", "p-link")) == 0);
+        ck("חכמות: סוג, שם ותנאי", s.item(rec).type == Store.SMART && s.item(rec).name.equals("אחרונים") && "תאריך:שבוע".equals(s.prop(rec, Store.P_COND))
+                && "תאריך".equals(s.prop(rec, Store.P_SORT)) && "ברצף".equals(s.prop(rec, Store.P_VIEW)) && s.prop(rec, Store.P_DIR) == null);
+        ck("חכמות: פנימית — שם אחרי החץ, תנאי ומיון", s.item(shot).name.equals("צילומי מסך") && "סוג:תמונות צילום".equals(s.prop(shot, Store.P_COND))
+                && "גודל".equals(s.prop(shot, Store.P_SORT)));
+        ck("חכמות: נפוצה בלי תנאי נוצרת, בלי תנאי", s.item(empty) != null && s.prop(empty, Store.P_COND) == null);
+        ck("חכמות: הנפוצות עומדות לעצמן", s.listsOf(rec).equals(Arrays.asList(books)) && s.listsOf(empty).isEmpty());
+        ck("חכמות: הסדר — מה ש־@סדר קבע, אחריו תת־רשימות, חכמות ואז קבצים",
+                names(s, books).equals(Arrays.asList("תמונות", "הלכה", "אחרונים", "צילומי מסך", "א.pdf")));
+        ck("חכמות: אותה חכמה בשתי רשימות — פריט אחד", s.listsOf(img).equals(Arrays.asList(books, halacha))
+                && names(s, halacha).equals(Arrays.asList("תמונות", "ב.pdf")));
+        ck("חכמות: לא משויכים — רק הקובץ מהשורש", names(s, books).size() == 5 && s.unassigned().size() == 1
+                && s.unassigned().get(0).name.equals("ש.pdf") && s.findFile(E) == s.unassigned().get(0).id);
+        ck("חכמות: המסד תקין", s.check() == null);
+
+        long last = s.lastId();
+        Importer.Report again = Importer.run(s, src, true);
+        ck("חכמות חוזרת: אין שינוי ואין מספרים חדשים", again.nothingToDo() && again.smartKnown == 4 && again.linksKnown == 6 && s.lastId() == last);
+
+        // המשתמש עורך: התנאי שלו לא נדרס; מאפיין שנמחק חוזר; חכמה שנמחקה חוזרת
+        s.setProp(rec, Store.P_COND, "משלי");
+        s.rename(rec, "אחרונים שלי");
+        s.setProp(img, Store.P_SORT, "");
+        Importer.Report upd = Importer.run(s, src, true);
+        ck("חכמות עדכון: התנאי והשם של המשתמש נשארים", "משלי".equals(s.prop(rec, Store.P_COND)) && s.item(rec).name.equals("אחרונים שלי"));
+        ck("חכמות עדכון: מאפיין ריק התמלא פעם אחת", "שם".equals(s.prop(img, Store.P_SORT)) && upd.propsSet == 1 && upd.smartNew == 0);
+        s.deleteList(img);
+        Importer.Report back = Importer.run(s, src, true);
+        long img2 = s.findByOrigin(Importer.smartOrigin("חכם", "s-img"));
+        ck("חכמות: חכמה שנמחקה במסד חוזרת בהעתקה חוזרת, ומתחברת מחדש לשתי הרשימות", back.smartNew == 1 && img2 != 0 && img2 != img
+                && s.listsOf(img2).size() == 2 && back.linksAdded == 2);
+        ck("חכמות: המסד תקין בסוף", s.check() == null);
+
+        // בלי קובץ ראשי: ההפניות נספרות כלא־נמצאו, ושום דבר לא קורס
+        File bare = new File(dir, "בלי-ראשי/חכם2");
+        write(new File(bare, Paths.TREE), SMART_TREE);
+        Importer.Source noIni = Importer.load(bare);
+        ck("חכמות: בלי קובץ ראשי — אין הגדרות, וכל ההפניות לא נמצאו", noIni.ini != null && noIni.wanted().isEmpty() && noIni.skippedSmart() == 6);
+        // קובץ ראשי עם הפניה מעגלית של פנימית שמקשרת לפנימית אחרת (לא נפוצה): לא נתקע
+        File loop = new File(dir, "מעגל/חכם3");
+        write(new File(loop, Paths.TREE), "#1 א\n@חכמה p-a\n");
+        write(new File(new File(loop, Paths.SETTINGS), Paths.MAIN),
+                "[רשימה פנימית: א › אחת]\nמזהה = p-a\nהגדרה נפוצה = p-b\nתנאי = x\n\n[רשימה פנימית: א › שתיים]\nמזהה = p-b\nהגדרה נפוצה = p-a\nתנאי = y\n");
+        Importer.Source lp = Importer.load(loop);
+        ck("חכמות: קישור בין שתי פנימיות לא נתקע — כל אחת היא הגדרה בפני עצמה", lp.wanted().size() == 1 && "x".equals(lp.wanted().get(0).cond));
+    }
+
     // ---------- הבדיקה המלאה (FullCheck) ----------
 
     /** opener — יוצר Store חדש. sabotage — האם המסד ה"אמיתי" חסר קישור אחד. */
     private String fullReport(final StoreContract.Opener opener, File dir, final boolean sabotage, final boolean selfOk) throws Exception {
-        final File old = new File(dir, "olddata-" + sabotage + selfOk);
+        return fullReport(opener, dir, sabotage, selfOk, false);
+    }
+
+    /** מנוע הערכה מדומה: "סוג:תמונות" — 3, "סוג:תמונות צילום" — 2 (או הערה "לא הובן" כש־badCond), כל השאר — 0. */
+    static Smarts.Finder fake(final boolean badCond) {
+        return new Smarts.Finder() {
+            @Override
+            public Smarts.Result find(String cond, String sort, int limit) {
+                int n = cond.equals("סוג:תמונות") ? 3 : cond.equals("סוג:תמונות צילום") ? 2 : 0;
+                return new Smarts.Result(true, n, n * 10L, badCond && cond.contains("צילום") ? "לא הובן" : "", new ArrayList<Smarts.Row>());
+            }
+        };
+    }
+
+    private String fullReport(final StoreContract.Opener opener, File dir, final boolean sabotage, final boolean selfOk,
+                              final boolean badCond) throws Exception {
+        final File old = new File(dir, "olddata-" + sabotage + selfOk + badCond);
+        writeSmartMode(new File(old, Modes.DIR + "/חכם"));
         write(new File(old, Modes.DIR + "/ראשון/" + Paths.TREE), TREE1);
         write(new File(old, Modes.DIR + "/ראשון/" + Sig.FILE), SIGS1);
         write(new File(old, Modes.DIR + "/שני/" + Paths.TREE), TREE2);
@@ -238,11 +358,12 @@ final class ImportTests {
             @Override public String header() { return "HEADER"; }
             @Override public String selfTest() { return "SELFTEST"; }
             @Override public boolean selfTestOk() { return selfOk; }
-            @Override public Store openTemp() throws Exception { return opener.fresh(new File(ctr, "fc-" + (n[0]++) + ".txt")); }
+            @Override public Store openTemp() throws Exception { return opener.fresh(new File(ctr, "fc-" + (n[0]++) + "-" + badCond + ".txt")); }
+            @Override public Smarts.Finder finder() { return fake(badCond); }
             @Override
             public Store openReal(String mode) throws Exception {
                 if (!mode.equals("ראשון")) return null;
-                Store s = opener.fresh(new File(ctr, "fc-" + (n[0]++) + ".txt"));
+                Store s = opener.fresh(new File(ctr, "fc-" + (n[0]++) + "-" + badCond + "r.txt"));
                 Importer.run(s, Importer.load(new File(old, Modes.DIR + "/ראשון")), true);
                 if (sabotage) {
                     long books = s.findByOrigin(Importer.originOf("ראשון", "ספרים"));
@@ -259,10 +380,18 @@ final class ImportTests {
         ck("בדיקה מלאה: הדוח כולל כותרת, בדיקה עצמית ושני אופנים", ok.contains("HEADER") && ok.contains("SELFTEST")
                 && ok.contains(Words.Db.modeHead("ראשון")) && ok.contains(Words.Db.modeHead("שני")));
         ck("בדיקה מלאה: אופן בלי מסד אמיתי מדווח כך", ok.contains(Words.Db.REAL_NONE));
-        ck("בדיקה מלאה: מה שלא מועתק מופיע", ok.contains("1 הפניות") && ok.contains("1 רשימות חכמות"));
+        ck("בדיקה מלאה: מה שלא מועתק מופיע", ok.contains("1 הפניות") && ok.contains("1 הפניות חכמות שלא נמצאו"));
         ck("בדיקה מלאה: רשימה ריקה בלי סיבה מוצגת בשמה", ok.contains(Words.Db.modeEmpty(1, 1, 0)) && ok.contains("   חדשה") && ok.contains(Words.Db.modeEmpty(0, 0, 0)));
         String bad = fullReport(opener, dir, true, true);
-        ck("בדיקה מלאה: מסד אמיתי שחסר בו קישור — פסק דין אדום", bad.startsWith(Words.Db.verdictBad(1)) && bad.contains(Words.Db.pRealBehind("ראשון", 0, 0, 0, 1)));
+        ck("בדיקה מלאה: מסד אמיתי שחסר בו קישור — פסק דין אדום", bad.startsWith(Words.Db.verdictBad(1)) && bad.contains(Words.Db.pRealBehind("ראשון", 0, 0, 0, 1, 0)));
+        ck("בדיקה מלאה: רשימות חכמות — במקור 4, נמצאו 4, אפס שגויות; לא משויכים צפוי 1 ונמצא 1",
+                ok.contains(Words.Db.modeTempSmart(4, 4, 0, 1, 1)));
+        ck("בדיקה מלאה: הערכה מול האינדקס — 3 תנאים, 2 עם תוצאות, אחד בלי, אחד בלי תנאי",
+                ok.contains("נבדקו 3 תנאים · עם תוצאות: 2 · בלי תוצאות: 1 · לא הובנו: 0 · בלי תנאי: 1 · סה״כ 5 קבצים")
+                        && ok.contains(Words.Db.evalNoHits("אחרונים")));
+        String badc = fullReport(opener, dir, false, true, true);
+        ck("בדיקה מלאה: תנאי שהמנוע לא הבין — פסק דין אדום", badc.startsWith(Words.Db.verdictBad(1)) && badc.contains(Words.Db.pSmartCond("חכם", 1))
+                && badc.contains(Words.Db.evalBad("צילומי מסך", "לא הובן")));
         String self = fullReport(opener, dir, false, false);
         ck("בדיקה מלאה: בדיקה עצמית שנכשלה — פסק דין אדום", self.startsWith(Words.Db.verdictBad(1)) && self.contains(Words.Db.pSelfTest()));
     }

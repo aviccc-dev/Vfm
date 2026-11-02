@@ -9,10 +9,13 @@ import java.util.List;
 public interface Store {
 
     /** סוגי פריט. בהמשך יתווספו (כותרת, פקודה…); המספרים נשמרים במסד ולא משתנים. */
-    int LIST = 1, NOTE = 2, FILE = 3;
+    int LIST = 1, NOTE = 2, FILE = 3, SMART = 4;
 
     /** מפתחות המאפיינים של רשימה (מ0.2): צלמית, תיאור, עיצוב, "למה". */
     String P_ICON = "icon", P_DESC = "desc", P_DESIGN = "design", P_WHY = "why";
+
+    /** מאפייני רשימה חכמה (מ0.3): התנאי כטקסט (התחביר של מנוע החיפוש), מיון, כיוון, תצוגה. */
+    String P_COND = "cond", P_SORT = "sort", P_DIR = "dir", P_VIEW = "view";
 
     /** שגיאת שימוש או אחסון. ההודעה — לאנשי הפיתוח (אנגלית); המסך מציג הודעה משלו. */
     final class Failure extends RuntimeException {
@@ -78,6 +81,12 @@ public interface Store {
     /** רשימה חדשה. parent = 0: עומדת לעצמה; אחרת היא נכנסת לסוף הרשימה parent. מחזיר את מספר הזיהוי. */
     long createList(String name, long parent);
 
+    /**
+     * רשימה חכמה חדשה (מ0.3): שאילתה ולא אוסף — אין לה חברים; התנאי נקבע ב־P_COND. parent = 0: עומדת לעצמה;
+     * אחרת היא נכנסת לסוף הרשימה הידנית parent.
+     */
+    long createSmart(String name, long parent);
+
     /** רעיון/הערה חדשים בסוף רשימה. */
     long addNote(long list, String text);
 
@@ -121,7 +130,7 @@ public interface Store {
 
     void rename(long item, String name);
 
-    /** מוחק רשימה ואת החברויות שלה; הפריטים שהיו בה נשארים (בלי רשימה). המספר לא יחזור. */
+    /** מוחק רשימה (או רשימה חכמה) ואת החברויות שלה; הפריטים שהיו בה נשארים (בלי רשימה). המספר לא יחזור. */
     void deleteList(long list);
 
     /** null אם אין. */
@@ -129,6 +138,12 @@ public interface Store {
 
     /** כל הרשימות, לפי מספר זיהוי. */
     List<Item> lists();
+
+    /** כל הרשימות החכמות, לפי מספר זיהוי. */
+    List<Item> smarts();
+
+    /** "לא משויכים" (מ0.3): קבצים ורעיונות שאינם באף רשימה, לפי מספר זיהוי. רשימות ורשימות חכמות לא נספרות. */
+    List<Item> unassigned();
 
     /** חברי הרשימה לפי המקום. */
     List<Member> members(long list);

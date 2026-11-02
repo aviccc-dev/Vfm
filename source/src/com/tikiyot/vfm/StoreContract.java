@@ -87,6 +87,7 @@ public final class StoreContract {
             unicode();
             restore();
             files();
+            smarts();
             atomicity();
             randomOps();
         } catch (Throwable t) {
@@ -291,6 +292,64 @@ public final class StoreContract {
             ck("deleting a list drops its origin", s.findByOrigin("tree:L:x") == 0);
             ck("files stay after their list is deleted", s.file(f1f) != null && s.listsOf(f1f).equals(java.util.Arrays.asList(l2)));
             ck("check is clean after files", s.check() == null);
+        } finally {
+            s.close();
+        }
+    }
+
+    private static List<Long> idsOf(List<Store.Item> items) {
+        List<Long> out = new ArrayList<Long>();
+        for (Store.Item it : items) out.add(it.id);
+        return out;
+    }
+
+    private void smarts() throws Exception {
+        final Store s = opener.fresh(counterFile());
+        try {
+            final long l = s.createList("l", 0);
+            final long s1 = s.createSmart("recent", 0);
+            final long s2 = s.createSmart("inside", l);
+            ck("smart items are typed", s.item(s1).type == Store.SMART && s.item(s2).type == Store.SMART);
+            ck("smarts() lists the smarts only", idsOf(s.smarts()).equals(java.util.Arrays.asList(s1, s2)));
+            ck("lists() leaves the smarts out", idsOf(s.lists()).equals(java.util.Arrays.asList(l)));
+            ck("a smart created inside a list is a member", s.count(l) == 1 && s.members(l).get(0).item.id == s2
+                    && s.members(l).get(0).item.type == Store.SMART);
+            ck("an existing smart joins a list", s.addMember(l, s1) && !s.addMember(l, s1) && s.count(l) == 2 && dense(s, l));
+            ck("a smart sits in two lists", s.addMember(s.createList("l2", 0), s1) && s.listsOf(s1).size() == 2);
+            s.setProp(s1, Store.P_COND, "type:x \u05e9\u05d1\u05d5\u05e2");
+            s.setProp(s1, Store.P_SORT, "date");
+            ck("a smart keeps its condition and sort", "type:x \u05e9\u05d1\u05d5\u05e2".equals(s.prop(s1, Store.P_COND)) && "date".equals(s.prop(s1, Store.P_SORT)));
+            s.setOrigin(s1, "ini:m:S:s-1");
+            ck("a smart is found by origin", s.findByOrigin("ini:m:S:s-1") == s1);
+            fails("a smart has no members", new Act() { public void run() { s.members(s1); } });
+            fails("a smart has no count", new Act() { public void run() { s.count(s1); } });
+            fails("a note cannot go in a smart", new Act() { public void run() { s.addNote(s1, "x"); } });
+            fails("a list cannot be created in a smart", new Act() { public void run() { s.createList("x", s1); } });
+            fails("a smart cannot be created in a smart", new Act() { public void run() { s.createSmart("x", s1); } });
+            fails("empty smart name", new Act() { public void run() { s.createSmart("  ", 0); } });
+            fails("a file cannot be deleted as a list", new Act() {
+                public void run() { s.deleteList(s.createFile(info("/storage/emulated/0/f.txt", 1, 1, null))); }
+            });
+            // unassigned: files and notes that are in no list
+            long f2 = s.createFile(info("/storage/emulated/0/g.txt", 2, 2, null));
+            long l3 = s.createList("l3", 0);
+            long n3 = s.addNote(l3, "orphan soon");
+            long nIn = s.addNote(l, "kept");
+            long f3 = s.findFile("/storage/emulated/0/f.txt");
+            ck("a file or note in no list is unassigned", idsOf(s.unassigned()).equals(java.util.Arrays.asList(f3, f2)));
+            s.deleteList(l3);
+            ck("a note stays, unassigned, when its list is deleted", idsOf(s.unassigned()).equals(java.util.Arrays.asList(f3, f2, n3)));
+            ck("lists and smarts are never unassigned", !idsOf(s.unassigned()).contains(l) && !idsOf(s.unassigned()).contains(s1));
+            s.addMember(l, f2);
+            ck("joining a list takes an item out", idsOf(s.unassigned()).equals(java.util.Arrays.asList(f3, n3)));
+            s.removeMember(l, f2);
+            ck("leaving the last list brings it back", idsOf(s.unassigned()).equals(java.util.Arrays.asList(f3, f2, n3)));
+            ck("a note in a list is not unassigned", !idsOf(s.unassigned()).contains(nIn));
+            s.deleteList(s2);
+            ck("deleting a smart removes it from its lists", s.smarts().size() == 1 && dense(s, l) && s.item(s2) == null);
+            s.deleteList(s1);
+            ck("deleting a smart drops its props and origin", s.item(s1) == null && s.findByOrigin("ini:m:S:s-1") == 0 && s.smarts().isEmpty());
+            ck("check is clean after smarts", s.check() == null);
         } finally {
             s.close();
         }
