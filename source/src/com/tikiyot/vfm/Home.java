@@ -28,6 +28,15 @@ public class Home extends Activity {
     /** 1.9.0: חזרה למסך הבית מכל מקום (START %בית%, כפתור 🏠) — המסכים שמעליו נסגרים. */
     static void go(Activity a) {
         if (a instanceof Home) return;
+        if (a instanceof DbListScreen) {                                       // מ0.9.2: במראה המוכר של המסד — הבית של המסד
+            DbListScreen.goHome((DbListScreen) a);
+            return;
+        }
+        if (DbListScreen.alive > 0) {                                         // גם ממסך שנפתח ממנו (רשימה חכמה, קבצים)
+            DbListScreen.goingHome = true;
+            a.finish();
+            return;
+        }
         a.startActivity(new android.content.Intent(a, Home.class)
                 .addFlags(android.content.Intent.FLAG_ACTIVITY_CLEAR_TOP | android.content.Intent.FLAG_ACTIVITY_SINGLE_TOP));
     }

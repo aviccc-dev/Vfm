@@ -26,6 +26,32 @@ public class DbListScreen extends ListScreen<Store.Member> {
     private long listId;
     private SqlStore store;
     private TextView modeBox;
+    /** הרשימה המוצגת היא הבית. */
+    private boolean atHome;
+    /** מ0.9.2: "בית" — כל המסכים שמעל הבית נסגרים אחד אחד, עד הבית (מסך המסד שבדרך — פותח אותו). */
+    static boolean goingHome;
+    /** כמה מסכים כאלה פתוחים — מסך שנפתח מעליהם ("בית" בו) חוזר לבית של המסד. */
+    static int alive;
+
+    @Override
+    protected void onDestroy() {
+        alive--;
+        super.onDestroy();
+    }
+
+    static void goHome(DbListScreen a) {
+        if (a.atHome) return;
+        goingHome = true;
+        a.finish();
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        if (!goingHome) return;
+        if (atHome) goingHome = false;
+        else finish();
+    }
     /** הספירה של כל שורה (מספר זיהוי ← טקסט), מהחישוב ברקע; token — טעינה שכבר לא רלוונטית לא כותבת. */
     private final java.util.Map<Long, String> stats = new java.util.HashMap<Long, String>();
     private int token;
@@ -38,6 +64,7 @@ public class DbListScreen extends ListScreen<Store.Member> {
     @Override
     protected void onCreate(Bundle saved) {
         super.onCreate(saved);
+        alive++;
         mode = getIntent().getStringExtra(EXTRA_MODE);
         listId = getIntent().getLongExtra(EXTRA_LIST, 0);
         LinearLayout root = build(saved, Words.Db.APP_NAME_M, "db-list");
@@ -95,6 +122,7 @@ public class DbListScreen extends ListScreen<Store.Member> {
         }
         rows.addAll(store.members(listId));
         boolean home = "1".equals(store.prop(listId, Store.P_HOME));
+        atHome = home;
         setTitle(home ? Words.Db.APP_NAME_M : it.name);
         modeBox.setVisibility(home ? View.VISIBLE : View.GONE);
         modeBox.setText(Words.Db.modeButton(mode));

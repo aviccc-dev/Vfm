@@ -157,6 +157,10 @@ public class DbScreen extends Activity {
     @Override
     protected void onResume() {
         super.onResume();
+        if (DbListScreen.goingHome) {                                          // מ0.9.2: "בית" הגיע עד כאן — פותחים את הבית
+            DbListScreen.goingHome = false;
+            familiarDone = false;
+        }
         refresh();
     }
 
