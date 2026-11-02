@@ -69,6 +69,15 @@ public final class MemStore implements Store {
     }
 
     @Override
+    public long addTitle(long list, String text) {
+        String t = Stores.clean(text, "text");
+        LinkedHashMap<Long, Long> l = listOf(list);
+        Item it = make(TITLE, t);
+        l.put(it.id, it.created);
+        return it.id;
+    }
+
+    @Override
     public long addNote(long list, String text) {
         String t = Stores.clean(text, "text");
         LinkedHashMap<Long, Long> l = listOf(list);
@@ -82,8 +91,9 @@ public final class MemStore implements Store {
         LinkedHashMap<Long, Long> l = listOf(list);
         Item it = items.get(item);
         if (it == null) throw new Failure("no such item " + item);
-        Stores.noListInList(it);
+        if (prop(item, P_TRASHED) != null) throw new Failure("item is in the bin: " + item);
         if (l.containsKey(item)) return false;
+        if (makesCycle(list, item)) throw new Failure("cycle: " + item + " already holds " + list);
         l.put(item, System.currentTimeMillis());
         return true;
     }
@@ -104,6 +114,76 @@ public final class MemStore implements Store {
         Map<Long, Long> old = new LinkedHashMap<Long, Long>(l);
         l.clear();
         for (Long id : order) l.put(id, old.get(id));
+    }
+
+    @Override
+    public boolean contains(long outer, long inner) {
+        java.util.Set<Long> seen = new java.util.HashSet<Long>();
+        java.util.ArrayDeque<Long> q = new java.util.ArrayDeque<Long>();
+        q.add(outer);
+        while (!q.isEmpty()) {
+            LinkedHashMap<Long, Long> l = members.get(q.poll());
+            if (l == null) continue;
+            for (Long id : l.keySet()) {
+                if (id == inner) return true;
+                if (seen.add(id)) q.add(id);
+            }
+        }
+        return false;
+    }
+
+    @Override
+    public boolean makesCycle(long list, long item) {
+        return list == item || contains(item, list);
+    }
+
+    @Override
+    public void trash(long item) {
+        Item it = items.get(item);
+        Stores.mayTrash(it, item);
+        if (prop(item, P_TRASHED) != null) return;
+        List<long[]> from = new ArrayList<long[]>();
+        for (Map.Entry<Long, LinkedHashMap<Long, Long>> e : members.entrySet()) {
+            int pos = 0;
+            for (Long id : e.getValue().keySet()) {
+                if (id == item) from.add(new long[]{e.getKey(), pos});
+                pos++;
+            }
+        }
+        for (long[] f : from) members.get(f[0]).remove(item);
+        setProp(item, P_TRASH_FROM, Stores.joinFrom(from));
+        setProp(item, P_TRASHED, String.valueOf(System.currentTimeMillis()));
+    }
+
+    @Override
+    public void restore(long item) {
+        if (items.get(item) == null) throw new Failure("no such item " + item);
+        if (prop(item, P_TRASHED) == null) throw new Failure("not in the bin: " + item);
+        List<long[]> from = Stores.parseFrom(prop(item, P_TRASH_FROM));
+        setProp(item, P_TRASHED, null);
+        setProp(item, P_TRASH_FROM, null);
+        for (long[] f : from) {
+            Item l = items.get(f[0]);
+            if (l == null || l.type != LIST) continue;
+            if (addMember(f[0], item)) move(f[0], item, (int) f[1]);
+        }
+    }
+
+    @Override
+    public void purge(long item) {
+        if (items.get(item) == null) throw new Failure("no such item " + item);
+        if (prop(item, P_TRASHED) == null) throw new Failure("not in the bin: " + item);
+        items.remove(item);
+        props.remove(item);
+        origins.remove(item);
+        for (LinkedHashMap<Long, Long> l : members.values()) l.remove(item);
+    }
+
+    @Override
+    public List<Item> trashed() {
+        List<Item> out = new ArrayList<Item>();
+        for (Item it : items.values()) if (prop(it.id, P_TRASHED) != null) out.add(it);
+        return out;
     }
 
     @Override
@@ -240,7 +320,8 @@ public final class MemStore implements Store {
     public List<Item> unassigned() {
         List<Item> out = new ArrayList<Item>();
         for (Item it : items.values()) {
-            if (it.type != FILE && it.type != NOTE) continue;
+            if (it.type != FILE && it.type != NOTE && it.type != TITLE) continue;
+            if (prop(it.id, P_TRASHED) != null) continue;
             boolean in = false;
             for (LinkedHashMap<Long, Long> l : members.values()) if (l.containsKey(it.id)) { in = true; break; }
             if (!in) out.add(it);

@@ -99,6 +99,12 @@ final class FullCheck {
             add(problems, mode, f, nodes.size() - 1, t.lists().size(), again.nothingToDo(), t.check());
             int[] un = unassigned(t, nodes);
             out.append(Words.Db.modeTempSmart(defs.size(), f.smartFound, f.smartWrong, un[0], un[1])).append("\n");
+            int[] rf = refs(t, src, nodes, f);
+            int cyc = cycles(t);
+            out.append(Words.Db.modeRefs(refs, rf[0], rf[1], rf[2], rf[3], cyc)).append("\n");
+            if (rf[3] > 0 || r.refsAdded + r.refsKnown != rf[0] || r.refCycles != rf[1] || r.refMissing != rf[2])
+                problems.add(Words.Db.pRefs(mode, Math.max(rf[3], 1)));
+            if (cyc > 0) problems.add(Words.Db.pCycles(mode, cyc));
             if (un[0] != un[1] || un[2] != 0) problems.add(Words.Db.pUnassigned(mode, un[0], un[1] + un[2]));
             if (f.smartMissing > 0) problems.add(Words.Db.pSmartMissing(mode, f.smartMissing));
             if (f.smartWrong > 0) problems.add(Words.Db.pSmartWrong(mode, f.smartWrong));
@@ -120,9 +126,14 @@ final class FullCheck {
             out.append(Words.Db.modeReal(real.lists().size(), nodes.size() - 1, f.lists, f.membersWrong, f.filesMissing,
                     pre.listsNew, pre.filesNew, pre.filesUpdated, pre.linksAdded, pre.smartNew, real.check() == null)).append("\n");
             out.append(Words.Db.modeRealUnassigned(real.unassigned().size())).append("\n");
-            if (pre.listsNew + pre.filesNew + pre.filesUpdated + pre.linksAdded + pre.smartNew > 0 || f.listsMissing > 0
+            int[] rf = refs(real, src, nodes, f);
+            int cyc = cycles(real);
+            out.append(Words.Db.modeRealRefs(rf[0], cyc)).append("\n");
+            if (rf[3] > 0 && pre.refsAdded == 0) problems.add(Words.Db.pRefs(mode, rf[3]));   // חסרות שהעתקה חוזרת תשלים — כבר ב"לא תואם"
+            if (cyc > 0) problems.add(Words.Db.pCycles(mode, cyc));
+            if (pre.listsNew + pre.filesNew + pre.filesUpdated + pre.linksAdded + pre.smartNew + pre.refsAdded > 0 || f.listsMissing > 0
                     || f.filesMissing > 0 || f.smartMissing > 0)
-                problems.add(Words.Db.pRealBehind(mode, pre.listsNew, pre.filesNew, pre.filesUpdated, pre.linksAdded, pre.smartNew));
+                problems.add(Words.Db.pRealBehind(mode, pre.listsNew, pre.filesNew, pre.filesUpdated, pre.linksAdded, pre.smartNew, pre.refsAdded));
             if (real.check() != null) problems.add(Words.Db.pCheck(mode, real.check()));
             for (String e : f.examples) out.append("   ").append(e).append("\n");
         } finally {
@@ -195,6 +206,10 @@ final class FullCheck {
             f.lists++;
             Set<Long> want = new HashSet<Long>();
             for (Tree.Node c : n.children) want.add(s.findByOrigin(Importer.originOf(src.mode, Tree.fullLabel(c.path()))));
+            for (String ref : n.refs) {
+                long tg = s.findByOrigin(Importer.originOf(src.mode, Tree.fullLabel(Tree.parsePath(ref))));
+                if (tg != 0 && !s.makesCycle(id, tg)) want.add(tg);
+            }
             for (String ref : n.smart) {
                 Importer.Smart d = src.smart(ref);
                 if (d != null) want.add(s.findByOrigin(Importer.smartOrigin(src.mode, d.key)));
@@ -313,7 +328,7 @@ final class FullCheck {
             long id = t.findByOrigin(Importer.originOf(src.mode, Tree.fullLabel(n.path())));
             if (id == 0 || t.count(id) > 0) continue;
             total++;
-            if (n.refs.size() + skippedIn(src, n) + n.live.size() + badIn(n) > 0) {
+            if (skippedRefs(t, src, n, id) + skippedIn(src, n) + n.live.size() + badIn(n) > 0) {
                 pending++;
             } else {
                 truly++;
@@ -322,6 +337,49 @@ final class FullCheck {
         }
         out.append(Words.Db.modeEmpty(total, truly, pending)).append("\n");
         for (String nm : names) out.append("   ").append(nm).append("\n");
+    }
+
+    /** הפניות של הרשימה שלא הועתקו: לרשימה שלא קיימת, או שהיו סוגרות מעגל. */
+    private static int skippedRefs(Store t, Importer.Source src, Tree.Node n, long id) {
+        int k = 0;
+        for (String ref : n.refs) {
+            long tg = t.findByOrigin(Importer.originOf(src.mode, Tree.fullLabel(Tree.parsePath(ref))));
+            if (tg == 0 || t.makesCycle(id, tg)) k++;
+        }
+        return k;
+    }
+
+    /**
+     * ההפניות במסד מול המקור: [הועתקו, נחסמו כמעגל, לרשימה שלא קיימת, שגויות]. הועתקה = הרשימה שאליה מפנים חברה ברשימה המפנה;
+     * מעגל = היא כבר מכילה את המפנה; שגויה — אף אחד מאלה. הפניות בשורש — "לא קיימת" (אין רשימה מפנה).
+     */
+    private static int[] refs(Store s, Importer.Source src, List<Tree.Node> nodes, Found f) {
+        int copied = 0, cyc = 0, missing = nodes.get(0).refs.size(), wrong = 0;
+        for (int i = 1; i < nodes.size(); i++) {
+            Tree.Node n = nodes.get(i);
+            if (n.refs.isEmpty()) continue;
+            long id = s.findByOrigin(Importer.originOf(src.mode, Tree.fullLabel(n.path())));
+            if (id == 0) continue;
+            Set<Long> got = new HashSet<Long>();
+            for (Store.Member m : s.members(id)) got.add(m.item.id);
+            for (String ref : n.refs) {
+                long tg = s.findByOrigin(Importer.originOf(src.mode, Tree.fullLabel(Tree.parsePath(ref))));
+                if (tg == 0) missing++;
+                else if (got.contains(tg)) copied++;
+                else if (s.makesCycle(id, tg)) {
+                    cyc++;
+                    example(f, Words.Db.exCycle(Tree.fullLabel(n.path()), ref));
+                } else wrong++;
+            }
+        }
+        return new int[]{copied, cyc, missing, wrong};
+    }
+
+    /** כמה רשימות במסד נמצאות בתוך עצמן. אמור להיות 0 תמיד. */
+    private static int cycles(Store s) {
+        int n = 0;
+        for (Store.Item l : s.lists()) if (s.contains(l.id, l.id)) n++;
+        return n;
     }
 
     private static int skippedIn(Importer.Source src, Tree.Node n) {

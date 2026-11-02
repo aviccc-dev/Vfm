@@ -33,7 +33,7 @@ public class DbScreen extends Activity {
     private ScrollView sv;
     /** נתיב הרשימות הפתוחות; ריק = "כל הרשימות". UNASSIGNED_ID = "לא משויכים" (רשימה מחושבת, לא פריט). */
     private final ArrayList<Long> path = new ArrayList<Long>();
-    private static final long UNASSIGNED_ID = -1L;
+    private static final long UNASSIGNED_ID = -1L, TRASH_ID = -2L;
     /** מספר ההצגה הנוכחית; הערכה של רשימה חכמה שהסתיימה אחרי שעזבו אותה — מתעלמים ממנה. */
     private int token;
     private final android.os.Handler ui = new android.os.Handler(android.os.Looper.getMainLooper());
@@ -202,8 +202,8 @@ public class DbScreen extends Activity {
             status.setText(Words.Db.status(all.size(), store.lastId(), store.systemCode(), store.info()));
             StringBuilder c = new StringBuilder(Words.Db.ALL_LISTS);
             for (Long id : new ArrayList<Long>(path)) {
-                if (id == UNASSIGNED_ID) {
-                    c.append(Words.Db.CRUMB_SEP).append(Words.Db.UNASSIGNED);
+                if (id == UNASSIGNED_ID || id == TRASH_ID) {
+                    c.append(Words.Db.CRUMB_SEP).append(id == TRASH_ID ? Words.Db.TRASH : Words.Db.UNASSIGNED);
                     continue;
                 }
                 Store.Item it = store.item(id);
@@ -211,7 +211,7 @@ public class DbScreen extends Activity {
                     path.remove(id);
                     continue;
                 }
-                c.append(Words.Db.CRUMB_SEP).append(it.type == Store.SMART ? "⚡ " : "").append(it.name);
+                c.append(Words.Db.CRUMB_SEP).append(it.type == Store.SMART ? "⚡ " + it.name : label(it));
             }
             crumb.setText(c.toString());
             final long cur = current();
@@ -239,24 +239,19 @@ public class DbScreen extends Activity {
                 buttons.addView(button(Words.Db.DELETE_YES, new Runnable() {
                     @Override public void run() { act(sm, -1, 4); }
                 }));
-            } else if (cur != UNASSIGNED_ID) {
-                buttons.addView(button(Words.Db.NEW_SUBLIST, new Runnable() {
-                    @Override public void run() { newList(current()); }
-                }));
-                buttons.addView(button(Words.Db.NEW_SMART, new Runnable() {
-                    @Override public void run() { newSmart(current()); }
-                }));
-                buttons.addView(button(Words.Db.NEW_NOTE, new Runnable() {
-                    @Override public void run() { newNote(); }
+            } else if (cur > 0) {
+                buttons.addView(button(Words.Db.ADD_MENU, new Runnable() {
+                    @Override public void run() { addMenu(); }
                 }));
             }
             buttons.addView(button(Words.Db.FULL_CHECK, new Runnable() {
                 @Override public void run() { fullCheck(); }
             }));
-            hint.setText(cur == UNASSIGNED_ID ? Words.Db.UNASSIGNED_HINT : Words.Db.HINT);
+            hint.setText(cur == UNASSIGNED_ID ? Words.Db.UNASSIGNED_HINT : cur == TRASH_ID ? Words.Db.TRASH_HINT : Words.Db.HINT);
             rows.removeAllViews();
             if (path.isEmpty()) {
-                rows.addView(unassignedRow(store.unassigned().size()));
+                rows.addView(specialRow(Words.Db.UNASSIGNED, Words.Db.UNASSIGNED_SUB, store.unassigned().size(), UNASSIGNED_ID));
+                rows.addView(specialRow(Words.Db.TRASH, Words.Db.TRASH_SUB, store.trashed().size(), TRASH_ID));
                 List<Store.Item> smarts = store.smarts();
                 if (all.isEmpty() && smarts.isEmpty()) {
                     TextView t = Ui.info(this);
@@ -273,6 +268,14 @@ public class DbScreen extends Activity {
                     rows.addView(t);
                 }
                 for (Store.Item it : un) rows.addView(row(it, -1, -1, 0));
+            } else if (cur == TRASH_ID) {
+                List<Store.Item> tr = store.trashed();
+                if (tr.isEmpty()) {
+                    TextView t = Ui.info(this);
+                    t.setText(Words.Db.TRASH_EMPTY);
+                    rows.addView(t);
+                }
+                for (Store.Item it : tr) rows.addView(row(it, -1, -1, 0));
             } else if (inSmart) {
                 showSmart(curItem);
             } else {
@@ -291,26 +294,26 @@ public class DbScreen extends Activity {
         }
     }
 
-    /** "לא משויכים": שורה מיוחדת בראש הרשימות — מחושבת בכל פעם, לא נשמרת. */
-    private View unassignedRow(int count) {
+    /** "לא משויכים" / סל המחזור: שורה מיוחדת בראש הרשימות — מחושבת בכל פעם, לא נשמרת. */
+    private View specialRow(String title, String subText, int count, final long id) {
         LinearLayout r = new LinearLayout(this);
         r.setOrientation(LinearLayout.VERTICAL);
         r.setPadding(Ui.dp(this, 12), Ui.dp(this, 10), Ui.dp(this, 12), Ui.dp(this, 10));
         TextView name = new TextView(this);
-        name.setText(Words.Db.UNASSIGNED);
+        name.setText(title);
         name.setTextSize(16);
         name.setTextColor(Ui.TEXT);
         TextView sub = new TextView(this);
         sub.setTextSize(12);
         sub.setTextColor(Ui.SUB);
-        sub.setText(Words.Db.UNASSIGNED_SUB + " · " + Words.items(count));
+        sub.setText(subText + " · " + Words.items(count));
         r.addView(name);
         r.addView(sub);
         r.setBackgroundColor(Ui.BG);
         r.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                path.add(UNASSIGNED_ID);
+                path.add(id);
                 show();
             }
         });
@@ -406,8 +409,13 @@ public class DbScreen extends Activity {
             sub.setText(Words.Db.smartLine(it.id, cond.length() > 70 ? cond.substring(0, 70) + "…" : cond));
             name.setText("⚡ " + it.name);
         } else {
-            sub.setText(Words.Db.kindLine(it.type == Store.LIST ? Words.Db.KIND_LIST : it.type == Store.FILE ? Words.Db.KIND_FILE : Words.Db.KIND_NOTE,
-                    it.id, count >= 0 ? Words.items(count) : ""));
+            boolean group = isGroup(it);
+            boolean shared = it.type == Store.LIST && store.listsOf(it.id).size() > 1;
+            String kind = group ? Words.Db.KIND_GROUP : shared ? Words.Db.KIND_REF : it.type == Store.LIST ? Words.Db.KIND_LIST
+                    : it.type == Store.FILE ? Words.Db.KIND_FILE : it.type == Store.TITLE ? Words.Db.KIND_TITLE : Words.Db.KIND_NOTE;
+            sub.setText(Words.Db.kindLine(kind, it.id, count >= 0 && !group ? Words.items(count) : ""));
+            name.setText((shared ? "↪ " : "") + label(it));
+            if (it.type == Store.TITLE) name.setTypeface(Typeface.DEFAULT_BOLD);
         }
         r.addView(name);
         r.addView(sub);
@@ -431,13 +439,107 @@ public class DbScreen extends Activity {
         return r;
     }
 
+    private boolean isGroup(Store.Item it) {
+        return it.type == Store.LIST && "1".equals(store.prop(it.id, Store.P_GROUP));
+    }
+
+    /** מה מוצג כשם: חבורה — לפי הכותרת שבה, ואם אין — לפי החבר הראשון; כותרת — בין קווים. */
+    private String label(Store.Item it) {
+        if (it.type == Store.TITLE) return "── " + it.name + " ──";
+        if (!isGroup(it)) return it.name;
+        List<Store.Member> ms = store.members(it.id);
+        String head = null;
+        for (Store.Member m : ms) if (m.item.type == Store.TITLE) { head = m.item.name; break; }
+        if (head == null && !ms.isEmpty()) head = ms.get(0).item.name;
+        return Words.Db.groupLabel(head == null ? Words.Db.GROUP_EMPTY : head, ms.size());
+    }
+
     // ---------- פעולות ----------
+
+    /** "➕ הוספה…" בתוך רשימה: כל מה שאפשר להוסיף, בתפריט אחד. */
+    private void addMenu() {
+        final String[] labels = {Words.Db.NEW_SUBLIST, Words.Db.NEW_SMART, Words.Db.NEW_REF, Words.Db.NEW_NOTE, Words.Db.NEW_TITLE, Words.Db.NEW_GROUP};
+        Ui.list(this, Words.Db.ADD_MENU, java.util.Arrays.asList(labels), new DialogInterface.OnClickListener() {
+            @Override
+            public void onClick(DialogInterface d, int which) {
+                switch (which) {
+                    case 0: newList(current()); break;
+                    case 1: newSmart(current()); break;
+                    case 2: newRef(); break;
+                    case 3: newNote(); break;
+                    case 4: newTitle(); break;
+                    default: newGroup(); break;
+                }
+            }
+        });
+    }
+
+    /** הפניה: רשימה קיימת נכנסת גם לכאן (אותה רשימה, לא עותק). מעגל — נחסם עם הסבר. */
+    private void newRef() {
+        final long into = current();
+        final List<Store.Item> lists = new ArrayList<Store.Item>();
+        for (Store.Item l : store.lists()) if (l.id != into) lists.add(l);
+        if (lists.isEmpty()) {
+            Ui.toast(this, Words.Db.NO_LISTS);
+            return;
+        }
+        List<String> labels = new ArrayList<String>();
+        for (Store.Item l : lists) labels.add(l.name + " · " + l.id);
+        Ui.list(this, Words.Db.REF_PICK, labels, new DialogInterface.OnClickListener() {
+            @Override
+            public void onClick(DialogInterface d, int which) {
+                addInto(into, lists.get(which));
+            }
+        });
+    }
+
+    /** מוסיף פריט לרשימה, עם ההודעות: כבר שם, מעגל. */
+    private void addInto(long list, Store.Item it) {
+        try {
+            if (store.makesCycle(list, it.id)) Ui.toast(this, Words.Db.cycleBlocked(it.name, store.item(list).name));
+            else if (!store.addMember(list, it.id)) Ui.toast(this, Words.Db.ALREADY_THERE);
+        } catch (Store.Failure f) {
+            Ui.toast(this, Words.Db.failed(f.getMessage()));
+        }
+        show();
+    }
+
+    private void newTitle() {
+        Ui.askText(this, Words.Db.NEW_TITLE_TITLE, "", Words.Db.TITLE_TEXT, new Ui.Text1() {
+            @Override
+            public void ok(String value) {
+                try {
+                    store.addTitle(current(), value);
+                } catch (Store.Failure f) {
+                    Ui.toast(DbScreen.this, Words.Db.failed(f.getMessage()));
+                }
+                show();
+            }
+        });
+    }
+
+    /** חבורה: רשימה מוטמעת בתוך הרשימה הפתוחה — נפתחת מיד כדי להכניס לה פריטים. */
+    private void newGroup() {
+        try {
+            long id = store.createList(Words.Db.GROUP_NAME, current());
+            store.setProp(id, Store.P_GROUP, "1");
+            path.add(id);
+        } catch (Store.Failure f) {
+            Ui.toast(this, Words.Db.failed(f.getMessage()));
+        }
+        show();
+    }
 
     private void newList(final long parent) {
         Ui.askText(this, Words.Db.NEW_LIST_TITLE, "", Words.Db.LIST_NAME, new Ui.Text1() {
             @Override
             public void ok(String value) {
                 try {
+                    for (Store.Item l : store.lists())
+                        if (l.name.equals(value.trim())) {
+                            Ui.toast(DbScreen.this, Words.Db.sameName(value.trim()));
+                            break;
+                        }
                     store.createList(value, parent);
                 } catch (Store.Failure f) {
                     Ui.toast(DbScreen.this, Words.Db.failed(f.getMessage()));
@@ -479,12 +581,7 @@ public class DbScreen extends Activity {
         Ui.list(this, Words.Db.ADD_TO_LIST_TITLE, labels, new DialogInterface.OnClickListener() {
             @Override
             public void onClick(DialogInterface d, int which) {
-                try {
-                    if (!store.addMember(lists.get(which).id, it.id)) Ui.toast(DbScreen.this, Words.Db.ALREADY_THERE);
-                } catch (Store.Failure f) {
-                    Ui.toast(DbScreen.this, Words.Db.failed(f.getMessage()));
-                }
-                show();
+                addInto(lists.get(which).id, it);
             }
         });
     }
@@ -506,6 +603,16 @@ public class DbScreen extends Activity {
     private void more(final Store.Item it, final int position, final int size) {
         final List<String> labels = new ArrayList<String>();
         final List<Integer> codes = new ArrayList<Integer>();
+        if (current() == TRASH_ID) {                                 // בסל: רק שחזור או מחיקה לצמיתות
+            labels.add(Words.Db.RESTORE);
+            codes.add(9);
+            labels.add(Words.Db.PURGE);
+            codes.add(10);
+            Ui.list(this, it.name, labels, new DialogInterface.OnClickListener() {
+                @Override public void onClick(DialogInterface d, int which) { act(it, position, codes.get(which)); }
+            });
+            return;
+        }
         if (it.type != Store.FILE) {                                 // שם הקובץ הוא שמו בכונן — לא משנים אותו כאן
             labels.add(Words.Db.RENAME);
             codes.add(0);
@@ -517,7 +624,10 @@ public class DbScreen extends Activity {
             codes.add(3);
         }
         if (it.type == Store.SMART) { labels.add(Words.Db.EDIT_COND); codes.add(5); }
-        if (it.type != Store.LIST) { labels.add(Words.Db.ADD_TO_LIST); codes.add(6); }
+        labels.add(Words.Db.ADD_TO_LIST);
+        codes.add(6);
+        if (it.type == Store.LIST) { labels.add(isGroup(it) ? Words.Db.TO_LIST : Words.Db.TO_GROUP); codes.add(7); }
+        if (it.type == Store.NOTE || it.type == Store.TITLE) { labels.add(Words.Db.TO_TRASH); codes.add(8); }
         if (it.type == Store.LIST || it.type == Store.SMART) { labels.add(Words.Db.DELETE_LIST); codes.add(4); }
         Ui.list(this, it.name, labels, new DialogInterface.OnClickListener() {
             @Override
@@ -545,7 +655,41 @@ public class DbScreen extends Activity {
             }
             if (code == 1) store.move(current(), it.id, position - 1);
             else if (code == 2) store.move(current(), it.id, position + 1);
-            else if (code == 3) store.removeMember(current(), it.id);
+            else if (code == 3) {
+                if ((it.type == Store.NOTE || it.type == Store.TITLE) && store.listsOf(it.id).size() == 1) {
+                    final long from = current();
+                    new AlertDialog.Builder(this).setMessage(Words.Db.lastListQuestion(it.name))
+                            .setPositiveButton(Words.Db.LAST_LIST_KEEP, new DialogInterface.OnClickListener() {
+                                @Override public void onClick(DialogInterface d, int w) { store.removeMember(from, it.id); show(); }
+                            })
+                            .setNeutralButton(Words.Db.LAST_LIST_TRASH, new DialogInterface.OnClickListener() {
+                                @Override public void onClick(DialogInterface d, int w) { store.trash(it.id); show(); }
+                            })
+                            .setNegativeButton(Words.CANCEL, null).show();
+                    return;
+                }
+                store.removeMember(current(), it.id);
+            } else if (code == 7) {
+                store.setProp(it.id, Store.P_GROUP, isGroup(it) ? null : "1");
+            } else if (code == 8) {
+                store.trash(it.id);
+            } else if (code == 9) {
+                store.restore(it.id);
+                Ui.toast(this, Words.Db.RESTORED);
+            } else if (code == 10) {
+                Ui.confirm(this, Words.Db.PURGE, it.name + "\n" + Words.Db.PURGE_DETAIL, Words.Db.PURGE, new Runnable() {
+                    @Override
+                    public void run() {
+                        try {
+                            store.purge(it.id);
+                        } catch (Store.Failure f) {
+                            Ui.toast(DbScreen.this, Words.Db.failed(f.getMessage()));
+                        }
+                        show();
+                    }
+                });
+                return;
+            }
             else if (code == 5) {
                 Ui.askText(this, Words.Db.EDIT_COND_TITLE, store.prop(it.id, Store.P_COND) == null ? "" : store.prop(it.id, Store.P_COND),
                         Words.Db.SMART_COND, new Ui.Text1() {
@@ -672,7 +816,7 @@ public class DbScreen extends Activity {
 
     private static String reportText(boolean done, String mode, Importer.Report r) {
         return Words.Db.importReport(done, mode, r.listsNew, r.listsKnown, r.smartNew, r.smartKnown, r.filesNew, r.filesKnown,
-                r.filesUpdated, r.linksAdded, r.propsSet, r.rootFiles, r.badLines, r.refs, r.smart, r.nested, r.live);
+                r.filesUpdated, r.linksAdded, r.refsAdded, r.propsSet, r.rootFiles, r.badLines, r.refCycles, r.refMissing, r.smart, r.nested, r.live);
     }
 
     // ---------- בדיקה מלאה (מ0.2.2) ----------

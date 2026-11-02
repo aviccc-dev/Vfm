@@ -73,6 +73,12 @@ final class StoreTests {
             } finally {
                 sm.close();
             }
+            Store rs = opener.fresh(new File(sub, "refs-counter.txt"));
+            try {
+                new ImportTests(o, name).refs(rs, new File(sub, "refs"));
+            } finally {
+                rs.close();
+            }
             new ImportTests(o, name).fullCheck(opener, new File(sub, "full"));
         } catch (Throwable x) {
             o.failed.add(name + " — העתקה: חריגה " + x);

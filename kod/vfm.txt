@@ -932,7 +932,7 @@ cd $S; rm -rf out gen bld
 [ "$S" != "$DIR" ] && rm -rf $S
 ls -la $OUT
 ===== קובץ: build/m-version.txt =====
-5 מ0.3
+6 מ0.4
 ===== קובץ: build/test.sh =====
 #!/bin/bash
 # בדיקות על המחשב (80). יוצא בכישלון אם בדיקה אחת נכשלה — ואז build.sh לא בונה.
@@ -8208,7 +8208,7 @@ public class DbScreen extends Activity {
     private ScrollView sv;
     /** נתיב הרשימות הפתוחות; ריק = "כל הרשימות". UNASSIGNED_ID = "לא משויכים" (רשימה מחושבת, לא פריט). */
     private final ArrayList<Long> path = new ArrayList<Long>();
-    private static final long UNASSIGNED_ID = -1L;
+    private static final long UNASSIGNED_ID = -1L, TRASH_ID = -2L;
     /** מספר ההצגה הנוכחית; הערכה של רשימה חכמה שהסתיימה אחרי שעזבו אותה — מתעלמים ממנה. */
     private int token;
     private final android.os.Handler ui = new android.os.Handler(android.os.Looper.getMainLooper());
@@ -8377,8 +8377,8 @@ public class DbScreen extends Activity {
             status.setText(Words.Db.status(all.size(), store.lastId(), store.systemCode(), store.info()));
             StringBuilder c = new StringBuilder(Words.Db.ALL_LISTS);
             for (Long id : new ArrayList<Long>(path)) {
-                if (id == UNASSIGNED_ID) {
-                    c.append(Words.Db.CRUMB_SEP).append(Words.Db.UNASSIGNED);
+                if (id == UNASSIGNED_ID || id == TRASH_ID) {
+                    c.append(Words.Db.CRUMB_SEP).append(id == TRASH_ID ? Words.Db.TRASH : Words.Db.UNASSIGNED);
                     continue;
                 }
                 Store.Item it = store.item(id);
@@ -8386,7 +8386,7 @@ public class DbScreen extends Activity {
                     path.remove(id);
                     continue;
                 }
-                c.append(Words.Db.CRUMB_SEP).append(it.type == Store.SMART ? "⚡ " : "").append(it.name);
+                c.append(Words.Db.CRUMB_SEP).append(it.type == Store.SMART ? "⚡ " + it.name : label(it));
             }
             crumb.setText(c.toString());
             final long cur = current();
@@ -8414,24 +8414,19 @@ public class DbScreen extends Activity {
                 buttons.addView(button(Words.Db.DELETE_YES, new Runnable() {
                     @Override public void run() { act(sm, -1, 4); }
                 }));
-            } else if (cur != UNASSIGNED_ID) {
-                buttons.addView(button(Words.Db.NEW_SUBLIST, new Runnable() {
-                    @Override public void run() { newList(current()); }
-                }));
-                buttons.addView(button(Words.Db.NEW_SMART, new Runnable() {
-                    @Override public void run() { newSmart(current()); }
-                }));
-                buttons.addView(button(Words.Db.NEW_NOTE, new Runnable() {
-                    @Override public void run() { newNote(); }
+            } else if (cur > 0) {
+                buttons.addView(button(Words.Db.ADD_MENU, new Runnable() {
+                    @Override public void run() { addMenu(); }
                 }));
             }
             buttons.addView(button(Words.Db.FULL_CHECK, new Runnable() {
                 @Override public void run() { fullCheck(); }
             }));
-            hint.setText(cur == UNASSIGNED_ID ? Words.Db.UNASSIGNED_HINT : Words.Db.HINT);
+            hint.setText(cur == UNASSIGNED_ID ? Words.Db.UNASSIGNED_HINT : cur == TRASH_ID ? Words.Db.TRASH_HINT : Words.Db.HINT);
             rows.removeAllViews();
             if (path.isEmpty()) {
-                rows.addView(unassignedRow(store.unassigned().size()));
+                rows.addView(specialRow(Words.Db.UNASSIGNED, Words.Db.UNASSIGNED_SUB, store.unassigned().size(), UNASSIGNED_ID));
+                rows.addView(specialRow(Words.Db.TRASH, Words.Db.TRASH_SUB, store.trashed().size(), TRASH_ID));
                 List<Store.Item> smarts = store.smarts();
                 if (all.isEmpty() && smarts.isEmpty()) {
                     TextView t = Ui.info(this);
@@ -8448,6 +8443,14 @@ public class DbScreen extends Activity {
                     rows.addView(t);
                 }
                 for (Store.Item it : un) rows.addView(row(it, -1, -1, 0));
+            } else if (cur == TRASH_ID) {
+                List<Store.Item> tr = store.trashed();
+                if (tr.isEmpty()) {
+                    TextView t = Ui.info(this);
+                    t.setText(Words.Db.TRASH_EMPTY);
+                    rows.addView(t);
+                }
+                for (Store.Item it : tr) rows.addView(row(it, -1, -1, 0));
             } else if (inSmart) {
                 showSmart(curItem);
             } else {
@@ -8466,26 +8469,26 @@ public class DbScreen extends Activity {
         }
     }
 
-    /** "לא משויכים": שורה מיוחדת בראש הרשימות — מחושבת בכל פעם, לא נשמרת. */
-    private View unassignedRow(int count) {
+    /** "לא משויכים" / סל המחזור: שורה מיוחדת בראש הרשימות — מחושבת בכל פעם, לא נשמרת. */
+    private View specialRow(String title, String subText, int count, final long id) {
         LinearLayout r = new LinearLayout(this);
         r.setOrientation(LinearLayout.VERTICAL);
         r.setPadding(Ui.dp(this, 12), Ui.dp(this, 10), Ui.dp(this, 12), Ui.dp(this, 10));
         TextView name = new TextView(this);
-        name.setText(Words.Db.UNASSIGNED);
+        name.setText(title);
         name.setTextSize(16);
         name.setTextColor(Ui.TEXT);
         TextView sub = new TextView(this);
         sub.setTextSize(12);
         sub.setTextColor(Ui.SUB);
-        sub.setText(Words.Db.UNASSIGNED_SUB + " · " + Words.items(count));
+        sub.setText(subText + " · " + Words.items(count));
         r.addView(name);
         r.addView(sub);
         r.setBackgroundColor(Ui.BG);
         r.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                path.add(UNASSIGNED_ID);
+                path.add(id);
                 show();
             }
         });
@@ -8581,8 +8584,13 @@ public class DbScreen extends Activity {
             sub.setText(Words.Db.smartLine(it.id, cond.length() > 70 ? cond.substring(0, 70) + "…" : cond));
             name.setText("⚡ " + it.name);
         } else {
-            sub.setText(Words.Db.kindLine(it.type == Store.LIST ? Words.Db.KIND_LIST : it.type == Store.FILE ? Words.Db.KIND_FILE : Words.Db.KIND_NOTE,
-                    it.id, count >= 0 ? Words.items(count) : ""));
+            boolean group = isGroup(it);
+            boolean shared = it.type == Store.LIST && store.listsOf(it.id).size() > 1;
+            String kind = group ? Words.Db.KIND_GROUP : shared ? Words.Db.KIND_REF : it.type == Store.LIST ? Words.Db.KIND_LIST
+                    : it.type == Store.FILE ? Words.Db.KIND_FILE : it.type == Store.TITLE ? Words.Db.KIND_TITLE : Words.Db.KIND_NOTE;
+            sub.setText(Words.Db.kindLine(kind, it.id, count >= 0 && !group ? Words.items(count) : ""));
+            name.setText((shared ? "↪ " : "") + label(it));
+            if (it.type == Store.TITLE) name.setTypeface(Typeface.DEFAULT_BOLD);
         }
         r.addView(name);
         r.addView(sub);
@@ -8606,13 +8614,107 @@ public class DbScreen extends Activity {
         return r;
     }
 
+    private boolean isGroup(Store.Item it) {
+        return it.type == Store.LIST && "1".equals(store.prop(it.id, Store.P_GROUP));
+    }
+
+    /** מה מוצג כשם: חבורה — לפי הכותרת שבה, ואם אין — לפי החבר הראשון; כותרת — בין קווים. */
+    private String label(Store.Item it) {
+        if (it.type == Store.TITLE) return "── " + it.name + " ──";
+        if (!isGroup(it)) return it.name;
+        List<Store.Member> ms = store.members(it.id);
+        String head = null;
+        for (Store.Member m : ms) if (m.item.type == Store.TITLE) { head = m.item.name; break; }
+        if (head == null && !ms.isEmpty()) head = ms.get(0).item.name;
+        return Words.Db.groupLabel(head == null ? Words.Db.GROUP_EMPTY : head, ms.size());
+    }
+
     // ---------- פעולות ----------
+
+    /** "➕ הוספה…" בתוך רשימה: כל מה שאפשר להוסיף, בתפריט אחד. */
+    private void addMenu() {
+        final String[] labels = {Words.Db.NEW_SUBLIST, Words.Db.NEW_SMART, Words.Db.NEW_REF, Words.Db.NEW_NOTE, Words.Db.NEW_TITLE, Words.Db.NEW_GROUP};
+        Ui.list(this, Words.Db.ADD_MENU, java.util.Arrays.asList(labels), new DialogInterface.OnClickListener() {
+            @Override
+            public void onClick(DialogInterface d, int which) {
+                switch (which) {
+                    case 0: newList(current()); break;
+                    case 1: newSmart(current()); break;
+                    case 2: newRef(); break;
+                    case 3: newNote(); break;
+                    case 4: newTitle(); break;
+                    default: newGroup(); break;
+                }
+            }
+        });
+    }
+
+    /** הפניה: רשימה קיימת נכנסת גם לכאן (אותה רשימה, לא עותק). מעגל — נחסם עם הסבר. */
+    private void newRef() {
+        final long into = current();
+        final List<Store.Item> lists = new ArrayList<Store.Item>();
+        for (Store.Item l : store.lists()) if (l.id != into) lists.add(l);
+        if (lists.isEmpty()) {
+            Ui.toast(this, Words.Db.NO_LISTS);
+            return;
+        }
+        List<String> labels = new ArrayList<String>();
+        for (Store.Item l : lists) labels.add(l.name + " · " + l.id);
+        Ui.list(this, Words.Db.REF_PICK, labels, new DialogInterface.OnClickListener() {
+            @Override
+            public void onClick(DialogInterface d, int which) {
+                addInto(into, lists.get(which));
+            }
+        });
+    }
+
+    /** מוסיף פריט לרשימה, עם ההודעות: כבר שם, מעגל. */
+    private void addInto(long list, Store.Item it) {
+        try {
+            if (store.makesCycle(list, it.id)) Ui.toast(this, Words.Db.cycleBlocked(it.name, store.item(list).name));
+            else if (!store.addMember(list, it.id)) Ui.toast(this, Words.Db.ALREADY_THERE);
+        } catch (Store.Failure f) {
+            Ui.toast(this, Words.Db.failed(f.getMessage()));
+        }
+        show();
+    }
+
+    private void newTitle() {
+        Ui.askText(this, Words.Db.NEW_TITLE_TITLE, "", Words.Db.TITLE_TEXT, new Ui.Text1() {
+            @Override
+            public void ok(String value) {
+                try {
+                    store.addTitle(current(), value);
+                } catch (Store.Failure f) {
+                    Ui.toast(DbScreen.this, Words.Db.failed(f.getMessage()));
+                }
+                show();
+            }
+        });
+    }
+
+    /** חבורה: רשימה מוטמעת בתוך הרשימה הפתוחה — נפתחת מיד כדי להכניס לה פריטים. */
+    private void newGroup() {
+        try {
+            long id = store.createList(Words.Db.GROUP_NAME, current());
+            store.setProp(id, Store.P_GROUP, "1");
+            path.add(id);
+        } catch (Store.Failure f) {
+            Ui.toast(this, Words.Db.failed(f.getMessage()));
+        }
+        show();
+    }
 
     private void newList(final long parent) {
         Ui.askText(this, Words.Db.NEW_LIST_TITLE, "", Words.Db.LIST_NAME, new Ui.Text1() {
             @Override
             public void ok(String value) {
                 try {
+                    for (Store.Item l : store.lists())
+                        if (l.name.equals(value.trim())) {
+                            Ui.toast(DbScreen.this, Words.Db.sameName(value.trim()));
+                            break;
+                        }
                     store.createList(value, parent);
                 } catch (Store.Failure f) {
                     Ui.toast(DbScreen.this, Words.Db.failed(f.getMessage()));
@@ -8654,12 +8756,7 @@ public class DbScreen extends Activity {
         Ui.list(this, Words.Db.ADD_TO_LIST_TITLE, labels, new DialogInterface.OnClickListener() {
             @Override
             public void onClick(DialogInterface d, int which) {
-                try {
-                    if (!store.addMember(lists.get(which).id, it.id)) Ui.toast(DbScreen.this, Words.Db.ALREADY_THERE);
-                } catch (Store.Failure f) {
-                    Ui.toast(DbScreen.this, Words.Db.failed(f.getMessage()));
-                }
-                show();
+                addInto(lists.get(which).id, it);
             }
         });
     }
@@ -8681,6 +8778,16 @@ public class DbScreen extends Activity {
     private void more(final Store.Item it, final int position, final int size) {
         final List<String> labels = new ArrayList<String>();
         final List<Integer> codes = new ArrayList<Integer>();
+        if (current() == TRASH_ID) {                                 // בסל: רק שחזור או מחיקה לצמיתות
+            labels.add(Words.Db.RESTORE);
+            codes.add(9);
+            labels.add(Words.Db.PURGE);
+            codes.add(10);
+            Ui.list(this, it.name, labels, new DialogInterface.OnClickListener() {
+                @Override public void onClick(DialogInterface d, int which) { act(it, position, codes.get(which)); }
+            });
+            return;
+        }
         if (it.type != Store.FILE) {                                 // שם הקובץ הוא שמו בכונן — לא משנים אותו כאן
             labels.add(Words.Db.RENAME);
             codes.add(0);
@@ -8692,7 +8799,10 @@ public class DbScreen extends Activity {
             codes.add(3);
         }
         if (it.type == Store.SMART) { labels.add(Words.Db.EDIT_COND); codes.add(5); }
-        if (it.type != Store.LIST) { labels.add(Words.Db.ADD_TO_LIST); codes.add(6); }
+        labels.add(Words.Db.ADD_TO_LIST);
+        codes.add(6);
+        if (it.type == Store.LIST) { labels.add(isGroup(it) ? Words.Db.TO_LIST : Words.Db.TO_GROUP); codes.add(7); }
+        if (it.type == Store.NOTE || it.type == Store.TITLE) { labels.add(Words.Db.TO_TRASH); codes.add(8); }
         if (it.type == Store.LIST || it.type == Store.SMART) { labels.add(Words.Db.DELETE_LIST); codes.add(4); }
         Ui.list(this, it.name, labels, new DialogInterface.OnClickListener() {
             @Override
@@ -8720,7 +8830,41 @@ public class DbScreen extends Activity {
             }
             if (code == 1) store.move(current(), it.id, position - 1);
             else if (code == 2) store.move(current(), it.id, position + 1);
-            else if (code == 3) store.removeMember(current(), it.id);
+            else if (code == 3) {
+                if ((it.type == Store.NOTE || it.type == Store.TITLE) && store.listsOf(it.id).size() == 1) {
+                    final long from = current();
+                    new AlertDialog.Builder(this).setMessage(Words.Db.lastListQuestion(it.name))
+                            .setPositiveButton(Words.Db.LAST_LIST_KEEP, new DialogInterface.OnClickListener() {
+                                @Override public void onClick(DialogInterface d, int w) { store.removeMember(from, it.id); show(); }
+                            })
+                            .setNeutralButton(Words.Db.LAST_LIST_TRASH, new DialogInterface.OnClickListener() {
+                                @Override public void onClick(DialogInterface d, int w) { store.trash(it.id); show(); }
+                            })
+                            .setNegativeButton(Words.CANCEL, null).show();
+                    return;
+                }
+                store.removeMember(current(), it.id);
+            } else if (code == 7) {
+                store.setProp(it.id, Store.P_GROUP, isGroup(it) ? null : "1");
+            } else if (code == 8) {
+                store.trash(it.id);
+            } else if (code == 9) {
+                store.restore(it.id);
+                Ui.toast(this, Words.Db.RESTORED);
+            } else if (code == 10) {
+                Ui.confirm(this, Words.Db.PURGE, it.name + "\n" + Words.Db.PURGE_DETAIL, Words.Db.PURGE, new Runnable() {
+                    @Override
+                    public void run() {
+                        try {
+                            store.purge(it.id);
+                        } catch (Store.Failure f) {
+                            Ui.toast(DbScreen.this, Words.Db.failed(f.getMessage()));
+                        }
+                        show();
+                    }
+                });
+                return;
+            }
             else if (code == 5) {
                 Ui.askText(this, Words.Db.EDIT_COND_TITLE, store.prop(it.id, Store.P_COND) == null ? "" : store.prop(it.id, Store.P_COND),
                         Words.Db.SMART_COND, new Ui.Text1() {
@@ -8847,7 +8991,7 @@ public class DbScreen extends Activity {
 
     private static String reportText(boolean done, String mode, Importer.Report r) {
         return Words.Db.importReport(done, mode, r.listsNew, r.listsKnown, r.smartNew, r.smartKnown, r.filesNew, r.filesKnown,
-                r.filesUpdated, r.linksAdded, r.propsSet, r.rootFiles, r.badLines, r.refs, r.smart, r.nested, r.live);
+                r.filesUpdated, r.linksAdded, r.refsAdded, r.propsSet, r.rootFiles, r.badLines, r.refCycles, r.refMissing, r.smart, r.nested, r.live);
     }
 
     // ---------- בדיקה מלאה (מ0.2.2) ----------
@@ -13273,6 +13417,12 @@ final class FullCheck {
             add(problems, mode, f, nodes.size() - 1, t.lists().size(), again.nothingToDo(), t.check());
             int[] un = unassigned(t, nodes);
             out.append(Words.Db.modeTempSmart(defs.size(), f.smartFound, f.smartWrong, un[0], un[1])).append("\n");
+            int[] rf = refs(t, src, nodes, f);
+            int cyc = cycles(t);
+            out.append(Words.Db.modeRefs(refs, rf[0], rf[1], rf[2], rf[3], cyc)).append("\n");
+            if (rf[3] > 0 || r.refsAdded + r.refsKnown != rf[0] || r.refCycles != rf[1] || r.refMissing != rf[2])
+                problems.add(Words.Db.pRefs(mode, Math.max(rf[3], 1)));
+            if (cyc > 0) problems.add(Words.Db.pCycles(mode, cyc));
             if (un[0] != un[1] || un[2] != 0) problems.add(Words.Db.pUnassigned(mode, un[0], un[1] + un[2]));
             if (f.smartMissing > 0) problems.add(Words.Db.pSmartMissing(mode, f.smartMissing));
             if (f.smartWrong > 0) problems.add(Words.Db.pSmartWrong(mode, f.smartWrong));
@@ -13294,9 +13444,14 @@ final class FullCheck {
             out.append(Words.Db.modeReal(real.lists().size(), nodes.size() - 1, f.lists, f.membersWrong, f.filesMissing,
                     pre.listsNew, pre.filesNew, pre.filesUpdated, pre.linksAdded, pre.smartNew, real.check() == null)).append("\n");
             out.append(Words.Db.modeRealUnassigned(real.unassigned().size())).append("\n");
-            if (pre.listsNew + pre.filesNew + pre.filesUpdated + pre.linksAdded + pre.smartNew > 0 || f.listsMissing > 0
+            int[] rf = refs(real, src, nodes, f);
+            int cyc = cycles(real);
+            out.append(Words.Db.modeRealRefs(rf[0], cyc)).append("\n");
+            if (rf[3] > 0 && pre.refsAdded == 0) problems.add(Words.Db.pRefs(mode, rf[3]));   // חסרות שהעתקה חוזרת תשלים — כבר ב"לא תואם"
+            if (cyc > 0) problems.add(Words.Db.pCycles(mode, cyc));
+            if (pre.listsNew + pre.filesNew + pre.filesUpdated + pre.linksAdded + pre.smartNew + pre.refsAdded > 0 || f.listsMissing > 0
                     || f.filesMissing > 0 || f.smartMissing > 0)
-                problems.add(Words.Db.pRealBehind(mode, pre.listsNew, pre.filesNew, pre.filesUpdated, pre.linksAdded, pre.smartNew));
+                problems.add(Words.Db.pRealBehind(mode, pre.listsNew, pre.filesNew, pre.filesUpdated, pre.linksAdded, pre.smartNew, pre.refsAdded));
             if (real.check() != null) problems.add(Words.Db.pCheck(mode, real.check()));
             for (String e : f.examples) out.append("   ").append(e).append("\n");
         } finally {
@@ -13369,6 +13524,10 @@ final class FullCheck {
             f.lists++;
             Set<Long> want = new HashSet<Long>();
             for (Tree.Node c : n.children) want.add(s.findByOrigin(Importer.originOf(src.mode, Tree.fullLabel(c.path()))));
+            for (String ref : n.refs) {
+                long tg = s.findByOrigin(Importer.originOf(src.mode, Tree.fullLabel(Tree.parsePath(ref))));
+                if (tg != 0 && !s.makesCycle(id, tg)) want.add(tg);
+            }
             for (String ref : n.smart) {
                 Importer.Smart d = src.smart(ref);
                 if (d != null) want.add(s.findByOrigin(Importer.smartOrigin(src.mode, d.key)));
@@ -13487,7 +13646,7 @@ final class FullCheck {
             long id = t.findByOrigin(Importer.originOf(src.mode, Tree.fullLabel(n.path())));
             if (id == 0 || t.count(id) > 0) continue;
             total++;
-            if (n.refs.size() + skippedIn(src, n) + n.live.size() + badIn(n) > 0) {
+            if (skippedRefs(t, src, n, id) + skippedIn(src, n) + n.live.size() + badIn(n) > 0) {
                 pending++;
             } else {
                 truly++;
@@ -13496,6 +13655,49 @@ final class FullCheck {
         }
         out.append(Words.Db.modeEmpty(total, truly, pending)).append("\n");
         for (String nm : names) out.append("   ").append(nm).append("\n");
+    }
+
+    /** הפניות של הרשימה שלא הועתקו: לרשימה שלא קיימת, או שהיו סוגרות מעגל. */
+    private static int skippedRefs(Store t, Importer.Source src, Tree.Node n, long id) {
+        int k = 0;
+        for (String ref : n.refs) {
+            long tg = t.findByOrigin(Importer.originOf(src.mode, Tree.fullLabel(Tree.parsePath(ref))));
+            if (tg == 0 || t.makesCycle(id, tg)) k++;
+        }
+        return k;
+    }
+
+    /**
+     * ההפניות במסד מול המקור: [הועתקו, נחסמו כמעגל, לרשימה שלא קיימת, שגויות]. הועתקה = הרשימה שאליה מפנים חברה ברשימה המפנה;
+     * מעגל = היא כבר מכילה את המפנה; שגויה — אף אחד מאלה. הפניות בשורש — "לא קיימת" (אין רשימה מפנה).
+     */
+    private static int[] refs(Store s, Importer.Source src, List<Tree.Node> nodes, Found f) {
+        int copied = 0, cyc = 0, missing = nodes.get(0).refs.size(), wrong = 0;
+        for (int i = 1; i < nodes.size(); i++) {
+            Tree.Node n = nodes.get(i);
+            if (n.refs.isEmpty()) continue;
+            long id = s.findByOrigin(Importer.originOf(src.mode, Tree.fullLabel(n.path())));
+            if (id == 0) continue;
+            Set<Long> got = new HashSet<Long>();
+            for (Store.Member m : s.members(id)) got.add(m.item.id);
+            for (String ref : n.refs) {
+                long tg = s.findByOrigin(Importer.originOf(src.mode, Tree.fullLabel(Tree.parsePath(ref))));
+                if (tg == 0) missing++;
+                else if (got.contains(tg)) copied++;
+                else if (s.makesCycle(id, tg)) {
+                    cyc++;
+                    example(f, Words.Db.exCycle(Tree.fullLabel(n.path()), ref));
+                } else wrong++;
+            }
+        }
+        return new int[]{copied, cyc, missing, wrong};
+    }
+
+    /** כמה רשימות במסד נמצאות בתוך עצמן. אמור להיות 0 תמיד. */
+    private static int cycles(Store s) {
+        int n = 0;
+        for (Store.Item l : s.lists()) if (s.contains(l.id, l.id)) n++;
+        return n;
     }
 
     private static int skippedIn(Importer.Source src, Tree.Node n) {
@@ -14601,8 +14803,12 @@ package com.tikiyot.vfm;
 //  - מה מועתק: רשימות ידניות בעץ (עם הסדר), צלמית/תיאור/עיצוב/"למה", קבצים (מסלול, כונן, גודל ותאריך, חתימה),
 //    ומ־מ0.3 גם רשימות חכמות: כל ההגדרות הנפוצות (עצמאיות), וכל @חכמה ברשימה ידנית — חברות של הרשימה החכמה בה
 //    (פנימית שמקושרת להגדרה נפוצה = אותו פריט, כמו בישן). התנאי נשמר כטקסט, כפי שהוא.
-//  - לא מועתק, ונספר בדוח: הפניות בין רשימות (@רשימה — מ0.4), @חכמה שאינה מובילה להגדרה (נמחקה, כלי, כפולים),
-//    "רשימות בתוך" שבתוך חכמה (מ0.4), תיקיות חיות (@תיקייה), שורות פגומות. שום דבר לא נמחק או משתנה במקור.
+//    ומ־מ0.4 הפניות בין רשימות (@רשימה): אותה רשימה נכנסת גם לרשימה המפנה (חברות, בלי "הורה").
+//  - לא מועתק, ונספר בדוח: הפניה שהייתה סוגרת מעגל (במנוע הישן ייתכן; במסד לא), הפניה לרשימה שאינה קיימת,
+//    @חכמה שאינה מובילה להגדרה (נמחקה, כלי, כפולים), "רשימות בתוך" שבתוך חכמה, תיקיות חיות (@תיקייה), שורות
+//    פגומות. שום דבר לא נמחק או משתנה במקור.
+//  - הסדר: קודם כל הרשימות נוצרות (או נמצאות) עומדות לעצמן, ואז כל רשימה מקבלת את חבריה לפי @סדר — כך הפניה
+//    יכולה להצביע גם על רשימה שמופיעה מאוחר יותר בקובץ.
 //  - העתקה חוזרת = עדכון, לא כפילות: רשימה מזוהה לפי האופן והמסלול שלה במקור (origin_key), קובץ לפי המסלול שלו.
 //    רשימה שכבר הועתקה לא משתנה במבנה; מאפיין ריק בה מתמלא, מאפיין שיש לא נדרס. קבצים חדשים נוספים לסוף.
 //    מה שנמחק במקור לא נמחק במסד.
@@ -14766,15 +14972,17 @@ final class Importer {
         int filesNew, filesKnown, filesUpdated, filesWithSig;
         int linksAdded, linksKnown, rootFiles;
         int propsSet;
-        /** smart = הפניות @חכמה שלא הועתקו; nested = "רשימות בתוך" חכמה שלא הועתקו (מ0.4). */
-        int badLines, refs, smart, live, nested;
+        /** smart = הפניות @חכמה שלא הועתקו; nested = "רשימות בתוך" חכמה שלא הועתקו. */
+        int badLines, smart, live, nested;
+        /** הפניות בין רשימות (מ0.4): נוספו / כבר היו / לא הועתקו כי היו סוגרות מעגל / לרשימה שלא קיימת. */
+        int refsAdded, refsKnown, refCycles, refMissing;
 
         boolean nothingToDo() {
-            return listsNew == 0 && smartNew == 0 && filesNew == 0 && filesUpdated == 0 && linksAdded == 0 && propsSet == 0;
+            return listsNew == 0 && smartNew == 0 && refsAdded == 0 && filesNew == 0 && filesUpdated == 0 && linksAdded == 0 && propsSet == 0;
         }
 
         boolean skippedAny() {
-            return badLines + refs + smart + live + nested > 0;
+            return badLines + refCycles + refMissing + smart + live + nested > 0;
         }
     }
 
@@ -14841,6 +15049,19 @@ final class Importer {
         return r;
     }
 
+    /** הפניה ברשימה (מסלול הרשימה שאליה מפנים) — כדי להבדיל ממזהה של רשימה חכמה בסדר. */
+    private static final class Ref {
+        final String path;
+
+        Ref(String path) {
+            this.path = path;
+        }
+
+        @Override public boolean equals(Object o) { return o instanceof Ref && ((Ref) o).path.equals(path); }
+
+        @Override public int hashCode() { return path.hashCode() * 31 + 7; }
+    }
+
     private static final class Ctx {
         final Store s;
         final Source src;
@@ -14849,6 +15070,9 @@ final class Importer {
         final Map<String, Long> files = new HashMap<String, Long>();
         /** מזהה הגדרה ← פריט, לריצה הזו (פנימית מקושרת ונפוצה — פריט אחד). */
         final Map<String, Long> smarts = new HashMap<String, Long>();
+        /** רשימה במקור ← פריט; ואילו נוצרו בריצה הזו (רק הן נכנסות לרשימת האב — רשימה ישנה לא משנה מקום). */
+        final Map<Tree.Node, Long> ids = new HashMap<Tree.Node, Long>();
+        final Set<Tree.Node> fresh = new HashSet<Tree.Node>();
 
         Ctx(Store s, Source src, Report r) {
             this.s = s;
@@ -14865,7 +15089,9 @@ final class Importer {
                 if (sm == null) r.smart++;
                 else smart(sm);
             }
-            for (Tree.Node c : root.children) list(c, 0);
+            for (Tree.Node c : root.children) ensure(c);
+            for (Tree.Node c : root.children) list(c);
+            r.refMissing += root.refs.size();                                 // בשורש אין רשימה מפנה
             for (Tree.Entry e : root.entries) {
                 if (e.bad) {
                     r.badLines++;
@@ -14877,17 +15103,17 @@ final class Importer {
         }
 
         void count(Tree.Node n) {
-            r.refs += n.refs.size();
             r.live += n.live.size();
         }
 
-        void list(Tree.Node n, long parent) {
-            count(n);
+        /** שלב א: הרשימה ותתי־הרשימות שלה קיימות במסד (עומדות לעצמן), עם המאפיינים. */
+        void ensure(Tree.Node n) {
             String key = originOf(src.mode, Tree.fullLabel(n.path()));
             long id = s.findByOrigin(key);
             if (id == 0) {
-                id = s.createList(n.name, parent);
+                id = s.createList(n.name, 0);
                 s.setOrigin(id, key);
+                fresh.add(n);
                 r.listsNew++;
                 prop(id, Store.P_ICON, n.icon, true);
                 prop(id, Store.P_DESC, n.desc, true);
@@ -14900,9 +15126,21 @@ final class Importer {
                 prop(id, Store.P_DESIGN, n.design, false);
                 prop(id, Store.P_WHY, n.why, false);
             }
+            ids.put(n, id);
+            for (Tree.Node c : n.children) ensure(c);
+        }
+
+        /** שלב ב: החברים של הרשימה, לפי הסדר. */
+        void list(Tree.Node n) {
+            count(n);
+            long id = ids.get(n);
             for (Object o : order(n)) {
                 if (o instanceof Tree.Node) {
-                    list((Tree.Node) o, id);
+                    Tree.Node c = (Tree.Node) o;
+                    if (fresh.contains(c)) s.addMember(id, ids.get(c));
+                    list(c);
+                } else if (o instanceof Ref) {
+                    ref(id, ((Ref) o).path);
                 } else if (o instanceof String) {
                     Smart sm = src.smart((String) o);
                     if (sm == null) {
@@ -14921,6 +15159,15 @@ final class Importer {
                     else r.linksKnown++;
                 }
             }
+        }
+
+        /** הפניה: אותה רשימה נכנסת גם לכאן — אלא אם תיסגר כך שרשרת (מעגל), או שהרשימה לא קיימת. */
+        void ref(long id, String path) {
+            long target = s.findByOrigin(originOf(src.mode, Tree.fullLabel(Tree.parsePath(path))));
+            if (target == 0) r.refMissing++;
+            else if (s.makesCycle(id, target)) r.refCycles++;
+            else if (s.addMember(id, target)) r.refsAdded++;
+            else r.refsKnown++;
         }
 
         /** פריט הרשימה החכמה: קיים — רק מאפיינים ריקים מתמלאים (עריכת המשתמש נשמרת); חדש — נוצר. */
@@ -14983,7 +15230,7 @@ final class Importer {
 
         /**
          * סדר הפריטים ברשימה: אם יש סדר חופשי (@סדר) — לפיו (רשימה: "c"+שם, קובץ: "f"+מסלול; מפתחות של סוגים שלא
-         * מועתקים מדולגים); מה שלא נזכר בו — אחריו, בסדר הרגיל: תת־רשימות, רשימות חכמות ואז קבצים.
+         * מועתקים מדולגים); מה שלא נזכר בו — אחריו, בסדר הרגיל: תת־רשימות, רשימות חכמות, הפניות ואז קבצים.
          */
         List<Object> order(Tree.Node n) {
             List<Object> out = new ArrayList<Object>();
@@ -14994,11 +15241,16 @@ final class Importer {
                 Object o = null;
                 if (k.charAt(0) == 'c') o = n.child(v);
                 else if (k.charAt(0) == 's') { if (n.smart.contains(v)) o = v; }
+                else if (k.charAt(0) == 'r') { if (n.refs.contains(v)) o = new Ref(v); }
                 else if (k.charAt(0) == 'f') for (Tree.Entry e : n.entries) if (e.path.equals(v)) { o = e; break; }
                 if (o != null && used.add(o)) out.add(o);
             }
             for (Tree.Node c : n.children) if (used.add(c)) out.add(c);
             for (String ref : n.smart) if (used.add(ref)) out.add(ref);
+            for (String ref : n.refs) {
+                Ref x = new Ref(ref);
+                if (used.add(x)) out.add(x);
+            }
             for (Tree.Entry e : n.entries) if (used.add(e)) out.add(e);
             return out;
         }
@@ -20544,6 +20796,15 @@ public final class MemStore implements Store {
     }
 
     @Override
+    public long addTitle(long list, String text) {
+        String t = Stores.clean(text, "text");
+        LinkedHashMap<Long, Long> l = listOf(list);
+        Item it = make(TITLE, t);
+        l.put(it.id, it.created);
+        return it.id;
+    }
+
+    @Override
     public long addNote(long list, String text) {
         String t = Stores.clean(text, "text");
         LinkedHashMap<Long, Long> l = listOf(list);
@@ -20557,8 +20818,9 @@ public final class MemStore implements Store {
         LinkedHashMap<Long, Long> l = listOf(list);
         Item it = items.get(item);
         if (it == null) throw new Failure("no such item " + item);
-        Stores.noListInList(it);
+        if (prop(item, P_TRASHED) != null) throw new Failure("item is in the bin: " + item);
         if (l.containsKey(item)) return false;
+        if (makesCycle(list, item)) throw new Failure("cycle: " + item + " already holds " + list);
         l.put(item, System.currentTimeMillis());
         return true;
     }
@@ -20579,6 +20841,76 @@ public final class MemStore implements Store {
         Map<Long, Long> old = new LinkedHashMap<Long, Long>(l);
         l.clear();
         for (Long id : order) l.put(id, old.get(id));
+    }
+
+    @Override
+    public boolean contains(long outer, long inner) {
+        java.util.Set<Long> seen = new java.util.HashSet<Long>();
+        java.util.ArrayDeque<Long> q = new java.util.ArrayDeque<Long>();
+        q.add(outer);
+        while (!q.isEmpty()) {
+            LinkedHashMap<Long, Long> l = members.get(q.poll());
+            if (l == null) continue;
+            for (Long id : l.keySet()) {
+                if (id == inner) return true;
+                if (seen.add(id)) q.add(id);
+            }
+        }
+        return false;
+    }
+
+    @Override
+    public boolean makesCycle(long list, long item) {
+        return list == item || contains(item, list);
+    }
+
+    @Override
+    public void trash(long item) {
+        Item it = items.get(item);
+        Stores.mayTrash(it, item);
+        if (prop(item, P_TRASHED) != null) return;
+        List<long[]> from = new ArrayList<long[]>();
+        for (Map.Entry<Long, LinkedHashMap<Long, Long>> e : members.entrySet()) {
+            int pos = 0;
+            for (Long id : e.getValue().keySet()) {
+                if (id == item) from.add(new long[]{e.getKey(), pos});
+                pos++;
+            }
+        }
+        for (long[] f : from) members.get(f[0]).remove(item);
+        setProp(item, P_TRASH_FROM, Stores.joinFrom(from));
+        setProp(item, P_TRASHED, String.valueOf(System.currentTimeMillis()));
+    }
+
+    @Override
+    public void restore(long item) {
+        if (items.get(item) == null) throw new Failure("no such item " + item);
+        if (prop(item, P_TRASHED) == null) throw new Failure("not in the bin: " + item);
+        List<long[]> from = Stores.parseFrom(prop(item, P_TRASH_FROM));
+        setProp(item, P_TRASHED, null);
+        setProp(item, P_TRASH_FROM, null);
+        for (long[] f : from) {
+            Item l = items.get(f[0]);
+            if (l == null || l.type != LIST) continue;
+            if (addMember(f[0], item)) move(f[0], item, (int) f[1]);
+        }
+    }
+
+    @Override
+    public void purge(long item) {
+        if (items.get(item) == null) throw new Failure("no such item " + item);
+        if (prop(item, P_TRASHED) == null) throw new Failure("not in the bin: " + item);
+        items.remove(item);
+        props.remove(item);
+        origins.remove(item);
+        for (LinkedHashMap<Long, Long> l : members.values()) l.remove(item);
+    }
+
+    @Override
+    public List<Item> trashed() {
+        List<Item> out = new ArrayList<Item>();
+        for (Item it : items.values()) if (prop(it.id, P_TRASHED) != null) out.add(it);
+        return out;
     }
 
     @Override
@@ -20715,7 +21047,8 @@ public final class MemStore implements Store {
     public List<Item> unassigned() {
         List<Item> out = new ArrayList<Item>();
         for (Item it : items.values()) {
-            if (it.type != FILE && it.type != NOTE) continue;
+            if (it.type != FILE && it.type != NOTE && it.type != TITLE) continue;
+            if (prop(it.id, P_TRASHED) != null) continue;
             boolean in = false;
             for (LinkedHashMap<Long, Long> l : members.values()) if (l.containsKey(it.id)) { in = true; break; }
             if (!in) out.add(it);
@@ -31251,6 +31584,21 @@ public final class SqlStore implements Store {
     }
 
     @Override
+    public long addTitle(long list, String text) {
+        String t = Stores.clean(text, "text");
+        db.beginTransaction();
+        try {
+            mustBeList(list);
+            long id = create(TITLE, t);
+            append(list, id, System.currentTimeMillis());
+            db.setTransactionSuccessful();
+            return id;
+        } finally {
+            db.endTransaction();
+        }
+    }
+
+    @Override
     public long addNote(long list, String text) {
         String t = Stores.clean(text, "text");
         db.beginTransaction();
@@ -31267,12 +31615,15 @@ public final class SqlStore implements Store {
 
     @Override
     public boolean addMember(long list, long item) {
+        // הבדיקות לפני העסקה: כישלון בתוך עסקה פנימית היה מבטל גם את העסקה החיצונית (atomic)
+        mustBeList(list);
+        Item it = read(item);
+        if (it == null) throw new Failure("no such item " + item);
+        if (prop(item, P_TRASHED) != null) throw new Failure("item is in the bin: " + item);
+        boolean there = num("SELECT COUNT(*) FROM members WHERE list_id=? AND item_id=?", s(list), s(item)) > 0;
+        if (!there && it.type == LIST && makesCycle(list, item)) throw new Failure("cycle: " + item + " already holds " + list);
         db.beginTransaction();
         try {
-            mustBeList(list);
-            Item it = read(item);
-            if (it == null) throw new Failure("no such item " + item);
-            Stores.noListInList(it);
             if (num("SELECT COUNT(*) FROM members WHERE list_id=? AND item_id=?", s(list), s(item)) > 0) {
                 db.setTransactionSuccessful();   // "כבר שם" אינו כישלון: בלי הסימון, עסקה חיצונית (atomic) הייתה מתבטלת כולה
                 return false;
@@ -31337,6 +31688,98 @@ public final class SqlStore implements Store {
         } finally {
             db.endTransaction();
         }
+    }
+
+    /** הרשימות שבתוך רשימה (צעד אחד). */
+    private List<Long> subLists(long list) {
+        List<Long> out = new ArrayList<Long>();
+        Cursor c = db.rawQuery("SELECT m.item_id FROM members m JOIN items i ON i.id = m.item_id WHERE m.list_id=? AND i.type=?",
+                new String[]{s(list), s(LIST)});
+        try {
+            while (c.moveToNext()) out.add(c.getLong(0));
+        } finally {
+            c.close();
+        }
+        return out;
+    }
+
+    @Override
+    public boolean contains(long outer, long inner) {
+        return containsVia(outer, inner);
+    }
+
+    /** חיפוש לרוחב דרך הרשימות שבתוך הרשימות; מבקר בכל רשימה פעם אחת (מעגל ישן לא יתקע). */
+    private boolean containsVia(long outer, long inner) {
+        java.util.Set<Long> seen = new java.util.HashSet<Long>();
+        java.util.ArrayDeque<Long> q = new java.util.ArrayDeque<Long>();
+        q.add(outer);
+        seen.add(outer);
+        while (!q.isEmpty()) {
+            long l = q.poll();
+            if (num("SELECT COUNT(*) FROM members WHERE list_id=? AND item_id=?", s(l), s(inner)) > 0) return true;
+            for (Long sub : subLists(l)) if (seen.add(sub)) q.add(sub);
+        }
+        return false;
+    }
+
+    @Override
+    public boolean makesCycle(long list, long item) {
+        return list == item || contains(item, list);
+    }
+
+    @Override
+    public void trash(long item) {
+        Stores.mayTrash(read(item), item);
+        if (prop(item, P_TRASHED) != null) return;
+        db.beginTransaction();
+        try {
+            List<long[]> from = new ArrayList<long[]>();
+            Cursor c = db.rawQuery("SELECT list_id, position FROM members WHERE item_id=? ORDER BY list_id", new String[]{s(item)});
+            try {
+                while (c.moveToNext()) from.add(new long[]{c.getLong(0), c.getLong(1)});
+            } finally {
+                c.close();
+            }
+            db.execSQL("DELETE FROM members WHERE item_id=?", new Object[]{item});
+            for (long[] f : from) closeGap(f[0], f[1]);
+            setProp(item, P_TRASH_FROM, Stores.joinFrom(from));
+            setProp(item, P_TRASHED, String.valueOf(System.currentTimeMillis()));
+            db.setTransactionSuccessful();
+        } finally {
+            db.endTransaction();
+        }
+    }
+
+    @Override
+    public void restore(long item) {
+        if (read(item) == null) throw new Failure("no such item " + item);
+        if (prop(item, P_TRASHED) == null) throw new Failure("not in the bin: " + item);
+        db.beginTransaction();
+        try {
+            List<long[]> from = Stores.parseFrom(prop(item, P_TRASH_FROM));
+            setProp(item, P_TRASHED, null);
+            setProp(item, P_TRASH_FROM, null);
+            for (long[] f : from) {
+                Item l = read(f[0]);
+                if (l == null || l.type != LIST) continue;
+                if (addMember(f[0], item)) move(f[0], item, (int) f[1]);
+            }
+            db.setTransactionSuccessful();
+        } finally {
+            db.endTransaction();
+        }
+    }
+
+    @Override
+    public void purge(long item) {
+        if (read(item) == null) throw new Failure("no such item " + item);
+        if (prop(item, P_TRASHED) == null) throw new Failure("not in the bin: " + item);
+        db.execSQL("DELETE FROM items WHERE id=?", new Object[]{item});        // מאפיינים — במחיקה מדורגת; חברויות אין (בסל)
+    }
+
+    @Override
+    public List<Item> trashed() {
+        return itemsWhere("id IN (SELECT item_id FROM props WHERE k=?)", P_TRASHED);
     }
 
     @Override
@@ -31491,7 +31934,8 @@ public final class SqlStore implements Store {
 
     @Override
     public List<Item> unassigned() {
-        return itemsWhere("type IN (?,?) AND id NOT IN (SELECT item_id FROM members)", s(FILE), s(NOTE));
+        return itemsWhere("type IN (?,?,?) AND id NOT IN (SELECT item_id FROM members) AND id NOT IN (SELECT item_id FROM props WHERE k=?)",
+                s(FILE), s(NOTE), s(TITLE), P_TRASHED);
     }
 
     @Override
@@ -31846,13 +32290,19 @@ import java.util.List;
 public interface Store {
 
     /** סוגי פריט. בהמשך יתווספו (כותרת, פקודה…); המספרים נשמרים במסד ולא משתנים. */
-    int LIST = 1, NOTE = 2, FILE = 3, SMART = 4;
+    int LIST = 1, NOTE = 2, FILE = 3, SMART = 4, TITLE = 5;
 
     /** מפתחות המאפיינים של רשימה (מ0.2): צלמית, תיאור, עיצוב, "למה". */
     String P_ICON = "icon", P_DESC = "desc", P_DESIGN = "design", P_WHY = "why";
 
     /** מאפייני רשימה חכמה (מ0.3): התנאי כטקסט (התחביר של מנוע החיפוש), מיון, כיוון, תצוגה. */
     String P_COND = "cond", P_SORT = "sort", P_DIR = "dir", P_VIEW = "view";
+
+    /** מ0.4: רשימה שהיא חבורה (רשימה מוטמעת, "1"). */
+    String P_GROUP = "group";
+
+    /** מ0.4, פנימי: פריט בסל המחזור (מתי) ומאיפה הוא יצא ("רשימה:מקום,…"). מנוהלים רק בידי trash/restore. */
+    String P_TRASHED = "trashed", P_TRASH_FROM = "trash_from";
 
     /** שגיאת שימוש או אחסון. ההודעה — לאנשי הפיתוח (אנגלית); המסך מציג הודעה משלו. */
     final class Failure extends RuntimeException {
@@ -31924,6 +32374,9 @@ public interface Store {
      */
     long createSmart(String name, long parent);
 
+    /** כותרת חדשה בסוף רשימה (מ0.4). */
+    long addTitle(long list, String text);
+
     /** רעיון/הערה חדשים בסוף רשימה. */
     long addNote(long list, String text);
 
@@ -31956,8 +32409,29 @@ public interface Store {
      */
     void atomic(Work w, boolean keep);
 
-    /** מוסיף פריט קיים לסוף רשימה. false אם כבר שם. בגרסה זו לא מוסיפים רשימה לרשימה אחרת (בדיקת מעגלים — מ0.4). */
+    /**
+     * מוסיף פריט קיים לסוף רשימה. false אם כבר שם. מ0.4: גם רשימה לתוך רשימה (הפניה — אותה רשימה בכמה מקומות),
+     * אבל לא כשנוצר מעגל לפי מספר זיהוי (Failure; בודקים קודם ב־makesCycle). פריט שבסל — Failure.
+     */
     boolean addMember(long list, long item);
+
+    /** האם inner נמצא בתוך outer, בכל עומק (צעד אחד לפחות). */
+    boolean contains(long outer, long inner);
+
+    /** האם הוספת item לרשימה list תיצור מעגל: אותו פריט, או ש־list כבר בתוך item. */
+    boolean makesCycle(long list, long item);
+
+    /** מעביר רעיון או כותרת לסל המחזור: יוצא מכל הרשימות, ונזכר מאיפה. אחר — Failure. */
+    void trash(long item);
+
+    /** מחזיר מהסל לרשימות שהיה בהן (שעדיין קיימות), למקום שהיה בו; אם אין — ל"לא משויכים". */
+    void restore(long item);
+
+    /** מוחק לצמיתות פריט שבסל. המספר לא יחזור. */
+    void purge(long item);
+
+    /** מה שבסל, לפי מספר זיהוי. */
+    List<Item> trashed();
 
     /** מסיר פריט מרשימה (הפריט עצמו נשאר). false אם לא היה שם. המקומות נסגרים. */
     boolean removeMember(long list, long item);
@@ -31979,7 +32453,7 @@ public interface Store {
     /** כל הרשימות החכמות, לפי מספר זיהוי. */
     List<Item> smarts();
 
-    /** "לא משויכים" (מ0.3): קבצים ורעיונות שאינם באף רשימה, לפי מספר זיהוי. רשימות ורשימות חכמות לא נספרות. */
+    /** "לא משויכים" (מ0.3): קבצים, רעיונות וכותרות שאינם באף רשימה ואינם בסל, לפי מספר זיהוי. רשימות ורשימות חכמות לא נספרות. */
     List<Item> unassigned();
 
     /** חברי הרשימה לפי המקום. */
@@ -32092,6 +32566,8 @@ public final class StoreContract {
             restore();
             files();
             smarts();
+            nesting();
+            bin();
             atomicity();
             randomOps();
         } catch (Throwable t) {
@@ -32137,7 +32613,7 @@ public final class StoreContract {
             ck("add twice is refused", !s.addMember(l2, n1) && s.count(l2) == 1);
             ck("item sits in two lists", s.listsOf(n1).equals(java.util.Arrays.asList(l1, l2)));
             final long n1f = n1;
-            fails("list into list is not allowed yet", new Act() { public void run() { s.addMember(l1, l2); } });
+            ck("a list can join another list (m0.4)", s.addMember(l1, l2) && s.removeMember(l1, l2));
             fails("note as a list", new Act() { public void run() { s.addNote(n1f, "x"); } });
             fails("add missing item", new Act() { public void run() { s.addMember(l1, 999); } });
             fails("add to missing list", new Act() { public void run() { s.addMember(999, n1f); } });
@@ -32359,6 +32835,102 @@ public final class StoreContract {
         }
     }
 
+    /** m0.4: a list inside lists (no parent), cycles by id are refused, titles, groups. */
+    private void nesting() throws Exception {
+        final Store s = opener.fresh(counterFile());
+        try {
+            final long a = s.createList("a", 0), b = s.createList("b", a), c = s.createList("c", b);
+            final long d = s.createList("d", 0);
+            ck("a sub list is a member of its parent", s.listsOf(b).equals(java.util.Arrays.asList(a)) && s.contains(a, c) && !s.contains(c, a));
+            ck("the same list can sit in two lists", s.addMember(d, c) && s.listsOf(c).equals(java.util.Arrays.asList(b, d)));
+            ck("contains goes through every level", s.contains(a, c) && s.contains(d, c) && !s.contains(a, d) && !s.contains(a, a));
+            ck("makesCycle: the same item", s.makesCycle(a, a));
+            ck("makesCycle: the list is already inside the item", s.makesCycle(c, a) && s.makesCycle(b, a) && !s.makesCycle(a, d));
+            fails("a list cannot go into itself", new Act() { public void run() { s.addMember(a, a); } });
+            fails("a cycle is refused (c already inside a)", new Act() { public void run() { s.addMember(c, a); } });
+            fails("a longer cycle is refused", new Act() { public void run() { s.addMember(c, b); } });
+            ck("a refused cycle changed nothing", s.count(c) == 0 && s.listsOf(a).isEmpty() && s.check() == null);
+            ck("adding an existing member again is just false, even if it would look like a cycle", !s.addMember(b, c));
+            long n = s.addNote(c, "deep");
+            ck("contains finds a note at any depth", s.contains(a, n) && s.contains(d, n) && !s.contains(b, d));
+            // a cycle refused inside atomic does not cancel the work around it
+            final long[] made = {0};
+            s.atomic(new Store.Work() {
+                @Override
+                public void run(Store x) {
+                    made[0] = x.createList("inside", 0);
+                    if (!x.makesCycle(c, a)) x.addMember(c, a);
+                }
+            }, true);
+            ck("checking makesCycle first keeps the atomic work", s.item(made[0]) != null);
+            // titles
+            long t = s.addTitle(a, "  head  ");
+            ck("title is typed, trimmed, and joins the end", s.item(t).type == Store.TITLE && s.item(t).name.equals("head")
+                    && s.members(a).get(s.count(a) - 1).item.id == t);
+            fails("empty title", new Act() { public void run() { s.addTitle(a, " "); } });
+            fails("title in a missing list", new Act() { public void run() { s.addTitle(999, "x"); } });
+            // groups are lists with a mark
+            long g = s.createList("group", a);
+            s.setProp(g, Store.P_GROUP, "1");
+            ck("a group is a list with a mark, and can hold several items", "1".equals(s.prop(g, Store.P_GROUP)) && s.addMember(g, n)
+                    && s.addTitle(g, "g-head") > 0 && s.count(g) == 2);
+            s.setProp(g, Store.P_GROUP, null);
+            ck("a group turns back into a plain list", s.prop(g, Store.P_GROUP) == null && s.item(g).type == Store.LIST);
+            // deleting a list that sits in two places
+            s.deleteList(c);
+            ck("deleting a shared list removes it from every list, dense", s.count(b) == 0 && s.count(d) == 0 && dense(s, a));
+            ck("its note stays", s.item(n) != null && s.listsOf(n).equals(java.util.Arrays.asList(g)));
+            ck("check is clean after nesting", s.check() == null);
+        } finally {
+            s.close();
+        }
+    }
+
+    /** m0.4: the recycle bin, for notes and titles. */
+    private void bin() throws Exception {
+        final Store s = opener.fresh(counterFile());
+        try {
+            final long l1 = s.createList("l1", 0), l2 = s.createList("l2", 0);
+            final long x = s.addNote(l1, "x");
+            long y = s.addNote(l1, "y");
+            s.addNote(l1, "z");
+            s.addMember(l2, y);
+            final long t = s.addTitle(l2, "t");
+            s.trash(y);
+            ck("trash takes an item out of every list", s.listsOf(y).isEmpty() && s.count(l1) == 2 && s.count(l2) == 1 && dense(s, l1) && dense(s, l2));
+            ck("the bin lists it", idsOf(s.trashed()).equals(java.util.Arrays.asList(y)));
+            ck("a trashed item is not unassigned", !idsOf(s.unassigned()).contains(y));
+            final long yf = y;
+            fails("a trashed item cannot join a list", new Act() { public void run() { s.addMember(l1, yf); } });
+            s.trash(y);
+            ck("trash twice does nothing more", s.trashed().size() == 1);
+            s.restore(y);
+            ck("restore brings it back to the same places", s.listsOf(y).equals(java.util.Arrays.asList(l1, l2))
+                    && ids(s.members(l1)).indexOf(y) == 1 && ids(s.members(l2)).indexOf(y) == 0 && s.trashed().isEmpty());
+            ck("restore clears the bin marks", s.prop(y, Store.P_TRASHED) == null && s.prop(y, Store.P_TRASH_FROM) == null);
+            fails("restore of an item that is not in the bin", new Act() { public void run() { s.restore(yf); } });
+            fails("purge of an item that is not in the bin", new Act() { public void run() { s.purge(yf); } });
+            s.trash(t);
+            s.deleteList(l2);
+            s.restore(t);
+            ck("restore when its list is gone: unassigned", s.listsOf(t).isEmpty() && idsOf(s.unassigned()).contains(t));
+            ck("a title in no list is unassigned", s.item(t).type == Store.TITLE);
+            s.trash(x);
+            long last = s.lastId();
+            s.purge(x);
+            ck("purge deletes for good, and the id does not come back", s.item(x) == null && s.trashed().isEmpty()
+                    && s.createList("after", 0) > last);
+            fails("a file cannot go to the bin", new Act() {
+                public void run() { s.trash(s.createFile(info("/storage/emulated/0/bin.txt", 1, 1, null))); }
+            });
+            fails("a list cannot go to the bin", new Act() { public void run() { s.trash(l1); } });
+            fails("a missing item cannot go to the bin", new Act() { public void run() { s.trash(999); } });
+            ck("check is clean after the bin", s.check() == null);
+        } finally {
+            s.close();
+        }
+    }
+
     private void atomicity() throws Exception {
         final Store s = opener.fresh(counterFile());
         try {
@@ -32538,8 +33110,31 @@ final class Stores {
         if (it.type != Store.LIST && it.type != Store.SMART) throw new Store.Failure("not a list: " + id);
     }
 
-    static void noListInList(Store.Item item) {
-        if (item.type == Store.LIST) throw new Store.Failure("list in list: not yet");
+    /** מה מותר לסל: רעיון וכותרת (פריטים שקיימים רק במסד). קובץ נשאר בכונן; רשימה נמחקת בנפרד. */
+    static void mayTrash(Store.Item it, long id) {
+        if (it == null) throw new Store.Failure("no such item " + id);
+        if (it.type != Store.NOTE && it.type != Store.TITLE) throw new Store.Failure("only notes and titles go to the bin: " + id);
+    }
+
+    /** "רשימה:מקום,…" ← זוגות. */
+    static java.util.List<long[]> parseFrom(String v) {
+        java.util.List<long[]> out = new java.util.ArrayList<long[]>();
+        if (v == null) return out;
+        for (String p : v.split(",")) {
+            int c = p.indexOf(':');
+            if (c <= 0) continue;
+            try {
+                out.add(new long[]{Long.parseLong(p.substring(0, c).trim()), Long.parseLong(p.substring(c + 1).trim())});
+            } catch (NumberFormatException ignored) {
+            }
+        }
+        return out;
+    }
+
+    static String joinFrom(java.util.List<long[]> l) {
+        StringBuilder sb = new StringBuilder();
+        for (long[] x : l) sb.append(sb.length() > 0 ? "," : "").append(x[0]).append(':').append(x[1]);
+        return sb.toString();
     }
 
     /** שם הקובץ מהמסלול (החלק האחרון). */
@@ -41620,7 +42215,7 @@ public final class Words {
 
         public static final String APP_NAME_M = "מנהל קבצים וירטואלי · מ";
         public static final String MENU = "מסד נתונים (מ)";
-        public static final String TITLE = "מסד נתונים · מ0.3";
+        public static final String TITLE = "מסד נתונים · מ0.4";
         public static final String NOTICE = "מנוע המסד בבנייה, ועדיין בלי גיבוי (מ0.5). \"העתקה מהישן\" רק קוראת מהמנוע הישן ולא משנה בו דבר. לכל אופן עבודה מסד משלו — כל אופן נכנס למסד של אותו אופן. אפשר להעתיק שוב: מה שכבר הועתק מתעדכן ולא מוכפל. רשימה חכמה שומרת רק את התנאי — הקבצים נמצאים בכל פתיחה מהאינדקס.";
         public static final String NEED_ACCESS = "כדי לשמור את מונה המזהים בתיקיית הנתונים, התוכנה צריכה הרשאת גישה לכל הקבצים.";
         public static final String ALL_LISTS = "כל הרשימות";
@@ -41646,6 +42241,47 @@ public final class Words {
         public static final String KIND_NOTE = "רעיון";
         public static final String KIND_FILE = "קובץ";
         public static final String KIND_SMART = "רשימה חכמה";
+        public static final String KIND_TITLE = "כותרת";
+        public static final String ADD_MENU = "➕ הוספה…";
+        public static final String KIND_GROUP = "חבורה";
+        public static final String KIND_REF = "רשימה (גם במקום אחר)";
+        public static final String NEW_REF = "↪ הפניה לרשימה";
+        public static final String NEW_TITLE = "➕ כותרת";
+        public static final String NEW_GROUP = "◆ חבורה";
+        public static final String NEW_TITLE_TITLE = "כותרת חדשה";
+        public static final String TITLE_TEXT = "הכותרת";
+        public static final String GROUP_NAME = "חבורה";
+        public static final String REF_PICK = "איזו רשימה להכניס לכאן? (אותה רשימה — תופיע בשני המקומות)";
+        public static final String TO_GROUP = "הפיכה לחבורה";
+        public static final String TO_LIST = "הפיכה לרשימה רגילה";
+        public static final String GROUP_EMPTY = "חבורה ריקה";
+        public static final String TRASH = "🗑 סל המחזור";
+        public static final String TRASH_SUB = "רעיונות וכותרות שנמחקו · שחזור או מחיקה לצמיתות";
+        public static final String TRASH_EMPTY = "הסל ריק.";
+        public static final String TRASH_HINT = "נגיעה ארוכה על פריט: שחזור או מחיקה לצמיתות.";
+        public static final String TO_TRASH = "מחיקה (לסל המחזור)";
+        public static final String RESTORE = "שחזור";
+        public static final String PURGE = "מחיקה לצמיתות";
+        public static final String PURGE_DETAIL = "הפריט יימחק לגמרי, ואי אפשר יהיה לשחזר אותו. מספר הזיהוי לא יחזור.";
+        public static final String LAST_LIST_KEEP = "להשאיר בלי שיוך";
+        public static final String LAST_LIST_TRASH = "לסל המחזור";
+        public static final String RESTORED = "שוחזר";
+
+        public static String lastListQuestion(String name) {
+            return "\"" + name + "\" לא נמצא באף רשימה אחרת. מה לעשות איתו?";
+        }
+
+        public static String cycleBlocked(String item, String list) {
+            return "לא נוסף: \"" + item + "\" כבר מכילה את \"" + list + "\" — זה היה יוצר מעגל.";
+        }
+
+        public static String sameName(String name) {
+            return "יש כבר רשימה בשם \"" + name + "\". זו רשימה נוספת עם מספר זיהוי משלה; כדי שתהיה אותה רשימה בשני מקומות — \"הפניה לרשימה\".";
+        }
+
+        public static String groupLabel(String head, int count) {
+            return "◆ " + head + " (" + count + ")";
+        }
         public static final String NEW_SMART = "⚡ חכמה חדשה";
         public static final String UNASSIGNED = "📥 לא משויכים";
         public static final String UNASSIGNED_SUB = "קבצים ורעיונות שאינם באף רשימה · מתעדכנת לבד";
@@ -41710,19 +42346,21 @@ public final class Words {
         /** הדוח. בתצוגה מקדימה — "ייווספו"; אחרי ההעתקה — "נוספו". */
         public static String importReport(boolean done, String mode, int listsNew, int listsKnown, int smartNew, int smartKnown,
                                           int filesNew, int filesKnown,
-                                          int filesUpdated, int linksAdded, int propsSet, int rootFiles,
-                                          int bad, int refs, int smart, int nested, int live) {
+                                          int filesUpdated, int linksAdded, int refsAdded, int propsSet, int rootFiles,
+                                          int bad, int refCycles, int refMissing, int smart, int nested, int live) {
             StringBuilder sb = new StringBuilder("מקור: " + mode + "\n");
             sb.append("רשימות: ").append(listsNew).append(done ? " נוספו" : " ייווספו").append(" · ").append(listsKnown).append(" כבר היו\n");
             sb.append("רשימות חכמות: ").append(smartNew).append(done ? " נוספו" : " ייווספו").append(" · ").append(smartKnown).append(" כבר היו\n");
             sb.append("קבצים: ").append(filesNew).append(done ? " נוספו" : " ייווספו").append(" · ").append(filesKnown + filesUpdated).append(" כבר היו");
             if (filesUpdated > 0) sb.append(" (").append(filesUpdated).append(done ? " עודכנו" : " יעודכנו").append(" לפי החתימה במקור)");
             sb.append('\n').append(linksAdded).append(done ? " קישורים נוספו" : " קישורים ייווספו").append(" (קבצים ורשימות חכמות) לרשימות");
+            if (refsAdded > 0) sb.append("\n").append(refsAdded).append(done ? " הפניות בין רשימות נוספו" : " הפניות בין רשימות ייווספו");
             if (propsSet > 0) sb.append(" · ").append(propsSet).append(done ? " פרטי רשימה הושלמו" : " פרטי רשימה יושלמו");
             if (rootFiles > 0) sb.append("\n").append(rootFiles).append(" קבצים בלי רשימה (היו בשורש הרשימות)");
-            if (bad + refs + smart + nested + live > 0) {
+            if (bad + refCycles + refMissing + smart + nested + live > 0) {
                 sb.append("\n\nלא מועתק בגרסה הזו (נשאר במנוע הישן, לא נמחק):");
-                if (refs > 0) sb.append("\n").append(refs).append(" הפניות בין רשימות (מ0.4)");
+                if (refCycles > 0) sb.append("\n").append(refCycles).append(" הפניות שהיו סוגרות מעגל (רשימה שכבר בתוך עצמה) — במסד אין מעגלים");
+                if (refMissing > 0) sb.append("\n").append(refMissing).append(" הפניות לרשימה שאינה קיימת");
                 if (smart > 0) sb.append("\n").append(smart).append(" הפניות לרשימות חכמות שלא נמצאו או שאינן הגדרה (נמחקו, כלי, כפולים)");
                 if (nested > 0) sb.append("\n").append(nested).append(" \"רשימות בתוך\" שבתוך רשימות חכמות (מ0.4)");
                 if (live > 0) sb.append("\n").append(live).append(" תיקיות חיות");
@@ -41781,8 +42419,29 @@ public final class Words {
         }
 
         public static String modeSource(int lists, int files, int defs, int refs, int smart, int nested, int live, int bad) {
-            return "במקור: " + lists + " רשימות · " + files + " קבצים · " + defs + " רשימות חכמות · לא מועתק בגרסה הזו: " + refs + " הפניות, "
+            return "במקור: " + lists + " רשימות · " + files + " קבצים · " + defs + " רשימות חכמות · " + refs + " הפניות · לא מועתק בגרסה הזו: "
                     + smart + " הפניות חכמות שלא נמצאו, " + nested + " רשימות בתוך חכמות, " + live + " תיקיות חיות, " + bad + " שורות פגומות";
+        }
+
+        public static String modeRefs(int total, int copied, int cycles, int missing, int wrong, int dbCycles) {
+            return "   הפניות: במקור " + total + " · הועתקו " + copied + " · נחסמו כמעגל " + cycles + " · לרשימה שלא קיימת " + missing
+                    + " · שגויות " + wrong + " · מעגלים במסד: " + dbCycles;
+        }
+
+        public static String modeRealRefs(int copied, int dbCycles) {
+            return "   הפניות במסד האמיתי: " + copied + " · מעגלים: " + dbCycles;
+        }
+
+        public static String pRefs(String mode, int n) {
+            return "אופן " + mode + ": " + n + " הפניות לא הועתקו נכון";
+        }
+
+        public static String pCycles(String mode, int n) {
+            return "אופן " + mode + ": במסד " + n + " רשימות שנמצאות בתוך עצמן (מעגל)";
+        }
+
+        public static String exCycle(String list, String target) {
+            return "נחסם כמעגל: \"" + list + "\" ← \"" + target + "\"";
         }
 
         public static String modeTempSmart(int defs, int found, int wrong, int unExpected, int unGot) {
@@ -41866,9 +42525,9 @@ public final class Words {
             return "אופן " + mode + ": בדיקת התקינות של המסד נכשלה — " + why;
         }
 
-        public static String pRealBehind(String mode, int lists, int files, int updated, int links, int smart) {
+        public static String pRealBehind(String mode, int lists, int files, int updated, int links, int smart, int refs) {
             return "אופן " + mode + ": המסד האמיתי לא תואם למקור — חסרים " + lists + " רשימות, " + files + " קבצים, "
-                    + updated + " עדכוני חתימה, " + links + " קישורים, " + smart + " רשימות חכמות (העתקה חוזרת תשלים)";
+                    + updated + " עדכוני חתימה, " + links + " קישורים, " + smart + " רשימות חכמות, " + refs + " הפניות (העתקה חוזרת תשלים)";
         }
 
         public static String pSmartMissing(String mode, int n) {
@@ -43004,7 +43663,8 @@ final class ImportTests {
                 && a.nested == b.nested && a.filesNew == b.filesNew && a.filesKnown == b.filesKnown
                 && a.filesUpdated == b.filesUpdated && a.filesWithSig == b.filesWithSig && a.linksAdded == b.linksAdded
                 && a.linksKnown == b.linksKnown && a.rootFiles == b.rootFiles && a.propsSet == b.propsSet
-                && a.badLines == b.badLines && a.refs == b.refs && a.smart == b.smart && a.live == b.live;
+                && a.badLines == b.badLines && a.refsAdded == b.refsAdded && a.refsKnown == b.refsKnown && a.refCycles == b.refCycles
+                && a.refMissing == b.refMissing && a.smart == b.smart && a.live == b.live;
     }
 
     private static List<String> names(Store s, long list) {
@@ -43038,7 +43698,7 @@ final class ImportTests {
         ck("תצוגה מקדימה: לא נשמר דבר", s.lists().isEmpty() && s.lastId() == 0 && s.findFile(A) == 0);
         ck("תצוגה מקדימה: ארבע רשימות חדשות, שלושה קבצים, חמישה קישורים", pre.listsNew == 4 && pre.listsKnown == 0
                 && pre.filesNew == 3 && pre.linksAdded == 5 && pre.linksKnown == 0);
-        ck("תצוגה מקדימה: מה שלא מועתק נספר", pre.badLines == 1 && pre.refs == 1 && pre.smart == 1 && pre.live == 1 && pre.skippedAny());
+        ck("תצוגה מקדימה: מה שלא מועתק נספר (ההפניה — מ0.4 — כבר מועתקת)", pre.badLines == 1 && pre.refsAdded == 1 && pre.refCycles == 0 && pre.refMissing == 0 && pre.smart == 1 && pre.live == 1 && pre.skippedAny());
         ck("תצוגה מקדימה: קובץ עם חתימה נספר", pre.filesWithSig == 1);
 
         // העתקה
@@ -43048,9 +43708,9 @@ final class ImportTests {
         long books = listBy(s, "ספרים"), halacha = listBy(s, "ספרים / הלכה"), moadim = listBy(s, "מועדים"), pesach = listBy(s, "מועדים / פסח");
         ck("העתקה: כל רשימה נמצאה לפי מקורה", books != 0 && halacha != 0 && moadim != 0 && pesach != 0);
         ck("העתקה: השם הוא השם האחרון, לא המסלול", s.item(halacha).name.equals("הלכה") && s.item(pesach).name.equals("פסח"));
-        ck("העתקה: תת־רשימה בתוך האב", s.listsOf(halacha).equals(Arrays.asList(books)) && s.listsOf(pesach).equals(Arrays.asList(moadim)));
+        ck("העתקה: תת־רשימה בתוך האב", s.listsOf(halacha).equals(Arrays.asList(books)) && s.listsOf(pesach).equals(Arrays.asList(books, moadim)));
         ck("העתקה: רשימה עליונה עומדת לעצמה", s.listsOf(books).isEmpty() && s.listsOf(moadim).isEmpty());
-        ck("העתקה: הסדר החופשי — קובץ, רשימה, ואז מה שלא נזכר", names(s, books).equals(Arrays.asList("ב.pdf", "הלכה", "א.pdf")));
+        ck("העתקה: הסדר החופשי — קובץ, רשימה, ואז מה שלא נזכר (הפניה לפני קבצים)", names(s, books).equals(Arrays.asList("ב.pdf", "הלכה", "פסח", "א.pdf")));
         ck("העתקה: צלמית, תיאור ו\"למה\"", "📘".equals(s.prop(books, Store.P_ICON)) && "ספרי לימוד".equals(s.prop(books, Store.P_DESC))
                 && "ללמוד".equals(s.prop(books, Store.P_WHY)) && s.prop(books, Store.P_DESIGN) == null && s.prop(halacha, Store.P_ICON) == null);
         long fa = s.findFile(A), fb = s.findFile(B), fc = s.findFile(C);
@@ -43096,7 +43756,7 @@ final class ImportTests {
         ck("שני אופנים: הרשימה של האופן השני נוצרה בנפרד", ro.listsNew == 1 && ro.listsKnown == 0 && s.lists().size() == before + 1
                 && booksOther != 0 && booksOther != books);
         ck("שני אופנים: הקבצים לא התערבבו", names(s, booksOther).equals(Arrays.asList("ד.pdf")) && !s.listsOf(fb).contains(booksOther));
-        ck("שני אופנים: הרשימה של האופן הראשון לא השתנתה", s.count(books) == 3 && s.listsOf(fa).contains(books));
+        ck("שני אופנים: הרשימה של האופן הראשון לא השתנתה", s.count(books) == 4 && s.listsOf(fa).contains(books));
         ck("שני אופנים: אותו קובץ הוא פריט אחד בשני האופנים", s.listsOf(s.findFile(D)).contains(booksOther) && s.findFile(D) == fd);
 
         // כישלון באמצע: הכול חוזר
@@ -43235,6 +43895,50 @@ final class ImportTests {
         ck("חכמות: קישור בין שתי פנימיות לא נתקע — כל אחת היא הגדרה בפני עצמה", lp.wanted().size() == 1 && "x".equals(lp.wanted().get(0).cond));
     }
 
+    // ---------- הפניות בין רשימות (מ0.4) ----------
+
+    /** הפניות: לרשימה מאוחרת בקובץ (ג), לעצמה, לרשימה שלא קיימת, לאב, ושרשרת שנסגרת (ג ← ב ← א ← ג). */
+    static final String REF_TREE = ""
+            + "#1 א\n"
+            + "@רשימה ג\n"
+            + "@רשימה א\n"
+            + "@סדר rג\n"
+            + "/x/a1 | 1\n"
+            + "#1 ב\n"
+            + "@רשימה א\n"
+            + "@רשימה לא קיימת\n"
+            + "#2 ב / פנימית\n"
+            + "@רשימה ב\n"
+            + "#1 ג\n"
+            + "@רשימה ב\n";
+
+    void refs(Store s, File dir) throws Exception {
+        File m = new File(dir, "הפניות");
+        write(new File(m, Paths.TREE), REF_TREE);
+        Importer.Source src = Importer.load(m);
+        Importer.Report pre = Importer.run(s, src, false);
+        ck("הפניות: תצוגה מקדימה לא שומרת", s.lists().isEmpty());
+        Importer.Report r = Importer.run(s, src, true);
+        ck("הפניות: הדוח זהה לתצוגה המקדימה", same(pre, r));
+        ck("הפניות: שתיים הועתקו, שלוש נחסמו כמעגל, אחת לרשימה שלא קיימת", r.refsAdded == 2 && r.refCycles == 3 && r.refMissing == 1
+                && r.refsKnown == 0 && r.skippedAny());
+        long a = listIn(s, "הפניות", "א"), b = listIn(s, "הפניות", "ב"), c = listIn(s, "הפניות", "ג"), in = listIn(s, "הפניות", "ב / פנימית");
+        ck("הפניות: הפניה לרשימה שמופיעה מאוחר בקובץ — הועתקה, ולפי @סדר", names(s, a).equals(Arrays.asList("ג", "a1")));
+        ck("הפניות: אותה רשימה בשני מקומות", s.listsOf(a).equals(Arrays.asList(b)) && s.listsOf(c).equals(Arrays.asList(a)));
+        ck("הפניות: תת־רשימה בתוך האב, וההפניה שלה לאב נחסמה", s.listsOf(in).equals(Arrays.asList(b)) && s.count(in) == 0);
+        ck("הפניות: השרשרת שנסגרת נחסמה", s.count(c) == 0 && s.contains(b, c) && !s.contains(c, b));
+        boolean noCycle = true;
+        for (Store.Item l : s.lists()) noCycle &= !s.contains(l.id, l.id);
+        ck("הפניות: אין אף רשימה בתוך עצמה", noCycle && s.check() == null);
+        long last = s.lastId();
+        Importer.Report again = Importer.run(s, src, true);
+        ck("הפניות חוזרת: אין שינוי", again.nothingToDo() && again.refsKnown == 2 && again.refCycles == 3 && again.refMissing == 1
+                && s.lastId() == last);
+        s.removeMember(a, c);
+        Importer.Report back = Importer.run(s, src, true);
+        ck("הפניות: הפניה שהמשתמש הסיר חוזרת בהעתקה חוזרת (כמו קובץ)", back.refsAdded == 1 && s.listsOf(c).equals(Arrays.asList(a)));
+    }
+
     // ---------- הבדיקה המלאה (FullCheck) ----------
 
     /** opener — יוצר Store חדש. sabotage — האם המסד ה"אמיתי" חסר קישור אחד. */
@@ -43257,6 +43961,7 @@ final class ImportTests {
                               final boolean badCond) throws Exception {
         final File old = new File(dir, "olddata-" + sabotage + selfOk + badCond);
         writeSmartMode(new File(old, Modes.DIR + "/חכם"));
+        write(new File(old, Modes.DIR + "/הפניות/" + Paths.TREE), REF_TREE);
         write(new File(old, Modes.DIR + "/ראשון/" + Paths.TREE), TREE1);
         write(new File(old, Modes.DIR + "/ראשון/" + Sig.FILE), SIGS1);
         write(new File(old, Modes.DIR + "/שני/" + Paths.TREE), TREE2);
@@ -43277,6 +43982,7 @@ final class ImportTests {
                 if (sabotage) {
                     long books = s.findByOrigin(Importer.originOf("ראשון", "ספרים"));
                     s.removeMember(books, s.findFile(A));
+                    s.removeMember(books, s.findByOrigin(Importer.originOf("ראשון", "מועדים / פסח")));   // כמו מסד ממ0.3: בלי הפניות
                 }
                 return s;
             }
@@ -43292,12 +43998,15 @@ final class ImportTests {
         ck("בדיקה מלאה: מה שלא מועתק מופיע", ok.contains("1 הפניות") && ok.contains("1 הפניות חכמות שלא נמצאו"));
         ck("בדיקה מלאה: רשימה ריקה בלי סיבה מוצגת בשמה", ok.contains(Words.Db.modeEmpty(1, 1, 0)) && ok.contains("   חדשה") && ok.contains(Words.Db.modeEmpty(0, 0, 0)));
         String bad = fullReport(opener, dir, true, true);
-        ck("בדיקה מלאה: מסד אמיתי שחסר בו קישור — פסק דין אדום", bad.startsWith(Words.Db.verdictBad(1)) && bad.contains(Words.Db.pRealBehind("ראשון", 0, 0, 0, 1, 0)));
+        ck("בדיקה מלאה: מסד אמיתי שחסרים בו קישור והפניה — פסק דין אדום, בעיה אחת (העתקה חוזרת תשלים)", bad.startsWith(Words.Db.verdictBad(1)) && bad.contains(Words.Db.pRealBehind("ראשון", 0, 0, 0, 1, 0, 1)));
         ck("בדיקה מלאה: רשימות חכמות — במקור 4, נמצאו 4, אפס שגויות; לא משויכים צפוי 1 ונמצא 1",
                 ok.contains(Words.Db.modeTempSmart(4, 4, 0, 1, 1)));
         ck("בדיקה מלאה: הערכה מול האינדקס — 3 תנאים, 2 עם תוצאות, אחד בלי, אחד בלי תנאי",
                 ok.contains("נבדקו 3 תנאים · עם תוצאות: 2 · בלי תוצאות: 1 · לא הובנו: 0 · בלי תנאי: 1 · סה״כ 5 קבצים")
                         && ok.contains(Words.Db.evalNoHits("אחרונים")));
+        ck("בדיקה מלאה: הפניות — 6 במקור, 2 הועתקו, 3 נחסמו כמעגל, 1 לא קיימת, אפס שגויות, אפס מעגלים במסד",
+                ok.contains(Words.Db.modeRefs(6, 2, 3, 1, 0, 0)));
+        ck("בדיקה מלאה: הפניה מהמנוע הישן — מועתקת", ok.contains(Words.Db.modeRefs(1, 1, 0, 0, 0, 0)));
         String badc = fullReport(opener, dir, false, true, true);
         ck("בדיקה מלאה: תנאי שהמנוע לא הבין — פסק דין אדום", badc.startsWith(Words.Db.verdictBad(1)) && badc.contains(Words.Db.pSmartCond("חכם", 1))
                 && badc.contains(Words.Db.evalBad("צילומי מסך", "לא הובן")));
@@ -43414,6 +44123,12 @@ final class StoreTests {
                 new ImportTests(o, name).smart(sm, new File(sub, "smart"));
             } finally {
                 sm.close();
+            }
+            Store rs = opener.fresh(new File(sub, "refs-counter.txt"));
+            try {
+                new ImportTests(o, name).refs(rs, new File(sub, "refs"));
+            } finally {
+                rs.close();
             }
             new ImportTests(o, name).fullCheck(opener, new File(sub, "full"));
         } catch (Throwable x) {

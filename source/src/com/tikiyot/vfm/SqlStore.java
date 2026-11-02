@@ -219,6 +219,21 @@ public final class SqlStore implements Store {
     }
 
     @Override
+    public long addTitle(long list, String text) {
+        String t = Stores.clean(text, "text");
+        db.beginTransaction();
+        try {
+            mustBeList(list);
+            long id = create(TITLE, t);
+            append(list, id, System.currentTimeMillis());
+            db.setTransactionSuccessful();
+            return id;
+        } finally {
+            db.endTransaction();
+        }
+    }
+
+    @Override
     public long addNote(long list, String text) {
         String t = Stores.clean(text, "text");
         db.beginTransaction();
@@ -235,12 +250,15 @@ public final class SqlStore implements Store {
 
     @Override
     public boolean addMember(long list, long item) {
+        // הבדיקות לפני העסקה: כישלון בתוך עסקה פנימית היה מבטל גם את העסקה החיצונית (atomic)
+        mustBeList(list);
+        Item it = read(item);
+        if (it == null) throw new Failure("no such item " + item);
+        if (prop(item, P_TRASHED) != null) throw new Failure("item is in the bin: " + item);
+        boolean there = num("SELECT COUNT(*) FROM members WHERE list_id=? AND item_id=?", s(list), s(item)) > 0;
+        if (!there && it.type == LIST && makesCycle(list, item)) throw new Failure("cycle: " + item + " already holds " + list);
         db.beginTransaction();
         try {
-            mustBeList(list);
-            Item it = read(item);
-            if (it == null) throw new Failure("no such item " + item);
-            Stores.noListInList(it);
             if (num("SELECT COUNT(*) FROM members WHERE list_id=? AND item_id=?", s(list), s(item)) > 0) {
                 db.setTransactionSuccessful();   // "כבר שם" אינו כישלון: בלי הסימון, עסקה חיצונית (atomic) הייתה מתבטלת כולה
                 return false;
@@ -305,6 +323,98 @@ public final class SqlStore implements Store {
         } finally {
             db.endTransaction();
         }
+    }
+
+    /** הרשימות שבתוך רשימה (צעד אחד). */
+    private List<Long> subLists(long list) {
+        List<Long> out = new ArrayList<Long>();
+        Cursor c = db.rawQuery("SELECT m.item_id FROM members m JOIN items i ON i.id = m.item_id WHERE m.list_id=? AND i.type=?",
+                new String[]{s(list), s(LIST)});
+        try {
+            while (c.moveToNext()) out.add(c.getLong(0));
+        } finally {
+            c.close();
+        }
+        return out;
+    }
+
+    @Override
+    public boolean contains(long outer, long inner) {
+        return containsVia(outer, inner);
+    }
+
+    /** חיפוש לרוחב דרך הרשימות שבתוך הרשימות; מבקר בכל רשימה פעם אחת (מעגל ישן לא יתקע). */
+    private boolean containsVia(long outer, long inner) {
+        java.util.Set<Long> seen = new java.util.HashSet<Long>();
+        java.util.ArrayDeque<Long> q = new java.util.ArrayDeque<Long>();
+        q.add(outer);
+        seen.add(outer);
+        while (!q.isEmpty()) {
+            long l = q.poll();
+            if (num("SELECT COUNT(*) FROM members WHERE list_id=? AND item_id=?", s(l), s(inner)) > 0) return true;
+            for (Long sub : subLists(l)) if (seen.add(sub)) q.add(sub);
+        }
+        return false;
+    }
+
+    @Override
+    public boolean makesCycle(long list, long item) {
+        return list == item || contains(item, list);
+    }
+
+    @Override
+    public void trash(long item) {
+        Stores.mayTrash(read(item), item);
+        if (prop(item, P_TRASHED) != null) return;
+        db.beginTransaction();
+        try {
+            List<long[]> from = new ArrayList<long[]>();
+            Cursor c = db.rawQuery("SELECT list_id, position FROM members WHERE item_id=? ORDER BY list_id", new String[]{s(item)});
+            try {
+                while (c.moveToNext()) from.add(new long[]{c.getLong(0), c.getLong(1)});
+            } finally {
+                c.close();
+            }
+            db.execSQL("DELETE FROM members WHERE item_id=?", new Object[]{item});
+            for (long[] f : from) closeGap(f[0], f[1]);
+            setProp(item, P_TRASH_FROM, Stores.joinFrom(from));
+            setProp(item, P_TRASHED, String.valueOf(System.currentTimeMillis()));
+            db.setTransactionSuccessful();
+        } finally {
+            db.endTransaction();
+        }
+    }
+
+    @Override
+    public void restore(long item) {
+        if (read(item) == null) throw new Failure("no such item " + item);
+        if (prop(item, P_TRASHED) == null) throw new Failure("not in the bin: " + item);
+        db.beginTransaction();
+        try {
+            List<long[]> from = Stores.parseFrom(prop(item, P_TRASH_FROM));
+            setProp(item, P_TRASHED, null);
+            setProp(item, P_TRASH_FROM, null);
+            for (long[] f : from) {
+                Item l = read(f[0]);
+                if (l == null || l.type != LIST) continue;
+                if (addMember(f[0], item)) move(f[0], item, (int) f[1]);
+            }
+            db.setTransactionSuccessful();
+        } finally {
+            db.endTransaction();
+        }
+    }
+
+    @Override
+    public void purge(long item) {
+        if (read(item) == null) throw new Failure("no such item " + item);
+        if (prop(item, P_TRASHED) == null) throw new Failure("not in the bin: " + item);
+        db.execSQL("DELETE FROM items WHERE id=?", new Object[]{item});        // מאפיינים — במחיקה מדורגת; חברויות אין (בסל)
+    }
+
+    @Override
+    public List<Item> trashed() {
+        return itemsWhere("id IN (SELECT item_id FROM props WHERE k=?)", P_TRASHED);
     }
 
     @Override
@@ -459,7 +569,8 @@ public final class SqlStore implements Store {
 
     @Override
     public List<Item> unassigned() {
-        return itemsWhere("type IN (?,?) AND id NOT IN (SELECT item_id FROM members)", s(FILE), s(NOTE));
+        return itemsWhere("type IN (?,?,?) AND id NOT IN (SELECT item_id FROM members) AND id NOT IN (SELECT item_id FROM props WHERE k=?)",
+                s(FILE), s(NOTE), s(TITLE), P_TRASHED);
     }
 
     @Override

@@ -2294,7 +2294,7 @@ public final class Words {
 
         public static final String APP_NAME_M = "מנהל קבצים וירטואלי · מ";
         public static final String MENU = "מסד נתונים (מ)";
-        public static final String TITLE = "מסד נתונים · מ0.3";
+        public static final String TITLE = "מסד נתונים · מ0.4";
         public static final String NOTICE = "מנוע המסד בבנייה, ועדיין בלי גיבוי (מ0.5). \"העתקה מהישן\" רק קוראת מהמנוע הישן ולא משנה בו דבר. לכל אופן עבודה מסד משלו — כל אופן נכנס למסד של אותו אופן. אפשר להעתיק שוב: מה שכבר הועתק מתעדכן ולא מוכפל. רשימה חכמה שומרת רק את התנאי — הקבצים נמצאים בכל פתיחה מהאינדקס.";
         public static final String NEED_ACCESS = "כדי לשמור את מונה המזהים בתיקיית הנתונים, התוכנה צריכה הרשאת גישה לכל הקבצים.";
         public static final String ALL_LISTS = "כל הרשימות";
@@ -2320,6 +2320,47 @@ public final class Words {
         public static final String KIND_NOTE = "רעיון";
         public static final String KIND_FILE = "קובץ";
         public static final String KIND_SMART = "רשימה חכמה";
+        public static final String KIND_TITLE = "כותרת";
+        public static final String ADD_MENU = "➕ הוספה…";
+        public static final String KIND_GROUP = "חבורה";
+        public static final String KIND_REF = "רשימה (גם במקום אחר)";
+        public static final String NEW_REF = "↪ הפניה לרשימה";
+        public static final String NEW_TITLE = "➕ כותרת";
+        public static final String NEW_GROUP = "◆ חבורה";
+        public static final String NEW_TITLE_TITLE = "כותרת חדשה";
+        public static final String TITLE_TEXT = "הכותרת";
+        public static final String GROUP_NAME = "חבורה";
+        public static final String REF_PICK = "איזו רשימה להכניס לכאן? (אותה רשימה — תופיע בשני המקומות)";
+        public static final String TO_GROUP = "הפיכה לחבורה";
+        public static final String TO_LIST = "הפיכה לרשימה רגילה";
+        public static final String GROUP_EMPTY = "חבורה ריקה";
+        public static final String TRASH = "🗑 סל המחזור";
+        public static final String TRASH_SUB = "רעיונות וכותרות שנמחקו · שחזור או מחיקה לצמיתות";
+        public static final String TRASH_EMPTY = "הסל ריק.";
+        public static final String TRASH_HINT = "נגיעה ארוכה על פריט: שחזור או מחיקה לצמיתות.";
+        public static final String TO_TRASH = "מחיקה (לסל המחזור)";
+        public static final String RESTORE = "שחזור";
+        public static final String PURGE = "מחיקה לצמיתות";
+        public static final String PURGE_DETAIL = "הפריט יימחק לגמרי, ואי אפשר יהיה לשחזר אותו. מספר הזיהוי לא יחזור.";
+        public static final String LAST_LIST_KEEP = "להשאיר בלי שיוך";
+        public static final String LAST_LIST_TRASH = "לסל המחזור";
+        public static final String RESTORED = "שוחזר";
+
+        public static String lastListQuestion(String name) {
+            return "\"" + name + "\" לא נמצא באף רשימה אחרת. מה לעשות איתו?";
+        }
+
+        public static String cycleBlocked(String item, String list) {
+            return "לא נוסף: \"" + item + "\" כבר מכילה את \"" + list + "\" — זה היה יוצר מעגל.";
+        }
+
+        public static String sameName(String name) {
+            return "יש כבר רשימה בשם \"" + name + "\". זו רשימה נוספת עם מספר זיהוי משלה; כדי שתהיה אותה רשימה בשני מקומות — \"הפניה לרשימה\".";
+        }
+
+        public static String groupLabel(String head, int count) {
+            return "◆ " + head + " (" + count + ")";
+        }
         public static final String NEW_SMART = "⚡ חכמה חדשה";
         public static final String UNASSIGNED = "📥 לא משויכים";
         public static final String UNASSIGNED_SUB = "קבצים ורעיונות שאינם באף רשימה · מתעדכנת לבד";
@@ -2384,19 +2425,21 @@ public final class Words {
         /** הדוח. בתצוגה מקדימה — "ייווספו"; אחרי ההעתקה — "נוספו". */
         public static String importReport(boolean done, String mode, int listsNew, int listsKnown, int smartNew, int smartKnown,
                                           int filesNew, int filesKnown,
-                                          int filesUpdated, int linksAdded, int propsSet, int rootFiles,
-                                          int bad, int refs, int smart, int nested, int live) {
+                                          int filesUpdated, int linksAdded, int refsAdded, int propsSet, int rootFiles,
+                                          int bad, int refCycles, int refMissing, int smart, int nested, int live) {
             StringBuilder sb = new StringBuilder("מקור: " + mode + "\n");
             sb.append("רשימות: ").append(listsNew).append(done ? " נוספו" : " ייווספו").append(" · ").append(listsKnown).append(" כבר היו\n");
             sb.append("רשימות חכמות: ").append(smartNew).append(done ? " נוספו" : " ייווספו").append(" · ").append(smartKnown).append(" כבר היו\n");
             sb.append("קבצים: ").append(filesNew).append(done ? " נוספו" : " ייווספו").append(" · ").append(filesKnown + filesUpdated).append(" כבר היו");
             if (filesUpdated > 0) sb.append(" (").append(filesUpdated).append(done ? " עודכנו" : " יעודכנו").append(" לפי החתימה במקור)");
             sb.append('\n').append(linksAdded).append(done ? " קישורים נוספו" : " קישורים ייווספו").append(" (קבצים ורשימות חכמות) לרשימות");
+            if (refsAdded > 0) sb.append("\n").append(refsAdded).append(done ? " הפניות בין רשימות נוספו" : " הפניות בין רשימות ייווספו");
             if (propsSet > 0) sb.append(" · ").append(propsSet).append(done ? " פרטי רשימה הושלמו" : " פרטי רשימה יושלמו");
             if (rootFiles > 0) sb.append("\n").append(rootFiles).append(" קבצים בלי רשימה (היו בשורש הרשימות)");
-            if (bad + refs + smart + nested + live > 0) {
+            if (bad + refCycles + refMissing + smart + nested + live > 0) {
                 sb.append("\n\nלא מועתק בגרסה הזו (נשאר במנוע הישן, לא נמחק):");
-                if (refs > 0) sb.append("\n").append(refs).append(" הפניות בין רשימות (מ0.4)");
+                if (refCycles > 0) sb.append("\n").append(refCycles).append(" הפניות שהיו סוגרות מעגל (רשימה שכבר בתוך עצמה) — במסד אין מעגלים");
+                if (refMissing > 0) sb.append("\n").append(refMissing).append(" הפניות לרשימה שאינה קיימת");
                 if (smart > 0) sb.append("\n").append(smart).append(" הפניות לרשימות חכמות שלא נמצאו או שאינן הגדרה (נמחקו, כלי, כפולים)");
                 if (nested > 0) sb.append("\n").append(nested).append(" \"רשימות בתוך\" שבתוך רשימות חכמות (מ0.4)");
                 if (live > 0) sb.append("\n").append(live).append(" תיקיות חיות");
@@ -2455,8 +2498,29 @@ public final class Words {
         }
 
         public static String modeSource(int lists, int files, int defs, int refs, int smart, int nested, int live, int bad) {
-            return "במקור: " + lists + " רשימות · " + files + " קבצים · " + defs + " רשימות חכמות · לא מועתק בגרסה הזו: " + refs + " הפניות, "
+            return "במקור: " + lists + " רשימות · " + files + " קבצים · " + defs + " רשימות חכמות · " + refs + " הפניות · לא מועתק בגרסה הזו: "
                     + smart + " הפניות חכמות שלא נמצאו, " + nested + " רשימות בתוך חכמות, " + live + " תיקיות חיות, " + bad + " שורות פגומות";
+        }
+
+        public static String modeRefs(int total, int copied, int cycles, int missing, int wrong, int dbCycles) {
+            return "   הפניות: במקור " + total + " · הועתקו " + copied + " · נחסמו כמעגל " + cycles + " · לרשימה שלא קיימת " + missing
+                    + " · שגויות " + wrong + " · מעגלים במסד: " + dbCycles;
+        }
+
+        public static String modeRealRefs(int copied, int dbCycles) {
+            return "   הפניות במסד האמיתי: " + copied + " · מעגלים: " + dbCycles;
+        }
+
+        public static String pRefs(String mode, int n) {
+            return "אופן " + mode + ": " + n + " הפניות לא הועתקו נכון";
+        }
+
+        public static String pCycles(String mode, int n) {
+            return "אופן " + mode + ": במסד " + n + " רשימות שנמצאות בתוך עצמן (מעגל)";
+        }
+
+        public static String exCycle(String list, String target) {
+            return "נחסם כמעגל: \"" + list + "\" ← \"" + target + "\"";
         }
 
         public static String modeTempSmart(int defs, int found, int wrong, int unExpected, int unGot) {
@@ -2540,9 +2604,9 @@ public final class Words {
             return "אופן " + mode + ": בדיקת התקינות של המסד נכשלה — " + why;
         }
 
-        public static String pRealBehind(String mode, int lists, int files, int updated, int links, int smart) {
+        public static String pRealBehind(String mode, int lists, int files, int updated, int links, int smart, int refs) {
             return "אופן " + mode + ": המסד האמיתי לא תואם למקור — חסרים " + lists + " רשימות, " + files + " קבצים, "
-                    + updated + " עדכוני חתימה, " + links + " קישורים, " + smart + " רשימות חכמות (העתקה חוזרת תשלים)";
+                    + updated + " עדכוני חתימה, " + links + " קישורים, " + smart + " רשימות חכמות, " + refs + " הפניות (העתקה חוזרת תשלים)";
         }
 
         public static String pSmartMissing(String mode, int n) {

@@ -9,13 +9,19 @@ import java.util.List;
 public interface Store {
 
     /** סוגי פריט. בהמשך יתווספו (כותרת, פקודה…); המספרים נשמרים במסד ולא משתנים. */
-    int LIST = 1, NOTE = 2, FILE = 3, SMART = 4;
+    int LIST = 1, NOTE = 2, FILE = 3, SMART = 4, TITLE = 5;
 
     /** מפתחות המאפיינים של רשימה (מ0.2): צלמית, תיאור, עיצוב, "למה". */
     String P_ICON = "icon", P_DESC = "desc", P_DESIGN = "design", P_WHY = "why";
 
     /** מאפייני רשימה חכמה (מ0.3): התנאי כטקסט (התחביר של מנוע החיפוש), מיון, כיוון, תצוגה. */
     String P_COND = "cond", P_SORT = "sort", P_DIR = "dir", P_VIEW = "view";
+
+    /** מ0.4: רשימה שהיא חבורה (רשימה מוטמעת, "1"). */
+    String P_GROUP = "group";
+
+    /** מ0.4, פנימי: פריט בסל המחזור (מתי) ומאיפה הוא יצא ("רשימה:מקום,…"). מנוהלים רק בידי trash/restore. */
+    String P_TRASHED = "trashed", P_TRASH_FROM = "trash_from";
 
     /** שגיאת שימוש או אחסון. ההודעה — לאנשי הפיתוח (אנגלית); המסך מציג הודעה משלו. */
     final class Failure extends RuntimeException {
@@ -87,6 +93,9 @@ public interface Store {
      */
     long createSmart(String name, long parent);
 
+    /** כותרת חדשה בסוף רשימה (מ0.4). */
+    long addTitle(long list, String text);
+
     /** רעיון/הערה חדשים בסוף רשימה. */
     long addNote(long list, String text);
 
@@ -119,8 +128,29 @@ public interface Store {
      */
     void atomic(Work w, boolean keep);
 
-    /** מוסיף פריט קיים לסוף רשימה. false אם כבר שם. בגרסה זו לא מוסיפים רשימה לרשימה אחרת (בדיקת מעגלים — מ0.4). */
+    /**
+     * מוסיף פריט קיים לסוף רשימה. false אם כבר שם. מ0.4: גם רשימה לתוך רשימה (הפניה — אותה רשימה בכמה מקומות),
+     * אבל לא כשנוצר מעגל לפי מספר זיהוי (Failure; בודקים קודם ב־makesCycle). פריט שבסל — Failure.
+     */
     boolean addMember(long list, long item);
+
+    /** האם inner נמצא בתוך outer, בכל עומק (צעד אחד לפחות). */
+    boolean contains(long outer, long inner);
+
+    /** האם הוספת item לרשימה list תיצור מעגל: אותו פריט, או ש־list כבר בתוך item. */
+    boolean makesCycle(long list, long item);
+
+    /** מעביר רעיון או כותרת לסל המחזור: יוצא מכל הרשימות, ונזכר מאיפה. אחר — Failure. */
+    void trash(long item);
+
+    /** מחזיר מהסל לרשימות שהיה בהן (שעדיין קיימות), למקום שהיה בו; אם אין — ל"לא משויכים". */
+    void restore(long item);
+
+    /** מוחק לצמיתות פריט שבסל. המספר לא יחזור. */
+    void purge(long item);
+
+    /** מה שבסל, לפי מספר זיהוי. */
+    List<Item> trashed();
 
     /** מסיר פריט מרשימה (הפריט עצמו נשאר). false אם לא היה שם. המקומות נסגרים. */
     boolean removeMember(long list, long item);
@@ -142,7 +172,7 @@ public interface Store {
     /** כל הרשימות החכמות, לפי מספר זיהוי. */
     List<Item> smarts();
 
-    /** "לא משויכים" (מ0.3): קבצים ורעיונות שאינם באף רשימה, לפי מספר זיהוי. רשימות ורשימות חכמות לא נספרות. */
+    /** "לא משויכים" (מ0.3): קבצים, רעיונות וכותרות שאינם באף רשימה ואינם בסל, לפי מספר זיהוי. רשימות ורשימות חכמות לא נספרות. */
     List<Item> unassigned();
 
     /** חברי הרשימה לפי המקום. */

@@ -88,6 +88,8 @@ public final class StoreContract {
             restore();
             files();
             smarts();
+            nesting();
+            bin();
             atomicity();
             randomOps();
         } catch (Throwable t) {
@@ -133,7 +135,7 @@ public final class StoreContract {
             ck("add twice is refused", !s.addMember(l2, n1) && s.count(l2) == 1);
             ck("item sits in two lists", s.listsOf(n1).equals(java.util.Arrays.asList(l1, l2)));
             final long n1f = n1;
-            fails("list into list is not allowed yet", new Act() { public void run() { s.addMember(l1, l2); } });
+            ck("a list can join another list (m0.4)", s.addMember(l1, l2) && s.removeMember(l1, l2));
             fails("note as a list", new Act() { public void run() { s.addNote(n1f, "x"); } });
             fails("add missing item", new Act() { public void run() { s.addMember(l1, 999); } });
             fails("add to missing list", new Act() { public void run() { s.addMember(999, n1f); } });
@@ -350,6 +352,102 @@ public final class StoreContract {
             s.deleteList(s1);
             ck("deleting a smart drops its props and origin", s.item(s1) == null && s.findByOrigin("ini:m:S:s-1") == 0 && s.smarts().isEmpty());
             ck("check is clean after smarts", s.check() == null);
+        } finally {
+            s.close();
+        }
+    }
+
+    /** m0.4: a list inside lists (no parent), cycles by id are refused, titles, groups. */
+    private void nesting() throws Exception {
+        final Store s = opener.fresh(counterFile());
+        try {
+            final long a = s.createList("a", 0), b = s.createList("b", a), c = s.createList("c", b);
+            final long d = s.createList("d", 0);
+            ck("a sub list is a member of its parent", s.listsOf(b).equals(java.util.Arrays.asList(a)) && s.contains(a, c) && !s.contains(c, a));
+            ck("the same list can sit in two lists", s.addMember(d, c) && s.listsOf(c).equals(java.util.Arrays.asList(b, d)));
+            ck("contains goes through every level", s.contains(a, c) && s.contains(d, c) && !s.contains(a, d) && !s.contains(a, a));
+            ck("makesCycle: the same item", s.makesCycle(a, a));
+            ck("makesCycle: the list is already inside the item", s.makesCycle(c, a) && s.makesCycle(b, a) && !s.makesCycle(a, d));
+            fails("a list cannot go into itself", new Act() { public void run() { s.addMember(a, a); } });
+            fails("a cycle is refused (c already inside a)", new Act() { public void run() { s.addMember(c, a); } });
+            fails("a longer cycle is refused", new Act() { public void run() { s.addMember(c, b); } });
+            ck("a refused cycle changed nothing", s.count(c) == 0 && s.listsOf(a).isEmpty() && s.check() == null);
+            ck("adding an existing member again is just false, even if it would look like a cycle", !s.addMember(b, c));
+            long n = s.addNote(c, "deep");
+            ck("contains finds a note at any depth", s.contains(a, n) && s.contains(d, n) && !s.contains(b, d));
+            // a cycle refused inside atomic does not cancel the work around it
+            final long[] made = {0};
+            s.atomic(new Store.Work() {
+                @Override
+                public void run(Store x) {
+                    made[0] = x.createList("inside", 0);
+                    if (!x.makesCycle(c, a)) x.addMember(c, a);
+                }
+            }, true);
+            ck("checking makesCycle first keeps the atomic work", s.item(made[0]) != null);
+            // titles
+            long t = s.addTitle(a, "  head  ");
+            ck("title is typed, trimmed, and joins the end", s.item(t).type == Store.TITLE && s.item(t).name.equals("head")
+                    && s.members(a).get(s.count(a) - 1).item.id == t);
+            fails("empty title", new Act() { public void run() { s.addTitle(a, " "); } });
+            fails("title in a missing list", new Act() { public void run() { s.addTitle(999, "x"); } });
+            // groups are lists with a mark
+            long g = s.createList("group", a);
+            s.setProp(g, Store.P_GROUP, "1");
+            ck("a group is a list with a mark, and can hold several items", "1".equals(s.prop(g, Store.P_GROUP)) && s.addMember(g, n)
+                    && s.addTitle(g, "g-head") > 0 && s.count(g) == 2);
+            s.setProp(g, Store.P_GROUP, null);
+            ck("a group turns back into a plain list", s.prop(g, Store.P_GROUP) == null && s.item(g).type == Store.LIST);
+            // deleting a list that sits in two places
+            s.deleteList(c);
+            ck("deleting a shared list removes it from every list, dense", s.count(b) == 0 && s.count(d) == 0 && dense(s, a));
+            ck("its note stays", s.item(n) != null && s.listsOf(n).equals(java.util.Arrays.asList(g)));
+            ck("check is clean after nesting", s.check() == null);
+        } finally {
+            s.close();
+        }
+    }
+
+    /** m0.4: the recycle bin, for notes and titles. */
+    private void bin() throws Exception {
+        final Store s = opener.fresh(counterFile());
+        try {
+            final long l1 = s.createList("l1", 0), l2 = s.createList("l2", 0);
+            final long x = s.addNote(l1, "x");
+            long y = s.addNote(l1, "y");
+            s.addNote(l1, "z");
+            s.addMember(l2, y);
+            final long t = s.addTitle(l2, "t");
+            s.trash(y);
+            ck("trash takes an item out of every list", s.listsOf(y).isEmpty() && s.count(l1) == 2 && s.count(l2) == 1 && dense(s, l1) && dense(s, l2));
+            ck("the bin lists it", idsOf(s.trashed()).equals(java.util.Arrays.asList(y)));
+            ck("a trashed item is not unassigned", !idsOf(s.unassigned()).contains(y));
+            final long yf = y;
+            fails("a trashed item cannot join a list", new Act() { public void run() { s.addMember(l1, yf); } });
+            s.trash(y);
+            ck("trash twice does nothing more", s.trashed().size() == 1);
+            s.restore(y);
+            ck("restore brings it back to the same places", s.listsOf(y).equals(java.util.Arrays.asList(l1, l2))
+                    && ids(s.members(l1)).indexOf(y) == 1 && ids(s.members(l2)).indexOf(y) == 0 && s.trashed().isEmpty());
+            ck("restore clears the bin marks", s.prop(y, Store.P_TRASHED) == null && s.prop(y, Store.P_TRASH_FROM) == null);
+            fails("restore of an item that is not in the bin", new Act() { public void run() { s.restore(yf); } });
+            fails("purge of an item that is not in the bin", new Act() { public void run() { s.purge(yf); } });
+            s.trash(t);
+            s.deleteList(l2);
+            s.restore(t);
+            ck("restore when its list is gone: unassigned", s.listsOf(t).isEmpty() && idsOf(s.unassigned()).contains(t));
+            ck("a title in no list is unassigned", s.item(t).type == Store.TITLE);
+            s.trash(x);
+            long last = s.lastId();
+            s.purge(x);
+            ck("purge deletes for good, and the id does not come back", s.item(x) == null && s.trashed().isEmpty()
+                    && s.createList("after", 0) > last);
+            fails("a file cannot go to the bin", new Act() {
+                public void run() { s.trash(s.createFile(info("/storage/emulated/0/bin.txt", 1, 1, null))); }
+            });
+            fails("a list cannot go to the bin", new Act() { public void run() { s.trash(l1); } });
+            fails("a missing item cannot go to the bin", new Act() { public void run() { s.trash(999); } });
+            ck("check is clean after the bin", s.check() == null);
         } finally {
             s.close();
         }

@@ -7,8 +7,12 @@ package com.tikiyot.vfm;
 //  - מה מועתק: רשימות ידניות בעץ (עם הסדר), צלמית/תיאור/עיצוב/"למה", קבצים (מסלול, כונן, גודל ותאריך, חתימה),
 //    ומ־מ0.3 גם רשימות חכמות: כל ההגדרות הנפוצות (עצמאיות), וכל @חכמה ברשימה ידנית — חברות של הרשימה החכמה בה
 //    (פנימית שמקושרת להגדרה נפוצה = אותו פריט, כמו בישן). התנאי נשמר כטקסט, כפי שהוא.
-//  - לא מועתק, ונספר בדוח: הפניות בין רשימות (@רשימה — מ0.4), @חכמה שאינה מובילה להגדרה (נמחקה, כלי, כפולים),
-//    "רשימות בתוך" שבתוך חכמה (מ0.4), תיקיות חיות (@תיקייה), שורות פגומות. שום דבר לא נמחק או משתנה במקור.
+//    ומ־מ0.4 הפניות בין רשימות (@רשימה): אותה רשימה נכנסת גם לרשימה המפנה (חברות, בלי "הורה").
+//  - לא מועתק, ונספר בדוח: הפניה שהייתה סוגרת מעגל (במנוע הישן ייתכן; במסד לא), הפניה לרשימה שאינה קיימת,
+//    @חכמה שאינה מובילה להגדרה (נמחקה, כלי, כפולים), "רשימות בתוך" שבתוך חכמה, תיקיות חיות (@תיקייה), שורות
+//    פגומות. שום דבר לא נמחק או משתנה במקור.
+//  - הסדר: קודם כל הרשימות נוצרות (או נמצאות) עומדות לעצמן, ואז כל רשימה מקבלת את חבריה לפי @סדר — כך הפניה
+//    יכולה להצביע גם על רשימה שמופיעה מאוחר יותר בקובץ.
 //  - העתקה חוזרת = עדכון, לא כפילות: רשימה מזוהה לפי האופן והמסלול שלה במקור (origin_key), קובץ לפי המסלול שלו.
 //    רשימה שכבר הועתקה לא משתנה במבנה; מאפיין ריק בה מתמלא, מאפיין שיש לא נדרס. קבצים חדשים נוספים לסוף.
 //    מה שנמחק במקור לא נמחק במסד.
@@ -172,15 +176,17 @@ final class Importer {
         int filesNew, filesKnown, filesUpdated, filesWithSig;
         int linksAdded, linksKnown, rootFiles;
         int propsSet;
-        /** smart = הפניות @חכמה שלא הועתקו; nested = "רשימות בתוך" חכמה שלא הועתקו (מ0.4). */
-        int badLines, refs, smart, live, nested;
+        /** smart = הפניות @חכמה שלא הועתקו; nested = "רשימות בתוך" חכמה שלא הועתקו. */
+        int badLines, smart, live, nested;
+        /** הפניות בין רשימות (מ0.4): נוספו / כבר היו / לא הועתקו כי היו סוגרות מעגל / לרשימה שלא קיימת. */
+        int refsAdded, refsKnown, refCycles, refMissing;
 
         boolean nothingToDo() {
-            return listsNew == 0 && smartNew == 0 && filesNew == 0 && filesUpdated == 0 && linksAdded == 0 && propsSet == 0;
+            return listsNew == 0 && smartNew == 0 && refsAdded == 0 && filesNew == 0 && filesUpdated == 0 && linksAdded == 0 && propsSet == 0;
         }
 
         boolean skippedAny() {
-            return badLines + refs + smart + live + nested > 0;
+            return badLines + refCycles + refMissing + smart + live + nested > 0;
         }
     }
 
@@ -247,6 +253,19 @@ final class Importer {
         return r;
     }
 
+    /** הפניה ברשימה (מסלול הרשימה שאליה מפנים) — כדי להבדיל ממזהה של רשימה חכמה בסדר. */
+    private static final class Ref {
+        final String path;
+
+        Ref(String path) {
+            this.path = path;
+        }
+
+        @Override public boolean equals(Object o) { return o instanceof Ref && ((Ref) o).path.equals(path); }
+
+        @Override public int hashCode() { return path.hashCode() * 31 + 7; }
+    }
+
     private static final class Ctx {
         final Store s;
         final Source src;
@@ -255,6 +274,9 @@ final class Importer {
         final Map<String, Long> files = new HashMap<String, Long>();
         /** מזהה הגדרה ← פריט, לריצה הזו (פנימית מקושרת ונפוצה — פריט אחד). */
         final Map<String, Long> smarts = new HashMap<String, Long>();
+        /** רשימה במקור ← פריט; ואילו נוצרו בריצה הזו (רק הן נכנסות לרשימת האב — רשימה ישנה לא משנה מקום). */
+        final Map<Tree.Node, Long> ids = new HashMap<Tree.Node, Long>();
+        final Set<Tree.Node> fresh = new HashSet<Tree.Node>();
 
         Ctx(Store s, Source src, Report r) {
             this.s = s;
@@ -271,7 +293,9 @@ final class Importer {
                 if (sm == null) r.smart++;
                 else smart(sm);
             }
-            for (Tree.Node c : root.children) list(c, 0);
+            for (Tree.Node c : root.children) ensure(c);
+            for (Tree.Node c : root.children) list(c);
+            r.refMissing += root.refs.size();                                 // בשורש אין רשימה מפנה
             for (Tree.Entry e : root.entries) {
                 if (e.bad) {
                     r.badLines++;
@@ -283,17 +307,17 @@ final class Importer {
         }
 
         void count(Tree.Node n) {
-            r.refs += n.refs.size();
             r.live += n.live.size();
         }
 
-        void list(Tree.Node n, long parent) {
-            count(n);
+        /** שלב א: הרשימה ותתי־הרשימות שלה קיימות במסד (עומדות לעצמן), עם המאפיינים. */
+        void ensure(Tree.Node n) {
             String key = originOf(src.mode, Tree.fullLabel(n.path()));
             long id = s.findByOrigin(key);
             if (id == 0) {
-                id = s.createList(n.name, parent);
+                id = s.createList(n.name, 0);
                 s.setOrigin(id, key);
+                fresh.add(n);
                 r.listsNew++;
                 prop(id, Store.P_ICON, n.icon, true);
                 prop(id, Store.P_DESC, n.desc, true);
@@ -306,9 +330,21 @@ final class Importer {
                 prop(id, Store.P_DESIGN, n.design, false);
                 prop(id, Store.P_WHY, n.why, false);
             }
+            ids.put(n, id);
+            for (Tree.Node c : n.children) ensure(c);
+        }
+
+        /** שלב ב: החברים של הרשימה, לפי הסדר. */
+        void list(Tree.Node n) {
+            count(n);
+            long id = ids.get(n);
             for (Object o : order(n)) {
                 if (o instanceof Tree.Node) {
-                    list((Tree.Node) o, id);
+                    Tree.Node c = (Tree.Node) o;
+                    if (fresh.contains(c)) s.addMember(id, ids.get(c));
+                    list(c);
+                } else if (o instanceof Ref) {
+                    ref(id, ((Ref) o).path);
                 } else if (o instanceof String) {
                     Smart sm = src.smart((String) o);
                     if (sm == null) {
@@ -327,6 +363,15 @@ final class Importer {
                     else r.linksKnown++;
                 }
             }
+        }
+
+        /** הפניה: אותה רשימה נכנסת גם לכאן — אלא אם תיסגר כך שרשרת (מעגל), או שהרשימה לא קיימת. */
+        void ref(long id, String path) {
+            long target = s.findByOrigin(originOf(src.mode, Tree.fullLabel(Tree.parsePath(path))));
+            if (target == 0) r.refMissing++;
+            else if (s.makesCycle(id, target)) r.refCycles++;
+            else if (s.addMember(id, target)) r.refsAdded++;
+            else r.refsKnown++;
         }
 
         /** פריט הרשימה החכמה: קיים — רק מאפיינים ריקים מתמלאים (עריכת המשתמש נשמרת); חדש — נוצר. */
@@ -389,7 +434,7 @@ final class Importer {
 
         /**
          * סדר הפריטים ברשימה: אם יש סדר חופשי (@סדר) — לפיו (רשימה: "c"+שם, קובץ: "f"+מסלול; מפתחות של סוגים שלא
-         * מועתקים מדולגים); מה שלא נזכר בו — אחריו, בסדר הרגיל: תת־רשימות, רשימות חכמות ואז קבצים.
+         * מועתקים מדולגים); מה שלא נזכר בו — אחריו, בסדר הרגיל: תת־רשימות, רשימות חכמות, הפניות ואז קבצים.
          */
         List<Object> order(Tree.Node n) {
             List<Object> out = new ArrayList<Object>();
@@ -400,11 +445,16 @@ final class Importer {
                 Object o = null;
                 if (k.charAt(0) == 'c') o = n.child(v);
                 else if (k.charAt(0) == 's') { if (n.smart.contains(v)) o = v; }
+                else if (k.charAt(0) == 'r') { if (n.refs.contains(v)) o = new Ref(v); }
                 else if (k.charAt(0) == 'f') for (Tree.Entry e : n.entries) if (e.path.equals(v)) { o = e; break; }
                 if (o != null && used.add(o)) out.add(o);
             }
             for (Tree.Node c : n.children) if (used.add(c)) out.add(c);
             for (String ref : n.smart) if (used.add(ref)) out.add(ref);
+            for (String ref : n.refs) {
+                Ref x = new Ref(ref);
+                if (used.add(x)) out.add(x);
+            }
             for (Tree.Entry e : n.entries) if (used.add(e)) out.add(e);
             return out;
         }

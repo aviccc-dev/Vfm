@@ -95,7 +95,8 @@ final class ImportTests {
                 && a.nested == b.nested && a.filesNew == b.filesNew && a.filesKnown == b.filesKnown
                 && a.filesUpdated == b.filesUpdated && a.filesWithSig == b.filesWithSig && a.linksAdded == b.linksAdded
                 && a.linksKnown == b.linksKnown && a.rootFiles == b.rootFiles && a.propsSet == b.propsSet
-                && a.badLines == b.badLines && a.refs == b.refs && a.smart == b.smart && a.live == b.live;
+                && a.badLines == b.badLines && a.refsAdded == b.refsAdded && a.refsKnown == b.refsKnown && a.refCycles == b.refCycles
+                && a.refMissing == b.refMissing && a.smart == b.smart && a.live == b.live;
     }
 
     private static List<String> names(Store s, long list) {
@@ -129,7 +130,7 @@ final class ImportTests {
         ck("תצוגה מקדימה: לא נשמר דבר", s.lists().isEmpty() && s.lastId() == 0 && s.findFile(A) == 0);
         ck("תצוגה מקדימה: ארבע רשימות חדשות, שלושה קבצים, חמישה קישורים", pre.listsNew == 4 && pre.listsKnown == 0
                 && pre.filesNew == 3 && pre.linksAdded == 5 && pre.linksKnown == 0);
-        ck("תצוגה מקדימה: מה שלא מועתק נספר", pre.badLines == 1 && pre.refs == 1 && pre.smart == 1 && pre.live == 1 && pre.skippedAny());
+        ck("תצוגה מקדימה: מה שלא מועתק נספר (ההפניה — מ0.4 — כבר מועתקת)", pre.badLines == 1 && pre.refsAdded == 1 && pre.refCycles == 0 && pre.refMissing == 0 && pre.smart == 1 && pre.live == 1 && pre.skippedAny());
         ck("תצוגה מקדימה: קובץ עם חתימה נספר", pre.filesWithSig == 1);
 
         // העתקה
@@ -139,9 +140,9 @@ final class ImportTests {
         long books = listBy(s, "ספרים"), halacha = listBy(s, "ספרים / הלכה"), moadim = listBy(s, "מועדים"), pesach = listBy(s, "מועדים / פסח");
         ck("העתקה: כל רשימה נמצאה לפי מקורה", books != 0 && halacha != 0 && moadim != 0 && pesach != 0);
         ck("העתקה: השם הוא השם האחרון, לא המסלול", s.item(halacha).name.equals("הלכה") && s.item(pesach).name.equals("פסח"));
-        ck("העתקה: תת־רשימה בתוך האב", s.listsOf(halacha).equals(Arrays.asList(books)) && s.listsOf(pesach).equals(Arrays.asList(moadim)));
+        ck("העתקה: תת־רשימה בתוך האב", s.listsOf(halacha).equals(Arrays.asList(books)) && s.listsOf(pesach).equals(Arrays.asList(books, moadim)));
         ck("העתקה: רשימה עליונה עומדת לעצמה", s.listsOf(books).isEmpty() && s.listsOf(moadim).isEmpty());
-        ck("העתקה: הסדר החופשי — קובץ, רשימה, ואז מה שלא נזכר", names(s, books).equals(Arrays.asList("ב.pdf", "הלכה", "א.pdf")));
+        ck("העתקה: הסדר החופשי — קובץ, רשימה, ואז מה שלא נזכר (הפניה לפני קבצים)", names(s, books).equals(Arrays.asList("ב.pdf", "הלכה", "פסח", "א.pdf")));
         ck("העתקה: צלמית, תיאור ו\"למה\"", "📘".equals(s.prop(books, Store.P_ICON)) && "ספרי לימוד".equals(s.prop(books, Store.P_DESC))
                 && "ללמוד".equals(s.prop(books, Store.P_WHY)) && s.prop(books, Store.P_DESIGN) == null && s.prop(halacha, Store.P_ICON) == null);
         long fa = s.findFile(A), fb = s.findFile(B), fc = s.findFile(C);
@@ -187,7 +188,7 @@ final class ImportTests {
         ck("שני אופנים: הרשימה של האופן השני נוצרה בנפרד", ro.listsNew == 1 && ro.listsKnown == 0 && s.lists().size() == before + 1
                 && booksOther != 0 && booksOther != books);
         ck("שני אופנים: הקבצים לא התערבבו", names(s, booksOther).equals(Arrays.asList("ד.pdf")) && !s.listsOf(fb).contains(booksOther));
-        ck("שני אופנים: הרשימה של האופן הראשון לא השתנתה", s.count(books) == 3 && s.listsOf(fa).contains(books));
+        ck("שני אופנים: הרשימה של האופן הראשון לא השתנתה", s.count(books) == 4 && s.listsOf(fa).contains(books));
         ck("שני אופנים: אותו קובץ הוא פריט אחד בשני האופנים", s.listsOf(s.findFile(D)).contains(booksOther) && s.findFile(D) == fd);
 
         // כישלון באמצע: הכול חוזר
@@ -326,6 +327,50 @@ final class ImportTests {
         ck("חכמות: קישור בין שתי פנימיות לא נתקע — כל אחת היא הגדרה בפני עצמה", lp.wanted().size() == 1 && "x".equals(lp.wanted().get(0).cond));
     }
 
+    // ---------- הפניות בין רשימות (מ0.4) ----------
+
+    /** הפניות: לרשימה מאוחרת בקובץ (ג), לעצמה, לרשימה שלא קיימת, לאב, ושרשרת שנסגרת (ג ← ב ← א ← ג). */
+    static final String REF_TREE = ""
+            + "#1 א\n"
+            + "@רשימה ג\n"
+            + "@רשימה א\n"
+            + "@סדר rג\n"
+            + "/x/a1 | 1\n"
+            + "#1 ב\n"
+            + "@רשימה א\n"
+            + "@רשימה לא קיימת\n"
+            + "#2 ב / פנימית\n"
+            + "@רשימה ב\n"
+            + "#1 ג\n"
+            + "@רשימה ב\n";
+
+    void refs(Store s, File dir) throws Exception {
+        File m = new File(dir, "הפניות");
+        write(new File(m, Paths.TREE), REF_TREE);
+        Importer.Source src = Importer.load(m);
+        Importer.Report pre = Importer.run(s, src, false);
+        ck("הפניות: תצוגה מקדימה לא שומרת", s.lists().isEmpty());
+        Importer.Report r = Importer.run(s, src, true);
+        ck("הפניות: הדוח זהה לתצוגה המקדימה", same(pre, r));
+        ck("הפניות: שתיים הועתקו, שלוש נחסמו כמעגל, אחת לרשימה שלא קיימת", r.refsAdded == 2 && r.refCycles == 3 && r.refMissing == 1
+                && r.refsKnown == 0 && r.skippedAny());
+        long a = listIn(s, "הפניות", "א"), b = listIn(s, "הפניות", "ב"), c = listIn(s, "הפניות", "ג"), in = listIn(s, "הפניות", "ב / פנימית");
+        ck("הפניות: הפניה לרשימה שמופיעה מאוחר בקובץ — הועתקה, ולפי @סדר", names(s, a).equals(Arrays.asList("ג", "a1")));
+        ck("הפניות: אותה רשימה בשני מקומות", s.listsOf(a).equals(Arrays.asList(b)) && s.listsOf(c).equals(Arrays.asList(a)));
+        ck("הפניות: תת־רשימה בתוך האב, וההפניה שלה לאב נחסמה", s.listsOf(in).equals(Arrays.asList(b)) && s.count(in) == 0);
+        ck("הפניות: השרשרת שנסגרת נחסמה", s.count(c) == 0 && s.contains(b, c) && !s.contains(c, b));
+        boolean noCycle = true;
+        for (Store.Item l : s.lists()) noCycle &= !s.contains(l.id, l.id);
+        ck("הפניות: אין אף רשימה בתוך עצמה", noCycle && s.check() == null);
+        long last = s.lastId();
+        Importer.Report again = Importer.run(s, src, true);
+        ck("הפניות חוזרת: אין שינוי", again.nothingToDo() && again.refsKnown == 2 && again.refCycles == 3 && again.refMissing == 1
+                && s.lastId() == last);
+        s.removeMember(a, c);
+        Importer.Report back = Importer.run(s, src, true);
+        ck("הפניות: הפניה שהמשתמש הסיר חוזרת בהעתקה חוזרת (כמו קובץ)", back.refsAdded == 1 && s.listsOf(c).equals(Arrays.asList(a)));
+    }
+
     // ---------- הבדיקה המלאה (FullCheck) ----------
 
     /** opener — יוצר Store חדש. sabotage — האם המסד ה"אמיתי" חסר קישור אחד. */
@@ -348,6 +393,7 @@ final class ImportTests {
                               final boolean badCond) throws Exception {
         final File old = new File(dir, "olddata-" + sabotage + selfOk + badCond);
         writeSmartMode(new File(old, Modes.DIR + "/חכם"));
+        write(new File(old, Modes.DIR + "/הפניות/" + Paths.TREE), REF_TREE);
         write(new File(old, Modes.DIR + "/ראשון/" + Paths.TREE), TREE1);
         write(new File(old, Modes.DIR + "/ראשון/" + Sig.FILE), SIGS1);
         write(new File(old, Modes.DIR + "/שני/" + Paths.TREE), TREE2);
@@ -368,6 +414,7 @@ final class ImportTests {
                 if (sabotage) {
                     long books = s.findByOrigin(Importer.originOf("ראשון", "ספרים"));
                     s.removeMember(books, s.findFile(A));
+                    s.removeMember(books, s.findByOrigin(Importer.originOf("ראשון", "מועדים / פסח")));   // כמו מסד ממ0.3: בלי הפניות
                 }
                 return s;
             }
@@ -383,12 +430,15 @@ final class ImportTests {
         ck("בדיקה מלאה: מה שלא מועתק מופיע", ok.contains("1 הפניות") && ok.contains("1 הפניות חכמות שלא נמצאו"));
         ck("בדיקה מלאה: רשימה ריקה בלי סיבה מוצגת בשמה", ok.contains(Words.Db.modeEmpty(1, 1, 0)) && ok.contains("   חדשה") && ok.contains(Words.Db.modeEmpty(0, 0, 0)));
         String bad = fullReport(opener, dir, true, true);
-        ck("בדיקה מלאה: מסד אמיתי שחסר בו קישור — פסק דין אדום", bad.startsWith(Words.Db.verdictBad(1)) && bad.contains(Words.Db.pRealBehind("ראשון", 0, 0, 0, 1, 0)));
+        ck("בדיקה מלאה: מסד אמיתי שחסרים בו קישור והפניה — פסק דין אדום, בעיה אחת (העתקה חוזרת תשלים)", bad.startsWith(Words.Db.verdictBad(1)) && bad.contains(Words.Db.pRealBehind("ראשון", 0, 0, 0, 1, 0, 1)));
         ck("בדיקה מלאה: רשימות חכמות — במקור 4, נמצאו 4, אפס שגויות; לא משויכים צפוי 1 ונמצא 1",
                 ok.contains(Words.Db.modeTempSmart(4, 4, 0, 1, 1)));
         ck("בדיקה מלאה: הערכה מול האינדקס — 3 תנאים, 2 עם תוצאות, אחד בלי, אחד בלי תנאי",
                 ok.contains("נבדקו 3 תנאים · עם תוצאות: 2 · בלי תוצאות: 1 · לא הובנו: 0 · בלי תנאי: 1 · סה״כ 5 קבצים")
                         && ok.contains(Words.Db.evalNoHits("אחרונים")));
+        ck("בדיקה מלאה: הפניות — 6 במקור, 2 הועתקו, 3 נחסמו כמעגל, 1 לא קיימת, אפס שגויות, אפס מעגלים במסד",
+                ok.contains(Words.Db.modeRefs(6, 2, 3, 1, 0, 0)));
+        ck("בדיקה מלאה: הפניה מהמנוע הישן — מועתקת", ok.contains(Words.Db.modeRefs(1, 1, 0, 0, 0, 0)));
         String badc = fullReport(opener, dir, false, true, true);
         ck("בדיקה מלאה: תנאי שהמנוע לא הבין — פסק דין אדום", badc.startsWith(Words.Db.verdictBad(1)) && badc.contains(Words.Db.pSmartCond("חכם", 1))
                 && badc.contains(Words.Db.evalBad("צילומי מסך", "לא הובן")));

@@ -26,8 +26,31 @@ final class Stores {
         if (it.type != Store.LIST && it.type != Store.SMART) throw new Store.Failure("not a list: " + id);
     }
 
-    static void noListInList(Store.Item item) {
-        if (item.type == Store.LIST) throw new Store.Failure("list in list: not yet");
+    /** מה מותר לסל: רעיון וכותרת (פריטים שקיימים רק במסד). קובץ נשאר בכונן; רשימה נמחקת בנפרד. */
+    static void mayTrash(Store.Item it, long id) {
+        if (it == null) throw new Store.Failure("no such item " + id);
+        if (it.type != Store.NOTE && it.type != Store.TITLE) throw new Store.Failure("only notes and titles go to the bin: " + id);
+    }
+
+    /** "רשימה:מקום,…" ← זוגות. */
+    static java.util.List<long[]> parseFrom(String v) {
+        java.util.List<long[]> out = new java.util.ArrayList<long[]>();
+        if (v == null) return out;
+        for (String p : v.split(",")) {
+            int c = p.indexOf(':');
+            if (c <= 0) continue;
+            try {
+                out.add(new long[]{Long.parseLong(p.substring(0, c).trim()), Long.parseLong(p.substring(c + 1).trim())});
+            } catch (NumberFormatException ignored) {
+            }
+        }
+        return out;
+    }
+
+    static String joinFrom(java.util.List<long[]> l) {
+        StringBuilder sb = new StringBuilder();
+        for (long[] x : l) sb.append(sb.length() > 0 ? "," : "").append(x[0]).append(':').append(x[1]);
+        return sb.toString();
     }
 
     /** שם הקובץ מהמסלול (החלק האחרון). */
