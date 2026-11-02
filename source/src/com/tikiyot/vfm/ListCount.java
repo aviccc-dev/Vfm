@@ -103,6 +103,11 @@ final class ListCount {
      * הקבצים השונים ונפחם, ובסוגריים הסכום (המשתמש: "מדד לסיבוכיות של הרשימות החכמות").
      */
     String text() {
+        return text(lists, items, size, unique, uniqueSize);
+    }
+
+    /** הנוסח — מקום אחד (מ0.9.1: גם הספירה של המסד, DbCount). */
+    static String text(long lists, long items, long size, long unique, long uniqueSize) {
         String l = lists > 0 ? lists + Words.Manual.LISTS_DOT : "";
         if (unique >= 0 && unique < items)
             return l + Files.count(unique) + Words.StatsW.FILES + " (" + Files.count(items) + ")"
@@ -138,9 +143,12 @@ final class ListCount {
 
         @Override
         public long[] smart(String ref) {
-            if (lib == null || !lib.ready) return null;
-            String c = cond(ref);
-            if (c == null) return null;
+            return byCond(cond(ref));
+        }
+
+        /** מ0.9.1: לפי התנאי עצמו (רשימה חכמה במסד); null — האינדקס לא מוכן, או אין תנאי. */
+        long[] byCond(String c) {
+            if (lib == null || !lib.ready || c == null) return null;
             long[] v = cache.get(c);
             if (v != null) return v;
             Library.Result r = lib.search(c, false, true);
@@ -158,8 +166,12 @@ final class ListCount {
 
         @Override
         public Map<String, Long> smartFiles(String ref) {
-            if (smart(ref) == null) return null;
-            return files.get(cond(ref));
+            return filesByCond(cond(ref));
+        }
+
+        Map<String, Long> filesByCond(String c) {
+            if (byCond(c) == null) return null;
+            return files.get(c);
         }
 
         private final Map<String, long[]> liveCache = new HashMap<String, long[]>();

@@ -53,9 +53,9 @@ public class DbScreen extends Activity {
     }
 
     /** האופנים שיש להם מסד כבר. */
-    private List<String> dbModes() {
+    static List<String> dbModes(android.content.Context c) {
         List<String> out = new ArrayList<String>();
-        File[] k = dbFile(this, "x").getParentFile().listFiles();
+        File[] k = dbFile(c, "x").getParentFile().listFiles();
         if (k != null)
             for (File f : k) {
                 String n = f.getName();
@@ -72,9 +72,14 @@ public class DbScreen extends Activity {
         return m.isEmpty() ? Importer.activeMode(oldData()) : m;
     }
 
+    /** מ0.9.1: האופן שנבחר — נזכר גם למסך המסד וגם למראה המוכר. */
+    static void saveMode(android.content.Context c, String m) {
+        c.getSharedPreferences(PREFS, MODE_PRIVATE).edit().putString(PREF_MODE, m).apply();
+    }
+
     private void switchMode(String m) {
         mode = m;
-        getSharedPreferences(PREFS, MODE_PRIVATE).edit().putString(PREF_MODE, m).apply();
+        saveMode(this, m);
         closeStore();
         path.clear();
         refresh();
@@ -88,7 +93,7 @@ public class DbScreen extends Activity {
     }
 
     private void pickMode() {
-        java.util.TreeSet<String> all = new java.util.TreeSet<String>(dbModes());
+        java.util.TreeSet<String> all = new java.util.TreeSet<String>(dbModes(this));
         all.addAll(Importer.modes(oldData()));
         all.add(mode);
         final List<String> names = new ArrayList<String>(all);

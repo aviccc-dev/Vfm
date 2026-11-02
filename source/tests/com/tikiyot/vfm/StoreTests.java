@@ -83,6 +83,12 @@ final class StoreTests {
             } finally {
                 rs.close();
             }
+            Store cs = opener.fresh(new File(sub, "count-counter.txt"));
+            try {
+                new ImportTests(o, name).count(cs);
+            } finally {
+                cs.close();
+            }
             Store ls = opener.fresh(new File(sub, "live-counter.txt"));
             try {
                 new ImportTests(o, name).live(ls, new File(sub, "live"));

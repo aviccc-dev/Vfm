@@ -334,6 +334,42 @@ final class ImportTests {
         ck("חכמות: קישור בין שתי פנימיות לא נתקע — כל אחת היא הגדרה בפני עצמה", lp.wanted().size() == 1 && "x".equals(lp.wanted().get(0).cond));
     }
 
+    // ---------- הספירה במראה המוכר (מ0.9.1) ----------
+
+    void count(Store s) throws Exception {
+        long a = s.createList("א", 0), b = s.createList("ב", 0), c = s.createList("ג", 0);
+        long f1 = s.createFile(new Store.FileInfo("/x/1", "פנימי", 10, 0, null));
+        long f2 = s.createFile(new Store.FileInfo("/x/2", "פנימי", 5, 0, null));
+        long f3 = s.createFile(new Store.FileInfo("/x/3", "פנימי", 7, 0, null));
+        long sm = s.createSmart("ח", 0);
+        s.setProp(sm, Store.P_COND, "X");
+        s.addMember(a, f1);
+        s.addMember(a, b);
+        s.addMember(a, sm);
+        s.addMember(a, c);
+        s.addMember(b, f1);
+        s.addMember(b, f2);
+        s.addMember(b, c);
+        s.addMember(c, f3);
+        final java.util.Map<String, Long> hits = new java.util.HashMap<String, Long>();
+        hits.put("/x/1", 10L);
+        hits.put("/x/9", 20L);
+        hits.put("/x/8", 0L);
+        DbCount.Index ix = new DbCount.Index() {
+            @Override public long[] cond(String q) { return "X".equals(q) ? new long[]{3, 30} : null; }
+            @Override public java.util.Map<String, Long> files(String q) { return "X".equals(q) ? hits : null; }
+        };
+        DbCount k = DbCount.of(s, a, ix);
+        ck("ספירה: רשימות בכל העומק (כל הופעה), קבצים כסכום, ורשימה משותפת — תוכנה פעם אחת",
+                k.lists == 4 && k.items == 7 && k.size == 62);
+        ck("ספירה: קבצים שונים ונפחם — כולל מה שהחכמה מוצאת", k.unique == 5 && k.uniqueSize == 42);
+        ck("ספירה: אותו נוסח כמו במנוע הישן", k.text().equals(ListCount.text(4, 7, 62, 5, 42)));
+        DbCount none = DbCount.of(s, a, null);
+        ck("ספירה בלי האינדקס: רק הקבצים שברשימות, בלי \"שונים\"", none.items == 4 && none.size == 32 && none.unique == -1);
+        ck("ספירה: רשימה חכמה לבדה", java.util.Arrays.equals(DbCount.smart(s, sm, ix), new long[]{3, 30}) && DbCount.smart(s, sm, null) == null);
+        ck("ספירה: המסד תקין", s.check() == null);
+    }
+
     // ---------- תיקיות חיות (מ0.7) ----------
 
     /** בשורש, ברשימה עם סדר חופשי (מפתח "l" — כמו שהמנוע הישן כותב), עם קו נטוי בסוף, ואותה תיקייה בשתי רשימות. */

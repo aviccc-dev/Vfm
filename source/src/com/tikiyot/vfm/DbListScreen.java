@@ -4,6 +4,8 @@ package com.tikiyot.vfm;
 // Looks.row), הצלמית והסוג (Ui.kind), שורות הכפתורים (TopRow). הבית הוא רשימת הבית שבמסד, ברשת.
 // נגיעה: רשימה — נפתחת כאן; רשימה חכמה — במסך החיפוש המוכר (לקריאה, כמו כלי חכם); קובץ — נפתח (פקודה — רצה).
 // נגיעה ארוכה — מסך המסד באותה רשימה (שם כל הפעולות). אחראי: להציג. אסור לו: לכתוב למסד (נפתח לקריאה בלבד).
+// מ0.9.1 (צילום המשתמש: "מעבר בין האופנים חסר, והנתונים מתחת לצלמיות"): בבית — "אופן עבודה: X ▾" ושורת האינדקס כמו
+// בבית הישן; מתחת לכל רשימה — הספירה (DbCount, באותו נוסח כמו ListCount), מחושבת ברקע; הצלמיות בבית — בלי מסגרת.
 
 import android.content.Intent;
 import android.os.Bundle;
@@ -23,6 +25,10 @@ public class DbListScreen extends ListScreen<Store.Member> {
     private String mode;
     private long listId;
     private SqlStore store;
+    private TextView modeBox;
+    /** הספירה של כל שורה (מספר זיהוי ← טקסט), מהחישוב ברקע; token — טעינה שכבר לא רלוונטית לא כותבת. */
+    private final java.util.Map<Long, String> stats = new java.util.HashMap<Long, String>();
+    private int token;
 
     /** פותח רשימה במראה המוכר. */
     static void open(android.app.Activity a, String mode, long list) {
@@ -35,6 +41,17 @@ public class DbListScreen extends ListScreen<Store.Member> {
         mode = getIntent().getStringExtra(EXTRA_MODE);
         listId = getIntent().getLongExtra(EXTRA_LIST, 0);
         LinearLayout root = build(saved, Words.Db.APP_NAME_M, "db-list");
+        modeBox = new TextView(this);                                         // כמו בבית הישן (Home, 105)
+        modeBox.setTextSize(16);
+        modeBox.setTypeface(android.graphics.Typeface.DEFAULT_BOLD);
+        modeBox.setTextColor(Ui.TEXT);
+        modeBox.setBackgroundColor(Ui.BG_SOFT);
+        modeBox.setPadding(Ui.dp(this, 12), Ui.dp(this, 10), Ui.dp(this, 12), Ui.dp(this, 10));
+        modeBox.setOnClickListener(new View.OnClickListener() {
+            @Override public void onClick(View v) { modeMenu(); }
+        });
+        modeBox.setVisibility(View.GONE);
+        root.addView(modeBox, 0);
         done(root, Actions.Tool.SEARCH, null);                               // הפס — לא נפתח (אין בחירה כאן); השורות — כן
     }
 
@@ -79,11 +96,94 @@ public class DbListScreen extends ListScreen<Store.Member> {
         rows.addAll(store.members(listId));
         boolean home = "1".equals(store.prop(listId, Store.P_HOME));
         setTitle(home ? Words.Db.APP_NAME_M : it.name);
+        modeBox.setVisibility(home ? View.VISIBLE : View.GONE);
+        modeBox.setText(Words.Db.modeButton(mode));
         String why = store.prop(listId, Store.P_WHY);
-        info.setText((home ? Words.Db.homeInfo(mode, rows.size()) : Words.items(rows.size()))
-                + (why == null || why.isEmpty() ? "" : "\n" + why));
+        String index = !lib.ready ? Words.LOADING_INDEX : lib.status;
+        info.setText(home ? index : Words.items(rows.size()) + (why == null || why.isEmpty() ? "" : "\n" + why));
         look(designOf(home));
         adapter.notifyDataSetChanged();
+        countLater();
+    }
+
+    /** הספירות — ברקע, בחיבור קריאה משלו; כשמוכן — השורות מצוירות שוב. */
+    private void countLater() {
+        final int mine = ++token;
+        final java.io.File db = DbScreen.dbFile(this, mode);
+        final java.util.List<Store.Item> items = new java.util.ArrayList<Store.Item>();
+        for (Store.Member m : rows) items.add(m.item);
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                final java.util.Map<Long, String> out = new java.util.HashMap<Long, String>();
+                SqlStore s = null;
+                try {
+                    s = SqlStore.openReadOnly(db);
+                    final ListCount.FromLibrary fl = new ListCount.FromLibrary(lib);
+                    DbCount.Index ix = new DbCount.Index() {
+                        @Override public long[] cond(String c) { return fl.byCond(c); }
+                        @Override public java.util.Map<String, Long> files(String c) { return fl.filesByCond(c); }
+                    };
+                    for (Store.Item it : items) {
+                        if (mine != token) return;
+                        if (it.type == Store.LIST) {
+                            if (!"1".equals(s.prop(it.id, Store.P_GROUP))) out.put(it.id, DbCount.of(s, it.id, ix).text());
+                        } else if (it.type == Store.SMART) {
+                            long[] v = DbCount.smart(s, it.id, ix);
+                            if (v != null) out.put(it.id, Files.count(v[0]) + Words.StatsW.FILES + (v[1] > 0 ? " · " + Files.size(v[1]) : ""));
+                        } else if (it.type == Store.FILE) {
+                            Store.FileInfo fi = s.file(it.id);
+                            if (fi != null && Batch.isBatch(fi.path) && new File(fi.path).isFile())
+                                out.put(it.id, Program.stat(DbListScreen.this, new File(fi.path)));
+                        }
+                    }
+                } catch (Throwable t) {
+                    Log.e("DbListScreen.count", t);
+                } finally {
+                    if (s != null) s.close();
+                }
+                runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        if (mine != token || isFinishing()) return;
+                        stats.clear();
+                        stats.putAll(out);
+                        adapter.notifyDataSetChanged();
+                    }
+                });
+            }
+        }).start();
+    }
+
+    /** מעבר בין האופנים שיש להם מסד (כמו בבית הישן — לפי השם). */
+    private void modeMenu() {
+        final java.util.List<String> all = DbScreen.dbModes(this);
+        java.util.List<String> labels = new java.util.ArrayList<String>();
+        for (String m : all) labels.add(Words.Db.modeLine(m, m.equals(mode)));
+        Ui.list(this, Words.Db.MODE_PICK, labels, new android.content.DialogInterface.OnClickListener() {
+            @Override
+            public void onClick(android.content.DialogInterface d, int which) {
+                String m = all.get(which);
+                if (m.equals(mode)) return;
+                DbScreen.saveMode(DbListScreen.this, m);
+                SqlStore s = null;
+                long h = 0;
+                try {
+                    s = SqlStore.openReadOnly(DbScreen.dbFile(DbListScreen.this, m));
+                    h = Importer.home(s);
+                } catch (Throwable t) {
+                    Log.e("DbListScreen.mode", t);
+                } finally {
+                    if (s != null) s.close();
+                }
+                if (h == 0) {
+                    Ui.toast(DbListScreen.this, Words.Db.NO_HOME);
+                    return;
+                }
+                finish();
+                open(DbListScreen.this, m, h);
+            }
+        });
     }
 
     /** העיצוב: של הרשימה; בבית — של מסך הבית, ואם לא נבחר — רשת (כמו האריחים בבית). */
@@ -92,7 +192,10 @@ public class DbListScreen extends ListScreen<Store.Member> {
         if (name != null && !name.isEmpty()) return Design.get(name);
         if (!home) return null;
         String h = Design.homeName();
-        return Design.get(h.isEmpty() ? Design.FILES : h);
+        if (!h.isEmpty()) return Design.get(h);
+        Design d = Design.get(Design.FILES);                                  // כמו האריחים בבית הישן: בלי מסגרת לצלמית
+        d.around = Design.NONE;
+        return d;
     }
 
     @Override
@@ -117,12 +220,13 @@ public class DbListScreen extends ListScreen<Store.Member> {
         if (store == null) return;
         if (it.type == Store.LIST) {
             boolean group = "1".equals(store.prop(it.id, Store.P_GROUP));
-            Ui.bindIcon(v, "", it.name, group ? Words.Db.KIND_GROUP : Words.items(store.count(it.id)));
+            String st = stats.get(it.id);
+            Ui.bindIcon(v, "", it.name, group ? Words.Db.KIND_GROUP : st != null ? st : Words.items(store.count(it.id)));
             String icon = store.prop(it.id, Store.P_ICON);
             Ui.kind(v, store.listsOf(it.id).size() > 1 && listId != homeOrZero() ? Ui.LINK : Ui.MANUAL, icon == null ? "" : icon);
         } else if (it.type == Store.SMART) {
-            String desc = store.prop(it.id, Store.P_DESC), icon = store.prop(it.id, Store.P_ICON);
-            Ui.bindIcon(v, "", it.name, desc == null ? "" : desc);
+            String desc = store.prop(it.id, Store.P_DESC), icon = store.prop(it.id, Store.P_ICON), st = stats.get(it.id);
+            Ui.bindIcon(v, "", it.name, st != null ? st : desc == null ? "" : desc);
             Ui.kind(v, Ui.SMART, icon == null ? "" : icon);
         } else if (it.type == Store.FILE) {
             Store.FileInfo fi = store.file(it.id);
@@ -130,6 +234,8 @@ public class DbListScreen extends ListScreen<Store.Member> {
             boolean there = f != null && f.exists();
             Ui.bindRow(this, v, it.name, false, there ? f.length() : fi == null ? -1 : fi.size, there ? f.lastModified() : 0,
                     fi == null ? "" : fi.path, there ? null : Words.FILE_NOT_AT_PATH, null);
+            String st = stats.get(it.id);                                     // קובץ פקודות — מה שהוא מסנן (כמו בבית הישן)
+            if (st != null && !st.isEmpty()) ((TextView[]) v.getTag())[2].setText(st);
             if (!there) ((TextView[]) v.getTag())[1].setTextColor(Ui.MUTED);
         } else if (it.type == Store.TITLE) {
             Ui.bindIcon(v, "", "── " + it.name + " ──", "");
