@@ -1,6 +1,7 @@
 package com.tikiyot.vfm;
 
-// מסך מנוע המסד (מ0.1–מ0.7): רשימות, רשימות חכמות ("לא משויכים" כרשימה מיוחדת) ופריטים מעל Store, העתקה מהמנוע הישן,
+// מ0.8: נגיעה בקובץ פותחת אותו (קובץ פקודות — רץ, כמו בכל התוכנה: Ui.open); הוספת קבצים מתיקייה ומחיפוש לרשימה.
+// מסך מנוע המסד (מ0.1–מ0.8): רשימות, רשימות חכמות ("לא משויכים" כרשימה מיוחדת) ופריטים מעל Store, העתקה מהמנוע הישן,
 // וגיבוי (מ0.5): עותק יומי ברקע כשנפתח המסד, עותק לפני פעולה מוחקת, "גיבוי עכשיו", שחזור, ומסד פגום שלא נפתח.
 // אחראי: להציג ולהפעיל. אסור לו: לדעת איך הנתונים נשמרים (Store, Backups), או לכתוב למנוע הישן (קורא בלבד).
 
@@ -418,6 +419,26 @@ public class DbScreen extends Activity {
         r.addView(name);
         r.addView(sub);
         r.setBackgroundColor(Ui.BG);
+        final Smarts.Row row = w;
+        r.setOnClickListener(new View.OnClickListener() {                      // מ0.8: נגיעה — פתיחה; תיקייה — בכונן
+            @Override
+            public void onClick(View v) {
+                if (row.dir) DiskScreen.open(DbScreen.this, row.path);
+                else Ui.open(DbScreen.this, new File(row.path));
+            }
+        });
+        if (!w.dir) r.setOnLongClickListener(new View.OnLongClickListener() {   // ארוכה — הוספה לרשימה
+            @Override
+            public boolean onLongClick(View v) {
+                pickListThen(new ListPicked() {
+                    @Override
+                    public void ok(long list) {
+                        addFiles(list, java.util.Collections.singletonList(row.path), java.util.Collections.singletonList(row.size));
+                    }
+                });
+                return true;
+            }
+        });
         return r;
     }
 
@@ -455,6 +476,9 @@ public class DbScreen extends Activity {
                 if (it.type == Store.LIST || it.type == Store.SMART) {
                     path.add(it.id);
                     show();
+                } else if (it.type == Store.FILE) {
+                    Store.FileInfo fi = store.file(it.id);                    // מ0.8: פתיחה (פקודה — הרצה)
+                    if (fi != null) Ui.open(DbScreen.this, new File(fi.path));
                 }
             }
         });
@@ -488,7 +512,8 @@ public class DbScreen extends Activity {
 
     /** "➕ הוספה…" בתוך רשימה: כל מה שאפשר להוסיף, בתפריט אחד. */
     private void addMenu() {
-        final String[] labels = {Words.Db.NEW_SUBLIST, Words.Db.NEW_SMART, Words.Db.NEW_REF, Words.Db.NEW_NOTE, Words.Db.NEW_TITLE, Words.Db.NEW_GROUP};
+        final String[] labels = {Words.Db.NEW_SUBLIST, Words.Db.NEW_SMART, Words.Db.NEW_REF, Words.Db.NEW_NOTE, Words.Db.NEW_TITLE, Words.Db.NEW_GROUP,
+                Words.Db.ADD_FROM_FOLDER, Words.Db.ADD_FROM_SEARCH};
         Ui.list(this, Words.Db.ADD_MENU, java.util.Arrays.asList(labels), new DialogInterface.OnClickListener() {
             @Override
             public void onClick(DialogInterface d, int which) {
@@ -498,7 +523,9 @@ public class DbScreen extends Activity {
                     case 2: newRef(); break;
                     case 3: newNote(); break;
                     case 4: newTitle(); break;
-                    default: newGroup(); break;
+                    case 5: newGroup(); break;
+                    case 6: fromFolder(current()); break;
+                    default: fromSearch(current()); break;
                 }
             }
         });
@@ -612,6 +639,152 @@ public class DbScreen extends Activity {
     }
 
     /** מוסיף פריט (קובץ, רעיון, רשימה חכמה) לרשימה ידנית שבוחרים. */
+    // ---------- מ0.8: קבצים מהכונן ----------
+
+    private interface ListPicked {
+        void ok(long list);
+    }
+
+    /** בחירת רשימה ידנית (בלי חכמות — אין להן חברים). */
+    private void pickListThen(final ListPicked cb) {
+        final List<Store.Item> lists = store.lists();
+        if (lists.isEmpty()) {
+            Ui.toast(this, Words.Db.NO_LISTS);
+            return;
+        }
+        List<String> labels = new ArrayList<String>();
+        for (Store.Item l : lists) labels.add(label(l) + " · " + l.id);
+        Ui.list(this, Words.Db.ADD_TO_LIST_TITLE, labels, new DialogInterface.OnClickListener() {
+            @Override
+            public void onClick(DialogInterface d, int which) {
+                cb.ok(lists.get(which).id);
+            }
+        });
+    }
+
+    /** הוספה בעסקה אחת, והודעה כמה נוספו וכמה כבר היו. */
+    private void addFiles(long list, List<String> paths, List<Long> sizes) {
+        try {
+            DbFiles.Added a = DbFiles.add(store, list, paths, sizes);
+            Ui.toast(this, Words.Db.filesAdded(a.added, a.already));
+        } catch (Throwable t) {
+            Log.e("DbScreen.addFiles", t);
+            Ui.toast(this, Words.Db.failed(String.valueOf(t.getMessage())));
+        }
+        show();
+    }
+
+    /** תיקייה מהכונן ← רשימת הקבצים שבה (בלי תתי־תיקיות ובלי נסתרים), לבחירה. */
+    private void fromFolder(final long list) {
+        FolderPicker.choose(this, new FolderPicker.Picked() {
+            @Override
+            public void ok(File folder) {
+                File[] k = folder.listFiles();
+                List<File> fs = new ArrayList<File>();
+                if (k != null) for (File f : k) if (f.isFile() && !f.getName().startsWith(".")) fs.add(f);
+                java.util.Collections.sort(fs, new java.util.Comparator<File>() {
+                    @Override public int compare(File a, File b) { return a.getName().compareToIgnoreCase(b.getName()); }
+                });
+                if (fs.isEmpty()) {
+                    Ui.toast(DbScreen.this, Words.Db.FOLDER_NO_FILES);
+                    return;
+                }
+                List<String> names = new ArrayList<String>(), paths = new ArrayList<String>();
+                List<Long> sizes = new ArrayList<Long>();
+                for (File f : fs) {
+                    if (names.size() >= PICK_MAX) break;
+                    names.add(f.getName() + " · " + Files.size(f.length()));
+                    paths.add(f.getAbsolutePath());
+                    sizes.add(f.length());
+                }
+                choose(list, folder.getName() + (fs.size() > PICK_MAX ? " " + Words.Db.firstOf(PICK_MAX, fs.size()) : ""), names, paths, sizes);
+            }
+        });
+    }
+
+    /** חיפוש באינדקס (אותו מנוע ואותו תחביר כמו ברשימה חכמה) ← התוצאות, לבחירה. */
+    private void fromSearch(final long list) {
+        Ui.askText(this, Words.Db.SEARCH_TITLE, "", Words.Db.SEARCH_HINT, new Ui.Text1() {
+            @Override
+            public void ok(final String query) {
+                if (query.trim().isEmpty()) return;
+                final Library lib = Library.get(DbScreen.this);
+                lib.start(null);
+                Ui.toast(DbScreen.this, Words.Db.SEARCHING);
+                new Thread(new Runnable() {
+                    @Override
+                    public void run() {
+                        Smarts.Result r;
+                        try {
+                            r = Smarts.over(lib).find(query.trim(), "", PICK_MAX);
+                        } catch (Throwable t) {
+                            Log.e("DbScreen.search", t);
+                            r = Smarts.Result.notReady();
+                        }
+                        final Smarts.Result res = r;
+                        runOnUiThread(new Runnable() {
+                            @Override
+                            public void run() {
+                                if (isFinishing()) return;
+                                if (!res.ready) {
+                                    Ui.toast(DbScreen.this, Words.Db.INDEX_NOT_READY);
+                                    return;
+                                }
+                                List<String> names = new ArrayList<String>(), paths = new ArrayList<String>();
+                                List<Long> sizes = new ArrayList<Long>();
+                                for (Smarts.Row w : res.rows) {
+                                    if (w.dir) continue;
+                                    names.add(w.name + " · " + w.folder);
+                                    paths.add(w.path);
+                                    sizes.add(w.size);
+                                }
+                                if (names.isEmpty()) {
+                                    Ui.toast(DbScreen.this, res.note.isEmpty() ? Words.Db.SEARCH_NONE : Words.Db.smartNote(res.note));
+                                    return;
+                                }
+                                choose(list, query.trim() + (res.count > names.size() ? " " + Words.Db.firstOf(names.size(), res.count) : ""),
+                                        names, paths, sizes);
+                            }
+                        });
+                    }
+                }).start();
+            }
+        });
+    }
+
+    /** כמה קבצים לכל היותר בחלון הבחירה. */
+    private static final int PICK_MAX = 500;
+
+    /** חלון בחירה: תיבות סימון, "הכול", "הוספה". */
+    private void choose(final long list, String title, List<String> names, final List<String> paths, final List<Long> sizes) {
+        final boolean[] on = new boolean[names.size()];
+        final AlertDialog d = new AlertDialog.Builder(this)
+                .setTitle(title)
+                .setMultiChoiceItems(names.toArray(new String[0]), on, new DialogInterface.OnMultiChoiceClickListener() {
+                    @Override public void onClick(DialogInterface x, int which, boolean checked) { on[which] = checked; }
+                })
+                .setPositiveButton(Words.Db.ADD_CHOSEN, new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface x, int w) {
+                        List<String> ps = new ArrayList<String>();
+                        List<Long> ss = new ArrayList<Long>();
+                        for (int i = 0; i < on.length; i++)
+                            if (on[i]) {
+                                ps.add(paths.get(i));
+                                ss.add(sizes.get(i));
+                            }
+                        if (ps.isEmpty()) Ui.toast(DbScreen.this, Words.Db.NOTHING_CHOSEN);
+                        else addFiles(list, ps, ss);
+                    }
+                })
+                .setNeutralButton(Words.Db.ADD_ALL, new DialogInterface.OnClickListener() {
+                    @Override public void onClick(DialogInterface x, int w) { addFiles(list, paths, sizes); }
+                })
+                .setNegativeButton(Words.CANCEL, null)
+                .create();
+        d.show();
+    }
+
     private void addToList(final Store.Item it) {
         final List<Store.Item> lists = store.lists();
         if (lists.isEmpty()) {

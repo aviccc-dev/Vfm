@@ -87,6 +87,7 @@ public final class StoreContract {
             unicode();
             restore();
             files();
+            adding();
             smarts();
             nesting();
             bin();
@@ -303,6 +304,37 @@ public final class StoreContract {
         List<Long> out = new ArrayList<Long>();
         for (Store.Item it : items) out.add(it.id);
         return out;
+    }
+
+    /** מ0.8: הוספת קבצים לרשימה (DbFiles) — פריט אחד לכל מסלול, סדר, כפולים, רשימה חכמה, מסלול פסול, עסקה אחת. */
+    private void adding() throws Exception {
+        final Store s = opener.fresh(counterFile());
+        try {
+            final long l = s.createList("l", 0), other = s.createList("o", 0);
+            final long sm = s.createSmart("sm", 0);
+            long loose = s.createFile(info("/storage/emulated/0/x/old.pdf", 5, 0, null));
+            DbFiles.Added a = DbFiles.add(s, l, java.util.Arrays.asList("/storage/emulated/0/x/a.pdf", "/storage/ABCD-1234/b.txt",
+                    "/storage/emulated/0/x/a.pdf", "relative.txt", "/storage/emulated/0/x/old.pdf"), java.util.Arrays.asList(10L, 20L, 10L, 1L, 5L));
+            ck("add files: new, duplicate in input once, bad path skipped, loose file reused", a.added == 3 && a.already == 0 && a.created == 2 && a.bad == 1);
+            java.util.List<Store.Member> ms = s.members(l);
+            ck("add files: order kept, the loose item is the same item", ms.size() == 3 && ms.get(0).item.name.equals("a.pdf")
+                    && ms.get(1).item.name.equals("b.txt") && ms.get(2).item.id == loose && s.unassigned().isEmpty());
+            Store.FileInfo b = s.file(ms.get(1).item.id);
+            ck("add files: drive by path, size given, no signature", b.drive.equals("ABCD-1234") && b.size == 20 && b.sig == null && b.mtime == 0);
+            DbFiles.Added again = DbFiles.add(s, l, java.util.Arrays.asList("/storage/ABCD-1234/b.txt", "/storage/emulated/0/x/c.pdf"), null);
+            ck("add files again: one already there, one new at the end (size unknown)", again.added == 1 && again.already == 1 && again.created == 1
+                    && s.count(l) == 4 && s.members(l).get(3).item.name.equals("c.pdf") && s.file(s.members(l).get(3).item.id).size == -1);
+            DbFiles.add(s, other, java.util.Arrays.asList("/storage/emulated/0/x/c.pdf"), null);
+            ck("add files: the same file in a second list is one item", s.listsOf(s.findFile("/storage/emulated/0/x/c.pdf")).equals(java.util.Arrays.asList(l, other)));
+            final long last = s.lastId();
+            fails("add files to a smart list", new Act() { public void run() { DbFiles.add(s, sm, java.util.Arrays.asList("/storage/emulated/0/y.pdf"), null); } });
+            ck("add files to a smart list changed nothing", s.lastId() == last && s.findFile("/storage/emulated/0/y.pdf") == 0);
+            DbFiles.Added none = DbFiles.add(s, l, java.util.Arrays.asList("", "no-slash"), null);
+            ck("add files: only bad paths — nothing done", none.added == 0 && none.created == 0 && none.bad == 2 && s.count(l) == 4);
+            ck("add files: store still valid", s.check() == null);
+        } finally {
+            s.close();
+        }
     }
 
     private void smarts() throws Exception {

@@ -2294,7 +2294,21 @@ public final class Words {
 
         public static final String APP_NAME_M = "מנהל קבצים וירטואלי · מ";
         public static final String MENU = "מסד נתונים (מ)";
-        public static final String TITLE = "מסד נתונים · מ0.7";
+        public static final String TITLE = "מסד נתונים · מ0.8";
+        /** מ0.8: קבצים מהכונן לרשימה. */
+        public static final String ADD_FROM_FOLDER = "📂 קבצים מתיקייה…", ADD_FROM_SEARCH = "🔍 קבצים מחיפוש…",
+                FOLDER_NO_FILES = "אין קבצים בתיקייה הזו (תתי־תיקיות ונסתרים לא מוצגים)",
+                SEARCH_TITLE = "חיפוש קבצים להוספה", SEARCH_HINT = "שם או תנאי, כמו ברשימה חכמה (למשל: סוג:ספרים)",
+                SEARCHING = "מחפש…", SEARCH_NONE = "לא נמצאו קבצים",
+                ADD_CHOSEN = "הוספה", ADD_ALL = "הוספת הכול", NOTHING_CHOSEN = "לא נבחר דבר";
+
+        public static String filesAdded(int added, int already) {
+            return "נוספו " + added + (already > 0 ? " · " + already + " כבר היו ברשימה" : "");
+        }
+
+        public static String firstOf(int shown, int total) {
+            return "(" + shown + " ראשונים מתוך " + total + ")";
+        }
         /** מ0.6: שם רשימת הבית במסד (בתצוגה — עם 🏠). */
         public static final String HOME_NAME = "בית", HOME_MARK = "🏠 ";
         public static final String NOTICE = "מנוע המסד בבנייה. גיבוי: עותק יומי כשיש שינוי, וגם לפני העתקה, מחיקת רשימה ומחיקה לצמיתות — בתיקייה \"גיבוי מסד\" שבתיקיית התוכנה. \"העתקה מהישן\" רק קוראת מהמנוע הישן ולא משנה בו דבר. לכל אופן עבודה מסד משלו — כל אופן נכנס למסד של אותו אופן. אפשר להעתיק שוב: מה שכבר הועתק מתעדכן ולא מוכפל. רשימה חכמה שומרת רק את התנאי — הקבצים נמצאים בכל פתיחה מהאינדקס.";
