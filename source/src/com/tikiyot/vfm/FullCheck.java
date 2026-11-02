@@ -151,7 +151,8 @@ final class FullCheck {
         try {
             Found f = verify(real, src, nodes, paths, defs, false);
             Importer.Report pre = Importer.run(real, src, false);
-            out.append(Words.Db.modeReal(real.lists().size(), nodes.size() - 1, f.lists, f.membersWrong, f.filesMissing,
+            int realLists = real.lists().size() - (Importer.home(real) != 0 ? 1 : 0);   // מ0.7: בלי רשימת הבית
+            out.append(Words.Db.modeReal(realLists, nodes.size() - 1, f.lists, f.membersWrong, f.filesMissing,
                     pre.listsNew, pre.filesNew, pre.filesUpdated, pre.linksAdded, pre.smartNew, real.check() == null)).append("\n");
             out.append(Words.Db.modeRealUnassigned(real.unassigned().size())).append("\n");
             int[] rf = refs(real, src, nodes, f);
@@ -317,6 +318,8 @@ final class FullCheck {
                 Importer.Smart d = src.smart(ref);
                 if (d != null) want.add(s.findByOrigin(Importer.smartOrigin(src.mode, d.key)));
             }
+            for (String lp : n.live)                                         // מ0.7: תיקייה חיה — רשימה חכמה של התיקייה
+                want.add(s.findByOrigin(Importer.liveOrigin(src.mode, Tree.fullLabel(n.path()), lp)));
             for (Tree.Entry e : n.entries) if (!e.bad) want.add(s.findFile(e.path));
             Set<Long> got = new HashSet<Long>();
             for (Store.Member m : s.members(id)) got.add(m.item.id);
@@ -479,7 +482,7 @@ final class FullCheck {
             long id = t.findByOrigin(Importer.originOf(src.mode, Tree.fullLabel(n.path())));
             if (id == 0 || t.count(id) > 0) continue;
             total++;
-            if (skippedRefs(t, src, n, id) + skippedIn(src, n) + n.live.size() + badIn(n) > 0) {
+            if (skippedRefs(t, src, n, id) + skippedIn(src, n) + badIn(n) > 0) {
                 pending++;
             } else {
                 truly++;

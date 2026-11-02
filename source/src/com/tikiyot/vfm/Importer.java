@@ -8,10 +8,10 @@ package com.tikiyot.vfm;
 //    ומ־מ0.3 גם רשימות חכמות: כל ההגדרות הנפוצות (עצמאיות), וכל @חכמה ברשימה ידנית — חברות של הרשימה החכמה בה
 //    (פנימית שמקושרת להגדרה נפוצה = אותו פריט, כמו בישן). התנאי נשמר כטקסט, כפי שהוא.
 //    ומ־מ0.4 הפניות בין רשימות (@רשימה): אותה רשימה נכנסת גם לרשימה המפנה (חברות, בלי "הורה").
+//    ומ־מ0.7 תיקייה חיה (@תיקייה) — כמו שהמנוע הישן עצמו מסב אותה מאז 1.17.3 (Unify): רשימה חכמה של התיקייה.
 //    ומ־מ0.6 מסך הבית: רשימה אחת מסומנת (P_HOME), והכלים בה לפי הסדר — רשימה ידנית (אותה רשימה), חכמה, קובץ פקודות.
 //  - לא מועתק, ונספר בדוח: הפניה שהייתה סוגרת מעגל (במנוע הישן ייתכן; במסד לא), הפניה לרשימה שאינה קיימת,
-//    @חכמה שאינה מובילה להגדרה (נמחקה, כלי, כפולים), "רשימות בתוך" שבתוך חכמה, תיקיות חיות (@תיקייה), שורות
-//    פגומות. שום דבר לא נמחק או משתנה במקור.
+//    @חכמה שאינה מובילה להגדרה (נמחקה, כלי, כפולים), "רשימות בתוך" שבתוך חכמה, שורות פגומות. שום דבר לא נמחק או משתנה במקור.
 //  - הסדר: קודם כל הרשימות נוצרות (או נמצאות) עומדות לעצמן, ואז כל רשימה מקבלת את חבריה לפי @סדר — כך הפניה
 //    יכולה להצביע גם על רשימה שמופיעה מאוחר יותר בקובץ.
 //  - העתקה חוזרת = עדכון, לא כפילות: רשימה מזוהה לפי האופן והמסלול שלה במקור (origin_key), קובץ לפי המסלול שלו.
@@ -44,6 +44,26 @@ final class Importer {
     /** מפתח המקור של רשימה חכמה: האופן ומזהה ההגדרה בקובץ הראשי (s-… נפוצה, p-… פנימית) — המזהה יציב במנוע הישן. */
     static String smartOrigin(String mode, String key) {
         return "ini:" + mode + ":S:" + key;  // תחביר
+    }
+
+    /**
+     * מ0.7: מפתח המקור של רשימה חכמה שהייתה תיקייה חיה: האופן, מסלול הרשימה שבה הייתה (השורש — ריק) והתיקייה. אותה תיקייה
+     * בשתי רשימות — שתי רשימות חכמות, כמו שהמנוע הישן מסב אותה (רשימה פנימית לכל רשימה).
+     */
+    static String liveOrigin(String mode, String listPath, String folder) {
+        return "tree:" + mode + ":F:" + listPath + "\t" + folder;  // תחביר
+    }
+
+    /** מ0.7: התנאי, המיון והתצוגה של רשימה חכמה של תיקייה — אותם ערכים כמו Unify.folderKeys, מאותו מקור. */
+    static Map<String, String> liveKeys(String folder) {
+        return Unify.folderKeys(folder);
+    }
+
+    /** מ0.7: שם הרשימה החכמה של תיקייה חיה — שם התיקייה (כמו בהסבה של המנוע הישן). */
+    static String liveName(String folder) {
+        String f = folder;
+        while (f.length() > 1 && f.endsWith("/")) f = f.substring(0, f.length() - 1);
+        return new File(f).getName().isEmpty() ? f : new File(f).getName();
     }
 
     /** מ0.6: מפתח המקור של רשימת הבית של האופן. */
@@ -217,7 +237,7 @@ final class Importer {
         int filesNew, filesKnown, filesUpdated, filesWithSig;
         int linksAdded, linksKnown, rootFiles;
         int propsSet;
-        /** smart = הפניות @חכמה שלא הועתקו; nested = "רשימות בתוך" חכמה שלא הועתקו. */
+        /** smart = הפניות @חכמה שלא הועתקו; nested = "רשימות בתוך" חכמה שלא הועתקו; live (מ0.7) = תיקיות חיות במקור — מועתקות כרשימות חכמות. */
         int badLines, smart, live, nested;
         /** הפניות בין רשימות (מ0.4): נוספו / כבר היו / לא הועתקו כי היו סוגרות מעגל / לרשימה שלא קיימת. */
         int refsAdded, refsKnown, refCycles, refMissing;
@@ -234,7 +254,7 @@ final class Importer {
         }
 
         boolean skippedAny() {
-            return badLines + refCycles + refMissing + smart + live + nested + homeSkipped + homeMissing > 0;
+            return badLines + refCycles + refMissing + smart + nested + homeSkipped + homeMissing > 0;
         }
     }
 
@@ -314,6 +334,19 @@ final class Importer {
         @Override public int hashCode() { return path.hashCode() * 31 + 7; }
     }
 
+    /** תיקייה חיה ברשימה (מ0.7). */
+    private static final class Live {
+        final String folder;
+
+        Live(String folder) {
+            this.folder = folder;
+        }
+
+        @Override public boolean equals(Object o) { return o instanceof Live && ((Live) o).folder.equals(folder); }
+
+        @Override public int hashCode() { return folder.hashCode() * 31 + 11; }
+    }
+
     private static final class Ctx {
         final Store s;
         final Source src;
@@ -341,6 +374,7 @@ final class Importer {
                 if (sm == null) r.smart++;
                 else smart(sm);
             }
+            for (String lp : root.live) live(root, lp);                       // מ0.7: בשורש — עומדות לעצמן
             for (Tree.Node c : root.children) ensure(c);
             for (Tree.Node c : root.children) list(c);
             r.refMissing += root.refs.size();                                 // בשורש אין רשימה מפנה
@@ -449,6 +483,9 @@ final class Importer {
                     list(c);
                 } else if (o instanceof Ref) {
                     ref(id, ((Ref) o).path);
+                } else if (o instanceof Live) {
+                    if (s.addMember(id, live(n, ((Live) o).folder))) r.linksAdded++;
+                    else r.linksKnown++;
                 } else if (o instanceof String) {
                     Smart sm = src.smart((String) o);
                     if (sm == null) {
@@ -476,6 +513,31 @@ final class Importer {
             else if (s.makesCycle(id, target)) r.refCycles++;
             else if (s.addMember(id, target)) r.refsAdded++;
             else r.refsKnown++;
+        }
+
+        /**
+         * מ0.7: תיקייה חיה ← רשימה חכמה של התיקייה (מקור:"…", לפי שם, בתיקיות — כולל הכול), בשם התיקייה. קיימת — רק מאפיינים
+         * ריקים מתמלאים (עריכת המשתמש נשמרת), כמו כל רשימה חכמה.
+         */
+        long live(Tree.Node n, String folder) {
+            String key = liveOrigin(src.mode, n.parent == null ? "" : Tree.fullLabel(n.path()), folder);
+            Long seen = smarts.get(key);
+            if (seen != null) return seen;
+            long id = s.findByOrigin(key);
+            boolean isNew = id == 0;
+            if (isNew) {
+                id = s.createSmart(liveName(folder), 0);
+                s.setOrigin(id, key);
+                r.smartNew++;
+            } else {
+                r.smartKnown++;
+            }
+            Map<String, String> kv = liveKeys(folder);
+            prop(id, Store.P_COND, kv.get(SmartLists.COND), isNew);
+            prop(id, Store.P_SORT, kv.get(SmartLists.SORT), isNew);
+            prop(id, Store.P_VIEW, kv.get(SmartLists.VIEW), isNew);
+            smarts.put(key, id);
+            return id;
         }
 
         /** פריט הרשימה החכמה: קיים — רק מאפיינים ריקים מתמלאים (עריכת המשתמש נשמרת); חדש — נוצר. */
@@ -555,11 +617,16 @@ final class Importer {
                 if (k.charAt(0) == 'c') o = n.child(v);
                 else if (k.charAt(0) == 's') { if (n.smart.contains(v)) o = v; }
                 else if (k.charAt(0) == 'r') { if (n.refs.contains(v)) o = new Ref(v); }
+                else if (k.charAt(0) == 'l') { if (n.live.contains(v)) o = new Live(v); }
                 else if (k.charAt(0) == 'f') for (Tree.Entry e : n.entries) if (e.path.equals(v)) { o = e; break; }
                 if (o != null && used.add(o)) out.add(o);
             }
             for (Tree.Node c : n.children) if (used.add(c)) out.add(c);
             for (String ref : n.smart) if (used.add(ref)) out.add(ref);
+            for (String lp : n.live) {                                       // מ0.7: אחרי החכמות — כמו בהסבה של הישן
+                Live x = new Live(lp);
+                if (used.add(x)) out.add(x);
+            }
             for (String ref : n.refs) {
                 Ref x = new Ref(ref);
                 if (used.add(x)) out.add(x);

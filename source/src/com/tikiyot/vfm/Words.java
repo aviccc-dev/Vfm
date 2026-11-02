@@ -2294,7 +2294,7 @@ public final class Words {
 
         public static final String APP_NAME_M = "מנהל קבצים וירטואלי · מ";
         public static final String MENU = "מסד נתונים (מ)";
-        public static final String TITLE = "מסד נתונים · מ0.6";
+        public static final String TITLE = "מסד נתונים · מ0.7";
         /** מ0.6: שם רשימת הבית במסד (בתצוגה — עם 🏠). */
         public static final String HOME_NAME = "בית", HOME_MARK = "🏠 ";
         public static final String NOTICE = "מנוע המסד בבנייה. גיבוי: עותק יומי כשיש שינוי, וגם לפני העתקה, מחיקת רשימה ומחיקה לצמיתות — בתיקייה \"גיבוי מסד\" שבתיקיית התוכנה. \"העתקה מהישן\" רק קוראת מהמנוע הישן ולא משנה בו דבר. לכל אופן עבודה מסד משלו — כל אופן נכנס למסד של אותו אופן. אפשר להעתיק שוב: מה שכבר הועתק מתעדכן ולא מוכפל. רשימה חכמה שומרת רק את התנאי — הקבצים נמצאים בכל פתיחה מהאינדקס.";
@@ -2438,13 +2438,13 @@ public final class Words {
             if (refsAdded > 0) sb.append("\n").append(refsAdded).append(done ? " הפניות בין רשימות נוספו" : " הפניות בין רשימות ייווספו");
             if (propsSet > 0) sb.append(" · ").append(propsSet).append(done ? " פרטי רשימה הושלמו" : " פרטי רשימה יושלמו");
             if (rootFiles > 0) sb.append("\n").append(rootFiles).append(" קבצים בלי רשימה (היו בשורש הרשימות)");
-            if (bad + refCycles + refMissing + smart + nested + live > 0) {
+            if (live > 0) sb.append("\n").append(live).append(done ? " תיקיות חיות הועתקו" : " תיקיות חיות יועתקו").append(" כרשימות חכמות של התיקייה");
+            if (bad + refCycles + refMissing + smart + nested > 0) {
                 sb.append("\n\nלא מועתק בגרסה הזו (נשאר במנוע הישן, לא נמחק):");
                 if (refCycles > 0) sb.append("\n").append(refCycles).append(" הפניות שהיו סוגרות מעגל (רשימה שכבר בתוך עצמה) — במסד אין מעגלים");
                 if (refMissing > 0) sb.append("\n").append(refMissing).append(" הפניות לרשימה שאינה קיימת");
                 if (smart > 0) sb.append("\n").append(smart).append(" הפניות לרשימות חכמות שלא נמצאו או שאינן הגדרה (נמחקו, כלי, כפולים)");
                 if (nested > 0) sb.append("\n").append(nested).append(" \"רשימות בתוך\" שבתוך רשימות חכמות (מ0.4)");
-                if (live > 0) sb.append("\n").append(live).append(" תיקיות חיות");
                 if (bad > 0) sb.append("\n").append(bad).append(" שורות פגומות בקובץ הרשימות");
             }
             sb.append("\n\nההגדרות הכלליות והעיצובים נשארים בקובצי טקסט (לא במסד).");
@@ -2511,8 +2511,9 @@ public final class Words {
         }
 
         public static String modeSource(int lists, int files, int defs, int refs, int smart, int nested, int live, int bad) {
-            return "במקור: " + lists + " רשימות · " + files + " קבצים · " + defs + " רשימות חכמות · " + refs + " הפניות · לא מועתק בגרסה הזו: "
-                    + smart + " הפניות חכמות שלא נמצאו, " + nested + " רשימות בתוך חכמות, " + live + " תיקיות חיות, " + bad + " שורות פגומות";
+            return "במקור: " + lists + " רשימות · " + files + " קבצים · " + defs + " רשימות חכמות · " + refs + " הפניות · " + live
+                    + " תיקיות חיות (מועתקות כרשימות חכמות) · לא מועתק בגרסה הזו: "
+                    + smart + " הפניות חכמות שלא נמצאו, " + nested + " רשימות בתוך חכמות, " + bad + " שורות פגומות";
         }
 
         public static String modeRefs(int total, int copied, int cycles, int missing, int wrong, int dbCycles) {
