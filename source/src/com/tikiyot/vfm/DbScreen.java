@@ -25,6 +25,9 @@ public class DbScreen extends Activity {
 
     /** מסד לכל אופן עבודה, באחסון הפרטי של התוכנה (לא בתיקייה הגלויה): vfm-m-<אופן>.db. */
     static final String DB_PREFIX = "vfm-m-", DB_SUFFIX = ".db";
+    /** מ0.9: פתיחה מהמראה המוכר — האופן, והרשימה שבה לפתוח (פעולות). בלי EXTRA_AT — נפתח הבית במראה המוכר. */
+    static final String EXTRA_MODE = "mode", EXTRA_AT = "at";
+    private boolean familiarDone;
     private static final String PREFS = "m", PREF_MODE = "mode";
 
     private volatile SqlStore store;
@@ -139,6 +142,11 @@ public class DbScreen extends Activity {
         sv.addView(rows);
         root.addView(sv, new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, 0, 1f));
         setContentView(root);
+        String m = getIntent().getStringExtra(EXTRA_MODE);                   // מ0.9: מהמראה המוכר
+        if (m != null && !m.isEmpty()) mode = m;
+        long at = getIntent().getLongExtra(EXTRA_AT, 0);
+        if (at > 0) path.add(at);
+        familiarDone = at > 0;
     }
 
     @Override
@@ -177,6 +185,17 @@ public class DbScreen extends Activity {
             startDaily();
         }
         show();
+        if (!familiarDone) {                                                  // מ0.9: פעם אחת — הבית במראה המוכר
+            familiarDone = true;
+            openFamiliar();
+        }
+    }
+
+    /** מ0.9: הבית במראה המוכר (אם יש בית במסד). */
+    private void openFamiliar() {
+        long h = store == null ? 0 : Importer.home(store);
+        if (h != 0) DbListScreen.open(this, mode, h);
+        else Ui.toast(this, Words.Db.NO_HOME);
     }
 
     @Override
@@ -237,6 +256,9 @@ public class DbScreen extends Activity {
             final boolean inSmart = curItem != null && curItem.type == Store.SMART;
             buttons.removeAllViews();
             if (path.isEmpty()) {
+                buttons.addView(button(Words.Db.FAMILIAR, new Runnable() {
+                    @Override public void run() { openFamiliar(); }
+                }));
                 buttons.addView(button(Words.Db.NEW_LIST, new Runnable() {
                     @Override public void run() { newList(0); }
                 }));

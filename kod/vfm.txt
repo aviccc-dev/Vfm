@@ -53,6 +53,7 @@
         <activity android:name=".RunScreen" android:exported="false" android:configChanges="orientation|screenSize|keyboardHidden" />
         <activity android:name=".SettingsScreen" android:exported="false" />
         <activity android:name=".DbScreen" android:exported="false" />
+        <activity android:name=".DbListScreen" android:exported="false" />
         <activity android:name=".IniListScreen" android:exported="false" />
         <activity android:name=".IniEditScreen" android:exported="false" />
         <activity android:name=".BatchEditScreen" android:exported="false" android:windowSoftInputMode="adjustResize" />
@@ -932,7 +933,7 @@ cd $S; rm -rf out gen bld
 [ "$S" != "$DIR" ] && rm -rf $S
 ls -la $OUT
 ===== קובץ: build/m-version.txt =====
-11 מ0.8
+12 מ0.9
 ===== קובץ: build/test.sh =====
 #!/bin/bash
 # בדיקות על המחשב (80). יוצא בכישלון אם בדיקה אחת נכשלה — ואז build.sh לא בונה.
@@ -9689,6 +9690,212 @@ final class DbFiles {
         return r;
     }
 }
+===== קובץ: src/com/tikiyot/vfm/DbListScreen.java =====
+package com.tikiyot.vfm;
+
+// מ0.9: רשימה מהמסד במראה המוכר — אותו שלד כמו כל מסכי הרשימות (ListScreen): השורות או הרשת לפי העיצוב (Ui.row /
+// Looks.row), הצלמית והסוג (Ui.kind), שורות הכפתורים (TopRow). הבית הוא רשימת הבית שבמסד, ברשת.
+// נגיעה: רשימה — נפתחת כאן; רשימה חכמה — במסך החיפוש המוכר (לקריאה, כמו כלי חכם); קובץ — נפתח (פקודה — רצה).
+// נגיעה ארוכה — מסך המסד באותה רשימה (שם כל הפעולות). אחראי: להציג. אסור לו: לכתוב למסד (נפתח לקריאה בלבד).
+
+import android.content.Intent;
+import android.os.Bundle;
+import android.view.Menu;
+import android.view.View;
+import android.widget.LinearLayout;
+import android.widget.TextView;
+
+import java.io.File;
+import java.util.List;
+
+public class DbListScreen extends ListScreen<Store.Member> {
+
+    static final String EXTRA_MODE = "mode", EXTRA_LIST = "list";
+    private static final int MENU_DB = 1;
+
+    private String mode;
+    private long listId;
+    private SqlStore store;
+
+    /** פותח רשימה במראה המוכר. */
+    static void open(android.app.Activity a, String mode, long list) {
+        a.startActivity(new Intent(a, DbListScreen.class).putExtra(EXTRA_MODE, mode).putExtra(EXTRA_LIST, list));
+    }
+
+    @Override
+    protected void onCreate(Bundle saved) {
+        super.onCreate(saved);
+        mode = getIntent().getStringExtra(EXTRA_MODE);
+        listId = getIntent().getLongExtra(EXTRA_LIST, 0);
+        LinearLayout root = build(saved, Words.Db.APP_NAME_M, "db-list");
+        done(root, Actions.Tool.SEARCH, null);                               // הפס — לא נפתח (אין בחירה כאן); השורות — כן
+    }
+
+    /** המסד לקריאה בלבד — נפתח בכל טעינה (מסך המסד הוא שכותב). */
+    private boolean openStore() {
+        closeStore();
+        try {
+            store = SqlStore.openReadOnly(DbScreen.dbFile(this, mode));
+            return true;
+        } catch (Throwable t) {
+            Log.e("DbListScreen.open", t);
+            info.setText(Words.Db.openFailed(String.valueOf(t.getMessage())));
+            return false;
+        }
+    }
+
+    private void closeStore() {
+        if (store != null) store.close();
+        store = null;
+    }
+
+    @Override
+    protected void onPause() {
+        super.onPause();
+        closeStore();
+    }
+
+    @Override
+    protected void refresh() {
+        rows.clear();
+        if (!openStore()) {
+            adapter.notifyDataSetChanged();
+            return;
+        }
+        Store.Item it = store.item(listId);
+        if (it == null || it.type != Store.LIST) {
+            info.setText(Words.Db.LIST_GONE);
+            look(null);
+            adapter.notifyDataSetChanged();
+            return;
+        }
+        rows.addAll(store.members(listId));
+        boolean home = "1".equals(store.prop(listId, Store.P_HOME));
+        setTitle(home ? Words.Db.APP_NAME_M : it.name);
+        String why = store.prop(listId, Store.P_WHY);
+        info.setText((home ? Words.Db.homeInfo(mode, rows.size()) : Words.items(rows.size()))
+                + (why == null || why.isEmpty() ? "" : "\n" + why));
+        look(designOf(home));
+        adapter.notifyDataSetChanged();
+    }
+
+    /** העיצוב: של הרשימה; בבית — של מסך הבית, ואם לא נבחר — רשת (כמו האריחים בבית). */
+    private Design designOf(boolean home) {
+        String name = store.prop(listId, Store.P_DESIGN);
+        if (name != null && !name.isEmpty()) return Design.get(name);
+        if (!home) return null;
+        String h = Design.homeName();
+        return Design.get(h.isEmpty() ? Design.FILES : h);
+    }
+
+    @Override
+    protected String key(Store.Member row) {
+        return null;                                                          // בלי בחירה כאן
+    }
+
+    @Override
+    protected String nameOf(Store.Member row) {
+        return row.item.name;
+    }
+
+    @Override
+    protected String[] ownLook(Store.Member row) {
+        String icon = store == null ? null : store.prop(row.item.id, Store.P_ICON);
+        return icon == null || icon.isEmpty() ? null : new String[]{icon, ""};
+    }
+
+    @Override
+    protected void bind(View v, Store.Member row) {
+        Store.Item it = row.item;
+        if (store == null) return;
+        if (it.type == Store.LIST) {
+            boolean group = "1".equals(store.prop(it.id, Store.P_GROUP));
+            Ui.bindIcon(v, "", it.name, group ? Words.Db.KIND_GROUP : Words.items(store.count(it.id)));
+            String icon = store.prop(it.id, Store.P_ICON);
+            Ui.kind(v, store.listsOf(it.id).size() > 1 && listId != homeOrZero() ? Ui.LINK : Ui.MANUAL, icon == null ? "" : icon);
+        } else if (it.type == Store.SMART) {
+            String desc = store.prop(it.id, Store.P_DESC), icon = store.prop(it.id, Store.P_ICON);
+            Ui.bindIcon(v, "", it.name, desc == null ? "" : desc);
+            Ui.kind(v, Ui.SMART, icon == null ? "" : icon);
+        } else if (it.type == Store.FILE) {
+            Store.FileInfo fi = store.file(it.id);
+            File f = fi == null ? null : new File(fi.path);
+            boolean there = f != null && f.exists();
+            Ui.bindRow(this, v, it.name, false, there ? f.length() : fi == null ? -1 : fi.size, there ? f.lastModified() : 0,
+                    fi == null ? "" : fi.path, there ? null : Words.FILE_NOT_AT_PATH, null);
+            if (!there) ((TextView[]) v.getTag())[1].setTextColor(Ui.MUTED);
+        } else if (it.type == Store.TITLE) {
+            Ui.bindIcon(v, "", "── " + it.name + " ──", "");
+        } else {
+            Ui.bindIcon(v, "💡", it.name, Words.Db.KIND_NOTE);
+        }
+    }
+
+    private long homeCache = -1;
+
+    private long homeOrZero() {
+        if (homeCache < 0) homeCache = Importer.home(store);
+        return homeCache;
+    }
+
+    @Override
+    protected void open(Store.Member row) {
+        Store.Item it = row.item;
+        if (it.type == Store.LIST) {
+            open(this, mode, it.id);
+        } else if (it.type == Store.SMART) {
+            String cond = prop(it.id, Store.P_COND), sort = prop(it.id, Store.P_SORT), view = prop(it.id, Store.P_VIEW);
+            if (cond.isEmpty()) {
+                Ui.toast(this, Words.Db.SMART_NO_COND);
+                return;
+            }
+            Intent i = new Intent(this, SearchScreen.class);                 // כמו כלי חכם (FnSmart.open), בלי מזהה כלי
+            i.putExtra(SearchScreen.EXTRA_QUERY, cond);
+            i.putExtra(SearchScreen.EXTRA_FIXED, true);
+            i.putExtra(SearchScreen.EXTRA_TITLE, it.name);
+            i.putExtra(SearchScreen.EXTRA_SORT, sort.isEmpty() ? Sort.NAME : sort);
+            i.putExtra(SearchScreen.EXTRA_VIEW, view);
+            startActivity(i);
+        } else if (it.type == Store.FILE) {
+            Store.FileInfo fi = store.file(it.id);
+            if (fi != null) Ui.open(this, new File(fi.path));
+        }
+    }
+
+    private String prop(long id, String k) {
+        String v = store.prop(id, k);
+        return v == null ? "" : v;
+    }
+
+    @Override
+    protected void hold(Store.Member row) {
+        actions();
+    }
+
+    /** כל הפעולות — במסך המסד, באותה רשימה. */
+    private void actions() {
+        startActivity(new Intent(this, DbScreen.class).putExtra(DbScreen.EXTRA_MODE, mode).putExtra(DbScreen.EXTRA_AT, listId));
+    }
+
+    @Override
+    protected void menu(Menu menu) {
+        menu.add(0, MENU_DB, 0, Words.Db.MENU_ACTIONS);
+    }
+
+    @Override
+    protected boolean item(int id) {
+        if (id != MENU_DB) return false;
+        actions();
+        return true;
+    }
+
+    @Override
+    protected void all(java.util.Set<String> files, java.util.Set<String> lists) { }
+
+    List<Store.Member> shown() {
+        return rows;
+    }
+}
 ===== קובץ: src/com/tikiyot/vfm/DbScreen.java =====
 package com.tikiyot.vfm;
 
@@ -9717,6 +9924,9 @@ public class DbScreen extends Activity {
 
     /** מסד לכל אופן עבודה, באחסון הפרטי של התוכנה (לא בתיקייה הגלויה): vfm-m-<אופן>.db. */
     static final String DB_PREFIX = "vfm-m-", DB_SUFFIX = ".db";
+    /** מ0.9: פתיחה מהמראה המוכר — האופן, והרשימה שבה לפתוח (פעולות). בלי EXTRA_AT — נפתח הבית במראה המוכר. */
+    static final String EXTRA_MODE = "mode", EXTRA_AT = "at";
+    private boolean familiarDone;
     private static final String PREFS = "m", PREF_MODE = "mode";
 
     private volatile SqlStore store;
@@ -9831,6 +10041,11 @@ public class DbScreen extends Activity {
         sv.addView(rows);
         root.addView(sv, new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, 0, 1f));
         setContentView(root);
+        String m = getIntent().getStringExtra(EXTRA_MODE);                   // מ0.9: מהמראה המוכר
+        if (m != null && !m.isEmpty()) mode = m;
+        long at = getIntent().getLongExtra(EXTRA_AT, 0);
+        if (at > 0) path.add(at);
+        familiarDone = at > 0;
     }
 
     @Override
@@ -9869,6 +10084,17 @@ public class DbScreen extends Activity {
             startDaily();
         }
         show();
+        if (!familiarDone) {                                                  // מ0.9: פעם אחת — הבית במראה המוכר
+            familiarDone = true;
+            openFamiliar();
+        }
+    }
+
+    /** מ0.9: הבית במראה המוכר (אם יש בית במסד). */
+    private void openFamiliar() {
+        long h = store == null ? 0 : Importer.home(store);
+        if (h != 0) DbListScreen.open(this, mode, h);
+        else Ui.toast(this, Words.Db.NO_HOME);
     }
 
     @Override
@@ -9929,6 +10155,9 @@ public class DbScreen extends Activity {
             final boolean inSmart = curItem != null && curItem.type == Store.SMART;
             buttons.removeAllViews();
             if (path.isEmpty()) {
+                buttons.addView(button(Words.Db.FAMILIAR, new Runnable() {
+                    @Override public void run() { openFamiliar(); }
+                }));
                 buttons.addView(button(Words.Db.NEW_LIST, new Runnable() {
                     @Override public void run() { newList(0); }
                 }));
@@ -36974,6 +37203,7 @@ final class TopRow {
     static String screenOf(Activity a) {
         if (a instanceof VirtualScreen) return Words.Top.S_LIST;
         if (a instanceof Home) return Words.Top.S_HOME;
+        if (a instanceof DbListScreen) return Words.Top.S_HOME;                 // מ0.9: המראה המוכר של המסד — שורת הבית
         if (a instanceof SearchScreen)                                        // 1.17.3: רשימה חכמה — אותה שורה כמו ידנית
             return ((SearchScreen) a).isList() ? Words.Top.S_LIST : Words.Top.S_SEARCH;
         if (a instanceof DiskScreen) return Words.Top.S_DISK;
@@ -44845,7 +45075,14 @@ public final class Words {
 
         public static final String APP_NAME_M = "מנהל קבצים וירטואלי · מ";
         public static final String MENU = "מסד נתונים (מ)";
-        public static final String TITLE = "מסד נתונים · מ0.8";
+        public static final String TITLE = "מסד נתונים · מ0.9";
+        /** מ0.9: המראה המוכר. */
+        public static final String LIST_GONE = "הרשימה הזו כבר לא קיימת במסד", MENU_ACTIONS = "⚙ פעולות (מסך המסד)",
+                FAMILIAR = "🏠 בית", NO_HOME = "אין עדיין בית במסד הזה — מעתיקים מהישן (\"העתקה מהישן\") והבית נוצר";
+
+        public static String homeInfo(String mode, int n) {
+            return "אופן עבודה: " + mode + " · " + Words.items(n);
+        }
         /** מ0.8: קבצים מהכונן לרשימה. */
         public static final String ADD_FROM_FOLDER = "📂 קבצים מתיקייה…", ADD_FROM_SEARCH = "🔍 קבצים מחיפוש…",
                 FOLDER_NO_FILES = "אין קבצים בתיקייה הזו (תתי־תיקיות ונסתרים לא מוצגים)",

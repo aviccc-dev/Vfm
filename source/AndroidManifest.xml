@@ -52,6 +52,7 @@
         <activity android:name=".RunScreen" android:exported="false" android:configChanges="orientation|screenSize|keyboardHidden" />
         <activity android:name=".SettingsScreen" android:exported="false" />
         <activity android:name=".DbScreen" android:exported="false" />
+        <activity android:name=".DbListScreen" android:exported="false" />
         <activity android:name=".IniListScreen" android:exported="false" />
         <activity android:name=".IniEditScreen" android:exported="false" />
         <activity android:name=".BatchEditScreen" android:exported="false" android:windowSoftInputMode="adjustResize" />

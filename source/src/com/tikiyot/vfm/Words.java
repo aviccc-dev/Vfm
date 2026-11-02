@@ -2294,7 +2294,14 @@ public final class Words {
 
         public static final String APP_NAME_M = "מנהל קבצים וירטואלי · מ";
         public static final String MENU = "מסד נתונים (מ)";
-        public static final String TITLE = "מסד נתונים · מ0.8";
+        public static final String TITLE = "מסד נתונים · מ0.9";
+        /** מ0.9: המראה המוכר. */
+        public static final String LIST_GONE = "הרשימה הזו כבר לא קיימת במסד", MENU_ACTIONS = "⚙ פעולות (מסך המסד)",
+                FAMILIAR = "🏠 בית", NO_HOME = "אין עדיין בית במסד הזה — מעתיקים מהישן (\"העתקה מהישן\") והבית נוצר";
+
+        public static String homeInfo(String mode, int n) {
+            return "אופן עבודה: " + mode + " · " + Words.items(n);
+        }
         /** מ0.8: קבצים מהכונן לרשימה. */
         public static final String ADD_FROM_FOLDER = "📂 קבצים מתיקייה…", ADD_FROM_SEARCH = "🔍 קבצים מחיפוש…",
                 FOLDER_NO_FILES = "אין קבצים בתיקייה הזו (תתי־תיקיות ונסתרים לא מוצגים)",

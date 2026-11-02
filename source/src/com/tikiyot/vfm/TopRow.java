@@ -54,6 +54,7 @@ final class TopRow {
     static String screenOf(Activity a) {
         if (a instanceof VirtualScreen) return Words.Top.S_LIST;
         if (a instanceof Home) return Words.Top.S_HOME;
+        if (a instanceof DbListScreen) return Words.Top.S_HOME;                 // מ0.9: המראה המוכר של המסד — שורת הבית
         if (a instanceof SearchScreen)                                        // 1.17.3: רשימה חכמה — אותה שורה כמו ידנית
             return ((SearchScreen) a).isList() ? Words.Top.S_LIST : Words.Top.S_SEARCH;
         if (a instanceof DiskScreen) return Words.Top.S_DISK;
