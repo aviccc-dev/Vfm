@@ -27,6 +27,9 @@ public class DbScreen extends Activity {
     static final String DB_PREFIX = "vfm-m-", DB_SUFFIX = ".db";
     /** מ0.9: פתיחה מהמראה המוכר — האופן, והרשימה שבה לפתוח (פעולות). בלי EXTRA_AT — נפתח הבית במראה המוכר. */
     static final String EXTRA_MODE = "mode", EXTRA_AT = "at";
+    /** מ0.10: מה לעשות מיד ברשימה שנפתחה (פקודה "הוסף מהכונן / מחיפוש" מהמראה המוכר). */
+    static final String EXTRA_DO = "do", DO_FOLDER = "folder", DO_SEARCH = "search";
+    private String pendingDo;
     private boolean familiarDone;
     private static final String PREFS = "m", PREF_MODE = "mode";
 
@@ -152,6 +155,7 @@ public class DbScreen extends Activity {
         long at = getIntent().getLongExtra(EXTRA_AT, 0);
         if (at > 0) path.add(at);
         familiarDone = at > 0;
+        pendingDo = at > 0 ? getIntent().getStringExtra(EXTRA_DO) : null;
     }
 
     @Override
@@ -194,6 +198,12 @@ public class DbScreen extends Activity {
             startDaily();
         }
         show();
+        if (pendingDo != null && store != null && current() > 0) {            // מ0.10
+            String d = pendingDo;
+            pendingDo = null;
+            if (DO_FOLDER.equals(d)) fromFolder(current());
+            else fromSearch(current());
+        }
         if (!familiarDone) {                                                  // מ0.9: פעם אחת — הבית במראה המוכר
             familiarDone = true;
             openFamiliar();

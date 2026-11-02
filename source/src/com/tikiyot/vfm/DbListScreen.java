@@ -32,6 +32,12 @@ public class DbListScreen extends ListScreen<Store.Member> {
     static boolean goingHome;
     /** כמה מסכים כאלה פתוחים — מסך שנפתח מעליהם ("בית" בו) חוזר לבית של המסד. */
     static int alive;
+    /** מ0.10: האופן של המסד שעובדים בו עכשיו (המסך האחרון שהוצג) — לפקודות (DbVerbs). */
+    static String currentMode;
+
+    long listId() {
+        return listId;
+    }
 
     @Override
     protected void onDestroy() {
@@ -48,6 +54,7 @@ public class DbListScreen extends ListScreen<Store.Member> {
     @Override
     protected void onResume() {
         super.onResume();
+        currentMode = mode;
         if (!goingHome) return;
         if (atHome) goingHome = false;
         else finish();
@@ -290,17 +297,26 @@ public class DbListScreen extends ListScreen<Store.Member> {
                 Ui.toast(this, Words.Db.SMART_NO_COND);
                 return;
             }
-            Intent i = new Intent(this, SearchScreen.class);                 // כמו כלי חכם (FnSmart.open), בלי מזהה כלי
-            i.putExtra(SearchScreen.EXTRA_QUERY, cond);
-            i.putExtra(SearchScreen.EXTRA_FIXED, true);
-            i.putExtra(SearchScreen.EXTRA_TITLE, it.name);
-            i.putExtra(SearchScreen.EXTRA_SORT, sort.isEmpty() ? Sort.NAME : sort);
-            i.putExtra(SearchScreen.EXTRA_VIEW, view);
-            startActivity(i);
+            openSmart(this, it.name, cond, sort, view);
         } else if (it.type == Store.FILE) {
             Store.FileInfo fi = store.file(it.id);
             if (fi != null) Ui.open(this, new File(fi.path));
         }
+    }
+
+    /** רשימה חכמה של המסד במסך החיפוש המוכר — כמו כלי חכם (FnSmart.open), בלי מזהה כלי (לקריאה). */
+    static void openSmart(android.app.Activity a, String name, String cond, String sort, String view) {
+        if (cond == null || cond.isEmpty()) {
+            Ui.toast(a, Words.Db.SMART_NO_COND);
+            return;
+        }
+        Intent i = new Intent(a, SearchScreen.class);
+        i.putExtra(SearchScreen.EXTRA_QUERY, cond);
+        i.putExtra(SearchScreen.EXTRA_FIXED, true);
+        i.putExtra(SearchScreen.EXTRA_TITLE, name);
+        i.putExtra(SearchScreen.EXTRA_SORT, sort == null || sort.isEmpty() ? Sort.NAME : sort);
+        i.putExtra(SearchScreen.EXTRA_VIEW, view == null ? "" : view);
+        a.startActivity(i);
     }
 
     private String prop(long id, String k) {

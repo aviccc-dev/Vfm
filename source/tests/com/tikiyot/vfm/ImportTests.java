@@ -334,6 +334,43 @@ final class ImportTests {
         ck("חכמות: קישור בין שתי פנימיות לא נתקע — כל אחת היא הגדרה בפני עצמה", lp.wanted().size() == 1 && "x".equals(lp.wanted().get(0).cond));
     }
 
+    // ---------- פקודות רשימות במסד (מ0.10) ----------
+
+    void paths(Store s, File dir) throws Exception {
+        File m = new File(dir, "פק");
+        write(new File(m, Paths.TREE), "#1 ספרים\n#2 ספרים / הלכה\n#1 מועדים\n#2 מועדים / הלכה\n");
+        Importer.run(s, Importer.load(m), true);
+        long books = listIn(s, "פק", "ספרים"), hal = listIn(s, "פק", "ספרים / הלכה"), moHal = listIn(s, "פק", "מועדים / הלכה");
+        ck("פקודות: פתח רשימה — לפי המקור", DbPaths.find(s, "פק", Tree.parsePath("ספרים/הלכה")) == hal
+                && DbPaths.find(s, "פק", Tree.parsePath("מועדים / הלכה")) == moHal);
+        ck("פקודות: לא קיימת — 0", DbPaths.find(s, "פק", Tree.parsePath("אין/כזו")) == 0 && DbPaths.find(s, "פק", Tree.parsePath("")) == 0);
+        long n1 = s.createList("חדש", 0), n2 = s.createList("פנים", n1);
+        ck("פקודות: רשימה שנוצרה במסד (בלי מקור) — לפי השמות", DbPaths.find(s, "פק", Tree.parsePath("חדש/פנים")) == n2);
+        long last = s.lastId();
+        ck("פקודות: צור רשימה קיימת — אותה רשימה, בלי מספר חדש", DbPaths.ensure(s, "פק", Tree.parsePath("ספרים/הלכה")) == hal && s.lastId() == last);
+        long made = DbPaths.ensure(s, "פק", Tree.parsePath("ספרים/הלכה/שבת"));
+        ck("פקודות: צור רשימה — החלק החסר נוצר בתוך הקיים", made != 0 && s.listsOf(made).equals(Arrays.asList(hal)) && s.item(made).name.equals("שבת"));
+        long deep = DbPaths.ensure(s, "פק", Tree.parsePath("א/ב/ג"));
+        long a1 = DbPaths.find(s, "פק", Tree.parsePath("א"));
+        ck("פקודות: צור רשימה — כל הדרך, הראשונה עומדת לעצמה", deep != 0 && a1 != 0 && s.listsOf(a1).isEmpty()
+                && DbPaths.find(s, "פק", Tree.parsePath("א/ב/ג")) == deep);
+        long home = s.createList("בית", 0);
+        s.setProp(home, Store.P_HOME, "1");
+        s.addMember(home, books);
+        ck("פקודות: רשימה שבבית — עדיין בראש", DbPaths.find(s, "פק", Tree.parsePath("ספרים")) == books);
+        long sm = DbPaths.ensureSmart(s, "חדשים", "תאריך:שבוע", "תאריך");
+        ck("פקודות: צור רשימה חכמה — נוצרת עם התנאי והמיון", sm != 0 && s.item(sm).type == Store.SMART && "תאריך:שבוע".equals(s.prop(sm, Store.P_COND))
+                && "תאריך".equals(s.prop(sm, Store.P_SORT)) && DbPaths.smart(s, "חדשים") == sm);
+        ck("פקודות: אותו שם ואותו תנאי — הקיימת", DbPaths.ensureSmart(s, "חדשים", "תאריך:שבוע", "") == sm);
+        long sm2 = DbPaths.ensureSmart(s, "חדשים", "תאריך:חודש", "");
+        long sm3 = DbPaths.ensureSmart(s, "חדשים", "סוג:ספרים", "");
+        ck("פקודות: אותו שם ותנאי אחר — \"שם (2)\", ואחר כך (3)", s.item(sm2).name.equals("חדשים (2)") && s.item(sm3).name.equals("חדשים (3)"));
+        ck("פקודות: עדכן רשימה חכמה — התנאי; המיון רק אם נכתב", DbPaths.updateSmart(s, "חדשים", "תאריך:יום", "") == sm
+                && "תאריך:יום".equals(s.prop(sm, Store.P_COND)) && "תאריך".equals(s.prop(sm, Store.P_SORT)));
+        ck("פקודות: עדכן רשימה חכמה שאינה — 0", DbPaths.updateSmart(s, "אין", "x", "") == 0);
+        ck("פקודות: המסד תקין", s.check() == null);
+    }
+
     // ---------- הספירה במראה המוכר (מ0.9.1) ----------
 
     void count(Store s) throws Exception {

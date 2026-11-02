@@ -288,6 +288,7 @@ final class Verbs {
             Ui.toast(a, c.error);
             return true;
         }
+        if (DbVerbs.active() && DbVerbs.run(a, c)) return true;               // מ0.10: במסד — פקודות הרשימות על המסד
         String host = hostCode(c);
         if (host != null) {
             if (!(a instanceof TopRow.Host) || !((TopRow.Host) a).act(host)) Ui.toast(a, Words.Top.notHere(label(c)));

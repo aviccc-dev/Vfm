@@ -83,6 +83,12 @@ final class StoreTests {
             } finally {
                 rs.close();
             }
+            Store ps = opener.fresh(new File(sub, "paths-counter.txt"));
+            try {
+                new ImportTests(o, name).paths(ps, new File(sub, "paths"));
+            } finally {
+                ps.close();
+            }
             Store cs = opener.fresh(new File(sub, "count-counter.txt"));
             try {
                 new ImportTests(o, name).count(cs);
