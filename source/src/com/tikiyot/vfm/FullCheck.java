@@ -3,8 +3,9 @@ package com.tikiyot.vfm;
 // בדיקה מלאה אחת (מ0.2.2): מריצה הכול ומחזירה דוח טקסט אחד, שאפשר להעתיק ולשלוח.
 // אחראי: לבדוק את שכבת האחסון (בדיקה עצמית), ולכל אופן עבודה במנוע הישן — העתקה מלאה למסד זמני ובדיקה מול המקור
 // (רשימות, חברות, קבצים, חתימות, רשימות חכמות ותנאיהן, "לא משויכים", העתקה חוזרת, רשימות ריקות), הערכת התנאים מול האינדקס
-// (מ0.3), ואת המסד האמיתי של אותו אופן מול המקור (בלי לשנות אותו).
-// אסור לו: לשנות את המנוע הישן, או את המסדים האמיתיים (רק תצוגה מקדימה עליהם).
+// (מ0.3), ואת המסד האמיתי של אותו אופן מול המקור (בלי לשנות אותו). מ0.5: עותק, גיבוי טקסט ושחזור של המסד האמיתי —
+// הכול על עותקים זמניים — ובדיקת הגיבויים שבתיקייה מול הרישום.
+// אסור לו: לשנות את המנוע הישן, את המסדים האמיתיים (רק תצוגה מקדימה עליהם) או את הגיבויים (רק קריאה).
 
 import java.io.File;
 import java.util.ArrayList;
@@ -33,6 +34,12 @@ final class FullCheck {
 
         /** מנוע ההערכה של רשימות חכמות (האינדקס); null — אין (למשל בבדיקות במחשב בלי אינדקס). */
         Smarts.Finder finder();
+
+        /** מ0.5: תיקייה זמנית חדשה וריקה לבדיקת הגיבוי (נמחקת אחרי הבדיקה). */
+        File scratch() throws Exception;
+
+        /** מ0.5: הגיבויים של האופן, או null. */
+        Backups backups(String mode);
     }
 
     private static final int EXAMPLES = 6;
@@ -115,9 +122,18 @@ final class FullCheck {
         }
 
         // 2. המסד האמיתי של האופן, מול המקור — בלי לכתוב אליו
-        Store real = env.openReal(mode);
+        Store real;
+        try {
+            real = env.openReal(mode);
+        } catch (SqlStore.Damaged d) {
+            out.append(Words.Db.realDamaged(String.valueOf(d.getMessage()))).append("\n");
+            problems.add(Words.Db.pRealDamaged(mode));
+            folder(env, mode, out, problems);
+            return;
+        }
         if (real == null) {
             out.append(Words.Db.REAL_NONE).append("\n");
+            folder(env, mode, out, problems);
             return;
         }
         try {
@@ -136,9 +152,81 @@ final class FullCheck {
                 problems.add(Words.Db.pRealBehind(mode, pre.listsNew, pre.filesNew, pre.filesUpdated, pre.linksAdded, pre.smartNew, pre.refsAdded));
             if (real.check() != null) problems.add(Words.Db.pCheck(mode, real.check()));
             for (String e : f.examples) out.append("   ").append(e).append("\n");
+            if (real instanceof SqlStore) backup((SqlStore) real, mode, env, out, problems);
         } finally {
             real.close();
         }
+        folder(env, mode, out, problems);
+    }
+
+    // ---------- מ0.5: גיבוי ----------
+
+    /**
+     * עותק דרך SQLite, גיבוי טקסט, שחזור מהטקסט למסד ריק ושחזור מהעותק — כולם בתיקייה זמנית; כל אחד חייב לתת אותה חתימת
+     * תוכן כמו המסד האמיתי. המסד האמיתי רק נקרא.
+     */
+    private static void backup(SqlStore real, String mode, Env env, StringBuilder out, List<String> problems) {
+        long t0 = System.currentTimeMillis();
+        try {
+            File w = env.scratch();
+            String live = DbDump.hash(real);
+            File copy = new File(w, "copy.db"), txt = new File(w, "copy.txt");
+            real.copyTo(copy);
+            String hc, ht;
+            SqlStore ro = SqlStore.openReadOnly(copy);
+            try {
+                hc = DbDump.hash(ro);
+                ht = DbDump.write(ro, txt, System.currentTimeMillis());
+            } finally {
+                ro.close();
+            }
+            DbDump.Data d = DbDump.read(txt);
+            Backups.Built fromText = Backups.build(txt, new File(w, "from-text.db"), new IdCounter(new File(w, "c1.txt")));
+            Backups.Built fromCopy = Backups.build(copy, new File(w, "from-copy.db"), new IdCounter(new File(w, "c2.txt")));
+            boolean copyOk = live.equals(hc), textOk = live.equals(ht) && live.equals(d.hash) && live.equals(fromText.content),
+                    restoreOk = live.equals(fromCopy.content);
+            out.append(Words.Db.backupLine(copyOk, copy.length(), textOk, d.records.size(), txt.length(), restoreOk,
+                    System.currentTimeMillis() - t0)).append("\n");
+            if (!copyOk) problems.add(Words.Db.pBackupCopy(mode));
+            if (!textOk) problems.add(Words.Db.pBackupText(mode));
+            if (!restoreOk) problems.add(Words.Db.pBackupRestore(mode));
+        } catch (Throwable t) {
+            Log.e("FullCheck.backup", t);
+            out.append(Words.Db.pBackupFailed(mode, String.valueOf(t))).append("\n");
+            problems.add(Words.Db.pBackupFailed(mode, String.valueOf(t)));
+        }
+    }
+
+    /** הגיבויים שבתיקייה: כמה מכל סוג, האחרון, ובדיקה מול הרישום. */
+    private static void folder(Env env, String mode, StringBuilder out, List<String> problems) {
+        Backups b = env.backups(mode);
+        if (b == null) return;
+        try {
+            List<Backups.Entry> all = b.list();
+            if (all.isEmpty()) {
+                out.append(Words.Db.BACKUPS_NONE).append("\n");
+                return;
+            }
+            int daily = 0, before = 0, text = 0, manual = 0;
+            for (Backups.Entry e : all) {
+                if (e.kind.equals(Backups.DAILY)) daily++;
+                else if (e.kind.equals(Backups.BEFORE)) before++;
+                else if (e.kind.equals(Backups.TEXT)) text++;
+                else if (e.kind.equals(Backups.MANUAL)) manual++;
+            }
+            int[] v = b.verifyAll(all);
+            out.append(Words.Db.backupsLine(all.size(), daily, before, text, manual, when(all.get(0)), v[0], v[1], v[2], v[3])).append("\n");
+            if (v[1] > 0) problems.add(Words.Db.pBackupsChanged(mode, v[1]));
+            if (v[2] > 0) problems.add(Words.Db.pBackupsBad(mode, v[2]));
+        } catch (Throwable t) {
+            Log.e("FullCheck.folder", t);
+            problems.add(Words.Db.pBackupFailed(mode, String.valueOf(t)));
+        }
+    }
+
+    /** מתי נעשה הגיבוי: מהרישום (מדויק), ואם אינו רשום — מהשם. */
+    static String when(Backups.Entry e) {
+        return new java.text.SimpleDateFormat("dd.MM.yyyy HH:mm", java.util.Locale.US).format(new java.util.Date(e.made > 0 ? e.made : e.when));
     }
 
     private static void add(List<String> problems, String mode, Found f, int expectedLists, int gotLists, boolean again, String check) {

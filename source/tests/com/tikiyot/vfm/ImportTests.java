@@ -406,6 +406,8 @@ final class ImportTests {
             @Override public boolean selfTestOk() { return selfOk; }
             @Override public Store openTemp() throws Exception { return opener.fresh(new File(ctr, "fc-" + (n[0]++) + "-" + badCond + ".txt")); }
             @Override public Smarts.Finder finder() { return fake(badCond); }
+            @Override public File scratch() { File w = new File(ctr, "scratch-" + System.nanoTime()); w.mkdirs(); return w; }
+            @Override public Backups backups(String mode) { return mode.equals("ראשון") ? new Backups(new File(ctr, "backups-" + mode), new File(ctr, "bk-tmp")) : null; }
             @Override
             public Store openReal(String mode) throws Exception {
                 if (!mode.equals("ראשון")) return null;
@@ -444,6 +446,35 @@ final class ImportTests {
                 && badc.contains(Words.Db.evalBad("צילומי מסך", "לא הובן")));
         String self = fullReport(opener, dir, false, false);
         ck("בדיקה מלאה: בדיקה עצמית שנכשלה — פסק דין אדום", self.startsWith(Words.Db.verdictBad(1)) && self.contains(Words.Db.pSelfTest()));
+        // מ0.5: גיבוי
+        ck("בדיקה מלאה: תיקיית גיבויים ריקה — מדווח, לא בעיה", ok.contains(Words.Db.BACKUPS_NONE));
+        boolean sql = label.contains("SqlStore");
+        ck("בדיקה מלאה: עותק, גיבוי טקסט ושחזור — זהים למסד (רק על SQLite)",
+                sql == (ok.contains("עותק דרך SQLite — זהה") && ok.contains("שוחזר למסד ריק וזהה") && ok.contains("שחזור מעותק — זהה")));
+        if (!sql) return;
+        File bdir = new File(dir, "backups-ראשון");
+        Backups bk = new Backups(bdir, new File(dir, "bk-tmp"));
+        SqlStore s = (SqlStore) opener.fresh(new File(dir, "bk-counter.txt"));
+        try {
+            s.createList("x", 0);
+            bk.daily(s, System.currentTimeMillis());
+            bk.manual(s, System.currentTimeMillis());
+        } finally {
+            s.close();
+        }
+        String withBk = fullReport(opener, dir, false, true);
+        ck("בדיקה מלאה: הגיבויים בתיקייה נבדקים — 4 תקינים (יומי, טקסט, ידני כעותק וכטקסט)", withBk.startsWith(Words.Db.VERDICT_OK)
+                && withBk.contains("גיבויים בתיקייה: 4 (יומיים 1, לפני פעולה 0, טקסט 1, ידניים 2)") && withBk.contains("תקינים: 4 · שונו: 0 · פגומים: 0"));
+        Backups.Entry victim = bk.list().get(bk.list().size() - 1);
+        java.io.RandomAccessFile raf = new java.io.RandomAccessFile(victim.file, "rw");
+        try {
+            raf.seek(victim.file.length() / 2);
+            raf.write(new byte[]{1, 2, 3, 4, 5, 6, 7, 8});
+        } finally {
+            raf.close();
+        }
+        String changed = fullReport(opener, dir, false, true);
+        ck("בדיקה מלאה: גיבוי שהשתנה אחרי שנרשם — פסק דין אדום", changed.startsWith(Words.Db.verdictBad(1)) && changed.contains(Words.Db.pBackupsChanged("ראשון", 1)));
     }
 
     // ---------- בלי Store ----------

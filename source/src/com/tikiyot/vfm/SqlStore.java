@@ -11,12 +11,27 @@ package com.tikiyot.vfm;
 //   files   — (מ0.2) פרטי פריט קובץ: מסלול (ייחודי), כונן, גודל ותאריך כפי שהיו בחישוב החתימה, והחתימה.
 //   members — רשימה, פריט, מקום (צפוף מ־0), מתי נוסף. פריט פעם אחת בכל רשימה.
 //   meta    — המונה הבא, קוד המערכת.
+//
+// מ0.5 — שמירה על הקובץ:
+//   • מסד פגום לא נמחק. ברירת המחדל של אנדרואיד (DefaultDatabaseErrorHandler) מוחקת את קובץ המסד כשהיא מזהה פגם,
+//     ופותחת במקומו מסד ריק — בלי לשאול. כאן המטפל לא עושה כלום: הקובץ נשאר, והפתיחה נכשלת ב־Damaged.
+//   • בדיקת תקינות קצרה (quick_check) בכל פתיחה, לפני שכותבים דבר. מסד פגום — Damaged, ולא נוגעים בו.
+//   • עותק עקבי של המסד (copyTo) דרך SQLite: VACUUM INTO, ובאנדרואיד ישן (SQLite לפני 3.27) — העתקת הקובץ ויומן ה־WAL
+//     בזמן שהכתיבה נעולה, ואיחוד שלהם בעותק.
+//   • פתיחה לקריאה בלבד (openReadOnly) — לבדיקת עותקים בלי לשנות בהם בית אחד.
 
 import android.database.Cursor;
+import android.database.DatabaseErrorHandler;
 import android.database.sqlite.SQLiteDatabase;
+import android.database.sqlite.SQLiteDatabaseCorruptException;
+import android.database.sqlite.SQLiteException;
 
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -24,21 +39,49 @@ public final class SqlStore implements Store {
 
     public static final int VERSION = 2;
 
+    /** המסד פגום (או שהקובץ אינו מסד). הקובץ לא נמחק ולא נכתב; ההודעה — לאנשי הפיתוח. */
+    public static final class Damaged extends RuntimeException {
+        public Damaged(String m) {
+            super(m);
+        }
+    }
+
+    /** מטפל פגמים שלא מוחק כלום (ראו בראש הקובץ). */
+    private static final DatabaseErrorHandler KEEP = new DatabaseErrorHandler() {
+        @Override
+        public void onCorruption(SQLiteDatabase d) {
+            Log.i("SqlStore: corruption reported, the file is kept");
+        }
+    };
+
+    /** לבדיקות במחשב: לבדוק גם את דרך ההעתקה של אנדרואיד ישן. */
+    static boolean forceFileCopy;
+
     private final SQLiteDatabase db;
     private final IdCounter counter;
     private final String code;
+    private final boolean readOnly;
 
     private SqlStore(SQLiteDatabase db, IdCounter counter) {
         this.db = db;
         this.counter = counter;
+        this.readOnly = false;
         this.code = openMeta();
     }
 
-    /** פותח (או יוצר) את המסד. @throws Failure אם הוא פגום, או מגרסה חדשה יותר. */
+    private SqlStore(SQLiteDatabase db) {
+        this.db = db;
+        this.counter = null;
+        this.readOnly = true;
+        this.code = text("SELECT v FROM meta WHERE k='system_code'");
+    }
+
+    /** פותח (או יוצר) את המסד. @throws Damaged אם הוא פגום; Failure אם הוא מגרסה חדשה יותר. */
     public static SqlStore open(File file, IdCounter counter) {
         File dir = file.getParentFile();
         if (dir != null) dir.mkdirs();
-        SQLiteDatabase db = SQLiteDatabase.openOrCreateDatabase(file, null);
+        if (file.isFile() && file.length() > 0) probe(file);                 // לפני כל פתיחה לכתיבה
+        SQLiteDatabase db = connect(file, false);
         try {
             db.enableWriteAheadLogging();
             db.setForeignKeyConstraintsEnabled(true);
@@ -47,9 +90,89 @@ public final class SqlStore implements Store {
             if (v == 0) create(db);
             else if (v == 1) upgradeTo2(db);
             return new SqlStore(db, counter);
+        } catch (SQLiteException e) {
+            db.close();
+            if (corrupt(e)) throw new Damaged(String.valueOf(e.getMessage()));
+            throw e;
         } catch (RuntimeException e) {
             db.close();
             throw e;
+        }
+    }
+
+    /**
+     * מ0.5: פותח עותק לקריאה בלבד — לבדיקה, לספירה ולגיבוי טקסט. לא כותב בו דבר (גם לא את המונה). כתיבה דרכו — Failure.
+     * @throws Damaged אם הוא פגום; Failure אם אינו קיים, או מגרסה חדשה יותר, או שאינו מסד של התוכנה.
+     */
+    public static SqlStore openReadOnly(File file) {
+        if (!file.isFile()) throw new Failure("no such file: " + file.getPath());
+        SQLiteDatabase db = connect(file, true);
+        try {
+            int v = db.getVersion();
+            if (v > VERSION) throw new Failure("database is newer: " + v);
+            if (v < 1) throw new Failure("not a database of this app");
+            mustBeWhole(db);
+            return new SqlStore(db);
+        } catch (SQLiteException e) {
+            db.close();
+            if (corrupt(e)) throw new Damaged(String.valueOf(e.getMessage()));
+            throw e;
+        } catch (RuntimeException e) {
+            db.close();
+            throw e;
+        }
+    }
+
+    /**
+     * בדיקה בפתיחה, לקריאה בלבד: גרסה ותקינות. מסד פגום לא נפתח לכתיבה בכלל — גם לא לשינוי שיטת היומן (שכותב בכותרת).
+     */
+    private static void probe(File file) {
+        SQLiteDatabase db;
+        try {
+            db = connect(file, true);
+        } catch (SQLiteException e) {                                         // לא פגם (פגם — Damaged מ־connect): לא חוסמים את הפתיחה
+            Log.e("SqlStore.probe", e);
+            return;
+        }
+        try {
+            int v = db.getVersion();
+            if (v > VERSION) throw new Failure("database is newer: " + v);
+            if (v > 0) mustBeWhole(db);
+        } catch (SQLiteException e) {
+            if (corrupt(e)) throw new Damaged(String.valueOf(e.getMessage()));
+            Log.e("SqlStore.probe", e);                                        // כמו למעלה: הבדיקה היא הגנה נוספת, לא תנאי לפתיחה
+        } finally {
+            db.close();
+        }
+    }
+
+    private static SQLiteDatabase connect(File file, boolean readOnly) {
+        try {
+            return readOnly
+                    ? SQLiteDatabase.openDatabase(file.getPath(), null, SQLiteDatabase.OPEN_READONLY | SQLiteDatabase.NO_LOCALIZED_COLLATORS, KEEP)
+                    : SQLiteDatabase.openOrCreateDatabase(file.getPath(), null, KEEP);
+        } catch (SQLiteException e) {
+            if (corrupt(e)) throw new Damaged(String.valueOf(e.getMessage()));
+            throw e;
+        }
+    }
+
+    /** האם השגיאה אומרת שהקובץ פגום (ולא, למשל, שאין הרשאה). */
+    static boolean corrupt(Throwable t) {
+        if (t instanceof SQLiteDatabaseCorruptException) return true;
+        String m = String.valueOf(t.getMessage()).toLowerCase();
+        return m.contains("malformed") || m.contains("not a database") || m.contains("corrupt") || m.contains("notadb");
+    }
+
+    /** בדיקת התקינות הקצרה. Damaged אם נמצא פגם. */
+    private static void mustBeWhole(SQLiteDatabase db) {
+        Cursor c = db.rawQuery("PRAGMA quick_check", null);
+        try {
+            if (!c.moveToFirst()) throw new Damaged("quick_check returned nothing");
+            String r = c.getString(0);
+            if (!"ok".equals(r)) throw new Damaged("quick_check: " + r);
+        } finally {
+            c.close();
         }
     }
 
@@ -138,6 +261,7 @@ public final class SqlStore implements Store {
     }
 
     private long issue() {
+        if (readOnly) throw new Failure("read-only copy");
         long id = Long.parseLong(text("SELECT v FROM meta WHERE k='next_id'"));
         try {
             counter.reserve(id);
@@ -626,6 +750,131 @@ public final class SqlStore implements Store {
     /** מידע לבדיקה עצמית: גרסת SQLite, שיטת היומן וסנכרון. */
     public String info() {
         return text("SELECT sqlite_version()") + " · " + text("PRAGMA journal_mode") + " · sync=" + text("PRAGMA synchronous");
+    }
+
+    // ---------- מ0.5: עותק, וגישה ישירה לגיבוי הטקסט (DbDump) ----------
+
+    /** שורה מתוצאת שאילתה: הערכים כטקסט, null לריק. */
+    interface Row {
+        void row(String[] v);
+    }
+
+    /** מריץ שאילתה ומעביר כל שורה (cols עמודות) — לגיבוי הטקסט. */
+    void each(String sql, int cols, Row r) {
+        Cursor c = db.rawQuery(sql, null);
+        try {
+            while (c.moveToNext()) {
+                String[] v = new String[cols];
+                for (int i = 0; i < cols; i++) v[i] = c.isNull(i) ? null : c.getString(i);
+                r.row(v);
+            }
+        } finally {
+            c.close();
+        }
+    }
+
+    /** כתיבה ישירה — רק לשחזור מגיבוי טקסט, בתוך rawWork. */
+    void rawExec(String sql, Object[] args) {
+        if (readOnly) throw new Failure("read-only copy");
+        db.execSQL(sql, args);
+    }
+
+    /** עסקה אחת לשחזור: הכול או כלום. */
+    void rawWork(Runnable r) {
+        if (readOnly) throw new Failure("read-only copy");
+        db.beginTransaction();
+        try {
+            r.run();
+            db.setTransactionSuccessful();
+        } finally {
+            db.endTransaction();
+        }
+    }
+
+    /** כמה פריטים יש במסד (שחזור נכנס רק למסד ריק). */
+    long itemCount() {
+        return num("SELECT COUNT(*) FROM items");
+    }
+
+    /** כמה חברויות יש במסד. */
+    long memberCount() {
+        return num("SELECT COUNT(*) FROM members");
+    }
+
+    /**
+     * מ0.5: עותק עקבי של כל המסד לקובץ חדש (שלא קיים). העותק — קובץ אחד שלם, בלי יומן. לא בתוך עסקה.
+     * SQLite 3.27 ומעלה (אנדרואיד 11 ומעלה): VACUUM INTO. לפני כן: נועלים כתיבה, מעתיקים את הקובץ ואת יומן ה־WAL,
+     * ופותחים את העותק כדי שיאחד אותם.
+     */
+    public void copyTo(File out) {
+        if (out.exists()) throw new Failure("target exists: " + out.getPath());
+        File dir = out.getParentFile();
+        if (dir != null) dir.mkdirs();
+        if (!forceFileCopy && atLeast(text("SELECT sqlite_version()"), 3, 27)) {
+            db.execSQL("VACUUM INTO '" + out.getPath().replace("'", "''") + "'");
+            return;
+        }
+        File main = new File(path()), wal = new File(path() + "-wal"), outWal = new File(out.getPath() + "-wal");
+        db.beginTransaction();                                                 // באנדרואיד: נעילת כתיבה; היומן לא משתנה עד הסוף
+        try {
+            copyFile(main, out);
+            if (wal.isFile()) copyFile(wal, outWal);
+        } catch (IOException e) {
+            throw new Failure("copy failed", e);
+        } finally {
+            db.endTransaction();
+        }
+        SQLiteDatabase c = SQLiteDatabase.openOrCreateDatabase(out.getPath(), null, KEEP);
+        try {
+            Cursor r = c.rawQuery("PRAGMA journal_mode=DELETE", null);       // מאחד את היומן לתוך הקובץ ומוחק אותו
+            try {
+                r.moveToFirst();
+            } finally {
+                r.close();
+            }
+        } finally {
+            c.close();
+        }
+        new File(out.getPath() + "-shm").delete();
+        if (outWal.exists()) throw new Failure("journal was not folded into the copy");
+    }
+
+    /** הקובץ של המסד הראשי. */
+    private String path() {
+        Cursor c = db.rawQuery("PRAGMA database_list", null);
+        try {
+            while (c.moveToNext()) if ("main".equals(c.getString(1))) return c.getString(2);
+            return "";
+        } finally {
+            c.close();
+        }
+    }
+
+    static boolean atLeast(String version, int major, int minor) {
+        try {
+            String[] p = version.split("\\.");
+            int a = Integer.parseInt(p[0]), b = p.length > 1 ? Integer.parseInt(p[1]) : 0;
+            return a > major || (a == major && b >= minor);
+        } catch (RuntimeException e) {
+            return false;
+        }
+    }
+
+    static void copyFile(File from, File to) throws IOException {
+        InputStream in = new FileInputStream(from);
+        try {
+            OutputStream out = new FileOutputStream(to);
+            try {
+                byte[] b = new byte[64 * 1024];
+                int n;
+                while ((n = in.read(b)) > 0) out.write(b, 0, n);
+                ((FileOutputStream) out).getFD().sync();
+            } finally {
+                out.close();
+            }
+        } finally {
+            in.close();
+        }
     }
 
     /**

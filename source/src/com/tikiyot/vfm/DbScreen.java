@@ -1,7 +1,8 @@
 package com.tikiyot.vfm;
 
-// מסך מנוע המסד (מ0.1–מ0.3): רשימות, רשימות חכמות ("לא משויכים" כרשימה מיוחדת) ופריטים מעל Store, והעתקה מהמנוע הישן.
-// אחראי: להציג ולהפעיל. אסור לו: לדעת איך הנתונים נשמרים (Store), או לכתוב למנוע הישן (קורא בלבד).
+// מסך מנוע המסד (מ0.1–מ0.5): רשימות, רשימות חכמות ("לא משויכים" כרשימה מיוחדת) ופריטים מעל Store, העתקה מהמנוע הישן,
+// וגיבוי (מ0.5): עותק יומי ברקע כשנפתח המסד, עותק לפני פעולה מוחקת, "גיבוי עכשיו", שחזור, ומסד פגום שלא נפתח.
+// אחראי: להציג ולהפעיל. אסור לו: לדעת איך הנתונים נשמרים (Store, Backups), או לכתוב למנוע הישן (קורא בלבד).
 
 import android.app.Activity;
 import android.app.AlertDialog;
@@ -25,7 +26,11 @@ public class DbScreen extends Activity {
     static final String DB_PREFIX = "vfm-m-", DB_SUFFIX = ".db";
     private static final String PREFS = "m", PREF_MODE = "mode";
 
-    private SqlStore store;
+    private volatile SqlStore store;
+    /** מ0.5: המסד של האופן פגום — לא נפתח. null: לא פגום. */
+    private String damaged;
+    /** סגירת המסד מחכה לגיבוי היומי שרץ ברקע (שלא ייסגר באמצע). */
+    private final Object storeLock = new Object();
     private String mode = "";
     private Button modeButton;
     private TextView status, crumb, hint;
@@ -66,10 +71,16 @@ public class DbScreen extends Activity {
     private void switchMode(String m) {
         mode = m;
         getSharedPreferences(PREFS, MODE_PRIVATE).edit().putString(PREF_MODE, m).apply();
-        if (store != null) store.close();
-        store = null;
+        closeStore();
         path.clear();
         refresh();
+    }
+
+    private void closeStore() {
+        synchronized (storeLock) {
+            if (store != null) store.close();
+            store = null;
+        }
     }
 
     private void pickMode() {
@@ -149,27 +160,33 @@ public class DbScreen extends Activity {
         if (mode.isEmpty()) mode = loadMode();
         modeButton.setText(Words.Db.modeButton(mode));
         if (store == null) {
+            damaged = null;
             try {
                 store = SqlStore.open(dbFile(this, mode), new IdCounter(counterFile()));
+            } catch (SqlStore.Damaged d) {
+                Log.e("DbScreen.open", d);
+                damaged = String.valueOf(d.getMessage());
+                showDamaged();
+                return;
             } catch (Throwable t) {
                 Log.e("DbScreen.open", t);
                 status.setText(Words.Db.openFailed(String.valueOf(t.getMessage())));
                 return;
             }
+            startDaily();
         }
         show();
     }
 
     @Override
     protected void onDestroy() {
-        if (store != null) store.close();
-        store = null;
+        closeStore();
         super.onDestroy();
     }
 
     @Override
     public void onBackPressed() {
-        if (path.isEmpty()) {
+        if (path.isEmpty() || store == null) {
             super.onBackPressed();
             return;
         }
@@ -252,6 +269,7 @@ public class DbScreen extends Activity {
             if (path.isEmpty()) {
                 rows.addView(specialRow(Words.Db.UNASSIGNED, Words.Db.UNASSIGNED_SUB, store.unassigned().size(), UNASSIGNED_ID));
                 rows.addView(specialRow(Words.Db.TRASH, Words.Db.TRASH_SUB, store.trashed().size(), TRASH_ID));
+                rows.addView(backupsRow());
                 List<Store.Item> smarts = store.smarts();
                 if (all.isEmpty() && smarts.isEmpty()) {
                     TextView t = Ui.info(this);
@@ -296,6 +314,16 @@ public class DbScreen extends Activity {
 
     /** "לא משויכים" / סל המחזור: שורה מיוחדת בראש הרשימות — מחושבת בכל פעם, לא נשמרת. */
     private View specialRow(String title, String subText, int count, final long id) {
+        return specialRow(title, subText + " · " + Words.items(count), new Runnable() {
+            @Override
+            public void run() {
+                path.add(id);
+                show();
+            }
+        });
+    }
+
+    private View specialRow(String title, String subLine, final Runnable tap) {
         LinearLayout r = new LinearLayout(this);
         r.setOrientation(LinearLayout.VERTICAL);
         r.setPadding(Ui.dp(this, 12), Ui.dp(this, 10), Ui.dp(this, 12), Ui.dp(this, 10));
@@ -306,15 +334,14 @@ public class DbScreen extends Activity {
         TextView sub = new TextView(this);
         sub.setTextSize(12);
         sub.setTextColor(Ui.SUB);
-        sub.setText(subText + " · " + Words.items(count));
+        sub.setText(subLine);
         r.addView(name);
         r.addView(sub);
         r.setBackgroundColor(Ui.BG);
         r.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                path.add(id);
-                show();
+                tap.run();
             }
         });
         return r;
@@ -680,12 +707,17 @@ public class DbScreen extends Activity {
                 Ui.confirm(this, Words.Db.PURGE, it.name + "\n" + Words.Db.PURGE_DETAIL, Words.Db.PURGE, new Runnable() {
                     @Override
                     public void run() {
-                        try {
-                            store.purge(it.id);
-                        } catch (Store.Failure f) {
-                            Ui.toast(DbScreen.this, Words.Db.failed(f.getMessage()));
-                        }
-                        show();
+                        guarded(Backups.OP_PURGE, new Runnable() {
+                            @Override
+                            public void run() {
+                                try {
+                                    store.purge(it.id);
+                                } catch (Store.Failure f) {
+                                    Ui.toast(DbScreen.this, Words.Db.failed(f.getMessage()));
+                                }
+                                show();
+                            }
+                        });
                     }
                 });
                 return;
@@ -713,13 +745,18 @@ public class DbScreen extends Activity {
                         Words.Db.DELETE_YES, new Runnable() {
                             @Override
                             public void run() {
-                                try {
-                                    store.deleteList(it.id);
-                                    path.remove(Long.valueOf(it.id));
-                                } catch (Store.Failure f) {
-                                    Ui.toast(DbScreen.this, Words.Db.failed(f.getMessage()));
-                                }
-                                show();
+                                guarded(Backups.OP_DELETE, new Runnable() {
+                                    @Override
+                                    public void run() {
+                                        try {
+                                            store.deleteList(it.id);
+                                            path.remove(Long.valueOf(it.id));
+                                        } catch (Store.Failure f) {
+                                            Ui.toast(DbScreen.this, Words.Db.failed(f.getMessage()));
+                                        }
+                                        show();
+                                    }
+                                });
                             }
                         });
                 return;
@@ -728,6 +765,245 @@ public class DbScreen extends Activity {
             Ui.toast(this, Words.Db.failed(f.getMessage()));
         }
         show();
+    }
+
+    // ---------- מ0.5: גיבוי ושחזור ----------
+
+    /** הגיבוי לפני ההעתקה נכשל — לא מעתיקים. */
+    private static final class BackupFailed extends RuntimeException {
+        BackupFailed(String m) {
+            super(m);
+        }
+    }
+
+    /** הגיבויים של האופן: בתיקייה הגלויה של התוכנה; עותקים זמניים — באחסון הפרטי. */
+    private Backups backups(String m) {
+        return new Backups(new File(new File(Paths.data(), Backups.DIR), m), new File(getCacheDir(), "mbackup"));
+    }
+
+    /** הגיבוי היומי, ברקע: עותק אם יש שינוי (פעם ביום), טקסט פעם בשבוע, ומחיקת ישנים. */
+    private void startDaily() {
+        final SqlStore s = store;
+        final String m = mode;
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                boolean made = false;
+                synchronized (storeLock) {
+                    if (s != store) return;                                    // המסד נסגר או הוחלף בינתיים
+                    try {
+                        Backups.Daily d = backups(m).daily(s, System.currentTimeMillis());
+                        made = d.copied || d.texted || !d.deleted.isEmpty();
+                    } catch (Throwable t) {
+                        Log.e("DbScreen.daily", t);
+                    }
+                }
+                if (!made) return;
+                ui.post(new Runnable() {
+                    @Override
+                    public void run() {
+                        if (!isFinishing() && s == store && path.isEmpty()) show();
+                    }
+                });
+            }
+        }).start();
+    }
+
+    /** לפני פעולה מוחקת: עותק (אם השתנה משהו מאז הגיבוי האחרון). אם הגיבוי נכשל — שואלים אם להמשיך בלי. */
+    private void guarded(String op, final Runnable work) {
+        try {
+            backups(mode).before(store, op, System.currentTimeMillis());
+        } catch (Throwable t) {
+            Log.e("DbScreen.before", t);
+            new AlertDialog.Builder(this).setMessage(Words.Db.backupBeforeFailed(String.valueOf(t.getMessage())))
+                    .setPositiveButton(Words.Db.GO_ON_WITHOUT_BACKUP, new DialogInterface.OnClickListener() {
+                        @Override public void onClick(DialogInterface d, int w) { work.run(); }
+                    })
+                    .setNegativeButton(Words.CANCEL, null).show();
+            return;
+        }
+        work.run();
+    }
+
+    private View backupsRow() {
+        List<Backups.Entry> all = backups(mode).list();
+        String sub = all.isEmpty() ? Words.Db.BACKUPS_EMPTY_SUB : Words.Db.backupsSub(all.size(), FullCheck.when(all.get(0)));
+        return specialRow(Words.Db.BACKUPS, sub, new Runnable() {
+            @Override public void run() { backupMenu(); }
+        });
+    }
+
+    /** רשימת הגיבויים (כל אחד נבדק מול הרישום), ו"גיבוי עכשיו". נגיעה בגיבוי — שחזור ממנו. */
+    private void backupMenu() {
+        final AlertDialog wait = new AlertDialog.Builder(this).setMessage(Words.Db.BACKUPS_CHECKING).setCancelable(false).show();
+        final Backups bk = backups(mode);
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                final List<Backups.Entry> all = bk.list();
+                final int[] states = new int[all.size()];
+                for (int i = 0; i < all.size(); i++) states[i] = bk.verify(all.get(i));
+                runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        wait.dismiss();
+                        if (isFinishing()) return;
+                        final boolean canBackup = store != null;
+                        List<String> labels = new ArrayList<String>();
+                        if (canBackup) labels.add(Words.Db.BACKUP_NOW);
+                        for (int i = 0; i < all.size(); i++) {
+                            Backups.Entry e = all.get(i);
+                            labels.add(Words.Db.backupEntry(states[i], Words.Db.backupKind(e.kind, e.op, e.text), FullCheck.when(e),
+                                    e.file.length()));
+                        }
+                        if (labels.isEmpty()) labels.add(Words.Db.BACKUPS_EMPTY_SUB);
+                        Ui.list(DbScreen.this, Words.Db.backupsTitle(mode), labels, new DialogInterface.OnClickListener() {
+                            @Override
+                            public void onClick(DialogInterface d, int which) {
+                                int i = canBackup ? which - 1 : which;
+                                if (canBackup && which == 0) backupNow();
+                                else if (i >= 0 && i < all.size()) restoreAsk(all.get(i), states[i]);
+                            }
+                        });
+                    }
+                });
+            }
+        }).start();
+    }
+
+    private void backupNow() {
+        final AlertDialog wait = new AlertDialog.Builder(this).setMessage(Words.Db.BACKUP_SAVING).setCancelable(false).show();
+        final Backups bk = backups(mode);
+        final SqlStore s = store;
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                String msg;
+                try {
+                    StringBuilder names = new StringBuilder();
+                    synchronized (storeLock) {
+                        if (s != store) throw new IllegalStateException("closed");
+                        for (Backups.Entry e : bk.manual(s, System.currentTimeMillis())) names.append(e.name).append('\n');
+                    }
+                    msg = Words.Db.backupSaved(names.toString().trim(), bk.dir.getPath());
+                } catch (Throwable t) {
+                    Log.e("DbScreen.backupNow", t);
+                    msg = Words.Db.failed(String.valueOf(t.getMessage()));
+                }
+                final String text = msg;
+                runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        wait.dismiss();
+                        if (isFinishing()) return;
+                        new AlertDialog.Builder(DbScreen.this).setMessage(text).setPositiveButton(Words.OK, null).show();
+                        if (store != null) show();
+                    }
+                });
+            }
+        }).start();
+    }
+
+    /** בונה מסד מהגיבוי (ברקע, בקובץ נפרד), מציג מה יש בו מול מה שיש עכשיו, ורק אחרי אישור מחליף. */
+    private void restoreAsk(final Backups.Entry e, int state) {
+        if (state == Backups.KEPT_DAMAGED) {
+            new AlertDialog.Builder(this).setMessage(Words.Db.KEPT_DAMAGED_INFO).setPositiveButton(Words.OK, null).show();
+            return;
+        }
+        if (state == Backups.BAD) {
+            new AlertDialog.Builder(this).setMessage(Words.Db.BACKUP_BAD).setPositiveButton(Words.OK, null).show();
+            return;
+        }
+        if (state == Backups.CHANGED) Ui.toast(this, Words.Db.BACKUP_CHANGED_WARN);
+        final String m = mode;
+        final File db = dbFile(this, m), built = new File(db.getPath() + ".restore");
+        final AlertDialog wait = new AlertDialog.Builder(this).setMessage(Words.Db.RESTORE_BUILDING).setCancelable(false).show();
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                Backups.Built b = null;
+                String err = null;
+                try {
+                    b = Backups.build(e.file, built, new IdCounter(counterFile()));
+                } catch (Throwable t) {
+                    Log.e("DbScreen.restore.build", t);
+                    err = String.valueOf(t.getMessage());
+                }
+                final Backups.Built res = b;
+                final String error = err;
+                runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        wait.dismiss();
+                        if (isFinishing() || !m.equals(mode)) {
+                            android.database.sqlite.SQLiteDatabase.deleteDatabase(built);
+                            return;
+                        }
+                        if (error != null) {
+                            new AlertDialog.Builder(DbScreen.this).setMessage(Words.Db.restoreFailed(error)).setPositiveButton(Words.OK, null).show();
+                            return;
+                        }
+                        SqlStore s = store;
+                        String label = Words.Db.backupKind(e.kind, e.op, e.text) + " · " + FullCheck.when(e);
+                        String q = Words.Db.restoreQuestion(label, res.lists, res.items, s == null ? 0 : s.lists().size(),
+                                s == null ? 0 : s.itemCount(), s == null);
+                        new AlertDialog.Builder(DbScreen.this).setMessage(q).setCancelable(false)
+                                .setPositiveButton(Words.Db.RESTORE_YES, new DialogInterface.OnClickListener() {
+                                    @Override public void onClick(DialogInterface d, int w) { restoreRun(built, db); }
+                                })
+                                .setNegativeButton(Words.CANCEL, new DialogInterface.OnClickListener() {
+                                    @Override public void onClick(DialogInterface d, int w) { android.database.sqlite.SQLiteDatabase.deleteDatabase(built); }
+                                }).show();
+                    }
+                });
+            }
+        }).start();
+    }
+
+    /** קודם שומרים את המסד הנוכחי (או הפגום, כמו שהוא), אחר כך מחליפים ופותחים מחדש. */
+    private void restoreRun(File built, File db) {
+        try {
+            long now = System.currentTimeMillis();
+            if (store != null) backups(mode).before(store, Backups.OP_RESTORE, now);
+            else if (db.isFile()) backups(mode).keepDamaged(db, now);
+        } catch (Throwable t) {
+            Log.e("DbScreen.restore.before", t);
+            android.database.sqlite.SQLiteDatabase.deleteDatabase(built);
+            new AlertDialog.Builder(this).setMessage(Words.Db.restoreFailed(Words.Db.backupBeforeFailed(String.valueOf(t.getMessage()))))
+                    .setPositiveButton(Words.OK, null).show();
+            return;
+        }
+        closeStore();
+        try {
+            Backups.swap(built, db);
+        } catch (Throwable t) {
+            Log.e("DbScreen.restore.swap", t);
+            android.database.sqlite.SQLiteDatabase.deleteDatabase(built);
+            new AlertDialog.Builder(this).setMessage(Words.Db.restoreFailed(String.valueOf(t.getMessage()))).setPositiveButton(Words.OK, null).show();
+            refresh();
+            return;
+        }
+        path.clear();
+        damaged = null;
+        refresh();
+        Ui.toast(this, Words.Db.RESTORED_DB);
+    }
+
+    /** המסד פגום: לא פותחים ולא כותבים; מציעים לשחזר מגיבוי. */
+    private void showDamaged() {
+        token++;
+        status.setText(Words.Db.damaged(mode, damaged));
+        crumb.setText(Words.Db.ALL_LISTS);
+        hint.setText(Words.Db.DAMAGED_HINT);
+        buttons.removeAllViews();
+        buttons.addView(button(Words.Db.RESTORE_FROM_BACKUP, new Runnable() {
+            @Override public void run() { backupMenu(); }
+        }));
+        buttons.addView(button(Words.Db.FULL_CHECK, new Runnable() {
+            @Override public void run() { fullCheck(); }
+        }));
+        rows.removeAllViews();
+        rows.addView(backupsRow());
     }
 
     // ---------- מ0.2: העתקה מהמנוע הישן ----------
@@ -776,7 +1052,17 @@ public class DbScreen extends Activity {
                 Importer.Report rep = null;
                 try {
                     Importer.Source src = Importer.load(new File(new File(old, Modes.DIR), mode));
+                    if (keep) {
+                        try {
+                            backups(mode).before(store, Backups.OP_IMPORT, System.currentTimeMillis());
+                        } catch (Throwable t) {
+                            Log.e("DbScreen.import.backup", t);
+                            throw new BackupFailed(Words.Db.importBackupFailed(String.valueOf(t.getMessage())));
+                        }
+                    }
                     rep = Importer.run(store, src, keep);
+                } catch (BackupFailed t) {
+                    err = t.getMessage();
                 } catch (Throwable t) {
                     Log.e("DbScreen.import", t);
                     err = Words.Db.importFailed(String.valueOf(t.getMessage()));
@@ -863,7 +1149,8 @@ public class DbScreen extends Activity {
         d.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(new View.OnClickListener() {
             @Override public void onClick(View v) { copy(report); }
         });
-        show();
+        if (store != null) show();
+        else if (damaged != null) showDamaged();
     }
 
     private void copy(String text) {
@@ -924,6 +1211,18 @@ public class DbScreen extends Activity {
                 File f = dbFile(DbScreen.this, mode);
                 return f.exists() ? SqlStore.open(f, new IdCounter(counterFile())) : null;
             }
+
+            @Override
+            public File scratch() {
+                File w = new File(tmp, "s" + (seq[0]++));
+                w.mkdirs();
+                return w;
+            }
+
+            @Override
+            public Backups backups(String mode) {
+                return DbScreen.this.backups(mode);
+            }
         };
     }
 
@@ -944,6 +1243,9 @@ public class DbScreen extends Activity {
             String persist = SqlStore.persistenceCheck(dir);
             if (persist != null) r.failed.add("persistence: " + persist);
             else r.passed++;
+            StoreContract.Result br = BackupContract.run(new File(dir, "backup"));
+            r.passed += br.passed;
+            for (String f : br.failed) r.failed.add("backup: " + f);
             String info = "?";
             SqlStore s = SqlStore.open(new File(dir, "info.db"), new IdCounter(new File(dir, "info-counter.txt")));
             try {

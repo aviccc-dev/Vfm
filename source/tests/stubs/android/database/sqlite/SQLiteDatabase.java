@@ -17,6 +17,8 @@ public class SQLiteDatabase {
 
     public interface CursorFactory { }
 
+    public static final int OPEN_READWRITE = 0, OPEN_READONLY = 1, NO_LOCALIZED_COLLATORS = 0x10, CREATE_IF_NECESSARY = 0x10000000;
+
     private final Process proc;
     private final BufferedReader in;
     private final BufferedWriter out;
@@ -32,14 +34,35 @@ public class SQLiteDatabase {
     }
 
     public static SQLiteDatabase openOrCreateDatabase(File file, CursorFactory factory) {
+        return start("open", file.getPath());
+    }
+
+    /** מ0.5: כמו באנדרואיד — הקובץ נפתח מיד (קורא את הכותרת), וקובץ שאינו מסד נכשל כאן. */
+    public static SQLiteDatabase openOrCreateDatabase(String path, CursorFactory factory, android.database.DatabaseErrorHandler h) {
+        return start("open", path);
+    }
+
+    public static SQLiteDatabase openDatabase(String path, CursorFactory factory, int flags, android.database.DatabaseErrorHandler h) {
+        if ((flags & OPEN_READONLY) != 0) return start("openro", path);
+        if ((flags & CREATE_IF_NECESSARY) == 0 && !new File(path).exists()) throw new SQLiteException("unable to open database file: " + path);
+        return start("open", path);
+    }
+
+    private static SQLiteDatabase start(String op, String path) {
+        SQLiteDatabase db;
         try {
             File script = new File(System.getProperty("vfm.src"), "tests/bridge/sqlite_bridge.py");
-            SQLiteDatabase db = new SQLiteDatabase(new ProcessBuilder("python3", "-I", script.getPath()).redirectErrorStream(false).start());
-            db.call("open", esc(file.getPath()));
-            return db;
+            db = new SQLiteDatabase(new ProcessBuilder("python3", "-I", script.getPath()).redirectErrorStream(false).start());
         } catch (IOException e) {
             throw new RuntimeException("python3 bridge: " + e, e);
         }
+        try {
+            db.call(op, esc(path));
+        } catch (RuntimeException e) {
+            db.proc.destroy();
+            throw e;
+        }
+        return db;
     }
 
     public static boolean deleteDatabase(File file) {

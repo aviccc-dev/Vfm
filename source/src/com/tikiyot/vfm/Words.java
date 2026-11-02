@@ -2294,8 +2294,8 @@ public final class Words {
 
         public static final String APP_NAME_M = "מנהל קבצים וירטואלי · מ";
         public static final String MENU = "מסד נתונים (מ)";
-        public static final String TITLE = "מסד נתונים · מ0.4";
-        public static final String NOTICE = "מנוע המסד בבנייה, ועדיין בלי גיבוי (מ0.5). \"העתקה מהישן\" רק קוראת מהמנוע הישן ולא משנה בו דבר. לכל אופן עבודה מסד משלו — כל אופן נכנס למסד של אותו אופן. אפשר להעתיק שוב: מה שכבר הועתק מתעדכן ולא מוכפל. רשימה חכמה שומרת רק את התנאי — הקבצים נמצאים בכל פתיחה מהאינדקס.";
+        public static final String TITLE = "מסד נתונים · מ0.5";
+        public static final String NOTICE = "מנוע המסד בבנייה. גיבוי: עותק יומי כשיש שינוי, וגם לפני העתקה, מחיקת רשימה ומחיקה לצמיתות — בתיקייה \"גיבוי מסד\" שבתיקיית התוכנה. \"העתקה מהישן\" רק קוראת מהמנוע הישן ולא משנה בו דבר. לכל אופן עבודה מסד משלו — כל אופן נכנס למסד של אותו אופן. אפשר להעתיק שוב: מה שכבר הועתק מתעדכן ולא מוכפל. רשימה חכמה שומרת רק את התנאי — הקבצים נמצאים בכל פתיחה מהאינדקס.";
         public static final String NEED_ACCESS = "כדי לשמור את מונה המזהים בתיקיית הנתונים, התוכנה צריכה הרשאת גישה לכל הקבצים.";
         public static final String ALL_LISTS = "כל הרשימות";
         public static final String CRUMB_SEP = " › ";
@@ -2640,6 +2640,125 @@ public final class Words {
         public static String exFileMissing(String path) {
             return "חסר קובץ: " + path;
         }
+
+        // ---------- מ0.5: גיבוי ----------
+
+        public static final String BACKUPS = "💾 גיבויים";
+        public static final String BACKUPS_EMPTY_SUB = "עוד אין גיבויים — הגיבוי היומי נעשה כשפותחים את המסך";
+        public static final String BACKUP_NOW = "💾 גיבוי עכשיו (עותק וגם טקסט)";
+        public static final String BACKUPS_CHECKING = "בודק את הגיבויים מול הרישום…";
+        public static final String BACKUP_SAVING = "שומר גיבוי…";
+        public static final String RESTORE_BUILDING = "בונה מסד מהגיבוי ובודק אותו. המסד הנוכחי עוד לא משתנה…";
+        public static final String RESTORE_YES = "♻️ שחזור";
+        public static final String RESTORE_FROM_BACKUP = "♻️ שחזור מגיבוי";
+        public static final String RESTORED_DB = "המסד שוחזר מהגיבוי.";
+        public static final String BACKUP_BAD = "הגיבוי הזה פגום או אינו שלם — אי אפשר לשחזר ממנו.";
+        public static final String BACKUP_CHANGED_WARN = "שימו לב: הקובץ הזה שונה מאז שנרשם. התוכנה תבדוק אותו לפני השחזור.";
+        public static final String KEPT_DAMAGED_INFO = "זה המסד הפגום, כפי שנשמר לפני שחזור. ממנו לא משחזרים — הוא נשמר רק כדי שלא יאבד דבר.";
+        public static final String GO_ON_WITHOUT_BACKUP = "להמשיך בלי גיבוי";
+        public static final String DAMAGED_HINT = "אפשר לשחזר מגיבוי: \"♻️ שחזור מגיבוי\". המסד הפגום יישמר קודם, כמו שהוא, בתיקיית הגיבויים.";
+        public static final String BACKUPS_NONE = "   גיבויים בתיקייה: אין עדיין (הגיבוי היומי נעשה כשפותחים את מסך המסד באופן הזה)";
+
+        public static String backupsSub(int n, String newest) {
+            return "עותק יומי כשיש שינוי, ולפני פעולות מוחקות · " + n + " קבצים · האחרון " + newest;
+        }
+
+        public static String backupsTitle(String mode) {
+            return "גיבויים · " + mode;
+        }
+
+        /** שם סוג הגיבוי לתצוגה. */
+        public static String backupKind(String kind, String op, boolean text) {
+            String k = kind.equals(Backups.DAILY) ? "יומי" : kind.equals(Backups.BEFORE) ? "לפני " + op : kind.equals(Backups.MANUAL) ? "ידני"
+                    : kind.equals(Backups.TEXT) ? "טקסט שבועי" : "המסד הפגום";
+            return k + (text && !kind.equals(Backups.TEXT) ? " · טקסט" : "");
+        }
+
+        /** שורה ברשימת הגיבויים: מצב · סוג · מתי · גודל. state — Backups.OK וכו'. */
+        public static String backupEntry(int state, String kind, String when, long bytes) {
+            String mark = state == Backups.OK || state == Backups.OK_UNRECORDED ? "✅" : state == Backups.CHANGED ? "⚠️" : state == Backups.BAD ? "❌" : "🗂";
+            String note = state == Backups.CHANGED ? " · שונה מאז שנרשם" : state == Backups.BAD ? " · פגום" : state == Backups.OK_UNRECORDED ? " · לא רשום" : "";
+            return mark + " " + kind + " · " + when + " · " + kb(bytes) + note;
+        }
+
+        public static String kb(long bytes) {
+            return ((bytes + 1023) / 1024) + " ק״ב";
+        }
+
+        public static String backupSaved(String names, String dir) {
+            return "נשמר גיבוי:\n" + names + "\nבתיקייה: " + dir;
+        }
+
+        public static String restoreQuestion(String label, int bl, long bi, int cl, long ci, boolean damaged) {
+            return "לשחזר מהגיבוי \"" + label + "\"?\n\nבגיבוי: " + Words.lists(bl) + " · " + Words.items((int) bi)
+                    + (damaged ? "\nעכשיו: המסד פגום. הוא יישמר כמו שהוא בתיקיית הגיבויים (\"פגום\")."
+                    : "\nעכשיו: " + Words.lists(cl) + " · " + Words.items((int) ci)
+                    + "\n\nהמסד הנוכחי יישמר קודם בתיקיית הגיבויים (\"לפני שחזור\").")
+                    + "\nמספרי זיהוי שכבר ניתנו לא יחזרו.";
+        }
+
+        public static String restoreFailed(String why) {
+            return "השחזור לא נעשה: " + why + "\nהמסד לא השתנה.";
+        }
+
+        public static String backupBeforeFailed(String why) {
+            return "הגיבוי לפני הפעולה נכשל: " + why;
+        }
+
+        public static String importBackupFailed(String why) {
+            return "הגיבוי לפני ההעתקה נכשל, ולכן לא הועתק דבר: " + why;
+        }
+
+        public static String damaged(String mode, String why) {
+            return "❌ המסד של האופן \"" + mode + "\" פגום, ולכן לא נפתח ולא נכתב בו דבר.\n(" + why + ")";
+        }
+
+        public static String backupLine(boolean copyOk, long copyBytes, boolean textOk, int records, long textBytes, boolean restoreOk, long ms) {
+            return "גיבוי (על עותק זמני): עותק דרך SQLite — " + (copyOk ? "זהה" : "שונה!") + " (" + kb(copyBytes) + ") · גיבוי טקסט — "
+                    + records + " רשומות, " + kb(textBytes) + (textOk ? ", שוחזר למסד ריק וזהה" : ", השחזור ממנו שונה!")
+                    + " · שחזור מעותק — " + (restoreOk ? "זהה" : "שונה!") + " · " + ms + " מ״ש";
+        }
+
+        public static String backupsLine(int total, int daily, int before, int text, int manual, String newest, int ok, int changed, int bad, int kept) {
+            return "   גיבויים בתיקייה: " + total + " (יומיים " + daily + ", לפני פעולה " + before + ", טקסט " + text + ", ידניים " + manual
+                    + ") · האחרון: " + newest + " · תקינים: " + ok + " · שונו: " + changed + " · פגומים: " + bad
+                    + (kept > 0 ? " · עותקי מסד פגום שנשמרו: " + kept : "");
+        }
+
+        public static String realDamaged(String why) {
+            return "המסד האמיתי של האופן: פגום — לא נפתח ולא נכתב (" + why + ")";
+        }
+
+        public static String pRealDamaged(String mode) {
+            return "אופן " + mode + ": המסד האמיתי פגום — אפשר לשחזר מגיבוי";
+        }
+
+        public static String pBackupCopy(String mode) {
+            return "אופן " + mode + ": העותק של המסד שונה מהמסד";
+        }
+
+        public static String pBackupText(String mode) {
+            return "אופן " + mode + ": גיבוי הטקסט, או השחזור ממנו, שונה מהמסד";
+        }
+
+        public static String pBackupRestore(String mode) {
+            return "אופן " + mode + ": שחזור מעותק נתן מסד שונה";
+        }
+
+        public static String pBackupFailed(String mode, String why) {
+            return "אופן " + mode + ": בדיקת הגיבוי נכשלה — " + why;
+        }
+
+        public static String pBackupsChanged(String mode, int n) {
+            return "אופן " + mode + ": " + n + " גיבויים בתיקייה שונו מאז שנרשמו";
+        }
+
+        public static String pBackupsBad(String mode, int n) {
+            return "אופן " + mode + ": " + n + " גיבויים בתיקייה פגומים";
+        }
+
+        public static final String DUMP_TITLE = "מנהל קבצים וירטואלי · מ — גיבוי טקסט של מסד. הפורמט מתועד בקוד (DbDump). לא לערוך ביד: שינוי של תו אחד פוסל את הקובץ.";
+        public static final String RECORD_HEAD = "# רישום הגיבויים: שם · בתים · SHA-256 של הקובץ · חתימת התוכן · מתי נעשה. לא לערוך ביד.";
 
         public static String selfTestOk(int passed, long ms, String info) {
             return "תקין — עברו " + passed + " בדיקות, בלי כישלון.\nזמן: " + ms + " מ״ש\nSQLite: " + info;

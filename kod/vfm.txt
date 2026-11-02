@@ -932,7 +932,7 @@ cd $S; rm -rf out gen bld
 [ "$S" != "$DIR" ] && rm -rf $S
 ls -la $OUT
 ===== קובץ: build/m-version.txt =====
-6 מ0.4
+7 מ0.5
 ===== קובץ: build/test.sh =====
 #!/bin/bash
 # בדיקות על המחשב (80). יוצא בכישלון אם בדיקה אחת נכשלה — ואז build.sh לא בונה.
@@ -1813,6 +1813,1099 @@ public class AsIfScreen extends ListScreen<Batch.AsIfRow> {
     protected void onDestroy() {
         rows.clear();
         super.onDestroy();
+    }
+}
+===== קובץ: src/com/tikiyot/vfm/BackupContract.java =====
+package com.tikiyot.vfm;
+
+// בדיקות הגיבוי (מ0.5): עותק, גיבוי טקסט, שחזור, מסד פגום, המונה אחרי שחזור, תיקיית הגיבויים והכללים למחיקת ישנים.
+// רץ במחשב (מול SQLite של המחשב) ובמכשיר, כחלק מהבדיקה העצמית — כך גם ההתנהגות של אנדרואיד מול מסד פגום נבדקת במכשיר עצמו.
+// שמות הבדיקות באנגלית — רק כשבדיקה נכשלת, לאנשי הפיתוח. נתוני בדיקה בעברית — כרצפי escape (בדיקת המילון).
+
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.RandomAccessFile;
+import java.util.ArrayList;
+import java.util.List;
+
+public final class BackupContract {
+
+    private final File dir;
+    private final StoreContract.Result r = new StoreContract.Result();
+    private int seq;
+
+    private BackupContract(File dir) {
+        this.dir = dir;
+    }
+
+    public static StoreContract.Result run(File dir) {
+        BackupContract c = new BackupContract(dir);
+        dir.mkdirs();
+        try {
+            c.all();
+        } catch (Throwable t) {
+            c.r.failed.add("backup contract crashed: " + t);
+        } finally {
+            SqlStore.forceFileCopy = false;
+        }
+        return c.r;
+    }
+
+    private void ck(String name, boolean ok) {
+        if (ok) r.passed++;
+        else r.failed.add(name);
+    }
+
+    private interface Act {
+        void run() throws Exception;
+    }
+
+    /** מצפה לחריגה מהסוג הנתון. */
+    private void fails(String name, Class<?> type, Act a) {
+        try {
+            a.run();
+            r.failed.add(name + " (no failure)");
+        } catch (Throwable t) {
+            if (type.isInstance(t)) r.passed++;
+            else r.failed.add(name + " (wrong exception " + t + ")");
+        }
+    }
+
+    private File f(String name) {
+        return new File(dir, name);
+    }
+
+    private IdCounter counter(String name) throws IOException {
+        return new IdCounter(f(name + "-counter.txt"));
+    }
+
+    private File fresh(String base) {
+        return f(base + "-" + (seq++) + ".db");
+    }
+
+    private static final long DAY = 86400000L;
+    /** 2.11.2026, 12:00 שעון מקומי בערך — מספיק לבדיקה (רק הפרשים בין ימים חשובים). */
+    private static final long NOW = 1793620800000L;
+
+    // ---------- הבדיקות ----------
+
+    private void all() throws Exception {
+        File aFile = fresh("live");
+        IdCounter aCounter = counter("live");
+        SqlStore a = SqlStore.open(aFile, aCounter);
+        try {
+            fill(a);
+            copies(a);
+            text(a);
+            damage(a);
+            counterAfterRestore(a, aFile);
+            folder(a);
+        } finally {
+            a.close();
+        }
+        retention();
+        names();
+        swap();
+    }
+
+    /** מסד עם כל הסוגים, ותווים שצריך לשמור עליהם: טאב, שורה חדשה, קו נטוי, "\N" כטקסט, אמוג'י. */
+    private void fill(SqlStore a) {
+        long l1 = a.createList("\u05e1\u05e4\u05e8\u05d9\u05dd", 0);
+        long l2 = a.createList("\u05d1\u05ea\u05d5\u05da", l1);
+        a.setProp(l1, Store.P_ICON, "\ud83d\udcda");
+        a.setProp(l1, Store.P_DESC, "tab\there\nnew line \\ back \\N end\r");
+        a.setProp(l2, Store.P_GROUP, "1");
+        long sm = a.createSmart("\u05d7\u05db\u05de\u05d4", l1);
+        a.setProp(sm, Store.P_COND, "\u05e1\u05d5\u05d2:pdf");
+        a.addNote(l1, "\u05e8\u05e2\u05d9\u05d5\u05df\t\u05e2\u05dd\n\u05e9\u05d5\u05e8\u05d4");
+        a.addTitle(l2, "\u05db\u05d5\u05ea\u05e8\u05ea");
+        long gone = a.addNote(l2, "bin");
+        a.trash(gone);
+        long fa = a.createFile(new Store.FileInfo("/x/\u05d0.pdf", "internal", 10, 20, null));
+        long fb = a.createFile(new Store.FileInfo("/x/b c.txt", "card", 30, 40, "abc"));
+        a.addMember(l1, fa);
+        a.addMember(l2, fb);
+        a.addMember(l2, sm);
+        a.setOrigin(l1, "tree:m:L:\u05e1\u05e4\u05e8\u05d9\u05dd");
+        a.createList("\\N", 0);
+    }
+
+    private void copies(SqlStore a) throws Exception {
+        String live = DbDump.hash(a);
+        File c1 = f("copy1.db");
+        a.copyTo(c1);
+        ck("copy: file made", c1.isFile() && c1.length() > 0);
+        ck("copy: no journal next to the copy", !new File(c1.getPath() + "-wal").exists());
+        SqlStore ro = SqlStore.openReadOnly(c1);
+        try {
+            ck("copy: same content signature", live.equals(DbDump.hash(ro)));
+            ck("copy: same system code", a.systemCode().equals(ro.systemCode()));
+            ck("copy: quick check", ro.check() == null);
+            fails("copy: read-only copy refuses writing", RuntimeException.class, new Act() {
+                @Override public void run() { ro2(ro); }
+            });
+        } finally {
+            ro.close();
+        }
+        String sha = Backups.sha(c1);
+        SqlStore.openReadOnly(c1).close();
+        ck("copy: opening for reading changes not one byte", sha.equals(Backups.sha(c1)));
+        final File c1f = c1;
+        this.liveForCopy = a;
+        fails("copy: target that exists is refused", Store.Failure.class, new Act() {
+            @Override public void run() { aCopy(c1f); }
+        });
+        // אנדרואיד ישן: העתקת הקובץ והיומן בזמן נעילה
+        a.addNote(a.lists().get(0).id, "pending in the journal");
+        String live2 = DbDump.hash(a);
+        SqlStore.forceFileCopy = true;
+        try {
+            File c2 = f("copy2.db");
+            a.copyTo(c2);
+            SqlStore r2 = SqlStore.openReadOnly(c2);
+            try {
+                ck("file copy (old Android): same content signature", live2.equals(DbDump.hash(r2)));
+            } finally {
+                r2.close();
+            }
+            ck("file copy (old Android): journal folded, none left", !new File(c2.getPath() + "-wal").exists());
+        } finally {
+            SqlStore.forceFileCopy = false;
+        }
+        fails("read-only open of a missing file", Store.Failure.class, new Act() {
+            @Override public void run() { SqlStore.openReadOnly(f("none.db")); }
+        });
+    }
+
+    private SqlStore liveForCopy;
+
+    private void aCopy(File to) {
+        liveForCopy.copyTo(to);
+    }
+
+    private static void ro2(SqlStore ro) {
+        ro.createList("x", 0);
+    }
+
+    private void text(SqlStore a) throws Exception {
+        String live = DbDump.hash(a);
+        File t1 = f("t1.txt");
+        String h = DbDump.write(a, t1, NOW);
+        ck("text: signature of the file = signature of the database", live.equals(h));
+        ck("text: no partial file left", !new File(t1.getPath() + ".part").exists());
+        DbDump.Data d = DbDump.read(t1);
+        ck("text: read back, same signature", h.equals(d.hash));
+        ck("text: all items", d.count("I") == a.itemCount());
+        ck("text: format and schema", d.format == DbDump.FORMAT && d.schema == SqlStore.VERSION && d.made == NOW);
+        File bFile = fresh("fromtext");
+        SqlStore b = SqlStore.open(bFile, counter("fromtext"));
+        try {
+            DbDump.load(d, b);
+            ck("text: restored into an empty database, same signature", h.equals(DbDump.hash(b)));
+            ck("text: restored keeps the ids", b.lastId() == a.lastId() && b.lists().size() == a.lists().size());
+            long l1 = a.lists().get(0).id;
+            ck("text: tab, new line, back slash and \\N kept", a.prop(l1, Store.P_DESC).equals(b.prop(l1, Store.P_DESC)));
+            final DbDump.Data dd = d;
+            final SqlStore bb = b;
+            fails("text: restore into a database that is not empty is refused", Store.Failure.class, new Act() {
+                @Override public void run() { DbDump.load(dd, bb); }
+            });
+            ck("text: the refused restore changed nothing", h.equals(DbDump.hash(b)));
+        } finally {
+            b.close();
+        }
+        SqlStore b2 = SqlStore.open(bFile, counter("fromtext"));
+        try {
+            ck("text: restored keeps the system code (same system)", a.systemCode().equals(b2.systemCode()));
+        } finally {
+            b2.close();
+        }
+        // קובץ קטוע, שונה, או מגרסה חדשה — לא נקרא
+        List<String> lines = readLines(t1);
+        writeLines(f("cut.txt"), lines.subList(0, lines.size() - 3));
+        fails("text: cut short is refused", Store.Failure.class, new Act() {
+            @Override public void run() throws Exception { DbDump.read(f("cut.txt")); }
+        });
+        List<String> edited = new ArrayList<String>(lines);
+        int mid = edited.size() / 2;
+        edited.set(mid, edited.get(mid).replace('1', '2').replace('a', 'b') + "x");
+        writeLines(f("edited.txt"), edited);
+        fails("text: an edited line is refused", Store.Failure.class, new Act() {
+            @Override public void run() throws Exception { DbDump.read(f("edited.txt")); }
+        });
+        List<String> newer = new ArrayList<String>(lines);
+        newer.set(1, "format\t" + (DbDump.FORMAT + 1));
+        writeLines(f("newer.txt"), newer);
+        fails("text: a newer format is refused", Store.Failure.class, new Act() {
+            @Override public void run() throws Exception { DbDump.read(f("newer.txt")); }
+        });
+        ck("text: escapes round trip", "a\tb\nc\\d\r\\N".equals(DbDump.unesc(DbDump.esc("a\tb\nc\\d\r\\N"))) && DbDump.unesc(DbDump.esc(null)) == null);
+    }
+
+    private void damage(SqlStore a) throws Exception {
+        File good = f("dmg-src.db");
+        a.copyTo(good);
+        // כותרת הרוסה: "הקובץ אינו מסד"
+        final File d1 = f("dmg-head.db");
+        SqlStore.copyFile(good, d1);
+        scribble(d1, 0, 32);
+        String s1 = Backups.sha(d1);
+        fails("damaged header: open fails as Damaged", SqlStore.Damaged.class, new Act() {
+            @Override public void run() throws Exception { SqlStore.open(d1, counter("dmg1")).close(); }
+        });
+        ck("damaged header: the file is kept, not one byte changed", d1.isFile() && s1.equals(Backups.sha(d1)));
+        // עמוד פנימי הרוס
+        final File d2 = f("dmg-page.db");
+        SqlStore.copyFile(good, d2);
+        int page = pageSize(d2);
+        scribble(d2, page, page);
+        String s2 = Backups.sha(d2);
+        fails("damaged page: open fails as Damaged", SqlStore.Damaged.class, new Act() {
+            @Override public void run() throws Exception { SqlStore.open(d2, counter("dmg2")).close(); }
+        });
+        ck("damaged page: the file is kept, not one byte changed", d2.isFile() && s2.equals(Backups.sha(d2)));
+        fails("damaged page: read-only open fails as Damaged", SqlStore.Damaged.class, new Act() {
+            @Override public void run() { SqlStore.openReadOnly(d2).close(); }
+        });
+        final File target = f("dmg-built.db");
+        fails("restore from a damaged copy fails", RuntimeException.class, new Act() {
+            @Override public void run() throws Exception { Backups.build(d2, target, counter("dmg3")); }
+        });
+        ck("restore from a damaged copy leaves nothing", !target.exists());
+    }
+
+    private void counterAfterRestore(SqlStore a, File aFile) throws Exception {
+        File old = f("old.db");
+        a.copyTo(old);
+        File oldText = f("old.txt");
+        DbDump.write(a, oldText, NOW);
+        long before = a.lastId();
+        for (int i = 0; i < 5; i++) a.createList("later " + i, 0);
+        long after = a.lastId();
+        IdCounter c = new IdCounter(new File(aFile.getPath().replace(".db", "") + "-shared-counter.txt"));
+        // המונה המשותף ראה את כל המספרים (כמו קובץ המונה האמיתי, שלא מתחלף בשחזור)
+        c.reserve(after);
+        File r1 = fresh("restored");
+        Backups.Built b = Backups.build(old, r1, c);
+        ck("restore from copy: what the copy had", b.items > 0 && b.lists > 0);
+        SqlStore s = SqlStore.open(r1, c);
+        try {
+            long id = s.createList("new", 0);
+            ck("restore from an old copy: no id is issued twice", id > after && before < after);
+        } finally {
+            s.close();
+        }
+        File r2 = fresh("restored-text");
+        Backups.build(oldText, r2, c);
+        SqlStore s2 = SqlStore.open(r2, c);
+        try {
+            ck("restore from an old text backup: no id is issued twice", s2.createList("new", 0) > after);
+        } finally {
+            s2.close();
+        }
+    }
+
+    private void folder(SqlStore a) throws Exception {
+        File bdir = f("backups"), tmp = f("tmp");
+        Backups bk = new Backups(bdir, tmp);
+        Backups.Daily d = bk.daily(a, NOW);
+        List<Backups.Entry> all = bk.list();
+        ck("daily: first time — copy and text", d.copied && d.texted && all.size() == 2);
+        ck("daily: the temporary copy is gone", tmp.listFiles() == null || tmp.listFiles().length == 0);
+        ck("daily: same day — not again", bk.daily(a, NOW + 3600000L).checkedAlready && bk.list().size() == 2);
+        Backups.Daily d2 = bk.daily(a, NOW + DAY);
+        ck("daily: next day, no change — no new copy", !d2.copied && !d2.texted && !d2.checkedAlready && bk.list().size() == 2);
+        a.addNote(a.lists().get(0).id, "change");
+        Backups.Daily d3 = bk.daily(a, NOW + 2 * DAY);
+        ck("daily: a change — new copy; text waits for a week", d3.copied && !d3.texted && bk.list().size() == 3);
+        ck("before: nothing changed since the last copy — no copy", bk.before(a, Backups.OP_DELETE, NOW + 2 * DAY + 60000L) == null);
+        a.addNote(a.lists().get(0).id, "change 2");
+        Backups.Entry be = bk.before(a, Backups.OP_DELETE, NOW + 2 * DAY + 120000L);
+        ck("before: a change — copy named after the action", be != null && be.kind.equals(Backups.BEFORE) && Backups.OP_DELETE.equals(be.op));
+        Backups.Daily d4 = bk.daily(a, NOW + 9 * DAY);
+        ck("daily: after a week with a change — text again", d4.texted);
+        List<Backups.Entry> m = bk.manual(a, NOW + 9 * DAY + 1000L);
+        ck("manual: copy and text", m.size() == 2 && !m.get(0).text && m.get(1).text && m.get(0).kind.equals(Backups.MANUAL));
+        all = bk.list();
+        int[] v = bk.verifyAll(all);
+        ck("verify: all recorded and whole", v[0] == all.size() && v[1] == 0 && v[2] == 0);
+        // עותק שהשתנה אחרי שנרשם
+        Backups.Entry victim = null;
+        for (Backups.Entry e : all) if (e.kind.equals(Backups.DAILY)) victim = e;
+        scribble(victim.file, (int) (victim.file.length() / 2), 8);
+        ck("verify: a byte changed after recording — found", bk.verify(victim) == Backups.CHANGED);
+        File stray = new File(bdir, Backups.DAILY + " 2020-01-01.db");
+        writeLines(stray, java.util.Arrays.asList("not a database"));
+        File mine = new File(bdir, "mine.db");
+        writeLines(mine, java.util.Arrays.asList("x"));
+        Backups.Entry se = Backups.parse(stray);
+        ck("verify: unrecorded file that is not a database — bad", bk.verify(se) == Backups.BAD);
+        ck("folder: a file that is not ours is not listed", !names(bk.list()).contains("mine.db"));
+        Backups.Entry de = bk.keepDamaged(victim.file, NOW + 10 * DAY);
+        ck("damaged: kept as is, not counted as a problem", de != null && de.kind.equals(Backups.DAMAGED) && bk.verify(de) == Backups.KEPT_DAMAGED);
+        // הרבה ימים: המחיקה לפי הכללים, וקובץ שאינו שלנו נשאר
+        for (int i = 11; i < 60; i++) {
+            a.addNote(a.lists().get(0).id, "day " + i);
+            bk.daily(a, NOW + i * DAY);
+        }
+        int daily = 0, text = 0;
+        for (Backups.Entry e : bk.list()) {
+            if (e.kind.equals(Backups.DAILY)) daily++;
+            if (e.kind.equals(Backups.TEXT)) text++;
+        }
+        ck("prune: 7 daily + one for each of 4 weeks", daily == Backups.KEEP_DAILY + Backups.KEEP_WEEKS);
+        ck("prune: 5 text backups", text == Backups.KEEP_TEXT);
+        ck("prune: manual and damaged are kept", count(bk.list(), Backups.MANUAL) == 2 && count(bk.list(), Backups.DAMAGED) == 1);
+        ck("prune: a file that is not ours is kept", mine.isFile());
+        int[] v2 = bk.verifyAll(bk.list());
+        ck("prune: the record follows (no bad, only the changed one)", v2[2] == 0 && v2[1] <= 1);
+    }
+
+    private void retention() {
+        List<Backups.Entry> all = new ArrayList<Backups.Entry>();
+        for (int i = 0; i < 60; i++) all.add(entry(Backups.DAILY, null, NOW - i * DAY, false));
+        for (int i = 0; i < 15; i++) all.add(entry(Backups.BEFORE, Backups.OP_DELETE, NOW - i * 3600000L, false));
+        for (int i = 0; i < 8; i++) all.add(entry(Backups.TEXT, null, NOW - i * 7 * DAY, true));
+        for (int i = 0; i < 20; i++) all.add(entry(Backups.MANUAL, null, NOW - i * DAY, false));
+        List<Backups.Entry> del = Backups.toDelete(all);
+        ck("retention: daily — 60 made, 11 kept", count(del, Backups.DAILY) == 49);
+        ck("retention: before — 15 made, 10 kept", count(del, Backups.BEFORE) == 5);
+        ck("retention: text — 8 made, 5 kept", count(del, Backups.TEXT) == 3);
+        ck("retention: manual — never", count(del, Backups.MANUAL) == 0);
+        boolean newestKept = true;
+        for (Backups.Entry e : del) if (e.when > NOW - 7 * DAY && e.kind.equals(Backups.DAILY)) newestKept = false;
+        ck("retention: the newest 7 days are kept", newestKept);
+        List<Backups.Entry> few = new ArrayList<Backups.Entry>();
+        for (int i = 0; i < 3; i++) few.add(entry(Backups.DAILY, null, NOW - i * DAY, false));
+        ck("retention: few — nothing deleted", Backups.toDelete(few).isEmpty());
+    }
+
+    private void names() {
+        Backups.Entry d = Backups.parse(new File(Backups.DAILY + " 2026-11-02.db"));
+        ck("name: daily", d != null && d.kind.equals(Backups.DAILY) && !d.text && Backups.day(d.when).equals("2026-11-02"));
+        Backups.Entry b = Backups.parse(new File(Backups.BEFORE + " " + Backups.OP_IMPORT + " 2026-11-02 14-03-05.db"));
+        ck("name: before, with the action and time", b != null && b.kind.equals(Backups.BEFORE) && Backups.OP_IMPORT.equals(b.op)
+                && Backups.stamp(b.when).equals("2026-11-02 14-03-05"));
+        ck("name: manual text", Backups.parse(new File(Backups.MANUAL + " 2026-11-02 14-03-05.txt")) != null);
+        ck("name: second of the same second", Backups.parse(new File(Backups.MANUAL + " 2026-11-02 14-03-05 (2).db")) != null);
+        ck("name: daily .txt is not ours", Backups.parse(new File(Backups.DAILY + " 2026-11-02.txt")) == null);
+        ck("name: text .db is not ours", Backups.parse(new File(Backups.TEXT + " 2026-11-02.db")) == null);
+        ck("name: no date — not ours", Backups.parse(new File(Backups.DAILY + ".db")) == null);
+        ck("name: impossible date — not ours", Backups.parse(new File(Backups.DAILY + " 2026-13-40.db")) == null);
+        ck("name: the record is not a backup", Backups.parse(new File(Backups.RECORD)) == null);
+    }
+
+    private void swap() throws Exception {
+        File db = fresh("swap");
+        IdCounter c = counter("swap");
+        SqlStore s = SqlStore.open(db, c);
+        s.createList("old", 0);
+        s.close();
+        File src = fresh("swap-src");
+        SqlStore n = SqlStore.open(src, counter("swap-src"));
+        n.createList("one", 0);
+        n.createList("two", 0);
+        File t = f("swap-src.txt");
+        DbDump.write(n, t, NOW);
+        n.close();
+        File built = new File(db.getPath() + ".restore");
+        Backups.Built b = Backups.build(t, built, c);
+        ck("build: from text — two lists", b.lists == 2);
+        Backups.swap(built, db);
+        ck("swap: nothing left of the built file", !built.exists() && !new File(built.getPath() + "-wal").exists());
+        SqlStore after = SqlStore.open(db, c);
+        try {
+            ck("swap: the database is the restored one", after.lists().size() == 2);
+        } finally {
+            after.close();
+        }
+        final File none = f("nothing.restore");
+        fails("swap: nothing to swap in — refused, database untouched", IOException.class, new Act() {
+            @Override public void run() throws Exception { Backups.swap(none, f("never.db")); }
+        });
+    }
+
+    // ---------- עזרים ----------
+
+    private static Backups.Entry entry(String kind, String op, long when, boolean text) {
+        String name = kind + (op == null ? "" : " " + op) + " " + (kind.equals(Backups.DAILY) || kind.equals(Backups.TEXT) ? Backups.day(when) : Backups.stamp(when))
+                + (text ? ".txt" : ".db");
+        return Backups.parse(new File(name));
+    }
+
+    private static int count(List<Backups.Entry> l, String kind) {
+        int n = 0;
+        for (Backups.Entry e : l) if (e.kind.equals(kind)) n++;
+        return n;
+    }
+
+    private static List<String> names(List<Backups.Entry> l) {
+        List<String> out = new ArrayList<String>();
+        for (Backups.Entry e : l) out.add(e.name);
+        return out;
+    }
+
+    /** כותב בתים אקראיים לתוך קובץ, במקום הנתון. */
+    private static void scribble(File file, int at, int n) throws IOException {
+        RandomAccessFile raf = new RandomAccessFile(file, "rw");
+        try {
+            byte[] b = new byte[n];
+            java.util.Random rnd = new java.util.Random(at + n);
+            rnd.nextBytes(b);
+            raf.seek(at);
+            raf.write(b);
+        } finally {
+            raf.close();
+        }
+    }
+
+    /** גודל העמוד מכותרת המסד (בתים 16–17). */
+    private static int pageSize(File file) throws IOException {
+        FileInputStream in = new FileInputStream(file);
+        try {
+            byte[] h = new byte[18];
+            if (in.read(h) < 18) return 4096;
+            int p = ((h[16] & 255) << 8) | (h[17] & 255);
+            return p == 1 ? 65536 : p;
+        } finally {
+            in.close();
+        }
+    }
+
+    private static List<String> readLines(File file) throws IOException {
+        List<String> out = new ArrayList<String>();
+        java.io.BufferedReader in = new java.io.BufferedReader(new java.io.InputStreamReader(new FileInputStream(file), "UTF-8"));
+        try {
+            String l;
+            while ((l = in.readLine()) != null) out.add(l);
+        } finally {
+            in.close();
+        }
+        return out;
+    }
+
+    private static void writeLines(File file, List<String> lines) throws IOException {
+        FileOutputStream out = new FileOutputStream(file);
+        try {
+            for (String l : lines) out.write((l + "\n").getBytes("UTF-8"));
+        } finally {
+            out.close();
+        }
+    }
+}
+===== קובץ: src/com/tikiyot/vfm/Backups.java =====
+package com.tikiyot.vfm;
+
+// הגיבויים של מסד אחד (מ0.5). אחראי: לעשות עותקים (יומי, לפני פעולה, ידני) וגיבוי טקסט שבועי; לרשום לכל קובץ חתימה;
+// למחוק ישנים לפי הכללים; לבדוק את הגיבויים מול הרישום; לבנות מסד משוחזר ולהחליף בו את המסד.
+// אסור לו: מסכים; לגעת בקובץ בתיקייה שאינו שלו (שם לא מוכר — לא נמחק ולא נבדק).
+//
+// התיקייה: <תיקיית התוכנה>/גיבוי מסד/<אופן>/ — גלויה, מחוץ לאחסון הפרטי (כך הגיבויים נשארים גם אם התוכנה נמחקת).
+//   יומי <יום>.db                — כשפותחים את המסך, פעם ביום, ורק אם היה שינוי מאז הגיבוי האחרון.
+//                                  נשמרים 7 האחרונים, ועוד אחד (האחרון) מכל אחד מ־4 השבועות שלפניהם.
+//   לפני <פעולה> <יום שעה>.db     — לפני העתקה מהישן, מחיקת רשימה, מחיקה לצמיתות ושחזור. נשמרים 10 האחרונים.
+//   טקסט <יום>.txt               — גיבוי טקסט (DbDump), פעם בשבוע כשהיה שינוי. נשמרים 5 האחרונים.
+//   ידני <יום שעה>.db וגם .txt    — "גיבוי עכשיו". לא נמחקים לבד.
+//   פגום <יום שעה>.db             — המסד הפגום כמו שהיה (עם היומן שלו, אם היה), לפני שחזור. לא נמחק לבד.
+//   רישום.txt                    — לכל קובץ: גודל, SHA-256 של הקובץ, חתימת התוכן ומתי נעשה; ואיזה יום כבר נבדק.
+// כל עותק נעשה קודם בתיקייה זמנית פרטית (SqlStore.copyTo), נפתח שם לקריאה ונבדק (תקינות וחתימת תוכן), ורק אז מועתק
+// לתיקייה ונרשם. עותק שהתוכן שלו זהה לגיבוי האחרון — לא נשמר שוב. בדיקת גיבוי רשום: הקובץ באותו גודל ובאותה חתימה
+// כמו ברישום (בלי לפתוח אותו); גיבוי לא רשום — נפתח ונבדק.
+
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.io.OutputStreamWriter;
+import java.io.Writer;
+import java.security.MessageDigest;
+import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.Date;
+import java.util.HashSet;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+import java.util.Set;
+import java.util.TimeZone;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
+final class Backups {
+
+    static final String DIR = "גיבוי מסד";  // בכונן
+    static final String DAILY = "יומי", BEFORE = "לפני", MANUAL = "ידני", TEXT = "טקסט", DAMAGED = "פגום";  // בכונן
+    static final String RECORD = "רישום.txt";  // בכונן
+    /** הפעולות שלפניהן נעשה עותק — חלק משם הקובץ. */
+    static final String OP_IMPORT = "העתקה מהישן", OP_DELETE = "מחיקת רשימה", OP_PURGE = "מחיקה לצמיתות", OP_RESTORE = "שחזור";  // בכונן
+
+    static final int KEEP_DAILY = 7, KEEP_WEEKS = 4, KEEP_BEFORE = 10, KEEP_TEXT = 5, TEXT_EVERY_DAYS = 7;
+
+    /** תוצאת בדיקה של גיבוי. */
+    static final int OK = 0, OK_UNRECORDED = 1, CHANGED = 2, BAD = 3, KEPT_DAMAGED = 4;
+
+    private static final Pattern NAME = Pattern.compile(
+            "^(" + DAILY + "|" + BEFORE + " (.+)|" + MANUAL + "|" + TEXT + "|" + DAMAGED + ") "  // בכונן
+                    + "(\\d{4}-\\d{2}-\\d{2})(?: (\\d{2})-(\\d{2})-(\\d{2}))?(?: \\((\\d+)\\))?\\.(db|txt)$");
+
+    /** כל הכתיבות לתיקיות הגיבוי — אחת בכל פעם (הגיבוי היומי רץ ברקע). */
+    private static final Object LOCK = new Object();
+
+    final File dir, tmp;
+
+    /** dir — תיקיית הגיבויים של המסד; tmp — תיקייה פרטית זמנית (עותקים לפני בדיקה). */
+    Backups(File dir, File tmp) {
+        this.dir = dir;
+        this.tmp = tmp;
+    }
+
+    // ---------- גיבוי ----------
+
+    static final class Entry {
+        final File file;
+        final String name, kind, op;
+        final boolean text;
+        final long when;
+        /** מהרישום; ‎-1 / null — לא רשום. */
+        long bytes = -1, made;
+        String sha, content;
+
+        Entry(File file, String kind, String op, boolean text, long when) {
+            this.file = file;
+            this.name = file.getName();
+            this.kind = kind;
+            this.op = op;
+            this.text = text;
+            this.when = when;
+        }
+
+        boolean recorded() {
+            return sha != null;
+        }
+    }
+
+    /** כל הגיבויים המוכרים בתיקייה, החדש קודם. */
+    List<Entry> list() {
+        Map<String, String[]> rec = readRecord().files;
+        List<Entry> out = new ArrayList<Entry>();
+        File[] k = dir.listFiles();
+        if (k != null)
+            for (File f : k) {
+                Entry e = parse(f);
+                if (e == null) continue;
+                String[] r = rec.get(e.name);
+                if (r != null) {
+                    try {
+                        e.bytes = Long.parseLong(r[1]);
+                        e.sha = r[2];
+                        e.content = r[3].isEmpty() ? null : r[3];
+                        e.made = Long.parseLong(r[4]);
+                    } catch (RuntimeException ignored) {
+                        e.sha = null;
+                    }
+                }
+                out.add(e);
+            }
+        Collections.sort(out, NEWEST_FIRST);
+        return out;
+    }
+
+    private static final Comparator<Entry> NEWEST_FIRST = new Comparator<Entry>() {
+        @Override
+        public int compare(Entry a, Entry b) {
+            return a.when != b.when ? (a.when > b.when ? -1 : 1) : b.name.compareTo(a.name);
+        }
+    };
+
+    /** שם קובץ ← גיבוי, או null אם השם לא שלנו. */
+    static Entry parse(File f) {
+        Matcher m = NAME.matcher(f.getName());
+        if (!m.matches()) return null;
+        String kind = m.group(1).startsWith(BEFORE + " ") ? BEFORE : m.group(1);
+        boolean text = m.group(8).equals("txt");
+        if (text && !kind.equals(TEXT) && !kind.equals(MANUAL)) return null;     // טקסט — רק "טקסט" ו"ידני"
+        if (!text && kind.equals(TEXT)) return null;
+        long when;
+        try {
+            SimpleDateFormat d = new SimpleDateFormat("yyyy-MM-dd HH-mm-ss", Locale.US);
+            d.setLenient(false);
+            when = d.parse(m.group(3) + " " + (m.group(4) == null ? "00-00-00" : m.group(4) + "-" + m.group(5) + "-" + m.group(6))).getTime();
+        } catch (Exception e) {
+            return null;
+        }
+        return new Entry(f, kind, kind.equals(BEFORE) ? m.group(2) : null, text, when);
+    }
+
+    /** עותק עקבי של המסד, שנבדק בתיקייה הזמנית. */
+    static final class Snapshot {
+        final File file;
+        final String content;
+        final int lists;
+        final long items;
+
+        Snapshot(File file, String content, int lists, long items) {
+            this.file = file;
+            this.content = content;
+            this.lists = lists;
+            this.items = items;
+        }
+    }
+
+    /** עושה עותק בתיקייה הזמנית, פותח אותו לקריאה, בודק ומחשב חתימת תוכן. */
+    Snapshot snapshot(SqlStore live) {
+        tmp.mkdirs();
+        File f = new File(tmp, "snap-" + System.nanoTime() + ".db");
+        live.copyTo(f);
+        try {
+            SqlStore c = SqlStore.openReadOnly(f);
+            try {
+                return new Snapshot(f, DbDump.hash(c), c.lists().size(), c.itemCount());
+            } finally {
+                c.close();
+            }
+        } catch (RuntimeException e) {
+            f.delete();
+            throw e;
+        }
+    }
+
+    /** מה נעשה בגיבוי היומי — לדוח וליומן. */
+    static final class Daily {
+        boolean checkedAlready, copied, texted;
+        final List<String> deleted = new ArrayList<String>();
+    }
+
+    /**
+     * הגיבוי היומי: אם היום עוד לא נבדק — עותק (אם אין של היום ויש שינוי מאז הגיבוי האחרון), גיבוי טקסט (אם עבר שבוע
+     * ויש שינוי), ומחיקת ישנים. עותק שזהה לאחרון לא נשמר.
+     */
+    Daily daily(SqlStore live, long now) throws IOException {
+        synchronized (LOCK) {
+            Daily r = new Daily();
+            String today = day(now);
+            Record rec = readRecord();
+            if (today.equals(rec.checked)) {
+                r.checkedAlready = true;
+                return r;
+            }
+            Snapshot s = snapshot(live);
+            try {
+                List<Entry> all = list();
+                Entry last = newestCopy(all);
+                boolean hasToday = false;
+                for (Entry e : all) if (e.kind.equals(DAILY) && day(e.when).equals(today)) hasToday = true;
+                if (!hasToday && (last == null || !s.content.equals(last.content))) {
+                    keepCopy(s, DAILY, null, now, false);
+                    r.copied = true;
+                }
+                Entry lastText = newest(all, TEXT);
+                if (lastText == null || (dayIndex(now) - dayIndex(lastText.when) >= TEXT_EVERY_DAYS && !s.content.equals(lastText.content))) {
+                    keepText(s, TEXT, now, false);
+                    r.texted = true;
+                }
+                r.deleted.addAll(prune());
+                Record again = readRecord();
+                again.checked = today;
+                writeRecord(again);
+                return r;
+            } finally {
+                s.file.delete();
+            }
+        }
+    }
+
+    /** עותק לפני פעולה הרסנית. null — התוכן זהה לגיבוי האחרון, כבר מוגן. */
+    Entry before(SqlStore live, String op, long now) throws IOException {
+        synchronized (LOCK) {
+            Snapshot s = snapshot(live);
+            try {
+                Entry last = newestCopy(list());
+                if (last != null && s.content.equals(last.content)) return null;
+                Entry e = keepCopy(s, BEFORE, op, now, true);
+                prune();
+                return e;
+            } finally {
+                s.file.delete();
+            }
+        }
+    }
+
+    /** "גיבוי עכשיו": עותק וגם גיבוי טקסט, באותו שם זמן. מחזיר את שניהם. */
+    List<Entry> manual(SqlStore live, long now) throws IOException {
+        synchronized (LOCK) {
+            Snapshot s = snapshot(live);
+            try {
+                List<Entry> out = new ArrayList<Entry>();
+                out.add(keepCopy(s, MANUAL, null, now, true));
+                out.add(keepText(s, MANUAL, now, true));
+                return out;
+            } finally {
+                s.file.delete();
+            }
+        }
+    }
+
+    /** שומר את המסד הפגום כמו שהוא (קובץ ויומן), בלי SQLite — לפני שחזור. */
+    Entry keepDamaged(File db, long now) throws IOException {
+        synchronized (LOCK) {
+            dir.mkdirs();
+            File dest = unique(DAMAGED, null, now, true, "db");
+            String sha = copyWithSha(db, dest);
+            File wal = new File(db.getPath() + "-wal");
+            if (wal.isFile() && wal.length() > 0) SqlStore.copyFile(wal, new File(dest.getPath() + "-wal"));
+            put(dest, sha, null, now);
+            return parse(dest);
+        }
+    }
+
+    private Entry keepCopy(Snapshot s, String kind, String op, long now, boolean withTime) throws IOException {
+        dir.mkdirs();
+        File dest = unique(kind, op, now, withTime, "db");
+        File part = new File(dir, dest.getName() + ".part");
+        String sha;
+        try {
+            sha = copyWithSha(s.file, part);
+        } catch (IOException e) {
+            part.delete();
+            throw e;
+        }
+        if (!part.renameTo(dest)) {
+            part.delete();
+            throw new IOException("cannot rename " + part.getPath());
+        }
+        put(dest, sha, s.content, now);
+        return parse(dest);
+    }
+
+    private Entry keepText(Snapshot s, String kind, long now, boolean withTime) throws IOException {
+        dir.mkdirs();
+        File dest = unique(kind, null, now, withTime, "txt");
+        SqlStore c = SqlStore.openReadOnly(s.file);
+        String content;
+        try {
+            content = DbDump.write(c, dest, now);
+        } finally {
+            c.close();
+        }
+        if (!content.equals(s.content)) throw new IOException("text backup differs from the copy");
+        put(dest, sha(dest), content, now);
+        return parse(dest);
+    }
+
+    /** שם פנוי: "<סוג>[ <פעולה>] <יום>[ <שעה>][ (n)].<סיומת>". */
+    private File unique(String kind, String op, long now, boolean withTime, String ext) {
+        String base = kind + (op == null ? "" : " " + op) + " " + (withTime ? stamp(now) : day(now));
+        File f = new File(dir, base + "." + ext);
+        for (int n = 2; f.exists(); n++) f = new File(dir, base + " (" + n + ")." + ext);
+        return f;
+    }
+
+    // ---------- מחיקת ישנים ----------
+
+    /** מוחק לפי הכללים. מחזיר את שמות הקבצים שנמחקו. */
+    List<String> prune() {
+        synchronized (LOCK) {
+            List<String> gone = new ArrayList<String>();
+            List<Entry> del = toDelete(list());
+            if (del.isEmpty()) return gone;
+            Record rec = readRecord();
+            for (Entry e : del) {
+                if (e.file.delete()) {
+                    gone.add(e.name);
+                    rec.files.remove(e.name);
+                }
+            }
+            try {
+                writeRecord(rec);
+            } catch (IOException ex) {
+                Log.e("Backups.prune", ex);
+            }
+            return gone;
+        }
+    }
+
+    /**
+     * מה למחוק (פונקציה טהורה): יומיים — מעבר ל־7 האחרונים, חוץ מהאחרון בכל אחד מ־4 השבועות שלפניהם; "לפני" — מעבר ל־10;
+     * טקסט — מעבר ל־5. ידניים ופגומים — לעולם לא.
+     */
+    static List<Entry> toDelete(List<Entry> all) {
+        List<Entry> sorted = new ArrayList<Entry>(all);
+        Collections.sort(sorted, NEWEST_FIRST);
+        List<Entry> out = new ArrayList<Entry>();
+        int daily = 0, before = 0, text = 0;
+        Set<Long> weeks = new HashSet<Long>();
+        for (Entry e : sorted) {
+            if (e.kind.equals(DAILY)) {
+                daily++;
+                if (daily <= KEEP_DAILY) continue;
+                long w = weekIndex(e.when);
+                if (!weeks.contains(w) && weeks.size() < KEEP_WEEKS) {
+                    weeks.add(w);
+                    continue;
+                }
+                out.add(e);
+            } else if (e.kind.equals(BEFORE)) {
+                if (++before > KEEP_BEFORE) out.add(e);
+            } else if (e.kind.equals(TEXT)) {
+                if (++text > KEEP_TEXT) out.add(e);
+            }
+        }
+        return out;
+    }
+
+    // ---------- בדיקה ----------
+
+    /** בודק גיבוי אחד: רשום — גודל וחתימת קובץ מול הרישום; לא רשום — פתיחה ובדיקה. */
+    int verify(Entry e) {
+        if (e.kind.equals(DAMAGED)) return KEPT_DAMAGED;
+        try {
+            if (e.recorded()) return e.file.length() == e.bytes && sha(e.file).equals(e.sha) ? OK : CHANGED;
+            if (e.text) {
+                DbDump.read(e.file);
+                return OK_UNRECORDED;
+            }
+            tmp.mkdirs();
+            File c = new File(tmp, "verify-" + System.nanoTime() + ".db");
+            try {
+                SqlStore.copyFile(e.file, c);
+                SqlStore.openReadOnly(c).close();
+            } finally {
+                c.delete();
+            }
+            return OK_UNRECORDED;
+        } catch (Throwable t) {
+            return BAD;
+        }
+    }
+
+    /** סיכום הבדיקה של כל הגיבויים: [תקינים, שונו, פגומים, פגום שנשמר]. */
+    int[] verifyAll(List<Entry> all) {
+        int[] r = new int[4];
+        for (Entry e : all) {
+            int v = verify(e);
+            if (v == OK || v == OK_UNRECORDED) r[0]++;
+            else if (v == CHANGED) r[1]++;
+            else if (v == BAD) r[2]++;
+            else r[3]++;
+        }
+        return r;
+    }
+
+    // ---------- שחזור ----------
+
+    /** מה יש במסד שנבנה. */
+    static final class Built {
+        final int lists;
+        final long items, members;
+        final String content;
+
+        Built(int lists, long items, long members, String content) {
+            this.lists = lists;
+            this.items = items;
+            this.members = members;
+            this.content = content;
+        }
+    }
+
+    /**
+     * בונה מסד משוחזר בקובץ target (מה שהיה בו נמחק) מגיבוי — עותק (.db) או טקסט (.txt). המונה — של המסד האמיתי, כדי
+     * שמספר זיהוי שכבר ניתן לא יחזור. גיבוי פגום, קטוע או שונה — חריגה, ושום דבר לא נשאר.
+     */
+    static Built build(File source, File target, IdCounter counter) throws IOException {
+        android.database.sqlite.SQLiteDatabase.deleteDatabase(target);
+        try {
+            SqlStore s;
+            if (source.getName().endsWith(".txt")) {
+                DbDump.Data d = DbDump.read(source);
+                s = SqlStore.open(target, counter);
+                try {
+                    DbDump.load(d, s);
+                    if (!DbDump.hash(s).equals(d.hash)) throw new Store.Failure("restored content differs from the text backup");
+                } catch (RuntimeException e) {
+                    s.close();
+                    throw e;
+                }
+                s.close();
+            } else {
+                SqlStore.copyFile(source, target);
+            }
+            s = SqlStore.open(target, counter);                                // בדיקת תקינות, שדרוג טבלאות, ומונה לא יורד
+            try {
+                String bad = s.check();
+                if (bad != null) throw new SqlStore.Damaged(bad);
+                return new Built(s.lists().size(), s.itemCount(), s.memberCount(), DbDump.hash(s));
+            } finally {
+                s.close();
+            }
+        } catch (IOException e) {
+            android.database.sqlite.SQLiteDatabase.deleteDatabase(target);
+            throw e;
+        } catch (RuntimeException e) {
+            android.database.sqlite.SQLiteDatabase.deleteDatabase(target);
+            throw e;
+        }
+    }
+
+    /**
+     * מחליף את המסד במסד שנבנה. שניהם סגורים. שינוי השם מחליף את הקובץ בפעולה אחת — בכל רגע יש בנתיב מסד שלם, הישן או
+     * החדש. היומן הישן נמחק קודם (מסד סגור — היומן שלו כבר אוחד).
+     */
+    static void swap(File built, File db) throws IOException {
+        if (!built.isFile()) throw new IOException("nothing to swap in: " + built.getPath());
+        for (String suf : new String[]{"-wal", "-shm", "-journal"}) new File(db.getPath() + suf).delete();
+        if (!built.renameTo(db)) throw new IOException("cannot replace " + db.getPath());
+        File wal = new File(built.getPath() + "-wal");
+        if (wal.isFile() && !wal.renameTo(new File(db.getPath() + "-wal"))) throw new IOException("cannot move the journal");
+        new File(built.getPath() + "-shm").delete();
+    }
+
+    // ---------- הרישום ----------
+
+    private static final class Record {
+        String checked = "";
+        final Map<String, String[]> files = new LinkedHashMap<String, String[]>();
+    }
+
+    private Record readRecord() {
+        Record r = new Record();
+        File f = new File(dir, RECORD);
+        if (!f.isFile()) return r;
+        try {
+            BufferedReader in = new BufferedReader(new InputStreamReader(new FileInputStream(f), "UTF-8"));
+            try {
+                String line;
+                while ((line = in.readLine()) != null) {
+                    if (line.startsWith("#")) continue;
+                    String[] p = line.split("\t", -1);
+                    if (p.length == 2 && p[0].equals("checked")) r.checked = p[1];
+                    else if (p.length == 5) r.files.put(p[0], p);
+                }
+            } finally {
+                in.close();
+            }
+        } catch (IOException e) {
+            Log.e("Backups.readRecord", e);
+        }
+        return r;
+    }
+
+    private void writeRecord(Record r) throws IOException {
+        dir.mkdirs();
+        File f = new File(dir, RECORD), part = new File(dir, RECORD + ".part");
+        FileOutputStream fo = new FileOutputStream(part);
+        try {
+            Writer w = new OutputStreamWriter(fo, "UTF-8");
+            w.write(Words.Db.RECORD_HEAD + "\n");
+            if (!r.checked.isEmpty()) w.write("checked\t" + r.checked + "\n");
+            for (String[] p : r.files.values()) w.write(p[0] + "\t" + p[1] + "\t" + p[2] + "\t" + p[3] + "\t" + p[4] + "\n");
+            w.flush();
+            fo.getFD().sync();
+        } finally {
+            fo.close();
+        }
+        if (!part.renameTo(f)) throw new IOException("cannot rename " + part.getPath());
+    }
+
+    private void put(File f, String sha, String content, long now) throws IOException {
+        Record r = readRecord();
+        r.files.put(f.getName(), new String[]{f.getName(), String.valueOf(f.length()), sha, content == null ? "" : content, String.valueOf(now)});
+        writeRecord(r);
+    }
+
+    // ---------- עזרים ----------
+
+    private static Entry newestCopy(List<Entry> all) {
+        for (Entry e : all) if (!e.text && !e.kind.equals(DAMAGED) && e.content != null) return e;
+        return null;
+    }
+
+    private static Entry newest(List<Entry> all, String kind) {
+        for (Entry e : all) if (e.kind.equals(kind)) return e;
+        return null;
+    }
+
+    static String day(long t) {
+        SimpleDateFormat d = new SimpleDateFormat("yyyy-MM-dd", Locale.US);
+        return d.format(new Date(t));
+    }
+
+    static String stamp(long t) {
+        SimpleDateFormat d = new SimpleDateFormat("yyyy-MM-dd HH-mm-ss", Locale.US);
+        return d.format(new Date(t));
+    }
+
+    /** מספר היום המקומי מאז 1970. */
+    static long dayIndex(long t) {
+        return floorDiv(t + TimeZone.getDefault().getOffset(t), 86400000L);
+    }
+
+    /** מספר השבוע, שבוע שמתחיל ביום ראשון (1.1.1970 היה יום חמישי). */
+    static long weekIndex(long t) {
+        return floorDiv(dayIndex(t) + 4, 7L);
+    }
+
+    /** חלוקה מעוגלת כלפי מטה (Math.floorDiv — רק מאנדרואיד 7). */
+    private static long floorDiv(long a, long b) {
+        long q = a / b;
+        return (a % b != 0 && (a < 0) != (b < 0)) ? q - 1 : q;
+    }
+
+    static String hex(byte[] b) {
+        StringBuilder sb = new StringBuilder(b.length * 2);
+        for (byte x : b) sb.append(Character.forDigit((x >> 4) & 15, 16)).append(Character.forDigit(x & 15, 16));
+        return sb.toString();
+    }
+
+    static String sha(File f) throws IOException {
+        InputStream in = new FileInputStream(f);
+        try {
+            MessageDigest md = digest();
+            byte[] b = new byte[64 * 1024];
+            int n;
+            while ((n = in.read(b)) > 0) md.update(b, 0, n);
+            return hex(md.digest());
+        } finally {
+            in.close();
+        }
+    }
+
+    /** מעתיק ומחשב חתימה על מה שנכתב. */
+    private static String copyWithSha(File from, File to) throws IOException {
+        InputStream in = new FileInputStream(from);
+        try {
+            FileOutputStream out = new FileOutputStream(to);
+            try {
+                MessageDigest md = digest();
+                byte[] b = new byte[64 * 1024];
+                int n;
+                while ((n = in.read(b)) > 0) {
+                    out.write(b, 0, n);
+                    md.update(b, 0, n);
+                }
+                out.getFD().sync();
+                return hex(md.digest());
+            } finally {
+                out.close();
+            }
+        } finally {
+            in.close();
+        }
+    }
+
+    private static MessageDigest digest() {
+        try {
+            return MessageDigest.getInstance("SHA-256");
+        } catch (Exception e) {
+            throw new Store.Failure("no SHA-256", e);
+        }
     }
 }
 ===== קובץ: src/com/tikiyot/vfm/BarService.java =====
@@ -8172,11 +9265,306 @@ final class DateSize {
         return (d + (d.isEmpty() || s.isEmpty() ? "" : " ") + s).trim();
     }
 }
+===== קובץ: src/com/tikiyot/vfm/DbDump.java =====
+package com.tikiyot.vfm;
+
+// גיבוי טקסט של מסד (מ0.5). אחראי: לכתוב את כל המסד לקובץ טקסט בפורמט מתועד, לקרוא אותו בחזרה — ולסרב לקובץ חסר,
+// קטוע או שונה — ולשחזר ממנו למסד ריק. אסור לו: למזג עם נתונים קיימים; לדעת איפה הגיבויים נשמרים.
+//
+// הפורמט, גרסה 1 — UTF-8, שורה לכל רשומה, שדות מופרדים בטאב:
+//   שורה 1: כותרת לקורא (לא נבדקת)
+//   format <גרסת הפורמט>
+//   made <מתי נעשה, אלפיות שנייה>
+//   ― התוכן, שנכנס לחתימה: ―
+//   schema <גרסת הטבלאות>
+//   X <מפתח> <ערך>                                                      — meta: המונה הבא, קוד המערכת
+//   I <מספר> <סוג> <נוצר> <שונה> <שם> <extra> <origin_sys> <origin_id> <origin_key>   — פריט
+//   P <פריט> <מפתח> <ערך>                                              — מאפיין
+//   F <פריט> <מסלול> <כונן> <גודל> <תאריך> <חתימה>                      — פרטי קובץ
+//   M <רשימה> <פריט> <מקום> <נוסף>                                      — חברות
+//   ― סוף התוכן ―
+//   end <מספר שורות התוכן> <SHA-256 של שורות התוכן, כל אחת עם סוף שורה>
+// בתוך שדה: "\\" לקו נטוי, "\t" לטאב, "\n" ו־"\r" לסוף שורה; "\N" לבד — ריק (NULL).
+// אותו מסד נותן תמיד אותו תוכן ואותה חתימה — גם עותק שלו. כך משווים מסד, עותק וגיבוי טקסט.
+
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.io.OutputStreamWriter;
+import java.io.Writer;
+import java.security.MessageDigest;
+import java.util.ArrayList;
+import java.util.List;
+
+final class DbDump {
+
+    static final int FORMAT = 1;
+    private static final String NULL = "\\N";
+
+    private DbDump() { }
+
+    /** מה שנקרא מקובץ — כבר נבדק (שלם, חתימה תואמת). */
+    static final class Data {
+        final int format, schema;
+        final long made;
+        /** הרשומות, כל אחת שדות אחרי פענוח (null לריק); הראשון — סוג הרשומה. */
+        final List<String[]> records;
+        final String hash;
+
+        Data(int format, int schema, long made, List<String[]> records, String hash) {
+            this.format = format;
+            this.schema = schema;
+            this.made = made;
+            this.records = records;
+            this.hash = hash;
+        }
+
+        int count(String tag) {
+            int n = 0;
+            for (String[] r : records) if (r[0].equals(tag)) n++;
+            return n;
+        }
+    }
+
+    /** חתימת התוכן של המסד — זהה לזו שבגיבוי הטקסט שלו ושל כל עותק שלו. */
+    static String hash(SqlStore s) {
+        Sink k = new Sink(null);
+        lines(s, k);
+        return k.hex();
+    }
+
+    /** כותב גיבוי טקסט (דרך קובץ זמני ושינוי שם). מחזיר את חתימת התוכן. */
+    static String write(SqlStore s, File f, long made) throws IOException {
+        File part = new File(f.getPath() + ".part");
+        FileOutputStream fo = new FileOutputStream(part);
+        String hex;
+        int n;
+        boolean ok = false;
+        try {
+            Writer w = new OutputStreamWriter(fo, "UTF-8");
+            w.write(Words.Db.DUMP_TITLE + "\n");
+            w.write("format\t" + FORMAT + "\n");
+            w.write("made\t" + made + "\n");
+            Sink k = new Sink(w);
+            lines(s, k);
+            hex = k.hex();
+            n = k.count;
+            w.write("end\t" + n + "\t" + hex + "\n");
+            w.flush();
+            fo.getFD().sync();
+            ok = true;
+        } finally {
+            fo.close();
+            if (!ok) part.delete();
+        }
+        if (!part.renameTo(f)) {
+            part.delete();
+            throw new IOException("cannot rename " + part.getPath());
+        }
+        return hex;
+    }
+
+    /** קורא ובודק. @throws Store.Failure אם הקובץ קטוע, שונה, מגרסה חדשה יותר או לא בפורמט. */
+    static Data read(File f) throws IOException {
+        BufferedReader in = new BufferedReader(new InputStreamReader(new FileInputStream(f), "UTF-8"));
+        try {
+            String title = in.readLine();
+            if (title == null) throw new Store.Failure("empty file");
+            int format = (int) field(in.readLine(), "format");
+            if (format > FORMAT) throw new Store.Failure("newer format: " + format);
+            if (format < 1) throw new Store.Failure("bad format: " + format);
+            long made = field(in.readLine(), "made");
+            Sink k = new Sink(null);
+            List<String[]> records = new ArrayList<String[]>();
+            int schema = -1;
+            String line;
+            boolean ended = false;
+            while ((line = in.readLine()) != null) {
+                if (line.startsWith("end\t")) {
+                    String[] e = line.split("\t", -1);
+                    if (e.length != 3) throw new Store.Failure("bad end line");
+                    if (Integer.parseInt(e[1]) != k.count) throw new Store.Failure("line count differs: " + e[1] + " / " + k.count);
+                    if (!e[2].equals(k.hex())) throw new Store.Failure("content signature differs");
+                    ended = true;
+                    if (in.readLine() != null) throw new Store.Failure("text after the end line");
+                    break;
+                }
+                k.line(line);
+                String[] p = line.split("\t", -1);
+                if (k.count == 1) {
+                    if (p.length != 2 || !p[0].equals("schema")) throw new Store.Failure("missing schema line");
+                    schema = Integer.parseInt(p[1]);
+                    if (schema > SqlStore.VERSION) throw new Store.Failure("newer schema: " + schema);
+                    continue;
+                }
+                int want = width(p[0]);
+                if (want < 0 || p.length != want) throw new Store.Failure("bad record at line " + (k.count + 3));
+                for (int i = 1; i < p.length; i++) p[i] = unesc(p[i]);
+                records.add(p);
+            }
+            if (!ended) throw new Store.Failure("cut short: no end line");
+            if (schema < 0) throw new Store.Failure("missing schema line");
+            return new Data(format, schema, made, records, k.hex());
+        } catch (NumberFormatException e) {
+            throw new Store.Failure("bad number: " + e.getMessage());
+        } finally {
+            in.close();
+        }
+    }
+
+    /** משחזר למסד ריק, בעסקה אחת: הכול או כלום. מסד שיש בו פריטים — Failure (בלי מיזוג). */
+    static void load(final Data d, final SqlStore target) {
+        if (target.itemCount() > 0) throw new Store.Failure("restore goes only into an empty database");
+        target.rawWork(new Runnable() {
+            @Override
+            public void run() {
+                target.rawExec("DELETE FROM meta", new Object[0]);
+                for (String[] r : d.records) {
+                    String t = r[0];
+                    if (t.equals("X")) {
+                        target.rawExec("INSERT INTO meta(k, v) VALUES(?,?)", new Object[]{r[1], r[2]});
+                    } else if (t.equals("I")) {
+                        target.rawExec("INSERT INTO items(id, type, created, changed, name, extra, origin_sys, origin_id, origin_key) "
+                                + "VALUES(?,?,?,?,?,?,?,?,?)", new Object[]{num(r[1]), num(r[2]), num(r[3]), num(r[4]), r[5], r[6], r[7],
+                                r[8] == null ? null : num(r[8]), r[9]});
+                    } else if (t.equals("P")) {
+                        target.rawExec("INSERT INTO props(item_id, k, v) VALUES(?,?,?)", new Object[]{num(r[1]), r[2], r[3]});
+                    } else if (t.equals("F")) {
+                        target.rawExec("INSERT INTO files(item_id, path, drive, size, mtime, sig) VALUES(?,?,?,?,?,?)",
+                                new Object[]{num(r[1]), r[2], r[3], num(r[4]), num(r[5]), r[6]});
+                    } else if (t.equals("M")) {
+                        target.rawExec("INSERT INTO members(list_id, item_id, position, added) VALUES(?,?,?,?)",
+                                new Object[]{num(r[1]), num(r[2]), num(r[3]), num(r[4])});
+                    }
+                }
+            }
+        });
+    }
+
+    // ---------- פנימי ----------
+
+    /** שורות התוכן, בסדר קבוע. */
+    private static void lines(SqlStore s, final Sink k) {
+        k.line("schema\t" + s.getVersionForTest());
+        s.each("SELECT k, v FROM meta ORDER BY k", 2, rec(k, "X"));
+        s.each("SELECT id, type, created, changed, name, extra, origin_sys, origin_id, origin_key FROM items ORDER BY id", 9, rec(k, "I"));
+        s.each("SELECT item_id, k, v FROM props ORDER BY item_id, k", 3, rec(k, "P"));
+        s.each("SELECT item_id, path, drive, size, mtime, sig FROM files ORDER BY item_id", 6, rec(k, "F"));
+        s.each("SELECT list_id, item_id, position, added FROM members ORDER BY list_id, position, item_id", 4, rec(k, "M"));
+    }
+
+    private static SqlStore.Row rec(final Sink k, final String tag) {
+        return new SqlStore.Row() {
+            @Override
+            public void row(String[] v) {
+                StringBuilder sb = new StringBuilder(tag);
+                for (String x : v) sb.append('\t').append(esc(x));
+                k.line(sb.toString());
+            }
+        };
+    }
+
+    /** כמה שדות (כולל הסוג) בכל סוג רשומה; ‎-1 — סוג לא מוכר. */
+    private static int width(String tag) {
+        if (tag.equals("X")) return 3;
+        if (tag.equals("I")) return 10;
+        if (tag.equals("P")) return 4;
+        if (tag.equals("F")) return 7;
+        if (tag.equals("M")) return 5;
+        return -1;
+    }
+
+    private static long field(String line, String name) {
+        if (line == null) throw new Store.Failure("missing " + name + " line");
+        String[] p = line.split("\t", -1);
+        if (p.length != 2 || !p[0].equals(name)) throw new Store.Failure("missing " + name + " line");
+        return Long.parseLong(p[1]);
+    }
+
+    private static Long num(String v) {
+        if (v == null) throw new Store.Failure("missing number");
+        return Long.valueOf(Long.parseLong(v));
+    }
+
+    static String esc(String s) {
+        if (s == null) return NULL;
+        StringBuilder b = new StringBuilder(s.length() + 8);
+        for (int i = 0; i < s.length(); i++) {
+            char c = s.charAt(i);
+            if (c == '\\') b.append("\\\\");
+            else if (c == '\t') b.append("\\t");
+            else if (c == '\n') b.append("\\n");
+            else if (c == '\r') b.append("\\r");
+            else b.append(c);
+        }
+        return b.toString();
+    }
+
+    static String unesc(String s) {
+        if (s.equals(NULL)) return null;
+        if (s.indexOf('\\') < 0) return s;
+        StringBuilder b = new StringBuilder(s.length());
+        for (int i = 0; i < s.length(); i++) {
+            char c = s.charAt(i);
+            if (c != '\\') {
+                b.append(c);
+                continue;
+            }
+            if (i + 1 >= s.length()) throw new Store.Failure("bad escape");
+            char n = s.charAt(++i);
+            if (n == '\\') b.append('\\');
+            else if (n == 't') b.append('\t');
+            else if (n == 'n') b.append('\n');
+            else if (n == 'r') b.append('\r');
+            else throw new Store.Failure("bad escape");
+        }
+        return b.toString();
+    }
+
+    /** מקבל שורות: סופר, מחשב חתימה, וכותב אם יש לאן. */
+    private static final class Sink {
+        private final Writer w;
+        private final MessageDigest md;
+        int count;
+
+        Sink(Writer w) {
+            this.w = w;
+            try {
+                md = MessageDigest.getInstance("SHA-256");
+            } catch (Exception e) {
+                throw new Store.Failure("no SHA-256", e);
+            }
+        }
+
+        void line(String l) {
+            try {
+                byte[] b = (l + "\n").getBytes("UTF-8");
+                md.update(b);
+                if (w != null) w.write(l + "\n");
+            } catch (IOException e) {
+                throw new Store.Failure("write failed", e);
+            }
+            count++;
+        }
+
+        private String done;
+
+        /** החתימה. אחריה לא מוסיפים שורות. */
+        String hex() {
+            if (done == null) done = Backups.hex(md.digest());
+            return done;
+        }
+    }
+}
 ===== קובץ: src/com/tikiyot/vfm/DbScreen.java =====
 package com.tikiyot.vfm;
 
-// מסך מנוע המסד (מ0.1–מ0.3): רשימות, רשימות חכמות ("לא משויכים" כרשימה מיוחדת) ופריטים מעל Store, והעתקה מהמנוע הישן.
-// אחראי: להציג ולהפעיל. אסור לו: לדעת איך הנתונים נשמרים (Store), או לכתוב למנוע הישן (קורא בלבד).
+// מסך מנוע המסד (מ0.1–מ0.5): רשימות, רשימות חכמות ("לא משויכים" כרשימה מיוחדת) ופריטים מעל Store, העתקה מהמנוע הישן,
+// וגיבוי (מ0.5): עותק יומי ברקע כשנפתח המסד, עותק לפני פעולה מוחקת, "גיבוי עכשיו", שחזור, ומסד פגום שלא נפתח.
+// אחראי: להציג ולהפעיל. אסור לו: לדעת איך הנתונים נשמרים (Store, Backups), או לכתוב למנוע הישן (קורא בלבד).
 
 import android.app.Activity;
 import android.app.AlertDialog;
@@ -8200,7 +9588,11 @@ public class DbScreen extends Activity {
     static final String DB_PREFIX = "vfm-m-", DB_SUFFIX = ".db";
     private static final String PREFS = "m", PREF_MODE = "mode";
 
-    private SqlStore store;
+    private volatile SqlStore store;
+    /** מ0.5: המסד של האופן פגום — לא נפתח. null: לא פגום. */
+    private String damaged;
+    /** סגירת המסד מחכה לגיבוי היומי שרץ ברקע (שלא ייסגר באמצע). */
+    private final Object storeLock = new Object();
     private String mode = "";
     private Button modeButton;
     private TextView status, crumb, hint;
@@ -8241,10 +9633,16 @@ public class DbScreen extends Activity {
     private void switchMode(String m) {
         mode = m;
         getSharedPreferences(PREFS, MODE_PRIVATE).edit().putString(PREF_MODE, m).apply();
-        if (store != null) store.close();
-        store = null;
+        closeStore();
         path.clear();
         refresh();
+    }
+
+    private void closeStore() {
+        synchronized (storeLock) {
+            if (store != null) store.close();
+            store = null;
+        }
     }
 
     private void pickMode() {
@@ -8324,27 +9722,33 @@ public class DbScreen extends Activity {
         if (mode.isEmpty()) mode = loadMode();
         modeButton.setText(Words.Db.modeButton(mode));
         if (store == null) {
+            damaged = null;
             try {
                 store = SqlStore.open(dbFile(this, mode), new IdCounter(counterFile()));
+            } catch (SqlStore.Damaged d) {
+                Log.e("DbScreen.open", d);
+                damaged = String.valueOf(d.getMessage());
+                showDamaged();
+                return;
             } catch (Throwable t) {
                 Log.e("DbScreen.open", t);
                 status.setText(Words.Db.openFailed(String.valueOf(t.getMessage())));
                 return;
             }
+            startDaily();
         }
         show();
     }
 
     @Override
     protected void onDestroy() {
-        if (store != null) store.close();
-        store = null;
+        closeStore();
         super.onDestroy();
     }
 
     @Override
     public void onBackPressed() {
-        if (path.isEmpty()) {
+        if (path.isEmpty() || store == null) {
             super.onBackPressed();
             return;
         }
@@ -8427,6 +9831,7 @@ public class DbScreen extends Activity {
             if (path.isEmpty()) {
                 rows.addView(specialRow(Words.Db.UNASSIGNED, Words.Db.UNASSIGNED_SUB, store.unassigned().size(), UNASSIGNED_ID));
                 rows.addView(specialRow(Words.Db.TRASH, Words.Db.TRASH_SUB, store.trashed().size(), TRASH_ID));
+                rows.addView(backupsRow());
                 List<Store.Item> smarts = store.smarts();
                 if (all.isEmpty() && smarts.isEmpty()) {
                     TextView t = Ui.info(this);
@@ -8471,6 +9876,16 @@ public class DbScreen extends Activity {
 
     /** "לא משויכים" / סל המחזור: שורה מיוחדת בראש הרשימות — מחושבת בכל פעם, לא נשמרת. */
     private View specialRow(String title, String subText, int count, final long id) {
+        return specialRow(title, subText + " · " + Words.items(count), new Runnable() {
+            @Override
+            public void run() {
+                path.add(id);
+                show();
+            }
+        });
+    }
+
+    private View specialRow(String title, String subLine, final Runnable tap) {
         LinearLayout r = new LinearLayout(this);
         r.setOrientation(LinearLayout.VERTICAL);
         r.setPadding(Ui.dp(this, 12), Ui.dp(this, 10), Ui.dp(this, 12), Ui.dp(this, 10));
@@ -8481,15 +9896,14 @@ public class DbScreen extends Activity {
         TextView sub = new TextView(this);
         sub.setTextSize(12);
         sub.setTextColor(Ui.SUB);
-        sub.setText(subText + " · " + Words.items(count));
+        sub.setText(subLine);
         r.addView(name);
         r.addView(sub);
         r.setBackgroundColor(Ui.BG);
         r.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                path.add(id);
-                show();
+                tap.run();
             }
         });
         return r;
@@ -8855,12 +10269,17 @@ public class DbScreen extends Activity {
                 Ui.confirm(this, Words.Db.PURGE, it.name + "\n" + Words.Db.PURGE_DETAIL, Words.Db.PURGE, new Runnable() {
                     @Override
                     public void run() {
-                        try {
-                            store.purge(it.id);
-                        } catch (Store.Failure f) {
-                            Ui.toast(DbScreen.this, Words.Db.failed(f.getMessage()));
-                        }
-                        show();
+                        guarded(Backups.OP_PURGE, new Runnable() {
+                            @Override
+                            public void run() {
+                                try {
+                                    store.purge(it.id);
+                                } catch (Store.Failure f) {
+                                    Ui.toast(DbScreen.this, Words.Db.failed(f.getMessage()));
+                                }
+                                show();
+                            }
+                        });
                     }
                 });
                 return;
@@ -8888,13 +10307,18 @@ public class DbScreen extends Activity {
                         Words.Db.DELETE_YES, new Runnable() {
                             @Override
                             public void run() {
-                                try {
-                                    store.deleteList(it.id);
-                                    path.remove(Long.valueOf(it.id));
-                                } catch (Store.Failure f) {
-                                    Ui.toast(DbScreen.this, Words.Db.failed(f.getMessage()));
-                                }
-                                show();
+                                guarded(Backups.OP_DELETE, new Runnable() {
+                                    @Override
+                                    public void run() {
+                                        try {
+                                            store.deleteList(it.id);
+                                            path.remove(Long.valueOf(it.id));
+                                        } catch (Store.Failure f) {
+                                            Ui.toast(DbScreen.this, Words.Db.failed(f.getMessage()));
+                                        }
+                                        show();
+                                    }
+                                });
                             }
                         });
                 return;
@@ -8903,6 +10327,245 @@ public class DbScreen extends Activity {
             Ui.toast(this, Words.Db.failed(f.getMessage()));
         }
         show();
+    }
+
+    // ---------- מ0.5: גיבוי ושחזור ----------
+
+    /** הגיבוי לפני ההעתקה נכשל — לא מעתיקים. */
+    private static final class BackupFailed extends RuntimeException {
+        BackupFailed(String m) {
+            super(m);
+        }
+    }
+
+    /** הגיבויים של האופן: בתיקייה הגלויה של התוכנה; עותקים זמניים — באחסון הפרטי. */
+    private Backups backups(String m) {
+        return new Backups(new File(new File(Paths.data(), Backups.DIR), m), new File(getCacheDir(), "mbackup"));
+    }
+
+    /** הגיבוי היומי, ברקע: עותק אם יש שינוי (פעם ביום), טקסט פעם בשבוע, ומחיקת ישנים. */
+    private void startDaily() {
+        final SqlStore s = store;
+        final String m = mode;
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                boolean made = false;
+                synchronized (storeLock) {
+                    if (s != store) return;                                    // המסד נסגר או הוחלף בינתיים
+                    try {
+                        Backups.Daily d = backups(m).daily(s, System.currentTimeMillis());
+                        made = d.copied || d.texted || !d.deleted.isEmpty();
+                    } catch (Throwable t) {
+                        Log.e("DbScreen.daily", t);
+                    }
+                }
+                if (!made) return;
+                ui.post(new Runnable() {
+                    @Override
+                    public void run() {
+                        if (!isFinishing() && s == store && path.isEmpty()) show();
+                    }
+                });
+            }
+        }).start();
+    }
+
+    /** לפני פעולה מוחקת: עותק (אם השתנה משהו מאז הגיבוי האחרון). אם הגיבוי נכשל — שואלים אם להמשיך בלי. */
+    private void guarded(String op, final Runnable work) {
+        try {
+            backups(mode).before(store, op, System.currentTimeMillis());
+        } catch (Throwable t) {
+            Log.e("DbScreen.before", t);
+            new AlertDialog.Builder(this).setMessage(Words.Db.backupBeforeFailed(String.valueOf(t.getMessage())))
+                    .setPositiveButton(Words.Db.GO_ON_WITHOUT_BACKUP, new DialogInterface.OnClickListener() {
+                        @Override public void onClick(DialogInterface d, int w) { work.run(); }
+                    })
+                    .setNegativeButton(Words.CANCEL, null).show();
+            return;
+        }
+        work.run();
+    }
+
+    private View backupsRow() {
+        List<Backups.Entry> all = backups(mode).list();
+        String sub = all.isEmpty() ? Words.Db.BACKUPS_EMPTY_SUB : Words.Db.backupsSub(all.size(), FullCheck.when(all.get(0)));
+        return specialRow(Words.Db.BACKUPS, sub, new Runnable() {
+            @Override public void run() { backupMenu(); }
+        });
+    }
+
+    /** רשימת הגיבויים (כל אחד נבדק מול הרישום), ו"גיבוי עכשיו". נגיעה בגיבוי — שחזור ממנו. */
+    private void backupMenu() {
+        final AlertDialog wait = new AlertDialog.Builder(this).setMessage(Words.Db.BACKUPS_CHECKING).setCancelable(false).show();
+        final Backups bk = backups(mode);
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                final List<Backups.Entry> all = bk.list();
+                final int[] states = new int[all.size()];
+                for (int i = 0; i < all.size(); i++) states[i] = bk.verify(all.get(i));
+                runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        wait.dismiss();
+                        if (isFinishing()) return;
+                        final boolean canBackup = store != null;
+                        List<String> labels = new ArrayList<String>();
+                        if (canBackup) labels.add(Words.Db.BACKUP_NOW);
+                        for (int i = 0; i < all.size(); i++) {
+                            Backups.Entry e = all.get(i);
+                            labels.add(Words.Db.backupEntry(states[i], Words.Db.backupKind(e.kind, e.op, e.text), FullCheck.when(e),
+                                    e.file.length()));
+                        }
+                        if (labels.isEmpty()) labels.add(Words.Db.BACKUPS_EMPTY_SUB);
+                        Ui.list(DbScreen.this, Words.Db.backupsTitle(mode), labels, new DialogInterface.OnClickListener() {
+                            @Override
+                            public void onClick(DialogInterface d, int which) {
+                                int i = canBackup ? which - 1 : which;
+                                if (canBackup && which == 0) backupNow();
+                                else if (i >= 0 && i < all.size()) restoreAsk(all.get(i), states[i]);
+                            }
+                        });
+                    }
+                });
+            }
+        }).start();
+    }
+
+    private void backupNow() {
+        final AlertDialog wait = new AlertDialog.Builder(this).setMessage(Words.Db.BACKUP_SAVING).setCancelable(false).show();
+        final Backups bk = backups(mode);
+        final SqlStore s = store;
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                String msg;
+                try {
+                    StringBuilder names = new StringBuilder();
+                    synchronized (storeLock) {
+                        if (s != store) throw new IllegalStateException("closed");
+                        for (Backups.Entry e : bk.manual(s, System.currentTimeMillis())) names.append(e.name).append('\n');
+                    }
+                    msg = Words.Db.backupSaved(names.toString().trim(), bk.dir.getPath());
+                } catch (Throwable t) {
+                    Log.e("DbScreen.backupNow", t);
+                    msg = Words.Db.failed(String.valueOf(t.getMessage()));
+                }
+                final String text = msg;
+                runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        wait.dismiss();
+                        if (isFinishing()) return;
+                        new AlertDialog.Builder(DbScreen.this).setMessage(text).setPositiveButton(Words.OK, null).show();
+                        if (store != null) show();
+                    }
+                });
+            }
+        }).start();
+    }
+
+    /** בונה מסד מהגיבוי (ברקע, בקובץ נפרד), מציג מה יש בו מול מה שיש עכשיו, ורק אחרי אישור מחליף. */
+    private void restoreAsk(final Backups.Entry e, int state) {
+        if (state == Backups.KEPT_DAMAGED) {
+            new AlertDialog.Builder(this).setMessage(Words.Db.KEPT_DAMAGED_INFO).setPositiveButton(Words.OK, null).show();
+            return;
+        }
+        if (state == Backups.BAD) {
+            new AlertDialog.Builder(this).setMessage(Words.Db.BACKUP_BAD).setPositiveButton(Words.OK, null).show();
+            return;
+        }
+        if (state == Backups.CHANGED) Ui.toast(this, Words.Db.BACKUP_CHANGED_WARN);
+        final String m = mode;
+        final File db = dbFile(this, m), built = new File(db.getPath() + ".restore");
+        final AlertDialog wait = new AlertDialog.Builder(this).setMessage(Words.Db.RESTORE_BUILDING).setCancelable(false).show();
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                Backups.Built b = null;
+                String err = null;
+                try {
+                    b = Backups.build(e.file, built, new IdCounter(counterFile()));
+                } catch (Throwable t) {
+                    Log.e("DbScreen.restore.build", t);
+                    err = String.valueOf(t.getMessage());
+                }
+                final Backups.Built res = b;
+                final String error = err;
+                runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        wait.dismiss();
+                        if (isFinishing() || !m.equals(mode)) {
+                            android.database.sqlite.SQLiteDatabase.deleteDatabase(built);
+                            return;
+                        }
+                        if (error != null) {
+                            new AlertDialog.Builder(DbScreen.this).setMessage(Words.Db.restoreFailed(error)).setPositiveButton(Words.OK, null).show();
+                            return;
+                        }
+                        SqlStore s = store;
+                        String label = Words.Db.backupKind(e.kind, e.op, e.text) + " · " + FullCheck.when(e);
+                        String q = Words.Db.restoreQuestion(label, res.lists, res.items, s == null ? 0 : s.lists().size(),
+                                s == null ? 0 : s.itemCount(), s == null);
+                        new AlertDialog.Builder(DbScreen.this).setMessage(q).setCancelable(false)
+                                .setPositiveButton(Words.Db.RESTORE_YES, new DialogInterface.OnClickListener() {
+                                    @Override public void onClick(DialogInterface d, int w) { restoreRun(built, db); }
+                                })
+                                .setNegativeButton(Words.CANCEL, new DialogInterface.OnClickListener() {
+                                    @Override public void onClick(DialogInterface d, int w) { android.database.sqlite.SQLiteDatabase.deleteDatabase(built); }
+                                }).show();
+                    }
+                });
+            }
+        }).start();
+    }
+
+    /** קודם שומרים את המסד הנוכחי (או הפגום, כמו שהוא), אחר כך מחליפים ופותחים מחדש. */
+    private void restoreRun(File built, File db) {
+        try {
+            long now = System.currentTimeMillis();
+            if (store != null) backups(mode).before(store, Backups.OP_RESTORE, now);
+            else if (db.isFile()) backups(mode).keepDamaged(db, now);
+        } catch (Throwable t) {
+            Log.e("DbScreen.restore.before", t);
+            android.database.sqlite.SQLiteDatabase.deleteDatabase(built);
+            new AlertDialog.Builder(this).setMessage(Words.Db.restoreFailed(Words.Db.backupBeforeFailed(String.valueOf(t.getMessage()))))
+                    .setPositiveButton(Words.OK, null).show();
+            return;
+        }
+        closeStore();
+        try {
+            Backups.swap(built, db);
+        } catch (Throwable t) {
+            Log.e("DbScreen.restore.swap", t);
+            android.database.sqlite.SQLiteDatabase.deleteDatabase(built);
+            new AlertDialog.Builder(this).setMessage(Words.Db.restoreFailed(String.valueOf(t.getMessage()))).setPositiveButton(Words.OK, null).show();
+            refresh();
+            return;
+        }
+        path.clear();
+        damaged = null;
+        refresh();
+        Ui.toast(this, Words.Db.RESTORED_DB);
+    }
+
+    /** המסד פגום: לא פותחים ולא כותבים; מציעים לשחזר מגיבוי. */
+    private void showDamaged() {
+        token++;
+        status.setText(Words.Db.damaged(mode, damaged));
+        crumb.setText(Words.Db.ALL_LISTS);
+        hint.setText(Words.Db.DAMAGED_HINT);
+        buttons.removeAllViews();
+        buttons.addView(button(Words.Db.RESTORE_FROM_BACKUP, new Runnable() {
+            @Override public void run() { backupMenu(); }
+        }));
+        buttons.addView(button(Words.Db.FULL_CHECK, new Runnable() {
+            @Override public void run() { fullCheck(); }
+        }));
+        rows.removeAllViews();
+        rows.addView(backupsRow());
     }
 
     // ---------- מ0.2: העתקה מהמנוע הישן ----------
@@ -8951,7 +10614,17 @@ public class DbScreen extends Activity {
                 Importer.Report rep = null;
                 try {
                     Importer.Source src = Importer.load(new File(new File(old, Modes.DIR), mode));
+                    if (keep) {
+                        try {
+                            backups(mode).before(store, Backups.OP_IMPORT, System.currentTimeMillis());
+                        } catch (Throwable t) {
+                            Log.e("DbScreen.import.backup", t);
+                            throw new BackupFailed(Words.Db.importBackupFailed(String.valueOf(t.getMessage())));
+                        }
+                    }
                     rep = Importer.run(store, src, keep);
+                } catch (BackupFailed t) {
+                    err = t.getMessage();
                 } catch (Throwable t) {
                     Log.e("DbScreen.import", t);
                     err = Words.Db.importFailed(String.valueOf(t.getMessage()));
@@ -9038,7 +10711,8 @@ public class DbScreen extends Activity {
         d.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(new View.OnClickListener() {
             @Override public void onClick(View v) { copy(report); }
         });
-        show();
+        if (store != null) show();
+        else if (damaged != null) showDamaged();
     }
 
     private void copy(String text) {
@@ -9099,6 +10773,18 @@ public class DbScreen extends Activity {
                 File f = dbFile(DbScreen.this, mode);
                 return f.exists() ? SqlStore.open(f, new IdCounter(counterFile())) : null;
             }
+
+            @Override
+            public File scratch() {
+                File w = new File(tmp, "s" + (seq[0]++));
+                w.mkdirs();
+                return w;
+            }
+
+            @Override
+            public Backups backups(String mode) {
+                return DbScreen.this.backups(mode);
+            }
         };
     }
 
@@ -9119,6 +10805,9 @@ public class DbScreen extends Activity {
             String persist = SqlStore.persistenceCheck(dir);
             if (persist != null) r.failed.add("persistence: " + persist);
             else r.passed++;
+            StoreContract.Result br = BackupContract.run(new File(dir, "backup"));
+            r.passed += br.passed;
+            for (String f : br.failed) r.failed.add("backup: " + f);
             String info = "?";
             SqlStore s = SqlStore.open(new File(dir, "info.db"), new IdCounter(new File(dir, "info-counter.txt")));
             try {
@@ -13321,8 +15010,9 @@ package com.tikiyot.vfm;
 // בדיקה מלאה אחת (מ0.2.2): מריצה הכול ומחזירה דוח טקסט אחד, שאפשר להעתיק ולשלוח.
 // אחראי: לבדוק את שכבת האחסון (בדיקה עצמית), ולכל אופן עבודה במנוע הישן — העתקה מלאה למסד זמני ובדיקה מול המקור
 // (רשימות, חברות, קבצים, חתימות, רשימות חכמות ותנאיהן, "לא משויכים", העתקה חוזרת, רשימות ריקות), הערכת התנאים מול האינדקס
-// (מ0.3), ואת המסד האמיתי של אותו אופן מול המקור (בלי לשנות אותו).
-// אסור לו: לשנות את המנוע הישן, או את המסדים האמיתיים (רק תצוגה מקדימה עליהם).
+// (מ0.3), ואת המסד האמיתי של אותו אופן מול המקור (בלי לשנות אותו). מ0.5: עותק, גיבוי טקסט ושחזור של המסד האמיתי —
+// הכול על עותקים זמניים — ובדיקת הגיבויים שבתיקייה מול הרישום.
+// אסור לו: לשנות את המנוע הישן, את המסדים האמיתיים (רק תצוגה מקדימה עליהם) או את הגיבויים (רק קריאה).
 
 import java.io.File;
 import java.util.ArrayList;
@@ -13351,6 +15041,12 @@ final class FullCheck {
 
         /** מנוע ההערכה של רשימות חכמות (האינדקס); null — אין (למשל בבדיקות במחשב בלי אינדקס). */
         Smarts.Finder finder();
+
+        /** מ0.5: תיקייה זמנית חדשה וריקה לבדיקת הגיבוי (נמחקת אחרי הבדיקה). */
+        File scratch() throws Exception;
+
+        /** מ0.5: הגיבויים של האופן, או null. */
+        Backups backups(String mode);
     }
 
     private static final int EXAMPLES = 6;
@@ -13433,9 +15129,18 @@ final class FullCheck {
         }
 
         // 2. המסד האמיתי של האופן, מול המקור — בלי לכתוב אליו
-        Store real = env.openReal(mode);
+        Store real;
+        try {
+            real = env.openReal(mode);
+        } catch (SqlStore.Damaged d) {
+            out.append(Words.Db.realDamaged(String.valueOf(d.getMessage()))).append("\n");
+            problems.add(Words.Db.pRealDamaged(mode));
+            folder(env, mode, out, problems);
+            return;
+        }
         if (real == null) {
             out.append(Words.Db.REAL_NONE).append("\n");
+            folder(env, mode, out, problems);
             return;
         }
         try {
@@ -13454,9 +15159,81 @@ final class FullCheck {
                 problems.add(Words.Db.pRealBehind(mode, pre.listsNew, pre.filesNew, pre.filesUpdated, pre.linksAdded, pre.smartNew, pre.refsAdded));
             if (real.check() != null) problems.add(Words.Db.pCheck(mode, real.check()));
             for (String e : f.examples) out.append("   ").append(e).append("\n");
+            if (real instanceof SqlStore) backup((SqlStore) real, mode, env, out, problems);
         } finally {
             real.close();
         }
+        folder(env, mode, out, problems);
+    }
+
+    // ---------- מ0.5: גיבוי ----------
+
+    /**
+     * עותק דרך SQLite, גיבוי טקסט, שחזור מהטקסט למסד ריק ושחזור מהעותק — כולם בתיקייה זמנית; כל אחד חייב לתת אותה חתימת
+     * תוכן כמו המסד האמיתי. המסד האמיתי רק נקרא.
+     */
+    private static void backup(SqlStore real, String mode, Env env, StringBuilder out, List<String> problems) {
+        long t0 = System.currentTimeMillis();
+        try {
+            File w = env.scratch();
+            String live = DbDump.hash(real);
+            File copy = new File(w, "copy.db"), txt = new File(w, "copy.txt");
+            real.copyTo(copy);
+            String hc, ht;
+            SqlStore ro = SqlStore.openReadOnly(copy);
+            try {
+                hc = DbDump.hash(ro);
+                ht = DbDump.write(ro, txt, System.currentTimeMillis());
+            } finally {
+                ro.close();
+            }
+            DbDump.Data d = DbDump.read(txt);
+            Backups.Built fromText = Backups.build(txt, new File(w, "from-text.db"), new IdCounter(new File(w, "c1.txt")));
+            Backups.Built fromCopy = Backups.build(copy, new File(w, "from-copy.db"), new IdCounter(new File(w, "c2.txt")));
+            boolean copyOk = live.equals(hc), textOk = live.equals(ht) && live.equals(d.hash) && live.equals(fromText.content),
+                    restoreOk = live.equals(fromCopy.content);
+            out.append(Words.Db.backupLine(copyOk, copy.length(), textOk, d.records.size(), txt.length(), restoreOk,
+                    System.currentTimeMillis() - t0)).append("\n");
+            if (!copyOk) problems.add(Words.Db.pBackupCopy(mode));
+            if (!textOk) problems.add(Words.Db.pBackupText(mode));
+            if (!restoreOk) problems.add(Words.Db.pBackupRestore(mode));
+        } catch (Throwable t) {
+            Log.e("FullCheck.backup", t);
+            out.append(Words.Db.pBackupFailed(mode, String.valueOf(t))).append("\n");
+            problems.add(Words.Db.pBackupFailed(mode, String.valueOf(t)));
+        }
+    }
+
+    /** הגיבויים שבתיקייה: כמה מכל סוג, האחרון, ובדיקה מול הרישום. */
+    private static void folder(Env env, String mode, StringBuilder out, List<String> problems) {
+        Backups b = env.backups(mode);
+        if (b == null) return;
+        try {
+            List<Backups.Entry> all = b.list();
+            if (all.isEmpty()) {
+                out.append(Words.Db.BACKUPS_NONE).append("\n");
+                return;
+            }
+            int daily = 0, before = 0, text = 0, manual = 0;
+            for (Backups.Entry e : all) {
+                if (e.kind.equals(Backups.DAILY)) daily++;
+                else if (e.kind.equals(Backups.BEFORE)) before++;
+                else if (e.kind.equals(Backups.TEXT)) text++;
+                else if (e.kind.equals(Backups.MANUAL)) manual++;
+            }
+            int[] v = b.verifyAll(all);
+            out.append(Words.Db.backupsLine(all.size(), daily, before, text, manual, when(all.get(0)), v[0], v[1], v[2], v[3])).append("\n");
+            if (v[1] > 0) problems.add(Words.Db.pBackupsChanged(mode, v[1]));
+            if (v[2] > 0) problems.add(Words.Db.pBackupsBad(mode, v[2]));
+        } catch (Throwable t) {
+            Log.e("FullCheck.folder", t);
+            problems.add(Words.Db.pBackupFailed(mode, String.valueOf(t)));
+        }
+    }
+
+    /** מתי נעשה הגיבוי: מהרישום (מדויק), ואם אינו רשום — מהשם. */
+    static String when(Backups.Entry e) {
+        return new java.text.SimpleDateFormat("dd.MM.yyyy HH:mm", java.util.Locale.US).format(new java.util.Date(e.made > 0 ? e.made : e.when));
     }
 
     private static void add(List<String> problems, String mode, Found f, int expectedLists, int gotLists, boolean again, String check) {
@@ -31376,12 +33153,27 @@ package com.tikiyot.vfm;
 //   files   — (מ0.2) פרטי פריט קובץ: מסלול (ייחודי), כונן, גודל ותאריך כפי שהיו בחישוב החתימה, והחתימה.
 //   members — רשימה, פריט, מקום (צפוף מ־0), מתי נוסף. פריט פעם אחת בכל רשימה.
 //   meta    — המונה הבא, קוד המערכת.
+//
+// מ0.5 — שמירה על הקובץ:
+//   • מסד פגום לא נמחק. ברירת המחדל של אנדרואיד (DefaultDatabaseErrorHandler) מוחקת את קובץ המסד כשהיא מזהה פגם,
+//     ופותחת במקומו מסד ריק — בלי לשאול. כאן המטפל לא עושה כלום: הקובץ נשאר, והפתיחה נכשלת ב־Damaged.
+//   • בדיקת תקינות קצרה (quick_check) בכל פתיחה, לפני שכותבים דבר. מסד פגום — Damaged, ולא נוגעים בו.
+//   • עותק עקבי של המסד (copyTo) דרך SQLite: VACUUM INTO, ובאנדרואיד ישן (SQLite לפני 3.27) — העתקת הקובץ ויומן ה־WAL
+//     בזמן שהכתיבה נעולה, ואיחוד שלהם בעותק.
+//   • פתיחה לקריאה בלבד (openReadOnly) — לבדיקת עותקים בלי לשנות בהם בית אחד.
 
 import android.database.Cursor;
+import android.database.DatabaseErrorHandler;
 import android.database.sqlite.SQLiteDatabase;
+import android.database.sqlite.SQLiteDatabaseCorruptException;
+import android.database.sqlite.SQLiteException;
 
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -31389,21 +33181,49 @@ public final class SqlStore implements Store {
 
     public static final int VERSION = 2;
 
+    /** המסד פגום (או שהקובץ אינו מסד). הקובץ לא נמחק ולא נכתב; ההודעה — לאנשי הפיתוח. */
+    public static final class Damaged extends RuntimeException {
+        public Damaged(String m) {
+            super(m);
+        }
+    }
+
+    /** מטפל פגמים שלא מוחק כלום (ראו בראש הקובץ). */
+    private static final DatabaseErrorHandler KEEP = new DatabaseErrorHandler() {
+        @Override
+        public void onCorruption(SQLiteDatabase d) {
+            Log.i("SqlStore: corruption reported, the file is kept");
+        }
+    };
+
+    /** לבדיקות במחשב: לבדוק גם את דרך ההעתקה של אנדרואיד ישן. */
+    static boolean forceFileCopy;
+
     private final SQLiteDatabase db;
     private final IdCounter counter;
     private final String code;
+    private final boolean readOnly;
 
     private SqlStore(SQLiteDatabase db, IdCounter counter) {
         this.db = db;
         this.counter = counter;
+        this.readOnly = false;
         this.code = openMeta();
     }
 
-    /** פותח (או יוצר) את המסד. @throws Failure אם הוא פגום, או מגרסה חדשה יותר. */
+    private SqlStore(SQLiteDatabase db) {
+        this.db = db;
+        this.counter = null;
+        this.readOnly = true;
+        this.code = text("SELECT v FROM meta WHERE k='system_code'");
+    }
+
+    /** פותח (או יוצר) את המסד. @throws Damaged אם הוא פגום; Failure אם הוא מגרסה חדשה יותר. */
     public static SqlStore open(File file, IdCounter counter) {
         File dir = file.getParentFile();
         if (dir != null) dir.mkdirs();
-        SQLiteDatabase db = SQLiteDatabase.openOrCreateDatabase(file, null);
+        if (file.isFile() && file.length() > 0) probe(file);                 // לפני כל פתיחה לכתיבה
+        SQLiteDatabase db = connect(file, false);
         try {
             db.enableWriteAheadLogging();
             db.setForeignKeyConstraintsEnabled(true);
@@ -31412,9 +33232,89 @@ public final class SqlStore implements Store {
             if (v == 0) create(db);
             else if (v == 1) upgradeTo2(db);
             return new SqlStore(db, counter);
+        } catch (SQLiteException e) {
+            db.close();
+            if (corrupt(e)) throw new Damaged(String.valueOf(e.getMessage()));
+            throw e;
         } catch (RuntimeException e) {
             db.close();
             throw e;
+        }
+    }
+
+    /**
+     * מ0.5: פותח עותק לקריאה בלבד — לבדיקה, לספירה ולגיבוי טקסט. לא כותב בו דבר (גם לא את המונה). כתיבה דרכו — Failure.
+     * @throws Damaged אם הוא פגום; Failure אם אינו קיים, או מגרסה חדשה יותר, או שאינו מסד של התוכנה.
+     */
+    public static SqlStore openReadOnly(File file) {
+        if (!file.isFile()) throw new Failure("no such file: " + file.getPath());
+        SQLiteDatabase db = connect(file, true);
+        try {
+            int v = db.getVersion();
+            if (v > VERSION) throw new Failure("database is newer: " + v);
+            if (v < 1) throw new Failure("not a database of this app");
+            mustBeWhole(db);
+            return new SqlStore(db);
+        } catch (SQLiteException e) {
+            db.close();
+            if (corrupt(e)) throw new Damaged(String.valueOf(e.getMessage()));
+            throw e;
+        } catch (RuntimeException e) {
+            db.close();
+            throw e;
+        }
+    }
+
+    /**
+     * בדיקה בפתיחה, לקריאה בלבד: גרסה ותקינות. מסד פגום לא נפתח לכתיבה בכלל — גם לא לשינוי שיטת היומן (שכותב בכותרת).
+     */
+    private static void probe(File file) {
+        SQLiteDatabase db;
+        try {
+            db = connect(file, true);
+        } catch (SQLiteException e) {                                         // לא פגם (פגם — Damaged מ־connect): לא חוסמים את הפתיחה
+            Log.e("SqlStore.probe", e);
+            return;
+        }
+        try {
+            int v = db.getVersion();
+            if (v > VERSION) throw new Failure("database is newer: " + v);
+            if (v > 0) mustBeWhole(db);
+        } catch (SQLiteException e) {
+            if (corrupt(e)) throw new Damaged(String.valueOf(e.getMessage()));
+            Log.e("SqlStore.probe", e);                                        // כמו למעלה: הבדיקה היא הגנה נוספת, לא תנאי לפתיחה
+        } finally {
+            db.close();
+        }
+    }
+
+    private static SQLiteDatabase connect(File file, boolean readOnly) {
+        try {
+            return readOnly
+                    ? SQLiteDatabase.openDatabase(file.getPath(), null, SQLiteDatabase.OPEN_READONLY | SQLiteDatabase.NO_LOCALIZED_COLLATORS, KEEP)
+                    : SQLiteDatabase.openOrCreateDatabase(file.getPath(), null, KEEP);
+        } catch (SQLiteException e) {
+            if (corrupt(e)) throw new Damaged(String.valueOf(e.getMessage()));
+            throw e;
+        }
+    }
+
+    /** האם השגיאה אומרת שהקובץ פגום (ולא, למשל, שאין הרשאה). */
+    static boolean corrupt(Throwable t) {
+        if (t instanceof SQLiteDatabaseCorruptException) return true;
+        String m = String.valueOf(t.getMessage()).toLowerCase();
+        return m.contains("malformed") || m.contains("not a database") || m.contains("corrupt") || m.contains("notadb");
+    }
+
+    /** בדיקת התקינות הקצרה. Damaged אם נמצא פגם. */
+    private static void mustBeWhole(SQLiteDatabase db) {
+        Cursor c = db.rawQuery("PRAGMA quick_check", null);
+        try {
+            if (!c.moveToFirst()) throw new Damaged("quick_check returned nothing");
+            String r = c.getString(0);
+            if (!"ok".equals(r)) throw new Damaged("quick_check: " + r);
+        } finally {
+            c.close();
         }
     }
 
@@ -31503,6 +33403,7 @@ public final class SqlStore implements Store {
     }
 
     private long issue() {
+        if (readOnly) throw new Failure("read-only copy");
         long id = Long.parseLong(text("SELECT v FROM meta WHERE k='next_id'"));
         try {
             counter.reserve(id);
@@ -31991,6 +33892,131 @@ public final class SqlStore implements Store {
     /** מידע לבדיקה עצמית: גרסת SQLite, שיטת היומן וסנכרון. */
     public String info() {
         return text("SELECT sqlite_version()") + " · " + text("PRAGMA journal_mode") + " · sync=" + text("PRAGMA synchronous");
+    }
+
+    // ---------- מ0.5: עותק, וגישה ישירה לגיבוי הטקסט (DbDump) ----------
+
+    /** שורה מתוצאת שאילתה: הערכים כטקסט, null לריק. */
+    interface Row {
+        void row(String[] v);
+    }
+
+    /** מריץ שאילתה ומעביר כל שורה (cols עמודות) — לגיבוי הטקסט. */
+    void each(String sql, int cols, Row r) {
+        Cursor c = db.rawQuery(sql, null);
+        try {
+            while (c.moveToNext()) {
+                String[] v = new String[cols];
+                for (int i = 0; i < cols; i++) v[i] = c.isNull(i) ? null : c.getString(i);
+                r.row(v);
+            }
+        } finally {
+            c.close();
+        }
+    }
+
+    /** כתיבה ישירה — רק לשחזור מגיבוי טקסט, בתוך rawWork. */
+    void rawExec(String sql, Object[] args) {
+        if (readOnly) throw new Failure("read-only copy");
+        db.execSQL(sql, args);
+    }
+
+    /** עסקה אחת לשחזור: הכול או כלום. */
+    void rawWork(Runnable r) {
+        if (readOnly) throw new Failure("read-only copy");
+        db.beginTransaction();
+        try {
+            r.run();
+            db.setTransactionSuccessful();
+        } finally {
+            db.endTransaction();
+        }
+    }
+
+    /** כמה פריטים יש במסד (שחזור נכנס רק למסד ריק). */
+    long itemCount() {
+        return num("SELECT COUNT(*) FROM items");
+    }
+
+    /** כמה חברויות יש במסד. */
+    long memberCount() {
+        return num("SELECT COUNT(*) FROM members");
+    }
+
+    /**
+     * מ0.5: עותק עקבי של כל המסד לקובץ חדש (שלא קיים). העותק — קובץ אחד שלם, בלי יומן. לא בתוך עסקה.
+     * SQLite 3.27 ומעלה (אנדרואיד 11 ומעלה): VACUUM INTO. לפני כן: נועלים כתיבה, מעתיקים את הקובץ ואת יומן ה־WAL,
+     * ופותחים את העותק כדי שיאחד אותם.
+     */
+    public void copyTo(File out) {
+        if (out.exists()) throw new Failure("target exists: " + out.getPath());
+        File dir = out.getParentFile();
+        if (dir != null) dir.mkdirs();
+        if (!forceFileCopy && atLeast(text("SELECT sqlite_version()"), 3, 27)) {
+            db.execSQL("VACUUM INTO '" + out.getPath().replace("'", "''") + "'");
+            return;
+        }
+        File main = new File(path()), wal = new File(path() + "-wal"), outWal = new File(out.getPath() + "-wal");
+        db.beginTransaction();                                                 // באנדרואיד: נעילת כתיבה; היומן לא משתנה עד הסוף
+        try {
+            copyFile(main, out);
+            if (wal.isFile()) copyFile(wal, outWal);
+        } catch (IOException e) {
+            throw new Failure("copy failed", e);
+        } finally {
+            db.endTransaction();
+        }
+        SQLiteDatabase c = SQLiteDatabase.openOrCreateDatabase(out.getPath(), null, KEEP);
+        try {
+            Cursor r = c.rawQuery("PRAGMA journal_mode=DELETE", null);       // מאחד את היומן לתוך הקובץ ומוחק אותו
+            try {
+                r.moveToFirst();
+            } finally {
+                r.close();
+            }
+        } finally {
+            c.close();
+        }
+        new File(out.getPath() + "-shm").delete();
+        if (outWal.exists()) throw new Failure("journal was not folded into the copy");
+    }
+
+    /** הקובץ של המסד הראשי. */
+    private String path() {
+        Cursor c = db.rawQuery("PRAGMA database_list", null);
+        try {
+            while (c.moveToNext()) if ("main".equals(c.getString(1))) return c.getString(2);
+            return "";
+        } finally {
+            c.close();
+        }
+    }
+
+    static boolean atLeast(String version, int major, int minor) {
+        try {
+            String[] p = version.split("\\.");
+            int a = Integer.parseInt(p[0]), b = p.length > 1 ? Integer.parseInt(p[1]) : 0;
+            return a > major || (a == major && b >= minor);
+        } catch (RuntimeException e) {
+            return false;
+        }
+    }
+
+    static void copyFile(File from, File to) throws IOException {
+        InputStream in = new FileInputStream(from);
+        try {
+            OutputStream out = new FileOutputStream(to);
+            try {
+                byte[] b = new byte[64 * 1024];
+                int n;
+                while ((n = in.read(b)) > 0) out.write(b, 0, n);
+                ((FileOutputStream) out).getFD().sync();
+            } finally {
+                out.close();
+            }
+        } finally {
+            in.close();
+        }
     }
 
     /**
@@ -42215,8 +44241,8 @@ public final class Words {
 
         public static final String APP_NAME_M = "מנהל קבצים וירטואלי · מ";
         public static final String MENU = "מסד נתונים (מ)";
-        public static final String TITLE = "מסד נתונים · מ0.4";
-        public static final String NOTICE = "מנוע המסד בבנייה, ועדיין בלי גיבוי (מ0.5). \"העתקה מהישן\" רק קוראת מהמנוע הישן ולא משנה בו דבר. לכל אופן עבודה מסד משלו — כל אופן נכנס למסד של אותו אופן. אפשר להעתיק שוב: מה שכבר הועתק מתעדכן ולא מוכפל. רשימה חכמה שומרת רק את התנאי — הקבצים נמצאים בכל פתיחה מהאינדקס.";
+        public static final String TITLE = "מסד נתונים · מ0.5";
+        public static final String NOTICE = "מנוע המסד בבנייה. גיבוי: עותק יומי כשיש שינוי, וגם לפני העתקה, מחיקת רשימה ומחיקה לצמיתות — בתיקייה \"גיבוי מסד\" שבתיקיית התוכנה. \"העתקה מהישן\" רק קוראת מהמנוע הישן ולא משנה בו דבר. לכל אופן עבודה מסד משלו — כל אופן נכנס למסד של אותו אופן. אפשר להעתיק שוב: מה שכבר הועתק מתעדכן ולא מוכפל. רשימה חכמה שומרת רק את התנאי — הקבצים נמצאים בכל פתיחה מהאינדקס.";
         public static final String NEED_ACCESS = "כדי לשמור את מונה המזהים בתיקיית הנתונים, התוכנה צריכה הרשאת גישה לכל הקבצים.";
         public static final String ALL_LISTS = "כל הרשימות";
         public static final String CRUMB_SEP = " › ";
@@ -42561,6 +44587,125 @@ public final class Words {
         public static String exFileMissing(String path) {
             return "חסר קובץ: " + path;
         }
+
+        // ---------- מ0.5: גיבוי ----------
+
+        public static final String BACKUPS = "💾 גיבויים";
+        public static final String BACKUPS_EMPTY_SUB = "עוד אין גיבויים — הגיבוי היומי נעשה כשפותחים את המסך";
+        public static final String BACKUP_NOW = "💾 גיבוי עכשיו (עותק וגם טקסט)";
+        public static final String BACKUPS_CHECKING = "בודק את הגיבויים מול הרישום…";
+        public static final String BACKUP_SAVING = "שומר גיבוי…";
+        public static final String RESTORE_BUILDING = "בונה מסד מהגיבוי ובודק אותו. המסד הנוכחי עוד לא משתנה…";
+        public static final String RESTORE_YES = "♻️ שחזור";
+        public static final String RESTORE_FROM_BACKUP = "♻️ שחזור מגיבוי";
+        public static final String RESTORED_DB = "המסד שוחזר מהגיבוי.";
+        public static final String BACKUP_BAD = "הגיבוי הזה פגום או אינו שלם — אי אפשר לשחזר ממנו.";
+        public static final String BACKUP_CHANGED_WARN = "שימו לב: הקובץ הזה שונה מאז שנרשם. התוכנה תבדוק אותו לפני השחזור.";
+        public static final String KEPT_DAMAGED_INFO = "זה המסד הפגום, כפי שנשמר לפני שחזור. ממנו לא משחזרים — הוא נשמר רק כדי שלא יאבד דבר.";
+        public static final String GO_ON_WITHOUT_BACKUP = "להמשיך בלי גיבוי";
+        public static final String DAMAGED_HINT = "אפשר לשחזר מגיבוי: \"♻️ שחזור מגיבוי\". המסד הפגום יישמר קודם, כמו שהוא, בתיקיית הגיבויים.";
+        public static final String BACKUPS_NONE = "   גיבויים בתיקייה: אין עדיין (הגיבוי היומי נעשה כשפותחים את מסך המסד באופן הזה)";
+
+        public static String backupsSub(int n, String newest) {
+            return "עותק יומי כשיש שינוי, ולפני פעולות מוחקות · " + n + " קבצים · האחרון " + newest;
+        }
+
+        public static String backupsTitle(String mode) {
+            return "גיבויים · " + mode;
+        }
+
+        /** שם סוג הגיבוי לתצוגה. */
+        public static String backupKind(String kind, String op, boolean text) {
+            String k = kind.equals(Backups.DAILY) ? "יומי" : kind.equals(Backups.BEFORE) ? "לפני " + op : kind.equals(Backups.MANUAL) ? "ידני"
+                    : kind.equals(Backups.TEXT) ? "טקסט שבועי" : "המסד הפגום";
+            return k + (text && !kind.equals(Backups.TEXT) ? " · טקסט" : "");
+        }
+
+        /** שורה ברשימת הגיבויים: מצב · סוג · מתי · גודל. state — Backups.OK וכו'. */
+        public static String backupEntry(int state, String kind, String when, long bytes) {
+            String mark = state == Backups.OK || state == Backups.OK_UNRECORDED ? "✅" : state == Backups.CHANGED ? "⚠️" : state == Backups.BAD ? "❌" : "🗂";
+            String note = state == Backups.CHANGED ? " · שונה מאז שנרשם" : state == Backups.BAD ? " · פגום" : state == Backups.OK_UNRECORDED ? " · לא רשום" : "";
+            return mark + " " + kind + " · " + when + " · " + kb(bytes) + note;
+        }
+
+        public static String kb(long bytes) {
+            return ((bytes + 1023) / 1024) + " ק״ב";
+        }
+
+        public static String backupSaved(String names, String dir) {
+            return "נשמר גיבוי:\n" + names + "\nבתיקייה: " + dir;
+        }
+
+        public static String restoreQuestion(String label, int bl, long bi, int cl, long ci, boolean damaged) {
+            return "לשחזר מהגיבוי \"" + label + "\"?\n\nבגיבוי: " + Words.lists(bl) + " · " + Words.items((int) bi)
+                    + (damaged ? "\nעכשיו: המסד פגום. הוא יישמר כמו שהוא בתיקיית הגיבויים (\"פגום\")."
+                    : "\nעכשיו: " + Words.lists(cl) + " · " + Words.items((int) ci)
+                    + "\n\nהמסד הנוכחי יישמר קודם בתיקיית הגיבויים (\"לפני שחזור\").")
+                    + "\nמספרי זיהוי שכבר ניתנו לא יחזרו.";
+        }
+
+        public static String restoreFailed(String why) {
+            return "השחזור לא נעשה: " + why + "\nהמסד לא השתנה.";
+        }
+
+        public static String backupBeforeFailed(String why) {
+            return "הגיבוי לפני הפעולה נכשל: " + why;
+        }
+
+        public static String importBackupFailed(String why) {
+            return "הגיבוי לפני ההעתקה נכשל, ולכן לא הועתק דבר: " + why;
+        }
+
+        public static String damaged(String mode, String why) {
+            return "❌ המסד של האופן \"" + mode + "\" פגום, ולכן לא נפתח ולא נכתב בו דבר.\n(" + why + ")";
+        }
+
+        public static String backupLine(boolean copyOk, long copyBytes, boolean textOk, int records, long textBytes, boolean restoreOk, long ms) {
+            return "גיבוי (על עותק זמני): עותק דרך SQLite — " + (copyOk ? "זהה" : "שונה!") + " (" + kb(copyBytes) + ") · גיבוי טקסט — "
+                    + records + " רשומות, " + kb(textBytes) + (textOk ? ", שוחזר למסד ריק וזהה" : ", השחזור ממנו שונה!")
+                    + " · שחזור מעותק — " + (restoreOk ? "זהה" : "שונה!") + " · " + ms + " מ״ש";
+        }
+
+        public static String backupsLine(int total, int daily, int before, int text, int manual, String newest, int ok, int changed, int bad, int kept) {
+            return "   גיבויים בתיקייה: " + total + " (יומיים " + daily + ", לפני פעולה " + before + ", טקסט " + text + ", ידניים " + manual
+                    + ") · האחרון: " + newest + " · תקינים: " + ok + " · שונו: " + changed + " · פגומים: " + bad
+                    + (kept > 0 ? " · עותקי מסד פגום שנשמרו: " + kept : "");
+        }
+
+        public static String realDamaged(String why) {
+            return "המסד האמיתי של האופן: פגום — לא נפתח ולא נכתב (" + why + ")";
+        }
+
+        public static String pRealDamaged(String mode) {
+            return "אופן " + mode + ": המסד האמיתי פגום — אפשר לשחזר מגיבוי";
+        }
+
+        public static String pBackupCopy(String mode) {
+            return "אופן " + mode + ": העותק של המסד שונה מהמסד";
+        }
+
+        public static String pBackupText(String mode) {
+            return "אופן " + mode + ": גיבוי הטקסט, או השחזור ממנו, שונה מהמסד";
+        }
+
+        public static String pBackupRestore(String mode) {
+            return "אופן " + mode + ": שחזור מעותק נתן מסד שונה";
+        }
+
+        public static String pBackupFailed(String mode, String why) {
+            return "אופן " + mode + ": בדיקת הגיבוי נכשלה — " + why;
+        }
+
+        public static String pBackupsChanged(String mode, int n) {
+            return "אופן " + mode + ": " + n + " גיבויים בתיקייה שונו מאז שנרשמו";
+        }
+
+        public static String pBackupsBad(String mode, int n) {
+            return "אופן " + mode + ": " + n + " גיבויים בתיקייה פגומים";
+        }
+
+        public static final String DUMP_TITLE = "מנהל קבצים וירטואלי · מ — גיבוי טקסט של מסד. הפורמט מתועד בקוד (DbDump). לא לערוך ביד: שינוי של תו אחד פוסל את הקובץ.";
+        public static final String RECORD_HEAD = "# רישום הגיבויים: שם · בתים · SHA-256 של הקובץ · חתימת התוכן · מתי נעשה. לא לערוך ביד.";
 
         public static String selfTestOk(int passed, long ms, String info) {
             return "תקין — עברו " + passed + " בדיקות, בלי כישלון.\nזמן: " + ms + " מ״ש\nSQLite: " + info;
@@ -43529,8 +45674,13 @@ def main():
         parts = line.decode("utf-8").rstrip("\n").split("\t")
         op = parts[0]
         try:
-            if op == "open":
-                conn = sqlite3.connect(unesc(parts[1]), isolation_level=None)
+            if op in ("open", "openro"):
+                path = unesc(parts[1])
+                if op == "openro":
+                    conn = sqlite3.connect("file:" + path.replace("%", "%25").replace("?", "%3f").replace("#", "%23") + "?mode=ro", uri=True, isolation_level=None)
+                else:
+                    conn = sqlite3.connect(path, isolation_level=None)
+                conn.execute("PRAGMA schema_version").fetchall()   # כמו באנדרואיד: קובץ שאינו מסד נכשל כבר בפתיחה
                 out.write("OK\n")
             elif op in ("exec", "query"):
                 cur = conn.execute(unesc(parts[1]), [arg(f) for f in parts[2:]])
@@ -43974,6 +46124,8 @@ final class ImportTests {
             @Override public boolean selfTestOk() { return selfOk; }
             @Override public Store openTemp() throws Exception { return opener.fresh(new File(ctr, "fc-" + (n[0]++) + "-" + badCond + ".txt")); }
             @Override public Smarts.Finder finder() { return fake(badCond); }
+            @Override public File scratch() { File w = new File(ctr, "scratch-" + System.nanoTime()); w.mkdirs(); return w; }
+            @Override public Backups backups(String mode) { return mode.equals("ראשון") ? new Backups(new File(ctr, "backups-" + mode), new File(ctr, "bk-tmp")) : null; }
             @Override
             public Store openReal(String mode) throws Exception {
                 if (!mode.equals("ראשון")) return null;
@@ -44012,6 +46164,35 @@ final class ImportTests {
                 && badc.contains(Words.Db.evalBad("צילומי מסך", "לא הובן")));
         String self = fullReport(opener, dir, false, false);
         ck("בדיקה מלאה: בדיקה עצמית שנכשלה — פסק דין אדום", self.startsWith(Words.Db.verdictBad(1)) && self.contains(Words.Db.pSelfTest()));
+        // מ0.5: גיבוי
+        ck("בדיקה מלאה: תיקיית גיבויים ריקה — מדווח, לא בעיה", ok.contains(Words.Db.BACKUPS_NONE));
+        boolean sql = label.contains("SqlStore");
+        ck("בדיקה מלאה: עותק, גיבוי טקסט ושחזור — זהים למסד (רק על SQLite)",
+                sql == (ok.contains("עותק דרך SQLite — זהה") && ok.contains("שוחזר למסד ריק וזהה") && ok.contains("שחזור מעותק — זהה")));
+        if (!sql) return;
+        File bdir = new File(dir, "backups-ראשון");
+        Backups bk = new Backups(bdir, new File(dir, "bk-tmp"));
+        SqlStore s = (SqlStore) opener.fresh(new File(dir, "bk-counter.txt"));
+        try {
+            s.createList("x", 0);
+            bk.daily(s, System.currentTimeMillis());
+            bk.manual(s, System.currentTimeMillis());
+        } finally {
+            s.close();
+        }
+        String withBk = fullReport(opener, dir, false, true);
+        ck("בדיקה מלאה: הגיבויים בתיקייה נבדקים — 4 תקינים (יומי, טקסט, ידני כעותק וכטקסט)", withBk.startsWith(Words.Db.VERDICT_OK)
+                && withBk.contains("גיבויים בתיקייה: 4 (יומיים 1, לפני פעולה 0, טקסט 1, ידניים 2)") && withBk.contains("תקינים: 4 · שונו: 0 · פגומים: 0"));
+        Backups.Entry victim = bk.list().get(bk.list().size() - 1);
+        java.io.RandomAccessFile raf = new java.io.RandomAccessFile(victim.file, "rw");
+        try {
+            raf.seek(victim.file.length() / 2);
+            raf.write(new byte[]{1, 2, 3, 4, 5, 6, 7, 8});
+        } finally {
+            raf.close();
+        }
+        String changed = fullReport(opener, dir, false, true);
+        ck("בדיקה מלאה: גיבוי שהשתנה אחרי שנרשם — פסק דין אדום", changed.startsWith(Words.Db.verdictBad(1)) && changed.contains(Words.Db.pBackupsChanged("ראשון", 1)));
     }
 
     // ---------- בלי Store ----------
@@ -44096,6 +46277,10 @@ final class StoreTests {
             }, dir);
             t.migration(dir);
             ImportTests.pure(t.o, dir);
+            StoreContract.Result br = BackupContract.run(new File(dir, "backup"));
+            t.o.passed += br.passed;
+            for (String f : br.failed) t.o.failed.add("גיבוי — " + f);
+            t.ck("גיבוי: החוזה רץ (לפחות 60 בדיקות)", br.passed + br.failed.size() >= 60);
             String p = SqlStore.persistenceCheck(dir);
             t.ck("שמירה בין פתיחות, WAL, גרסה עתידית לא נפתחת" + (p == null ? "" : ": " + p), p == null);
         } catch (Throwable x) {
@@ -50850,6 +53035,15 @@ public interface Cursor {
 
     void close();
 }
+===== קובץ: tests/stubs/android/database/DatabaseErrorHandler.java =====
+package android.database;
+
+import android.database.sqlite.SQLiteDatabase;
+
+// תחליף לבדיקות על המחשב (מ0.5): מה שאנדרואיד קורא כשהוא מזהה מסד פגום. ברירת המחדל של אנדרואיד מוחקת את הקובץ.
+public interface DatabaseErrorHandler {
+    void onCorruption(SQLiteDatabase dbObj);
+}
 ===== קובץ: tests/stubs/android/database/sqlite/SQLiteDatabase.java =====
 package android.database.sqlite;
 
@@ -50870,6 +53064,8 @@ public class SQLiteDatabase {
 
     public interface CursorFactory { }
 
+    public static final int OPEN_READWRITE = 0, OPEN_READONLY = 1, NO_LOCALIZED_COLLATORS = 0x10, CREATE_IF_NECESSARY = 0x10000000;
+
     private final Process proc;
     private final BufferedReader in;
     private final BufferedWriter out;
@@ -50885,14 +53081,35 @@ public class SQLiteDatabase {
     }
 
     public static SQLiteDatabase openOrCreateDatabase(File file, CursorFactory factory) {
+        return start("open", file.getPath());
+    }
+
+    /** מ0.5: כמו באנדרואיד — הקובץ נפתח מיד (קורא את הכותרת), וקובץ שאינו מסד נכשל כאן. */
+    public static SQLiteDatabase openOrCreateDatabase(String path, CursorFactory factory, android.database.DatabaseErrorHandler h) {
+        return start("open", path);
+    }
+
+    public static SQLiteDatabase openDatabase(String path, CursorFactory factory, int flags, android.database.DatabaseErrorHandler h) {
+        if ((flags & OPEN_READONLY) != 0) return start("openro", path);
+        if ((flags & CREATE_IF_NECESSARY) == 0 && !new File(path).exists()) throw new SQLiteException("unable to open database file: " + path);
+        return start("open", path);
+    }
+
+    private static SQLiteDatabase start(String op, String path) {
+        SQLiteDatabase db;
         try {
             File script = new File(System.getProperty("vfm.src"), "tests/bridge/sqlite_bridge.py");
-            SQLiteDatabase db = new SQLiteDatabase(new ProcessBuilder("python3", "-I", script.getPath()).redirectErrorStream(false).start());
-            db.call("open", esc(file.getPath()));
-            return db;
+            db = new SQLiteDatabase(new ProcessBuilder("python3", "-I", script.getPath()).redirectErrorStream(false).start());
         } catch (IOException e) {
             throw new RuntimeException("python3 bridge: " + e, e);
         }
+        try {
+            db.call(op, esc(path));
+        } catch (RuntimeException e) {
+            db.proc.destroy();
+            throw e;
+        }
+        return db;
     }
 
     public static boolean deleteDatabase(File file) {
@@ -51037,6 +53254,14 @@ public class SQLiteDatabase {
         @Override public long getLong(int c) { String v = rows.get(at)[c]; return v.equals("N") ? 0 : Long.parseLong(unesc(v.substring(1))); }
         @Override public int getInt(int c) { return (int) getLong(c); }
         @Override public void close() { }
+    }
+}
+===== קובץ: tests/stubs/android/database/sqlite/SQLiteDatabaseCorruptException.java =====
+package android.database.sqlite;
+
+public class SQLiteDatabaseCorruptException extends SQLiteException {
+    public SQLiteDatabaseCorruptException(String m) {
+        super(m);
     }
 }
 ===== קובץ: tests/stubs/android/database/sqlite/SQLiteException.java =====

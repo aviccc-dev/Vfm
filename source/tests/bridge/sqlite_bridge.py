@@ -47,8 +47,13 @@ def main():
         parts = line.decode("utf-8").rstrip("\n").split("\t")
         op = parts[0]
         try:
-            if op == "open":
-                conn = sqlite3.connect(unesc(parts[1]), isolation_level=None)
+            if op in ("open", "openro"):
+                path = unesc(parts[1])
+                if op == "openro":
+                    conn = sqlite3.connect("file:" + path.replace("%", "%25").replace("?", "%3f").replace("#", "%23") + "?mode=ro", uri=True, isolation_level=None)
+                else:
+                    conn = sqlite3.connect(path, isolation_level=None)
+                conn.execute("PRAGMA schema_version").fetchall()   # כמו באנדרואיד: קובץ שאינו מסד נכשל כבר בפתיחה
                 out.write("OK\n")
             elif op in ("exec", "query"):
                 cur = conn.execute(unesc(parts[1]), [arg(f) for f in parts[2:]])

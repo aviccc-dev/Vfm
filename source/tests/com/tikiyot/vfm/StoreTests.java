@@ -45,6 +45,10 @@ final class StoreTests {
             }, dir);
             t.migration(dir);
             ImportTests.pure(t.o, dir);
+            StoreContract.Result br = BackupContract.run(new File(dir, "backup"));
+            t.o.passed += br.passed;
+            for (String f : br.failed) t.o.failed.add("גיבוי — " + f);
+            t.ck("גיבוי: החוזה רץ (לפחות 60 בדיקות)", br.passed + br.failed.size() >= 60);
             String p = SqlStore.persistenceCheck(dir);
             t.ck("שמירה בין פתיחות, WAL, גרסה עתידית לא נפתחת" + (p == null ? "" : ": " + p), p == null);
         } catch (Throwable x) {
