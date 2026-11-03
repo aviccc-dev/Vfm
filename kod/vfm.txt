@@ -933,7 +933,7 @@ cd $S; rm -rf out gen bld
 [ "$S" != "$DIR" ] && rm -rf $S
 ls -la $OUT
 ===== קובץ: build/m-version.txt =====
-16 מ0.10.1
+17 מ0.11
 ===== קובץ: build/test.sh =====
 #!/bin/bash
 # בדיקות על המחשב (80). יוצא בכישלון אם בדיקה אחת נכשלה — ואז build.sh לא בונה.
@@ -10626,6 +10626,29 @@ public class DbScreen extends Activity {
         return m.isEmpty() ? Importer.activeMode(oldData()) : m;
     }
 
+    /**
+     * מ0.11: הפתיחה של בניית מ — הבית של המסד במראה המוכר (האופן שנבחר בפעם הקודמת). אין הרשאה, אין בית, או מסד פגום —
+     * מסך המסד (שם מבקשים הרשאה, מעתיקים מהישן, משחזרים).
+     */
+    static void start(Activity a) {
+        String m = a.getSharedPreferences(PREFS, MODE_PRIVATE).getString(PREF_MODE, "");
+        if (m.isEmpty()) m = Importer.activeMode(oldData());
+        long home = 0;
+        if (Ui.hasFiles(a) && dbFile(a, m).isFile()) {
+            SqlStore s = null;
+            try {
+                s = SqlStore.openReadOnly(dbFile(a, m));
+                home = Importer.home(s);
+            } catch (Throwable t) {
+                Log.e("DbScreen.start", t);
+            } finally {
+                if (s != null) s.close();
+            }
+        }
+        if (home != 0) DbListScreen.open(a, m, home);
+        else a.startActivity(new android.content.Intent(a, DbScreen.class));
+    }
+
     /** מ0.9.1: האופן שנבחר — נזכר גם למסך המסד וגם למראה המוכר. */
     static void saveMode(android.content.Context c, String m) {
         c.getSharedPreferences(PREFS, MODE_PRIVATE).edit().putString(PREF_MODE, m).apply();
@@ -17054,6 +17077,11 @@ public class Home extends Activity {
         super.onCreate(saved);
         Log.install();
         Log.initVersion(this);
+        if (Flavor.M) {                                                       // מ0.11: בבניית מ — ישר לבית של המסד
+            DbScreen.start(this);                                             // (המשתמש: הבית הישן של מ "נראה טעות")
+            finish();
+            return;
+        }
         Examples.install(this, Paths.data(), internalRoot(), false);        // 156: בפעם הראשונה בלבד
         Envs.all();                                                           // 1.15.0: סביבות ← רשימות, בכל האופנים
         Unify.all();                                                          // 1.17.3: תיקייה מתעדכנת ← חכמה; נפוצה ← תבנית
@@ -17322,6 +17350,7 @@ public class Home extends Activity {
     @Override
     protected void onResume() {
         super.onResume();
+        if (isFinishing()) return;                                            // מ0.11: הופנה לבית של המסד
         enter();
     }
 
@@ -45757,9 +45786,9 @@ public final class Words {
 
         public static final String APP_NAME_M = "מנהל קבצים וירטואלי · מ";
         public static final String MENU = "מסד נתונים (מ)";
-        public static final String TITLE = "מסד נתונים · מ0.10.1";
+        public static final String TITLE = "מסד נתונים · מ0.11";
         /** מ0.9: המראה המוכר. */
-        public static final String LIST_GONE = "הרשימה הזו כבר לא קיימת במסד", MENU_ACTIONS = "⚙ פעולות (מסך המסד)",
+        public static final String LIST_GONE = "הרשימה הזו כבר לא קיימת במסד", MENU_ACTIONS = "⚙ מסד: גיבוי, העתקה, בדיקה ופעולות",
                 FAMILIAR = "🏠 בית", ADD_IN_LIST = "הוספת קבצים — מתוך רשימה", NO_HOME = "אין עדיין בית במסד הזה — מעתיקים מהישן (\"העתקה מהישן\") והבית נוצר";
 
         public static String homeInfo(String mode, int n) {

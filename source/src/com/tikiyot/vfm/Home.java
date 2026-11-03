@@ -61,6 +61,11 @@ public class Home extends Activity {
         super.onCreate(saved);
         Log.install();
         Log.initVersion(this);
+        if (Flavor.M) {                                                       // מ0.11: בבניית מ — ישר לבית של המסד
+            DbScreen.start(this);                                             // (המשתמש: הבית הישן של מ "נראה טעות")
+            finish();
+            return;
+        }
         Examples.install(this, Paths.data(), internalRoot(), false);        // 156: בפעם הראשונה בלבד
         Envs.all();                                                           // 1.15.0: סביבות ← רשימות, בכל האופנים
         Unify.all();                                                          // 1.17.3: תיקייה מתעדכנת ← חכמה; נפוצה ← תבנית
@@ -329,6 +334,7 @@ public class Home extends Activity {
     @Override
     protected void onResume() {
         super.onResume();
+        if (isFinishing()) return;                                            // מ0.11: הופנה לבית של המסד
         enter();
     }
 

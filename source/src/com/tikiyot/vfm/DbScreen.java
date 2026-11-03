@@ -75,6 +75,29 @@ public class DbScreen extends Activity {
         return m.isEmpty() ? Importer.activeMode(oldData()) : m;
     }
 
+    /**
+     * מ0.11: הפתיחה של בניית מ — הבית של המסד במראה המוכר (האופן שנבחר בפעם הקודמת). אין הרשאה, אין בית, או מסד פגום —
+     * מסך המסד (שם מבקשים הרשאה, מעתיקים מהישן, משחזרים).
+     */
+    static void start(Activity a) {
+        String m = a.getSharedPreferences(PREFS, MODE_PRIVATE).getString(PREF_MODE, "");
+        if (m.isEmpty()) m = Importer.activeMode(oldData());
+        long home = 0;
+        if (Ui.hasFiles(a) && dbFile(a, m).isFile()) {
+            SqlStore s = null;
+            try {
+                s = SqlStore.openReadOnly(dbFile(a, m));
+                home = Importer.home(s);
+            } catch (Throwable t) {
+                Log.e("DbScreen.start", t);
+            } finally {
+                if (s != null) s.close();
+            }
+        }
+        if (home != 0) DbListScreen.open(a, m, home);
+        else a.startActivity(new android.content.Intent(a, DbScreen.class));
+    }
+
     /** מ0.9.1: האופן שנבחר — נזכר גם למסך המסד וגם למראה המוכר. */
     static void saveMode(android.content.Context c, String m) {
         c.getSharedPreferences(PREFS, MODE_PRIVATE).edit().putString(PREF_MODE, m).apply();
