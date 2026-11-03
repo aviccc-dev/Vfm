@@ -933,7 +933,7 @@ cd $S; rm -rf out gen bld
 [ "$S" != "$DIR" ] && rm -rf $S
 ls -la $OUT
 ===== קובץ: build/m-version.txt =====
-17 מ0.11
+18 מ0.11.1
 ===== קובץ: build/test.sh =====
 #!/bin/bash
 # בדיקות על המחשב (80). יוצא בכישלון אם בדיקה אחת נכשלה — ואז build.sh לא בונה.
@@ -9792,7 +9792,7 @@ import java.util.List;
 public class DbListScreen extends ListScreen<Store.Member> {
 
     static final String EXTRA_MODE = "mode", EXTRA_LIST = "list";
-    private static final int MENU_DB = 1;
+    private static final int MENU_DB = 1, MENU_DESIGN = 2, MENU_SETTINGS = 3, MENU_OLD = 4, MENU_CMDS = 5;
 
     private String mode;
     private long listId;
@@ -9827,6 +9827,7 @@ public class DbListScreen extends ListScreen<Store.Member> {
     protected void onResume() {
         super.onResume();
         currentMode = mode;
+        Home.inOld = false;                                                   // מ0.11.1: חזרנו לצד של המסד
         if (!goingHome) return;
         if (atHome) goingHome = false;
         else finish();
@@ -10140,16 +10141,55 @@ public class DbListScreen extends ListScreen<Store.Member> {
         startActivity(new Intent(this, DbScreen.class).putExtra(DbScreen.EXTRA_MODE, mode).putExtra(DbScreen.EXTRA_AT, listId));
     }
 
+    /** מ0.11.1: התפריט — כמו בבית הישן (פקודות, הגדרות, עיצוב), ועוד: מסך המסד, והצד הישן. */
     @Override
     protected void menu(Menu menu) {
+        menu.add(0, MENU_CMDS, 0, Words.BATCH_MENU);
+        menu.add(0, MENU_SETTINGS, 0, Words.Main.SETTINGS);
+        menu.add(0, MENU_DESIGN, 0, Words.DesignW.MENU);
         menu.add(0, MENU_DB, 0, Words.Db.MENU_ACTIONS);
+        menu.add(0, MENU_OLD, 0, Words.Db.MENU_OLD);
     }
 
     @Override
     protected boolean item(int id) {
-        if (id != MENU_DB) return false;
-        actions();
+        if (id == MENU_DB) actions();
+        else if (id == MENU_CMDS) CmdMenu.show(this, null);
+        else if (id == MENU_SETTINGS) startActivity(new Intent(this, SettingsScreen.class));
+        else if (id == MENU_OLD) Home.openOld(this);
+        else if (id == MENU_DESIGN) design();
+        else return false;
         return true;
+    }
+
+    /** עיצוב: בבית — של מסך הבית (כמו בבית הישן); ברשימה — שלה (נשמר במסד). */
+    private void design() {
+        if (atHome) {
+            String cur = Design.homeName();
+            DesignUi.choose(this, Words.DesignW.TITLE_HOME, cur.isEmpty() ? Design.FILES : cur, null, false, new DesignUi.Done() {
+                @Override public void chosen(String name) { Design.setHome(name); refresh(); }
+
+                @Override public void changed() { refresh(); }
+            });
+            return;
+        }
+        String cur = store == null ? null : store.prop(listId, Store.P_DESIGN);
+        DesignUi.choose(this, Words.DesignW.TITLE_LIST, cur == null || cur.isEmpty() ? Design.DEFAULT : cur,
+                cur == null || cur.isEmpty() ? "" : null, true, new DesignUi.Done() {
+            @Override
+            public void chosen(final String name) {
+                DbVerbs.write(DbListScreen.this, mode, new DbVerbs.Job() {
+                    @Override
+                    public long run(Store s, java.util.List<String> p) {
+                        s.setProp(listId, Store.P_DESIGN, name);              // "" — לרשת (המאפיין נמחק)
+                        return listId;
+                    }
+                }, null);
+                refresh();
+            }
+
+            @Override public void changed() { refresh(); }
+        });
     }
 
     @Override
@@ -10380,7 +10420,7 @@ final class DbVerbs {
 
     /** האם הפקודות עכשיו של המסד. */
     static boolean active() {
-        return DbListScreen.alive > 0 && DbListScreen.currentMode != null;
+        return DbListScreen.alive > 0 && DbListScreen.currentMode != null && !Home.inOld;
     }
 
     /** מבצע את הפקודה במסד; false — אינה פקודת רשימות (ממשיכה כרגיל: מסכים, תיקייה, חיפוש, הרצה). */
@@ -17041,9 +17081,24 @@ import java.util.List;
 
 public class Home extends Activity {
 
+    /** מ0.11.1: בבניית מ — לפתוח את הבית הישן (בלי ההפניה לבית של המסד). */
+    static final String EXTRA_OLD = "old";
+    /** מ0.11.1: בבניית מ — המשתמש עובד עכשיו בצד הישן (הבית הישן הוצג אחרון); הפקודות והבית — של הישן. */
+    static boolean inOld;
+
+    /** מ0.11.1: הבית הישן, מתוך בניית מ. */
+    static void openOld(Activity a) {
+        a.startActivity(new android.content.Intent(a, Home.class).putExtra(EXTRA_OLD, true)
+                .addFlags(android.content.Intent.FLAG_ACTIVITY_CLEAR_TOP | android.content.Intent.FLAG_ACTIVITY_SINGLE_TOP));
+    }
+
     /** 1.9.0: חזרה למסך הבית מכל מקום (START %בית%, כפתור 🏠) — המסכים שמעליו נסגרים. */
     static void go(Activity a) {
         if (a instanceof Home) return;
+        if (Flavor.M && inOld) {                                              // מ0.11.1: בצד הישן — הבית הישן
+            openOld(a);
+            return;
+        }
         if (a instanceof DbListScreen) {                                       // מ0.9.2: במראה המוכר של המסד — הבית של המסד
             DbListScreen.goHome((DbListScreen) a);
             return;
@@ -17077,7 +17132,7 @@ public class Home extends Activity {
         super.onCreate(saved);
         Log.install();
         Log.initVersion(this);
-        if (Flavor.M) {                                                       // מ0.11: בבניית מ — ישר לבית של המסד
+        if (Flavor.M && !getIntent().getBooleanExtra(EXTRA_OLD, false)) {    // מ0.11: בבניית מ — ישר לבית של המסד
             DbScreen.start(this);                                             // (המשתמש: הבית הישן של מ "נראה טעות")
             finish();
             return;
@@ -17351,6 +17406,7 @@ public class Home extends Activity {
     protected void onResume() {
         super.onResume();
         if (isFinishing()) return;                                            // מ0.11: הופנה לבית של המסד
+        if (Flavor.M) inOld = true;                                           // מ0.11.1
         enter();
     }
 
@@ -17628,8 +17684,9 @@ public class Home extends Activity {
             startActivity(new Intent(this, SettingsScreen.class));
             return true;
         }
-        if (item.getItemId() == 4) {
-            startActivity(new Intent(this, DbScreen.class));
+        if (item.getItemId() == 4) {                                    // מ0.11.1: חזרה לבית של המסד
+            inOld = false;
+            DbScreen.start(this);
             return true;
         }
         if (item.getItemId() == 3) {                                    // 1.12.0: עיצוב למסך הבית
@@ -45786,9 +45843,10 @@ public final class Words {
 
         public static final String APP_NAME_M = "מנהל קבצים וירטואלי · מ";
         public static final String MENU = "מסד נתונים (מ)";
-        public static final String TITLE = "מסד נתונים · מ0.11";
+        public static final String TITLE = "מסד נתונים · מ0.11.1";
         /** מ0.9: המראה המוכר. */
         public static final String LIST_GONE = "הרשימה הזו כבר לא קיימת במסד", MENU_ACTIONS = "⚙ מסד: גיבוי, העתקה, בדיקה ופעולות",
+                MENU_OLD = "↩ הצד הישן (לפני המסד)",
                 FAMILIAR = "🏠 בית", ADD_IN_LIST = "הוספת קבצים — מתוך רשימה", NO_HOME = "אין עדיין בית במסד הזה — מעתיקים מהישן (\"העתקה מהישן\") והבית נוצר";
 
         public static String homeInfo(String mode, int n) {

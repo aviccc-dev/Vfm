@@ -25,9 +25,24 @@ import java.util.List;
 
 public class Home extends Activity {
 
+    /** מ0.11.1: בבניית מ — לפתוח את הבית הישן (בלי ההפניה לבית של המסד). */
+    static final String EXTRA_OLD = "old";
+    /** מ0.11.1: בבניית מ — המשתמש עובד עכשיו בצד הישן (הבית הישן הוצג אחרון); הפקודות והבית — של הישן. */
+    static boolean inOld;
+
+    /** מ0.11.1: הבית הישן, מתוך בניית מ. */
+    static void openOld(Activity a) {
+        a.startActivity(new android.content.Intent(a, Home.class).putExtra(EXTRA_OLD, true)
+                .addFlags(android.content.Intent.FLAG_ACTIVITY_CLEAR_TOP | android.content.Intent.FLAG_ACTIVITY_SINGLE_TOP));
+    }
+
     /** 1.9.0: חזרה למסך הבית מכל מקום (START %בית%, כפתור 🏠) — המסכים שמעליו נסגרים. */
     static void go(Activity a) {
         if (a instanceof Home) return;
+        if (Flavor.M && inOld) {                                              // מ0.11.1: בצד הישן — הבית הישן
+            openOld(a);
+            return;
+        }
         if (a instanceof DbListScreen) {                                       // מ0.9.2: במראה המוכר של המסד — הבית של המסד
             DbListScreen.goHome((DbListScreen) a);
             return;
@@ -61,7 +76,7 @@ public class Home extends Activity {
         super.onCreate(saved);
         Log.install();
         Log.initVersion(this);
-        if (Flavor.M) {                                                       // מ0.11: בבניית מ — ישר לבית של המסד
+        if (Flavor.M && !getIntent().getBooleanExtra(EXTRA_OLD, false)) {    // מ0.11: בבניית מ — ישר לבית של המסד
             DbScreen.start(this);                                             // (המשתמש: הבית הישן של מ "נראה טעות")
             finish();
             return;
@@ -335,6 +350,7 @@ public class Home extends Activity {
     protected void onResume() {
         super.onResume();
         if (isFinishing()) return;                                            // מ0.11: הופנה לבית של המסד
+        if (Flavor.M) inOld = true;                                           // מ0.11.1
         enter();
     }
 
@@ -612,8 +628,9 @@ public class Home extends Activity {
             startActivity(new Intent(this, SettingsScreen.class));
             return true;
         }
-        if (item.getItemId() == 4) {
-            startActivity(new Intent(this, DbScreen.class));
+        if (item.getItemId() == 4) {                                    // מ0.11.1: חזרה לבית של המסד
+            inOld = false;
+            DbScreen.start(this);
             return true;
         }
         if (item.getItemId() == 3) {                                    // 1.12.0: עיצוב למסך הבית

@@ -16,7 +16,7 @@ final class DbVerbs {
 
     /** האם הפקודות עכשיו של המסד. */
     static boolean active() {
-        return DbListScreen.alive > 0 && DbListScreen.currentMode != null;
+        return DbListScreen.alive > 0 && DbListScreen.currentMode != null && !Home.inOld;
     }
 
     /** מבצע את הפקודה במסד; false — אינה פקודת רשימות (ממשיכה כרגיל: מסכים, תיקייה, חיפוש, הרצה). */

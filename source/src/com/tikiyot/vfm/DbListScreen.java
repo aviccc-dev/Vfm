@@ -20,7 +20,7 @@ import java.util.List;
 public class DbListScreen extends ListScreen<Store.Member> {
 
     static final String EXTRA_MODE = "mode", EXTRA_LIST = "list";
-    private static final int MENU_DB = 1;
+    private static final int MENU_DB = 1, MENU_DESIGN = 2, MENU_SETTINGS = 3, MENU_OLD = 4, MENU_CMDS = 5;
 
     private String mode;
     private long listId;
@@ -55,6 +55,7 @@ public class DbListScreen extends ListScreen<Store.Member> {
     protected void onResume() {
         super.onResume();
         currentMode = mode;
+        Home.inOld = false;                                                   // מ0.11.1: חזרנו לצד של המסד
         if (!goingHome) return;
         if (atHome) goingHome = false;
         else finish();
@@ -368,16 +369,55 @@ public class DbListScreen extends ListScreen<Store.Member> {
         startActivity(new Intent(this, DbScreen.class).putExtra(DbScreen.EXTRA_MODE, mode).putExtra(DbScreen.EXTRA_AT, listId));
     }
 
+    /** מ0.11.1: התפריט — כמו בבית הישן (פקודות, הגדרות, עיצוב), ועוד: מסך המסד, והצד הישן. */
     @Override
     protected void menu(Menu menu) {
+        menu.add(0, MENU_CMDS, 0, Words.BATCH_MENU);
+        menu.add(0, MENU_SETTINGS, 0, Words.Main.SETTINGS);
+        menu.add(0, MENU_DESIGN, 0, Words.DesignW.MENU);
         menu.add(0, MENU_DB, 0, Words.Db.MENU_ACTIONS);
+        menu.add(0, MENU_OLD, 0, Words.Db.MENU_OLD);
     }
 
     @Override
     protected boolean item(int id) {
-        if (id != MENU_DB) return false;
-        actions();
+        if (id == MENU_DB) actions();
+        else if (id == MENU_CMDS) CmdMenu.show(this, null);
+        else if (id == MENU_SETTINGS) startActivity(new Intent(this, SettingsScreen.class));
+        else if (id == MENU_OLD) Home.openOld(this);
+        else if (id == MENU_DESIGN) design();
+        else return false;
         return true;
+    }
+
+    /** עיצוב: בבית — של מסך הבית (כמו בבית הישן); ברשימה — שלה (נשמר במסד). */
+    private void design() {
+        if (atHome) {
+            String cur = Design.homeName();
+            DesignUi.choose(this, Words.DesignW.TITLE_HOME, cur.isEmpty() ? Design.FILES : cur, null, false, new DesignUi.Done() {
+                @Override public void chosen(String name) { Design.setHome(name); refresh(); }
+
+                @Override public void changed() { refresh(); }
+            });
+            return;
+        }
+        String cur = store == null ? null : store.prop(listId, Store.P_DESIGN);
+        DesignUi.choose(this, Words.DesignW.TITLE_LIST, cur == null || cur.isEmpty() ? Design.DEFAULT : cur,
+                cur == null || cur.isEmpty() ? "" : null, true, new DesignUi.Done() {
+            @Override
+            public void chosen(final String name) {
+                DbVerbs.write(DbListScreen.this, mode, new DbVerbs.Job() {
+                    @Override
+                    public long run(Store s, java.util.List<String> p) {
+                        s.setProp(listId, Store.P_DESIGN, name);              // "" — לרשת (המאפיין נמחק)
+                        return listId;
+                    }
+                }, null);
+                refresh();
+            }
+
+            @Override public void changed() { refresh(); }
+        });
     }
 
     @Override
