@@ -88,7 +88,7 @@ public class Home extends Activity {
         Reserved.ensureBackup(Modes.current());                               // 1.22.3: "שמור לתוכנה / גיבוי" גם באופן הפעיל
         Mirror.rebuild();                                                     // 1.17.5: העותק הקריא — תמיד מעודכן בפתיחה
         lib = Library.get(this);
-        setTitle(Flavor.M ? Words.Db.APP_NAME_M : Words.Main.APP_NAME);
+        setTitle(Words.Main.APP_NAME);                                        // מ0.11.2: הצד הישן — בלי "מ"
 
         LinearLayout root = Ui.screen(this);
         int p = Ui.dp(this, 12);

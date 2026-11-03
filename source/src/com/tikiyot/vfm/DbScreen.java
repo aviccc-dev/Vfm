@@ -135,7 +135,7 @@ public class DbScreen extends Activity {
 
     /** קובץ המונה — בתיקיית הנתונים הגלויה, כדי ששחזור המסד מגיבוי ישן לא יחזיר מספר זיהוי. */
     static File counterFile() {
-        return new File(new File(Paths.data(), Paths.SYSTEM), "מונה-מזהים.txt");  // בכונן
+        return new File(new File(Paths.dbData(), Paths.SYSTEM), "מונה-מזהים.txt");  // בכונן (מ0.11.2: dbData — לא זז)
     }
 
     @Override
@@ -1019,7 +1019,7 @@ public class DbScreen extends Activity {
 
     /** הגיבויים של האופן: בתיקייה הגלויה של התוכנה; עותקים זמניים — באחסון הפרטי. */
     private Backups backups(String m) {
-        return new Backups(new File(new File(Paths.data(), Backups.DIR), m), new File(getCacheDir(), "mbackup"));
+        return new Backups(new File(new File(Paths.dbData(), Backups.DIR), m), new File(getCacheDir(), "mbackup"));
     }
 
     /** הגיבוי היומי, ברקע: עותק אם יש שינוי (פעם ביום), טקסט פעם בשבוע, ומחיקת ישנים. */

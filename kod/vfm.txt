@@ -933,7 +933,7 @@ cd $S; rm -rf out gen bld
 [ "$S" != "$DIR" ] && rm -rf $S
 ls -la $OUT
 ===== קובץ: build/m-version.txt =====
-18 מ0.11.1
+19 מ0.11.2
 ===== קובץ: build/test.sh =====
 #!/bin/bash
 # בדיקות על המחשב (80). יוצא בכישלון אם בדיקה אחת נכשלה — ואז build.sh לא בונה.
@@ -10726,7 +10726,7 @@ public class DbScreen extends Activity {
 
     /** קובץ המונה — בתיקיית הנתונים הגלויה, כדי ששחזור המסד מגיבוי ישן לא יחזיר מספר זיהוי. */
     static File counterFile() {
-        return new File(new File(Paths.data(), Paths.SYSTEM), "מונה-מזהים.txt");  // בכונן
+        return new File(new File(Paths.dbData(), Paths.SYSTEM), "מונה-מזהים.txt");  // בכונן (מ0.11.2: dbData — לא זז)
     }
 
     @Override
@@ -11610,7 +11610,7 @@ public class DbScreen extends Activity {
 
     /** הגיבויים של האופן: בתיקייה הגלויה של התוכנה; עותקים זמניים — באחסון הפרטי. */
     private Backups backups(String m) {
-        return new Backups(new File(new File(Paths.data(), Backups.DIR), m), new File(getCacheDir(), "mbackup"));
+        return new Backups(new File(new File(Paths.dbData(), Backups.DIR), m), new File(getCacheDir(), "mbackup"));
     }
 
     /** הגיבוי היומי, ברקע: עותק אם יש שינוי (פעם ביום), טקסט פעם בשבוע, ומחיקת ישנים. */
@@ -17144,7 +17144,7 @@ public class Home extends Activity {
         Reserved.ensureBackup(Modes.current());                               // 1.22.3: "שמור לתוכנה / גיבוי" גם באופן הפעיל
         Mirror.rebuild();                                                     // 1.17.5: העותק הקריא — תמיד מעודכן בפתיחה
         lib = Library.get(this);
-        setTitle(Flavor.M ? Words.Db.APP_NAME_M : Words.Main.APP_NAME);
+        setTitle(Words.Main.APP_NAME);                                        // מ0.11.2: הצד הישן — בלי "מ"
 
         LinearLayout root = Ui.screen(this);
         int p = Ui.dp(this, 12);
@@ -25690,7 +25690,11 @@ import java.io.File;
 
 public final class Paths {
 
-    public static final String APP_DIR = Flavor.appDir(Flavor.M);  // בכונן (מ0.1: בבניית מ — תיקייה נפרדת)
+    /**
+     * מ0.11.2: הצד הישן של בניית מ עובד על התיקייה של התוכנה הרגילה — אותם אופנים ואותם קבצים (המשתמש: בצד הישן "חסרים
+     * אופנים"). עד כאן — תיקייה נפרדת (מ0.1). מה ששייך למסד (קובץ המונה, הגיבויים) — בתיקייה של בניית מ: dbData().
+     */
+    public static final String APP_DIR = Flavor.oldAppDir();  // בכונן
     /** השמות בכונן, בתוך תיקיית אופן העבודה — מקום אחד (131). */
     public static final String TREE = "מבנה.txt", SETTINGS = "הגדרות", SYSTEM = ".מערכת", BACKUPS = ".גיבויים",  // בכונן
             MAIN = "מבנה התוכנה.ini";  // בכונן
@@ -25710,6 +25714,11 @@ public final class Paths {
 
     public static File data() {
         return mk(new File(Environment.getExternalStorageDirectory(), APP_DIR));
+    }
+
+    /** מ0.11.2: התיקייה של המסד בכונן (קובץ המונה, "גיבוי מסד") — של בניית מ, כמו שהייתה מ־מ0.1 (לא זזה). */
+    public static File dbData() {
+        return mk(new File(Environment.getExternalStorageDirectory(), Flavor.appDir(Flavor.M)));
     }
 
     /** 105: תיקיית אופן העבודה הפעיל — בה כל מה שלהלן. data() היא תיקיית התוכנה, המשותפת לכל האופנים. */
@@ -45843,7 +45852,7 @@ public final class Words {
 
         public static final String APP_NAME_M = "מנהל קבצים וירטואלי · מ";
         public static final String MENU = "מסד נתונים (מ)";
-        public static final String TITLE = "מסד נתונים · מ0.11.1";
+        public static final String TITLE = "מסד נתונים · מ0.11.2";
         /** מ0.9: המראה המוכר. */
         public static final String LIST_GONE = "הרשימה הזו כבר לא קיימת במסד", MENU_ACTIONS = "⚙ מסד: גיבוי, העתקה, בדיקה ופעולות",
                 MENU_OLD = "↩ הצד הישן (לפני המסד)",

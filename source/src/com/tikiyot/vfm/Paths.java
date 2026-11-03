@@ -8,7 +8,11 @@ import java.io.File;
 
 public final class Paths {
 
-    public static final String APP_DIR = Flavor.appDir(Flavor.M);  // בכונן (מ0.1: בבניית מ — תיקייה נפרדת)
+    /**
+     * מ0.11.2: הצד הישן של בניית מ עובד על התיקייה של התוכנה הרגילה — אותם אופנים ואותם קבצים (המשתמש: בצד הישן "חסרים
+     * אופנים"). עד כאן — תיקייה נפרדת (מ0.1). מה ששייך למסד (קובץ המונה, הגיבויים) — בתיקייה של בניית מ: dbData().
+     */
+    public static final String APP_DIR = Flavor.oldAppDir();  // בכונן
     /** השמות בכונן, בתוך תיקיית אופן העבודה — מקום אחד (131). */
     public static final String TREE = "מבנה.txt", SETTINGS = "הגדרות", SYSTEM = ".מערכת", BACKUPS = ".גיבויים",  // בכונן
             MAIN = "מבנה התוכנה.ini";  // בכונן
@@ -28,6 +32,11 @@ public final class Paths {
 
     public static File data() {
         return mk(new File(Environment.getExternalStorageDirectory(), APP_DIR));
+    }
+
+    /** מ0.11.2: התיקייה של המסד בכונן (קובץ המונה, "גיבוי מסד") — של בניית מ, כמו שהייתה מ־מ0.1 (לא זזה). */
+    public static File dbData() {
+        return mk(new File(Environment.getExternalStorageDirectory(), Flavor.appDir(Flavor.M)));
     }
 
     /** 105: תיקיית אופן העבודה הפעיל — בה כל מה שלהלן. data() היא תיקיית התוכנה, המשותפת לכל האופנים. */
