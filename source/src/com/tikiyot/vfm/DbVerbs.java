@@ -46,24 +46,7 @@ final class DbVerbs {
             return true;
         }
         if (c.kind.equals(Verbs.K_NEW_LIST)) {
-            final long in = a instanceof DbListScreen ? ((DbListScreen) a).listId() : 0;
-            Ui.askText(a, Words.Db.NEW_LIST_TITLE, "", Words.Db.LIST_NAME, new Ui.Text1() {
-                @Override
-                public void ok(final String name) {
-                    if (name.trim().isEmpty()) return;
-                    long id = write(a, mode, new Job() {
-                        @Override
-                        public long run(Store s, List<String> p) {
-                            final long[] out = {0};
-                            s.atomic(new Store.Work() {
-                                @Override public void run(Store t) { out[0] = t.createList(Tree.cleanName(name), in); }
-                            }, true);
-                            return out[0];
-                        }
-                    }, null);
-                    if (id != 0) DbListScreen.open(a, mode, id);
-                }
-            });
+            newList(a, mode, a instanceof DbListScreen ? ((DbListScreen) a).listId() : 0);
             return true;
         }
         if (c.kind.equals(Verbs.K_ADD) && (c.arg.equals(Verbs.A_DRIVE) || c.arg.equals(Verbs.A_SEARCH))) {
@@ -71,20 +54,82 @@ final class DbVerbs {
                 Ui.toast(a, Words.Db.ADD_IN_LIST);
                 return true;
             }
-            a.startActivity(new Intent(a, DbScreen.class).putExtra(DbScreen.EXTRA_MODE, mode)
-                    .putExtra(DbScreen.EXTRA_AT, ((DbListScreen) a).listId())
-                    .putExtra(DbScreen.EXTRA_DO, c.arg.equals(Verbs.A_DRIVE) ? DbScreen.DO_FOLDER : DbScreen.DO_SEARCH));
+            addFiles(a, mode, ((DbListScreen) a).listId(), c.arg.equals(Verbs.A_DRIVE) ? DbScreen.DO_FOLDER : DbScreen.DO_SEARCH);
             return true;
         }
         return false;
     }
 
-    private interface Job {
+    // ---------- מ0.10.1: מה שה־➕ במראה המוכר עושה (וגם הפקודות) ----------
+
+    /** רשימה ידנית חדשה בתוך in (0 — בתוך הבית, אם יש), ונפתחת. */
+    static void newList(final Activity a, final String mode, final long in) {
+        Ui.askText(a, Words.Db.NEW_LIST_TITLE, "", Words.Db.LIST_NAME, new Ui.Text1() {
+            @Override
+            public void ok(final String name) {
+                if (name.trim().isEmpty()) return;
+                long id = write(a, mode, new Job() {
+                    @Override
+                    public long run(Store s, List<String> p) {
+                        final long into = in != 0 ? in : Importer.home(s);
+                        final long[] out = {0};
+                        s.atomic(new Store.Work() {
+                            @Override public void run(Store t) { out[0] = t.createList(Tree.cleanName(name), into); }
+                        }, true);
+                        return out[0];
+                    }
+                }, null);
+                if (id != 0) DbListScreen.open(a, mode, id);
+            }
+        });
+    }
+
+    /** רשימה חכמה חדשה — בטופס המוכר — בתוך in (0 — בתוך הבית, אם יש). */
+    static void newSmart(final Activity a, final String mode, final long in) {
+        DbSmartForm.show(a, null, 0, new DbSmartForm.Done() {
+            @Override
+            public void ok(final DbSmartForm.Result r) {
+                write(a, mode, new Job() {
+                    @Override
+                    public long run(Store s, List<String> p) {
+                        return DbSmartForm.save(s, 0, in != 0 ? in : Importer.home(s), r);
+                    }
+                }, null);
+                if (a instanceof DbListScreen) ((DbListScreen) a).reload();
+            }
+        });
+    }
+
+    /** פקודה (מתפריט הפקודות האחד) — קובץ הפקודות נכנס לרשימה. */
+    static void addCommand(final Activity a, final String mode, final long in) {
+        CmdMenu.show(a, null, new CmdMenu.Picked() {
+            @Override
+            public void ok(String icon, String name, String line, java.io.File file) {
+                final java.io.File f = file != null ? file : Shortcuts.write(icon, name, line);
+                write(a, mode, new Job() {
+                    @Override
+                    public long run(Store s, List<String> p) {
+                        DbFiles.add(s, in, java.util.Collections.singletonList(f.getAbsolutePath()), null);
+                        return in;
+                    }
+                }, null);
+                if (a instanceof DbListScreen) ((DbListScreen) a).reload();
+            }
+        }, null);
+    }
+
+    /** קבצים מתיקייה / מחיפוש — מסך המסד נפתח ברשימה, וישר חלון הבחירה. */
+    static void addFiles(Activity a, String mode, long in, String what) {
+        a.startActivity(new Intent(a, DbScreen.class).putExtra(DbScreen.EXTRA_MODE, mode)
+                .putExtra(DbScreen.EXTRA_AT, in).putExtra(DbScreen.EXTRA_DO, what));
+    }
+
+    interface Job {
         long run(Store s, List<String> path);
     }
 
     /** פעולה שכותבת: המסד נפתח לכתיבה לרגע (עם קובץ המונה) ונסגר. 0 — נכשל (והודעה). */
-    private static long write(Activity a, String mode, Job job, List<String> path) {
+    static long write(Activity a, String mode, Job job, List<String> path) {
         SqlStore s = null;
         try {
             s = SqlStore.open(DbScreen.dbFile(a, mode), new IdCounter(DbScreen.counterFile()));

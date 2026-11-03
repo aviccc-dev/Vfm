@@ -645,7 +645,7 @@ public class DbScreen extends Activity {
                             Ui.toast(DbScreen.this, Words.Db.sameName(value.trim()));
                             break;
                         }
-                    store.createList(value, parent);
+                    store.createList(value, parent != 0 ? parent : Importer.home(store));   // מ0.10.1: בראש — בבית
                 } catch (Store.Failure f) {
                     Ui.toast(DbScreen.this, Words.Db.failed(f.getMessage()));
                 }
@@ -654,27 +654,17 @@ public class DbScreen extends Activity {
         });
     }
 
+    /** מ0.10.1: בטופס המוכר (DbSmartForm); בראש — בתוך הבית, אם יש. */
     private void newSmart(final long parent) {
-        Ui.askText(this, Words.Db.NEW_SMART_TITLE, "", Words.Db.SMART_NAME, new Ui.Text1() {
+        DbSmartForm.show(this, store, 0, new DbSmartForm.Done() {
             @Override
-            public void ok(final String name) {
-                Ui.askText(DbScreen.this, Words.Db.NEW_SMART_TITLE, "", Words.Db.SMART_COND, new Ui.Text1() {
-                    @Override
-                    public void ok(final String cond) {
-                        try {
-                            store.atomic(new Store.Work() {                     // הרשימה והתנאי — יחד או לא בכלל
-                                @Override
-                                public void run(Store s) {
-                                    long id = s.createSmart(name, parent);
-                                    s.setProp(id, Store.P_COND, cond.trim());
-                                }
-                            }, true);
-                        } catch (Store.Failure f) {
-                            Ui.toast(DbScreen.this, Words.Db.failed(f.getMessage()));
-                        }
-                        show();
-                    }
-                });
+            public void ok(DbSmartForm.Result r) {
+                try {
+                    DbSmartForm.save(store, 0, parent != 0 ? parent : Importer.home(store), r);
+                } catch (Store.Failure f) {
+                    Ui.toast(DbScreen.this, Words.Db.failed(f.getMessage()));
+                }
+                show();
             }
         });
     }
@@ -951,19 +941,18 @@ public class DbScreen extends Activity {
                 });
                 return;
             }
-            else if (code == 5) {
-                Ui.askText(this, Words.Db.EDIT_COND_TITLE, store.prop(it.id, Store.P_COND) == null ? "" : store.prop(it.id, Store.P_COND),
-                        Words.Db.SMART_COND, new Ui.Text1() {
-                            @Override
-                            public void ok(String value) {
-                                try {
-                                    store.setProp(it.id, Store.P_COND, value.trim());
-                                } catch (Store.Failure f) {
-                                    Ui.toast(DbScreen.this, Words.Db.failed(f.getMessage()));
-                                }
-                                show();
-                            }
-                        });
+            else if (code == 5) {                                             // מ0.10.1: עריכה בטופס המוכר
+                DbSmartForm.show(this, store, it.id, new DbSmartForm.Done() {
+                    @Override
+                    public void ok(DbSmartForm.Result r) {
+                        try {
+                            DbSmartForm.save(store, it.id, 0, r);
+                        } catch (Store.Failure f) {
+                            Ui.toast(DbScreen.this, Words.Db.failed(f.getMessage()));
+                        }
+                        show();
+                    }
+                });
                 return;
             } else if (code == 6) {
                 addToList(it);

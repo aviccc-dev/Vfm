@@ -35,7 +35,7 @@ final class DbPaths {
             public void run(Store t) {
                 String first = Tree.cleanName(path.get(0));
                 long cur = top(t, first);
-                if (cur == 0) cur = t.createList(first, 0);
+                if (cur == 0) cur = t.createList(first, Importer.home(t));    // מ0.10.1: חדשה בראש — בבית (אם יש)
                 for (int i = 1; i < path.size(); i++) {
                     String name = Tree.cleanName(path.get(i));
                     long c = child(t, cur, name);

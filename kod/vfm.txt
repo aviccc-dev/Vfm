@@ -933,7 +933,7 @@ cd $S; rm -rf out gen bld
 [ "$S" != "$DIR" ] && rm -rf $S
 ls -la $OUT
 ===== קובץ: build/m-version.txt =====
-15 מ0.10
+16 מ0.10.1
 ===== קובץ: build/test.sh =====
 #!/bin/bash
 # בדיקות על המחשב (80). יוצא בכישלון אם בדיקה אחת נכשלה — ואז build.sh לא בונה.
@@ -9900,6 +9900,7 @@ public class DbListScreen extends ListScreen<Store.Member> {
             return;
         }
         rows.addAll(store.members(listId));
+        rows.add(PLUS);                                                       // מ0.10.1: ➕ בסוף, כמו בבית הישן
         boolean home = "1".equals(store.prop(listId, Store.P_HOME));
         atHome = home;
         setTitle(home ? Words.Db.APP_NAME_M : it.name);
@@ -9907,7 +9908,7 @@ public class DbListScreen extends ListScreen<Store.Member> {
         modeBox.setText(Words.Db.modeButton(mode));
         String why = store.prop(listId, Store.P_WHY);
         String index = !lib.ready ? Words.LOADING_INDEX : lib.status;
-        info.setText(home ? index : Words.items(rows.size()) + (why == null || why.isEmpty() ? "" : "\n" + why));
+        info.setText(home ? index : Words.items(rows.size() - 1) + (why == null || why.isEmpty() ? "" : "\n" + why));
         look(designOf(home));
         adapter.notifyDataSetChanged();
         countLater();
@@ -10012,18 +10013,31 @@ public class DbListScreen extends ListScreen<Store.Member> {
 
     @Override
     protected String nameOf(Store.Member row) {
-        return row.item.name;
+        return row == PLUS ? Words.Main.ADD : row.item.name;
     }
 
     @Override
     protected String[] ownLook(Store.Member row) {
+        if (row == PLUS) return null;
         String icon = store == null ? null : store.prop(row.item.id, Store.P_ICON);
         return icon == null || icon.isEmpty() ? null : new String[]{icon, ""};
+    }
+
+    /** מ0.10.1: השורה האחרונה — "➕ הוספה" (לא פריט במסד). */
+    private static final Store.Member PLUS = new Store.Member(new Store.Item(-1, 0, "", 0, 0), -1, 0);
+
+    /** טעינה מחדש אחרי שינוי שנעשה מכאן (רשימה חכמה, פקודה). */
+    void reload() {
+        refresh();
     }
 
     @Override
     protected void bind(View v, Store.Member row) {
         Store.Item it = row.item;
+        if (row == PLUS) {
+            Ui.bindIcon(v, "➕", Words.Main.ADD, "");
+            return;
+        }
         if (store == null) return;
         if (it.type == Store.LIST) {
             boolean group = "1".equals(store.prop(it.id, Store.P_GROUP));
@@ -10060,6 +10074,10 @@ public class DbListScreen extends ListScreen<Store.Member> {
 
     @Override
     protected void open(Store.Member row) {
+        if (row == PLUS) {
+            addMenu();
+            return;
+        }
         Store.Item it = row.item;
         if (it.type == Store.LIST) {
             open(this, mode, it.id);
@@ -10098,7 +10116,23 @@ public class DbListScreen extends ListScreen<Store.Member> {
 
     @Override
     protected void hold(Store.Member row) {
-        actions();
+        if (row != PLUS) actions();
+    }
+
+    /** ➕: בבית — כמו בבית הישן (רשימה ידנית, רשימה חכמה, פקודה); ברשימה — גם קבצים מתיקייה ומחיפוש. */
+    private void addMenu() {
+        final boolean home = atHome;
+        String[] items = home ? new String[]{Words.Main.ADD_MANUAL, Words.Main.ADD_SMART, Words.Main.ADD_CMD}
+                : new String[]{Words.Main.ADD_MANUAL, Words.Main.ADD_SMART, Words.Main.ADD_CMD, Words.Db.ADD_FROM_FOLDER, Words.Db.ADD_FROM_SEARCH};
+        Ui.options(this, Words.Main.WHAT_TO_ADD, items, new android.content.DialogInterface.OnClickListener() {
+            @Override
+            public void onClick(android.content.DialogInterface d, int which) {
+                if (which == 0) DbVerbs.newList(DbListScreen.this, mode, listId);
+                else if (which == 1) DbVerbs.newSmart(DbListScreen.this, mode, listId);
+                else if (which == 2) DbVerbs.addCommand(DbListScreen.this, mode, listId);
+                else DbVerbs.addFiles(DbListScreen.this, mode, listId, which == 3 ? DbScreen.DO_FOLDER : DbScreen.DO_SEARCH);
+            }
+        });
     }
 
     /** כל הפעולות — במסך המסד, באותה רשימה. */
@@ -10163,7 +10197,7 @@ final class DbPaths {
             public void run(Store t) {
                 String first = Tree.cleanName(path.get(0));
                 long cur = top(t, first);
-                if (cur == 0) cur = t.createList(first, 0);
+                if (cur == 0) cur = t.createList(first, Importer.home(t));    // מ0.10.1: חדשה בראש — בבית (אם יש)
                 for (int i = 1; i < path.size(); i++) {
                     String name = Tree.cleanName(path.get(i));
                     long c = child(t, cur, name);
@@ -10244,6 +10278,89 @@ final class DbPaths {
         return 0;
     }
 }
+===== קובץ: src/com/tikiyot/vfm/DbSmartForm.java =====
+package com.tikiyot.vfm;
+
+// מ0.10.1: רשימה חכמה במסד — בטופס המוכר (SmartForm: מאיפה, סוג, תאריך, גודל, מיון, תצוגה, צלמית, תיאור, "למה"),
+// ליצירה ולעריכה (המשתמש: "רשימה חכמה היא בלי הטופס של התנאים"). הטופס עצמו לא משתנה; כאן רק התרגום בין המאפיינים
+// במסד (cond/sort/view/icon/desc/why) לבין מה שהטופס מקבל ומחזיר.
+// אחראי: התרגום, ושמירה בעסקה אחת. אסור לו: לפתוח מסד (מקבל Store פתוח לכתיבה).
+
+import android.app.Activity;
+
+final class DbSmartForm {
+
+    private DbSmartForm() { }
+
+    /** מה שהטופס החזיר, כבר במונחי המסד. */
+    static final class Result {
+        String name = "", cond = "", sort = "", view = "", icon = "", desc = "", why = "";
+    }
+
+    interface Done {
+        void ok(Result r);
+    }
+
+    /** הטופס; smart — לעריכה (0 — חדשה). s — לקריאת הערכים הקיימים בלבד. */
+    static void show(Activity a, Store s, long smart, final Done done) {
+        Target t = null;
+        String name = null;
+        if (smart != 0) {
+            name = s.item(smart).name;
+            t = Target.of(FnSmart.KIND, SmartLists.COND, v(s, smart, Store.P_COND), SmartLists.SORT, v(s, smart, Store.P_SORT),
+                    SmartLists.VIEW, v(s, smart, Store.P_VIEW), Program.ICON, v(s, smart, Store.P_ICON),
+                    DESC, v(s, smart, Store.P_DESC), Program.WHY, v(s, smart, Store.P_WHY));
+        }
+        SmartForm.show(a, name, t, new Func.Done() {
+            @Override
+            public void ok(String n, Target out) {
+                Result r = new Result();
+                r.name = n == null ? "" : n.trim();
+                r.cond = out.get(SmartLists.COND, "");
+                r.sort = out.get(SmartLists.SORT, "");
+                r.view = out.get(SmartLists.VIEW, "");
+                String link = out.get(SmartLists.LINK, "");
+                if (r.cond.isEmpty() && !link.isEmpty()) {                     // נבחרה תבנית — התנאי שלה (במסד אין קישור)
+                    SmartLists.Named l = SmartLists.byId(link);
+                    if (l != null) {
+                        r.cond = l.cond;
+                        if (r.view.isEmpty()) r.view = l.view;
+                    }
+                }
+                r.icon = out.get(Program.ICON, "");
+                r.desc = out.get(DESC, "");
+                r.why = out.get(Program.WHY, "");
+                done.ok(r);
+            }
+        });
+    }
+
+    /** שומר בעסקה אחת: smart = 0 — נוצרת (בתוך into, אם לא 0). מחזיר את מספר הזיהוי. */
+    static long save(Store s, final long smart, final long into, final Result r) {
+        final long[] out = {smart};
+        s.atomic(new Store.Work() {
+            @Override
+            public void run(Store t) {
+                if (out[0] == 0) out[0] = t.createSmart(r.name.isEmpty() ? Words.SMART_LIST : r.name, into);
+                else if (!r.name.isEmpty()) t.rename(out[0], r.name);
+                t.setProp(out[0], Store.P_COND, r.cond);
+                t.setProp(out[0], Store.P_SORT, r.sort);
+                t.setProp(out[0], Store.P_VIEW, r.view);
+                t.setProp(out[0], Store.P_ICON, r.icon);
+                t.setProp(out[0], Store.P_DESC, r.desc);
+                t.setProp(out[0], Store.P_WHY, r.why);
+            }
+        }, true);
+        return out[0];
+    }
+
+    private static final String DESC = "תיאור";  // תחביר (המפתח בטופס, כמו SmartForm.detailKeys)
+
+    private static String v(Store s, long id, String k) {
+        String x = s.prop(id, k);
+        return x == null ? "" : x;
+    }
+}
 ===== קובץ: src/com/tikiyot/vfm/DbVerbs.java =====
 package com.tikiyot.vfm;
 
@@ -10293,24 +10410,7 @@ final class DbVerbs {
             return true;
         }
         if (c.kind.equals(Verbs.K_NEW_LIST)) {
-            final long in = a instanceof DbListScreen ? ((DbListScreen) a).listId() : 0;
-            Ui.askText(a, Words.Db.NEW_LIST_TITLE, "", Words.Db.LIST_NAME, new Ui.Text1() {
-                @Override
-                public void ok(final String name) {
-                    if (name.trim().isEmpty()) return;
-                    long id = write(a, mode, new Job() {
-                        @Override
-                        public long run(Store s, List<String> p) {
-                            final long[] out = {0};
-                            s.atomic(new Store.Work() {
-                                @Override public void run(Store t) { out[0] = t.createList(Tree.cleanName(name), in); }
-                            }, true);
-                            return out[0];
-                        }
-                    }, null);
-                    if (id != 0) DbListScreen.open(a, mode, id);
-                }
-            });
+            newList(a, mode, a instanceof DbListScreen ? ((DbListScreen) a).listId() : 0);
             return true;
         }
         if (c.kind.equals(Verbs.K_ADD) && (c.arg.equals(Verbs.A_DRIVE) || c.arg.equals(Verbs.A_SEARCH))) {
@@ -10318,20 +10418,82 @@ final class DbVerbs {
                 Ui.toast(a, Words.Db.ADD_IN_LIST);
                 return true;
             }
-            a.startActivity(new Intent(a, DbScreen.class).putExtra(DbScreen.EXTRA_MODE, mode)
-                    .putExtra(DbScreen.EXTRA_AT, ((DbListScreen) a).listId())
-                    .putExtra(DbScreen.EXTRA_DO, c.arg.equals(Verbs.A_DRIVE) ? DbScreen.DO_FOLDER : DbScreen.DO_SEARCH));
+            addFiles(a, mode, ((DbListScreen) a).listId(), c.arg.equals(Verbs.A_DRIVE) ? DbScreen.DO_FOLDER : DbScreen.DO_SEARCH);
             return true;
         }
         return false;
     }
 
-    private interface Job {
+    // ---------- מ0.10.1: מה שה־➕ במראה המוכר עושה (וגם הפקודות) ----------
+
+    /** רשימה ידנית חדשה בתוך in (0 — בתוך הבית, אם יש), ונפתחת. */
+    static void newList(final Activity a, final String mode, final long in) {
+        Ui.askText(a, Words.Db.NEW_LIST_TITLE, "", Words.Db.LIST_NAME, new Ui.Text1() {
+            @Override
+            public void ok(final String name) {
+                if (name.trim().isEmpty()) return;
+                long id = write(a, mode, new Job() {
+                    @Override
+                    public long run(Store s, List<String> p) {
+                        final long into = in != 0 ? in : Importer.home(s);
+                        final long[] out = {0};
+                        s.atomic(new Store.Work() {
+                            @Override public void run(Store t) { out[0] = t.createList(Tree.cleanName(name), into); }
+                        }, true);
+                        return out[0];
+                    }
+                }, null);
+                if (id != 0) DbListScreen.open(a, mode, id);
+            }
+        });
+    }
+
+    /** רשימה חכמה חדשה — בטופס המוכר — בתוך in (0 — בתוך הבית, אם יש). */
+    static void newSmart(final Activity a, final String mode, final long in) {
+        DbSmartForm.show(a, null, 0, new DbSmartForm.Done() {
+            @Override
+            public void ok(final DbSmartForm.Result r) {
+                write(a, mode, new Job() {
+                    @Override
+                    public long run(Store s, List<String> p) {
+                        return DbSmartForm.save(s, 0, in != 0 ? in : Importer.home(s), r);
+                    }
+                }, null);
+                if (a instanceof DbListScreen) ((DbListScreen) a).reload();
+            }
+        });
+    }
+
+    /** פקודה (מתפריט הפקודות האחד) — קובץ הפקודות נכנס לרשימה. */
+    static void addCommand(final Activity a, final String mode, final long in) {
+        CmdMenu.show(a, null, new CmdMenu.Picked() {
+            @Override
+            public void ok(String icon, String name, String line, java.io.File file) {
+                final java.io.File f = file != null ? file : Shortcuts.write(icon, name, line);
+                write(a, mode, new Job() {
+                    @Override
+                    public long run(Store s, List<String> p) {
+                        DbFiles.add(s, in, java.util.Collections.singletonList(f.getAbsolutePath()), null);
+                        return in;
+                    }
+                }, null);
+                if (a instanceof DbListScreen) ((DbListScreen) a).reload();
+            }
+        }, null);
+    }
+
+    /** קבצים מתיקייה / מחיפוש — מסך המסד נפתח ברשימה, וישר חלון הבחירה. */
+    static void addFiles(Activity a, String mode, long in, String what) {
+        a.startActivity(new Intent(a, DbScreen.class).putExtra(DbScreen.EXTRA_MODE, mode)
+                .putExtra(DbScreen.EXTRA_AT, in).putExtra(DbScreen.EXTRA_DO, what));
+    }
+
+    interface Job {
         long run(Store s, List<String> path);
     }
 
     /** פעולה שכותבת: המסד נפתח לכתיבה לרגע (עם קובץ המונה) ונסגר. 0 — נכשל (והודעה). */
-    private static long write(Activity a, String mode, Job job, List<String> path) {
+    static long write(Activity a, String mode, Job job, List<String> path) {
         SqlStore s = null;
         try {
             s = SqlStore.open(DbScreen.dbFile(a, mode), new IdCounter(DbScreen.counterFile()));
@@ -11034,7 +11196,7 @@ public class DbScreen extends Activity {
                             Ui.toast(DbScreen.this, Words.Db.sameName(value.trim()));
                             break;
                         }
-                    store.createList(value, parent);
+                    store.createList(value, parent != 0 ? parent : Importer.home(store));   // מ0.10.1: בראש — בבית
                 } catch (Store.Failure f) {
                     Ui.toast(DbScreen.this, Words.Db.failed(f.getMessage()));
                 }
@@ -11043,27 +11205,17 @@ public class DbScreen extends Activity {
         });
     }
 
+    /** מ0.10.1: בטופס המוכר (DbSmartForm); בראש — בתוך הבית, אם יש. */
     private void newSmart(final long parent) {
-        Ui.askText(this, Words.Db.NEW_SMART_TITLE, "", Words.Db.SMART_NAME, new Ui.Text1() {
+        DbSmartForm.show(this, store, 0, new DbSmartForm.Done() {
             @Override
-            public void ok(final String name) {
-                Ui.askText(DbScreen.this, Words.Db.NEW_SMART_TITLE, "", Words.Db.SMART_COND, new Ui.Text1() {
-                    @Override
-                    public void ok(final String cond) {
-                        try {
-                            store.atomic(new Store.Work() {                     // הרשימה והתנאי — יחד או לא בכלל
-                                @Override
-                                public void run(Store s) {
-                                    long id = s.createSmart(name, parent);
-                                    s.setProp(id, Store.P_COND, cond.trim());
-                                }
-                            }, true);
-                        } catch (Store.Failure f) {
-                            Ui.toast(DbScreen.this, Words.Db.failed(f.getMessage()));
-                        }
-                        show();
-                    }
-                });
+            public void ok(DbSmartForm.Result r) {
+                try {
+                    DbSmartForm.save(store, 0, parent != 0 ? parent : Importer.home(store), r);
+                } catch (Store.Failure f) {
+                    Ui.toast(DbScreen.this, Words.Db.failed(f.getMessage()));
+                }
+                show();
             }
         });
     }
@@ -11340,19 +11492,18 @@ public class DbScreen extends Activity {
                 });
                 return;
             }
-            else if (code == 5) {
-                Ui.askText(this, Words.Db.EDIT_COND_TITLE, store.prop(it.id, Store.P_COND) == null ? "" : store.prop(it.id, Store.P_COND),
-                        Words.Db.SMART_COND, new Ui.Text1() {
-                            @Override
-                            public void ok(String value) {
-                                try {
-                                    store.setProp(it.id, Store.P_COND, value.trim());
-                                } catch (Store.Failure f) {
-                                    Ui.toast(DbScreen.this, Words.Db.failed(f.getMessage()));
-                                }
-                                show();
-                            }
-                        });
+            else if (code == 5) {                                             // מ0.10.1: עריכה בטופס המוכר
+                DbSmartForm.show(this, store, it.id, new DbSmartForm.Done() {
+                    @Override
+                    public void ok(DbSmartForm.Result r) {
+                        try {
+                            DbSmartForm.save(store, it.id, 0, r);
+                        } catch (Store.Failure f) {
+                            Ui.toast(DbScreen.this, Words.Db.failed(f.getMessage()));
+                        }
+                        show();
+                    }
+                });
                 return;
             } else if (code == 6) {
                 addToList(it);
@@ -45606,7 +45757,7 @@ public final class Words {
 
         public static final String APP_NAME_M = "מנהל קבצים וירטואלי · מ";
         public static final String MENU = "מסד נתונים (מ)";
-        public static final String TITLE = "מסד נתונים · מ0.10";
+        public static final String TITLE = "מסד נתונים · מ0.10.1";
         /** מ0.9: המראה המוכר. */
         public static final String LIST_GONE = "הרשימה הזו כבר לא קיימת במסד", MENU_ACTIONS = "⚙ פעולות (מסך המסד)",
                 FAMILIAR = "🏠 בית", ADD_IN_LIST = "הוספת קבצים — מתוך רשימה", NO_HOME = "אין עדיין בית במסד הזה — מעתיקים מהישן (\"העתקה מהישן\") והבית נוצר";
@@ -47504,6 +47655,23 @@ final class ImportTests {
         ck("פקודות: עדכן רשימה חכמה — התנאי; המיון רק אם נכתב", DbPaths.updateSmart(s, "חדשים", "תאריך:יום", "") == sm
                 && "תאריך:יום".equals(s.prop(sm, Store.P_COND)) && "תאריך".equals(s.prop(sm, Store.P_SORT)));
         ck("פקודות: עדכן רשימה חכמה שאינה — 0", DbPaths.updateSmart(s, "אין", "x", "") == 0);
+        long made2 = DbPaths.ensure(s, "פק", Tree.parsePath("חדשה בראש"));
+        ck("פקודות: צור רשימה חדשה בראש — נכנסת לבית", made2 != 0 && s.listsOf(made2).equals(Arrays.asList(home))
+                && DbPaths.find(s, "פק", Tree.parsePath("חדשה בראש")) == made2);
+        DbSmartForm.Result r = new DbSmartForm.Result();
+        r.name = "מהטופס";
+        r.cond = "סוג:ספרים";
+        r.sort = "שם";
+        r.view = "ברצף";
+        r.why = "למה כך";
+        long fs = DbSmartForm.save(s, 0, home, r);
+        ck("טופס חכמה: נוצרת בבית עם כל השדות", s.item(fs).type == Store.SMART && s.listsOf(fs).equals(Arrays.asList(home))
+                && "סוג:ספרים".equals(s.prop(fs, Store.P_COND)) && "ברצף".equals(s.prop(fs, Store.P_VIEW)) && "למה כך".equals(s.prop(fs, Store.P_WHY)));
+        r.name = "";
+        r.cond = "סוג:תמונות";
+        r.why = "";
+        ck("טופס חכמה: עריכה — אותו פריט, שם נשאר כשריק, שדה שנמחק נמחק", DbSmartForm.save(s, fs, 0, r) == fs
+                && s.item(fs).name.equals("מהטופס") && "סוג:תמונות".equals(s.prop(fs, Store.P_COND)) && s.prop(fs, Store.P_WHY) == null);
         ck("פקודות: המסד תקין", s.check() == null);
     }
 

@@ -368,6 +368,23 @@ final class ImportTests {
         ck("פקודות: עדכן רשימה חכמה — התנאי; המיון רק אם נכתב", DbPaths.updateSmart(s, "חדשים", "תאריך:יום", "") == sm
                 && "תאריך:יום".equals(s.prop(sm, Store.P_COND)) && "תאריך".equals(s.prop(sm, Store.P_SORT)));
         ck("פקודות: עדכן רשימה חכמה שאינה — 0", DbPaths.updateSmart(s, "אין", "x", "") == 0);
+        long made2 = DbPaths.ensure(s, "פק", Tree.parsePath("חדשה בראש"));
+        ck("פקודות: צור רשימה חדשה בראש — נכנסת לבית", made2 != 0 && s.listsOf(made2).equals(Arrays.asList(home))
+                && DbPaths.find(s, "פק", Tree.parsePath("חדשה בראש")) == made2);
+        DbSmartForm.Result r = new DbSmartForm.Result();
+        r.name = "מהטופס";
+        r.cond = "סוג:ספרים";
+        r.sort = "שם";
+        r.view = "ברצף";
+        r.why = "למה כך";
+        long fs = DbSmartForm.save(s, 0, home, r);
+        ck("טופס חכמה: נוצרת בבית עם כל השדות", s.item(fs).type == Store.SMART && s.listsOf(fs).equals(Arrays.asList(home))
+                && "סוג:ספרים".equals(s.prop(fs, Store.P_COND)) && "ברצף".equals(s.prop(fs, Store.P_VIEW)) && "למה כך".equals(s.prop(fs, Store.P_WHY)));
+        r.name = "";
+        r.cond = "סוג:תמונות";
+        r.why = "";
+        ck("טופס חכמה: עריכה — אותו פריט, שם נשאר כשריק, שדה שנמחק נמחק", DbSmartForm.save(s, fs, 0, r) == fs
+                && s.item(fs).name.equals("מהטופס") && "סוג:תמונות".equals(s.prop(fs, Store.P_COND)) && s.prop(fs, Store.P_WHY) == null);
         ck("פקודות: המסד תקין", s.check() == null);
     }
 

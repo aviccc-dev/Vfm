@@ -128,6 +128,7 @@ public class DbListScreen extends ListScreen<Store.Member> {
             return;
         }
         rows.addAll(store.members(listId));
+        rows.add(PLUS);                                                       // מ0.10.1: ➕ בסוף, כמו בבית הישן
         boolean home = "1".equals(store.prop(listId, Store.P_HOME));
         atHome = home;
         setTitle(home ? Words.Db.APP_NAME_M : it.name);
@@ -135,7 +136,7 @@ public class DbListScreen extends ListScreen<Store.Member> {
         modeBox.setText(Words.Db.modeButton(mode));
         String why = store.prop(listId, Store.P_WHY);
         String index = !lib.ready ? Words.LOADING_INDEX : lib.status;
-        info.setText(home ? index : Words.items(rows.size()) + (why == null || why.isEmpty() ? "" : "\n" + why));
+        info.setText(home ? index : Words.items(rows.size() - 1) + (why == null || why.isEmpty() ? "" : "\n" + why));
         look(designOf(home));
         adapter.notifyDataSetChanged();
         countLater();
@@ -240,18 +241,31 @@ public class DbListScreen extends ListScreen<Store.Member> {
 
     @Override
     protected String nameOf(Store.Member row) {
-        return row.item.name;
+        return row == PLUS ? Words.Main.ADD : row.item.name;
     }
 
     @Override
     protected String[] ownLook(Store.Member row) {
+        if (row == PLUS) return null;
         String icon = store == null ? null : store.prop(row.item.id, Store.P_ICON);
         return icon == null || icon.isEmpty() ? null : new String[]{icon, ""};
+    }
+
+    /** מ0.10.1: השורה האחרונה — "➕ הוספה" (לא פריט במסד). */
+    private static final Store.Member PLUS = new Store.Member(new Store.Item(-1, 0, "", 0, 0), -1, 0);
+
+    /** טעינה מחדש אחרי שינוי שנעשה מכאן (רשימה חכמה, פקודה). */
+    void reload() {
+        refresh();
     }
 
     @Override
     protected void bind(View v, Store.Member row) {
         Store.Item it = row.item;
+        if (row == PLUS) {
+            Ui.bindIcon(v, "➕", Words.Main.ADD, "");
+            return;
+        }
         if (store == null) return;
         if (it.type == Store.LIST) {
             boolean group = "1".equals(store.prop(it.id, Store.P_GROUP));
@@ -288,6 +302,10 @@ public class DbListScreen extends ListScreen<Store.Member> {
 
     @Override
     protected void open(Store.Member row) {
+        if (row == PLUS) {
+            addMenu();
+            return;
+        }
         Store.Item it = row.item;
         if (it.type == Store.LIST) {
             open(this, mode, it.id);
@@ -326,7 +344,23 @@ public class DbListScreen extends ListScreen<Store.Member> {
 
     @Override
     protected void hold(Store.Member row) {
-        actions();
+        if (row != PLUS) actions();
+    }
+
+    /** ➕: בבית — כמו בבית הישן (רשימה ידנית, רשימה חכמה, פקודה); ברשימה — גם קבצים מתיקייה ומחיפוש. */
+    private void addMenu() {
+        final boolean home = atHome;
+        String[] items = home ? new String[]{Words.Main.ADD_MANUAL, Words.Main.ADD_SMART, Words.Main.ADD_CMD}
+                : new String[]{Words.Main.ADD_MANUAL, Words.Main.ADD_SMART, Words.Main.ADD_CMD, Words.Db.ADD_FROM_FOLDER, Words.Db.ADD_FROM_SEARCH};
+        Ui.options(this, Words.Main.WHAT_TO_ADD, items, new android.content.DialogInterface.OnClickListener() {
+            @Override
+            public void onClick(android.content.DialogInterface d, int which) {
+                if (which == 0) DbVerbs.newList(DbListScreen.this, mode, listId);
+                else if (which == 1) DbVerbs.newSmart(DbListScreen.this, mode, listId);
+                else if (which == 2) DbVerbs.addCommand(DbListScreen.this, mode, listId);
+                else DbVerbs.addFiles(DbListScreen.this, mode, listId, which == 3 ? DbScreen.DO_FOLDER : DbScreen.DO_SEARCH);
+            }
+        });
     }
 
     /** כל הפעולות — במסך המסד, באותה רשימה. */
