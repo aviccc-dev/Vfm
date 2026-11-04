@@ -2309,6 +2309,15 @@ public final class Words {
         public static final String COPY_TO = "📋 העתקה לרשימה…", COPY_TO_TITLE = "העתקה לתוך:",
                 REMOVE_HERE = "🗑 הסרה מכאן", REMOVE_YES = "להסיר", ALL_ACTIONS = "⚙ כל הפעולות (מסך המסד)";
 
+        public static String removeQuestionN(int n) {
+            return n + " פריטים — יוצאים מהרשימה הזו. רשימה שלא נשארת באף מקום — נמחקת עם מה שרק שלה; "
+                    + "לפני כן — גיבוי של המסד. הקבצים בכונן לא נוגעים.";
+        }
+
+        public static String items(int n) {
+            return n + " פריטים";
+        }
+
         public static String removeQuestion(String name) {
             return "\"" + name + "\" — יוצא מהרשימה הזו. רשימה שלא נשארת באף מקום — נמחקת עם מה שרק שלה; "
                     + "לפני כן — גיבוי של המסד. הקבצים בכונן לא נוגעים.";
@@ -2381,7 +2390,7 @@ public final class Words {
 
         public static final String APP_NAME_M = "מנהל קבצים וירטואלי · מ";
         public static final String MENU = "מסד נתונים (מ)";
-        public static final String TITLE = "מסד נתונים · מ0.15";
+        public static final String TITLE = "מסד נתונים · מ0.16";
         /** מ0.9: המראה המוכר. */
         public static final String LIST_GONE = "הרשימה הזו כבר לא קיימת במסד", MENU_ACTIONS = "⚙ מסד: גיבוי, העתקה, בדיקה ופעולות",
                 MENU_OLD = "↩ הצד הישן (לפני המסד)",

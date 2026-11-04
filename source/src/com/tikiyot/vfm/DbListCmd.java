@@ -303,6 +303,60 @@ final class DbListCmd {
         return c;
     }
 
+    /** מ0.16: העתקה לפי מספרי זיהוי (מהמסך) — רשימה לא לתוך עצמה (נספרת כ"לא נכנסה"). */
+    static Copied copyIds(Store s, List<Long> ids, long dest) {
+        List<Store.Item> what = new ArrayList<Store.Item>();
+        int self = 0;
+        for (Long id : ids) {
+            Store.Item it = s.item(id);
+            if (it == null) continue;
+            if (it.type == Store.LIST && (id == dest || s.contains(id, dest))) { self++; continue; }
+            what.add(it);
+        }
+        Copied c = copyInto(s, what, dest);
+        if (self > 0) {
+            c.skipped += self;
+            if (c.why == null) c.why = Words.ListCmdW.INTO_ITSELF;
+        }
+        return c;
+    }
+
+    /** מ0.16: קישור — אותו פריט גם ב-dest (רשימה משותפת); מעגל, או כבר בה (גם בתת־רשימה) — לא נכנס. בעסקה אחת. */
+    static Copied linkInto(Store s, final List<Long> ids, final long dest) {
+        final Copied c = new Copied();
+        s.atomic(new Store.Work() {
+            @Override public void run(Store t) {
+                for (Long id : ids) {
+                    String w = t.item(id) == null ? Words.DbCmd.ALREADY : id == dest || t.makesCycle(dest, id) ? Words.ListCmdW.INTO_ITSELF
+                            : t.contains(dest, id) || !t.addMember(dest, id) ? Words.DbCmd.ALREADY : null;
+                    if (w == null) c.done++;
+                    else {
+                        c.skipped++;
+                        if (c.why == null) c.why = w;
+                    }
+                }
+            }
+        }, true);
+        return c;
+    }
+
+    /** מ0.16: העברה — קישור ל-dest, ויציאה מ-from רק של מה שנכנס עכשיו. בעסקה אחת. */
+    static Copied moveTo(Store s, final List<Long> ids, final long from, final long dest) {
+        final Copied c = new Copied();
+        s.atomic(new Store.Work() {
+            @Override public void run(Store t) {
+                for (Long id : ids) {
+                    Copied one = linkInto(t, java.util.Collections.singletonList(id), dest);
+                    c.done += one.done;
+                    c.skipped += one.skipped;
+                    if (c.why == null) c.why = one.why;
+                    if (one.done == 1 && from != 0) t.removeMember(from, id);
+                }
+            }
+        }, true);
+        return c;
+    }
+
     /** הסרה מרשימה — בעסקה אחת: יוצא מ-parent; רשימה שלא נשארה באף מקום — נמחקת עם מה שרק שלה; רעיון שהיה רק כאן — לסל. */
     static void removeFrom(Store s, final long parent, final long item) {
         s.atomic(new Store.Work() {

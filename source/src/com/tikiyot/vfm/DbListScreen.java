@@ -91,7 +91,7 @@ public class DbListScreen extends ListScreen<Store.Member> {
         });
         modeBox.setVisibility(View.GONE);
         root.addView(modeBox, 0);
-        done(root, Actions.Tool.SEARCH, null);                               // הפס — לא נפתח (אין בחירה כאן); השורות — כן
+        done(root, Actions.Tool.LIST, own());                                // מ0.16: פס הבחירה — כמו ברשימה ידנית
     }
 
     /** המסד לקריאה בלבד — נפתח בכל טעינה (מסך המסד הוא שכותב). */
@@ -239,9 +239,18 @@ public class DbListScreen extends ListScreen<Store.Member> {
         return d;
     }
 
+    /** מ0.16: בחירה מרובה — קובץ לפי המסלול (כך גם פעולות הקבצים הרגילות: פתיחה, שיתוף, מחיקה מהכונן…). */
     @Override
     protected String key(Store.Member row) {
-        return null;                                                          // בלי בחירה כאן
+        if (row == PLUS || row.item.type != Store.FILE || store == null) return null;
+        Store.FileInfo fi = store.file(row.item.id);
+        return fi == null ? null : fi.path;
+    }
+
+    /** מ0.16: רשימה, חכמה, רעיון, כותרת — לפי מספר הזיהוי. */
+    @Override
+    protected String listKey(Store.Member row) {
+        return row == PLUS || row.item.type == Store.FILE ? null : "#" + row.item.id;
     }
 
     @Override
@@ -347,23 +356,6 @@ public class DbListScreen extends ListScreen<Store.Member> {
         return v == null ? "" : v;
     }
 
-    /** מ0.13: נגיעה ארוכה — העתקה לרשימה, הסרה מכאן (דרך הליבה של הפקודות — DbListCmd), או כל הפעולות. */
-    @Override
-    protected void hold(Store.Member row) {
-        if (row == PLUS) return;
-        final Store.Item it = row.item;
-        String[] items = {Words.DbCmd.EDIT, Words.DbCmd.COPY_TO, Words.DbCmd.REMOVE_HERE, Words.DbCmd.ALL_ACTIONS};
-        Ui.options(this, it.name, items, new android.content.DialogInterface.OnClickListener() {
-            @Override
-            public void onClick(android.content.DialogInterface d, int which) {
-                if (which == 0) edit(it);
-                else if (which == 1) copyTo(it);
-                else if (which == 2) removeHere(it);
-                else actions();
-            }
-        });
-    }
-
     /** מ0.13.1: עריכה — רשימה חכמה בטופס שלה; רשימה: שם, צלמית, תיאור, "למה"; רעיון/כותרת — הטקסט. דרך הליבה. */
     private void edit(final Store.Item it) {
         if (it.type == Store.FILE) {
@@ -419,6 +411,7 @@ public class DbListScreen extends ListScreen<Store.Member> {
 
     private void done(String msg) {
         Ui.toast(this, msg);
+        sel.stop();
         refresh();
     }
 
@@ -427,11 +420,46 @@ public class DbListScreen extends ListScreen<Store.Member> {
         return atHome ? homeOrZero() : listId;
     }
 
-    private void copyTo(final Store.Item it) {
+    /** מ0.16: הפעולות של פס הבחירה — כולן דרך הליבה של הפקודות (DbListCmd). */
+    private java.util.Map<Actions.Action, Runnable> own() {
+        java.util.Map<Actions.Action, Runnable> m = new java.util.HashMap<Actions.Action, Runnable>();
+        m.put(Actions.DUPLICATE_LIST, new Runnable() { @Override public void run() { toList(COPY); } });
+        m.put(Actions.ALSO_TO_LIST, new Runnable() { @Override public void run() { toList(LINK); } });
+        m.put(Actions.MOVE_TO_LIST, new Runnable() { @Override public void run() { toList(MOVE); } });
+        m.put(Actions.REMOVE_FROM_LIST, new Runnable() { @Override public void run() { removeChosen(); } });
+        m.put(Actions.SETTINGS_LIST, new Runnable() {
+            @Override public void run() {
+                List<Long> ids = chosenIds();
+                if (ids.size() == 1 && store.item(ids.get(0)) != null) edit(store.item(ids.get(0)));
+            }
+        });
+        return m;
+    }
+
+    private static final int COPY = 0, LINK = 1, MOVE = 2;
+
+    /** מה שנבחר — מספרי זיהוי (קבצים לפי המסלול, השאר לפי "#מספר"). */
+    private List<Long> chosenIds() {
+        List<Long> out = new ArrayList<Long>();
+        for (String p : sel.files) {
+            long id = store.findFile(p);
+            if (id != 0) out.add(id);
+        }
+        for (String k : sel.lists)
+            if (k.startsWith("#")) {
+                try { out.add(Long.parseLong(k.substring(1))); } catch (NumberFormatException ignored) { }
+            }
+        return out;
+    }
+
+    /** העתקה / קישור / העברה לרשימה שנבחרת. */
+    private void toList(final int how) {
+        final List<Long> ids = chosenIds();
+        if (ids.isEmpty()) return;
         final List<Store.Item> lists = new ArrayList<Store.Item>();
         List<String> labels = new ArrayList<String>();
         for (Store.Item l : store.lists()) {
-            if ("1".equals(store.prop(l.id, Store.P_HOME))) continue;
+            if ("1".equals(store.prop(l.id, Store.P_HOME)) || l.id == here()) continue;
             lists.add(l);
             List<Long> in = store.listsOf(l.id);
             Store.Item up = in.isEmpty() ? null : store.item(in.get(0));
@@ -441,39 +469,38 @@ public class DbListScreen extends ListScreen<Store.Member> {
             Ui.toast(this, Words.Db.NO_LISTS);
             return;
         }
+        final long from = here();
         Ui.list(this, Words.DbCmd.COPY_TO_TITLE, labels, new android.content.DialogInterface.OnClickListener() {
             @Override
             public void onClick(android.content.DialogInterface d, int which) {
                 final long dest = lists.get(which).id;
-                String msg = DbListCmd.now(mode, new DbListCmd.Work() {
+                done(DbListCmd.now(mode, new DbListCmd.Work() {
                     @Override
                     public DbListCmd.Res run(Store t, DbListCmd.Finder f) {
-                        if (it.type == Store.LIST && (it.id == dest || t.contains(it.id, dest)))
-                            return DbListCmd.Res.err(Words.ListCmdW.INTO_ITSELF);
-                        DbListCmd.Copied c = DbListCmd.copyInto(t, java.util.Collections.singletonList(t.item(it.id)), dest);
+                        DbListCmd.Copied c = how == COPY ? DbListCmd.copyIds(t, ids, dest)
+                                : how == LINK ? DbListCmd.linkInto(t, ids, dest) : DbListCmd.moveTo(t, ids, from, dest);
                         return DbListCmd.Res.ok(Words.ListCmdW.copied(c.done, c.skipped, c.why, "\"" + t.item(dest).name + "\""));
                     }
-                }, false);
-                Ui.toast(DbListScreen.this, msg);
-                refresh();
+                }, how == MOVE));
             }
         });
     }
 
-    private void removeHere(final Store.Item it) {
+    /** הסרה מכאן — של כל מה שנבחר (אישור; גיבוי לפני). */
+    private void removeChosen() {
+        final List<Long> ids = chosenIds();
+        if (ids.isEmpty()) return;
         final long from = here();
-        Ui.confirm(this, Words.DbCmd.REMOVE_HERE, Words.DbCmd.removeQuestion(it.name), Words.DbCmd.REMOVE_YES, new Runnable() {
+        Ui.confirm(this, Words.DbCmd.REMOVE_HERE, Words.DbCmd.removeQuestionN(ids.size()), Words.DbCmd.REMOVE_YES, new Runnable() {
             @Override
             public void run() {
-                String msg = DbListCmd.now(mode, new DbListCmd.Work() {
+                done(DbListCmd.now(mode, new DbListCmd.Work() {
                     @Override
                     public DbListCmd.Res run(Store t, DbListCmd.Finder f) {
-                        DbListCmd.removeFrom(t, from, it.id);
-                        return DbListCmd.Res.ok(Words.DbCmd.removed("\"" + it.name + "\""));
+                        for (Long id : ids) DbListCmd.removeFrom(t, from, id);
+                        return DbListCmd.Res.ok(Words.DbCmd.removed(Words.DbCmd.items(ids.size())));
                     }
-                }, true);
-                Ui.toast(DbListScreen.this, msg);
-                refresh();
+                }, true));
             }
         });
     }

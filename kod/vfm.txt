@@ -962,7 +962,7 @@ cd $S; rm -rf out gen bld
 [ "$S" != "$DIR" ] && rm -rf $S
 ls -la $OUT
 ===== קובץ: build/m-version.txt =====
-26 מ0.15
+27 מ0.16
 ===== קובץ: build/test.sh =====
 #!/bin/bash
 # בדיקות על המחשב (80). יוצא בכישלון אם בדיקה אחת נכשלה — ואז build.sh לא בונה.
@@ -10229,6 +10229,60 @@ final class DbListCmd {
         return c;
     }
 
+    /** מ0.16: העתקה לפי מספרי זיהוי (מהמסך) — רשימה לא לתוך עצמה (נספרת כ"לא נכנסה"). */
+    static Copied copyIds(Store s, List<Long> ids, long dest) {
+        List<Store.Item> what = new ArrayList<Store.Item>();
+        int self = 0;
+        for (Long id : ids) {
+            Store.Item it = s.item(id);
+            if (it == null) continue;
+            if (it.type == Store.LIST && (id == dest || s.contains(id, dest))) { self++; continue; }
+            what.add(it);
+        }
+        Copied c = copyInto(s, what, dest);
+        if (self > 0) {
+            c.skipped += self;
+            if (c.why == null) c.why = Words.ListCmdW.INTO_ITSELF;
+        }
+        return c;
+    }
+
+    /** מ0.16: קישור — אותו פריט גם ב-dest (רשימה משותפת); מעגל, או כבר בה (גם בתת־רשימה) — לא נכנס. בעסקה אחת. */
+    static Copied linkInto(Store s, final List<Long> ids, final long dest) {
+        final Copied c = new Copied();
+        s.atomic(new Store.Work() {
+            @Override public void run(Store t) {
+                for (Long id : ids) {
+                    String w = t.item(id) == null ? Words.DbCmd.ALREADY : id == dest || t.makesCycle(dest, id) ? Words.ListCmdW.INTO_ITSELF
+                            : t.contains(dest, id) || !t.addMember(dest, id) ? Words.DbCmd.ALREADY : null;
+                    if (w == null) c.done++;
+                    else {
+                        c.skipped++;
+                        if (c.why == null) c.why = w;
+                    }
+                }
+            }
+        }, true);
+        return c;
+    }
+
+    /** מ0.16: העברה — קישור ל-dest, ויציאה מ-from רק של מה שנכנס עכשיו. בעסקה אחת. */
+    static Copied moveTo(Store s, final List<Long> ids, final long from, final long dest) {
+        final Copied c = new Copied();
+        s.atomic(new Store.Work() {
+            @Override public void run(Store t) {
+                for (Long id : ids) {
+                    Copied one = linkInto(t, java.util.Collections.singletonList(id), dest);
+                    c.done += one.done;
+                    c.skipped += one.skipped;
+                    if (c.why == null) c.why = one.why;
+                    if (one.done == 1 && from != 0) t.removeMember(from, id);
+                }
+            }
+        }, true);
+        return c;
+    }
+
     /** הסרה מרשימה — בעסקה אחת: יוצא מ-parent; רשימה שלא נשארה באף מקום — נמחקת עם מה שרק שלה; רעיון שהיה רק כאן — לסל. */
     static void removeFrom(Store s, final long parent, final long item) {
         s.atomic(new Store.Work() {
@@ -10802,7 +10856,7 @@ public class DbListScreen extends ListScreen<Store.Member> {
         });
         modeBox.setVisibility(View.GONE);
         root.addView(modeBox, 0);
-        done(root, Actions.Tool.SEARCH, null);                               // הפס — לא נפתח (אין בחירה כאן); השורות — כן
+        done(root, Actions.Tool.LIST, own());                                // מ0.16: פס הבחירה — כמו ברשימה ידנית
     }
 
     /** המסד לקריאה בלבד — נפתח בכל טעינה (מסך המסד הוא שכותב). */
@@ -10950,9 +11004,18 @@ public class DbListScreen extends ListScreen<Store.Member> {
         return d;
     }
 
+    /** מ0.16: בחירה מרובה — קובץ לפי המסלול (כך גם פעולות הקבצים הרגילות: פתיחה, שיתוף, מחיקה מהכונן…). */
     @Override
     protected String key(Store.Member row) {
-        return null;                                                          // בלי בחירה כאן
+        if (row == PLUS || row.item.type != Store.FILE || store == null) return null;
+        Store.FileInfo fi = store.file(row.item.id);
+        return fi == null ? null : fi.path;
+    }
+
+    /** מ0.16: רשימה, חכמה, רעיון, כותרת — לפי מספר הזיהוי. */
+    @Override
+    protected String listKey(Store.Member row) {
+        return row == PLUS || row.item.type == Store.FILE ? null : "#" + row.item.id;
     }
 
     @Override
@@ -11058,23 +11121,6 @@ public class DbListScreen extends ListScreen<Store.Member> {
         return v == null ? "" : v;
     }
 
-    /** מ0.13: נגיעה ארוכה — העתקה לרשימה, הסרה מכאן (דרך הליבה של הפקודות — DbListCmd), או כל הפעולות. */
-    @Override
-    protected void hold(Store.Member row) {
-        if (row == PLUS) return;
-        final Store.Item it = row.item;
-        String[] items = {Words.DbCmd.EDIT, Words.DbCmd.COPY_TO, Words.DbCmd.REMOVE_HERE, Words.DbCmd.ALL_ACTIONS};
-        Ui.options(this, it.name, items, new android.content.DialogInterface.OnClickListener() {
-            @Override
-            public void onClick(android.content.DialogInterface d, int which) {
-                if (which == 0) edit(it);
-                else if (which == 1) copyTo(it);
-                else if (which == 2) removeHere(it);
-                else actions();
-            }
-        });
-    }
-
     /** מ0.13.1: עריכה — רשימה חכמה בטופס שלה; רשימה: שם, צלמית, תיאור, "למה"; רעיון/כותרת — הטקסט. דרך הליבה. */
     private void edit(final Store.Item it) {
         if (it.type == Store.FILE) {
@@ -11130,6 +11176,7 @@ public class DbListScreen extends ListScreen<Store.Member> {
 
     private void done(String msg) {
         Ui.toast(this, msg);
+        sel.stop();
         refresh();
     }
 
@@ -11138,11 +11185,46 @@ public class DbListScreen extends ListScreen<Store.Member> {
         return atHome ? homeOrZero() : listId;
     }
 
-    private void copyTo(final Store.Item it) {
+    /** מ0.16: הפעולות של פס הבחירה — כולן דרך הליבה של הפקודות (DbListCmd). */
+    private java.util.Map<Actions.Action, Runnable> own() {
+        java.util.Map<Actions.Action, Runnable> m = new java.util.HashMap<Actions.Action, Runnable>();
+        m.put(Actions.DUPLICATE_LIST, new Runnable() { @Override public void run() { toList(COPY); } });
+        m.put(Actions.ALSO_TO_LIST, new Runnable() { @Override public void run() { toList(LINK); } });
+        m.put(Actions.MOVE_TO_LIST, new Runnable() { @Override public void run() { toList(MOVE); } });
+        m.put(Actions.REMOVE_FROM_LIST, new Runnable() { @Override public void run() { removeChosen(); } });
+        m.put(Actions.SETTINGS_LIST, new Runnable() {
+            @Override public void run() {
+                List<Long> ids = chosenIds();
+                if (ids.size() == 1 && store.item(ids.get(0)) != null) edit(store.item(ids.get(0)));
+            }
+        });
+        return m;
+    }
+
+    private static final int COPY = 0, LINK = 1, MOVE = 2;
+
+    /** מה שנבחר — מספרי זיהוי (קבצים לפי המסלול, השאר לפי "#מספר"). */
+    private List<Long> chosenIds() {
+        List<Long> out = new ArrayList<Long>();
+        for (String p : sel.files) {
+            long id = store.findFile(p);
+            if (id != 0) out.add(id);
+        }
+        for (String k : sel.lists)
+            if (k.startsWith("#")) {
+                try { out.add(Long.parseLong(k.substring(1))); } catch (NumberFormatException ignored) { }
+            }
+        return out;
+    }
+
+    /** העתקה / קישור / העברה לרשימה שנבחרת. */
+    private void toList(final int how) {
+        final List<Long> ids = chosenIds();
+        if (ids.isEmpty()) return;
         final List<Store.Item> lists = new ArrayList<Store.Item>();
         List<String> labels = new ArrayList<String>();
         for (Store.Item l : store.lists()) {
-            if ("1".equals(store.prop(l.id, Store.P_HOME))) continue;
+            if ("1".equals(store.prop(l.id, Store.P_HOME)) || l.id == here()) continue;
             lists.add(l);
             List<Long> in = store.listsOf(l.id);
             Store.Item up = in.isEmpty() ? null : store.item(in.get(0));
@@ -11152,39 +11234,38 @@ public class DbListScreen extends ListScreen<Store.Member> {
             Ui.toast(this, Words.Db.NO_LISTS);
             return;
         }
+        final long from = here();
         Ui.list(this, Words.DbCmd.COPY_TO_TITLE, labels, new android.content.DialogInterface.OnClickListener() {
             @Override
             public void onClick(android.content.DialogInterface d, int which) {
                 final long dest = lists.get(which).id;
-                String msg = DbListCmd.now(mode, new DbListCmd.Work() {
+                done(DbListCmd.now(mode, new DbListCmd.Work() {
                     @Override
                     public DbListCmd.Res run(Store t, DbListCmd.Finder f) {
-                        if (it.type == Store.LIST && (it.id == dest || t.contains(it.id, dest)))
-                            return DbListCmd.Res.err(Words.ListCmdW.INTO_ITSELF);
-                        DbListCmd.Copied c = DbListCmd.copyInto(t, java.util.Collections.singletonList(t.item(it.id)), dest);
+                        DbListCmd.Copied c = how == COPY ? DbListCmd.copyIds(t, ids, dest)
+                                : how == LINK ? DbListCmd.linkInto(t, ids, dest) : DbListCmd.moveTo(t, ids, from, dest);
                         return DbListCmd.Res.ok(Words.ListCmdW.copied(c.done, c.skipped, c.why, "\"" + t.item(dest).name + "\""));
                     }
-                }, false);
-                Ui.toast(DbListScreen.this, msg);
-                refresh();
+                }, how == MOVE));
             }
         });
     }
 
-    private void removeHere(final Store.Item it) {
+    /** הסרה מכאן — של כל מה שנבחר (אישור; גיבוי לפני). */
+    private void removeChosen() {
+        final List<Long> ids = chosenIds();
+        if (ids.isEmpty()) return;
         final long from = here();
-        Ui.confirm(this, Words.DbCmd.REMOVE_HERE, Words.DbCmd.removeQuestion(it.name), Words.DbCmd.REMOVE_YES, new Runnable() {
+        Ui.confirm(this, Words.DbCmd.REMOVE_HERE, Words.DbCmd.removeQuestionN(ids.size()), Words.DbCmd.REMOVE_YES, new Runnable() {
             @Override
             public void run() {
-                String msg = DbListCmd.now(mode, new DbListCmd.Work() {
+                done(DbListCmd.now(mode, new DbListCmd.Work() {
                     @Override
                     public DbListCmd.Res run(Store t, DbListCmd.Finder f) {
-                        DbListCmd.removeFrom(t, from, it.id);
-                        return DbListCmd.Res.ok(Words.DbCmd.removed("\"" + it.name + "\""));
+                        for (Long id : ids) DbListCmd.removeFrom(t, from, id);
+                        return DbListCmd.Res.ok(Words.DbCmd.removed(Words.DbCmd.items(ids.size())));
                     }
-                }, true);
-                Ui.toast(DbListScreen.this, msg);
-                refresh();
+                }, true));
             }
         });
     }
@@ -47052,6 +47133,15 @@ public final class Words {
         public static final String COPY_TO = "📋 העתקה לרשימה…", COPY_TO_TITLE = "העתקה לתוך:",
                 REMOVE_HERE = "🗑 הסרה מכאן", REMOVE_YES = "להסיר", ALL_ACTIONS = "⚙ כל הפעולות (מסך המסד)";
 
+        public static String removeQuestionN(int n) {
+            return n + " פריטים — יוצאים מהרשימה הזו. רשימה שלא נשארת באף מקום — נמחקת עם מה שרק שלה; "
+                    + "לפני כן — גיבוי של המסד. הקבצים בכונן לא נוגעים.";
+        }
+
+        public static String items(int n) {
+            return n + " פריטים";
+        }
+
         public static String removeQuestion(String name) {
             return "\"" + name + "\" — יוצא מהרשימה הזו. רשימה שלא נשארת באף מקום — נמחקת עם מה שרק שלה; "
                     + "לפני כן — גיבוי של המסד. הקבצים בכונן לא נוגעים.";
@@ -47124,7 +47214,7 @@ public final class Words {
 
         public static final String APP_NAME_M = "מנהל קבצים וירטואלי · מ";
         public static final String MENU = "מסד נתונים (מ)";
-        public static final String TITLE = "מסד נתונים · מ0.15";
+        public static final String TITLE = "מסד נתונים · מ0.16";
         /** מ0.9: המראה המוכר. */
         public static final String LIST_GONE = "הרשימה הזו כבר לא קיימת במסד", MENU_ACTIONS = "⚙ מסד: גיבוי, העתקה, בדיקה ופעולות",
                 MENU_OLD = "↩ הצד הישן (לפני המסד)",
@@ -49151,6 +49241,20 @@ final class ImportTests {
         r = DbListCmd.remove(s, M, x[0]);
         ck("RD במסד: רשימה שגם במקום אחר — רק יוצאת מכאן", r.error == null && s.item(hal) == null && s.item(shared) != null
                 && s.listsOf(shared).equals(Arrays.asList(home)));
+
+        // בחירה מרובה (מ0.16): העתקה / קישור / העברה לפי מספרי זיהוי
+        long ta = s.createList("יעד-א", home), tb = s.createList("יעד-ב", home);
+        long f1 = s.findFile("/s/a.pdf"), lst = s.createList("פנימית", ta);
+        DbListCmd.Copied lk = DbListCmd.linkInto(s, Arrays.asList(lst, f1), tb);
+        ck("קישור: אותה רשימה ואותו קובץ גם ביעד", lk.done == 2 && s.contains(tb, lst) && s.listsOf(lst).size() == 2);
+        ck("קישור: שוב — לא נכנס (כבר בה); לתוך עצמו — לא", DbListCmd.linkInto(s, Arrays.asList(lst), tb).skipped == 1
+                && DbListCmd.linkInto(s, Arrays.asList(tb), tb).skipped == 1);
+        long f2 = s.createFile(new Store.FileInfo("/s/m.txt", "פנימי", 1, 0, null));
+        s.addMember(ta, f2);
+        DbListCmd.Copied mv = DbListCmd.moveTo(s, Arrays.asList(f2), ta, tb);
+        ck("העברה: נכנס ליעד ויצא מהמקור", mv.done == 1 && s.listsOf(f2).equals(Arrays.asList(tb)));
+        DbListCmd.Copied cpi = DbListCmd.copyIds(s, Arrays.asList(ta, tb), ta);
+        ck("העתקה לפי מספרים: רשימה לא לתוך עצמה (נספרת)", cpi.skipped >= 1 && Words.ListCmdW.INTO_ITSELF.equals(cpi.why));
 
         // ודא (מ0.14)
         ListCmd.Side vb = sides("VERIFY ידנית \"ספרים\" קיימת")[0];

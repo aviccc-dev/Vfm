@@ -497,6 +497,20 @@ final class ImportTests {
         ck("RD במסד: רשימה שגם במקום אחר — רק יוצאת מכאן", r.error == null && s.item(hal) == null && s.item(shared) != null
                 && s.listsOf(shared).equals(Arrays.asList(home)));
 
+        // בחירה מרובה (מ0.16): העתקה / קישור / העברה לפי מספרי זיהוי
+        long ta = s.createList("יעד-א", home), tb = s.createList("יעד-ב", home);
+        long f1 = s.findFile("/s/a.pdf"), lst = s.createList("פנימית", ta);
+        DbListCmd.Copied lk = DbListCmd.linkInto(s, Arrays.asList(lst, f1), tb);
+        ck("קישור: אותה רשימה ואותו קובץ גם ביעד", lk.done == 2 && s.contains(tb, lst) && s.listsOf(lst).size() == 2);
+        ck("קישור: שוב — לא נכנס (כבר בה); לתוך עצמו — לא", DbListCmd.linkInto(s, Arrays.asList(lst), tb).skipped == 1
+                && DbListCmd.linkInto(s, Arrays.asList(tb), tb).skipped == 1);
+        long f2 = s.createFile(new Store.FileInfo("/s/m.txt", "פנימי", 1, 0, null));
+        s.addMember(ta, f2);
+        DbListCmd.Copied mv = DbListCmd.moveTo(s, Arrays.asList(f2), ta, tb);
+        ck("העברה: נכנס ליעד ויצא מהמקור", mv.done == 1 && s.listsOf(f2).equals(Arrays.asList(tb)));
+        DbListCmd.Copied cpi = DbListCmd.copyIds(s, Arrays.asList(ta, tb), ta);
+        ck("העתקה לפי מספרים: רשימה לא לתוך עצמה (נספרת)", cpi.skipped >= 1 && Words.ListCmdW.INTO_ITSELF.equals(cpi.why));
+
         // ודא (מ0.14)
         ListCmd.Side vb = sides("VERIFY ידנית \"ספרים\" קיימת")[0];
         String[] fd = {""};
