@@ -1009,7 +1009,7 @@ cd $S; rm -rf out gen bld
 [ "$S" != "$DIR" ] && rm -rf $S
 ls -la $OUT
 ===== קובץ: build/m-version.txt =====
-31 מ0.18.1
+32 מ0.19
 ===== קובץ: build/test.sh =====
 #!/bin/bash
 # בדיקות על המחשב (80). יוצא בכישלון אם בדיקה אחת נכשלה — ואז build.sh לא בונה.
@@ -13481,7 +13481,15 @@ public class DbScreen extends Activity {
                             throw new BackupFailed(Words.Db.importBackupFailed(String.valueOf(t.getMessage())));
                         }
                     }
-                    rep = Importer.run(store, src, keep);
+                    final java.io.File toolDir = new java.io.File(Modes.dirOf(mode), Words.DbCmd.TOOLS_DIR);   // מ0.19
+                    Importer.toolFiles = keep ? new Importer.ToolFiles() {
+                        @Override public java.io.File write(String icon, String name, String line) { return Shortcuts.write(toolDir, icon, name, line); }
+                    } : null;
+                    try {
+                        rep = Importer.run(store, src, keep);
+                    } finally {
+                        Importer.toolFiles = null;
+                    }
                 } catch (BackupFailed t) {
                     err = t.getMessage();
                 } catch (Throwable t) {
@@ -19799,6 +19807,8 @@ final class Importer {
          * הרשימה או הקובץ שלהם לא קיימים (או שהיו סוגרים מעגל). homeNew — רשימת הבית נוצרה בריצה הזו.
          */
         int homeTools, homeAdded, homeKnown, homeSkipped, homeMissing;
+        /** מ0.19: כלים שהפכו לקובץ פקודות קטן. */
+        int homeToolFiles;
         boolean homeNew;
 
         boolean nothingToDo() {
@@ -19862,6 +19872,20 @@ final class Importer {
      * מעתיק (keep=true) או רק בודק מה היה קורה (keep=false) — בעסקה אחת: כישלון באמצע = שום שינוי.
      * @throws Store.Failure / RuntimeException אם נכשל (ואז המסד כמו שהיה)
      */
+    /** הצלמית של כלי: מה שנכתב בו (פרמטר "צלמית"), ואם אין — של הסוג. */
+    static String iconOf(Structure.Func f) {
+        String i = f.params.get("צלמית");  // תחביר
+        return i != null && !i.trim().isEmpty() ? i.trim() : Func.iconOf(f.kind);
+    }
+
+    /** מ0.19: כותב קובץ פקודות לכלי (בהעתקה האמיתית בלבד — לא בבדיקה המלאה). */
+    interface ToolFiles {
+        java.io.File write(String icon, String name, String line);
+    }
+
+    /** null — כלי שאינו רשימה/חכמה/פקודה לא מועתק (נספר), כמו עד מ0.18. */
+    static ToolFiles toolFiles;
+
     static Report run(Store store, final Source src, boolean keep) {
         final Report r = new Report();
         store.atomic(new Store.Work() {
@@ -19992,6 +20016,13 @@ final class Importer {
                     return 0;
                 }
                 return file(p, -1);
+            }
+            if (toolFiles != null) {                                          // מ0.19: כלי אחר — קובץ פקודות קטן ("פתח כלי …")
+                java.io.File cf = toolFiles.write(iconOf(f), f.name, Verbs.toolLine(f.kind, f.params));
+                if (cf != null) {
+                    r.homeToolFiles++;
+                    return file(cf.getAbsolutePath(), -1);
+                }
             }
             r.homeSkipped++;
             return 0;
@@ -43526,6 +43557,8 @@ final class Verbs {
     static final String SCREEN = "מסך", LIST = "רשימה", SMART_WORD = "חכמה", FOLDER = "תיקייה";   // תחביר
     /** 1.17.0: "פתח תפריט <רשימה ב'שמור לתוכנה'>" · "צור פקודה" (המילון, 23). */
     static final String MENU = "תפריט", CMD_WORD = "פקודה";   // תחביר
+    /** מ0.19: "פתח כלי "<סוג>" /מפתח:ערך…" — כלי (כפולים, פס, אפליקציה…) כפקודה. */
+    static final String TOOL = "כלי";   // תחביר
     static final String S_HOME = "הבית", S_SEARCH = "חיפוש", S_COMMANDS = "פקודות", S_DISK = "קבצים פיזיים",   // תחביר
             S_VIRTUAL = "קבצים וירטואליים", S_SETTINGS = "הגדרות", S_TRASH = "סל", S_EDITOR = "עורך פקודות";   // תחביר
     static final String[] SCREENS = {S_HOME, S_SEARCH, S_COMMANDS, S_DISK, S_VIRTUAL, S_SETTINGS, S_TRASH, S_EDITOR};
@@ -43534,7 +43567,7 @@ final class Verbs {
 
     /** סוגי הפקודה אחרי הפענוח. */
     static final String K_SCREEN = "screen", K_LIST = "list", K_SMART = "smart", K_FOLDER = "folder", K_FIND = "find",
-            K_BACK = "back", K_RUN = "run", K_NEW_LIST = "newlist", K_ADD = "add", K_MENU = "menu", K_NEW_CMD = "newcmd";
+            K_BACK = "back", K_RUN = "run", K_NEW_LIST = "newlist", K_ADD = "add", K_MENU = "menu", K_NEW_CMD = "newcmd", K_TOOL = "tool";
 
     static final class Cmd {
         String verb = "", kind = "", arg = "", sort = "", cond = "";
@@ -43625,6 +43658,11 @@ final class Verbs {
             } else if (starts(rest, S_EDITOR)) {                              // 1.28.0: "פתח עורך פקודות" (גם בלי "מסך")
                 c.kind = K_SCREEN;
                 c.arg = S_EDITOR;
+            } else if (starts(rest, TOOL)) {                                  // מ0.19: כלי כפקודה
+                c.kind = K_TOOL;
+                c.arg = after(rest, TOOL);
+                List<String> tk = Batch.tokens(c.arg);
+                if (tk.isEmpty() || Func.byKind(tk.get(0)) == null) c.error = Words.Verb.usage(OPEN);
             } else if (starts(rest, MENU)) {                                  // 1.17.0
                 c.kind = K_MENU;
                 c.arg = unquote(after(rest, MENU));
@@ -43743,6 +43781,28 @@ final class Verbs {
 
     // ---------- תיאור (לתצוגה המקדימה של קובץ פקודות) ----------
 
+    /** מ0.19: "<סוג>" /מפתח:ערך … ← Target (הסוג והפרמטרים, כמו בכלי שבבית הישן). */
+    static Target toolTarget(String arg) {
+        List<String> tk = Batch.tokens(arg == null ? "" : arg);
+        if (tk.isEmpty()) return null;
+        java.util.Map<String, String> m = new java.util.LinkedHashMap<String, String>();
+        for (int i = 1; i < tk.size(); i++) {
+            String x = tk.get(i);
+            int c = x.indexOf(':');
+            if (!x.startsWith("/") || c < 2) continue;
+            m.put(x.substring(1, c), x.substring(c + 1));
+        }
+        return Target.of(tk.get(0), m);
+    }
+
+    /** מ0.19: השורה של כלי — "פתח כלי "<סוג>" /מפתח:"ערך" …" (הפוך של toolTarget). */
+    static String toolLine(String kind, java.util.Map<String, String> params) {
+        StringBuilder sb = new StringBuilder(OPEN).append(' ').append(TOOL).append(" \"").append(kind).append('"');
+        for (java.util.Map.Entry<String, String> e : params.entrySet())
+            sb.append(" /").append(e.getKey()).append(":\"").append(e.getValue().replace("\"", "'")).append('"');
+        return sb.toString();
+    }
+
     static String describe(Cmd c) {
         if (c.error != null) return c.error;
         return Words.Verb.atEnd(label(c));
@@ -43758,6 +43818,7 @@ final class Verbs {
         if (c.kind.equals(K_BACK)) return Words.Verb.BACK;
         if (c.kind.equals(K_RUN)) return Words.Verb.RUN + new File(c.arg).getName();
         if (c.kind.equals(K_MENU)) return Words.Verb.MENU + c.arg;
+        if (c.kind.equals(K_TOOL)) return Words.Verb.TOOL + c.arg;
         if (c.kind.equals(K_NEW_CMD)) return Words.CmdM.NEW;
         return c.verb + " " + c.arg;
     }
@@ -43795,6 +43856,12 @@ final class Verbs {
             else a.onBackPressed();
         }
         else if (c.kind.equals(K_MENU)) CmdMenu.showList(a, Tree.parsePath(c.arg), null, null);   // 1.17.0
+        else if (c.kind.equals(K_TOOL)) {                                       // מ0.19: הכלי עם הפרמטרים שבשורה
+            Target t = toolTarget(c.arg);
+            Func f = t == null ? null : Func.byKind(t.kind);
+            if (f == null) Ui.toast(a, Words.Verb.NOT_FOUND + c.arg);
+            else f.open(a, t);
+        }
         else if (c.kind.equals(K_NEW_CMD)) CmdMenu.create(a, here, null);
         else if (c.kind.equals(K_SCREEN)) screen(a, c);
         else if (c.kind.equals(K_FOLDER)) {
@@ -47087,6 +47154,7 @@ public final class Words {
     public static final class Verb {
         private Verb() { }
         public static final String MENU = "תפריט: ";   // 1.17.0
+        public static final String TOOL = "כלי: ";   // מ0.19
 
         public static final String SCREEN = "מסך ", LIST = "רשימה: ", SMART = "רשימה חכמה: ", FOLDER = "תיקייה: ",
                 FIND = "מצא: ", BACK = "חזרה למסך הקודם", RUN = "הרצה: ";
@@ -47458,6 +47526,7 @@ public final class Words {
                 TEST_CALL_FILE = "בדיקת כלול",  // בכונן
                 TEST_LOAD_FILE = "בדיקת עומס",  // בכונן
                 TEST_ALL_FILE = "בדיקה כללית",  // בכונן
+                TOOLS_DIR = "כלים",  // בכונן
                 TEST_READY = "אופן \"בדיקות מערכת\" — נגיעה ב\"בדיקת פקודות\" מריצה את הבדיקה";
 
         public static String removed(String what) {
@@ -47634,7 +47703,7 @@ public final class Words {
 
         public static final String APP_NAME_M = "מנהל קבצים וירטואלי · מ";
         public static final String MENU = "מסד נתונים (מ)";
-        public static final String TITLE = "מסד נתונים · מ0.18.1";
+        public static final String TITLE = "מסד נתונים · מ0.19";
         /** מ0.9: המראה המוכר. */
         public static final String LIST_GONE = "הרשימה הזו כבר לא קיימת במסד", MENU_ACTIONS = "⚙ מסד: גיבוי, העתקה, בדיקה ופעולות",
                 MENU_OLD = "↩ הצד הישן (לפני המסד)",
@@ -49911,6 +49980,29 @@ final class ImportTests {
         Importer.Report again = Importer.run(s, src, true);
         ck("בית חוזרת: אין שינוי ואין מספרים חדשים", again.nothingToDo() && again.homeKnown == 6 && again.homeAdded == 0 && !again.homeNew
                 && s.lastId() == last);
+
+        // מ0.19: עם כותב כלים — הכלי שלא הועתק נעשה קובץ פקודות קטן ("פתח כלי …") ונכנס לבית
+        final File tdir = new File(dir, "כלים");
+        Importer.toolFiles = new Importer.ToolFiles() {
+            @Override public File write(String icon, String name, String line) { return Shortcuts.write(tdir, icon, name, line); }
+        };
+        Importer.Report tr;
+        try {
+            tr = Importer.run(s, src, true);
+        } finally {
+            Importer.toolFiles = null;
+        }
+        Store.Item lastIt = s.members(h).get(s.members(h).size() - 1).item;
+        String tline = "";
+        try { tline = Files.readUtf8(new File(s.file(lastIt.id).path)); } catch (Throwable ignored) { }
+        ck("בית: כלי שאינו רשימה/חכמה/פקודה — קובץ פקודות בבית, עם \"פתח כלי\" (" + tline.replace('\n', '|') + ")",
+                tr.homeToolFiles == 1 && tr.homeSkipped == 0 && tr.homeAdded == 1 && tline.contains(Verbs.OPEN + " " + Verbs.TOOL + " \""));
+        String kindLine = tline.substring(tline.indexOf(Verbs.OPEN + " " + Verbs.TOOL));
+        Verbs.Cmd vc = Verbs.parse(kindLine.trim());
+        Target tt = Verbs.toolTarget(vc.arg);
+        ck("בית: השורה נקראת בחזרה — הסוג והפרמטרים של הכלי", vc.error == null && Verbs.K_TOOL.equals(vc.kind) && tt != null && Func.byKind(tt.kind) != null);
+        s.removeMember(h, lastIt.id);
+        ck("פתח כלי: סוג לא מוכר — שגיאה", Verbs.parse("פתח כלי \"אין כזה\"").error != null);
 
         // המשתמש מסדר ומוציא: הסדר שלו נשמר, ומה שהוציא חוזר לסוף
         s.move(h, img, 0);

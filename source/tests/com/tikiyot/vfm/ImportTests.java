@@ -747,6 +747,29 @@ final class ImportTests {
         ck("בית חוזרת: אין שינוי ואין מספרים חדשים", again.nothingToDo() && again.homeKnown == 6 && again.homeAdded == 0 && !again.homeNew
                 && s.lastId() == last);
 
+        // מ0.19: עם כותב כלים — הכלי שלא הועתק נעשה קובץ פקודות קטן ("פתח כלי …") ונכנס לבית
+        final File tdir = new File(dir, "כלים");
+        Importer.toolFiles = new Importer.ToolFiles() {
+            @Override public File write(String icon, String name, String line) { return Shortcuts.write(tdir, icon, name, line); }
+        };
+        Importer.Report tr;
+        try {
+            tr = Importer.run(s, src, true);
+        } finally {
+            Importer.toolFiles = null;
+        }
+        Store.Item lastIt = s.members(h).get(s.members(h).size() - 1).item;
+        String tline = "";
+        try { tline = Files.readUtf8(new File(s.file(lastIt.id).path)); } catch (Throwable ignored) { }
+        ck("בית: כלי שאינו רשימה/חכמה/פקודה — קובץ פקודות בבית, עם \"פתח כלי\" (" + tline.replace('\n', '|') + ")",
+                tr.homeToolFiles == 1 && tr.homeSkipped == 0 && tr.homeAdded == 1 && tline.contains(Verbs.OPEN + " " + Verbs.TOOL + " \""));
+        String kindLine = tline.substring(tline.indexOf(Verbs.OPEN + " " + Verbs.TOOL));
+        Verbs.Cmd vc = Verbs.parse(kindLine.trim());
+        Target tt = Verbs.toolTarget(vc.arg);
+        ck("בית: השורה נקראת בחזרה — הסוג והפרמטרים של הכלי", vc.error == null && Verbs.K_TOOL.equals(vc.kind) && tt != null && Func.byKind(tt.kind) != null);
+        s.removeMember(h, lastIt.id);
+        ck("פתח כלי: סוג לא מוכר — שגיאה", Verbs.parse("פתח כלי \"אין כזה\"").error != null);
+
         // המשתמש מסדר ומוציא: הסדר שלו נשמר, ומה שהוציא חוזר לסוף
         s.move(h, img, 0);
         s.removeMember(h, s.findFile(CMD));

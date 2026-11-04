@@ -246,6 +246,8 @@ final class Importer {
          * הרשימה או הקובץ שלהם לא קיימים (או שהיו סוגרים מעגל). homeNew — רשימת הבית נוצרה בריצה הזו.
          */
         int homeTools, homeAdded, homeKnown, homeSkipped, homeMissing;
+        /** מ0.19: כלים שהפכו לקובץ פקודות קטן. */
+        int homeToolFiles;
         boolean homeNew;
 
         boolean nothingToDo() {
@@ -309,6 +311,20 @@ final class Importer {
      * מעתיק (keep=true) או רק בודק מה היה קורה (keep=false) — בעסקה אחת: כישלון באמצע = שום שינוי.
      * @throws Store.Failure / RuntimeException אם נכשל (ואז המסד כמו שהיה)
      */
+    /** הצלמית של כלי: מה שנכתב בו (פרמטר "צלמית"), ואם אין — של הסוג. */
+    static String iconOf(Structure.Func f) {
+        String i = f.params.get("צלמית");  // תחביר
+        return i != null && !i.trim().isEmpty() ? i.trim() : Func.iconOf(f.kind);
+    }
+
+    /** מ0.19: כותב קובץ פקודות לכלי (בהעתקה האמיתית בלבד — לא בבדיקה המלאה). */
+    interface ToolFiles {
+        java.io.File write(String icon, String name, String line);
+    }
+
+    /** null — כלי שאינו רשימה/חכמה/פקודה לא מועתק (נספר), כמו עד מ0.18. */
+    static ToolFiles toolFiles;
+
     static Report run(Store store, final Source src, boolean keep) {
         final Report r = new Report();
         store.atomic(new Store.Work() {
@@ -439,6 +455,13 @@ final class Importer {
                     return 0;
                 }
                 return file(p, -1);
+            }
+            if (toolFiles != null) {                                          // מ0.19: כלי אחר — קובץ פקודות קטן ("פתח כלי …")
+                java.io.File cf = toolFiles.write(iconOf(f), f.name, Verbs.toolLine(f.kind, f.params));
+                if (cf != null) {
+                    r.homeToolFiles++;
+                    return file(cf.getAbsolutePath(), -1);
+                }
             }
             r.homeSkipped++;
             return 0;

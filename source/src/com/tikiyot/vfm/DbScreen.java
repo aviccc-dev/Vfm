@@ -1306,7 +1306,15 @@ public class DbScreen extends Activity {
                             throw new BackupFailed(Words.Db.importBackupFailed(String.valueOf(t.getMessage())));
                         }
                     }
-                    rep = Importer.run(store, src, keep);
+                    final java.io.File toolDir = new java.io.File(Modes.dirOf(mode), Words.DbCmd.TOOLS_DIR);   // מ0.19
+                    Importer.toolFiles = keep ? new Importer.ToolFiles() {
+                        @Override public java.io.File write(String icon, String name, String line) { return Shortcuts.write(toolDir, icon, name, line); }
+                    } : null;
+                    try {
+                        rep = Importer.run(store, src, keep);
+                    } finally {
+                        Importer.toolFiles = null;
+                    }
                 } catch (BackupFailed t) {
                     err = t.getMessage();
                 } catch (Throwable t) {

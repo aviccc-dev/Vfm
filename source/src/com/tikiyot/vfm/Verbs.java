@@ -30,6 +30,8 @@ final class Verbs {
     static final String SCREEN = "מסך", LIST = "רשימה", SMART_WORD = "חכמה", FOLDER = "תיקייה";   // תחביר
     /** 1.17.0: "פתח תפריט <רשימה ב'שמור לתוכנה'>" · "צור פקודה" (המילון, 23). */
     static final String MENU = "תפריט", CMD_WORD = "פקודה";   // תחביר
+    /** מ0.19: "פתח כלי "<סוג>" /מפתח:ערך…" — כלי (כפולים, פס, אפליקציה…) כפקודה. */
+    static final String TOOL = "כלי";   // תחביר
     static final String S_HOME = "הבית", S_SEARCH = "חיפוש", S_COMMANDS = "פקודות", S_DISK = "קבצים פיזיים",   // תחביר
             S_VIRTUAL = "קבצים וירטואליים", S_SETTINGS = "הגדרות", S_TRASH = "סל", S_EDITOR = "עורך פקודות";   // תחביר
     static final String[] SCREENS = {S_HOME, S_SEARCH, S_COMMANDS, S_DISK, S_VIRTUAL, S_SETTINGS, S_TRASH, S_EDITOR};
@@ -38,7 +40,7 @@ final class Verbs {
 
     /** סוגי הפקודה אחרי הפענוח. */
     static final String K_SCREEN = "screen", K_LIST = "list", K_SMART = "smart", K_FOLDER = "folder", K_FIND = "find",
-            K_BACK = "back", K_RUN = "run", K_NEW_LIST = "newlist", K_ADD = "add", K_MENU = "menu", K_NEW_CMD = "newcmd";
+            K_BACK = "back", K_RUN = "run", K_NEW_LIST = "newlist", K_ADD = "add", K_MENU = "menu", K_NEW_CMD = "newcmd", K_TOOL = "tool";
 
     static final class Cmd {
         String verb = "", kind = "", arg = "", sort = "", cond = "";
@@ -129,6 +131,11 @@ final class Verbs {
             } else if (starts(rest, S_EDITOR)) {                              // 1.28.0: "פתח עורך פקודות" (גם בלי "מסך")
                 c.kind = K_SCREEN;
                 c.arg = S_EDITOR;
+            } else if (starts(rest, TOOL)) {                                  // מ0.19: כלי כפקודה
+                c.kind = K_TOOL;
+                c.arg = after(rest, TOOL);
+                List<String> tk = Batch.tokens(c.arg);
+                if (tk.isEmpty() || Func.byKind(tk.get(0)) == null) c.error = Words.Verb.usage(OPEN);
             } else if (starts(rest, MENU)) {                                  // 1.17.0
                 c.kind = K_MENU;
                 c.arg = unquote(after(rest, MENU));
@@ -247,6 +254,28 @@ final class Verbs {
 
     // ---------- תיאור (לתצוגה המקדימה של קובץ פקודות) ----------
 
+    /** מ0.19: "<סוג>" /מפתח:ערך … ← Target (הסוג והפרמטרים, כמו בכלי שבבית הישן). */
+    static Target toolTarget(String arg) {
+        List<String> tk = Batch.tokens(arg == null ? "" : arg);
+        if (tk.isEmpty()) return null;
+        java.util.Map<String, String> m = new java.util.LinkedHashMap<String, String>();
+        for (int i = 1; i < tk.size(); i++) {
+            String x = tk.get(i);
+            int c = x.indexOf(':');
+            if (!x.startsWith("/") || c < 2) continue;
+            m.put(x.substring(1, c), x.substring(c + 1));
+        }
+        return Target.of(tk.get(0), m);
+    }
+
+    /** מ0.19: השורה של כלי — "פתח כלי "<סוג>" /מפתח:"ערך" …" (הפוך של toolTarget). */
+    static String toolLine(String kind, java.util.Map<String, String> params) {
+        StringBuilder sb = new StringBuilder(OPEN).append(' ').append(TOOL).append(" \"").append(kind).append('"');
+        for (java.util.Map.Entry<String, String> e : params.entrySet())
+            sb.append(" /").append(e.getKey()).append(":\"").append(e.getValue().replace("\"", "'")).append('"');
+        return sb.toString();
+    }
+
     static String describe(Cmd c) {
         if (c.error != null) return c.error;
         return Words.Verb.atEnd(label(c));
@@ -262,6 +291,7 @@ final class Verbs {
         if (c.kind.equals(K_BACK)) return Words.Verb.BACK;
         if (c.kind.equals(K_RUN)) return Words.Verb.RUN + new File(c.arg).getName();
         if (c.kind.equals(K_MENU)) return Words.Verb.MENU + c.arg;
+        if (c.kind.equals(K_TOOL)) return Words.Verb.TOOL + c.arg;
         if (c.kind.equals(K_NEW_CMD)) return Words.CmdM.NEW;
         return c.verb + " " + c.arg;
     }
@@ -299,6 +329,12 @@ final class Verbs {
             else a.onBackPressed();
         }
         else if (c.kind.equals(K_MENU)) CmdMenu.showList(a, Tree.parsePath(c.arg), null, null);   // 1.17.0
+        else if (c.kind.equals(K_TOOL)) {                                       // מ0.19: הכלי עם הפרמטרים שבשורה
+            Target t = toolTarget(c.arg);
+            Func f = t == null ? null : Func.byKind(t.kind);
+            if (f == null) Ui.toast(a, Words.Verb.NOT_FOUND + c.arg);
+            else f.open(a, t);
+        }
         else if (c.kind.equals(K_NEW_CMD)) CmdMenu.create(a, here, null);
         else if (c.kind.equals(K_SCREEN)) screen(a, c);
         else if (c.kind.equals(K_FOLDER)) {
