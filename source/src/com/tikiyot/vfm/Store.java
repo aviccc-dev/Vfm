@@ -119,6 +119,9 @@ public interface Store {
 
     void setOrigin(long item, String key);
 
+    /** מ0.12: מפתח המקור של פריט, או null. */
+    String origin(long item);
+
     /** מאפיין של פריט, או null. */
     String prop(long item, String key);
 

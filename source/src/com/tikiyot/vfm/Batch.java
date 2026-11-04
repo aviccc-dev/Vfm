@@ -382,6 +382,9 @@ final class Batch {
         Tree tree;
         /** 1.25.4: הקבצים של רשימות חכמות — חיפוש אחד לכל תנאי, לכל הקובץ (גם בעותקים שלהן). */
         ListCmd.Lenient files;
+        /** מ0.12: כשעובדים במסד — עותק של המסד בזיכרון (DbListCmd), והקבצים לכל תנאי; null — עוד לא נטען. לא נשמר. */
+        Store db;
+        final Map<String, List<String>> condFiles = new java.util.HashMap<String, List<String>>();
 
         boolean isDir(File d) {
             String p = d.getAbsolutePath();
@@ -757,7 +760,8 @@ final class Batch {
                 s.files.clear();
             }
         }
-        ListCmd.plan(s, cmd, lp, sw, sim, fsFiles, fsDest);
+        if (DbVerbs.active()) DbListCmd.plan(s, cmd, lp, sw, sim, fsFiles, fsDest);   // מ0.12: עובדים במסד
+        else ListCmd.plan(s, cmd, lp, sw, sim, fsFiles, fsDest);
     }
 
     private static void plan(Step s, String cmd, List<String> args, List<String> paths, List<String> sw, Sim sim) {

@@ -2244,6 +2244,34 @@ public final class Words {
         }
     }
 
+    /** מ0.12: פקודות הרשימות על המסד (DbListCmd) */
+    public static final class DbCmd {
+        private DbCmd() { }
+
+        public static final String NO_HOME = "אין בית במסד הזה", SAME_NAME = "כבר יש שם רשימה בשם הזה",
+                ALREADY = "כבר בה",
+                MENU_TESTS = "🧪 בדיקת הפקודות (אופן \"בדיקות מערכת\")",
+                TEST_MODE = "בדיקות מערכת",  // בכונן
+                TEST_FILE = "בדיקת פקודות",  // בכונן
+                TEST_READY = "אופן \"בדיקות מערכת\" — נגיעה ב\"בדיקת פקודות\" מריצה את הבדיקה";
+
+        public static String removed(String what) {
+            return what + " — יצא מהרשימות (לפני הביצוע — גיבוי של המסד); הקבצים בכונן לא נוגעים";
+        }
+
+        public static String notThere(String label) {
+            return "אין רשימה " + label + " — אין מה למחוק, בלי שינוי";
+        }
+
+        public static String inDb(String text) {
+            return "במסד: " + text;
+        }
+
+        public static String beforeFailed(String why) {
+            return "הגיבוי לפני הפעולה לא הצליח — לא בוצע: " + why;
+        }
+    }
+
     /** 1.14.0: הלוח הווירטואלי (VClip) */
     public static final class VClipW {
         private VClipW() { }
@@ -2294,7 +2322,7 @@ public final class Words {
 
         public static final String APP_NAME_M = "מנהל קבצים וירטואלי · מ";
         public static final String MENU = "מסד נתונים (מ)";
-        public static final String TITLE = "מסד נתונים · מ0.11.2";
+        public static final String TITLE = "מסד נתונים · מ0.12";
         /** מ0.9: המראה המוכר. */
         public static final String LIST_GONE = "הרשימה הזו כבר לא קיימת במסד", MENU_ACTIONS = "⚙ מסד: גיבוי, העתקה, בדיקה ופעולות",
                 MENU_OLD = "↩ הצד הישן (לפני המסד)",

@@ -20,7 +20,7 @@ import java.util.List;
 public class DbListScreen extends ListScreen<Store.Member> {
 
     static final String EXTRA_MODE = "mode", EXTRA_LIST = "list";
-    private static final int MENU_DB = 1, MENU_DESIGN = 2, MENU_SETTINGS = 3, MENU_OLD = 4, MENU_CMDS = 5;
+    private static final int MENU_DB = 1, MENU_DESIGN = 2, MENU_SETTINGS = 3, MENU_OLD = 4, MENU_CMDS = 5, MENU_TESTS = 6;
 
     private String mode;
     private long listId;
@@ -34,6 +34,8 @@ public class DbListScreen extends ListScreen<Store.Member> {
     static int alive;
     /** מ0.10: האופן של המסד שעובדים בו עכשיו (המסך האחרון שהוצג) — לפקודות (DbVerbs). */
     static String currentMode;
+    /** מ0.12: ההקשר של התוכנה — לפקודות שרצות במסד (מיקום קובץ המסד). */
+    static android.content.Context app;
 
     long listId() {
         return listId;
@@ -73,6 +75,7 @@ public class DbListScreen extends ListScreen<Store.Member> {
     protected void onCreate(Bundle saved) {
         super.onCreate(saved);
         alive++;
+        app = getApplicationContext();
         mode = getIntent().getStringExtra(EXTRA_MODE);
         listId = getIntent().getLongExtra(EXTRA_LIST, 0);
         LinearLayout root = build(saved, Words.Db.APP_NAME_M, "db-list");
@@ -376,6 +379,7 @@ public class DbListScreen extends ListScreen<Store.Member> {
         menu.add(0, MENU_SETTINGS, 0, Words.Main.SETTINGS);
         menu.add(0, MENU_DESIGN, 0, Words.DesignW.MENU);
         menu.add(0, MENU_DB, 0, Words.Db.MENU_ACTIONS);
+        menu.add(0, MENU_TESTS, 0, Words.DbCmd.MENU_TESTS);
         menu.add(0, MENU_OLD, 0, Words.Db.MENU_OLD);
     }
 
@@ -386,6 +390,7 @@ public class DbListScreen extends ListScreen<Store.Member> {
         else if (id == MENU_SETTINGS) startActivity(new Intent(this, SettingsScreen.class));
         else if (id == MENU_OLD) Home.openOld(this);
         else if (id == MENU_DESIGN) design();
+        else if (id == MENU_TESTS) DbTestMode.open(this);
         else return false;
         return true;
     }

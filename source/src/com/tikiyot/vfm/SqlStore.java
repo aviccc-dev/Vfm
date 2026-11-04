@@ -625,6 +625,11 @@ public final class SqlStore implements Store {
     }
 
     @Override
+    public String origin(long item) {
+        return text("SELECT origin_key FROM items WHERE id=?", s(item));
+    }
+
+    @Override
     public String prop(long item, String key) {
         return text("SELECT v FROM props WHERE item_id=? AND k=?", s(item), key);
     }

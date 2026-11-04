@@ -89,6 +89,12 @@ final class StoreTests {
             } finally {
                 ps.close();
             }
+            Store lc = opener.fresh(new File(sub, "listcmd-counter.txt"));
+            try {
+                new ImportTests(o, name).listCmd(lc);
+            } finally {
+                lc.close();
+            }
             Store cs = opener.fresh(new File(sub, "count-counter.txt"));
             try {
                 new ImportTests(o, name).count(cs);

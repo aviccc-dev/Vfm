@@ -22,6 +22,16 @@ public final class IdCounter {
         this.ceiling = read(file);
     }
 
+    /** מ0.12: מונה בזיכרון בלבד (בלי קובץ) — להדמיה של פקודות על עותק של המסד; מספריו לא נשמרים ולא נוגעים במונה האמיתי. */
+    public static IdCounter memory() {
+        return new IdCounter();
+    }
+
+    private IdCounter() {
+        this.file = null;
+        this.ceiling = 0;
+    }
+
     public long ceiling() {
         return ceiling;
     }
@@ -37,6 +47,10 @@ public final class IdCounter {
      */
     public void reserve(long id) throws IOException {
         if (id <= ceiling) return;
+        if (file == null) {
+            ceiling = id;
+            return;
+        }
         long now = read(file);
         if (id <= now) {
             ceiling = now;

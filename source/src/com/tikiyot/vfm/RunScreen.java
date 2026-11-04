@@ -353,7 +353,8 @@ public class RunScreen extends Activity {
             @Override
             public void run() {
                 List<String> gone = new ArrayList<String>();
-                for (List<String> p : made) {
+                if (DbVerbs.active()) gone = DbListCmd.removeLists(made);                // מ0.12: במסד
+                else for (List<String> p : made) {
                     if (Tree.load().find(p) == null) continue;
                     List<String> parent = new ArrayList<String>(p.subList(0, p.size() - 1));
                     String leaf = p.get(p.size() - 1);

@@ -1019,7 +1019,12 @@ public class DbScreen extends Activity {
 
     /** הגיבויים של האופן: בתיקייה הגלויה של התוכנה; עותקים זמניים — באחסון הפרטי. */
     private Backups backups(String m) {
-        return new Backups(new File(new File(Paths.dbData(), Backups.DIR), m), new File(getCacheDir(), "mbackup"));
+        return backupsOf(this, m);
+    }
+
+    /** מ0.12: גם לפקודות שרצות במסד (DbListCmd). */
+    static Backups backupsOf(android.content.Context c, String m) {
+        return new Backups(new File(new File(Paths.dbData(), Backups.DIR), m), new File(c.getCacheDir(), "mbackup"));
     }
 
     /** הגיבוי היומי, ברקע: עותק אם יש שינוי (פעם ביום), טקסט פעם בשבוע, ומחיקת ישנים. */

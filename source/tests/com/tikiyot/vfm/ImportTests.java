@@ -390,6 +390,123 @@ final class ImportTests {
 
     // ---------- הספירה במראה המוכר (מ0.9.1) ----------
 
+    // ---------- מ0.12: פקודות הרשימות על המסד (DbListCmd) ----------
+
+    private static ListCmd.Side[] sides(String line) {
+        ListCmd.Parsed p = ListCmd.parse(line, new ArrayList<String>());
+        ListCmd.Side[] out = new ListCmd.Side[p.sides.size()];
+        for (int i = 0; i < out.length; i++) {
+            out[i] = p.sides.get(i);
+            if (out[i].list()) ListCmd.resolve(out[i], null);
+        }
+        return out;
+    }
+
+    private static long at(Store s, String path) {
+        return DbPaths.find(s, "פק", Tree.parsePath(path));
+    }
+
+    private static int filesIn(Store s, long list) {
+        int n = 0;
+        for (Store.Member m : s.members(list)) if (m.item.type == Store.FILE) n++;
+        return n;
+    }
+
+    void listCmd(Store s) throws Exception {
+        final String M = "פק";
+        DbListCmd.Finder f = new DbListCmd.Finder() {
+            @Override public List<String> find(String cond) {
+                return "x".equals(cond) ? Arrays.asList("/s/c.pdf") : new ArrayList<String>();
+            }
+        };
+        long home = s.createList("בית", 0);
+        s.setProp(home, Store.P_HOME, "1");
+        long hal = DbPaths.ensure(s, M, Tree.parsePath("ספרים/הלכה")), books = at(s, "ספרים");
+        DbFiles.add(s, hal, Arrays.asList("/s/a.pdf", "/s/b.txt"), null);
+        s.addNote(books, "רעיון");
+        long sm = s.createSmart("חדשים", books);
+        s.setProp(sm, Store.P_COND, "x");
+        long shared = s.createList("משותף", home);
+        s.addMember(hal, shared);
+        ck("פקודות במסד: הכנה", books != 0 && s.listsOf(books).equals(Arrays.asList(home)));
+
+        ListCmd.Side[] x = sides("MD ידנית \"תורה/גמרא\"");
+        DbListCmd.Res r = DbListCmd.md(s, M, x[0]);
+        long torah = at(s, "תורה"), gem = at(s, "תורה/גמרא");
+        ck("MD במסד: נוצרת בכל הדרך, הראשונה בבית", !r.noop && r.error == null && gem != 0 && s.listsOf(torah).equals(Arrays.asList(home)));
+        ck("MD במסד: קיימת — בלי שינוי", DbListCmd.md(s, M, x[0]).noop);
+
+        x = sides("COPY ידנית \"ספרים\" ידנית \"תורה\"");
+        r = DbListCmd.copy(s, M, x[0], x[1], null, f);
+        long cBooks = at(s, "תורה/ספרים"), cHal = at(s, "תורה/ספרים/הלכה");
+        boolean smartCopied = false, noteCopied = false;
+        for (Store.Member m : s.members(cBooks)) {
+            if (m.item.type == Store.SMART && m.item.id != sm && "x".equals(s.prop(m.item.id, Store.P_COND))) smartCopied = true;
+            if (m.item.type == Store.NOTE && m.item.name.equals("רעיון")) noteCopied = true;
+        }
+        ck("COPY רשימה במסד: עותק עצמאי (מספר אחר), עם תת־הרשימה שלה", r.error == null && cBooks != 0 && cBooks != books && cHal != 0 && cHal != hal);
+        ck("COPY רשימה במסד: אותם פריטי קבצים (לא קבצים חדשים)", filesIn(s, cHal) == 2 && s.findFile("/s/a.pdf") != 0
+                && s.listsOf(s.findFile("/s/a.pdf")).size() == 2);
+        ck("COPY רשימה במסד: חכמה — עותק של ההגדרה; רעיון — הועתק", smartCopied && noteCopied);
+        ck("COPY רשימה במסד: רשימה שגם בבית — אותה רשימה, לא עותק", s.contains(cHal, shared) && s.listsOf(shared).size() == 3);
+        ck("COPY רשימה במסד: המקור לא השתנה", filesIn(s, hal) == 2 && s.members(books).size() == 3);
+        r = DbListCmd.copy(s, M, x[0], x[1], null, f);
+        ck("COPY במסד: שוב — לא נכנסה (כבר יש בשם הזה)", r.error == null && r.text.contains(Words.DbCmd.SAME_NAME));
+        x = sides("COPY ידנית \"ספרים\" ידנית \"ספרים/הלכה\"");
+        ck("COPY במסד: לא לתוך עצמה", Words.ListCmdW.INTO_ITSELF.equals(DbListCmd.copy(s, M, x[0], x[1], null, f).error));
+        x = sides("COPY ידנית \"אין\" ידנית \"תורה\"");
+        ck("COPY במסד: מקור שאינו קיים — שגיאה", Words.ListCmdW.noList("אין").equals(DbListCmd.copy(s, M, x[0], x[1], null, f).error));
+
+        x = sides("COPY קבצי ידנית \"ספרים\" ידנית \"תורה/גמרא\"");
+        r = DbListCmd.copy(s, M, x[0], x[1], null, f);
+        ck("COPY קבצי ידנית במסד: כל העומק, וגם מה שהחכמה מוצאת", r.error == null && filesIn(s, gem) == 3);
+        x = sides("COPY \"/s/d.txt\" ידנית \"תורה/גמרא\"");
+        r = DbListCmd.copy(s, M, x[0], x[1], Arrays.asList("/s/d.txt", "/s/a.pdf"), f);
+        ck("COPY קבצים מהכונן לרשימה במסד: רק מה שחסר", r.error == null && filesIn(s, gem) == 4);
+        x = sides("COPY קבצי חכמה \"ספרים/חדשים\" ידנית \"תורה/גמרא\"");
+        DbListCmd.Finder notReady = new DbListCmd.Finder() {
+            @Override public List<String> find(String cond) { return null; }
+        };
+        ck("COPY קבצי חכמה במסד: האינדקס לא מוכן — שגיאה, בלי שינוי", Words.ListCmdW.INDEX_NOT_READY.equals(DbListCmd.copy(s, M, x[0], x[1], null, notReady).error)
+                && filesIn(s, gem) == 4);
+
+        x = sides("COMP ידנית \"ספרים\" ידנית \"תורה/גמרא\"");
+        r = DbListCmd.comp(s, M, x[0], x[1], false, f);
+        ck("COMP במסד: לפי המסלולים", r.error == null && r.text.equals(Words.ListCmdW.compared(x[0].label(), 0, x[1].label(), 1, 3) + "\n   d.txt"));
+
+        x = sides("DEL ידנית \"תורה/גמרא/*.pdf\"");
+        r = DbListCmd.remove(s, M, x[0]);
+        ck("DEL קבצים לפי תבנית במסד: רק אלה יוצאים", r.error == null && filesIn(s, gem) == 2 && s.findFile("/s/a.pdf") != 0);
+        x = sides("RD תוכן ידנית \"תורה/ספרים\"");
+        long trashed0 = s.trashed().size();
+        r = DbListCmd.remove(s, M, x[0]);
+        ck("RD תוכן במסד: מתרוקנת; תת־רשימה שהייתה רק שלה — נמחקת; רעיון — לסל", r.error == null && s.members(cBooks).isEmpty()
+                && s.item(cHal) == null && s.trashed().size() == trashed0 + 1 && s.item(shared) != null);
+        x = sides("RD ידנית \"תורה\"");
+        r = DbListCmd.remove(s, M, x[0]);
+        ck("RD רשימה במסד: נמחקת עם מה שרק שלה; המקור לא נוגע", r.error == null && at(s, "תורה") == 0 && s.item(gem) == null
+                && s.item(cBooks) == null && filesIn(s, hal) == 2 && s.findFile("/s/d.txt") != 0);
+        ck("RD במסד: רשימה שאינה קיימת — בלי שינוי", DbListCmd.remove(s, M, x[0]).noop);
+        x = sides("RD חכמה \"ספרים/חדשים\"");
+        r = DbListCmd.remove(s, M, x[0]);
+        ck("RD חכמה במסד: יוצאת ונמחקת", r.error == null && s.item(sm) == null);
+        x = sides("RD ידנית \"*\"");
+        ck("RD במסד: את הבית — לא", Words.ListCmdW.HOME_NO_REMOVE.equals(DbListCmd.remove(s, M, x[0]).error));
+        x = sides("RD ידנית \"ספרים/הלכה\"");
+        r = DbListCmd.remove(s, M, x[0]);
+        ck("RD במסד: רשימה שגם במקום אחר — רק יוצאת מכאן", r.error == null && s.item(hal) == null && s.item(shared) != null
+                && s.listsOf(shared).equals(Arrays.asList(home)));
+
+        long lists = s.lists().size();
+        MemStore c = DbListCmd.copyOf(s);
+        ck("העותק להדמיה: אותן רשימות, אותם קבצים, אותו בית, אותם מקורות", c.lists().size() == lists && c.findFile("/s/d.txt") != 0
+                && Importer.home(c) != 0 && DbPaths.find(c, M, Tree.parsePath("ספרים")) != 0);
+        x = sides("RD ידנית \"ספרים\"");
+        DbListCmd.remove(c, M, x[0]);
+        ck("העותק להדמיה: שינוי בו לא נוגע במסד", at(s, "ספרים") == books && DbPaths.find(c, M, Tree.parsePath("ספרים")) == 0);
+        ck("פקודות במסד: המסד תקין", s.check() == null);
+    }
+
     void count(Store s) throws Exception {
         long a = s.createList("א", 0), b = s.createList("ב", 0), c = s.createList("ג", 0);
         long f1 = s.createFile(new Store.FileInfo("/x/1", "פנימי", 10, 0, null));

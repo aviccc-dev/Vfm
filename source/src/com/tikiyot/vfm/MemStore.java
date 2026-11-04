@@ -245,6 +245,11 @@ public final class MemStore implements Store {
     }
 
     @Override
+    public String origin(long item) {
+        return origins.get(item);
+    }
+
+    @Override
     public String prop(long item, String key) {
         Map<String, String> m = props.get(item);
         return m == null ? null : m.get(key);
