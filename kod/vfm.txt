@@ -880,6 +880,25 @@ MOVE הורדות\*.epub לשלוח
 @עיצוב תוכנת ניהול קבצים
 @תיאור כאן שמים דוגמאות משלך
 @למה הרשימה הזו לא נמחקת ולא משתנה ב"חזרה לברירת מחדל" — כל השאר חוזר להתחלה
+===== קובץ: assets/tests/klali.vbat =====
+בדיקה
+ECHO בדיקה כללית — שכל הפונקציות עובדות (לא עומס). כל "ודא" מסמן ✅ או ❌, ובסוף — כמה עברו. בכל גרסה נוספות כאן הבדיקות של מה שחדש.
+אופן "בדיקות מערכת"
+:: רשימות במסד — יצירה, מחיקה, העתקה, השוואה, קישור, העברה, כלול (מ0.12–מ0.17)
+כלול "בדיקת פקודות.vbat"
+:: יצוא לטקסט (מ0.18)
+COPY ידנית "בדיקת פקודות" קובץ "%כאן%\יצוא-בדיקה.txt"
+ודא "%כאן%\יצוא-בדיקה.txt" קיים
+COPY קבצי ידנית "בדיקת פקודות" קובץ "%כאן%\יצוא-בדיקה-קבצים.txt"
+ודא "%כאן%\יצוא-בדיקה-קבצים.txt" קיים
+:: קבצים בכונן — מרשימה לתיקייה, מחיקה לסל, הסרת תיקייה
+MD "%כאן%\תיקיית בדיקה"
+COPY קבצי ידנית "בדיקת פקודות/א/פנימית" תיקייה "%כאן%\תיקיית בדיקה"
+ודא "%כאן%\תיקיית בדיקה\בדיקת פקודות.vbat" קיים
+DEL "%כאן%\תיקיית בדיקה\*.vbat"
+ודא "%כאן%\תיקיית בדיקה\בדיקת פקודות.vbat" חסר
+RD "%כאן%\תיקיית בדיקה"
+ECHO סוף הבדיקה הכללית. "בדיקת פקודות" נשארת לראות; קובצי היצוא — בתיקיית אופן הבדיקות.
 ===== קובץ: assets/tests/omes-masad.vbat =====
 בדיקה
 :: בדיקת עומס במסד — כמו בדיקת העומס שבזמנו הראתה שהמנוע הישן איטי, והביאה אותנו למסד.
@@ -990,7 +1009,7 @@ cd $S; rm -rf out gen bld
 [ "$S" != "$DIR" ] && rm -rf $S
 ls -la $OUT
 ===== קובץ: build/m-version.txt =====
-29 מ0.17.1
+30 מ0.18
 ===== קובץ: build/test.sh =====
 #!/bin/bash
 # בדיקות על המחשב (80). יוצא בכישלון אם בדיקה אחת נכשלה — ואז build.sh לא בונה.
@@ -4238,6 +4257,16 @@ final class Batch {
                 plan.steps.add(s);
                 continue;
             }
+            if (lp == null && cmd.equals(VERIFY) && tk.size() >= 2) {          // מ0.18: ודא "קובץ" קיים — בלי מילת סוג
+                List<String> conds = new ArrayList<String>(tk.subList(2, tk.size()));
+                String[] err = {null};
+                String p = path(tk.get(1), here, vars, err);
+                if (p == null) s.error = err[0];
+                else DbListCmd.planVerifyFile(s, new File(p), conds, sim);
+                if (s.error != null) plan.errors++;
+                plan.steps.add(s);
+                continue;
+            }
             if (lp != null && lp.error != null) {
                 s.error = lp.error;
                 plan.errors++;
@@ -4287,6 +4316,13 @@ final class Batch {
             for (int i = 1; i < lp.sides.size(); i++) conds.add(lp.sides.get(i).raw);
             ListCmd.Side a = lp.sides.get(0);
             if (a.list()) ListCmd.resolve(a, vars);
+            else {                                                              // מ0.18: ודא "קובץ" קיים / חסר — בכונן
+                String[] err = {null};
+                String p = path(a.raw, here, vars, err);
+                if (p == null) { s.error = err[0]; return; }
+                DbListCmd.planVerifyFile(s, new File(p), conds, sim);
+                return;
+            }
             DbListCmd.planVerify(s, a, conds, sim);
             return;
         }
@@ -9589,6 +9625,131 @@ final class DbCount {
         }
     }
 }
+===== קובץ: src/com/tikiyot/vfm/DbExport.java =====
+package com.tikiyot.vfm;
+
+// מ0.18: יצוא מהמסד לטקסט (claude/masad-yetzu.md). הפורמט — של "מבנה.txt" הישן (מוכר, נערך ביד, וההעתקה מהישן כבר
+// קוראת אותו): כותרת "#N א / ב" לכל רשימה, @צלמית/@תיאור/@למה/@עיצוב, ושורת קובץ "/מסלול | גודל". השורה הראשונה —
+// @תיאור של השורש: גרסת הפורמט, התאריך ומה יצא. רשימה עם תתי־רשימות — בקובץ אחד; רשימה שמופיעה פעמיים — פעם אחת.
+// עוד לא בפורמט (נספר בשורה הראשונה): רשימות חכמות, רעיונות וכותרות.
+// אחראי: הטקסט ושם הקובץ (בלי ממשק — נבדק). אסור לו: לכתוב למסד.
+
+import java.io.File;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
+
+final class DbExport {
+
+    static final int FORMAT = 1;
+
+    private DbExport() { }
+
+    /** מה יצא. */
+    static final class Out {
+        String text;
+        int lists, files, skipped;
+    }
+
+    /** רשימה (או הבית) עם כל מה שבתוכה. title — מה יוצא (לשורה הראשונה). */
+    static Out list(Store s, long list, boolean home, String title, long when) {
+        Out o = new Out();
+        StringBuilder body = new StringBuilder();
+        Set<Long> seen = new HashSet<Long>();
+        seen.add(list);
+        if (home) {
+            for (Store.Member m : s.members(list)) {
+                Store.Item it = m.item;
+                if (it.type == Store.LIST) node(s, it.id, java.util.Collections.singletonList(it.name), body, o, seen);
+                else if (it.type == Store.FILE) entry(s, it.id, body, o);
+                else o.skipped++;
+            }
+        } else {
+            node(s, list, java.util.Collections.singletonList(s.item(list).name), body, o, seen);
+        }
+        o.text = Tree.DESC_LINE + Words.DbCmd.exportHeader(FORMAT, date(when), title, o.lists, o.files, o.skipped) + "\n" + body;
+        return o;
+    }
+
+    /** רק המסלולים של הקבצים (קבצי ידנית). */
+    static Out paths(List<String> paths, String title, long when) {
+        Out o = new Out();
+        StringBuilder sb = new StringBuilder(Tree.DESC_LINE).append(Words.DbCmd.exportHeader(FORMAT, date(when), title, 0, paths.size(), 0)).append('\n');
+        for (String p : paths) sb.append(p).append('\n');
+        o.files = paths.size();
+        o.text = sb.toString();
+        return o;
+    }
+
+    private static void node(Store s, long id, List<String> path, StringBuilder sb, Out o, Set<Long> seen) {
+        o.lists++;
+        if (sb.length() > 0) sb.append('\n');
+        sb.append('#').append(path.size()).append(' ').append(join(path)).append('\n');
+        prop(sb, s, id, Store.P_ICON, Tree.ICON_LINE);
+        prop(sb, s, id, Store.P_DESIGN, Tree.DESIGN_LINE);
+        prop(sb, s, id, Store.P_DESC, Tree.DESC_LINE);
+        prop(sb, s, id, Store.P_WHY, Tree.WHY_LINE);
+        List<Store.Member> ms = s.members(id);
+        for (Store.Member m : ms) {
+            if (m.item.type == Store.FILE) entry(s, m.item.id, sb, o);
+            else if (m.item.type != Store.LIST) o.skipped++;
+        }
+        for (Store.Member m : ms) {
+            if (m.item.type != Store.LIST || !seen.add(m.item.id)) continue;   // פעם אחת, ובלי לולאה
+            List<String> p = new java.util.ArrayList<String>(path);
+            p.add(m.item.name);
+            node(s, m.item.id, p, sb, o, seen);
+        }
+    }
+
+    private static void entry(Store s, long id, StringBuilder sb, Out o) {
+        Store.FileInfo fi = s.file(id);
+        if (fi == null) return;
+        sb.append(new Tree.Entry(fi.path, fi.size, false).line()).append('\n');
+        o.files++;
+    }
+
+    private static void prop(StringBuilder sb, Store s, long id, String key, String line) {
+        String v = s.prop(id, key);
+        if (v != null && !v.trim().isEmpty()) sb.append(line).append(v.replace('\n', ' ').trim()).append('\n');
+    }
+
+    static String date(long when) {
+        return new java.text.SimpleDateFormat("dd.MM.yyyy HH:mm", java.util.Locale.US).format(new java.util.Date(when));
+    }
+
+    /** שם קובץ בטוח: תווים שאסורים בשם — רווח; עד 80 תווים. */
+    static String safe(String name) {
+        StringBuilder sb = new StringBuilder();
+        for (char c : (name == null ? "" : name).toCharArray()) sb.append("/\\:*?\"<>|".indexOf(c) >= 0 ? ' ' : c);
+        String r = sb.toString().trim();
+        return r.length() > 80 ? r.substring(0, 80).trim() : r.isEmpty() ? "export" : r;
+    }
+
+    private static String join(List<String> p) {
+        StringBuilder sb = new StringBuilder();
+        for (String x : p) sb.append(sb.length() > 0 ? Tree.SEP : "").append(x);
+        return sb.toString();
+    }
+
+    /**
+     * לאן: "*" — שם לפי מה שיוצא ("אופן X", "רשימה X", "קבצי רשימה X"), בתיקייה "יצוא" של התוכנה, ותפוס — "(2)";
+     * שם בלי מסלול — בתיקייה "יצוא"; מסלול מלא — כמו שנכתב (הכותב בחר — נכתב מעליו).
+     */
+    static File target(String raw, String defaultName, File exportDir) {
+        String r = raw == null ? "" : raw.trim();
+        if (r.isEmpty() || r.equals(ListCmd.HOME)) {
+            String base = safe(defaultName);
+            File f = new File(exportDir, base + ".txt");
+            for (int k = 2; f.exists(); k++) f = new File(exportDir, base + " (" + k + ").txt");
+            return f;
+        }
+        File f = new File(r);
+        if (!f.isAbsolute()) f = new File(exportDir, r);
+        if (!f.getName().contains(".")) f = new File(f.getParentFile(), f.getName() + ".txt");
+        return f;
+    }
+}
 ===== קובץ: src/com/tikiyot/vfm/DbDump.java =====
 package com.tikiyot.vfm;
 
@@ -10480,6 +10641,42 @@ final class DbListCmd {
                 + Words.ListCmdW.copied(c.done, c.skipped, c.why, b.label()) + nowIn(s, dest));
     }
 
+    /** מ0.18: היצוא — write=false (ההדמיה): רק השם והמספרים; write=true: נכתב. */
+    static Res export(Store s, String mode, ListCmd.Side a, ListCmd.Side b, Finder f, boolean write) {
+        long when = System.currentTimeMillis();
+        DbExport.Out o;
+        String name;
+        if (a.filesOf) {
+            String[] err = {null};
+            List<String> ps = files(s, mode, a, f, err);
+            if (ps == null) return Res.err(err[0]);
+            name = Words.DbCmd.exportFilesName(a.raw);
+            o = DbExport.paths(ps, name, when);
+        } else {
+            long id = list(s, mode, a);
+            if (id == 0) return Res.err(a.home ? Words.DbCmd.NO_HOME : Words.ListCmdW.noList(a.raw));
+            name = a.home ? Words.DbCmd.exportModeName(mode) : Words.DbCmd.exportListName(s.item(id).name);
+            o = DbExport.list(s, id, a.home, name, when);
+        }
+        File to = DbExport.target(b.raw, name, exportDir());
+        if (write) {
+            try {
+                File dir = to.getParentFile();
+                if (dir != null && !dir.isDirectory() && !dir.mkdirs()) return Res.err(Words.CANT_CREATE_FOLDER);
+                Files.writeAtomic(to, o.text);
+            } catch (Throwable t) {
+                Log.e("DbListCmd.export", t);
+                return Res.err(Words.Db.failed(String.valueOf(t.getMessage())));
+            }
+        }
+        return Res.ok(Words.DbCmd.exported(name, Bidi.path(to.getAbsolutePath()), o.lists, o.files, o.skipped));
+    }
+
+    /** התיקייה "יצוא" בתיקיית התוכנה. */
+    static File exportDir() {
+        return new File(Paths.data(), Words.DbCmd.EXPORT_DIR);
+    }
+
     /** COMP: לפי המסלולים; /תנאים — גם התנאים של שתי חכמות. */
     static Res comp(Store s, String mode, ListCmd.Side a, ListCmd.Side b, boolean conds, Finder f) {
         String[] err = {null};
@@ -10614,6 +10811,21 @@ final class DbListCmd {
             final ListCmd.Side a = sd.get(0), b = sd.get(1);
             if (b.content || b.filesOf) { s.error = Words.ListCmdW.USAGE; return; }
             if (b.kind == ListCmd.SMART_LIST) { s.error = Words.ListCmdW.INTO_SMART; return; }
+            if (b.kind == ListCmd.EXPORT) {                                  // מ0.18: יצוא לקובץ טקסט
+                if (a.kind == ListCmd.SMART_LIST || a.content || a.mask != null || !a.list()) { s.error = Words.DbCmd.USAGE_EXPORT; return; }
+                work = new Work() {
+                    @Override public Res run(Store t, Finder f) { return export(t, mode, a, b, f, !(t instanceof MemStore)); }
+                };
+                s.target = b.label();
+                Res pr = work.run(db, find);
+                if (pr.error != null) { s.error = pr.error; return; }
+                s.describe = Words.DbCmd.inDb(pr.text);
+                final Work w = work;
+                s.op = new ListCmd.Op() {
+                    @Override public String run(Library lib) { return real(mode, w, false, lib); }
+                };
+                return;
+            }
             if (b.kind == ListCmd.FS) {                                      // מרשימה לתיקייה — הקבצים עצמם (הביצוע הרגיל)
                 if (fsDest == null || !sim.isDir(fsDest)) { s.error = Words.Cmd.NO_DEST; return; }
                 String[] err = {null};
@@ -10764,6 +10976,29 @@ final class DbListCmd {
                 } finally {
                     if (st != null) st.close();
                 }
+            }
+        };
+    }
+
+    /** מ0.18: ודא "קובץ" קיים / חסר — בכונן (גם מה שהשורות שלפני ייצרו, לפי ההדמיה של Batch). */
+    static void planVerifyFile(final Batch.Step s, final File f, List<String> conds, Batch.Sim sim) {
+        Boolean want = null;
+        for (String c : conds) {
+            String t = c.trim();
+            if (t.equals(Words.DbCmd.WORD_EXISTS) || t.equals(Words.DbCmd.WORD_EXISTS_M)) want = Boolean.TRUE;
+            else if (t.equals(Words.DbCmd.WORD_MISSING) || t.equals(Words.DbCmd.WORD_MISSING_M)) want = Boolean.FALSE;
+            else { s.error = Words.DbCmd.VERIFY_USAGE; return; }
+        }
+        final boolean exists = want == null || want;
+        final String what = "\"" + f.getName() + "\" " + (exists ? Words.DbCmd.WORD_EXISTS_M : Words.DbCmd.WORD_MISSING_M);
+        s.target = f.getName();
+        s.describe = Words.DbCmd.verifyWill(what);
+        s.op = new ListCmd.Op() {
+            @Override
+            public String run(Library lib) {
+                boolean ok = f.isFile() == exists;
+                s.verified = ok;
+                return Words.DbCmd.verifyResult(ok, what, f.isFile() ? Words.DbCmd.WORD_EXISTS_M : Words.DbCmd.WORD_MISSING_M);
             }
         };
     }
@@ -11661,7 +11896,8 @@ import java.util.List;
 
 final class DbTestMode {
 
-    static final String ASSET = "tests/pkudot-masad.vbat", ASSET_CALL = "tests/pkudot-kalul.vbat", ASSET_LOAD = "tests/omes-masad.vbat";
+    static final String ASSET = "tests/pkudot-masad.vbat", ASSET_CALL = "tests/pkudot-kalul.vbat", ASSET_LOAD = "tests/omes-masad.vbat",
+            ASSET_ALL = "tests/klali.vbat";
 
     /** בקובץ בדיקת העומס: מוחלף בשם האופן עם המסד הגדול ביותר (הנתונים האמיתיים). */
     static final String REAL = "%האופן-האמיתי%";  // תחביר
@@ -11713,6 +11949,13 @@ final class DbTestMode {
             } finally {
                 out3.close();
             }
+            final File all = new File(Modes.dirOf(mode), Words.DbCmd.TEST_ALL_FILE + "." + Batch.EXT);
+            FileOutputStream out4 = new FileOutputStream(all);
+            try {
+                out4.write(Examples.asset(a, ASSET_ALL).getBytes("UTF-8"));   // מ0.18: הבדיקה הכללית — מתעדכנת בכל גרסה
+            } finally {
+                out4.close();
+            }
             long home = DbVerbs.write(a, mode, new DbVerbs.Job() {
                 @Override
                 public long run(Store s, List<String> p) {
@@ -11725,7 +11968,7 @@ final class DbTestMode {
                             }
                         }
                     }, true);
-                    DbFiles.add(s, h[0], java.util.Arrays.asList(f.getAbsolutePath(), load.getAbsolutePath()), null, true);
+                    DbFiles.add(s, h[0], java.util.Arrays.asList(all.getAbsolutePath(), f.getAbsolutePath(), load.getAbsolutePath()), null, true);
                     return h[0];
                 }
             }, null);
@@ -23326,11 +23569,13 @@ import java.util.Map;
 final class ListCmd {
 
     static final String MANUAL = "ידנית", SMART = "חכמה", CONTENT = "תוכן", FILES_OF = "קבצי", FOLDER = "תיקייה";   // תחביר
+    /** מ0.18: יעד שהוא קובץ טקסט — יצוא מהמסד. */
+    static final String FILE_WORD = "קובץ";   // תחביר
     static final String HOME = "*";
     /** 1.25.0: COMP של שתי רשימות חכמות — גם התנאים (המשתמש: "אולי פרמטר שיוסיף את השוואת התנאים"). */
     static final String SW_CONDS = "/תנאים";   // תחביר
 
-    static final int FS = 0, LIST = 1, SMART_LIST = 2;
+    static final int FS = 0, LIST = 1, SMART_LIST = 2, EXPORT = 3;
 
     /** צד אחד בשורה: מה הוא, והערך שלו. */
     static final class Side {
@@ -23405,7 +23650,7 @@ final class ListCmd {
 
     private static boolean word(Tok t) {
         return !t.quoted && (t.text.equals(MANUAL) || t.text.equals(SMART) || t.text.equals(CONTENT)
-                || t.text.equals(FILES_OF) || t.text.equals(FOLDER));
+                || t.text.equals(FILES_OF) || t.text.equals(FOLDER) || t.text.equals(FILE_WORD));
     }
 
     /** null — אין בשורה מילת סוג. switches — נאספים בנפרד (כמו ב-Batch). */
@@ -23428,6 +23673,7 @@ final class ListCmd {
                 else if (t.text.equals(FILES_OF)) cur.filesOf = true;
                 else if (t.text.equals(MANUAL)) cur.kind = LIST;
                 else if (t.text.equals(SMART)) cur.kind = SMART_LIST;
+                else if (t.text.equals(FILE_WORD)) cur.kind = EXPORT;
                 else cur.kind = FS;
                 if (t.text.equals(FOLDER) && (cur.content || cur.filesOf)) p.error = Words.ListCmdW.USAGE;
                 continue;
@@ -23439,6 +23685,9 @@ final class ListCmd {
             cur = null;
         }
         if (cur != null) p.error = Words.ListCmdW.USAGE;                     // מילת סוג בלי שם אחריה
+        for (int i = 0; i < p.sides.size(); i++)                              // מ0.18: "קובץ" — רק יעד, ובלי תוכן/קבצי
+            if (p.sides.get(i).kind == EXPORT && (i != p.sides.size() - 1 || i == 0 || p.sides.get(i).content || p.sides.get(i).filesOf))
+                p.error = Words.DbCmd.USAGE_EXPORT;
         return p;
     }
 
@@ -23791,6 +24040,7 @@ final class ListCmd {
         if (cmd.equals("COPY")) {
             if (sd.size() != 2) { s.error = Words.ListCmdW.USAGE; return; }
             final Side a = sd.get(0), b = sd.get(1);
+            if (b.kind == EXPORT) { s.error = Words.DbCmd.VERIFY_DB_ONLY; return; }   // מ0.18: יצוא — מהמסד
             if (b.content || b.filesOf) { s.error = Words.ListCmdW.USAGE; return; }
             if (b.kind == SMART_LIST) { s.error = Words.ListCmdW.INTO_SMART; return; }
             if (b.kind == FS) {                                             // מרשימה לתיקייה — הקבצים עצמם (הביצוע הרגיל)
@@ -47193,6 +47443,7 @@ public final class Words {
                 TEST_FILE = "בדיקת פקודות",  // בכונן
                 TEST_CALL_FILE = "בדיקת כלול",  // בכונן
                 TEST_LOAD_FILE = "בדיקת עומס",  // בכונן
+                TEST_ALL_FILE = "בדיקה כללית",  // בכונן
                 TEST_READY = "אופן \"בדיקות מערכת\" — נגיעה ב\"בדיקת פקודות\" מריצה את הבדיקה";
 
         public static String removed(String what) {
@@ -47205,7 +47456,32 @@ public final class Words {
                 P_VERIFY = "מה לוודא", H_VERIFY_WHAT = "קיימת · חסרה · /רשימות:N · /פריטים:N (כמו \"עכשיו בה\" בדוח)",
                 VERIFY_DB_ONLY = "ודא — עובדת כשעובדים במסד",
                 VERIFY_USAGE = "צורה: ודא ידנית \"א\" [קיימת | חסרה] [/רשימות:N] [/פריטים:N]",
-                WORD_EXISTS = "קיימת", WORD_MISSING = "חסרה", SW_LISTS = "/רשימות:", SW_ITEMS = "/פריטים:";  // תחביר
+                WORD_EXISTS = "קיימת", WORD_MISSING = "חסרה", WORD_EXISTS_M = "קיים", WORD_MISSING_M = "חסר", SW_LISTS = "/רשימות:", SW_ITEMS = "/פריטים:";  // תחביר
+
+        public static final String USAGE_EXPORT = "צורה: COPY ידנית \"א\" קובץ \"*\" (או שם/מסלול) · גם קבצי ידנית \"א\", ידנית \"*\" (הבית — כל האופן)",
+                EXPORT_DIR = "יצוא";  // בכונן
+
+        public static String exportHeader(int format, String date, String what, int lists, int files, int skipped) {
+            return "יצוא מהמסד · פורמט " + format + " · " + date + " · " + what + " · " + lists + " רשימות, " + files + " קבצים"
+                    + (skipped > 0 ? " · לא בפורמט עדיין (חכמות, רעיונות, כותרות): " + skipped : "");
+        }
+
+        public static String exportModeName(String mode) {
+            return "אופן " + mode;
+        }
+
+        public static String exportListName(String name) {
+            return "רשימה " + name;
+        }
+
+        public static String exportFilesName(String name) {
+            return "קבצי רשימה " + name;
+        }
+
+        public static String exported(String what, String path, int lists, int files, int skipped) {
+            return "יצוא: " + what + " ← " + path + " · " + lists + " רשימות, " + files + " קבצים"
+                    + (skipped > 0 ? " · לא נכנסו (חכמות, רעיונות, כותרות — עוד לא בפורמט): " + skipped : "");
+        }
 
         public static final String N_LINK = "קשר",  // תחביר
                 W_LINK = "קישור במסד: אותה רשימה (או פריט) גם במקום נוסף — לא עותק. קשר ידנית \"א\" ידנית \"ב\"",
@@ -47344,7 +47620,7 @@ public final class Words {
 
         public static final String APP_NAME_M = "מנהל קבצים וירטואלי · מ";
         public static final String MENU = "מסד נתונים (מ)";
-        public static final String TITLE = "מסד נתונים · מ0.17.1";
+        public static final String TITLE = "מסד נתונים · מ0.18";
         /** מ0.9: המראה המוכר. */
         public static final String LIST_GONE = "הרשימה הזו כבר לא קיימת במסד", MENU_ACTIONS = "⚙ מסד: גיבוי, העתקה, בדיקה ופעולות",
                 MENU_OLD = "↩ הצד הישן (לפני המסד)",
@@ -49398,6 +49674,23 @@ final class ImportTests {
         ck("העבר: נכנסת ליעד ויוצאת מהמקור", s.listsOf(lone).equals(Arrays.asList(tb)));
         ck("העבר/קשר: לא לתוך עצמה", Words.ListCmdW.INTO_ITSELF.equals(DbListCmd.link(s, M, sides("LINK ידנית \"יעד-ב\" ידנית \"יעד-ב/לבד\"")[0],
                 sides("LINK ידנית \"יעד-ב\" ידנית \"יעד-ב/לבד\"")[1], false).error));
+
+        // יצוא (מ0.18): הטקסט נקרא בחזרה בהעתקה מהישן — אותן רשימות ואותם קבצים
+        DbExport.Out eo = DbExport.list(s, books, false, "רשימה ספרים", 0);
+        File em = new File(System.getProperty("java.io.tmpdir"), "export" + System.nanoTime());
+        write(new File(em, Paths.TREE), eo.text);
+        MemStore back = new MemStore(IdCounter.memory());
+        Importer.run(back, Importer.load(em), true);
+        long bb = DbPaths.find(back, "x", Tree.parsePath("ספרים"));
+        ck("יצוא: נקרא בחזרה — אותן רשימות ואותם קבצים (" + eo.lists + "/" + eo.files + ")", bb != 0
+                && back.lists().size() == eo.lists && DbCount.of(back, bb, null).items == eo.files && eo.text.startsWith(Tree.DESC_LINE));
+        File ed = new File(em, "יצוא");
+        ed.mkdirs();
+        File e1 = DbExport.target("*", "רשימה ספרים", ed);
+        write(e1, "x");
+        ck("יצוא: שם לפי מה שיוצא, ותפוס — (2); שם בלי מסלול — בתיקיית היצוא",
+                e1.getName().equals("רשימה ספרים.txt") && DbExport.target("*", "רשימה ספרים", ed).getName().equals("רשימה ספרים (2).txt")
+                && DbExport.target("שלי", "x", ed).equals(new File(ed, "שלי.txt")));
 
         // ודא (מ0.14)
         ListCmd.Side vb = sides("VERIFY ידנית \"ספרים\" קיימת")[0];

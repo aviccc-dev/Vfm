@@ -524,6 +524,23 @@ final class ImportTests {
         ck("העבר/קשר: לא לתוך עצמה", Words.ListCmdW.INTO_ITSELF.equals(DbListCmd.link(s, M, sides("LINK ידנית \"יעד-ב\" ידנית \"יעד-ב/לבד\"")[0],
                 sides("LINK ידנית \"יעד-ב\" ידנית \"יעד-ב/לבד\"")[1], false).error));
 
+        // יצוא (מ0.18): הטקסט נקרא בחזרה בהעתקה מהישן — אותן רשימות ואותם קבצים
+        DbExport.Out eo = DbExport.list(s, books, false, "רשימה ספרים", 0);
+        File em = new File(System.getProperty("java.io.tmpdir"), "export" + System.nanoTime());
+        write(new File(em, Paths.TREE), eo.text);
+        MemStore back = new MemStore(IdCounter.memory());
+        Importer.run(back, Importer.load(em), true);
+        long bb = DbPaths.find(back, "x", Tree.parsePath("ספרים"));
+        ck("יצוא: נקרא בחזרה — אותן רשימות ואותם קבצים (" + eo.lists + "/" + eo.files + ")", bb != 0
+                && back.lists().size() == eo.lists && DbCount.of(back, bb, null).items == eo.files && eo.text.startsWith(Tree.DESC_LINE));
+        File ed = new File(em, "יצוא");
+        ed.mkdirs();
+        File e1 = DbExport.target("*", "רשימה ספרים", ed);
+        write(e1, "x");
+        ck("יצוא: שם לפי מה שיוצא, ותפוס — (2); שם בלי מסלול — בתיקיית היצוא",
+                e1.getName().equals("רשימה ספרים.txt") && DbExport.target("*", "רשימה ספרים", ed).getName().equals("רשימה ספרים (2).txt")
+                && DbExport.target("שלי", "x", ed).equals(new File(ed, "שלי.txt")));
+
         // ודא (מ0.14)
         ListCmd.Side vb = sides("VERIFY ידנית \"ספרים\" קיימת")[0];
         String[] fd = {""};

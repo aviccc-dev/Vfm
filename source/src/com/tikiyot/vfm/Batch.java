@@ -776,6 +776,16 @@ final class Batch {
                 plan.steps.add(s);
                 continue;
             }
+            if (lp == null && cmd.equals(VERIFY) && tk.size() >= 2) {          // מ0.18: ודא "קובץ" קיים — בלי מילת סוג
+                List<String> conds = new ArrayList<String>(tk.subList(2, tk.size()));
+                String[] err = {null};
+                String p = path(tk.get(1), here, vars, err);
+                if (p == null) s.error = err[0];
+                else DbListCmd.planVerifyFile(s, new File(p), conds, sim);
+                if (s.error != null) plan.errors++;
+                plan.steps.add(s);
+                continue;
+            }
             if (lp != null && lp.error != null) {
                 s.error = lp.error;
                 plan.errors++;
@@ -825,6 +835,13 @@ final class Batch {
             for (int i = 1; i < lp.sides.size(); i++) conds.add(lp.sides.get(i).raw);
             ListCmd.Side a = lp.sides.get(0);
             if (a.list()) ListCmd.resolve(a, vars);
+            else {                                                              // מ0.18: ודא "קובץ" קיים / חסר — בכונן
+                String[] err = {null};
+                String p = path(a.raw, here, vars, err);
+                if (p == null) { s.error = err[0]; return; }
+                DbListCmd.planVerifyFile(s, new File(p), conds, sim);
+                return;
+            }
             DbListCmd.planVerify(s, a, conds, sim);
             return;
         }

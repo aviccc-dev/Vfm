@@ -517,6 +517,42 @@ final class DbListCmd {
                 + Words.ListCmdW.copied(c.done, c.skipped, c.why, b.label()) + nowIn(s, dest));
     }
 
+    /** מ0.18: היצוא — write=false (ההדמיה): רק השם והמספרים; write=true: נכתב. */
+    static Res export(Store s, String mode, ListCmd.Side a, ListCmd.Side b, Finder f, boolean write) {
+        long when = System.currentTimeMillis();
+        DbExport.Out o;
+        String name;
+        if (a.filesOf) {
+            String[] err = {null};
+            List<String> ps = files(s, mode, a, f, err);
+            if (ps == null) return Res.err(err[0]);
+            name = Words.DbCmd.exportFilesName(a.raw);
+            o = DbExport.paths(ps, name, when);
+        } else {
+            long id = list(s, mode, a);
+            if (id == 0) return Res.err(a.home ? Words.DbCmd.NO_HOME : Words.ListCmdW.noList(a.raw));
+            name = a.home ? Words.DbCmd.exportModeName(mode) : Words.DbCmd.exportListName(s.item(id).name);
+            o = DbExport.list(s, id, a.home, name, when);
+        }
+        File to = DbExport.target(b.raw, name, exportDir());
+        if (write) {
+            try {
+                File dir = to.getParentFile();
+                if (dir != null && !dir.isDirectory() && !dir.mkdirs()) return Res.err(Words.CANT_CREATE_FOLDER);
+                Files.writeAtomic(to, o.text);
+            } catch (Throwable t) {
+                Log.e("DbListCmd.export", t);
+                return Res.err(Words.Db.failed(String.valueOf(t.getMessage())));
+            }
+        }
+        return Res.ok(Words.DbCmd.exported(name, Bidi.path(to.getAbsolutePath()), o.lists, o.files, o.skipped));
+    }
+
+    /** התיקייה "יצוא" בתיקיית התוכנה. */
+    static File exportDir() {
+        return new File(Paths.data(), Words.DbCmd.EXPORT_DIR);
+    }
+
     /** COMP: לפי המסלולים; /תנאים — גם התנאים של שתי חכמות. */
     static Res comp(Store s, String mode, ListCmd.Side a, ListCmd.Side b, boolean conds, Finder f) {
         String[] err = {null};
@@ -651,6 +687,21 @@ final class DbListCmd {
             final ListCmd.Side a = sd.get(0), b = sd.get(1);
             if (b.content || b.filesOf) { s.error = Words.ListCmdW.USAGE; return; }
             if (b.kind == ListCmd.SMART_LIST) { s.error = Words.ListCmdW.INTO_SMART; return; }
+            if (b.kind == ListCmd.EXPORT) {                                  // מ0.18: יצוא לקובץ טקסט
+                if (a.kind == ListCmd.SMART_LIST || a.content || a.mask != null || !a.list()) { s.error = Words.DbCmd.USAGE_EXPORT; return; }
+                work = new Work() {
+                    @Override public Res run(Store t, Finder f) { return export(t, mode, a, b, f, !(t instanceof MemStore)); }
+                };
+                s.target = b.label();
+                Res pr = work.run(db, find);
+                if (pr.error != null) { s.error = pr.error; return; }
+                s.describe = Words.DbCmd.inDb(pr.text);
+                final Work w = work;
+                s.op = new ListCmd.Op() {
+                    @Override public String run(Library lib) { return real(mode, w, false, lib); }
+                };
+                return;
+            }
             if (b.kind == ListCmd.FS) {                                      // מרשימה לתיקייה — הקבצים עצמם (הביצוע הרגיל)
                 if (fsDest == null || !sim.isDir(fsDest)) { s.error = Words.Cmd.NO_DEST; return; }
                 String[] err = {null};
@@ -801,6 +852,29 @@ final class DbListCmd {
                 } finally {
                     if (st != null) st.close();
                 }
+            }
+        };
+    }
+
+    /** מ0.18: ודא "קובץ" קיים / חסר — בכונן (גם מה שהשורות שלפני ייצרו, לפי ההדמיה של Batch). */
+    static void planVerifyFile(final Batch.Step s, final File f, List<String> conds, Batch.Sim sim) {
+        Boolean want = null;
+        for (String c : conds) {
+            String t = c.trim();
+            if (t.equals(Words.DbCmd.WORD_EXISTS) || t.equals(Words.DbCmd.WORD_EXISTS_M)) want = Boolean.TRUE;
+            else if (t.equals(Words.DbCmd.WORD_MISSING) || t.equals(Words.DbCmd.WORD_MISSING_M)) want = Boolean.FALSE;
+            else { s.error = Words.DbCmd.VERIFY_USAGE; return; }
+        }
+        final boolean exists = want == null || want;
+        final String what = "\"" + f.getName() + "\" " + (exists ? Words.DbCmd.WORD_EXISTS_M : Words.DbCmd.WORD_MISSING_M);
+        s.target = f.getName();
+        s.describe = Words.DbCmd.verifyWill(what);
+        s.op = new ListCmd.Op() {
+            @Override
+            public String run(Library lib) {
+                boolean ok = f.isFile() == exists;
+                s.verified = ok;
+                return Words.DbCmd.verifyResult(ok, what, f.isFile() ? Words.DbCmd.WORD_EXISTS_M : Words.DbCmd.WORD_MISSING_M);
             }
         };
     }

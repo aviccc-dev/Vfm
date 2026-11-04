@@ -2255,6 +2255,7 @@ public final class Words {
                 TEST_FILE = "בדיקת פקודות",  // בכונן
                 TEST_CALL_FILE = "בדיקת כלול",  // בכונן
                 TEST_LOAD_FILE = "בדיקת עומס",  // בכונן
+                TEST_ALL_FILE = "בדיקה כללית",  // בכונן
                 TEST_READY = "אופן \"בדיקות מערכת\" — נגיעה ב\"בדיקת פקודות\" מריצה את הבדיקה";
 
         public static String removed(String what) {
@@ -2267,7 +2268,32 @@ public final class Words {
                 P_VERIFY = "מה לוודא", H_VERIFY_WHAT = "קיימת · חסרה · /רשימות:N · /פריטים:N (כמו \"עכשיו בה\" בדוח)",
                 VERIFY_DB_ONLY = "ודא — עובדת כשעובדים במסד",
                 VERIFY_USAGE = "צורה: ודא ידנית \"א\" [קיימת | חסרה] [/רשימות:N] [/פריטים:N]",
-                WORD_EXISTS = "קיימת", WORD_MISSING = "חסרה", SW_LISTS = "/רשימות:", SW_ITEMS = "/פריטים:";  // תחביר
+                WORD_EXISTS = "קיימת", WORD_MISSING = "חסרה", WORD_EXISTS_M = "קיים", WORD_MISSING_M = "חסר", SW_LISTS = "/רשימות:", SW_ITEMS = "/פריטים:";  // תחביר
+
+        public static final String USAGE_EXPORT = "צורה: COPY ידנית \"א\" קובץ \"*\" (או שם/מסלול) · גם קבצי ידנית \"א\", ידנית \"*\" (הבית — כל האופן)",
+                EXPORT_DIR = "יצוא";  // בכונן
+
+        public static String exportHeader(int format, String date, String what, int lists, int files, int skipped) {
+            return "יצוא מהמסד · פורמט " + format + " · " + date + " · " + what + " · " + lists + " רשימות, " + files + " קבצים"
+                    + (skipped > 0 ? " · לא בפורמט עדיין (חכמות, רעיונות, כותרות): " + skipped : "");
+        }
+
+        public static String exportModeName(String mode) {
+            return "אופן " + mode;
+        }
+
+        public static String exportListName(String name) {
+            return "רשימה " + name;
+        }
+
+        public static String exportFilesName(String name) {
+            return "קבצי רשימה " + name;
+        }
+
+        public static String exported(String what, String path, int lists, int files, int skipped) {
+            return "יצוא: " + what + " ← " + path + " · " + lists + " רשימות, " + files + " קבצים"
+                    + (skipped > 0 ? " · לא נכנסו (חכמות, רעיונות, כותרות — עוד לא בפורמט): " + skipped : "");
+        }
 
         public static final String N_LINK = "קשר",  // תחביר
                 W_LINK = "קישור במסד: אותה רשימה (או פריט) גם במקום נוסף — לא עותק. קשר ידנית \"א\" ידנית \"ב\"",
@@ -2406,7 +2432,7 @@ public final class Words {
 
         public static final String APP_NAME_M = "מנהל קבצים וירטואלי · מ";
         public static final String MENU = "מסד נתונים (מ)";
-        public static final String TITLE = "מסד נתונים · מ0.17.1";
+        public static final String TITLE = "מסד נתונים · מ0.18";
         /** מ0.9: המראה המוכר. */
         public static final String LIST_GONE = "הרשימה הזו כבר לא קיימת במסד", MENU_ACTIONS = "⚙ מסד: גיבוי, העתקה, בדיקה ופעולות",
                 MENU_OLD = "↩ הצד הישן (לפני המסד)",

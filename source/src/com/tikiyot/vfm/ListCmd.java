@@ -16,11 +16,13 @@ import java.util.Map;
 final class ListCmd {
 
     static final String MANUAL = "ידנית", SMART = "חכמה", CONTENT = "תוכן", FILES_OF = "קבצי", FOLDER = "תיקייה";   // תחביר
+    /** מ0.18: יעד שהוא קובץ טקסט — יצוא מהמסד. */
+    static final String FILE_WORD = "קובץ";   // תחביר
     static final String HOME = "*";
     /** 1.25.0: COMP של שתי רשימות חכמות — גם התנאים (המשתמש: "אולי פרמטר שיוסיף את השוואת התנאים"). */
     static final String SW_CONDS = "/תנאים";   // תחביר
 
-    static final int FS = 0, LIST = 1, SMART_LIST = 2;
+    static final int FS = 0, LIST = 1, SMART_LIST = 2, EXPORT = 3;
 
     /** צד אחד בשורה: מה הוא, והערך שלו. */
     static final class Side {
@@ -95,7 +97,7 @@ final class ListCmd {
 
     private static boolean word(Tok t) {
         return !t.quoted && (t.text.equals(MANUAL) || t.text.equals(SMART) || t.text.equals(CONTENT)
-                || t.text.equals(FILES_OF) || t.text.equals(FOLDER));
+                || t.text.equals(FILES_OF) || t.text.equals(FOLDER) || t.text.equals(FILE_WORD));
     }
 
     /** null — אין בשורה מילת סוג. switches — נאספים בנפרד (כמו ב-Batch). */
@@ -118,6 +120,7 @@ final class ListCmd {
                 else if (t.text.equals(FILES_OF)) cur.filesOf = true;
                 else if (t.text.equals(MANUAL)) cur.kind = LIST;
                 else if (t.text.equals(SMART)) cur.kind = SMART_LIST;
+                else if (t.text.equals(FILE_WORD)) cur.kind = EXPORT;
                 else cur.kind = FS;
                 if (t.text.equals(FOLDER) && (cur.content || cur.filesOf)) p.error = Words.ListCmdW.USAGE;
                 continue;
@@ -129,6 +132,9 @@ final class ListCmd {
             cur = null;
         }
         if (cur != null) p.error = Words.ListCmdW.USAGE;                     // מילת סוג בלי שם אחריה
+        for (int i = 0; i < p.sides.size(); i++)                              // מ0.18: "קובץ" — רק יעד, ובלי תוכן/קבצי
+            if (p.sides.get(i).kind == EXPORT && (i != p.sides.size() - 1 || i == 0 || p.sides.get(i).content || p.sides.get(i).filesOf))
+                p.error = Words.DbCmd.USAGE_EXPORT;
         return p;
     }
 
@@ -481,6 +487,7 @@ final class ListCmd {
         if (cmd.equals("COPY")) {
             if (sd.size() != 2) { s.error = Words.ListCmdW.USAGE; return; }
             final Side a = sd.get(0), b = sd.get(1);
+            if (b.kind == EXPORT) { s.error = Words.DbCmd.VERIFY_DB_ONLY; return; }   // מ0.18: יצוא — מהמסד
             if (b.content || b.filesOf) { s.error = Words.ListCmdW.USAGE; return; }
             if (b.kind == SMART_LIST) { s.error = Words.ListCmdW.INTO_SMART; return; }
             if (b.kind == FS) {                                             // מרשימה לתיקייה — הקבצים עצמם (הביצוע הרגיל)
