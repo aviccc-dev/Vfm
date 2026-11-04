@@ -225,6 +225,9 @@ final class Commands {
                     hidden(),
                     sw(Batch.SW_LIST, null, Type.LIST, Words.Def.P_LIST, Words.Def.H_LIST)),
                     "COMP " + Batch.SW_LIST + "<" + Words.Def.P_LIST + "> <" + Words.Def.P_DEST + ">"),
+            new Def(Batch.LINK, Words.DbCmd.N_LINK, new String[]{Words.DbCmd.N_LINK}, Family.FILE, Words.DbCmd.W_LINK, list(
+                    pos(Type.LIST, Words.Def.P_SOURCE, Words.DbCmd.H_LINK_SRC),
+                    pos(Type.LIST, Words.Def.P_DEST, Words.DbCmd.H_LINK_DEST)), null),
             new Def(Batch.VERIFY, Words.DbCmd.N_VERIFY, new String[]{Words.DbCmd.N_VERIFY}, Family.FILE, Words.DbCmd.W_VERIFY, list(
                     pos(Type.LIST, Words.Def.P_LIST, Words.DbCmd.H_VERIFY),
                     pos(Type.TEXT, Words.DbCmd.P_VERIFY, Words.DbCmd.H_VERIFY_WHAT)), null),

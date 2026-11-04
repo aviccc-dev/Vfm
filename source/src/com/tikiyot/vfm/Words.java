@@ -2254,6 +2254,7 @@ public final class Words {
                 TEST_MODE = "בדיקות מערכת",  // בכונן
                 TEST_FILE = "בדיקת פקודות",  // בכונן
                 TEST_CALL_FILE = "בדיקת כלול",  // בכונן
+                TEST_LOAD_FILE = "בדיקת עומס",  // בכונן
                 TEST_READY = "אופן \"בדיקות מערכת\" — נגיעה ב\"בדיקת פקודות\" מריצה את הבדיקה";
 
         public static String removed(String what) {
@@ -2267,6 +2268,19 @@ public final class Words {
                 VERIFY_DB_ONLY = "ודא — עובדת כשעובדים במסד",
                 VERIFY_USAGE = "צורה: ודא ידנית \"א\" [קיימת | חסרה] [/רשימות:N] [/פריטים:N]",
                 WORD_EXISTS = "קיימת", WORD_MISSING = "חסרה", SW_LISTS = "/רשימות:", SW_ITEMS = "/פריטים:";  // תחביר
+
+        public static final String N_LINK = "קשר",  // תחביר
+                W_LINK = "קישור במסד: אותה רשימה (או פריט) גם במקום נוסף — לא עותק. קשר ידנית \"א\" ידנית \"ב\"",
+                H_LINK_SRC = "מה לקשר: ידנית / חכמה / תוכן ידנית / ידנית \"א\\*.pdf\"", H_LINK_DEST = "לאיזו רשימה ידנית",
+                USAGE_LINK = "צורה: קשר (או MOVE) ידנית \"א\" ידנית \"ב\" · גם חכמה \"א\", תוכן ידנית \"א\", ידנית \"א\\*.pdf\"";
+
+        public static String linked(String what, String to) {
+            return what + " ← קושר גם ל" + to;
+        }
+
+        public static String moved(String what, String to) {
+            return what + " ← הועבר ל" + to;
+        }
 
         public static final String N_MODE = "אופן", N_CALL = "כלול",  // תחביר
                 W_MODE = "מכאן והלאה — הפקודות על המסד של אופן אחר (רק לקובץ הזה; המסך לא מתחלף)",
@@ -2390,7 +2404,7 @@ public final class Words {
 
         public static final String APP_NAME_M = "מנהל קבצים וירטואלי · מ";
         public static final String MENU = "מסד נתונים (מ)";
-        public static final String TITLE = "מסד נתונים · מ0.16";
+        public static final String TITLE = "מסד נתונים · מ0.17";
         /** מ0.9: המראה המוכר. */
         public static final String LIST_GONE = "הרשימה הזו כבר לא קיימת במסד", MENU_ACTIONS = "⚙ מסד: גיבוי, העתקה, בדיקה ופעולות",
                 MENU_OLD = "↩ הצד הישן (לפני המסד)",

@@ -880,6 +880,28 @@ MOVE הורדות\*.epub לשלוח
 @עיצוב תוכנת ניהול קבצים
 @תיאור כאן שמים דוגמאות משלך
 @למה הרשימה הזו לא נמחקת ולא משתנה ב"חזרה לברירת מחדל" — כל השאר חוזר להתחלה
+===== קובץ: assets/tests/omes-masad.vbat =====
+בדיקה
+:: בדיקת עומס במסד — כמו בדיקת העומס שבזמנו הראתה שהמנוע הישן איטי, והביאה אותנו למסד.
+:: רצה על האופן שבשורת "אופן" (כאן: "עבודה אמיתית" — הנתונים האמיתיים), כולה בתוך רשימה חדשה "בדיקת עומס", ובסוף מוחקת אותה.
+:: לפני כל מחיקה — גיבוי של המסד. אופן אחר — לשנות את השורה (רק אופן שיש לו מסד).
+ECHO בדיקת עומס במסד: מעתיקה את כל מה שבבית לרשימה "בדיקת עומס", ואז 3 סבבים — בכל סבב תוכן הרשימה כולה נכנס לתת־רשימה חדשה (גדל בכל סבב). "מדידה" — הזמן של כל שורה. בסוף — נמחקת.
+מדידה
+אופן "עבודה אמיתית"
+RD ידנית "בדיקת עומס"
+MD ידנית "בדיקת עומס"
+COPY תוכן ידנית "*" ידנית "בדיקת עומס"
+ודא ידנית "בדיקת עומס" קיימת
+חזור 3 /עד:60שניות
+MD ידנית "בדיקת עומס\%סבב%"
+COPY תוכן ידנית "בדיקת עומס" ידנית "בדיקת עומס\%סבב%"
+סוף
+ודא ידנית "בדיקת עומס\1" קיימת
+ודא ידנית "בדיקת עומס\3" קיימת
+COMP ידנית "בדיקת עומס\1" ידנית "בדיקת עומס"
+RD ידנית "בדיקת עומס"
+ודא ידנית "בדיקת עומס" חסרה
+ECHO סוף. בדוח — הזמן של כל שורה ("מדידה"), ובסוף — כמה "ודא" עברו. הרשימה "בדיקת עומס" נמחקה.
 ===== קובץ: assets/tests/pkudot-kalul.vbat =====
 ECHO זה הקובץ הנכלל ("כלול"): השורות שלו רצות במקום השורה שכללה אותו.
 MD ידנית "בדיקת פקודות/מכלול"
@@ -908,7 +930,14 @@ RD ידנית "בדיקת פקודות/ב/א"
 ודא ידנית "בדיקת פקודות/א/פנימית" קיימת
 כלול "בדיקת כלול.vbat"
 ודא ידנית "בדיקת פקודות/מכלול" קיימת
-ECHO סוף. הרשימה "בדיקת פקודות" נשארת לראות (בבית): א, ובתוכה פנימית עם קובץ הבדיקה; ב — ריקה. בהרצה הבאה — נמחקת ונבנית מחדש. "ניקוי" — מוחק אותה עכשיו.
+MD ידנית "בדיקת פקודות/ג"
+קשר ידנית "בדיקת פקודות/א/פנימית" ידנית "בדיקת פקודות/ג"
+ודא ידנית "בדיקת פקודות/ג" /רשימות:1 /פריטים:1
+ודא ידנית "בדיקת פקודות/א/פנימית" קיימת
+MOVE ידנית "בדיקת פקודות/ג/פנימית" ידנית "בדיקת פקודות/ב"
+ודא ידנית "בדיקת פקודות/ג" /רשימות:0 /פריטים:0
+ודא ידנית "בדיקת פקודות/ב" /רשימות:1 /פריטים:1
+ECHO סוף. הרשימה "בדיקת פקודות" נשארת לראות (בבית): א, ובתוכה פנימית עם קובץ הבדיקה; אותה פנימית גם ב־ב (קישור והעברה); ג — ריקה; מכלול. בהרצה הבאה — נמחקת ונבנית מחדש. "ניקוי" — מוחק אותה עכשיו.
 ===== קובץ: build/build.sh =====
 #!/bin/bash
 # שימוש: build.sh <תיקיית המקור המלאה> <קובץ יעד> [m]
@@ -962,7 +991,7 @@ cd $S; rm -rf out gen bld
 [ "$S" != "$DIR" ] && rm -rf $S
 ls -la $OUT
 ===== קובץ: build/m-version.txt =====
-27 מ0.16
+28 מ0.17
 ===== קובץ: build/test.sh =====
 #!/bin/bash
 # בדיקות על המחשב (80). יוצא בכישלון אם בדיקה אחת נכשלה — ואז build.sh לא בונה.
@@ -3595,6 +3624,8 @@ final class Batch {
     static final String VERIFY = "VERIFY";
     /** מ0.15: אופן — מכאן והלאה הפקודות במסד של אופן אחר; CALL — שורות של קובץ אחר במקום השורה. */
     static final String MODE = "MODE", CALL = "CALL";
+    /** מ0.17: קישור — אותה רשימה / אותו פריט גם במקום נוסף (במסד). */
+    static final String LINK = "LINK";
     /** מ0.15: עומק מרבי של CALL בתוך CALL. */
     static final int CALL_DEPTH = 5;
     /** הגבול לסבבים בלולאה, ולשורות אחרי הפריסה. */
@@ -8424,6 +8455,9 @@ final class Commands {
                     hidden(),
                     sw(Batch.SW_LIST, null, Type.LIST, Words.Def.P_LIST, Words.Def.H_LIST)),
                     "COMP " + Batch.SW_LIST + "<" + Words.Def.P_LIST + "> <" + Words.Def.P_DEST + ">"),
+            new Def(Batch.LINK, Words.DbCmd.N_LINK, new String[]{Words.DbCmd.N_LINK}, Family.FILE, Words.DbCmd.W_LINK, list(
+                    pos(Type.LIST, Words.Def.P_SOURCE, Words.DbCmd.H_LINK_SRC),
+                    pos(Type.LIST, Words.Def.P_DEST, Words.DbCmd.H_LINK_DEST)), null),
             new Def(Batch.VERIFY, Words.DbCmd.N_VERIFY, new String[]{Words.DbCmd.N_VERIFY}, Family.FILE, Words.DbCmd.W_VERIFY, list(
                     pos(Type.LIST, Words.Def.P_LIST, Words.DbCmd.H_VERIFY),
                     pos(Type.TEXT, Words.DbCmd.P_VERIFY, Words.DbCmd.H_VERIFY_WHAT)), null),
@@ -10400,6 +10434,49 @@ final class DbListCmd {
         return sb.toString();
     }
 
+    /**
+     * מ0.17: LINK (קשר) — אותו פריט גם ביעד (רשימה משותפת); MOVE (העבר) — נכנס ליעד ויוצא מהמקום שלו. המקור: רשימה
+     * (מהרשימה שמעליה, או מהבית), חכמה, תוכן של רשימה, או קבצים לפי תבנית — כמו ב-COPY.
+     */
+    static Res link(Store s, String mode, ListCmd.Side a, ListCmd.Side b, boolean move) {
+        long dest = b.home ? Importer.home(s) : b.mask != null ? 0 : DbPaths.find(s, mode, b.path);
+        if (dest == 0) return Res.err(b.home ? Words.DbCmd.NO_HOME : Words.ListCmdW.noList(b.raw));
+        List<Long> ids = new ArrayList<Long>();
+        long from;
+        String label;
+        if (a.kind == ListCmd.SMART_LIST) {
+            long[] r = smart(s, mode, a);
+            if (r == null) return Res.err(Words.ListCmdW.noSmart(a.raw));
+            ids.add(r[1]);
+            from = r[0];
+            label = Words.ListCmdW.smartList(a.label());
+        } else {
+            long src = list(s, mode, a);
+            if (src == 0) return Res.err(a.home ? Words.DbCmd.NO_HOME : Words.ListCmdW.noList(a.raw));
+            if (a.home || a.content || a.mask != null) {
+                for (Store.Member m : s.members(src)) {
+                    if (a.mask != null) {
+                        String p = pathOf(s, m.item);
+                        if (p == null || !Batch.wild(a.mask, new File(p).getName())) continue;
+                    }
+                    ids.add(m.item.id);
+                }
+                from = src;
+                label = a.mask != null ? Words.files(ids.size()) : a.home ? Words.DbCmd.homeContent(ids.size())
+                        : Words.ListCmdW.contentOf(ids.size(), a.label());
+            } else {
+                if (src == dest || s.contains(src, dest)) return Res.err(Words.ListCmdW.INTO_ITSELF);
+                List<String> up = new ArrayList<String>(a.path.subList(0, a.path.size() - 1));
+                from = up.isEmpty() ? Importer.home(s) : DbPaths.find(s, mode, up);
+                ids.add(src);
+                label = Words.ListCmdW.list(a.label());
+            }
+        }
+        Copied c = move ? moveTo(s, ids, from, dest) : linkInto(s, ids, dest);
+        return Res.ok((move ? Words.DbCmd.moved(label, b.label()) : Words.DbCmd.linked(label, b.label())) + " · "
+                + Words.ListCmdW.copied(c.done, c.skipped, c.why, b.label()) + nowIn(s, dest));
+    }
+
     /** COMP: לפי המסלולים; /תנאים — גם התנאים של שתי חכמות. */
     static Res comp(Store s, String mode, ListCmd.Side a, ListCmd.Side b, boolean conds, Finder f) {
         String[] err = {null};
@@ -10561,10 +10638,17 @@ final class DbListCmd {
             if (r.error != null) s.error = r.error;
             else s.describe = Words.DbCmd.inDb(r.text);
             return;
-        } else if (cmd.equals("MOVE")) {
-            boolean toList = sd.size() == 2 && sd.get(1).list();
-            s.error = toList && !sd.get(0).list() ? Words.ListCmdW.MOVE_TO_LIST : Words.ListCmdW.MOVE_LATER;
-            return;
+        } else if (cmd.equals("MOVE") || cmd.equals(Batch.LINK)) {           // מ0.17: העברה וקישור — במסד
+            if (sd.size() != 2) { s.error = Words.DbCmd.USAGE_LINK; return; }
+            final ListCmd.Side a = sd.get(0), b = sd.get(1);
+            if (!a.list() && cmd.equals("MOVE")) { s.error = Words.ListCmdW.MOVE_TO_LIST; return; }
+            if (!a.list() || a.filesOf || b.content || b.filesOf || b.kind == ListCmd.FS) { s.error = Words.DbCmd.USAGE_LINK; return; }
+            if (b.kind == ListCmd.SMART_LIST) { s.error = Words.ListCmdW.INTO_SMART; return; }
+            final boolean move = cmd.equals("MOVE");
+            destructive = move;
+            work = new Work() {
+                @Override public Res run(Store t, Finder f) { return link(t, mode, a, b, move); }
+            };
         } else {
             s.error = Words.ListCmdW.notYet(cmd);
             return;
@@ -10718,8 +10802,8 @@ final class DbListCmd {
     }
 
     /** "ניקוי" שבסוף ההרצה (RunScreen): הרשימות שההרצה יצרה — יוצאות מהמסד (גיבוי לפני). מחזיר את מה שיצא. */
-    static List<String> removeLists(final List<List<String>> paths) {
-        final String mode = mode();
+    static List<String> removeLists(final List<List<String>> paths, String fileMode) {
+        final String mode = fileMode != null ? fileMode : mode();   // מ0.17: האופן של הקובץ ("אופן"), אם נכתב
         final List<String> gone = new ArrayList<String>();
         String r = real(mode, new Work() {
             @Override
@@ -11572,7 +11656,7 @@ import java.util.List;
 
 final class DbTestMode {
 
-    static final String ASSET = "tests/pkudot-masad.vbat", ASSET_CALL = "tests/pkudot-kalul.vbat";
+    static final String ASSET = "tests/pkudot-masad.vbat", ASSET_CALL = "tests/pkudot-kalul.vbat", ASSET_LOAD = "tests/omes-masad.vbat";
 
     private DbTestMode() { }
 
@@ -11599,6 +11683,13 @@ final class DbTestMode {
             } finally {
                 out2.close();
             }
+            final File load = new File(Modes.dirOf(mode), Words.DbCmd.TEST_LOAD_FILE + "." + Batch.EXT);
+            FileOutputStream out3 = new FileOutputStream(load);
+            try {
+                out3.write(Examples.asset(a, ASSET_LOAD).getBytes("UTF-8"));   // מ0.17: בדיקת העומס — על הנתונים האמיתיים
+            } finally {
+                out3.close();
+            }
             long home = DbVerbs.write(a, mode, new DbVerbs.Job() {
                 @Override
                 public long run(Store s, List<String> p) {
@@ -11611,7 +11702,7 @@ final class DbTestMode {
                             }
                         }
                     }, true);
-                    DbFiles.add(s, h[0], Collections.singletonList(f.getAbsolutePath()), null, true);
+                    DbFiles.add(s, h[0], java.util.Arrays.asList(f.getAbsolutePath(), load.getAbsolutePath()), null, true);
                     return h[0];
                 }
             }, null);
@@ -30899,7 +30990,7 @@ public class RunScreen extends Activity {
             @Override
             public void run() {
                 List<String> gone = new ArrayList<String>();
-                if (DbVerbs.active()) gone = DbListCmd.removeLists(made);                // מ0.12: במסד
+                if (DbVerbs.active()) gone = DbListCmd.removeLists(made, plan.sim == null ? null : plan.sim.mode);                // מ0.12: במסד
                 else for (List<String> p : made) {
                     if (Tree.load().find(p) == null) continue;
                     List<String> parent = new ArrayList<String>(p.subList(0, p.size() - 1));
@@ -47078,6 +47169,7 @@ public final class Words {
                 TEST_MODE = "בדיקות מערכת",  // בכונן
                 TEST_FILE = "בדיקת פקודות",  // בכונן
                 TEST_CALL_FILE = "בדיקת כלול",  // בכונן
+                TEST_LOAD_FILE = "בדיקת עומס",  // בכונן
                 TEST_READY = "אופן \"בדיקות מערכת\" — נגיעה ב\"בדיקת פקודות\" מריצה את הבדיקה";
 
         public static String removed(String what) {
@@ -47091,6 +47183,19 @@ public final class Words {
                 VERIFY_DB_ONLY = "ודא — עובדת כשעובדים במסד",
                 VERIFY_USAGE = "צורה: ודא ידנית \"א\" [קיימת | חסרה] [/רשימות:N] [/פריטים:N]",
                 WORD_EXISTS = "קיימת", WORD_MISSING = "חסרה", SW_LISTS = "/רשימות:", SW_ITEMS = "/פריטים:";  // תחביר
+
+        public static final String N_LINK = "קשר",  // תחביר
+                W_LINK = "קישור במסד: אותה רשימה (או פריט) גם במקום נוסף — לא עותק. קשר ידנית \"א\" ידנית \"ב\"",
+                H_LINK_SRC = "מה לקשר: ידנית / חכמה / תוכן ידנית / ידנית \"א\\*.pdf\"", H_LINK_DEST = "לאיזו רשימה ידנית",
+                USAGE_LINK = "צורה: קשר (או MOVE) ידנית \"א\" ידנית \"ב\" · גם חכמה \"א\", תוכן ידנית \"א\", ידנית \"א\\*.pdf\"";
+
+        public static String linked(String what, String to) {
+            return what + " ← קושר גם ל" + to;
+        }
+
+        public static String moved(String what, String to) {
+            return what + " ← הועבר ל" + to;
+        }
 
         public static final String N_MODE = "אופן", N_CALL = "כלול",  // תחביר
                 W_MODE = "מכאן והלאה — הפקודות על המסד של אופן אחר (רק לקובץ הזה; המסך לא מתחלף)",
@@ -47214,7 +47319,7 @@ public final class Words {
 
         public static final String APP_NAME_M = "מנהל קבצים וירטואלי · מ";
         public static final String MENU = "מסד נתונים (מ)";
-        public static final String TITLE = "מסד נתונים · מ0.16";
+        public static final String TITLE = "מסד נתונים · מ0.17";
         /** מ0.9: המראה המוכר. */
         public static final String LIST_GONE = "הרשימה הזו כבר לא קיימת במסד", MENU_ACTIONS = "⚙ מסד: גיבוי, העתקה, בדיקה ופעולות",
                 MENU_OLD = "↩ הצד הישן (לפני המסד)",
@@ -49255,6 +49360,19 @@ final class ImportTests {
         ck("העברה: נכנס ליעד ויצא מהמקור", mv.done == 1 && s.listsOf(f2).equals(Arrays.asList(tb)));
         DbListCmd.Copied cpi = DbListCmd.copyIds(s, Arrays.asList(ta, tb), ta);
         ck("העתקה לפי מספרים: רשימה לא לתוך עצמה (נספרת)", cpi.skipped >= 1 && Words.ListCmdW.INTO_ITSELF.equals(cpi.why));
+
+        // קשר / העבר בפקודה (מ0.17)
+        DbListCmd.Res lr = DbListCmd.link(s, M, sides("LINK ידנית \"יעד-א/פנימית\" ידנית \"ספרים\"")[0],
+                sides("LINK ידנית \"יעד-א/פנימית\" ידנית \"ספרים\"")[1], false);
+        ck("קשר: אותה רשימה גם ביעד", lr.error == null && s.contains(books, lst) && s.contains(ta, lst));
+        DbListCmd.Res mr = DbListCmd.link(s, M, sides("MOVE ידנית \"יעד-א/פנימית\" ידנית \"יעד-ב\"")[0],
+                sides("MOVE ידנית \"יעד-א/פנימית\" ידנית \"יעד-ב\"")[1], true);
+        ck("העבר: יוצאת מהרשימה שמעליה (כבר ביעד — לא נכנסה, ולכן גם לא יצאה)", mr.error == null && s.contains(ta, lst));
+        long lone = s.createList("לבד", ta);
+        DbListCmd.link(s, M, sides("MOVE ידנית \"יעד-א/לבד\" ידנית \"יעד-ב\"")[0], sides("MOVE ידנית \"יעד-א/לבד\" ידנית \"יעד-ב\"")[1], true);
+        ck("העבר: נכנסת ליעד ויוצאת מהמקור", s.listsOf(lone).equals(Arrays.asList(tb)));
+        ck("העבר/קשר: לא לתוך עצמה", Words.ListCmdW.INTO_ITSELF.equals(DbListCmd.link(s, M, sides("LINK ידנית \"יעד-ב\" ידנית \"יעד-ב/לבד\"")[0],
+                sides("LINK ידנית \"יעד-ב\" ידנית \"יעד-ב/לבד\"")[1], false).error));
 
         // ודא (מ0.14)
         ListCmd.Side vb = sides("VERIFY ידנית \"ספרים\" קיימת")[0];
@@ -54401,7 +54519,7 @@ public final class Tests {
     /** 1.22.5: ההגדרה האחת — שלמה, תואמת למנוע, וכל פרמטר עם שם והסבר. */
     private static void v1225() {
         check("1.22.5: פקודות הקבצים — אותן ובאותו סדר (מ0.14: ודא)",
-                java.util.Arrays.equals(BatchLine.COMMANDS, new String[]{"COPY", "MOVE", "DEL", "REN", "MD", "RD", "COMP", "VERIFY", "MODE", "CALL", "START", "ECHO", "REM"}));
+                java.util.Arrays.equals(BatchLine.COMMANDS, new String[]{"COPY", "MOVE", "DEL", "REN", "MD", "RD", "COMP", "LINK", "VERIFY", "MODE", "CALL", "START", "ECHO", "REM"}));
         check("1.22.5: שמות נרדפים", Commands.canonical("MKDIR").equals("MD") && Commands.canonical("rmdir").equals("RD")
                 && Commands.canonical("ERASE").equals("DEL") && Commands.canonical("RENAME").equals("REN")
                 && Commands.canonical("copy").equals("COPY") && Commands.canonical("FORMAT").equals("FORMAT")

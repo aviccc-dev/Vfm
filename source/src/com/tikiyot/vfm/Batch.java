@@ -161,6 +161,8 @@ final class Batch {
     static final String VERIFY = "VERIFY";
     /** מ0.15: אופן — מכאן והלאה הפקודות במסד של אופן אחר; CALL — שורות של קובץ אחר במקום השורה. */
     static final String MODE = "MODE", CALL = "CALL";
+    /** מ0.17: קישור — אותה רשימה / אותו פריט גם במקום נוסף (במסד). */
+    static final String LINK = "LINK";
     /** מ0.15: עומק מרבי של CALL בתוך CALL. */
     static final int CALL_DEPTH = 5;
     /** הגבול לסבבים בלולאה, ולשורות אחרי הפריסה. */

@@ -474,6 +474,49 @@ final class DbListCmd {
         return sb.toString();
     }
 
+    /**
+     * מ0.17: LINK (קשר) — אותו פריט גם ביעד (רשימה משותפת); MOVE (העבר) — נכנס ליעד ויוצא מהמקום שלו. המקור: רשימה
+     * (מהרשימה שמעליה, או מהבית), חכמה, תוכן של רשימה, או קבצים לפי תבנית — כמו ב-COPY.
+     */
+    static Res link(Store s, String mode, ListCmd.Side a, ListCmd.Side b, boolean move) {
+        long dest = b.home ? Importer.home(s) : b.mask != null ? 0 : DbPaths.find(s, mode, b.path);
+        if (dest == 0) return Res.err(b.home ? Words.DbCmd.NO_HOME : Words.ListCmdW.noList(b.raw));
+        List<Long> ids = new ArrayList<Long>();
+        long from;
+        String label;
+        if (a.kind == ListCmd.SMART_LIST) {
+            long[] r = smart(s, mode, a);
+            if (r == null) return Res.err(Words.ListCmdW.noSmart(a.raw));
+            ids.add(r[1]);
+            from = r[0];
+            label = Words.ListCmdW.smartList(a.label());
+        } else {
+            long src = list(s, mode, a);
+            if (src == 0) return Res.err(a.home ? Words.DbCmd.NO_HOME : Words.ListCmdW.noList(a.raw));
+            if (a.home || a.content || a.mask != null) {
+                for (Store.Member m : s.members(src)) {
+                    if (a.mask != null) {
+                        String p = pathOf(s, m.item);
+                        if (p == null || !Batch.wild(a.mask, new File(p).getName())) continue;
+                    }
+                    ids.add(m.item.id);
+                }
+                from = src;
+                label = a.mask != null ? Words.files(ids.size()) : a.home ? Words.DbCmd.homeContent(ids.size())
+                        : Words.ListCmdW.contentOf(ids.size(), a.label());
+            } else {
+                if (src == dest || s.contains(src, dest)) return Res.err(Words.ListCmdW.INTO_ITSELF);
+                List<String> up = new ArrayList<String>(a.path.subList(0, a.path.size() - 1));
+                from = up.isEmpty() ? Importer.home(s) : DbPaths.find(s, mode, up);
+                ids.add(src);
+                label = Words.ListCmdW.list(a.label());
+            }
+        }
+        Copied c = move ? moveTo(s, ids, from, dest) : linkInto(s, ids, dest);
+        return Res.ok((move ? Words.DbCmd.moved(label, b.label()) : Words.DbCmd.linked(label, b.label())) + " · "
+                + Words.ListCmdW.copied(c.done, c.skipped, c.why, b.label()) + nowIn(s, dest));
+    }
+
     /** COMP: לפי המסלולים; /תנאים — גם התנאים של שתי חכמות. */
     static Res comp(Store s, String mode, ListCmd.Side a, ListCmd.Side b, boolean conds, Finder f) {
         String[] err = {null};
@@ -635,10 +678,17 @@ final class DbListCmd {
             if (r.error != null) s.error = r.error;
             else s.describe = Words.DbCmd.inDb(r.text);
             return;
-        } else if (cmd.equals("MOVE")) {
-            boolean toList = sd.size() == 2 && sd.get(1).list();
-            s.error = toList && !sd.get(0).list() ? Words.ListCmdW.MOVE_TO_LIST : Words.ListCmdW.MOVE_LATER;
-            return;
+        } else if (cmd.equals("MOVE") || cmd.equals(Batch.LINK)) {           // מ0.17: העברה וקישור — במסד
+            if (sd.size() != 2) { s.error = Words.DbCmd.USAGE_LINK; return; }
+            final ListCmd.Side a = sd.get(0), b = sd.get(1);
+            if (!a.list() && cmd.equals("MOVE")) { s.error = Words.ListCmdW.MOVE_TO_LIST; return; }
+            if (!a.list() || a.filesOf || b.content || b.filesOf || b.kind == ListCmd.FS) { s.error = Words.DbCmd.USAGE_LINK; return; }
+            if (b.kind == ListCmd.SMART_LIST) { s.error = Words.ListCmdW.INTO_SMART; return; }
+            final boolean move = cmd.equals("MOVE");
+            destructive = move;
+            work = new Work() {
+                @Override public Res run(Store t, Finder f) { return link(t, mode, a, b, move); }
+            };
         } else {
             s.error = Words.ListCmdW.notYet(cmd);
             return;
@@ -792,8 +842,8 @@ final class DbListCmd {
     }
 
     /** "ניקוי" שבסוף ההרצה (RunScreen): הרשימות שההרצה יצרה — יוצאות מהמסד (גיבוי לפני). מחזיר את מה שיצא. */
-    static List<String> removeLists(final List<List<String>> paths) {
-        final String mode = mode();
+    static List<String> removeLists(final List<List<String>> paths, String fileMode) {
+        final String mode = fileMode != null ? fileMode : mode();   // מ0.17: האופן של הקובץ ("אופן"), אם נכתב
         final List<String> gone = new ArrayList<String>();
         String r = real(mode, new Work() {
             @Override

@@ -511,6 +511,19 @@ final class ImportTests {
         DbListCmd.Copied cpi = DbListCmd.copyIds(s, Arrays.asList(ta, tb), ta);
         ck("העתקה לפי מספרים: רשימה לא לתוך עצמה (נספרת)", cpi.skipped >= 1 && Words.ListCmdW.INTO_ITSELF.equals(cpi.why));
 
+        // קשר / העבר בפקודה (מ0.17)
+        DbListCmd.Res lr = DbListCmd.link(s, M, sides("LINK ידנית \"יעד-א/פנימית\" ידנית \"ספרים\"")[0],
+                sides("LINK ידנית \"יעד-א/פנימית\" ידנית \"ספרים\"")[1], false);
+        ck("קשר: אותה רשימה גם ביעד", lr.error == null && s.contains(books, lst) && s.contains(ta, lst));
+        DbListCmd.Res mr = DbListCmd.link(s, M, sides("MOVE ידנית \"יעד-א/פנימית\" ידנית \"יעד-ב\"")[0],
+                sides("MOVE ידנית \"יעד-א/פנימית\" ידנית \"יעד-ב\"")[1], true);
+        ck("העבר: יוצאת מהרשימה שמעליה (כבר ביעד — לא נכנסה, ולכן גם לא יצאה)", mr.error == null && s.contains(ta, lst));
+        long lone = s.createList("לבד", ta);
+        DbListCmd.link(s, M, sides("MOVE ידנית \"יעד-א/לבד\" ידנית \"יעד-ב\"")[0], sides("MOVE ידנית \"יעד-א/לבד\" ידנית \"יעד-ב\"")[1], true);
+        ck("העבר: נכנסת ליעד ויוצאת מהמקור", s.listsOf(lone).equals(Arrays.asList(tb)));
+        ck("העבר/קשר: לא לתוך עצמה", Words.ListCmdW.INTO_ITSELF.equals(DbListCmd.link(s, M, sides("LINK ידנית \"יעד-ב\" ידנית \"יעד-ב/לבד\"")[0],
+                sides("LINK ידנית \"יעד-ב\" ידנית \"יעד-ב/לבד\"")[1], false).error));
+
         // ודא (מ0.14)
         ListCmd.Side vb = sides("VERIFY ידנית \"ספרים\" קיימת")[0];
         String[] fd = {""};

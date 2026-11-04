@@ -15,7 +15,7 @@ import java.util.List;
 
 final class DbTestMode {
 
-    static final String ASSET = "tests/pkudot-masad.vbat", ASSET_CALL = "tests/pkudot-kalul.vbat";
+    static final String ASSET = "tests/pkudot-masad.vbat", ASSET_CALL = "tests/pkudot-kalul.vbat", ASSET_LOAD = "tests/omes-masad.vbat";
 
     private DbTestMode() { }
 
@@ -42,6 +42,13 @@ final class DbTestMode {
             } finally {
                 out2.close();
             }
+            final File load = new File(Modes.dirOf(mode), Words.DbCmd.TEST_LOAD_FILE + "." + Batch.EXT);
+            FileOutputStream out3 = new FileOutputStream(load);
+            try {
+                out3.write(Examples.asset(a, ASSET_LOAD).getBytes("UTF-8"));   // מ0.17: בדיקת העומס — על הנתונים האמיתיים
+            } finally {
+                out3.close();
+            }
             long home = DbVerbs.write(a, mode, new DbVerbs.Job() {
                 @Override
                 public long run(Store s, List<String> p) {
@@ -54,7 +61,7 @@ final class DbTestMode {
                             }
                         }
                     }, true);
-                    DbFiles.add(s, h[0], Collections.singletonList(f.getAbsolutePath()), null, true);
+                    DbFiles.add(s, h[0], java.util.Arrays.asList(f.getAbsolutePath(), load.getAbsolutePath()), null, true);
                     return h[0];
                 }
             }, null);
