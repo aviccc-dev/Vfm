@@ -66,6 +66,8 @@ final class Batch {
         String target;
         /** 1.27.0: MD ידנית — הרשימה (לניקוי שבסוף, ולאזהרה כשכבר קיימת). */
         List<String> listPath;
+        /** מ0.14: ודא — עבר (TRUE) / נכשל (FALSE) בהרצה; null — אינה ודא, או לא רצה. */
+        Boolean verified;
 
         /** "12" · בלולאה — "12 (סבב 3)". */
         String label() {
@@ -155,6 +157,8 @@ final class Batch {
     static final String MEASURE = "מדידה", LOOP = "חזור", LOOP_END = "סוף", V_ROUND = "סבב";   // תחביר
     /** 1.28.0: "בדיקה" — שורת כותרת: הקובץ רץ במסך ההרצה, בשלבים ובאישור. בלעדיה — רץ מיד. */
     static final String CHECK = "בדיקה";   // תחביר
+    /** מ0.14: ודא — בדיקה בתוך קובץ פקודות (✅ / ❌), לא עוצרת. */
+    static final String VERIFY = "VERIFY";
     /** הגבול לסבבים בלולאה, ולשורות אחרי הפריסה. */
     static final int MAX_ROUNDS = 1000, MAX_LINES = 50000;
     /** 1.13.0: שלב של פקודת פתיחה בעברית (Verbs). */
@@ -740,6 +744,15 @@ final class Batch {
 
     /** 1.24.0: שורה עם רשימה — הצד שבכונן מפוענח כאן (מסלול, תבנית, סינון), והשאר — ListCmd. */
     private static void planList(Step s, String cmd, ListCmd.Parsed lp, List<String> sw, File here, Map<String, String> vars, Sim sim) {
+        if (cmd.equals(VERIFY)) {                                               // מ0.14: ודא — הצד הראשון רשימה, השאר תנאים
+            if (!DbVerbs.active()) { s.error = Words.DbCmd.VERIFY_DB_ONLY; return; }
+            List<String> conds = new ArrayList<String>(sw);
+            for (int i = 1; i < lp.sides.size(); i++) conds.add(lp.sides.get(i).raw);
+            ListCmd.Side a = lp.sides.get(0);
+            if (a.list()) ListCmd.resolve(a, vars);
+            DbListCmd.planVerify(s, a, conds, sim);
+            return;
+        }
         List<String> fsFiles = new ArrayList<String>();
         File fsDest = null;
         for (int i = 0; i < lp.sides.size(); i++) {
@@ -1487,6 +1500,9 @@ final class Batch {
             report.add(Words.Cmd.line(s.label(), out));
         }
         if (plan.measure) measured(plan, report, (System.nanoTime() - all0) / 1000000);
+        int ok = 0, bad = 0;                                                     // מ0.14: ודא — כמה עברו וכמה נכשלו
+        for (Step s : plan.steps) if (s.verified != null) { if (s.verified) ok++; else bad++; }
+        if (ok + bad > 0) report.add(Words.DbCmd.verifySummary(ok, bad));
         return report;
     }
 

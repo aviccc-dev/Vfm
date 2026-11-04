@@ -497,6 +497,22 @@ final class ImportTests {
         ck("RD במסד: רשימה שגם במקום אחר — רק יוצאת מכאן", r.error == null && s.item(hal) == null && s.item(shared) != null
                 && s.listsOf(shared).equals(Arrays.asList(home)));
 
+        // ודא (מ0.14)
+        ListCmd.Side vb = sides("VERIFY ידנית \"ספרים\" קיימת")[0];
+        String[] fd = {""};
+        ck("ודא: קיימת — עוברת", DbListCmd.verify(s, M, vb, DbListCmd.expect(Arrays.asList("קיימת")), fd));
+        ck("ודא: חסרה על קיימת — נכשלת, ואומרת מה בפועל", !DbListCmd.verify(s, M, vb, DbListCmd.expect(Arrays.asList("חסרה")), fd)
+                && fd[0].equals(Words.DbCmd.WORD_EXISTS));
+        DbCount bc = DbCount.of(s, books, null);
+        ck("ודא: מספרים נכונים — עוברת; שגויים — נכשלת", DbListCmd.verify(s, M, vb, DbListCmd.expect(Arrays.asList("/רשימות:" + bc.lists, "/פריטים:" + bc.items)), fd)
+                && !DbListCmd.verify(s, M, vb, DbListCmd.expect(Arrays.asList("/פריטים:" + (bc.items + 1))), fd));
+        ListCmd.Side vn = sides("VERIFY ידנית \"אין כזו\" חסרה")[0];
+        ck("ודא: חסרה על חסרה — עוברת; בלי תנאי — קיימת", DbListCmd.verify(s, M, vn, DbListCmd.expect(Arrays.asList("חסרה")), fd)
+                && !DbListCmd.verify(s, M, vn, DbListCmd.expect(new ArrayList<String>()), fd));
+        ck("ודא: תנאי לא מוכר / מספר שגוי — צורה", DbListCmd.expect(Arrays.asList("משהו")).error != null
+                && DbListCmd.expect(Arrays.asList("/פריטים:x")).error != null && DbListCmd.expect(Arrays.asList("חסרה", "/רשימות:1")).error != null);
+        ck("ודא: השם בעברית מוכר כפקודה", Batch.VERIFY.equals(Commands.canonical("ודא")));
+
         long lists = s.lists().size();
         MemStore c = DbListCmd.copyOf(s);
         ck("העותק להדמיה: אותן רשימות, אותם קבצים, אותו בית, אותם מקורות", c.lists().size() == lists && c.findFile("/s/d.txt") != 0

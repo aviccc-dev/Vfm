@@ -2259,6 +2259,26 @@ public final class Words {
             return what + " — יצא מהרשימות (לפני הביצוע — גיבוי של המסד); הקבצים בכונן לא נוגעים";
         }
 
+        public static final String N_VERIFY = "ודא",  // תחביר
+                W_VERIFY = "בדיקה בתוך קובץ פקודות: ✅ או ❌, ולא עוצרת. ודא ידנית \"א\" קיימת · חסרה · /רשימות:2 /פריטים:1",
+                H_VERIFY = "הרשימה שבודקים (ידנית \"א\" או חכמה \"א\")",
+                P_VERIFY = "מה לוודא", H_VERIFY_WHAT = "קיימת · חסרה · /רשימות:N · /פריטים:N (כמו \"עכשיו בה\" בדוח)",
+                VERIFY_DB_ONLY = "ודא — עובדת כשעובדים במסד",
+                VERIFY_USAGE = "צורה: ודא ידנית \"א\" [קיימת | חסרה] [/רשימות:N] [/פריטים:N]",
+                WORD_EXISTS = "קיימת", WORD_MISSING = "חסרה", SW_LISTS = "/רשימות:", SW_ITEMS = "/פריטים:";  // תחביר
+
+        public static String verifySummary(int ok, int bad) {
+            return (bad == 0 ? "✅" : "❌") + " ודא: " + ok + " עברו · " + bad + " נכשלו";
+        }
+
+        public static String verifyWill(String what) {
+            return "יבדוק: " + what;
+        }
+
+        public static String verifyResult(boolean ok, String what, String found) {
+            return (ok ? "✅ " : "❌ ") + what + (ok ? "" : " — בפועל: " + found);
+        }
+
         public static final String EDIT = "✎ עריכה", ICON = "צלמית",
                 FILE_NO_EDIT = "קובץ — אין מה לערוך כאן; שינוי שם הקובץ עצמו — במסכי הקבצים";
 
@@ -2341,7 +2361,7 @@ public final class Words {
 
         public static final String APP_NAME_M = "מנהל קבצים וירטואלי · מ";
         public static final String MENU = "מסד נתונים (מ)";
-        public static final String TITLE = "מסד נתונים · מ0.13.1";
+        public static final String TITLE = "מסד נתונים · מ0.14";
         /** מ0.9: המראה המוכר. */
         public static final String LIST_GONE = "הרשימה הזו כבר לא קיימת במסד", MENU_ACTIONS = "⚙ מסד: גיבוי, העתקה, בדיקה ופעולות",
                 MENU_OLD = "↩ הצד הישן (לפני המסד)",

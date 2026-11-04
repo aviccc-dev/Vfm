@@ -602,6 +602,98 @@ final class DbListCmd {
         };
     }
 
+    // ---------- מ0.14: ודא ----------
+
+    /** מה לוודא: קיימת/חסרה, ומספרי רשימות ופריטים (-1 — לא נבדק). */
+    static final class Expect {
+        Boolean exists;
+        long lists = -1, items = -1;
+        String error;
+
+        String text(ListCmd.Side a) {
+            StringBuilder sb = new StringBuilder(a.label());
+            if (exists != null) sb.append(' ').append(exists ? Words.DbCmd.WORD_EXISTS : Words.DbCmd.WORD_MISSING);
+            if (lists >= 0) sb.append(' ').append(Words.DbCmd.SW_LISTS).append(lists);
+            if (items >= 0) sb.append(' ').append(Words.DbCmd.SW_ITEMS).append(items);
+            return sb.toString();
+        }
+    }
+
+    static Expect expect(List<String> conds) {
+        Expect e = new Expect();
+        for (String c : conds) {
+            String t = c.trim();
+            try {
+                if (t.equals(Words.DbCmd.WORD_EXISTS)) e.exists = Boolean.TRUE;
+                else if (t.equals(Words.DbCmd.WORD_MISSING)) e.exists = Boolean.FALSE;
+                else if (t.startsWith(Words.DbCmd.SW_LISTS)) e.lists = Long.parseLong(t.substring(Words.DbCmd.SW_LISTS.length()).trim());
+                else if (t.startsWith(Words.DbCmd.SW_ITEMS)) e.items = Long.parseLong(t.substring(Words.DbCmd.SW_ITEMS.length()).trim());
+                else e.error = Words.DbCmd.VERIFY_USAGE;
+            } catch (NumberFormatException x) {
+                e.error = Words.DbCmd.VERIFY_USAGE;
+            }
+        }
+        if (e.exists == null && e.lists < 0 && e.items < 0) e.exists = Boolean.TRUE;   // בלי תנאי — קיימת
+        if (Boolean.FALSE.equals(e.exists) && (e.lists >= 0 || e.items >= 0)) e.error = Words.DbCmd.VERIFY_USAGE;
+        return e;
+    }
+
+    /** הבדיקה עצמה על המסד: Res.ok — עבר; Res.err — נכשל (הטקסט: מה נמצא בפועל). */
+    static boolean verify(Store s, String mode, ListCmd.Side a, Expect e, String[] found) {
+        long id = a.kind == ListCmd.SMART_LIST ? (smart(s, mode, a) == null ? 0 : smart(s, mode, a)[1]) : list(s, mode, a);
+        if (id == 0) {
+            found[0] = Words.DbCmd.WORD_MISSING;
+            return Boolean.FALSE.equals(e.exists);
+        }
+        if (Boolean.FALSE.equals(e.exists)) {
+            found[0] = Words.DbCmd.WORD_EXISTS;
+            return false;
+        }
+        DbCount c = a.kind == ListCmd.SMART_LIST ? null : DbCount.of(s, id, null);
+        long lists = c == null ? 0 : c.lists, items = c == null ? 0 : c.items;
+        found[0] = Words.DbCmd.SW_LISTS + lists + " " + Words.DbCmd.SW_ITEMS + items;
+        return (e.lists < 0 || e.lists == lists) && (e.items < 0 || e.items == items);
+    }
+
+    /** שורת ודא: בתכנון — על העותק (מה צפוי), בהרצה — על המסד; ❌ לא עוצרת. */
+    static void planVerify(final Batch.Step s, final ListCmd.Side a, List<String> conds, Batch.Sim sim) {
+        if (!a.list() || a.content || a.filesOf || a.mask != null) { s.error = Words.DbCmd.VERIFY_USAGE; return; }
+        final Expect e = expect(conds);
+        if (e.error != null) { s.error = e.error; return; }
+        final String mode = mode();
+        Store db;
+        try {
+            db = sim(sim, mode);
+        } catch (Throwable t) {
+            Log.e("DbListCmd.verify", t);
+            s.error = Words.Db.failed(String.valueOf(t.getMessage()));
+            return;
+        }
+        final String what = e.text(a);
+        String[] found = {""};
+        boolean now = verify(db, mode, a, e, found);
+        s.target = a.label();
+        s.describe = Words.DbCmd.verifyWill(what) + " · " + Words.DbCmd.inDb(Words.DbCmd.verifyResult(now, what, found[0]));
+        s.op = new ListCmd.Op() {
+            @Override
+            public String run(Library lib) {
+                SqlStore st = null;
+                try {
+                    st = SqlStore.openReadOnly(DbScreen.dbFile(DbListScreen.app, mode));
+                    String[] f = {""};
+                    boolean ok = verify(st, mode, a, e, f);
+                    s.verified = ok;
+                    return Words.DbCmd.verifyResult(ok, what, f[0]);
+                } catch (Throwable t) {
+                    s.verified = Boolean.FALSE;
+                    return Words.Db.failed(String.valueOf(t.getMessage()));
+                } finally {
+                    if (st != null) st.close();
+                }
+            }
+        };
+    }
+
     /** העותק בזיכרון — פעם אחת לכל קובץ פקודות (השורות הבאות רואות מה שהקודמות עשו). */
     private static Store sim(Batch.Sim sim, String mode) {
         if (sim.db != null) return sim.db;

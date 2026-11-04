@@ -882,18 +882,26 @@ MOVE הורדות\*.epub לשלוח
 @למה הרשימה הזו לא נמחקת ולא משתנה ב"חזרה לברירת מחדל" — כל השאר חוזר להתחלה
 ===== קובץ: assets/tests/pkudot-masad.vbat =====
 בדיקה
-ECHO בדיקת פקודות הרשימות במסד. הכול נעשה בתוך הרשימה "בדיקת פקודות". בהתחלה — מה שנשאר מהפעם הקודמת נמחק.
+ECHO בדיקת פקודות הרשימות במסד. הכול נעשה בתוך הרשימה "בדיקת פקודות". בהתחלה — מה שנשאר מהפעם הקודמת נמחק. כל "ודא" מסמן ✅ או ❌, ובסוף — כמה עברו.
 RD ידנית "בדיקת פקודות"
+ודא ידנית "בדיקת פקודות" חסרה
 MD ידנית "בדיקת פקודות/א/פנימית"
 MD ידנית "בדיקת פקודות/ב"
 MD ידנית "בדיקת פקודות/א"
+ודא ידנית "בדיקת פקודות" /רשימות:3 /פריטים:0
 COPY תוכן ידנית "*" ידנית "בדיקת פקודות/א/פנימית"
+ודא ידנית "בדיקת פקודות/א/פנימית" /רשימות:0 /פריטים:1
 COPY ידנית "בדיקת פקודות/א" ידנית "בדיקת פקודות/ב"
+ודא ידנית "בדיקת פקודות/ב" /רשימות:2 /פריטים:1
 COPY ידנית "בדיקת פקודות/א" ידנית "בדיקת פקודות/ב"
+ודא ידנית "בדיקת פקודות/ב" /רשימות:2 /פריטים:1
 COMP ידנית "בדיקת פקודות/א" ידנית "בדיקת פקודות/ב"
 RD תוכן ידנית "בדיקת פקודות/ב/א"
+ודא ידנית "בדיקת פקודות/ב/א" /רשימות:0 /פריטים:0
 COMP ידנית "בדיקת פקודות/א" ידנית "בדיקת פקודות/ב"
 RD ידנית "בדיקת פקודות/ב/א"
+ודא ידנית "בדיקת פקודות/ב/א" חסרה
+ודא ידנית "בדיקת פקודות/א/פנימית" קיימת
 ECHO סוף. הרשימה "בדיקת פקודות" נשארת לראות (בבית): א, ובתוכה פנימית עם קובץ הבדיקה; ב — ריקה. בהרצה הבאה — נמחקת ונבנית מחדש. "ניקוי" — מוחק אותה עכשיו.
 ===== קובץ: build/build.sh =====
 #!/bin/bash
@@ -948,7 +956,7 @@ cd $S; rm -rf out gen bld
 [ "$S" != "$DIR" ] && rm -rf $S
 ls -la $OUT
 ===== קובץ: build/m-version.txt =====
-24 מ0.13.1
+25 מ0.14
 ===== קובץ: build/test.sh =====
 #!/bin/bash
 # בדיקות על המחשב (80). יוצא בכישלון אם בדיקה אחת נכשלה — ואז build.sh לא בונה.
@@ -3486,6 +3494,8 @@ final class Batch {
         String target;
         /** 1.27.0: MD ידנית — הרשימה (לניקוי שבסוף, ולאזהרה כשכבר קיימת). */
         List<String> listPath;
+        /** מ0.14: ודא — עבר (TRUE) / נכשל (FALSE) בהרצה; null — אינה ודא, או לא רצה. */
+        Boolean verified;
 
         /** "12" · בלולאה — "12 (סבב 3)". */
         String label() {
@@ -3575,6 +3585,8 @@ final class Batch {
     static final String MEASURE = "מדידה", LOOP = "חזור", LOOP_END = "סוף", V_ROUND = "סבב";   // תחביר
     /** 1.28.0: "בדיקה" — שורת כותרת: הקובץ רץ במסך ההרצה, בשלבים ובאישור. בלעדיה — רץ מיד. */
     static final String CHECK = "בדיקה";   // תחביר
+    /** מ0.14: ודא — בדיקה בתוך קובץ פקודות (✅ / ❌), לא עוצרת. */
+    static final String VERIFY = "VERIFY";
     /** הגבול לסבבים בלולאה, ולשורות אחרי הפריסה. */
     static final int MAX_ROUNDS = 1000, MAX_LINES = 50000;
     /** 1.13.0: שלב של פקודת פתיחה בעברית (Verbs). */
@@ -4160,6 +4172,15 @@ final class Batch {
 
     /** 1.24.0: שורה עם רשימה — הצד שבכונן מפוענח כאן (מסלול, תבנית, סינון), והשאר — ListCmd. */
     private static void planList(Step s, String cmd, ListCmd.Parsed lp, List<String> sw, File here, Map<String, String> vars, Sim sim) {
+        if (cmd.equals(VERIFY)) {                                               // מ0.14: ודא — הצד הראשון רשימה, השאר תנאים
+            if (!DbVerbs.active()) { s.error = Words.DbCmd.VERIFY_DB_ONLY; return; }
+            List<String> conds = new ArrayList<String>(sw);
+            for (int i = 1; i < lp.sides.size(); i++) conds.add(lp.sides.get(i).raw);
+            ListCmd.Side a = lp.sides.get(0);
+            if (a.list()) ListCmd.resolve(a, vars);
+            DbListCmd.planVerify(s, a, conds, sim);
+            return;
+        }
         List<String> fsFiles = new ArrayList<String>();
         File fsDest = null;
         for (int i = 0; i < lp.sides.size(); i++) {
@@ -4907,6 +4928,9 @@ final class Batch {
             report.add(Words.Cmd.line(s.label(), out));
         }
         if (plan.measure) measured(plan, report, (System.nanoTime() - all0) / 1000000);
+        int ok = 0, bad = 0;                                                     // מ0.14: ודא — כמה עברו וכמה נכשלו
+        for (Step s : plan.steps) if (s.verified != null) { if (s.verified) ok++; else bad++; }
+        if (ok + bad > 0) report.add(Words.DbCmd.verifySummary(ok, bad));
         return report;
     }
 
@@ -8325,6 +8349,9 @@ final class Commands {
                     hidden(),
                     sw(Batch.SW_LIST, null, Type.LIST, Words.Def.P_LIST, Words.Def.H_LIST)),
                     "COMP " + Batch.SW_LIST + "<" + Words.Def.P_LIST + "> <" + Words.Def.P_DEST + ">"),
+            new Def(Batch.VERIFY, Words.DbCmd.N_VERIFY, new String[]{Words.DbCmd.N_VERIFY}, Family.FILE, Words.DbCmd.W_VERIFY, list(
+                    pos(Type.LIST, Words.Def.P_LIST, Words.DbCmd.H_VERIFY),
+                    pos(Type.TEXT, Words.DbCmd.P_VERIFY, Words.DbCmd.H_VERIFY_WHAT)), null),
             new Def("START", Words.Def.N_START, null, Family.FILE, Words.Def.W_START,
                     list(pos(Type.PATH, Words.Def.P_WHAT_OPEN, Words.Def.H_START, Words.Def.U_START)), null),
             new Def("ECHO", Words.Def.N_ECHO, null, Family.FILE, Words.Def.W_ECHO, list(pos(Type.TEXT, Words.Def.P_TEXT, Words.Def.H_TEXT)), null),
@@ -10397,6 +10424,98 @@ final class DbListCmd {
         final boolean before = destructive;
         s.op = new ListCmd.Op() {
             @Override public String run(Library lib) { return real(mode, w, before, lib); }
+        };
+    }
+
+    // ---------- מ0.14: ודא ----------
+
+    /** מה לוודא: קיימת/חסרה, ומספרי רשימות ופריטים (-1 — לא נבדק). */
+    static final class Expect {
+        Boolean exists;
+        long lists = -1, items = -1;
+        String error;
+
+        String text(ListCmd.Side a) {
+            StringBuilder sb = new StringBuilder(a.label());
+            if (exists != null) sb.append(' ').append(exists ? Words.DbCmd.WORD_EXISTS : Words.DbCmd.WORD_MISSING);
+            if (lists >= 0) sb.append(' ').append(Words.DbCmd.SW_LISTS).append(lists);
+            if (items >= 0) sb.append(' ').append(Words.DbCmd.SW_ITEMS).append(items);
+            return sb.toString();
+        }
+    }
+
+    static Expect expect(List<String> conds) {
+        Expect e = new Expect();
+        for (String c : conds) {
+            String t = c.trim();
+            try {
+                if (t.equals(Words.DbCmd.WORD_EXISTS)) e.exists = Boolean.TRUE;
+                else if (t.equals(Words.DbCmd.WORD_MISSING)) e.exists = Boolean.FALSE;
+                else if (t.startsWith(Words.DbCmd.SW_LISTS)) e.lists = Long.parseLong(t.substring(Words.DbCmd.SW_LISTS.length()).trim());
+                else if (t.startsWith(Words.DbCmd.SW_ITEMS)) e.items = Long.parseLong(t.substring(Words.DbCmd.SW_ITEMS.length()).trim());
+                else e.error = Words.DbCmd.VERIFY_USAGE;
+            } catch (NumberFormatException x) {
+                e.error = Words.DbCmd.VERIFY_USAGE;
+            }
+        }
+        if (e.exists == null && e.lists < 0 && e.items < 0) e.exists = Boolean.TRUE;   // בלי תנאי — קיימת
+        if (Boolean.FALSE.equals(e.exists) && (e.lists >= 0 || e.items >= 0)) e.error = Words.DbCmd.VERIFY_USAGE;
+        return e;
+    }
+
+    /** הבדיקה עצמה על המסד: Res.ok — עבר; Res.err — נכשל (הטקסט: מה נמצא בפועל). */
+    static boolean verify(Store s, String mode, ListCmd.Side a, Expect e, String[] found) {
+        long id = a.kind == ListCmd.SMART_LIST ? (smart(s, mode, a) == null ? 0 : smart(s, mode, a)[1]) : list(s, mode, a);
+        if (id == 0) {
+            found[0] = Words.DbCmd.WORD_MISSING;
+            return Boolean.FALSE.equals(e.exists);
+        }
+        if (Boolean.FALSE.equals(e.exists)) {
+            found[0] = Words.DbCmd.WORD_EXISTS;
+            return false;
+        }
+        DbCount c = a.kind == ListCmd.SMART_LIST ? null : DbCount.of(s, id, null);
+        long lists = c == null ? 0 : c.lists, items = c == null ? 0 : c.items;
+        found[0] = Words.DbCmd.SW_LISTS + lists + " " + Words.DbCmd.SW_ITEMS + items;
+        return (e.lists < 0 || e.lists == lists) && (e.items < 0 || e.items == items);
+    }
+
+    /** שורת ודא: בתכנון — על העותק (מה צפוי), בהרצה — על המסד; ❌ לא עוצרת. */
+    static void planVerify(final Batch.Step s, final ListCmd.Side a, List<String> conds, Batch.Sim sim) {
+        if (!a.list() || a.content || a.filesOf || a.mask != null) { s.error = Words.DbCmd.VERIFY_USAGE; return; }
+        final Expect e = expect(conds);
+        if (e.error != null) { s.error = e.error; return; }
+        final String mode = mode();
+        Store db;
+        try {
+            db = sim(sim, mode);
+        } catch (Throwable t) {
+            Log.e("DbListCmd.verify", t);
+            s.error = Words.Db.failed(String.valueOf(t.getMessage()));
+            return;
+        }
+        final String what = e.text(a);
+        String[] found = {""};
+        boolean now = verify(db, mode, a, e, found);
+        s.target = a.label();
+        s.describe = Words.DbCmd.verifyWill(what) + " · " + Words.DbCmd.inDb(Words.DbCmd.verifyResult(now, what, found[0]));
+        s.op = new ListCmd.Op() {
+            @Override
+            public String run(Library lib) {
+                SqlStore st = null;
+                try {
+                    st = SqlStore.openReadOnly(DbScreen.dbFile(DbListScreen.app, mode));
+                    String[] f = {""};
+                    boolean ok = verify(st, mode, a, e, f);
+                    s.verified = ok;
+                    return Words.DbCmd.verifyResult(ok, what, f[0]);
+                } catch (Throwable t) {
+                    s.verified = Boolean.FALSE;
+                    return Words.Db.failed(String.valueOf(t.getMessage()));
+                } finally {
+                    if (st != null) st.close();
+                }
+            }
         };
     }
 
@@ -46771,6 +46890,26 @@ public final class Words {
             return what + " — יצא מהרשימות (לפני הביצוע — גיבוי של המסד); הקבצים בכונן לא נוגעים";
         }
 
+        public static final String N_VERIFY = "ודא",  // תחביר
+                W_VERIFY = "בדיקה בתוך קובץ פקודות: ✅ או ❌, ולא עוצרת. ודא ידנית \"א\" קיימת · חסרה · /רשימות:2 /פריטים:1",
+                H_VERIFY = "הרשימה שבודקים (ידנית \"א\" או חכמה \"א\")",
+                P_VERIFY = "מה לוודא", H_VERIFY_WHAT = "קיימת · חסרה · /רשימות:N · /פריטים:N (כמו \"עכשיו בה\" בדוח)",
+                VERIFY_DB_ONLY = "ודא — עובדת כשעובדים במסד",
+                VERIFY_USAGE = "צורה: ודא ידנית \"א\" [קיימת | חסרה] [/רשימות:N] [/פריטים:N]",
+                WORD_EXISTS = "קיימת", WORD_MISSING = "חסרה", SW_LISTS = "/רשימות:", SW_ITEMS = "/פריטים:";  // תחביר
+
+        public static String verifySummary(int ok, int bad) {
+            return (bad == 0 ? "✅" : "❌") + " ודא: " + ok + " עברו · " + bad + " נכשלו";
+        }
+
+        public static String verifyWill(String what) {
+            return "יבדוק: " + what;
+        }
+
+        public static String verifyResult(boolean ok, String what, String found) {
+            return (ok ? "✅ " : "❌ ") + what + (ok ? "" : " — בפועל: " + found);
+        }
+
         public static final String EDIT = "✎ עריכה", ICON = "צלמית",
                 FILE_NO_EDIT = "קובץ — אין מה לערוך כאן; שינוי שם הקובץ עצמו — במסכי הקבצים";
 
@@ -46853,7 +46992,7 @@ public final class Words {
 
         public static final String APP_NAME_M = "מנהל קבצים וירטואלי · מ";
         public static final String MENU = "מסד נתונים (מ)";
-        public static final String TITLE = "מסד נתונים · מ0.13.1";
+        public static final String TITLE = "מסד נתונים · מ0.14";
         /** מ0.9: המראה המוכר. */
         public static final String LIST_GONE = "הרשימה הזו כבר לא קיימת במסד", MENU_ACTIONS = "⚙ מסד: גיבוי, העתקה, בדיקה ופעולות",
                 MENU_OLD = "↩ הצד הישן (לפני המסד)",
@@ -48880,6 +49019,22 @@ final class ImportTests {
         r = DbListCmd.remove(s, M, x[0]);
         ck("RD במסד: רשימה שגם במקום אחר — רק יוצאת מכאן", r.error == null && s.item(hal) == null && s.item(shared) != null
                 && s.listsOf(shared).equals(Arrays.asList(home)));
+
+        // ודא (מ0.14)
+        ListCmd.Side vb = sides("VERIFY ידנית \"ספרים\" קיימת")[0];
+        String[] fd = {""};
+        ck("ודא: קיימת — עוברת", DbListCmd.verify(s, M, vb, DbListCmd.expect(Arrays.asList("קיימת")), fd));
+        ck("ודא: חסרה על קיימת — נכשלת, ואומרת מה בפועל", !DbListCmd.verify(s, M, vb, DbListCmd.expect(Arrays.asList("חסרה")), fd)
+                && fd[0].equals(Words.DbCmd.WORD_EXISTS));
+        DbCount bc = DbCount.of(s, books, null);
+        ck("ודא: מספרים נכונים — עוברת; שגויים — נכשלת", DbListCmd.verify(s, M, vb, DbListCmd.expect(Arrays.asList("/רשימות:" + bc.lists, "/פריטים:" + bc.items)), fd)
+                && !DbListCmd.verify(s, M, vb, DbListCmd.expect(Arrays.asList("/פריטים:" + (bc.items + 1))), fd));
+        ListCmd.Side vn = sides("VERIFY ידנית \"אין כזו\" חסרה")[0];
+        ck("ודא: חסרה על חסרה — עוברת; בלי תנאי — קיימת", DbListCmd.verify(s, M, vn, DbListCmd.expect(Arrays.asList("חסרה")), fd)
+                && !DbListCmd.verify(s, M, vn, DbListCmd.expect(new ArrayList<String>()), fd));
+        ck("ודא: תנאי לא מוכר / מספר שגוי — צורה", DbListCmd.expect(Arrays.asList("משהו")).error != null
+                && DbListCmd.expect(Arrays.asList("/פריטים:x")).error != null && DbListCmd.expect(Arrays.asList("חסרה", "/רשימות:1")).error != null);
+        ck("ודא: השם בעברית מוכר כפקודה", Batch.VERIFY.equals(Commands.canonical("ודא")));
 
         long lists = s.lists().size();
         MemStore c = DbListCmd.copyOf(s);
@@ -53992,8 +54147,8 @@ public final class Tests {
 
     /** 1.22.5: ההגדרה האחת — שלמה, תואמת למנוע, וכל פרמטר עם שם והסבר. */
     private static void v1225() {
-        check("1.22.5: פקודות הקבצים — אותן ובאותו סדר",
-                java.util.Arrays.equals(BatchLine.COMMANDS, new String[]{"COPY", "MOVE", "DEL", "REN", "MD", "RD", "COMP", "START", "ECHO", "REM"}));
+        check("1.22.5: פקודות הקבצים — אותן ובאותו סדר (מ0.14: ודא)",
+                java.util.Arrays.equals(BatchLine.COMMANDS, new String[]{"COPY", "MOVE", "DEL", "REN", "MD", "RD", "COMP", "VERIFY", "START", "ECHO", "REM"}));
         check("1.22.5: שמות נרדפים", Commands.canonical("MKDIR").equals("MD") && Commands.canonical("rmdir").equals("RD")
                 && Commands.canonical("ERASE").equals("DEL") && Commands.canonical("RENAME").equals("REN")
                 && Commands.canonical("copy").equals("COPY") && Commands.canonical("FORMAT").equals("FORMAT")
