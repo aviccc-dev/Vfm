@@ -302,7 +302,11 @@ public class RunScreen extends Activity {
         final List<String> open = firstList();
         if (open != null)
             bs.add(btn(Words.Run.open(ListCmd.pathText(open)), new View.OnClickListener() {
-                @Override public void onClick(View v) { Verbs.run(RunScreen.this, Verbs.openList(open), file.getParentFile()); }
+                @Override public void onClick(View v) {
+                    String m = plan.sim == null ? null : plan.sim.mode;                // מ0.18.1: באופן של הקובץ ("אופן")
+                    if (DbVerbs.active() && m != null) DbVerbs.openPath(RunScreen.this, m, open);
+                    else Verbs.run(RunScreen.this, Verbs.openList(open), file.getParentFile());
+                }
             }));
         if (plan.open != null && !plan.trouble)
             bs.add(btn("▶ " + Verbs.label(Verbs.parse(plan.open)), new View.OnClickListener() {

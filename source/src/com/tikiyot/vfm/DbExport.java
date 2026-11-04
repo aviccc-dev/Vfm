@@ -109,7 +109,7 @@ final class DbExport {
      * שם בלי מסלול — בתיקייה "יצוא"; מסלול מלא — כמו שנכתב (הכותב בחר — נכתב מעליו).
      */
     static File target(String raw, String defaultName, File exportDir) {
-        String r = raw == null ? "" : raw.trim();
+        String r = raw == null ? "" : raw.trim().replace('\\', '/');   // מ0.18.1: "\\" כמו בשאר הפקודות (באנדרואיד — שם קובץ אסור)
         if (r.isEmpty() || r.equals(ListCmd.HOME)) {
             String base = safe(defaultName);
             File f = new File(exportDir, base + ".txt");

@@ -117,6 +117,16 @@ final class DbVerbs {
                 .putExtra(DbScreen.EXTRA_AT, in).putExtra(DbScreen.EXTRA_DO, what));
     }
 
+    /** מ0.18.1: פותח רשימה לפי המסלול — באופן נתון (גם אם אינו האופן שפתוח). */
+    static void openPath(Activity a, String mode, List<String> path) {
+        long id = read(a, mode, path);
+        if (id == 0) Ui.toast(a, Words.Verb.NOT_FOUND + Tree.label(path));
+        else {
+            DbScreen.saveMode(a, mode);
+            DbListScreen.open(a, mode, id);
+        }
+    }
+
     interface Job {
         long run(Store s, List<String> path);
     }

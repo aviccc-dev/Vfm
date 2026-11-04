@@ -537,9 +537,10 @@ final class ImportTests {
         ed.mkdirs();
         File e1 = DbExport.target("*", "רשימה ספרים", ed);
         write(e1, "x");
-        ck("יצוא: שם לפי מה שיוצא, ותפוס — (2); שם בלי מסלול — בתיקיית היצוא",
+        ck("יצוא: שם לפי מה שיוצא, ותפוס — (2); שם בלי מסלול — בתיקיית היצוא; \\ כמו /",
                 e1.getName().equals("רשימה ספרים.txt") && DbExport.target("*", "רשימה ספרים", ed).getName().equals("רשימה ספרים (2).txt")
-                && DbExport.target("שלי", "x", ed).equals(new File(ed, "שלי.txt")));
+                && DbExport.target("שלי", "x", ed).equals(new File(ed, "שלי.txt"))
+                && DbExport.target(ed.getAbsolutePath() + "\\שלי.txt", "x", ed).equals(new File(ed, "שלי.txt")));
 
         // ודא (מ0.14)
         ListCmd.Side vb = sides("VERIFY ידנית \"ספרים\" קיימת")[0];

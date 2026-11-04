@@ -891,14 +891,14 @@ COPY ידנית "בדיקת פקודות" קובץ "%כאן%\יצוא-בדיקה
 ודא "%כאן%\יצוא-בדיקה.txt" קיים
 COPY קבצי ידנית "בדיקת פקודות" קובץ "%כאן%\יצוא-בדיקה-קבצים.txt"
 ודא "%כאן%\יצוא-בדיקה-קבצים.txt" קיים
-:: קבצים בכונן — מרשימה לתיקייה, מחיקה לסל, הסרת תיקייה
-MD "%כאן%\תיקיית בדיקה"
-COPY קבצי ידנית "בדיקת פקודות/א/פנימית" תיקייה "%כאן%\תיקיית בדיקה"
-ודא "%כאן%\תיקיית בדיקה\בדיקת פקודות.vbat" קיים
-DEL "%כאן%\תיקיית בדיקה\*.vbat"
-ודא "%כאן%\תיקיית בדיקה\בדיקת פקודות.vbat" חסר
-RD "%כאן%\תיקיית בדיקה"
-ECHO סוף הבדיקה הכללית. "בדיקת פקודות" נשארת לראות; קובצי היצוא — בתיקיית אופן הבדיקות.
+:: קבצים בכונן — מחוץ לתיקיית התוכנה (בתוכה פקודות הקבצים חסומות, כדי לשמור עליה): תיקייה, העתקה מרשימה, מחיקה לסל, הסרה
+MD "%פנימי%\בדיקת מנהל קבצים (אפשר למחוק)"
+COPY קבצי ידנית "בדיקת פקודות/א/פנימית" תיקייה "%פנימי%\בדיקת מנהל קבצים (אפשר למחוק)"
+ודא "%פנימי%\בדיקת מנהל קבצים (אפשר למחוק)\בדיקת פקודות.vbat" קיים
+DEL "%פנימי%\בדיקת מנהל קבצים (אפשר למחוק)\*.vbat"
+ודא "%פנימי%\בדיקת מנהל קבצים (אפשר למחוק)\בדיקת פקודות.vbat" חסר
+RD "%פנימי%\בדיקת מנהל קבצים (אפשר למחוק)"
+ECHO סוף הבדיקה הכללית. "בדיקת פקודות" נשארת לראות; קובצי היצוא — בתיקיית אופן הבדיקות; התיקייה בכונן — הוסרה, והקובץ שהועתק אליה — בסל.
 ===== קובץ: assets/tests/omes-masad.vbat =====
 בדיקה
 :: בדיקת עומס במסד — כמו בדיקת העומס שבזמנו הראתה שהמנוע הישן איטי, והביאה אותנו למסד.
@@ -1009,7 +1009,7 @@ cd $S; rm -rf out gen bld
 [ "$S" != "$DIR" ] && rm -rf $S
 ls -la $OUT
 ===== קובץ: build/m-version.txt =====
-30 מ0.18
+31 מ0.18.1
 ===== קובץ: build/test.sh =====
 #!/bin/bash
 # בדיקות על המחשב (80). יוצא בכישלון אם בדיקה אחת נכשלה — ואז build.sh לא בונה.
@@ -9737,7 +9737,7 @@ final class DbExport {
      * שם בלי מסלול — בתיקייה "יצוא"; מסלול מלא — כמו שנכתב (הכותב בחר — נכתב מעליו).
      */
     static File target(String raw, String defaultName, File exportDir) {
-        String r = raw == null ? "" : raw.trim();
+        String r = raw == null ? "" : raw.trim().replace('\\', '/');   // מ0.18.1: "\\" כמו בשאר הפקודות (באנדרואיד — שם קובץ אסור)
         if (r.isEmpty() || r.equals(ListCmd.HOME)) {
             String base = safe(defaultName);
             File f = new File(exportDir, base + ".txt");
@@ -12100,6 +12100,16 @@ final class DbVerbs {
     static void addFiles(Activity a, String mode, long in, String what) {
         a.startActivity(new Intent(a, DbScreen.class).putExtra(DbScreen.EXTRA_MODE, mode)
                 .putExtra(DbScreen.EXTRA_AT, in).putExtra(DbScreen.EXTRA_DO, what));
+    }
+
+    /** מ0.18.1: פותח רשימה לפי המסלול — באופן נתון (גם אם אינו האופן שפתוח). */
+    static void openPath(Activity a, String mode, List<String> path) {
+        long id = read(a, mode, path);
+        if (id == 0) Ui.toast(a, Words.Verb.NOT_FOUND + Tree.label(path));
+        else {
+            DbScreen.saveMode(a, mode);
+            DbListScreen.open(a, mode, id);
+        }
     }
 
     interface Job {
@@ -31196,7 +31206,11 @@ public class RunScreen extends Activity {
         final List<String> open = firstList();
         if (open != null)
             bs.add(btn(Words.Run.open(ListCmd.pathText(open)), new View.OnClickListener() {
-                @Override public void onClick(View v) { Verbs.run(RunScreen.this, Verbs.openList(open), file.getParentFile()); }
+                @Override public void onClick(View v) {
+                    String m = plan.sim == null ? null : plan.sim.mode;                // מ0.18.1: באופן של הקובץ ("אופן")
+                    if (DbVerbs.active() && m != null) DbVerbs.openPath(RunScreen.this, m, open);
+                    else Verbs.run(RunScreen.this, Verbs.openList(open), file.getParentFile());
+                }
             }));
         if (plan.open != null && !plan.trouble)
             bs.add(btn("▶ " + Verbs.label(Verbs.parse(plan.open)), new View.OnClickListener() {
@@ -47620,7 +47634,7 @@ public final class Words {
 
         public static final String APP_NAME_M = "מנהל קבצים וירטואלי · מ";
         public static final String MENU = "מסד נתונים (מ)";
-        public static final String TITLE = "מסד נתונים · מ0.18";
+        public static final String TITLE = "מסד נתונים · מ0.18.1";
         /** מ0.9: המראה המוכר. */
         public static final String LIST_GONE = "הרשימה הזו כבר לא קיימת במסד", MENU_ACTIONS = "⚙ מסד: גיבוי, העתקה, בדיקה ופעולות",
                 MENU_OLD = "↩ הצד הישן (לפני המסד)",
@@ -49688,9 +49702,10 @@ final class ImportTests {
         ed.mkdirs();
         File e1 = DbExport.target("*", "רשימה ספרים", ed);
         write(e1, "x");
-        ck("יצוא: שם לפי מה שיוצא, ותפוס — (2); שם בלי מסלול — בתיקיית היצוא",
+        ck("יצוא: שם לפי מה שיוצא, ותפוס — (2); שם בלי מסלול — בתיקיית היצוא; \\ כמו /",
                 e1.getName().equals("רשימה ספרים.txt") && DbExport.target("*", "רשימה ספרים", ed).getName().equals("רשימה ספרים (2).txt")
-                && DbExport.target("שלי", "x", ed).equals(new File(ed, "שלי.txt")));
+                && DbExport.target("שלי", "x", ed).equals(new File(ed, "שלי.txt"))
+                && DbExport.target(ed.getAbsolutePath() + "\\שלי.txt", "x", ed).equals(new File(ed, "שלי.txt")));
 
         // ודא (מ0.14)
         ListCmd.Side vb = sides("VERIFY ידנית \"ספרים\" קיימת")[0];
