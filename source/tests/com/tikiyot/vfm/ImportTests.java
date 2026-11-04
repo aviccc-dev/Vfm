@@ -511,6 +511,13 @@ final class ImportTests {
         ck("הליבה (מסכים): רעיון שהוסר מהרשימה היחידה — לסל", s.members(nl).isEmpty() && "הערה".equals(s.trashed().get(s.trashed().size() - 1).name));
         DbListCmd.Copied cp = DbListCmd.copyInto(s, Arrays.asList(s.item(books)), nl);
         ck("הליבה (מסכים): העתקה לתוך רשימה — עותק עצמאי", cp.done == 1 && s.members(nl).size() == 1 && s.members(nl).get(0).item.id != books);
+        DbListCmd.edit(s, nl, "מהמסך חדש", "⭐", "תיאור", "");
+        ck("הליבה (מסכים): עריכה — שם, צלמית, תיאור", s.item(nl).name.equals("מהמסך חדש") && "⭐".equals(s.prop(nl, Store.P_ICON))
+                && "תיאור".equals(s.prop(nl, Store.P_DESC)) && at(s, "מהמסך חדש") == nl);
+        long hal2 = at(s, "ספרים"), copyInBooks = s.createList("זמני", hal2);
+        s.setOrigin(copyInBooks, Importer.originOf(M, "ספרים / זמני"));
+        DbListCmd.edit(s, copyInBooks, "קבוע", "", "", "");
+        ck("שינוי שם: הפקודה מוצאת לפי השם החדש, לא לפי המקור הישן", at(s, "ספרים/קבוע") == copyInBooks && at(s, "ספרים/זמני") == 0);
         DbListCmd.removeFrom(s, home, nl);
         ck("הליבה (מסכים): הסרה מהבית — נמחקת עם מה שרק שלה", s.item(nl) == null && at(s, "ספרים") == books);
         ck("פקודות במסד: המסד תקין", s.check() == null);

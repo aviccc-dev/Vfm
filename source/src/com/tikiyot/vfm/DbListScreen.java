@@ -352,15 +352,74 @@ public class DbListScreen extends ListScreen<Store.Member> {
     protected void hold(Store.Member row) {
         if (row == PLUS) return;
         final Store.Item it = row.item;
-        String[] items = {Words.DbCmd.COPY_TO, Words.DbCmd.REMOVE_HERE, Words.DbCmd.ALL_ACTIONS};
+        String[] items = {Words.DbCmd.EDIT, Words.DbCmd.COPY_TO, Words.DbCmd.REMOVE_HERE, Words.DbCmd.ALL_ACTIONS};
         Ui.options(this, it.name, items, new android.content.DialogInterface.OnClickListener() {
             @Override
             public void onClick(android.content.DialogInterface d, int which) {
-                if (which == 0) copyTo(it);
-                else if (which == 1) removeHere(it);
+                if (which == 0) edit(it);
+                else if (which == 1) copyTo(it);
+                else if (which == 2) removeHere(it);
                 else actions();
             }
         });
+    }
+
+    /** מ0.13.1: עריכה — רשימה חכמה בטופס שלה; רשימה: שם, צלמית, תיאור, "למה"; רעיון/כותרת — הטקסט. דרך הליבה. */
+    private void edit(final Store.Item it) {
+        if (it.type == Store.FILE) {
+            Ui.toast(this, Words.DbCmd.FILE_NO_EDIT);
+            return;
+        }
+        if (it.type == Store.SMART) {
+            DbSmartForm.show(this, store, it.id, new DbSmartForm.Done() {
+                @Override
+                public void ok(final DbSmartForm.Result r) {
+                    done(DbListCmd.now(mode, new DbListCmd.Work() {
+                        @Override public DbListCmd.Res run(Store t, DbListCmd.Finder f) {
+                            DbSmartForm.save(t, it.id, 0, r);
+                            return DbListCmd.Res.ok(Words.DbCmd.saved(r.name.isEmpty() ? it.name : r.name));
+                        }
+                    }, false));
+                }
+            });
+            return;
+        }
+        final boolean list = it.type == Store.LIST;
+        LinearLayout form = Ui.form(this);
+        form.addView(Ui.label(this, list ? Words.ToolM.NAME : Words.Db.NOTE_TEXT));
+        final android.widget.EditText name = Ui.field(this, it.name, null);
+        form.addView(name);
+        final android.widget.EditText icon = Ui.field(this, prop(it.id, Store.P_ICON), "📁");
+        final android.widget.EditText desc = Ui.field(this, prop(it.id, Store.P_DESC), Words.Manual.DESC_HINT);
+        final android.widget.EditText why = Ui.field(this, prop(it.id, Store.P_WHY), Words.WhyW.HINT);
+        if (list) {
+            form.addView(Ui.label(this, Words.DbCmd.ICON));
+            form.addView(icon);
+            form.addView(Ui.label(this, Words.Manual.DESC));
+            desc.setSingleLine(false);
+            form.addView(desc);
+            form.addView(Ui.label(this, Words.WhyW.FIELD));
+            why.setSingleLine(false);
+            form.addView(why);
+        }
+        Ui.askForm(this, Words.DbCmd.EDIT + ": " + it.name, form, new Runnable() {
+            @Override
+            public void run() {
+                final String n = name.getText().toString(), i = icon.getText().toString(), d = desc.getText().toString(),
+                        w = why.getText().toString();
+                done(DbListCmd.now(mode, new DbListCmd.Work() {
+                    @Override public DbListCmd.Res run(Store t, DbListCmd.Finder f) {
+                        DbListCmd.edit(t, it.id, n, i, d, w);
+                        return DbListCmd.Res.ok(Words.DbCmd.saved(t.item(it.id).name));
+                    }
+                }, false));
+            }
+        });
+    }
+
+    private void done(String msg) {
+        Ui.toast(this, msg);
+        refresh();
     }
 
     /** הרשימה שמוצגת עכשיו (בבית — רשימת הבית). */

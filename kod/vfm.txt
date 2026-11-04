@@ -948,7 +948,7 @@ cd $S; rm -rf out gen bld
 [ "$S" != "$DIR" ] && rm -rf $S
 ls -la $OUT
 ===== קובץ: build/m-version.txt =====
-23 מ0.13
+24 מ0.13.1
 ===== קובץ: build/test.sh =====
 #!/bin/bash
 # בדיקות על המחשב (80). יוצא בכישלון אם בדיקה אחת נכשלה — ואז build.sh לא בונה.
@@ -10118,6 +10118,22 @@ final class DbListCmd {
         }, true);
     }
 
+    /** מ0.13.1: עריכה — שם (ריק — בלי שינוי), צלמית, תיאור, "למה"; בעסקה אחת. רעיון/כותרת — השם הוא הטקסט. */
+    static void edit(Store s, final long id, final String name, final String icon, final String desc, final String why) {
+        s.atomic(new Store.Work() {
+            @Override public void run(Store t) {
+                Store.Item it = t.item(id);
+                if (it == null) return;
+                String n = it.type == Store.LIST ? Tree.cleanName(name) : name.trim();
+                if (!n.isEmpty() && !n.equals(it.name)) t.rename(id, n);
+                if (it.type == Store.NOTE || it.type == Store.TITLE || it.type == Store.FILE) return;
+                t.setProp(id, Store.P_ICON, icon.trim());
+                t.setProp(id, Store.P_DESC, desc.trim().replace('\n', ' '));
+                t.setProp(id, Store.P_WHY, why.trim().replace('\n', ' '));
+            }
+        }, true);
+    }
+
     /** רשימה ידנית חדשה בתוך parent (0 — בבית, אם יש). */
     static long newList(Store s, final long parent, final String name) {
         final long into = parent != 0 ? parent : Importer.home(s);
@@ -10822,15 +10838,74 @@ public class DbListScreen extends ListScreen<Store.Member> {
     protected void hold(Store.Member row) {
         if (row == PLUS) return;
         final Store.Item it = row.item;
-        String[] items = {Words.DbCmd.COPY_TO, Words.DbCmd.REMOVE_HERE, Words.DbCmd.ALL_ACTIONS};
+        String[] items = {Words.DbCmd.EDIT, Words.DbCmd.COPY_TO, Words.DbCmd.REMOVE_HERE, Words.DbCmd.ALL_ACTIONS};
         Ui.options(this, it.name, items, new android.content.DialogInterface.OnClickListener() {
             @Override
             public void onClick(android.content.DialogInterface d, int which) {
-                if (which == 0) copyTo(it);
-                else if (which == 1) removeHere(it);
+                if (which == 0) edit(it);
+                else if (which == 1) copyTo(it);
+                else if (which == 2) removeHere(it);
                 else actions();
             }
         });
+    }
+
+    /** מ0.13.1: עריכה — רשימה חכמה בטופס שלה; רשימה: שם, צלמית, תיאור, "למה"; רעיון/כותרת — הטקסט. דרך הליבה. */
+    private void edit(final Store.Item it) {
+        if (it.type == Store.FILE) {
+            Ui.toast(this, Words.DbCmd.FILE_NO_EDIT);
+            return;
+        }
+        if (it.type == Store.SMART) {
+            DbSmartForm.show(this, store, it.id, new DbSmartForm.Done() {
+                @Override
+                public void ok(final DbSmartForm.Result r) {
+                    done(DbListCmd.now(mode, new DbListCmd.Work() {
+                        @Override public DbListCmd.Res run(Store t, DbListCmd.Finder f) {
+                            DbSmartForm.save(t, it.id, 0, r);
+                            return DbListCmd.Res.ok(Words.DbCmd.saved(r.name.isEmpty() ? it.name : r.name));
+                        }
+                    }, false));
+                }
+            });
+            return;
+        }
+        final boolean list = it.type == Store.LIST;
+        LinearLayout form = Ui.form(this);
+        form.addView(Ui.label(this, list ? Words.ToolM.NAME : Words.Db.NOTE_TEXT));
+        final android.widget.EditText name = Ui.field(this, it.name, null);
+        form.addView(name);
+        final android.widget.EditText icon = Ui.field(this, prop(it.id, Store.P_ICON), "📁");
+        final android.widget.EditText desc = Ui.field(this, prop(it.id, Store.P_DESC), Words.Manual.DESC_HINT);
+        final android.widget.EditText why = Ui.field(this, prop(it.id, Store.P_WHY), Words.WhyW.HINT);
+        if (list) {
+            form.addView(Ui.label(this, Words.DbCmd.ICON));
+            form.addView(icon);
+            form.addView(Ui.label(this, Words.Manual.DESC));
+            desc.setSingleLine(false);
+            form.addView(desc);
+            form.addView(Ui.label(this, Words.WhyW.FIELD));
+            why.setSingleLine(false);
+            form.addView(why);
+        }
+        Ui.askForm(this, Words.DbCmd.EDIT + ": " + it.name, form, new Runnable() {
+            @Override
+            public void run() {
+                final String n = name.getText().toString(), i = icon.getText().toString(), d = desc.getText().toString(),
+                        w = why.getText().toString();
+                done(DbListCmd.now(mode, new DbListCmd.Work() {
+                    @Override public DbListCmd.Res run(Store t, DbListCmd.Finder f) {
+                        DbListCmd.edit(t, it.id, n, i, d, w);
+                        return DbListCmd.Res.ok(Words.DbCmd.saved(t.item(it.id).name));
+                    }
+                }, false));
+            }
+        });
+    }
+
+    private void done(String msg) {
+        Ui.toast(this, msg);
+        refresh();
     }
 
     /** הרשימה שמוצגת עכשיו (בבית — רשימת הבית). */
@@ -10991,7 +11066,8 @@ final class DbPaths {
     static long find(Store s, String mode, List<String> path) {
         if (path == null || path.isEmpty()) return 0;
         long o = s.findByOrigin(Importer.originOf(mode, Tree.fullLabel(path)));
-        if (o != 0 && s.item(o) != null && s.item(o).type == Store.LIST) return o;
+        Store.Item oi = o == 0 ? null : s.item(o);
+        if (oi != null && oi.type == Store.LIST && oi.name.equals(path.get(path.size() - 1).trim())) return o;   // מ0.13.1: אחרי שינוי שם — לפי השמות
         long cur = top(s, path.get(0));
         for (int i = 1; i < path.size() && cur != 0; i++) cur = child(s, cur, path.get(i));
         return cur;
@@ -46695,6 +46771,13 @@ public final class Words {
             return what + " — יצא מהרשימות (לפני הביצוע — גיבוי של המסד); הקבצים בכונן לא נוגעים";
         }
 
+        public static final String EDIT = "✎ עריכה", ICON = "צלמית",
+                FILE_NO_EDIT = "קובץ — אין מה לערוך כאן; שינוי שם הקובץ עצמו — במסכי הקבצים";
+
+        public static String saved(String name) {
+            return "נשמר: \"" + name + "\"";
+        }
+
         public static final String COPY_TO = "📋 העתקה לרשימה…", COPY_TO_TITLE = "העתקה לתוך:",
                 REMOVE_HERE = "🗑 הסרה מכאן", REMOVE_YES = "להסיר", ALL_ACTIONS = "⚙ כל הפעולות (מסך המסד)";
 
@@ -46770,7 +46853,7 @@ public final class Words {
 
         public static final String APP_NAME_M = "מנהל קבצים וירטואלי · מ";
         public static final String MENU = "מסד נתונים (מ)";
-        public static final String TITLE = "מסד נתונים · מ0.13";
+        public static final String TITLE = "מסד נתונים · מ0.13.1";
         /** מ0.9: המראה המוכר. */
         public static final String LIST_GONE = "הרשימה הזו כבר לא קיימת במסד", MENU_ACTIONS = "⚙ מסד: גיבוי, העתקה, בדיקה ופעולות",
                 MENU_OLD = "↩ הצד הישן (לפני המסד)",
@@ -48812,6 +48895,13 @@ final class ImportTests {
         ck("הליבה (מסכים): רעיון שהוסר מהרשימה היחידה — לסל", s.members(nl).isEmpty() && "הערה".equals(s.trashed().get(s.trashed().size() - 1).name));
         DbListCmd.Copied cp = DbListCmd.copyInto(s, Arrays.asList(s.item(books)), nl);
         ck("הליבה (מסכים): העתקה לתוך רשימה — עותק עצמאי", cp.done == 1 && s.members(nl).size() == 1 && s.members(nl).get(0).item.id != books);
+        DbListCmd.edit(s, nl, "מהמסך חדש", "⭐", "תיאור", "");
+        ck("הליבה (מסכים): עריכה — שם, צלמית, תיאור", s.item(nl).name.equals("מהמסך חדש") && "⭐".equals(s.prop(nl, Store.P_ICON))
+                && "תיאור".equals(s.prop(nl, Store.P_DESC)) && at(s, "מהמסך חדש") == nl);
+        long hal2 = at(s, "ספרים"), copyInBooks = s.createList("זמני", hal2);
+        s.setOrigin(copyInBooks, Importer.originOf(M, "ספרים / זמני"));
+        DbListCmd.edit(s, copyInBooks, "קבוע", "", "", "");
+        ck("שינוי שם: הפקודה מוצאת לפי השם החדש, לא לפי המקור הישן", at(s, "ספרים/קבוע") == copyInBooks && at(s, "ספרים/זמני") == 0);
         DbListCmd.removeFrom(s, home, nl);
         ck("הליבה (מסכים): הסרה מהבית — נמחקת עם מה שרק שלה", s.item(nl) == null && at(s, "ספרים") == books);
         ck("פקודות במסד: המסד תקין", s.check() == null);

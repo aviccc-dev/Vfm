@@ -320,6 +320,22 @@ final class DbListCmd {
         }, true);
     }
 
+    /** מ0.13.1: עריכה — שם (ריק — בלי שינוי), צלמית, תיאור, "למה"; בעסקה אחת. רעיון/כותרת — השם הוא הטקסט. */
+    static void edit(Store s, final long id, final String name, final String icon, final String desc, final String why) {
+        s.atomic(new Store.Work() {
+            @Override public void run(Store t) {
+                Store.Item it = t.item(id);
+                if (it == null) return;
+                String n = it.type == Store.LIST ? Tree.cleanName(name) : name.trim();
+                if (!n.isEmpty() && !n.equals(it.name)) t.rename(id, n);
+                if (it.type == Store.NOTE || it.type == Store.TITLE || it.type == Store.FILE) return;
+                t.setProp(id, Store.P_ICON, icon.trim());
+                t.setProp(id, Store.P_DESC, desc.trim().replace('\n', ' '));
+                t.setProp(id, Store.P_WHY, why.trim().replace('\n', ' '));
+            }
+        }, true);
+    }
+
     /** רשימה ידנית חדשה בתוך parent (0 — בבית, אם יש). */
     static long newList(Store s, final long parent, final String name) {
         final long into = parent != 0 ? parent : Importer.home(s);

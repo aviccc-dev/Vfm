@@ -18,7 +18,8 @@ final class DbPaths {
     static long find(Store s, String mode, List<String> path) {
         if (path == null || path.isEmpty()) return 0;
         long o = s.findByOrigin(Importer.originOf(mode, Tree.fullLabel(path)));
-        if (o != 0 && s.item(o) != null && s.item(o).type == Store.LIST) return o;
+        Store.Item oi = o == 0 ? null : s.item(o);
+        if (oi != null && oi.type == Store.LIST && oi.name.equals(path.get(path.size() - 1).trim())) return o;   // מ0.13.1: אחרי שינוי שם — לפי השמות
         long cur = top(s, path.get(0));
         for (int i = 1; i < path.size() && cur != 0; i++) cur = child(s, cur, path.get(i));
         return cur;
