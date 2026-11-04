@@ -494,6 +494,7 @@ final class Design {
             }
         });
         if (from.equals(homeName())) setHome(to);
+        if (Flavor.M) DbFollow.designRenamedEverywhere(from, to);          // מ0.23: גם הרשימות במסד
     }
 
     private static boolean renameIn(Tree.Node n, String from, String to) {

@@ -290,7 +290,8 @@ public class DupScreen extends Activity {
 
     private void buildListsOf() {
         listsOf.clear();
-        listsOf.putAll(Tree.load().whereListed(Nested.inner(lib)));          // 169
+        if (DbPicker.on(this)) listsOf.putAll(DbPicker.whereListed(this));    // מ0.23: עובדים במסד — הרשימות של המסד
+        else listsOf.putAll(Tree.load().whereListed(Nested.inner(lib)));     // 169
     }
 
     private List<Library.Hit> group(String spec) {

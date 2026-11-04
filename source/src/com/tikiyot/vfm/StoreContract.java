@@ -270,6 +270,21 @@ public final class StoreContract {
             ck("updateFile can clear the signature", s.file(f2).sig == null);
             fails("updateFile of a list", new Act() { public void run() { s.updateFile(l1f, 1, 1, null); } });
             fails("updateFile of a missing item", new Act() { public void run() { s.updateFile(999, 1, 1, null); } });
+            // מ0.23: הקובץ זז בכונן — אותו פריט, מסלול ושם חדשים, החברות נשארת
+            String moved = "/storage/ABCD-1234/חדש/b.txt";  // בכונן
+            s.moveFile(f2, moved, "ABCD-1234");
+            ck("moveFile: new path, drive and name, same item",
+                    s.findFile(moved) == f2 && s.findFile("/storage/ABCD-1234/a.txt") == 0 && s.file(f2).path.equals(moved)
+                            && s.file(f2).drive.equals("ABCD-1234") && s.item(f2).name.equals("b.txt") && s.file(f2).size == 55);
+            ck("moveFile keeps the lists", s.listsOf(f2).equals(java.util.Collections.singletonList(l1)));
+            s.moveFile(f2, moved, "ABCD-1234");
+            ck("moveFile to its own path — no change", s.findFile(moved) == f2);
+            final long f2f = f2;
+            final String hpm = hp;
+            fails("moveFile onto another file's path", new Act() { public void run() { s.moveFile(f2f, hpm, "x"); } });
+            ck("a refused moveFile changes nothing", s.findFile(moved) == f2 && s.findFile(hp) == f1);
+            fails("moveFile of a list", new Act() { public void run() { s.moveFile(l1f, "/storage/emulated/0/z", "x"); } });
+            fails("moveFile to an empty path", new Act() { public void run() { s.moveFile(f2f, " ", "x"); } });
             // מקור
             ck("no origin yet", s.findByOrigin("tree:L:x") == 0);
             s.setOrigin(l1, "tree:L:x");

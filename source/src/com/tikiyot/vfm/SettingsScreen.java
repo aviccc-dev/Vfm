@@ -79,9 +79,10 @@ public class SettingsScreen extends Activity {
         button(root, Words.Prefs.CHECK_PATH, new Runnable() {
             @Override public void run() { checkPath(); }
         });
-        button(root, Words.Prefs.CLEAN_ORPHANS, new Runnable() {
-            @Override public void run() { cleanOrphans(); }
-        });
+        if (!Flavor.M || Home.inOld)                                          // מ0.23: פועל על הרשימות הישנות — לא במסד
+            button(root, Words.Prefs.CLEAN_ORPHANS, new Runnable() {
+                @Override public void run() { cleanOrphans(); }
+            });
         button(root, Words.Prefs.ERROR_LOG, new Runnable() {
             @Override public void run() { showLog(); }
         });

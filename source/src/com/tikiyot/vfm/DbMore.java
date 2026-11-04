@@ -227,4 +227,78 @@ final class DbMore {
         }
         return out;
     }
+
+    // ================= מ0.23: תיקייה מהכונן לרשימה ("לרשימה" במסכי הקבצים) =================
+
+    /** שם פנוי בין הרשימות (מאותו סוג) שבתוך list: "שם", ואם תפוס — "שם (2)"… */
+    static String freeName(Store s, long list, int type, String name) {
+        String base = type == Store.SMART ? name.trim() : Tree.cleanName(name);
+        if (base.isEmpty()) base = "?";
+        java.util.Set<String> taken = new java.util.HashSet<String>();
+        for (Store.Member m : s.members(list)) if (m.item.type == type) taken.add(m.item.name);
+        String n = base;
+        for (int k = 2; taken.contains(n); k++) n = base + " (" + k + ")";
+        return n;
+    }
+
+    /**
+     * תיקייה חיה: רשימה חכמה בתוך list שמוצאת את מה שבתיקייה (התנאי, המיון והתצוגה — Unify.folderKeys, כמו בישן).
+     * אותה תיקייה כבר שם (אותו תנאי) — בלי כפולה, 0. אחרת — מספר החכמה החדשה.
+     */
+    static long liveFolder(Store s, final long list, String folder) {
+        final java.util.Map<String, String> kv = Unify.folderKeys(folder);
+        final String cond = kv.get(SmartLists.COND);
+        for (Store.Member m : s.members(list))
+            if (m.item.type == Store.SMART && cond.equals(s.prop(m.item.id, Store.P_COND))) return 0;
+        final String name = freeName(s, list, Store.SMART, new java.io.File(folder).getName());
+        final long[] out = {0};
+        s.atomic(new Store.Work() {
+            @Override
+            public void run(Store t) {
+                long id = t.createSmart(name, list);
+                t.setProp(id, Store.P_COND, cond);
+                t.setProp(id, Store.P_SORT, kv.get(SmartLists.SORT));
+                t.setProp(id, Store.P_VIEW, kv.get(SmartLists.VIEW));
+                out[0] = id;
+            }
+        }, true);
+        return out[0];
+    }
+
+    /**
+     * תיקייה שנסרקה (Tree.scanFolder — צומת מנותק, לא נשמר) לתוך list. structure — רשימה בשם התיקייה (שם פנוי), ובתוכה
+     * התת־תיקיות כרשימות והקבצים; אחרת — רק הקבצים, ישר לתוך list. הקבצים — DbFiles.add (אותה ליבה). מחזיר [רשימות, פריטים].
+     */
+    static int[] attach(Store s, long list, Tree.Node scanned, boolean structure, boolean sign) {
+        int[] c = {0, 0};
+        if (structure) {
+            long sub = DbListCmd.newList(s, list, freeName(s, list, Store.LIST, scanned.name));
+            c[0]++;
+            graft(s, sub, scanned, sign, c, 0);
+        } else {
+            c[1] += files(s, list, scanned, sign);
+        }
+        return c;
+    }
+
+    private static void graft(Store s, long into, Tree.Node n, boolean sign, int[] c, int depth) {
+        c[1] += files(s, into, n, sign);
+        if (depth > 60) return;
+        for (Tree.Node ch : n.children) {
+            long sub = DbListCmd.newList(s, into, freeName(s, into, Store.LIST, ch.name));
+            c[0]++;
+            graft(s, sub, ch, sign, c, depth + 1);
+        }
+    }
+
+    private static int files(Store s, long list, Tree.Node n, boolean sign) {
+        if (n.entries.isEmpty()) return 0;
+        List<String> ps = new ArrayList<String>();
+        List<Long> sz = new ArrayList<Long>();
+        for (Tree.Entry e : n.entries) {
+            ps.add(e.path);
+            sz.add(e.size);
+        }
+        return DbFiles.add(s, list, ps, sz, sign).added;
+    }
 }

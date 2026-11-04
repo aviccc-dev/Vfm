@@ -80,12 +80,16 @@ final class HoleForm {
                 public void onClick(View v) {
                     if (kind == CmdTemplates.HOLE_MANY) {
                         pickMany(a, h, e);
+                    } else if (kind == CmdTemplates.HOLE_MANUAL && DbPicker.on(a)) {   // מ0.23: עובדים במסד — הרשימות של המסד
+                        DbPicker.choose(a, h, new DbPicker.Picked() {
+                            @Override public void ok(String mode, long id, List<String> path) { e.setText(ListCmd.pathText(path)); }
+                        });
                     } else if (kind == CmdTemplates.HOLE_MANUAL) {
                         ListPicker.choose(a, h, null, new ArrayList<String>(), new ListPicker.Picked() {   // כל הרשימות
                             @Override public void ok(ArrayList<String> path) { e.setText(ListCmd.pathText(path)); }
                         });
                     } else if (kind == CmdTemplates.HOLE_SMART) {
-                        final List<String> names = ListCmd.smartNames();
+                        final List<String> names = DbPicker.on(a) ? DbPicker.names(a).get("smart") : ListCmd.smartNames();   // מ0.23
                         if (names.isEmpty()) {
                             Ui.toast(a, Words.Ed.NO_SMART);
                             return;
@@ -109,7 +113,8 @@ final class HoleForm {
     private static void pickMany(Activity a, String title, final EditText e) {
         final List<String> all = new ArrayList<String>();
         all.add(ListCmd.HOME);
-        ListCmd.manualPaths(Tree.load().root, "", all);
+        if (DbPicker.on(a)) all.addAll(DbPicker.names(a).get("manual"));     // מ0.23: עובדים במסד
+        else ListCmd.manualPaths(Tree.load().root, "", all);
         String[] shown = new String[all.size()];
         final boolean[] on = new boolean[all.size()];
         List<String> now = CmdTemplates.many(Bidi.strip(e.getText().toString()));

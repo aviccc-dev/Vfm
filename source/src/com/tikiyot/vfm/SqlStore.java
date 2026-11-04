@@ -608,6 +608,22 @@ public final class SqlStore implements Store {
     }
 
     @Override
+    public void moveFile(long item, String path, String drive) {
+        if (file(item) == null) throw new Failure("not a file: " + item);
+        Stores.checkFile(new FileInfo(path, drive, 0, 0, null));
+        db.beginTransaction();
+        try {
+            long had = findFile(path);
+            if (had != 0 && had != item) throw new Failure("file already exists: " + path);
+            db.execSQL("UPDATE files SET path=?, drive=? WHERE item_id=?", new Object[]{path, drive, item});
+            db.execSQL("UPDATE items SET name=?, changed=? WHERE id=?", new Object[]{Stores.fileName(path), System.currentTimeMillis(), item});
+            db.setTransactionSuccessful();
+        } finally {
+            db.endTransaction();
+        }
+    }
+
+    @Override
     public long findFile(String path) {
         return num("SELECT item_id FROM files WHERE path=?", path);
     }

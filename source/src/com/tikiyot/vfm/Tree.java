@@ -155,6 +155,15 @@ public final class Tree {
         root.declared = true;
     }
 
+    /** מ0.23: עץ בזיכרון בלבד — לא נשמר לעולם (תצוגה של המסד בשביל מי שקורא עץ, כמו החתימות). */
+    private boolean memoryOnly;
+
+    static Tree memory() {
+        Tree t = new Tree();
+        t.memoryOnly = true;
+        return t;
+    }
+
     public Node find(List<String> path) {
         Node cur = root;
         for (String p : path) {
@@ -335,6 +344,7 @@ public final class Tree {
 
     /** 162: שמירה לקובץ של אופן אחר (אחרי העתקה אליו). */
     boolean saveTo(File f) {
+        if (memoryOnly) return false;
         try {
             Files.writeAtomic(f, text());
             return true;
@@ -347,6 +357,7 @@ public final class Tree {
     // ---------- שמירה ----------
 
     public boolean save() {
+        if (memoryOnly) return false;
         synchronized (LOCK) {
             return saveLocked();
         }

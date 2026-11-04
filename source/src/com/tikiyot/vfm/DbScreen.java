@@ -28,7 +28,7 @@ public class DbScreen extends Activity {
     /** מ0.9: פתיחה מהמראה המוכר — האופן, והרשימה שבה לפתוח (פעולות). בלי EXTRA_AT — נפתח הבית במראה המוכר. */
     static final String EXTRA_MODE = "mode", EXTRA_AT = "at";
     /** מ0.10: מה לעשות מיד ברשימה שנפתחה (פקודה "הוסף מהכונן / מחיפוש" מהמראה המוכר). */
-    static final String EXTRA_DO = "do", DO_FOLDER = "folder", DO_SEARCH = "search";
+    static final String EXTRA_DO = "do", DO_FOLDER = "folder", DO_SEARCH = "search", DO_BACKUPS = "backups";   // מ0.23: גיבויים מ־⋮
     private String pendingDo;
     private boolean familiarDone;
     /** מ0.20: האופנים שכבר הוצע בהם שחזור למסד ריק (פעם אחת לכל אופן בכל פתיחה של המסך). */
@@ -74,6 +74,12 @@ public class DbScreen extends Activity {
     /** האופן הפתוח: מה שנבחר בפעם הקודמת, ואם אין — האופן הפעיל במנוע הישן. */
     private String loadMode() {
         String m = getSharedPreferences(PREFS, MODE_PRIVATE).getString(PREF_MODE, "");
+        return m.isEmpty() ? Importer.activeMode(oldData()) : m;
+    }
+
+    /** מ0.23: האופן של המסד בלי מסך פתוח (למשל שיתוף מאפליקציה אחרת): מה שנבחר בפעם הקודמת, ואם אין — הפעיל בישן. */
+    static String savedMode(android.content.Context c) {
+        String m = c.getSharedPreferences(PREFS, MODE_PRIVATE).getString(PREF_MODE, "");
         return m.isEmpty() ? Importer.activeMode(oldData()) : m;
     }
 
@@ -228,6 +234,7 @@ public class DbScreen extends Activity {
             String d = pendingDo;
             pendingDo = null;
             if (DO_FOLDER.equals(d)) fromFolder(current());
+            else if (DO_BACKUPS.equals(d)) backupMenu();
             else fromSearch(current());
         }
         if (!familiarDone) {                                                  // מ0.9: פעם אחת — הבית במראה המוכר

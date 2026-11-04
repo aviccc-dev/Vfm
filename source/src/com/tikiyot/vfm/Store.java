@@ -111,6 +111,12 @@ public interface Store {
     /** מעדכן גודל, תאריך וחתימה (sig יכול להיות null). */
     void updateFile(long item, long size, long mtime, String sig);
 
+    /**
+     * מ0.23: הקובץ זז בכונן (העברה, שינוי שם, שחזור מהסל) — אותו פריט, מסלול חדש; השם — שם הקובץ החדש. החברות ברשימות
+     * נשארת. מסלול שכבר יש לו פריט אחר — Failure (המאחד — DbFollow).
+     */
+    void moveFile(long item, String path, String drive);
+
     /** מספר הפריט של קובץ במסלול הזה, או 0. */
     long findFile(String path);
 

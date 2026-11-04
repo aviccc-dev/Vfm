@@ -2249,6 +2249,16 @@ public final class Words {
     public static final class DbCmd {
         private DbCmd() { }
 
+        // מ0.23: יצוא וייבוא — קובצי פקודות מוכנים ב־⭐
+        public static final String TOOL_EXPORT = "יצוא רשימה", TOOL_IMPORT = "ייבוא רשימה",   // בכונן
+                HOLE_EXPORT = "רשימה-לייצוא", HOLE_FILE = "שם-הקובץ-בתיקיית-יצוא", HOLE_INTO = "לתוך-רשימה";   // תחביר
+
+        public static String toolsAdded(java.util.List<String> names) {
+            StringBuilder sb = new StringBuilder();
+            for (String n : names) sb.append(sb.length() == 0 ? "" : ", ").append(n);
+            return "נוספו לתפריט הפקודות ⭐: " + sb;
+        }
+
         public static final String NO_HOME = "אין בית במסד הזה", SAME_NAME = "כבר יש שם רשימה בשם הזה",
                 ALREADY = "כבר בה",
                 MENU_TESTS = "🧪 בדיקת הפקודות (אופן \"בדיקות מערכת\")",
@@ -2258,6 +2268,7 @@ public final class Words {
                 TEST_LOAD_FILE = "בדיקת עומס",  // בכונן
                 TEST_ALL_FILE = "בדיקה כללית",  // בכונן
                 TEST_STRESS_FILE = "בדיקת לחץ",  // בכונן
+                TEST_V23_FILE = "בדיקת מ0.23",  // בכונן
                 TOOLS_DIR = "כלים",  // בכונן
                 TEST_READY = "אופן \"בדיקות מערכת\" — נגיעה ב\"בדיקת פקודות\" מריצה את הבדיקה";
 
@@ -2465,9 +2476,17 @@ public final class Words {
     public static final class Db {
         private Db() { }
 
+        // מ0.23: בורר הרשימות של המסד
+        public static final String PICK_NOT_HOME = "בוחרים רשימה שבתוך הבית",
+                NO_DB_HERE = "אין מסד לאופן הזה";
+
+        public static String addedTo(int added, int already, String list) {
+            return "נוספו ל\"" + list + "\": " + added + (already > 0 ? " · כבר היו בה: " + already : "") + " · הקבצים עצמם לא זזו";
+        }
+
         public static final String APP_NAME_M = "מנהל קבצים וירטואלי · מ";
         public static final String MENU = "מסד נתונים (מ)";
-        public static final String TITLE = "מסד נתונים · מ0.22";
+        public static final String TITLE = "מסד נתונים · מ0.23";
         /** מ0.9: המראה המוכר. */
         public static final String LIST_GONE = "הרשימה הזו כבר לא קיימת במסד", MENU_ACTIONS = "⚙ מסד: גיבוי, העתקה, בדיקה ופעולות",
                 MENU_OLD = "↩ הצד הישן (לפני המסד)",

@@ -374,8 +374,38 @@ final class DbListCmd {
         }, true);
     }
 
-    /** מ0.13.1: עריכה — שם (ריק — בלי שינוי), צלמית, תיאור, "למה"; בעסקה אחת. רעיון/כותרת — השם הוא הטקסט. */
-    static void edit(Store s, final long id, final String name, final String icon, final String desc, final String why) {
+    /**
+     * מ0.23: הבדיקה האחת של שם לרשימה (ידנית או חכמה) — של REN, של "הגדרות" במסך ושל רשימה חדשה מ־➕: "/" או "\\" —
+     * לא (לפני הניקוי, שמוחק אותם בשקט); ריק — לא; באחת הרשימות שהיא בתוכן (parents) כבר יש פריט אחר מאותו סוג באותו
+     * שם — לא. self — הפריט עצמו (0 — חדש). מחזיר את השגיאה, או null.
+     */
+    static String nameError(Store s, List<Long> parents, long self, int type, String raw) {
+        String name = raw == null ? "" : raw;
+        if (name.contains("/") || name.contains("\\")) return Words.DbCmd.BAD_NAME;
+        String n = type == Store.SMART ? name.trim() : Tree.cleanName(name);
+        if (n.isEmpty()) return Words.DbCmd.BAD_NAME;
+        for (Long p : parents) {
+            if (p == null || p == 0) continue;
+            for (Store.Member m : s.members(p))
+                if (m.item.id != self && m.item.type == type && m.item.name.equals(n)) return Words.DbCmd.nameTaken(n);
+        }
+        return null;
+    }
+
+    /**
+     * מ0.13.1: עריכה — שם (ריק — בלי שינוי), צלמית, תיאור, "למה"; בעסקה אחת. רעיון/כותרת — השם הוא הטקסט.
+     * מ0.23: לרשימה ולחכמה — שם חדש עובר את nameError (כמו REN); שגיאה — שום שינוי, ומוחזרת. אחרת — null.
+     */
+    static String edit(Store s, final long id, final String name, final String icon, final String desc, final String why) {
+        Store.Item cur = s.item(id);
+        if (cur == null) return null;
+        if ((cur.type == Store.LIST || cur.type == Store.SMART) && !name.trim().isEmpty()) {
+            String n = cur.type == Store.LIST ? Tree.cleanName(name) : name.trim();
+            if (!n.equals(cur.name) || name.contains("/") || name.contains("\\")) {
+                String e = nameError(s, s.listsOf(id), id, cur.type, name);
+                if (e != null) return e;
+            }
+        }
         s.atomic(new Store.Work() {
             @Override public void run(Store t) {
                 Store.Item it = t.item(id);
@@ -388,9 +418,10 @@ final class DbListCmd {
                 t.setProp(id, Store.P_WHY, why.trim().replace('\n', ' '));
             }
         }, true);
+        return null;
     }
 
-    /** רשימה ידנית חדשה בתוך parent (0 — בבית, אם יש). */
+    /** רשימה ידנית חדשה בתוך parent (0 — בבית, אם יש). בלי בדיקת שם — למי שכבר בדק (ייבוא, העתקה). */
     static long newList(Store s, final long parent, final String name) {
         final long into = parent != 0 ? parent : Importer.home(s);
         final long[] out = {0};
@@ -399,6 +430,24 @@ final class DbListCmd {
         }, true);
         return out[0];
     }
+
+    /** מה יצא מ־newListChecked: הרשימה, או השגיאה. */
+    static final class Made {
+        long id;
+        String error;
+    }
+
+    /** מ0.23: רשימה חדשה מהמסך (➕, הבורר) — אחרי nameError, כמו MD: שם תפוס באותה רשימה — שגיאה, לא כפולה. */
+    static Made newListChecked(Store s, long parent, String name) {
+        Made r = new Made();
+        long into = parent != 0 ? parent : Importer.home(s);
+        List<Long> ps = new ArrayList<Long>();
+        ps.add(into);
+        r.error = nameError(s, ps, 0, Store.LIST, name);
+        if (r.error == null) r.id = newList(s, into, name);
+        return r;
+    }
+
 
     /** פריט אחד לתוך into; null — נכנס, אחרת — למה לא. */
     private static String copyItem(Store t, Store.Item it, long into) {
@@ -493,9 +542,8 @@ final class DbListCmd {
         }
         Store.Item it = s.item(id);
         if (n.equals(it.name)) return Res.same(Words.DbCmd.renamed(a.label(), n));
-        if (parent != 0)
-            for (Store.Member m : s.members(parent))
-                if (m.item.id != id && m.item.type == it.type && m.item.name.equals(n)) return Res.err(Words.DbCmd.nameTaken(n));
+        String e = nameError(s, java.util.Collections.singletonList(parent), id, it.type, name);   // מ0.23: הבדיקה האחת
+        if (e != null) return Res.err(e);
         final long fid = id;
         s.atomic(new Store.Work() {
             @Override public void run(Store t) { t.rename(fid, n); }
@@ -1067,6 +1115,16 @@ final class DbListCmd {
 
     /** ההרצה: המסד נפתח לרגע; לפני פעולה שמוציאה — גיבוי "לפני פעולה" (נכשל — לא מבצעים). */
     private static String real(String mode, Work w, boolean before, Library lib) {
+        Res r = realRes(mode, w, before, lib);
+        return r.error != null ? r.error : Words.DbCmd.inDb(r.text);
+    }
+
+    /** מ0.23: כמו now, אבל התוצאה עצמה — כדי לדעת אם נכשל (מסכים שמראים הודעה משלהם). */
+    static Res nowRes(String mode, Work w, boolean before) {
+        return realRes(mode, w, before, null);
+    }
+
+    private static Res realRes(String mode, Work w, boolean before, Library lib) {
         SqlStore s = null;
         try {
             s = SqlStore.open(DbScreen.dbFile(DbListScreen.app, mode), new IdCounter(DbScreen.counterFile()));
@@ -1075,14 +1133,13 @@ final class DbListCmd {
                     DbScreen.backupsOf(DbListScreen.app, mode).before(s, Backups.OP_DELETE, System.currentTimeMillis());
                 } catch (Throwable t) {
                     Log.e("DbListCmd.before", t);
-                    return Words.DbCmd.beforeFailed(String.valueOf(t.getMessage()));
+                    return Res.err(Words.DbCmd.beforeFailed(String.valueOf(t.getMessage())));
                 }
             }
-            Res r = w.run(s, over(lib, new HashMap<String, List<String>>()));
-            return r.error != null ? r.error : Words.DbCmd.inDb(r.text);
+            return w.run(s, over(lib, new HashMap<String, List<String>>()));
         } catch (Throwable t) {
             Log.e("DbListCmd.real", t);
-            return Words.Db.failed(String.valueOf(t.getMessage()));
+            return Res.err(Words.Db.failed(String.valueOf(t.getMessage())));
         } finally {
             if (s != null) s.close();
         }

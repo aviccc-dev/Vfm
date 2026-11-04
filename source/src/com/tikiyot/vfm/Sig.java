@@ -281,7 +281,7 @@ final class Sig {
                     try {
                         for (int i = 0; i < 300 && !lib.ready; i++) Thread.sleep(200);
                         for (int round = 0; round < 20; round++) {           // קובץ שמשתנה כל הזמן — לא לנצח
-                            Status s = status(lib, Tree.load());              // פעם אחת לסבב, לא לכל מנה
+                            Status s = status(lib, DbPicker.listsForSig());   // פעם אחת לסבב (מ0.23: במסד — הרשימות של המסד)
                             lastDone = s.done;
                             lastTotal = s.total;
                             if (s.todo.isEmpty()) {
@@ -523,6 +523,7 @@ final class Sig {
                 n += t.replacePath(e.getKey(), e.getValue(), new File(e.getValue()).length());
             if (n > 0) t.save();
         }
+        if (Flavor.M) n = DbFollow.movedEverywhere(moved);                 // מ0.23: הרשימות שהמשתמש רואה — במסד
         moved(moved);
         return n;
     }

@@ -437,6 +437,8 @@ final class Batch {
             }
             gone.remove(to.getAbsolutePath());
             added.put(to.getAbsolutePath(), src);
+            if (!copy && db != null)                                           // מ0.23: גם בהדמיה — הרשימות במסד עוקבות
+                DbFollow.moved(db, java.util.Collections.singletonMap(from, to.getAbsolutePath()));
         }
     }
 

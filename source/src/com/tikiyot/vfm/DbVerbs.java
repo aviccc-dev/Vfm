@@ -68,11 +68,17 @@ final class DbVerbs {
             @Override
             public void ok(final String name) {
                 if (name.trim().isEmpty()) return;
+                final String[] err = {null};
                 long id = write(a, mode, new Job() {
                     @Override
-                    public long run(Store s, List<String> p) { return DbListCmd.newList(s, in, name); }   // מ0.13: הליבה
+                    public long run(Store s, List<String> p) {                // מ0.23: עם בדיקת השם (כמו MD) — לא כפולה
+                        DbListCmd.Made r = DbListCmd.newListChecked(s, in, name);
+                        err[0] = r.error;
+                        return r.id;
+                    }
                 }, null);
-                if (id != 0) DbListScreen.open(a, mode, id);
+                if (err[0] != null) Ui.toast(a, err[0]);
+                else if (id != 0) DbListScreen.open(a, mode, id);
             }
         });
     }
@@ -144,6 +150,11 @@ final class DbVerbs {
         } finally {
             if (s != null) s.close();
         }
+    }
+
+    /** מ0.23: האם יש במסד של האופן רשימה במסלול הזה. */
+    static boolean exists(Activity a, String mode, List<String> path) {
+        return mode != null && DbScreen.dbFile(a, mode).isFile() && read(a, mode, path) != 0;
     }
 
     private static long read(Activity a, String mode, List<String> path) {

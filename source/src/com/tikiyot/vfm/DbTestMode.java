@@ -16,7 +16,7 @@ import java.util.List;
 final class DbTestMode {
 
     static final String ASSET = "tests/pkudot-masad.vbat", ASSET_CALL = "tests/pkudot-kalul.vbat", ASSET_LOAD = "tests/omes-masad.vbat",
-            ASSET_ALL = "tests/klali.vbat", ASSET_STRESS = "tests/lachatz.vbat";
+            ASSET_ALL = "tests/klali.vbat", ASSET_STRESS = "tests/lachatz.vbat", ASSET_V23 = "tests/gersa-023.vbat";
 
     /** בקובץ בדיקת העומס: מוחלף בשם האופן עם המסד הגדול ביותר (הנתונים האמיתיים). */
     static final String REAL = "%האופן-האמיתי%";  // תחביר
@@ -82,6 +82,13 @@ final class DbTestMode {
             } finally {
                 out5.close();
             }
+            final File v23 = new File(Modes.dirOf(mode), Words.DbCmd.TEST_V23_FILE + "." + Batch.EXT);
+            FileOutputStream out6 = new FileOutputStream(v23);
+            try {
+                out6.write(Examples.asset(a, ASSET_V23).getBytes("UTF-8"));   // מ0.23: בדיקת הגרסה (נכללת גם בכללית)
+            } finally {
+                out6.close();
+            }
             long home = DbVerbs.write(a, mode, new DbVerbs.Job() {
                 @Override
                 public long run(Store s, List<String> p) {
@@ -94,7 +101,7 @@ final class DbTestMode {
                             }
                         }
                     }, true);
-                    DbFiles.add(s, h[0], java.util.Arrays.asList(all.getAbsolutePath(), f.getAbsolutePath(), stress.getAbsolutePath(), load.getAbsolutePath()), null, true);
+                    DbFiles.add(s, h[0], java.util.Arrays.asList(all.getAbsolutePath(), v23.getAbsolutePath(), f.getAbsolutePath(), stress.getAbsolutePath(), load.getAbsolutePath()), null, true);
                     return h[0];
                 }
             }, null);

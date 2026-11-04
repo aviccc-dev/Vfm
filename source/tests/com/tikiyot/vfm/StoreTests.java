@@ -95,6 +95,12 @@ final class StoreTests {
             } finally {
                 lc.close();
             }
+            Store fx = opener.fresh(new File(sub, "fix23-counter.txt"));       // מ0.23
+            try {
+                new ImportTests(o, name).fixes23(fx, new File(sub, "fix23"));
+            } finally {
+                fx.close();
+            }
             Store cs = opener.fresh(new File(sub, "count-counter.txt"));
             try {
                 new ImportTests(o, name).count(cs);

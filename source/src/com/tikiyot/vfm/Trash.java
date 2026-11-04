@@ -211,12 +211,12 @@ public final class Trash {
             if (renamed) {                                     // שם תפוס: הפריטים ברשימות עוברים לשם החדש (65)
                 Map<String, String> m = new HashMap<String, String>();
                 for (String rel : relFiles(dst)) m.put(it.original + "/" + rel, dst.getAbsolutePath() + "/" + rel);
-                Tree.replaceEverywhere(m);
+                Physical.listsMoved(m);                     // מ0.23: גם המסד
             }
         } else {
             lib.fileRemoved(src.getAbsolutePath());
             lib.fileAdded(dst);
-            if (renamed) Tree.replaceEverywhere(java.util.Collections.singletonMap(it.original, dst.getAbsolutePath()));
+            if (renamed) Physical.listsMoved(java.util.Collections.singletonMap(it.original, dst.getAbsolutePath()));   // מ0.23: גם המסד
         }
         forget(src.getParentFile(), java.util.Collections.singletonList(src.getName()));
         Log.i("שוחזר: " + dst);

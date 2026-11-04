@@ -169,7 +169,7 @@ public class ShareScreen extends Activity {
         status.setText(Words.ShareIn.ADD_N + files.size() + Words.ShareIn.FILES_TO_LIST + Words.NO_TOUCH
                 + (unresolved > 0 ? "\n(" + unresolved + Words.ShareIn.NOT_IDENTIFIED : ""));
         // 126: הבורר האחד (תיקיות / עץ, חיפוש, תצוגה אחרונה) — במקום שורות משלו
-        if (FnVirtual.allBases().isEmpty()) {
+        if (!DbPicker.on(this) && FnVirtual.allBases().isEmpty()) {           // מ0.23: במסד — הרשימות של המסד
             status.setText(Words.ShareIn.NO_LISTS_YET);
             return;
         }
@@ -183,6 +183,18 @@ public class ShareScreen extends Activity {
     }
 
     private void pick() {
+        if (DbPicker.on(this)) {                                              // מ0.23: עובדים במסד — לרשימה במסד
+            DbPicker.choose(this, Words.ADD_TO_LIST, new DbPicker.Picked() {
+                @Override
+                public void ok(String mode, long id, List<String> path) {
+                    Library.get(ShareScreen.this).learn(files);
+                    DbPicker.addPicked(ShareScreen.this, mode, id, path, files, new Runnable() {
+                        @Override public void run() { finish(); }
+                    });
+                }
+            });
+            return;
+        }
         ListPicker.choose(this, Words.ADD_TO_LIST, null, new ListPicker.Picked() {
             @Override public void ok(ArrayList<String> path) { addTo(path); }
         });

@@ -408,6 +408,12 @@ public class RunScreen extends Activity {
             if (s.ran && s.op != null && s.target != null && Batch.kind(s) != Batch.K_DELETE) {
                 String t = s.target.replace("\"", "").trim();
                 if (t.equals(Words.ListCmdW.HOME)) continue;
+                String m = plan.sim == null ? null : plan.sim.mode;
+                if (DbVerbs.active()) {                                         // מ0.23: במסד — קיימת במסד (גם "/" וגם "\\")
+                    List<String> p = Tree.parsePath(t.replace('\\', '/'));
+                    if (!p.isEmpty() && DbVerbs.exists(this, m != null ? m : DbListScreen.currentMode, p)) return p;
+                    continue;
+                }
                 List<String> p = new ArrayList<String>();
                 for (String x : t.split("\\\\")) if (!x.trim().isEmpty()) p.add(x.trim());
                 if (Tree.load().find(p) != null) return p;

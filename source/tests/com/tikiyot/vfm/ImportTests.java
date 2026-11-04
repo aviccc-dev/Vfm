@@ -412,6 +412,118 @@ final class ImportTests {
         return n;
     }
 
+    /** מ0.23: סט התיקונים — המסד עוקב אחרי הכונן, בורר הרשימות, בדיקת השם האחת, תיקייה לרשימה, הכלים ב־⭐. */
+    void fixes23(Store s, File dir) throws Exception {
+        final String M = "x";
+        long home = s.createList("בית", 0);
+        s.setProp(home, Store.P_HOME, "1");
+        long a = s.createList("א", home), b = s.createList("ב", a), c = s.createList("ג", home);
+        String p1 = "/storage/emulated/0/ת/1.pdf", p2 = "/storage/emulated/0/ת/2.pdf", p3 = "/storage/emulated/0/ת/3.pdf";
+        DbFiles.add(s, a, Arrays.asList(p1, p2), null);
+        DbFiles.add(s, b, Arrays.asList(p1), null);
+        DbFiles.add(s, c, Arrays.asList(p3), null);
+        long f1 = s.findFile(p1), f3 = s.findFile(p3);
+
+        // --- המסד עוקב אחרי הכונן (DbFollow) ---
+        ck("עוקב: ספירה — בכמה רשימות (כל הופעה)", DbFollow.count(s, Arrays.asList(p1, p2, "/nope")) == 3);
+        java.util.Map<String, String> mv = new java.util.LinkedHashMap<String, String>();
+        mv.put(p1, "/storage/ABCD-1234/חדש/1.pdf");
+        mv.put("/nope", "/x");
+        ck("עוקב: העברה — אותו פריט, המסלול והשם החדשים, ברשימות כמו קודם", DbFollow.moved(s, mv) == 1
+                && s.findFile("/storage/ABCD-1234/חדש/1.pdf") == f1 && s.findFile(p1) == 0
+                && s.file(f1).drive.equals("ABCD-1234") && s.listsOf(f1).equals(Arrays.asList(a, b)));
+        java.util.Map<String, String> onto = new java.util.HashMap<String, String>();
+        onto.put("/storage/ABCD-1234/חדש/1.pdf", p3);                      // החליף את 3 — החברות עוברת אליו
+        ck("עוקב: העברה על קובץ שיש לו פריט — החברות עוברת אליו, הישן יוצא מהרשימות", DbFollow.moved(s, onto) == 1
+                && s.listsOf(f3).containsAll(Arrays.asList(a, b, c)) && s.listsOf(f1).isEmpty());
+        ck("עוקב: מחיקה — יוצא מכל הרשימות (הפריט נשאר)", DbFollow.gone(s, Arrays.asList(p3)) == 3
+                && s.listsOf(f3).isEmpty() && s.item(f3) != null && DbFollow.count(s, Arrays.asList(p3)) == 0);
+        ck("עוקב: בלי כלום — 0", DbFollow.moved(s, new java.util.HashMap<String, String>()) == 0
+                && DbFollow.gone(s, new ArrayList<String>()) == 0);
+        s.setProp(b, Store.P_DESIGN, "כחול");
+        ck("עוקב: שינוי שם של עיצוב — הרשימות עוברות לשם החדש; מחיקה — יורשות",
+                DbFollow.designRenamed(s, "כחול", "ים") == 1 && "ים".equals(s.prop(b, Store.P_DESIGN))
+                        && DbFollow.designRenamed(s, "ים", "") == 1 && s.prop(b, Store.P_DESIGN) == null);
+
+        // --- בורר הרשימות של המסד (DbPicker.Snap) ---
+        long a2 = s.createList("א", home);                                   // שם כפול באותה רשימה (נוצר לפני התיקון)
+        long loose = s.createList("עצמאית", 0);
+        long sm = s.createSmart("חכמה-בבית", home), sm2 = s.createSmart("חכמה-בא", a), sm3 = s.createSmart("לבד", 0);
+        DbPicker.Snap snap = DbPicker.Snap.of(s);
+        ck("בורר: השורש — הרשימות שבבית, ואחריהן מה שאינו בשום רשימה", snap.kids.get("").equals(Arrays.asList("א", "ג", "א (2)", "עצמאית")));
+        ck("בורר: לכל מסלול — הרשימה הנכונה (גם הכפולה)", snap.id(Tree.parsePath("א/ב")) == b && snap.id(Tree.parsePath("א (2)")) == a2
+                && snap.id(Tree.parsePath("עצמאית")) == loose && snap.id(Tree.parsePath("אין")) == 0 && snap.home == home);
+        ck("בורר: כל המסלולים בצורת הפקודות", snap.paths().equals(Arrays.asList("א", "א\\ב", "ג", "א (2)", "עצמאית")));
+        ck("בורר: החכמות בשם שהפקודות מכירות", snap.smarts.equals(Arrays.asList("חכמה-בבית", "לבד", "א\\חכמה-בא")));
+        DbFiles.add(s, a2, Arrays.asList(p2), null);
+        java.util.Map<String, List<String>> where = DbPicker.whereListed(s);
+        ck("בורר: איפה כל קובץ — מסלול מלא", where.get(p2) != null && where.get(p2).containsAll(Arrays.asList("א", "א (2)"))
+                && where.get(p2).size() == 2 && where.get(p3) == null);
+        Tree mt = DbPicker.asTree(s);
+        ck("בורר: עץ בזיכרון לחתימות — כל רשימה עם הקבצים שלה, ולא נשמר", mt.root.children.size() == s.lists().size() && !mt.save());
+
+        // --- בדיקת השם האחת (REN, הגדרות, ➕) ---
+        ck("שם: ➕ רשימה חדשה בשם תפוס — שגיאה, לא כפולה", DbListCmd.newListChecked(s, home, "ג").error != null
+                && DbListCmd.newListChecked(s, home, "ג").id == 0);
+        ck("שם: ➕ עם / — שגיאה (לא נמחק בשקט)", Words.DbCmd.BAD_NAME.equals(DbListCmd.newListChecked(s, home, "ד/ה").error));
+        DbListCmd.Made ok = DbListCmd.newListChecked(s, 0, "ד");
+        ck("שם: ➕ שם פנוי — נוצרת (0 — בבית)", ok.error == null && ok.id != 0 && s.listsOf(ok.id).equals(Arrays.asList(home)));
+        ck("שם: הגדרות — שם תפוס באחת הרשימות שהיא בהן — שגיאה, בלי שינוי",
+                DbListCmd.edit(s, c, "ד", "", "", "") != null && s.item(c).name.equals("ג"));
+        ck("שם: הגדרות — עם / — שגיאה", Words.DbCmd.BAD_NAME.equals(DbListCmd.edit(s, c, "ג/ז", "", "", "")));
+        ck("שם: הגדרות — שם פנוי — משתנה, וגם הצלמית", DbListCmd.edit(s, c, "ז", "🌟", "", "") == null && s.item(c).name.equals("ז")
+                && "🌟".equals(s.prop(c, Store.P_ICON)));
+        ck("שם: הגדרות — אותו שם — בלי שגיאה (רק הפרטים)", DbListCmd.edit(s, c, "ז", "📘", "", "") == null && "📘".equals(s.prop(c, Store.P_ICON)));
+        ck("שם: חכמה — אותה בדיקה (תפוס)", DbListCmd.edit(s, sm, "חכמה-בבית", "", "", "") == null
+                && DbListCmd.nameError(s, Arrays.asList(home), 0, Store.SMART, "חכמה-בבית") != null);
+
+        // --- תיקייה מהכונן לרשימה (DbMore.liveFolder / attach) ---
+        ck("תיקייה: שם פנוי — (2) כשתפוס", DbMore.freeName(s, home, Store.LIST, "ד").equals("ד (2)") && DbMore.freeName(s, home, Store.LIST, "ח").equals("ח"));
+        long live = DbMore.liveFolder(s, ok.id, "/storage/emulated/0/תמונות");
+        ck("תיקייה חיה: חכמה בתוך הרשימה, בשם התיקייה, עם התנאי של התיקייה", live != 0 && s.item(live).type == Store.SMART
+                && s.item(live).name.equals("תמונות") && s.listsOf(live).equals(Arrays.asList(ok.id))
+                && Unify.folderKeys("/storage/emulated/0/תמונות").get(SmartLists.COND).equals(s.prop(live, Store.P_COND)));
+        ck("תיקייה חיה: אותה תיקייה שוב — בלי כפולה", DbMore.liveFolder(s, ok.id, "/storage/emulated/0/תמונות") == 0);
+        Tree.Node scan = new Tree.Node();
+        scan.name = "תיקייה";
+        scan.entries.add(new Tree.Entry("/storage/emulated/0/תיקייה/a.txt", 3, false));
+        Tree.Node subn = new Tree.Node();
+        subn.name = "פנימית";
+        subn.entries.add(new Tree.Entry("/storage/emulated/0/תיקייה/פנימית/b.txt", 4, false));
+        scan.children.add(subn);
+        int[] st = DbMore.attach(s, ok.id, scan, true, false);
+        long tl = DbPaths.find(s, M, Tree.parsePath("ד/תיקייה")), pl = DbPaths.find(s, M, Tree.parsePath("ד/תיקייה/פנימית"));
+        ck("תיקייה עם המבנה: רשימה לכל תיקייה, הקבצים בתוכן", st[0] == 2 && st[1] == 2 && tl != 0 && pl != 0
+                && s.count(tl) == 2 && s.count(pl) == 1);
+        Tree.Node flat = new Tree.Node();
+        flat.name = "שטוחה";
+        flat.entries.add(new Tree.Entry("/storage/emulated/0/תיקייה/a.txt", 3, false));
+        flat.entries.add(new Tree.Entry("/storage/emulated/0/תיקייה/c.txt", 3, false));
+        int[] sf = DbMore.attach(s, ok.id, flat, false, false);
+        ck("תיקייה — הקבצים בלבד: ישר לתוך הרשימה, בלי רשימה חדשה", sf[0] == 0 && sf[1] == 2);
+        int[] sa = DbMore.attach(s, ok.id, scan, true, false);
+        ck("תיקייה עם המבנה פעמיים — שם פנוי, לא מתערבב", sa[0] == 2 && DbPaths.find(s, M, Tree.parsePath("ד/תיקייה (2)")) != 0);
+
+        // --- יצוא וייבוא ב־⭐ (DbCmdMenu.ensureTools) ---
+        long root = s.createList(Reserved.ROOT, home);
+        long cmds = s.createList(Reserved.CMDS, root);
+        dir.mkdirs();
+        File t1 = new File(dir, Words.DbCmd.TOOL_EXPORT + ".vbat"), t2 = new File(dir, Words.DbCmd.TOOL_IMPORT + ".vbat");
+        write(t1, "x");
+        write(t2, "y");
+        List<String> added = DbCmdMenu.ensureTools(s, M, Arrays.asList(t1, t2));
+        ck("כלים: נכנסים לרשימת הפקודות של המסד", added.equals(Arrays.asList(Words.DbCmd.TOOL_EXPORT, Words.DbCmd.TOOL_IMPORT))
+                && s.count(cmds) == 2);
+        DbListCmd.removeFrom(s, cmds, s.findFile(t1.getAbsolutePath()));
+        ck("כלים: מה שהמשתמש הוציא — לא חוזר", DbCmdMenu.ensureTools(s, M, Arrays.asList(t1, t2)).isEmpty() && s.count(cmds) == 1);
+        ck("כלים: השורות — יצוא ⟵ ידנית וקובץ \"*\"; ייבוא ⟵ קובץ וידנית; המקומות הפתוחים — רשימה ידנית",
+                DbCmdMenu.dbTools().get(0)[2].startsWith("COPY ידנית \"<") && DbCmdMenu.dbTools().get(0)[2].endsWith("קובץ \"*\"")
+                        && CmdTemplates.holeKind(Arrays.asList(DbCmdMenu.dbTools().get(0)[2]), Words.DbCmd.HOLE_EXPORT) == CmdTemplates.HOLE_MANUAL
+                        && CmdTemplates.holeKind(Arrays.asList(DbCmdMenu.dbTools().get(1)[2]), Words.DbCmd.HOLE_INTO) == CmdTemplates.HOLE_MANUAL
+                        && CmdTemplates.holeKind(Arrays.asList(DbCmdMenu.dbTools().get(1)[2]), Words.DbCmd.HOLE_FILE) == CmdTemplates.HOLE_PATH);
+        ck("כלים: אין רשימת פקודות — כלום", DbCmdMenu.ensureTools(new MemStore(IdCounter.memory()), M, Arrays.asList(t1)).isEmpty());
+    }
+
     void listCmd(Store s) throws Exception {
         final String M = "פק";
         DbListCmd.Finder f = new DbListCmd.Finder() {

@@ -478,7 +478,15 @@ final class TopRow {
                 new DialogInterface.OnClickListener() {
             @Override
             public void onClick(DialogInterface d, int w) {
-                if (w == 0) ListPicker.choose(a, Words.Main.ADD_MANUAL.trim(), null, new ListPicker.Picked() {
+                if (w == 0 && DbPicker.on(a)) DbPicker.choose(a, Words.Main.ADD_MANUAL.trim(), new DbPicker.Picked() {   // מ0.23
+                    @Override
+                    public void ok(String mode, long id, List<String> path) {
+                        cb.ok("📋", path.get(path.size() - 1), Verbs.openList(path));
+                    }
+                });
+                else if (w == 1 && DbPicker.on(a)) dbSmart(a, cb);                // מ0.23: החכמות של המסד
+                else if (w == 3 && DbPicker.on(a)) dbMenus(a, cb);
+                else if (w == 0) ListPicker.choose(a, Words.Main.ADD_MANUAL.trim(), null, new ListPicker.Picked() {
                     @Override
                     public void ok(ArrayList<String> path) {
                         if (path.isEmpty()) return;
@@ -506,5 +514,62 @@ final class TopRow {
                 }, screen);
             }
         });
+    }
+
+    /** מ0.23: רשימה חכמה מהמסד — בשמה (כמו שהפקודה "פתח חכמה" מוצאת אותה). */
+    private static void dbSmart(Activity a, final Chosen cb) {
+        final List<String> all = new ArrayList<String>();
+        for (String n : DbPicker.names(a).get("smart")) {
+            String name = n.substring(n.lastIndexOf('\\') + 1);
+            if (!all.contains(name)) all.add(name);
+        }
+        if (all.isEmpty()) {
+            Ui.toast(a, Words.Top.NO_SMART);
+            return;
+        }
+        List<String> names = new ArrayList<String>();
+        for (String n : all) names.add("✨ " + n);
+        Ui.list(a, Words.Main.ADD_SMART.trim(), names, new DialogInterface.OnClickListener() {
+            @Override
+            public void onClick(DialogInterface d, int k) { cb.ok("✨", all.get(k), Verbs.openSmart(all.get(k))); }
+        });
+    }
+
+    /** מ0.23: "☰ תפריט" מהמסד — הרשימות שבתוך "שמור לתוכנה" (באופן הפתוח, ואם אין — באופן אחר שיש בו). */
+    private static void dbMenus(Activity a, final Chosen cb) {
+        String mode = DbPicker.mode(a);
+        DbPicker.Snap snap = DbPicker.snap(a, mode);
+        if (snap == null || snap.kids.get(DbPicker.keyOf(Reserved.ROOT_PATH)) == null) {
+            String other = DbCmdMenu.otherMode(a, mode, Reserved.ROOT_PATH);
+            snap = other == null ? null : DbPicker.snap(a, other);
+        }
+        if (snap == null || snap.kids.get(DbPicker.keyOf(Reserved.ROOT_PATH)) == null) {
+            Ui.toast(a, Words.Verb.NOT_FOUND + Reserved.ROOT);
+            return;
+        }
+        final List<List<String>> paths = new ArrayList<List<String>>();
+        List<String> labels = new ArrayList<String>();
+        dbCollect(snap, Reserved.ROOT_PATH, 0, paths, labels);
+        Ui.list(a, Words.Top.T_MENU, labels, new DialogInterface.OnClickListener() {
+            @Override
+            public void onClick(DialogInterface d, int k) {
+                List<String> p = paths.get(k);
+                cb.ok("☰", p.get(p.size() - 1), Verbs.openMenu(p));
+            }
+        });
+    }
+
+    private static void dbCollect(DbPicker.Snap snap, List<String> at, int depth, List<List<String>> paths, List<String> labels) {
+        List<String> kids = snap.kids.get(DbPicker.keyOf(at));
+        if (kids == null || depth > 30) return;
+        for (String c : kids) {
+            List<String> p = new ArrayList<String>(at);
+            p.add(c);
+            StringBuilder in = new StringBuilder();
+            for (int i = 0; i < depth; i++) in.append("    ");
+            paths.add(p);
+            labels.add(in + "☰ " + c);
+            dbCollect(snap, p, depth + 1, paths, labels);
+        }
     }
 }

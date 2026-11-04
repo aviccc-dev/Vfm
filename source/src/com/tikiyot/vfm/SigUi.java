@@ -41,7 +41,7 @@ final class SigUi {
         new Thread(new Runnable() {
             @Override
             public void run() {
-                final Sig.Status s = Sig.status(lib, Tree.load());
+                final Sig.Status s = Sig.status(lib, DbPicker.listsForSig());       // מ0.23
                 Sig.lastDone = s.done;
                 Sig.lastTotal = s.total;
                 final int added = addedPercent(lib);
@@ -110,7 +110,7 @@ final class SigUi {
         new Thread(new Runnable() {
             @Override
             public void run() {
-                Tree t = Tree.load();
+                Tree t = DbPicker.listsForSig();                                // מ0.23: במסד — הרשימות של המסד
                 final Sig.Plan pl = Sig.plan(lib, t);
                 final Sig.Status s = Sig.status(lib, t);
                 a.runOnUiThread(new Runnable() {

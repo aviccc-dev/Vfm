@@ -254,8 +254,26 @@ public final class Physical {
             r.dirs++;
             r.inner += rel.size();
         }
-        if (!grey && !gone.isEmpty()) r.lists = Tree.removeEverywhere(gone);
+        if (!grey && !gone.isEmpty()) r.lists = listsGone(gone);
         return r;
+    }
+
+    // ================= הרשימות אחרי הכונן — במקום אחד (מ0.23) =================
+    // בבניית מ — המסד (בכל האופנים) הוא מה שהמשתמש רואה, והמספר בהודעה הוא שלו; עץ הרשימות הישן ממשיך להתעדכן כמו קודם
+    // (התיקייה שלו משותפת לתוכנה הישנה, עד המעבר לתיקייה נפרדת — claude/yetzia-mipituach.md).
+
+    static int listsMoved(java.util.Map<String, String> moved) {
+        int n = Tree.replaceEverywhere(moved);
+        return Flavor.M ? DbFollow.movedEverywhere(moved) : n;
+    }
+
+    static int listsGone(java.util.Collection<String> gone) {
+        int n = Tree.removeEverywhere(gone);
+        return Flavor.M ? DbFollow.goneEverywhere(gone) : n;
+    }
+
+    static int listsCount(java.util.Collection<String> paths) {
+        return Flavor.M ? DbFollow.countEverywhere(paths) : Tree.countEverywhere(paths);
     }
 
     /** קובץ או תיקייה אל ".נמחקו" של אותו כונן. מחזיר את המקום בסל, או null. */
@@ -754,11 +772,11 @@ public final class Physical {
 
         /** בסוף: הרשימות. קובץ שהוחלף ונשאר במקומו — הפריטים נשארים; שלא נשאר — כמו מחיקה (58). */
         void finish() {
-            if (!moved.isEmpty()) r.lists += Tree.replaceEverywhere(moved);
+            if (!moved.isEmpty()) r.lists += listsMoved(moved);
             if (!grey && !replaced.isEmpty()) {
                 List<String> gone = new ArrayList<String>();
                 for (String p : replaced) if (!new File(p).exists()) gone.add(p);
-                if (!gone.isEmpty()) r.lists += Tree.removeEverywhere(gone);
+                if (!gone.isEmpty()) r.lists += listsGone(gone);
             }
         }
     }
@@ -862,7 +880,7 @@ public final class Physical {
         for (int i = 0; i < n; i++) r.done.add("");
         r.failed = items.size() - n;
         if (r.failed > 0) r.note = Words.DELETE_FAILED;
-        if (!origs.isEmpty()) r.lists = Tree.removeEverywhere(origs);
+        if (!origs.isEmpty()) r.lists = listsGone(origs);
         return r;
     }
 
@@ -951,7 +969,7 @@ public final class Physical {
             return;
         }
         final boolean grey = Acts.deletedStaysGrey();
-        int inLists = Tree.countEverywhere(all);
+        int inLists = listsCount(all);
         String lists = inLists == 0 ? "" : grey ? Words.Disk.LISTS_MARK_DELETED : Words.Disk.LISTS_REMOVE_FROM + Words.items(inLists) + Words.Disk.IN_LISTS_SUFFIX;
         String files;
         if (dirs.isEmpty()) files = paths.size() == 1 ? Words.Disk.FILE_TO_TRASH : Words.Disk.FILES_TO_TRASH;
@@ -1058,7 +1076,7 @@ public final class Physical {
                 + (across && !copy ? Words.Disk.ACROSS_DRIVES : "")
                 + (warning == null ? "" : "\n" + warning)
                 + namesOf(paths, dirs, 12);                                       // 141
-        int inLists = copy ? 0 : Tree.countEverywhere(all);
+        int inLists = copy ? 0 : listsCount(all);
         String undo = copy ? Words.Disk.COPIES_NOT_IN_LISTS
                 : (inLists > 0 ? Words.Disk.LISTS_FOLLOW_OPEN + Words.items(inLists) + ")" : Words.Disk.LISTS_FOLLOW)
                 + Words.Disk.TAKEN_ASK;
@@ -1331,7 +1349,7 @@ public final class Physical {
         lib.fileAdded(dst);
         Map<String, String> moved = new LinkedHashMap<String, String>();
         moved.put(path, dst.getAbsolutePath());
-        r.lists = Tree.replaceEverywhere(moved);
+        r.lists = listsMoved(moved);                                         // מ0.23: גם המסד
         r.done.add(path);
         r.to.put(path, dst.getAbsolutePath());
         moved(path, dst.getAbsolutePath());
@@ -1365,7 +1383,7 @@ public final class Physical {
                     return;
                 }
                 String oldExt = Text.ext(f.getName()), newExt = Text.ext(name);
-                int inLists = Tree.countEverywhere(java.util.Collections.singletonList(path));
+                int inLists = listsCount(java.util.Collections.singletonList(path));
                 String detail = f.getName() + "\n← " + name + Words.Disk.IN_FOLDER_LINE + f.getParent()
                         + (!oldExt.equals(newExt) ? Words.Disk.EXT_CHANGES + (oldExt.isEmpty() ? Words.Disk.WITHOUT : oldExt)
                         + " ← " + (newExt.isEmpty() ? Words.Disk.WITHOUT : newExt) + Words.Disk.EXT_WARNING : "");

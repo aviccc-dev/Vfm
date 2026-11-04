@@ -176,6 +176,7 @@ public final class MemStore implements Store {
         items.remove(item);
         props.remove(item);
         origins.remove(item);
+        files.remove(item);                                                  // מ0.23: כמו המסד (ON DELETE CASCADE)
         for (LinkedHashMap<Long, Long> l : members.values()) l.remove(item);
     }
 
@@ -224,6 +225,19 @@ public final class MemStore implements Store {
         if (f == null) throw new Failure("not a file: " + item);
         files.put(item, new FileInfo(f.path, f.drive, size, mtime, sig));
         touch(item);
+    }
+
+    @Override
+    public void moveFile(long item, String path, String drive) {
+        FileInfo f = files.get(item);
+        if (f == null) throw new Failure("not a file: " + item);
+        FileInfo n = new FileInfo(path, drive, f.size, f.mtime, f.sig);
+        Stores.checkFile(n);
+        long had = findFile(path);
+        if (had != 0 && had != item) throw new Failure("file already exists: " + path);
+        files.put(item, n);
+        Item it = items.get(item);
+        items.put(item, new Item(it.id, it.type, Stores.fileName(path), it.created, System.currentTimeMillis()));
     }
 
     @Override
