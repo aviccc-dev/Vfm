@@ -324,12 +324,28 @@ public class RunScreen extends Activity {
             });
             bs.add(clean[0]);
         }
+        bs.add(btn(Words.Db.COPY_REPORT, new View.OnClickListener() {          // מ0.12: הדוח — להדבקה בשיחה
+            @Override public void onClick(View v) {
+                Ui.copyText(RunScreen.this, Words.Run.FULL_REPORT, reportText());
+                Ui.toast(RunScreen.this, Words.Db.REPORT_COPIED);
+            }
+        }));
         bs.add(btn(Words.CLOSE, close()));
         buttons(bs.toArray(new Button[0]));
         if (!plan.shared.isEmpty()) {                                          // 203: כל מה שלשיתוף — שליחה אחת
             Ui.toast(this, Words.Cmd.sending(plan.shared.size()));
             Acts.sendReady(this, plan.shared);
         }
+    }
+
+    /** מ0.12: הדוח כטקסט אחד — שם הקובץ, ההודעות (ECHO), השורות, הזמן. */
+    private String reportText() {
+        StringBuilder sb = new StringBuilder(file.getName()).append('\n');
+        for (String e : plan.echoes) sb.append(e).append('\n');
+        sb.append('\n');
+        for (String r : report) sb.append(r).append('\n');
+        sb.append(Words.Run.TIME).append(": ").append(Words.Loop.time(took));
+        return sb.toString();
     }
 
     /** 1.27.0: הרשימות שההרצה יצרה (MD שלא היה קיים) — רק העליונות (מה שבתוכן נמחק איתן). */

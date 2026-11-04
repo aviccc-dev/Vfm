@@ -268,7 +268,7 @@ final class DbListCmd {
                     }
                     what.add(m.item);
                 }
-                label = a.mask != null ? Words.files(what.size()) : a.home ? Words.ListCmdW.homeContent(what.size())
+                label = a.mask != null ? Words.files(what.size()) : a.home ? Words.DbCmd.homeContent(what.size())
                         : Words.ListCmdW.contentOf(what.size(), a.label());
             } else {
                 if (src == dest || s.contains(src, dest)) return Res.err(Words.ListCmdW.INTO_ITSELF);
@@ -620,7 +620,7 @@ final class DbListCmd {
                 }
             }
             Res r = w.run(s, over(lib, new HashMap<String, List<String>>()));
-            return r.error != null ? r.error : r.text;
+            return r.error != null ? r.error : Words.DbCmd.inDb(r.text);
         } catch (Throwable t) {
             Log.e("DbListCmd.real", t);
             return Words.Db.failed(String.valueOf(t.getMessage()));

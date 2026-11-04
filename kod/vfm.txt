@@ -881,7 +881,7 @@ MOVE הורדות\*.epub לשלוח
 @תיאור כאן שמים דוגמאות משלך
 @למה הרשימה הזו לא נמחקת ולא משתנה ב"חזרה לברירת מחדל" — כל השאר חוזר להתחלה
 ===== קובץ: assets/tests/pkudot-masad.vbat =====
-ECHO בדיקת פקודות הרשימות במסד. הכול נעשה בתוך הרשימה "בדיקת פקודות", ובסוף היא נמחקת.
+ECHO בדיקת פקודות הרשימות במסד. הכול נעשה בתוך הרשימה "בדיקת פקודות". בהתחלה — מה שנשאר מהפעם הקודמת נמחק.
 RD ידנית "בדיקת פקודות"
 MD ידנית "בדיקת פקודות/א/פנימית"
 MD ידנית "בדיקת פקודות/ב"
@@ -892,9 +892,8 @@ COPY ידנית "בדיקת פקודות/א" ידנית "בדיקת פקודות
 COMP ידנית "בדיקת פקודות/א" ידנית "בדיקת פקודות/ב"
 RD תוכן ידנית "בדיקת פקודות/ב/א"
 COMP ידנית "בדיקת פקודות/א" ידנית "בדיקת פקודות/ב"
-RD ידנית "בדיקת פקודות/ב"
-RD ידנית "בדיקת פקודות"
-ECHO סוף. בדוח — כל שורה ומה היא עשתה. הרשימה "בדיקת פקודות" כבר לא קיימת.
+RD ידנית "בדיקת פקודות/ב/א"
+ECHO סוף. הרשימה "בדיקת פקודות" נשארת לראות (בבית): א, ובתוכה פנימית עם קובץ הבדיקה; ב — ריקה. בהרצה הבאה — נמחקת ונבנית מחדש. "ניקוי" — מוחק אותה עכשיו.
 ===== קובץ: build/build.sh =====
 #!/bin/bash
 # שימוש: build.sh <תיקיית המקור המלאה> <קובץ יעד> [m]
@@ -948,7 +947,7 @@ cd $S; rm -rf out gen bld
 [ "$S" != "$DIR" ] && rm -rf $S
 ls -la $OUT
 ===== קובץ: build/m-version.txt =====
-20 מ0.12
+21 מ0.12.1
 ===== קובץ: build/test.sh =====
 #!/bin/bash
 # בדיקות על המחשב (80). יוצא בכישלון אם בדיקה אחת נכשלה — ואז build.sh לא בונה.
@@ -10059,7 +10058,7 @@ final class DbListCmd {
                     }
                     what.add(m.item);
                 }
-                label = a.mask != null ? Words.files(what.size()) : a.home ? Words.ListCmdW.homeContent(what.size())
+                label = a.mask != null ? Words.files(what.size()) : a.home ? Words.DbCmd.homeContent(what.size())
                         : Words.ListCmdW.contentOf(what.size(), a.label());
             } else {
                 if (src == dest || s.contains(src, dest)) return Res.err(Words.ListCmdW.INTO_ITSELF);
@@ -10411,7 +10410,7 @@ final class DbListCmd {
                 }
             }
             Res r = w.run(s, over(lib, new HashMap<String, List<String>>()));
-            return r.error != null ? r.error : r.text;
+            return r.error != null ? r.error : Words.DbCmd.inDb(r.text);
         } catch (Throwable t) {
             Log.e("DbListCmd.real", t);
             return Words.Db.failed(String.valueOf(t.getMessage()));
@@ -30358,12 +30357,28 @@ public class RunScreen extends Activity {
             });
             bs.add(clean[0]);
         }
+        bs.add(btn(Words.Db.COPY_REPORT, new View.OnClickListener() {          // מ0.12: הדוח — להדבקה בשיחה
+            @Override public void onClick(View v) {
+                Ui.copyText(RunScreen.this, Words.Run.FULL_REPORT, reportText());
+                Ui.toast(RunScreen.this, Words.Db.REPORT_COPIED);
+            }
+        }));
         bs.add(btn(Words.CLOSE, close()));
         buttons(bs.toArray(new Button[0]));
         if (!plan.shared.isEmpty()) {                                          // 203: כל מה שלשיתוף — שליחה אחת
             Ui.toast(this, Words.Cmd.sending(plan.shared.size()));
             Acts.sendReady(this, plan.shared);
         }
+    }
+
+    /** מ0.12: הדוח כטקסט אחד — שם הקובץ, ההודעות (ECHO), השורות, הזמן. */
+    private String reportText() {
+        StringBuilder sb = new StringBuilder(file.getName()).append('\n');
+        for (String e : plan.echoes) sb.append(e).append('\n');
+        sb.append('\n');
+        for (String r : report) sb.append(r).append('\n');
+        sb.append(Words.Run.TIME).append(": ").append(Words.Loop.time(took));
+        return sb.toString();
     }
 
     /** 1.27.0: הרשימות שההרצה יצרה (MD שלא היה קיים) — רק העליונות (מה שבתוכן נמחק איתן). */
@@ -46571,6 +46586,10 @@ public final class Words {
             return what + " — יצא מהרשימות (לפני הביצוע — גיבוי של המסד); הקבצים בכונן לא נוגעים";
         }
 
+        public static String homeContent(int n) {
+            return "כל מה שבבית (" + n + ")";
+        }
+
         public static String notThere(String label) {
             return "אין רשימה " + label + " — אין מה למחוק, בלי שינוי";
         }
@@ -46634,7 +46653,7 @@ public final class Words {
 
         public static final String APP_NAME_M = "מנהל קבצים וירטואלי · מ";
         public static final String MENU = "מסד נתונים (מ)";
-        public static final String TITLE = "מסד נתונים · מ0.12";
+        public static final String TITLE = "מסד נתונים · מ0.12.1";
         /** מ0.9: המראה המוכר. */
         public static final String LIST_GONE = "הרשימה הזו כבר לא קיימת במסד", MENU_ACTIONS = "⚙ מסד: גיבוי, העתקה, בדיקה ופעולות",
                 MENU_OLD = "↩ הצד הישן (לפני המסד)",
