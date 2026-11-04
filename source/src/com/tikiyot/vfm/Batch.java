@@ -159,6 +159,10 @@ final class Batch {
     static final String CHECK = "בדיקה";   // תחביר
     /** מ0.14: ודא — בדיקה בתוך קובץ פקודות (✅ / ❌), לא עוצרת. */
     static final String VERIFY = "VERIFY";
+    /** מ0.15: אופן — מכאן והלאה הפקודות במסד של אופן אחר; CALL — שורות של קובץ אחר במקום השורה. */
+    static final String MODE = "MODE", CALL = "CALL";
+    /** מ0.15: עומק מרבי של CALL בתוך CALL. */
+    static final int CALL_DEPTH = 5;
     /** הגבול לסבבים בלולאה, ולשורות אחרי הפריסה. */
     static final int MAX_ROUNDS = 1000, MAX_LINES = 50000;
     /** 1.13.0: שלב של פקודת פתיחה בעברית (Verbs). */
@@ -388,6 +392,8 @@ final class Batch {
         ListCmd.Lenient files;
         /** מ0.12: כשעובדים במסד — עותק של המסד בזיכרון (DbListCmd), והקבצים לכל תנאי; null — עוד לא נטען. לא נשמר. */
         Store db;
+        /** מ0.15: האופן מ"אופן" בקובץ; null — האופן שפתוח. */
+        String mode;
         final Map<String, List<String>> condFiles = new java.util.HashMap<String, List<String>>();
 
         boolean isDir(File d) {
@@ -478,6 +484,47 @@ final class Batch {
     }
 
     /** פורס את הלולאות: כל סבב — השורות שבתוכה, עם %סבב% = מספר הסבב (בלולאה פנימית — שלה). */
+    /**
+     * מ0.15: CALL "קובץ" (בעברית: כלול) — במקום השורה: הודעה "▸ כלול: …" ואחריה שורות הקובץ (גם CALL שבתוכו, עד
+     * CALL_DEPTH). קובץ שלא נמצא, מעגל, או עומק — השורה נשארת כמו שהיא ונכשלת בתכנון (עם הסבר).
+     */
+    static String[] calls(String[] lines, File here, Map<String, String> vars, int depth, java.util.Set<String> stack) {
+        List<String> out = new ArrayList<String>();
+        for (String raw : lines) {
+            List<String> tk = tokens(clean(raw));
+            if (tk.size() != 2 || !CALL.equals(Commands.canonical(tk.get(0)))) {
+                out.add(raw);
+                continue;
+            }
+            String[] err = {null};
+            String p = path(tk.get(1), here, vars, err);
+            File f = p == null ? null : new File(p);
+            String key = f == null ? "" : f.getAbsolutePath();
+            if (f == null || !f.isFile() || depth >= CALL_DEPTH || stack.contains(key)) {
+                out.add(raw);
+                continue;
+            }
+            try {
+                String[] inner = Bidi.strip(Files.readUtf8(f)).replace("\r", "").split("\n");
+                stack.add(key);
+                String[] sub = calls(inner, f.getParentFile(), vars, depth + 1, stack);
+                stack.remove(key);
+                List<String> keep = new ArrayList<String>();
+                for (String x : sub) {
+                    String c = clean(x);
+                    if (c.equals(CHECK) || c.equals(AS_IF) || c.equals(AS_IF2)) continue;   // שורות כותרת — רק של הקובץ הראשי
+                    keep.add(x);
+                }
+                out.add("ECHO " + Words.DbCmd.called(f.getName(), keep.size()));
+                out.addAll(keep);
+            } catch (Throwable t) {
+                Log.e("Batch.calls", t);
+                out.add(raw);
+            }
+        }
+        return out.toArray(new String[0]);
+    }
+
     static List<Ln> expand(String[] lines, Plan plan) {
         List<Ln> out = new ArrayList<Ln>();
         expand(lines, 0, lines.length, new int[0], new int[0], null, plan, out);
@@ -610,6 +657,7 @@ final class Batch {
         sim.lib = lib;
         plan.sim = sim;
         String[] lines = Bidi.strip(text).replace("\r", "").split("\n");          // 204
+        lines = calls(lines, here, vars, 0, new java.util.HashSet<String>());  // מ0.15: CALL — השורות של הקובץ במקומה
         List<Ln> all = expand(lines, plan);                                    // 1.25.0: לולאות
         Clock clock = new Clock();
         int mark = 0;
@@ -689,6 +737,27 @@ final class Batch {
                 if (rest.equalsIgnoreCase("OFF") || rest.equalsIgnoreCase("ON")) continue;
                 plan.echoes.add(rest.startsWith(".") ? rest.substring(1) : rest);
                 s.describe = Words.Cmd.echo(rest);
+                plan.steps.add(s);
+                continue;
+            }
+            if (cmd.equals(CALL)) {                                             // מ0.15: לא נכלל (לא נמצא / מעגל / עומק)
+                s.error = Words.DbCmd.CALL_FAILED;
+                plan.errors++;
+                plan.steps.add(s);
+                continue;
+            }
+            if (cmd.equals(MODE)) {                                             // מ0.15: אופן — מכאן והלאה, במסד
+                String m = tk.size() == 2 ? tk.get(1).trim() : "";
+                if (m.isEmpty()) s.error = Words.DbCmd.MODE_USAGE;
+                else if (!DbVerbs.active()) s.error = Words.DbCmd.VERIFY_DB_ONLY;
+                else if (!DbScreen.dbModes(DbListScreen.app).contains(m)) s.error = Words.DbCmd.noMode(m);
+                else {
+                    sim.mode = m;
+                    sim.db = null;
+                    s.noop = true;
+                    s.describe = Words.DbCmd.modeNow(m);
+                }
+                if (s.error != null) plan.errors++;
                 plan.steps.add(s);
                 continue;
             }

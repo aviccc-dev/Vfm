@@ -102,7 +102,7 @@ final class DbVerbs {
                 write(a, mode, new Job() {
                     @Override
                     public long run(Store s, List<String> p) {
-                        DbFiles.add(s, in, java.util.Collections.singletonList(f.getAbsolutePath()), null);
+                        DbFiles.add(s, in, java.util.Collections.singletonList(f.getAbsolutePath()), null, true);
                         return in;
                     }
                 }, null);

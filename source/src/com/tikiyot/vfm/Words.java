@@ -2253,6 +2253,7 @@ public final class Words {
                 MENU_TESTS = "🧪 בדיקת הפקודות (אופן \"בדיקות מערכת\")",
                 TEST_MODE = "בדיקות מערכת",  // בכונן
                 TEST_FILE = "בדיקת פקודות",  // בכונן
+                TEST_CALL_FILE = "בדיקת כלול",  // בכונן
                 TEST_READY = "אופן \"בדיקות מערכת\" — נגיעה ב\"בדיקת פקודות\" מריצה את הבדיקה";
 
         public static String removed(String what) {
@@ -2266,6 +2267,25 @@ public final class Words {
                 VERIFY_DB_ONLY = "ודא — עובדת כשעובדים במסד",
                 VERIFY_USAGE = "צורה: ודא ידנית \"א\" [קיימת | חסרה] [/רשימות:N] [/פריטים:N]",
                 WORD_EXISTS = "קיימת", WORD_MISSING = "חסרה", SW_LISTS = "/רשימות:", SW_ITEMS = "/פריטים:";  // תחביר
+
+        public static final String N_MODE = "אופן", N_CALL = "כלול",  // תחביר
+                W_MODE = "מכאן והלאה — הפקודות על המסד של אופן אחר (רק לקובץ הזה; המסך לא מתחלף)",
+                H_MODE = "שם אופן עבודה שיש לו מסד", MODE_USAGE = "צורה: אופן \"שם האופן\"",
+                W_CALL = "השורות של קובץ פקודות אחר — במקום השורה הזו (כמו CALL); עד 5 בתוך 5",
+                H_CALL = "קובץ פקודות (מסלול, או שם בתיקייה של הקובץ הזה)",
+                CALL_FAILED = "כלול — הקובץ לא נמצא, או שהוא כבר בתוך עצמו (מעגל), או יותר מ־5 בתוך 5";
+
+        public static String noMode(String m) {
+            return "אין מסד לאופן \"" + m + "\"";
+        }
+
+        public static String modeNow(String m) {
+            return "מכאן והלאה — הפקודות במסד של האופן \"" + m + "\"";
+        }
+
+        public static String called(String name, int lines) {
+            return "▸ כלול: " + name + " (" + lines + " שורות)";
+        }
 
         public static String verifySummary(int ok, int bad) {
             return (bad == 0 ? "✅" : "❌") + " ודא: " + ok + " עברו · " + bad + " נכשלו";
@@ -2361,7 +2381,7 @@ public final class Words {
 
         public static final String APP_NAME_M = "מנהל קבצים וירטואלי · מ";
         public static final String MENU = "מסד נתונים (מ)";
-        public static final String TITLE = "מסד נתונים · מ0.14";
+        public static final String TITLE = "מסד נתונים · מ0.15";
         /** מ0.9: המראה המוכר. */
         public static final String LIST_GONE = "הרשימה הזו כבר לא קיימת במסד", MENU_ACTIONS = "⚙ מסד: גיבוי, העתקה, בדיקה ופעולות",
                 MENU_OLD = "↩ הצד הישן (לפני המסד)",

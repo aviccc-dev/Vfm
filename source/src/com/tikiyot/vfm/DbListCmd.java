@@ -237,7 +237,7 @@ final class DbListCmd {
                 what = Words.ListCmdW.filesOf(Words.files(paths.size()), a.label());
             }
             final List<String> ps = paths;
-            DbFiles.Added r = DbFiles.add(s, dest, ps, null);
+            DbFiles.Added r = DbFiles.add(s, dest, ps, null, !(s instanceof MemStore));   // מ0.15: חתימה — בהרצה, לא בהדמיה
             return Res.ok(what + " — " + Words.ListCmdW.copied(r.added, ps.size() - r.added, ps.size() > r.added ? Words.DbCmd.ALREADY : null, b.label()) + nowIn(s, dest));
         }
         final List<Store.Item> what = new ArrayList<Store.Item>();
@@ -492,6 +492,11 @@ final class DbListCmd {
         return DbListScreen.currentMode;
     }
 
+    /** מ0.15: האופן של הקובץ — מ"אופן" שבו, אחרת זה שפתוח. */
+    static String mode(Batch.Sim sim) {
+        return sim != null && sim.mode != null ? sim.mode : mode();
+    }
+
     /** שורה עם מילות סוג, כשעובדים במסד: אותן בדיקות צורה כמו ListCmd.plan; הפעולה — על העותק בזיכרון, ובהרצה — על המסד. */
     static void plan(final Batch.Step s, final String cmd, ListCmd.Parsed p, List<String> sw, final Batch.Sim sim,
                      final List<String> fsFiles, final File fsDest) {
@@ -500,7 +505,7 @@ final class DbListCmd {
                 s.error = Words.ListCmdW.NO_FILTER;
                 return;
             }
-        final String mode = mode();
+        final String mode = mode(sim);
         final Store db;
         try {
             db = sim(sim, mode);
@@ -660,7 +665,7 @@ final class DbListCmd {
         if (!a.list() || a.content || a.filesOf || a.mask != null) { s.error = Words.DbCmd.VERIFY_USAGE; return; }
         final Expect e = expect(conds);
         if (e.error != null) { s.error = e.error; return; }
-        final String mode = mode();
+        final String mode = mode(sim);
         Store db;
         try {
             db = sim(sim, mode);

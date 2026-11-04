@@ -880,8 +880,12 @@ MOVE הורדות\*.epub לשלוח
 @עיצוב תוכנת ניהול קבצים
 @תיאור כאן שמים דוגמאות משלך
 @למה הרשימה הזו לא נמחקת ולא משתנה ב"חזרה לברירת מחדל" — כל השאר חוזר להתחלה
+===== קובץ: assets/tests/pkudot-kalul.vbat =====
+ECHO זה הקובץ הנכלל ("כלול"): השורות שלו רצות במקום השורה שכללה אותו.
+MD ידנית "בדיקת פקודות/מכלול"
 ===== קובץ: assets/tests/pkudot-masad.vbat =====
 בדיקה
+אופן "בדיקות מערכת"
 ECHO בדיקת פקודות הרשימות במסד. הכול נעשה בתוך הרשימה "בדיקת פקודות". בהתחלה — מה שנשאר מהפעם הקודמת נמחק. כל "ודא" מסמן ✅ או ❌, ובסוף — כמה עברו.
 RD ידנית "בדיקת פקודות"
 ודא ידנית "בדיקת פקודות" חסרה
@@ -889,7 +893,7 @@ MD ידנית "בדיקת פקודות/א/פנימית"
 MD ידנית "בדיקת פקודות/ב"
 MD ידנית "בדיקת פקודות/א"
 ודא ידנית "בדיקת פקודות" /רשימות:3 /פריטים:0
-COPY תוכן ידנית "*" ידנית "בדיקת פקודות/א/פנימית"
+COPY "בדיקת פקודות.vbat" ידנית "בדיקת פקודות/א/פנימית"
 ודא ידנית "בדיקת פקודות/א/פנימית" /רשימות:0 /פריטים:1
 COPY ידנית "בדיקת פקודות/א" ידנית "בדיקת פקודות/ב"
 ודא ידנית "בדיקת פקודות/ב" /רשימות:2 /פריטים:1
@@ -902,6 +906,8 @@ COMP ידנית "בדיקת פקודות/א" ידנית "בדיקת פקודות
 RD ידנית "בדיקת פקודות/ב/א"
 ודא ידנית "בדיקת פקודות/ב/א" חסרה
 ודא ידנית "בדיקת פקודות/א/פנימית" קיימת
+כלול "בדיקת כלול.vbat"
+ודא ידנית "בדיקת פקודות/מכלול" קיימת
 ECHO סוף. הרשימה "בדיקת פקודות" נשארת לראות (בבית): א, ובתוכה פנימית עם קובץ הבדיקה; ב — ריקה. בהרצה הבאה — נמחקת ונבנית מחדש. "ניקוי" — מוחק אותה עכשיו.
 ===== קובץ: build/build.sh =====
 #!/bin/bash
@@ -956,7 +962,7 @@ cd $S; rm -rf out gen bld
 [ "$S" != "$DIR" ] && rm -rf $S
 ls -la $OUT
 ===== קובץ: build/m-version.txt =====
-25 מ0.14
+26 מ0.15
 ===== קובץ: build/test.sh =====
 #!/bin/bash
 # בדיקות על המחשב (80). יוצא בכישלון אם בדיקה אחת נכשלה — ואז build.sh לא בונה.
@@ -3587,6 +3593,10 @@ final class Batch {
     static final String CHECK = "בדיקה";   // תחביר
     /** מ0.14: ודא — בדיקה בתוך קובץ פקודות (✅ / ❌), לא עוצרת. */
     static final String VERIFY = "VERIFY";
+    /** מ0.15: אופן — מכאן והלאה הפקודות במסד של אופן אחר; CALL — שורות של קובץ אחר במקום השורה. */
+    static final String MODE = "MODE", CALL = "CALL";
+    /** מ0.15: עומק מרבי של CALL בתוך CALL. */
+    static final int CALL_DEPTH = 5;
     /** הגבול לסבבים בלולאה, ולשורות אחרי הפריסה. */
     static final int MAX_ROUNDS = 1000, MAX_LINES = 50000;
     /** 1.13.0: שלב של פקודת פתיחה בעברית (Verbs). */
@@ -3816,6 +3826,8 @@ final class Batch {
         ListCmd.Lenient files;
         /** מ0.12: כשעובדים במסד — עותק של המסד בזיכרון (DbListCmd), והקבצים לכל תנאי; null — עוד לא נטען. לא נשמר. */
         Store db;
+        /** מ0.15: האופן מ"אופן" בקובץ; null — האופן שפתוח. */
+        String mode;
         final Map<String, List<String>> condFiles = new java.util.HashMap<String, List<String>>();
 
         boolean isDir(File d) {
@@ -3906,6 +3918,47 @@ final class Batch {
     }
 
     /** פורס את הלולאות: כל סבב — השורות שבתוכה, עם %סבב% = מספר הסבב (בלולאה פנימית — שלה). */
+    /**
+     * מ0.15: CALL "קובץ" (בעברית: כלול) — במקום השורה: הודעה "▸ כלול: …" ואחריה שורות הקובץ (גם CALL שבתוכו, עד
+     * CALL_DEPTH). קובץ שלא נמצא, מעגל, או עומק — השורה נשארת כמו שהיא ונכשלת בתכנון (עם הסבר).
+     */
+    static String[] calls(String[] lines, File here, Map<String, String> vars, int depth, java.util.Set<String> stack) {
+        List<String> out = new ArrayList<String>();
+        for (String raw : lines) {
+            List<String> tk = tokens(clean(raw));
+            if (tk.size() != 2 || !CALL.equals(Commands.canonical(tk.get(0)))) {
+                out.add(raw);
+                continue;
+            }
+            String[] err = {null};
+            String p = path(tk.get(1), here, vars, err);
+            File f = p == null ? null : new File(p);
+            String key = f == null ? "" : f.getAbsolutePath();
+            if (f == null || !f.isFile() || depth >= CALL_DEPTH || stack.contains(key)) {
+                out.add(raw);
+                continue;
+            }
+            try {
+                String[] inner = Bidi.strip(Files.readUtf8(f)).replace("\r", "").split("\n");
+                stack.add(key);
+                String[] sub = calls(inner, f.getParentFile(), vars, depth + 1, stack);
+                stack.remove(key);
+                List<String> keep = new ArrayList<String>();
+                for (String x : sub) {
+                    String c = clean(x);
+                    if (c.equals(CHECK) || c.equals(AS_IF) || c.equals(AS_IF2)) continue;   // שורות כותרת — רק של הקובץ הראשי
+                    keep.add(x);
+                }
+                out.add("ECHO " + Words.DbCmd.called(f.getName(), keep.size()));
+                out.addAll(keep);
+            } catch (Throwable t) {
+                Log.e("Batch.calls", t);
+                out.add(raw);
+            }
+        }
+        return out.toArray(new String[0]);
+    }
+
     static List<Ln> expand(String[] lines, Plan plan) {
         List<Ln> out = new ArrayList<Ln>();
         expand(lines, 0, lines.length, new int[0], new int[0], null, plan, out);
@@ -4038,6 +4091,7 @@ final class Batch {
         sim.lib = lib;
         plan.sim = sim;
         String[] lines = Bidi.strip(text).replace("\r", "").split("\n");          // 204
+        lines = calls(lines, here, vars, 0, new java.util.HashSet<String>());  // מ0.15: CALL — השורות של הקובץ במקומה
         List<Ln> all = expand(lines, plan);                                    // 1.25.0: לולאות
         Clock clock = new Clock();
         int mark = 0;
@@ -4117,6 +4171,27 @@ final class Batch {
                 if (rest.equalsIgnoreCase("OFF") || rest.equalsIgnoreCase("ON")) continue;
                 plan.echoes.add(rest.startsWith(".") ? rest.substring(1) : rest);
                 s.describe = Words.Cmd.echo(rest);
+                plan.steps.add(s);
+                continue;
+            }
+            if (cmd.equals(CALL)) {                                             // מ0.15: לא נכלל (לא נמצא / מעגל / עומק)
+                s.error = Words.DbCmd.CALL_FAILED;
+                plan.errors++;
+                plan.steps.add(s);
+                continue;
+            }
+            if (cmd.equals(MODE)) {                                             // מ0.15: אופן — מכאן והלאה, במסד
+                String m = tk.size() == 2 ? tk.get(1).trim() : "";
+                if (m.isEmpty()) s.error = Words.DbCmd.MODE_USAGE;
+                else if (!DbVerbs.active()) s.error = Words.DbCmd.VERIFY_DB_ONLY;
+                else if (!DbScreen.dbModes(DbListScreen.app).contains(m)) s.error = Words.DbCmd.noMode(m);
+                else {
+                    sim.mode = m;
+                    sim.db = null;
+                    s.noop = true;
+                    s.describe = Words.DbCmd.modeNow(m);
+                }
+                if (s.error != null) plan.errors++;
                 plan.steps.add(s);
                 continue;
             }
@@ -8352,6 +8427,10 @@ final class Commands {
             new Def(Batch.VERIFY, Words.DbCmd.N_VERIFY, new String[]{Words.DbCmd.N_VERIFY}, Family.FILE, Words.DbCmd.W_VERIFY, list(
                     pos(Type.LIST, Words.Def.P_LIST, Words.DbCmd.H_VERIFY),
                     pos(Type.TEXT, Words.DbCmd.P_VERIFY, Words.DbCmd.H_VERIFY_WHAT)), null),
+            new Def(Batch.MODE, Words.DbCmd.N_MODE, new String[]{Words.DbCmd.N_MODE}, Family.FILE, Words.DbCmd.W_MODE,
+                    list(pos(Type.NAME, Words.DbCmd.N_MODE, Words.DbCmd.H_MODE)), null),
+            new Def(Batch.CALL, Words.DbCmd.N_CALL, new String[]{Words.DbCmd.N_CALL}, Family.FILE, Words.DbCmd.W_CALL,
+                    list(pos(Type.PATH, Words.Def.P_FILE, Words.DbCmd.H_CALL)), null),
             new Def("START", Words.Def.N_START, null, Family.FILE, Words.Def.W_START,
                     list(pos(Type.PATH, Words.Def.P_WHAT_OPEN, Words.Def.H_START, Words.Def.U_START)), null),
             new Def("ECHO", Words.Def.N_ECHO, null, Family.FILE, Words.Def.W_ECHO, list(pos(Type.TEXT, Words.Def.P_TEXT, Words.Def.H_TEXT)), null),
@@ -9788,11 +9867,19 @@ final class DbFiles {
 
     /**
      * מוסיף את הקבצים לסוף הרשימה הידנית list, לפי הסדר; מסלול כפול בקלט — פעם אחת. קובץ שכבר יש לו פריט (גם בלי רשימה)
-     * — אותו פריט. פריט חדש: הכונן לפי המסלול, הגודל שנמסר, בלי חתימה. הכול בעסקה אחת: כישלון — שום שינוי.
+     * — אותו פריט. פריט חדש: הכונן לפי המסלול, הגודל שנמסר, בלי חתימה (מ0.15: עם sign — עם חתימה). הכול בעסקה אחת: כישלון — שום שינוי.
      * sizes — באותו אורך כמו paths, או null (גודל לא ידוע, -1).
      * @throws Store.Failure אם list אינה רשימה ידנית (רשימה חכמה היא שאילתה — אין לה חברים)
      */
     static Added add(Store s, final long list, List<String> paths, List<Long> sizes) {
+        return add(s, list, paths, sizes, false);
+    }
+
+    /**
+     * מ0.15: sign — לפריט חדש של קובץ שקיים בכונן: הגודל, התאריך והחתימה החלקית (Sig.of — כמו "חתימות.txt" בישן),
+     * מחושבים לפני העסקה. בלי sign (ההדמיה, הבדיקות) — כמו קודם, בלי חתימה.
+     */
+    static Added add(Store s, final long list, List<String> paths, List<Long> sizes, boolean sign) {
         Stores.mustBeList(s.item(list), list);                                // לפני העסקה (עסקאות מקוננות)
         final Added r = new Added();
         final Map<String, Long> in = new LinkedHashMap<String, Long>();
@@ -9805,13 +9892,27 @@ final class DbFiles {
             if (!in.containsKey(p)) in.put(p, sizes == null || sizes.get(i) == null ? -1L : sizes.get(i));
         }
         if (in.isEmpty()) return r;
+        final Map<String, Store.FileInfo> signed = new java.util.HashMap<String, Store.FileInfo>();
+        if (sign)
+            for (String p : in.keySet()) {
+                if (s.findFile(p) != 0) continue;
+                java.io.File f = new java.io.File(p);
+                if (!f.isFile()) continue;
+                try {
+                    String sig = Sig.of(f);
+                    if (sig != null) signed.put(p, new Store.FileInfo(p, Importer.driveOf(p), f.length(), f.lastModified(), sig));
+                } catch (Throwable x) {
+                    Log.e("DbFiles.sign", x);
+                }
+            }
         s.atomic(new Store.Work() {
             @Override
             public void run(Store t) {
                 for (Map.Entry<String, Long> e : in.entrySet()) {
                     long id = t.findFile(e.getKey());
                     if (id == 0) {
-                        id = t.createFile(new Store.FileInfo(e.getKey(), Importer.driveOf(e.getKey()), e.getValue(), 0, null));
+                        Store.FileInfo fi = signed.get(e.getKey());
+                        id = t.createFile(fi != null ? fi : new Store.FileInfo(e.getKey(), Importer.driveOf(e.getKey()), e.getValue(), 0, null));
                         r.created++;
                     }
                     if (t.addMember(list, id)) r.added++;
@@ -10062,7 +10163,7 @@ final class DbListCmd {
                 what = Words.ListCmdW.filesOf(Words.files(paths.size()), a.label());
             }
             final List<String> ps = paths;
-            DbFiles.Added r = DbFiles.add(s, dest, ps, null);
+            DbFiles.Added r = DbFiles.add(s, dest, ps, null, !(s instanceof MemStore));   // מ0.15: חתימה — בהרצה, לא בהדמיה
             return Res.ok(what + " — " + Words.ListCmdW.copied(r.added, ps.size() - r.added, ps.size() > r.added ? Words.DbCmd.ALREADY : null, b.label()) + nowIn(s, dest));
         }
         final List<Store.Item> what = new ArrayList<Store.Item>();
@@ -10317,6 +10418,11 @@ final class DbListCmd {
         return DbListScreen.currentMode;
     }
 
+    /** מ0.15: האופן של הקובץ — מ"אופן" שבו, אחרת זה שפתוח. */
+    static String mode(Batch.Sim sim) {
+        return sim != null && sim.mode != null ? sim.mode : mode();
+    }
+
     /** שורה עם מילות סוג, כשעובדים במסד: אותן בדיקות צורה כמו ListCmd.plan; הפעולה — על העותק בזיכרון, ובהרצה — על המסד. */
     static void plan(final Batch.Step s, final String cmd, ListCmd.Parsed p, List<String> sw, final Batch.Sim sim,
                      final List<String> fsFiles, final File fsDest) {
@@ -10325,7 +10431,7 @@ final class DbListCmd {
                 s.error = Words.ListCmdW.NO_FILTER;
                 return;
             }
-        final String mode = mode();
+        final String mode = mode(sim);
         final Store db;
         try {
             db = sim(sim, mode);
@@ -10485,7 +10591,7 @@ final class DbListCmd {
         if (!a.list() || a.content || a.filesOf || a.mask != null) { s.error = Words.DbCmd.VERIFY_USAGE; return; }
         final Expect e = expect(conds);
         if (e.error != null) { s.error = e.error; return; }
-        final String mode = mode();
+        final String mode = mode(sim);
         Store db;
         try {
             db = sim(sim, mode);
@@ -11385,7 +11491,7 @@ import java.util.List;
 
 final class DbTestMode {
 
-    static final String ASSET = "tests/pkudot-masad.vbat";
+    static final String ASSET = "tests/pkudot-masad.vbat", ASSET_CALL = "tests/pkudot-kalul.vbat";
 
     private DbTestMode() { }
 
@@ -11406,6 +11512,12 @@ final class DbTestMode {
             } finally {
                 out.close();
             }
+            FileOutputStream out2 = new FileOutputStream(new File(Modes.dirOf(mode), Words.DbCmd.TEST_CALL_FILE + "." + Batch.EXT));
+            try {
+                out2.write(Examples.asset(a, ASSET_CALL).getBytes("UTF-8"));   // מ0.15: הקובץ שהבדיקה כוללת
+            } finally {
+                out2.close();
+            }
             long home = DbVerbs.write(a, mode, new DbVerbs.Job() {
                 @Override
                 public long run(Store s, List<String> p) {
@@ -11418,7 +11530,7 @@ final class DbTestMode {
                             }
                         }
                     }, true);
-                    DbFiles.add(s, h[0], Collections.singletonList(f.getAbsolutePath()), null);
+                    DbFiles.add(s, h[0], Collections.singletonList(f.getAbsolutePath()), null, true);
                     return h[0];
                 }
             }, null);
@@ -11537,7 +11649,7 @@ final class DbVerbs {
                 write(a, mode, new Job() {
                     @Override
                     public long run(Store s, List<String> p) {
-                        DbFiles.add(s, in, java.util.Collections.singletonList(f.getAbsolutePath()), null);
+                        DbFiles.add(s, in, java.util.Collections.singletonList(f.getAbsolutePath()), null, true);
                         return in;
                     }
                 }, null);
@@ -12334,7 +12446,7 @@ public class DbScreen extends Activity {
     /** הוספה בעסקה אחת, והודעה כמה נוספו וכמה כבר היו. */
     private void addFiles(long list, List<String> paths, List<Long> sizes) {
         try {
-            DbFiles.Added a = DbFiles.add(store, list, paths, sizes);
+            DbFiles.Added a = DbFiles.add(store, list, paths, sizes, true);
             Ui.toast(this, Words.Db.filesAdded(a.added, a.already));
         } catch (Throwable t) {
             Log.e("DbScreen.addFiles", t);
@@ -46884,6 +46996,7 @@ public final class Words {
                 MENU_TESTS = "🧪 בדיקת הפקודות (אופן \"בדיקות מערכת\")",
                 TEST_MODE = "בדיקות מערכת",  // בכונן
                 TEST_FILE = "בדיקת פקודות",  // בכונן
+                TEST_CALL_FILE = "בדיקת כלול",  // בכונן
                 TEST_READY = "אופן \"בדיקות מערכת\" — נגיעה ב\"בדיקת פקודות\" מריצה את הבדיקה";
 
         public static String removed(String what) {
@@ -46897,6 +47010,25 @@ public final class Words {
                 VERIFY_DB_ONLY = "ודא — עובדת כשעובדים במסד",
                 VERIFY_USAGE = "צורה: ודא ידנית \"א\" [קיימת | חסרה] [/רשימות:N] [/פריטים:N]",
                 WORD_EXISTS = "קיימת", WORD_MISSING = "חסרה", SW_LISTS = "/רשימות:", SW_ITEMS = "/פריטים:";  // תחביר
+
+        public static final String N_MODE = "אופן", N_CALL = "כלול",  // תחביר
+                W_MODE = "מכאן והלאה — הפקודות על המסד של אופן אחר (רק לקובץ הזה; המסך לא מתחלף)",
+                H_MODE = "שם אופן עבודה שיש לו מסד", MODE_USAGE = "צורה: אופן \"שם האופן\"",
+                W_CALL = "השורות של קובץ פקודות אחר — במקום השורה הזו (כמו CALL); עד 5 בתוך 5",
+                H_CALL = "קובץ פקודות (מסלול, או שם בתיקייה של הקובץ הזה)",
+                CALL_FAILED = "כלול — הקובץ לא נמצא, או שהוא כבר בתוך עצמו (מעגל), או יותר מ־5 בתוך 5";
+
+        public static String noMode(String m) {
+            return "אין מסד לאופן \"" + m + "\"";
+        }
+
+        public static String modeNow(String m) {
+            return "מכאן והלאה — הפקודות במסד של האופן \"" + m + "\"";
+        }
+
+        public static String called(String name, int lines) {
+            return "▸ כלול: " + name + " (" + lines + " שורות)";
+        }
 
         public static String verifySummary(int ok, int bad) {
             return (bad == 0 ? "✅" : "❌") + " ודא: " + ok + " עברו · " + bad + " נכשלו";
@@ -46992,7 +47124,7 @@ public final class Words {
 
         public static final String APP_NAME_M = "מנהל קבצים וירטואלי · מ";
         public static final String MENU = "מסד נתונים (מ)";
-        public static final String TITLE = "מסד נתונים · מ0.14";
+        public static final String TITLE = "מסד נתונים · מ0.15";
         /** מ0.9: המראה המוכר. */
         public static final String LIST_GONE = "הרשימה הזו כבר לא קיימת במסד", MENU_ACTIONS = "⚙ מסד: גיבוי, העתקה, בדיקה ופעולות",
                 MENU_OLD = "↩ הצד הישן (לפני המסד)",
@@ -49035,6 +49167,23 @@ final class ImportTests {
         ck("ודא: תנאי לא מוכר / מספר שגוי — צורה", DbListCmd.expect(Arrays.asList("משהו")).error != null
                 && DbListCmd.expect(Arrays.asList("/פריטים:x")).error != null && DbListCmd.expect(Arrays.asList("חסרה", "/רשימות:1")).error != null);
         ck("ודא: השם בעברית מוכר כפקודה", Batch.VERIFY.equals(Commands.canonical("ודא")));
+
+        // כלול (מ0.15)
+        File cd = new File(System.getProperty("java.io.tmpdir"), "call" + System.nanoTime());
+        cd.mkdirs();
+        write(new File(cd, "פנים.vbat"), "בדיקה\nMD ידנית \"מכלול\"\nכלול \"עמוק.vbat\"\n");
+        write(new File(cd, "עמוק.vbat"), "ECHO עמוק\n");
+        write(new File(cd, "מעגל.vbat"), "כלול \"מעגל.vbat\"\n");
+        String[] ex = Batch.calls(new String[]{"ECHO א", "כלול \"פנים.vbat\"", "ECHO ב"}, cd, null, 0, new java.util.HashSet<String>());
+        ck("כלול: השורות של הקובץ במקום השורה (גם כלול בתוך כלול), בלי שורת \"בדיקה\" שלו", Arrays.asList(ex).equals(Arrays.asList(
+                "ECHO א", "ECHO " + Words.DbCmd.called("פנים.vbat", 3), "MD ידנית \"מכלול\"", "ECHO " + Words.DbCmd.called("עמוק.vbat", 1), "ECHO עמוק", "ECHO ב")));
+        String[] cyc = Batch.calls(new String[]{"כלול \"מעגל.vbat\""}, cd, null, 0, new java.util.HashSet<String>());
+        ck("כלול: מעגל — נעצר (השורה נשארת ונכשלת)", cyc.length == 2 && cyc[1].equals("כלול \"מעגל.vbat\""));
+        String[] none = Batch.calls(new String[]{"כלול \"אין.vbat\""}, cd, null, 0, new java.util.HashSet<String>());
+        ck("כלול: קובץ שלא קיים — השורה נשארת", none.length == 1);
+        Batch.Plan bp = Batch.plan("כלול \"אין.vbat\"\nאופן \"x\"\n", cd, null);
+        ck("כלול שנכשל ואופן מחוץ למסד — שגיאה בתכנון, עם הסבר", bp.steps.size() == 2 && Words.DbCmd.CALL_FAILED.equals(bp.steps.get(0).error)
+                && Words.DbCmd.VERIFY_DB_ONLY.equals(bp.steps.get(1).error));
 
         long lists = s.lists().size();
         MemStore c = DbListCmd.copyOf(s);
@@ -54148,7 +54297,7 @@ public final class Tests {
     /** 1.22.5: ההגדרה האחת — שלמה, תואמת למנוע, וכל פרמטר עם שם והסבר. */
     private static void v1225() {
         check("1.22.5: פקודות הקבצים — אותן ובאותו סדר (מ0.14: ודא)",
-                java.util.Arrays.equals(BatchLine.COMMANDS, new String[]{"COPY", "MOVE", "DEL", "REN", "MD", "RD", "COMP", "VERIFY", "START", "ECHO", "REM"}));
+                java.util.Arrays.equals(BatchLine.COMMANDS, new String[]{"COPY", "MOVE", "DEL", "REN", "MD", "RD", "COMP", "VERIFY", "MODE", "CALL", "START", "ECHO", "REM"}));
         check("1.22.5: שמות נרדפים", Commands.canonical("MKDIR").equals("MD") && Commands.canonical("rmdir").equals("RD")
                 && Commands.canonical("ERASE").equals("DEL") && Commands.canonical("RENAME").equals("REN")
                 && Commands.canonical("copy").equals("COPY") && Commands.canonical("FORMAT").equals("FORMAT")

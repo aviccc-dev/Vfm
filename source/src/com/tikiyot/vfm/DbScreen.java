@@ -719,7 +719,7 @@ public class DbScreen extends Activity {
     /** הוספה בעסקה אחת, והודעה כמה נוספו וכמה כבר היו. */
     private void addFiles(long list, List<String> paths, List<Long> sizes) {
         try {
-            DbFiles.Added a = DbFiles.add(store, list, paths, sizes);
+            DbFiles.Added a = DbFiles.add(store, list, paths, sizes, true);
             Ui.toast(this, Words.Db.filesAdded(a.added, a.already));
         } catch (Throwable t) {
             Log.e("DbScreen.addFiles", t);

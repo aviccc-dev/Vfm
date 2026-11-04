@@ -15,7 +15,7 @@ import java.util.List;
 
 final class DbTestMode {
 
-    static final String ASSET = "tests/pkudot-masad.vbat";
+    static final String ASSET = "tests/pkudot-masad.vbat", ASSET_CALL = "tests/pkudot-kalul.vbat";
 
     private DbTestMode() { }
 
@@ -36,6 +36,12 @@ final class DbTestMode {
             } finally {
                 out.close();
             }
+            FileOutputStream out2 = new FileOutputStream(new File(Modes.dirOf(mode), Words.DbCmd.TEST_CALL_FILE + "." + Batch.EXT));
+            try {
+                out2.write(Examples.asset(a, ASSET_CALL).getBytes("UTF-8"));   // מ0.15: הקובץ שהבדיקה כוללת
+            } finally {
+                out2.close();
+            }
             long home = DbVerbs.write(a, mode, new DbVerbs.Job() {
                 @Override
                 public long run(Store s, List<String> p) {
@@ -48,7 +54,7 @@ final class DbTestMode {
                             }
                         }
                     }, true);
-                    DbFiles.add(s, h[0], Collections.singletonList(f.getAbsolutePath()), null);
+                    DbFiles.add(s, h[0], Collections.singletonList(f.getAbsolutePath()), null, true);
                     return h[0];
                 }
             }, null);
