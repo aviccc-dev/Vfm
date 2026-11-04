@@ -948,7 +948,7 @@ cd $S; rm -rf out gen bld
 [ "$S" != "$DIR" ] && rm -rf $S
 ls -la $OUT
 ===== קובץ: build/m-version.txt =====
-22 מ0.12.2
+23 מ0.13
 ===== קובץ: build/test.sh =====
 #!/bin/bash
 # בדיקות על המחשב (80). יוצא בכישלון אם בדיקה אחת נכשלה — ואז build.sh לא בונה.
@@ -10002,13 +10002,8 @@ final class DbListCmd {
             return Res.ok(Words.DbCmd.removed(what));
         }
         List<String> up = new ArrayList<String>(a.path.subList(0, a.path.size() - 1));
-        final long parent = up.isEmpty() ? Importer.home(s) : DbPaths.find(s, mode, up);
-        s.atomic(new Store.Work() {
-            @Override public void run(Store t) {
-                if (parent != 0) t.removeMember(parent, id);
-                dropIfAlone(t, id);
-            }
-        }, true);
+        long parent = up.isEmpty() ? Importer.home(s) : DbPaths.find(s, mode, up);
+        removeFrom(s, parent, id);
         return Res.ok(Words.DbCmd.removed(Words.ListCmdW.list(a.label())));
     }
 
@@ -10074,23 +10069,63 @@ final class DbListCmd {
                 label = Words.ListCmdW.list(a.label());
             }
         }
-        final int[] done = {0}, skipped = {0};
-        final String[] why = {null};
+        Copied c = copyInto(s, what, dest);
+        String selfText = self.isEmpty() ? "" : Words.ListCmdW.notIntoSelf(self);
+        return Res.ok(Words.ListCmdW.copy(label, b.label()) + names(what) + selfText + " · "
+                + Words.ListCmdW.copied(c.done, c.skipped, c.why, b.label()) + nowIn(s, dest));
+    }
+
+    // ---------- הליבה לפי מספר זיהוי — הפקודות והמסכים (מ0.13) עוברים כאן ----------
+
+    /** כמה נכנסו, כמה לא, ולמה (הסיבה הראשונה). */
+    static final class Copied {
+        int done, skipped;
+        String why;
+    }
+
+    /** העתקה לתוך dest — בעסקה אחת: רשימה — עותק עצמאי; חכמה — עותק ההגדרה; רעיון — עותק; קובץ — אותו פריט. */
+    static Copied copyInto(Store s, final List<Store.Item> what, final long dest) {
+        final Copied c = new Copied();
         s.atomic(new Store.Work() {
             @Override public void run(Store t) {
                 for (Store.Item it : what) {
                     String w = copyItem(t, it, dest);
-                    if (w == null) done[0]++;
+                    if (w == null) c.done++;
                     else {
-                        skipped[0]++;
-                        if (why[0] == null) why[0] = w;
+                        c.skipped++;
+                        if (c.why == null) c.why = w;
                     }
                 }
             }
         }, true);
-        String selfText = self.isEmpty() ? "" : Words.ListCmdW.notIntoSelf(self);
-        return Res.ok(Words.ListCmdW.copy(label, b.label()) + names(what) + selfText + " · "
-                + Words.ListCmdW.copied(done[0], skipped[0], why[0], b.label()) + nowIn(s, dest));
+        return c;
+    }
+
+    /** הסרה מרשימה — בעסקה אחת: יוצא מ-parent; רשימה שלא נשארה באף מקום — נמחקת עם מה שרק שלה; רעיון שהיה רק כאן — לסל. */
+    static void removeFrom(Store s, final long parent, final long item) {
+        s.atomic(new Store.Work() {
+            @Override public void run(Store t) {
+                Store.Item it = t.item(item);
+                if (it == null) return;
+                boolean idea = it.type == Store.NOTE || it.type == Store.TITLE;
+                if (idea && t.listsOf(item).size() <= 1) {
+                    t.trash(item);
+                    return;
+                }
+                if (parent != 0) t.removeMember(parent, item);
+                if (it.type == Store.LIST || it.type == Store.SMART) dropIfAlone(t, item);
+            }
+        }, true);
+    }
+
+    /** רשימה ידנית חדשה בתוך parent (0 — בבית, אם יש). */
+    static long newList(Store s, final long parent, final String name) {
+        final long into = parent != 0 ? parent : Importer.home(s);
+        final long[] out = {0};
+        s.atomic(new Store.Work() {
+            @Override public void run(Store t) { out[0] = t.createList(Tree.cleanName(name), into); }
+        }, true);
+        return out[0];
     }
 
     /** פריט אחד לתוך into; null — נכנס, אחרת — למה לא. */
@@ -10321,7 +10356,7 @@ final class DbListCmd {
             }
             Res r = comp(db, mode, a, b, conds, find);
             if (r.error != null) s.error = r.error;
-            else s.describe = r.text;
+            else s.describe = Words.DbCmd.inDb(r.text);
             return;
         } else if (cmd.equals("MOVE")) {
             boolean toList = sd.size() == 2 && sd.get(1).list();
@@ -10380,6 +10415,11 @@ final class DbListCmd {
                 return out;
             }
         };
+    }
+
+    /** מ0.13: פעולה מהמסך — דרך אותה הליבה; לפני הסרה — גיבוי. מחזיר את ההודעה. */
+    static String now(String mode, Work w, boolean before) {
+        return real(mode, w, before, null);
     }
 
     /** "ניקוי" שבסוף ההרצה (RunScreen): הרשימות שההרצה יצרה — יוצאות מהמסד (גיבוי לפני). מחזיר את מה שיצא. */
@@ -10445,6 +10485,7 @@ import android.widget.LinearLayout;
 import android.widget.TextView;
 
 import java.io.File;
+import java.util.ArrayList;
 import java.util.List;
 
 public class DbListScreen extends ListScreen<Store.Member> {
@@ -10776,9 +10817,76 @@ public class DbListScreen extends ListScreen<Store.Member> {
         return v == null ? "" : v;
     }
 
+    /** מ0.13: נגיעה ארוכה — העתקה לרשימה, הסרה מכאן (דרך הליבה של הפקודות — DbListCmd), או כל הפעולות. */
     @Override
     protected void hold(Store.Member row) {
-        if (row != PLUS) actions();
+        if (row == PLUS) return;
+        final Store.Item it = row.item;
+        String[] items = {Words.DbCmd.COPY_TO, Words.DbCmd.REMOVE_HERE, Words.DbCmd.ALL_ACTIONS};
+        Ui.options(this, it.name, items, new android.content.DialogInterface.OnClickListener() {
+            @Override
+            public void onClick(android.content.DialogInterface d, int which) {
+                if (which == 0) copyTo(it);
+                else if (which == 1) removeHere(it);
+                else actions();
+            }
+        });
+    }
+
+    /** הרשימה שמוצגת עכשיו (בבית — רשימת הבית). */
+    private long here() {
+        return atHome ? homeOrZero() : listId;
+    }
+
+    private void copyTo(final Store.Item it) {
+        final List<Store.Item> lists = new ArrayList<Store.Item>();
+        List<String> labels = new ArrayList<String>();
+        for (Store.Item l : store.lists()) {
+            if ("1".equals(store.prop(l.id, Store.P_HOME))) continue;
+            lists.add(l);
+            List<Long> in = store.listsOf(l.id);
+            Store.Item up = in.isEmpty() ? null : store.item(in.get(0));
+            labels.add(up == null || "1".equals(store.prop(up.id, Store.P_HOME)) ? l.name : l.name + "  ‹ " + up.name);
+        }
+        if (lists.isEmpty()) {
+            Ui.toast(this, Words.Db.NO_LISTS);
+            return;
+        }
+        Ui.list(this, Words.DbCmd.COPY_TO_TITLE, labels, new android.content.DialogInterface.OnClickListener() {
+            @Override
+            public void onClick(android.content.DialogInterface d, int which) {
+                final long dest = lists.get(which).id;
+                String msg = DbListCmd.now(mode, new DbListCmd.Work() {
+                    @Override
+                    public DbListCmd.Res run(Store t, DbListCmd.Finder f) {
+                        if (it.type == Store.LIST && (it.id == dest || t.contains(it.id, dest)))
+                            return DbListCmd.Res.err(Words.ListCmdW.INTO_ITSELF);
+                        DbListCmd.Copied c = DbListCmd.copyInto(t, java.util.Collections.singletonList(t.item(it.id)), dest);
+                        return DbListCmd.Res.ok(Words.ListCmdW.copied(c.done, c.skipped, c.why, "\"" + t.item(dest).name + "\""));
+                    }
+                }, false);
+                Ui.toast(DbListScreen.this, msg);
+                refresh();
+            }
+        });
+    }
+
+    private void removeHere(final Store.Item it) {
+        final long from = here();
+        Ui.confirm(this, Words.DbCmd.REMOVE_HERE, Words.DbCmd.removeQuestion(it.name), Words.DbCmd.REMOVE_YES, new Runnable() {
+            @Override
+            public void run() {
+                String msg = DbListCmd.now(mode, new DbListCmd.Work() {
+                    @Override
+                    public DbListCmd.Res run(Store t, DbListCmd.Finder f) {
+                        DbListCmd.removeFrom(t, from, it.id);
+                        return DbListCmd.Res.ok(Words.DbCmd.removed("\"" + it.name + "\""));
+                    }
+                }, true);
+                Ui.toast(DbListScreen.this, msg);
+                refresh();
+            }
+        });
     }
 
     /** ➕: בבית — כמו בבית הישן (רשימה ידנית, רשימה חכמה, פקודה); ברשימה — גם קבצים מתיקייה ומחיפוש. */
@@ -11202,14 +11310,7 @@ final class DbVerbs {
                 if (name.trim().isEmpty()) return;
                 long id = write(a, mode, new Job() {
                     @Override
-                    public long run(Store s, List<String> p) {
-                        final long into = in != 0 ? in : Importer.home(s);
-                        final long[] out = {0};
-                        s.atomic(new Store.Work() {
-                            @Override public void run(Store t) { out[0] = t.createList(Tree.cleanName(name), into); }
-                        }, true);
-                        return out[0];
-                    }
+                    public long run(Store s, List<String> p) { return DbListCmd.newList(s, in, name); }   // מ0.13: הליבה
                 }, null);
                 if (id != 0) DbListScreen.open(a, mode, id);
             }
@@ -46594,6 +46695,14 @@ public final class Words {
             return what + " — יצא מהרשימות (לפני הביצוע — גיבוי של המסד); הקבצים בכונן לא נוגעים";
         }
 
+        public static final String COPY_TO = "📋 העתקה לרשימה…", COPY_TO_TITLE = "העתקה לתוך:",
+                REMOVE_HERE = "🗑 הסרה מכאן", REMOVE_YES = "להסיר", ALL_ACTIONS = "⚙ כל הפעולות (מסך המסד)";
+
+        public static String removeQuestion(String name) {
+            return "\"" + name + "\" — יוצא מהרשימה הזו. רשימה שלא נשארת באף מקום — נמחקת עם מה שרק שלה; "
+                    + "לפני כן — גיבוי של המסד. הקבצים בכונן לא נוגעים.";
+        }
+
         public static String homeContent(int n) {
             return "כל מה שבבית (" + n + ")";
         }
@@ -46661,7 +46770,7 @@ public final class Words {
 
         public static final String APP_NAME_M = "מנהל קבצים וירטואלי · מ";
         public static final String MENU = "מסד נתונים (מ)";
-        public static final String TITLE = "מסד נתונים · מ0.12.2";
+        public static final String TITLE = "מסד נתונים · מ0.13";
         /** מ0.9: המראה המוכר. */
         public static final String LIST_GONE = "הרשימה הזו כבר לא קיימת במסד", MENU_ACTIONS = "⚙ מסד: גיבוי, העתקה, בדיקה ופעולות",
                 MENU_OLD = "↩ הצד הישן (לפני המסד)",
@@ -48696,6 +48805,15 @@ final class ImportTests {
         x = sides("RD ידנית \"ספרים\"");
         DbListCmd.remove(c, M, x[0]);
         ck("העותק להדמיה: שינוי בו לא נוגע במסד", at(s, "ספרים") == books && DbPaths.find(c, M, Tree.parsePath("ספרים")) == 0);
+        long nl = DbListCmd.newList(s, 0, "מהמסך");
+        ck("הליבה (מסכים): רשימה חדשה — בבית", nl != 0 && s.listsOf(nl).equals(Arrays.asList(home)));
+        long note = s.addNote(nl, "הערה");
+        DbListCmd.removeFrom(s, nl, note);
+        ck("הליבה (מסכים): רעיון שהוסר מהרשימה היחידה — לסל", s.members(nl).isEmpty() && "הערה".equals(s.trashed().get(s.trashed().size() - 1).name));
+        DbListCmd.Copied cp = DbListCmd.copyInto(s, Arrays.asList(s.item(books)), nl);
+        ck("הליבה (מסכים): העתקה לתוך רשימה — עותק עצמאי", cp.done == 1 && s.members(nl).size() == 1 && s.members(nl).get(0).item.id != books);
+        DbListCmd.removeFrom(s, home, nl);
+        ck("הליבה (מסכים): הסרה מהבית — נמחקת עם מה שרק שלה", s.item(nl) == null && at(s, "ספרים") == books);
         ck("פקודות במסד: המסד תקין", s.check() == null);
     }
 

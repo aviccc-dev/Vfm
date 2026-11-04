@@ -70,14 +70,7 @@ final class DbVerbs {
                 if (name.trim().isEmpty()) return;
                 long id = write(a, mode, new Job() {
                     @Override
-                    public long run(Store s, List<String> p) {
-                        final long into = in != 0 ? in : Importer.home(s);
-                        final long[] out = {0};
-                        s.atomic(new Store.Work() {
-                            @Override public void run(Store t) { out[0] = t.createList(Tree.cleanName(name), into); }
-                        }, true);
-                        return out[0];
-                    }
+                    public long run(Store s, List<String> p) { return DbListCmd.newList(s, in, name); }   // מ0.13: הליבה
                 }, null);
                 if (id != 0) DbListScreen.open(a, mode, id);
             }

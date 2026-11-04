@@ -15,6 +15,7 @@ import android.widget.LinearLayout;
 import android.widget.TextView;
 
 import java.io.File;
+import java.util.ArrayList;
 import java.util.List;
 
 public class DbListScreen extends ListScreen<Store.Member> {
@@ -346,9 +347,76 @@ public class DbListScreen extends ListScreen<Store.Member> {
         return v == null ? "" : v;
     }
 
+    /** מ0.13: נגיעה ארוכה — העתקה לרשימה, הסרה מכאן (דרך הליבה של הפקודות — DbListCmd), או כל הפעולות. */
     @Override
     protected void hold(Store.Member row) {
-        if (row != PLUS) actions();
+        if (row == PLUS) return;
+        final Store.Item it = row.item;
+        String[] items = {Words.DbCmd.COPY_TO, Words.DbCmd.REMOVE_HERE, Words.DbCmd.ALL_ACTIONS};
+        Ui.options(this, it.name, items, new android.content.DialogInterface.OnClickListener() {
+            @Override
+            public void onClick(android.content.DialogInterface d, int which) {
+                if (which == 0) copyTo(it);
+                else if (which == 1) removeHere(it);
+                else actions();
+            }
+        });
+    }
+
+    /** הרשימה שמוצגת עכשיו (בבית — רשימת הבית). */
+    private long here() {
+        return atHome ? homeOrZero() : listId;
+    }
+
+    private void copyTo(final Store.Item it) {
+        final List<Store.Item> lists = new ArrayList<Store.Item>();
+        List<String> labels = new ArrayList<String>();
+        for (Store.Item l : store.lists()) {
+            if ("1".equals(store.prop(l.id, Store.P_HOME))) continue;
+            lists.add(l);
+            List<Long> in = store.listsOf(l.id);
+            Store.Item up = in.isEmpty() ? null : store.item(in.get(0));
+            labels.add(up == null || "1".equals(store.prop(up.id, Store.P_HOME)) ? l.name : l.name + "  ‹ " + up.name);
+        }
+        if (lists.isEmpty()) {
+            Ui.toast(this, Words.Db.NO_LISTS);
+            return;
+        }
+        Ui.list(this, Words.DbCmd.COPY_TO_TITLE, labels, new android.content.DialogInterface.OnClickListener() {
+            @Override
+            public void onClick(android.content.DialogInterface d, int which) {
+                final long dest = lists.get(which).id;
+                String msg = DbListCmd.now(mode, new DbListCmd.Work() {
+                    @Override
+                    public DbListCmd.Res run(Store t, DbListCmd.Finder f) {
+                        if (it.type == Store.LIST && (it.id == dest || t.contains(it.id, dest)))
+                            return DbListCmd.Res.err(Words.ListCmdW.INTO_ITSELF);
+                        DbListCmd.Copied c = DbListCmd.copyInto(t, java.util.Collections.singletonList(t.item(it.id)), dest);
+                        return DbListCmd.Res.ok(Words.ListCmdW.copied(c.done, c.skipped, c.why, "\"" + t.item(dest).name + "\""));
+                    }
+                }, false);
+                Ui.toast(DbListScreen.this, msg);
+                refresh();
+            }
+        });
+    }
+
+    private void removeHere(final Store.Item it) {
+        final long from = here();
+        Ui.confirm(this, Words.DbCmd.REMOVE_HERE, Words.DbCmd.removeQuestion(it.name), Words.DbCmd.REMOVE_YES, new Runnable() {
+            @Override
+            public void run() {
+                String msg = DbListCmd.now(mode, new DbListCmd.Work() {
+                    @Override
+                    public DbListCmd.Res run(Store t, DbListCmd.Finder f) {
+                        DbListCmd.removeFrom(t, from, it.id);
+                        return DbListCmd.Res.ok(Words.DbCmd.removed("\"" + it.name + "\""));
+                    }
+                }, true);
+                Ui.toast(DbListScreen.this, msg);
+                refresh();
+            }
+        });
     }
 
     /** ➕: בבית — כמו בבית הישן (רשימה ידנית, רשימה חכמה, פקודה); ברשימה — גם קבצים מתיקייה ומחיפוש. */

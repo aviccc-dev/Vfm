@@ -204,13 +204,8 @@ final class DbListCmd {
             return Res.ok(Words.DbCmd.removed(what));
         }
         List<String> up = new ArrayList<String>(a.path.subList(0, a.path.size() - 1));
-        final long parent = up.isEmpty() ? Importer.home(s) : DbPaths.find(s, mode, up);
-        s.atomic(new Store.Work() {
-            @Override public void run(Store t) {
-                if (parent != 0) t.removeMember(parent, id);
-                dropIfAlone(t, id);
-            }
-        }, true);
+        long parent = up.isEmpty() ? Importer.home(s) : DbPaths.find(s, mode, up);
+        removeFrom(s, parent, id);
         return Res.ok(Words.DbCmd.removed(Words.ListCmdW.list(a.label())));
     }
 
@@ -276,23 +271,63 @@ final class DbListCmd {
                 label = Words.ListCmdW.list(a.label());
             }
         }
-        final int[] done = {0}, skipped = {0};
-        final String[] why = {null};
+        Copied c = copyInto(s, what, dest);
+        String selfText = self.isEmpty() ? "" : Words.ListCmdW.notIntoSelf(self);
+        return Res.ok(Words.ListCmdW.copy(label, b.label()) + names(what) + selfText + " · "
+                + Words.ListCmdW.copied(c.done, c.skipped, c.why, b.label()) + nowIn(s, dest));
+    }
+
+    // ---------- הליבה לפי מספר זיהוי — הפקודות והמסכים (מ0.13) עוברים כאן ----------
+
+    /** כמה נכנסו, כמה לא, ולמה (הסיבה הראשונה). */
+    static final class Copied {
+        int done, skipped;
+        String why;
+    }
+
+    /** העתקה לתוך dest — בעסקה אחת: רשימה — עותק עצמאי; חכמה — עותק ההגדרה; רעיון — עותק; קובץ — אותו פריט. */
+    static Copied copyInto(Store s, final List<Store.Item> what, final long dest) {
+        final Copied c = new Copied();
         s.atomic(new Store.Work() {
             @Override public void run(Store t) {
                 for (Store.Item it : what) {
                     String w = copyItem(t, it, dest);
-                    if (w == null) done[0]++;
+                    if (w == null) c.done++;
                     else {
-                        skipped[0]++;
-                        if (why[0] == null) why[0] = w;
+                        c.skipped++;
+                        if (c.why == null) c.why = w;
                     }
                 }
             }
         }, true);
-        String selfText = self.isEmpty() ? "" : Words.ListCmdW.notIntoSelf(self);
-        return Res.ok(Words.ListCmdW.copy(label, b.label()) + names(what) + selfText + " · "
-                + Words.ListCmdW.copied(done[0], skipped[0], why[0], b.label()) + nowIn(s, dest));
+        return c;
+    }
+
+    /** הסרה מרשימה — בעסקה אחת: יוצא מ-parent; רשימה שלא נשארה באף מקום — נמחקת עם מה שרק שלה; רעיון שהיה רק כאן — לסל. */
+    static void removeFrom(Store s, final long parent, final long item) {
+        s.atomic(new Store.Work() {
+            @Override public void run(Store t) {
+                Store.Item it = t.item(item);
+                if (it == null) return;
+                boolean idea = it.type == Store.NOTE || it.type == Store.TITLE;
+                if (idea && t.listsOf(item).size() <= 1) {
+                    t.trash(item);
+                    return;
+                }
+                if (parent != 0) t.removeMember(parent, item);
+                if (it.type == Store.LIST || it.type == Store.SMART) dropIfAlone(t, item);
+            }
+        }, true);
+    }
+
+    /** רשימה ידנית חדשה בתוך parent (0 — בבית, אם יש). */
+    static long newList(Store s, final long parent, final String name) {
+        final long into = parent != 0 ? parent : Importer.home(s);
+        final long[] out = {0};
+        s.atomic(new Store.Work() {
+            @Override public void run(Store t) { out[0] = t.createList(Tree.cleanName(name), into); }
+        }, true);
+        return out[0];
     }
 
     /** פריט אחד לתוך into; null — נכנס, אחרת — למה לא. */
@@ -523,7 +558,7 @@ final class DbListCmd {
             }
             Res r = comp(db, mode, a, b, conds, find);
             if (r.error != null) s.error = r.error;
-            else s.describe = r.text;
+            else s.describe = Words.DbCmd.inDb(r.text);
             return;
         } else if (cmd.equals("MOVE")) {
             boolean toList = sd.size() == 2 && sd.get(1).list();
@@ -582,6 +617,11 @@ final class DbListCmd {
                 return out;
             }
         };
+    }
+
+    /** מ0.13: פעולה מהמסך — דרך אותה הליבה; לפני הסרה — גיבוי. מחזיר את ההודעה. */
+    static String now(String mode, Work w, boolean before) {
+        return real(mode, w, before, null);
     }
 
     /** "ניקוי" שבסוף ההרצה (RunScreen): הרשימות שההרצה יצרה — יוצאות מהמסד (גיבוי לפני). מחזיר את מה שיצא. */

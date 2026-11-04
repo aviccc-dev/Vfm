@@ -504,6 +504,15 @@ final class ImportTests {
         x = sides("RD ידנית \"ספרים\"");
         DbListCmd.remove(c, M, x[0]);
         ck("העותק להדמיה: שינוי בו לא נוגע במסד", at(s, "ספרים") == books && DbPaths.find(c, M, Tree.parsePath("ספרים")) == 0);
+        long nl = DbListCmd.newList(s, 0, "מהמסך");
+        ck("הליבה (מסכים): רשימה חדשה — בבית", nl != 0 && s.listsOf(nl).equals(Arrays.asList(home)));
+        long note = s.addNote(nl, "הערה");
+        DbListCmd.removeFrom(s, nl, note);
+        ck("הליבה (מסכים): רעיון שהוסר מהרשימה היחידה — לסל", s.members(nl).isEmpty() && "הערה".equals(s.trashed().get(s.trashed().size() - 1).name));
+        DbListCmd.Copied cp = DbListCmd.copyInto(s, Arrays.asList(s.item(books)), nl);
+        ck("הליבה (מסכים): העתקה לתוך רשימה — עותק עצמאי", cp.done == 1 && s.members(nl).size() == 1 && s.members(nl).get(0).item.id != books);
+        DbListCmd.removeFrom(s, home, nl);
+        ck("הליבה (מסכים): הסרה מהבית — נמחקת עם מה שרק שלה", s.item(nl) == null && at(s, "ספרים") == books);
         ck("פקודות במסד: המסד תקין", s.check() == null);
     }
 
