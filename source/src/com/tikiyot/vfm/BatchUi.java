@@ -203,7 +203,7 @@ final class BatchUi {
         else a.startActivity(SearchScreen.fileManager(a, "", start.getAbsolutePath(), null));   // 159
     }
 
-    private static void show(final Activity a, String title, String body, final File start) {
+    private static void show(final Activity a, String title, final String body, final File start) {
         TextView t = new TextView(a);
         t.setText(body);
         t.setTextSize(14);
@@ -213,6 +213,13 @@ final class BatchUi {
         ScrollView sv = new ScrollView(a);
         sv.addView(t);
         AlertDialog.Builder b = new AlertDialog.Builder(a).setTitle(title).setView(sv).setNegativeButton(Words.CLOSE, null);
+        b.setNeutralButton(Words.Db.COPY_REPORT, new DialogInterface.OnClickListener() {   // מ0.12.2: הדוח — להדבקה בשיחה
+            @Override
+            public void onClick(DialogInterface d, int w) {
+                Ui.copyText(a, Words.Run.FULL_REPORT, body);
+                Ui.toast(a, Words.Db.REPORT_COPIED);
+            }
+        });
         if (Batch.isHome(start))                                              // 1.9.0
             b.setPositiveButton(Words.Cmd.TO_HOME, new DialogInterface.OnClickListener() {
                 @Override

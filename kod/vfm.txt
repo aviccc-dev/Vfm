@@ -881,6 +881,7 @@ MOVE הורדות\*.epub לשלוח
 @תיאור כאן שמים דוגמאות משלך
 @למה הרשימה הזו לא נמחקת ולא משתנה ב"חזרה לברירת מחדל" — כל השאר חוזר להתחלה
 ===== קובץ: assets/tests/pkudot-masad.vbat =====
+בדיקה
 ECHO בדיקת פקודות הרשימות במסד. הכול נעשה בתוך הרשימה "בדיקת פקודות". בהתחלה — מה שנשאר מהפעם הקודמת נמחק.
 RD ידנית "בדיקת פקודות"
 MD ידנית "בדיקת פקודות/א/פנימית"
@@ -947,7 +948,7 @@ cd $S; rm -rf out gen bld
 [ "$S" != "$DIR" ] && rm -rf $S
 ls -la $OUT
 ===== קובץ: build/m-version.txt =====
-21 מ0.12.1
+22 מ0.12.2
 ===== קובץ: build/test.sh =====
 #!/bin/bash
 # בדיקות על המחשב (80). יוצא בכישלון אם בדיקה אחת נכשלה — ואז build.sh לא בונה.
@@ -6656,7 +6657,7 @@ final class BatchUi {
         else a.startActivity(SearchScreen.fileManager(a, "", start.getAbsolutePath(), null));   // 159
     }
 
-    private static void show(final Activity a, String title, String body, final File start) {
+    private static void show(final Activity a, String title, final String body, final File start) {
         TextView t = new TextView(a);
         t.setText(body);
         t.setTextSize(14);
@@ -6666,6 +6667,13 @@ final class BatchUi {
         ScrollView sv = new ScrollView(a);
         sv.addView(t);
         AlertDialog.Builder b = new AlertDialog.Builder(a).setTitle(title).setView(sv).setNegativeButton(Words.CLOSE, null);
+        b.setNeutralButton(Words.Db.COPY_REPORT, new DialogInterface.OnClickListener() {   // מ0.12.2: הדוח — להדבקה בשיחה
+            @Override
+            public void onClick(DialogInterface d, int w) {
+                Ui.copyText(a, Words.Run.FULL_REPORT, body);
+                Ui.toast(a, Words.Db.REPORT_COPIED);
+            }
+        });
         if (Batch.isHome(start))                                              // 1.9.0
             b.setPositiveButton(Words.Cmd.TO_HOME, new DialogInterface.OnClickListener() {
                 @Override
@@ -46653,7 +46661,7 @@ public final class Words {
 
         public static final String APP_NAME_M = "מנהל קבצים וירטואלי · מ";
         public static final String MENU = "מסד נתונים (מ)";
-        public static final String TITLE = "מסד נתונים · מ0.12.1";
+        public static final String TITLE = "מסד נתונים · מ0.12.2";
         /** מ0.9: המראה המוכר. */
         public static final String LIST_GONE = "הרשימה הזו כבר לא קיימת במסד", MENU_ACTIONS = "⚙ מסד: גיבוי, העתקה, בדיקה ופעולות",
                 MENU_OLD = "↩ הצד הישן (לפני המסד)",
