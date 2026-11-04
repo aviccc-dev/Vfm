@@ -2434,7 +2434,7 @@ public final class Words {
 
         public static final String APP_NAME_M = "מנהל קבצים וירטואלי · מ";
         public static final String MENU = "מסד נתונים (מ)";
-        public static final String TITLE = "מסד נתונים · מ0.19";
+        public static final String TITLE = "מסד נתונים · מ0.20";
         /** מ0.9: המראה המוכר. */
         public static final String LIST_GONE = "הרשימה הזו כבר לא קיימת במסד", MENU_ACTIONS = "⚙ מסד: גיבוי, העתקה, בדיקה ופעולות",
                 MENU_OLD = "↩ הצד הישן (לפני המסד)",
@@ -2645,6 +2645,12 @@ public final class Words {
         }
 
         public static final String FULL_CHECK = "🧪 בדיקה מלאה";
+        public static final String EMPTY_TITLE = "המסד ריק", EMPTY_RESTORE = "לשחזר", EMPTY_NOT_NOW = "לא עכשיו";
+
+        public static String emptyRestore(String mode, String when) {
+            return "המסד של האופן \"" + mode + "\" ריק (אולי אחרי התקנה מחדש), ונמצא גיבוי תקין מ־" + when
+                    + ". לשחזר ממנו? לפני ההחלפה יוצג מה יש בו.";
+        }
         public static final String FULL_CHECK_TITLE = "בדיקה מלאה";
         public static final String FULL_CHECK_RUNNING = "מריץ בדיקה מלאה — בודק את המסד, ומעתיק כל אופן למסד זמני ומשווה למקור. כמה שניות…";
         public static final String COPY_REPORT = "📋 העתקה";

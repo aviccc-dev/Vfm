@@ -31,6 +31,8 @@ public class DbScreen extends Activity {
     static final String EXTRA_DO = "do", DO_FOLDER = "folder", DO_SEARCH = "search";
     private String pendingDo;
     private boolean familiarDone;
+    /** מ0.20: האופנים שכבר הוצע בהם שחזור למסד ריק (פעם אחת לכל אופן בכל פתיחה של המסך). */
+    private final java.util.Set<String> restoreOffered = new java.util.HashSet<String>();
     private static final String PREFS = "m", PREF_MODE = "mode";
 
     private volatile SqlStore store;
@@ -219,6 +221,7 @@ public class DbScreen extends Activity {
                 return;
             }
             startDaily();
+            offerRestoreIfEmpty();
         }
         show();
         if (pendingDo != null && store != null && current() > 0) {            // מ0.10
@@ -1028,6 +1031,47 @@ public class DbScreen extends Activity {
     }
 
     /** הגיבוי היומי, ברקע: עותק אם יש שינוי (פעם ביום), טקסט פעם בשבוע, ומחיקת ישנים. */
+    /**
+     * מ0.20 (המשתמש: "בתוכנה הזו אם ייעלמו נתונים — זה עשוי להיות נזק גדול"): מסד ריק (למשל אחרי התקנה מחדש) ויש
+     * גיבויים של האופן — מציעים מיד לשחזר מהאחרון התקין (השחזור עצמו — כרגיל: בנייה בצד, השוואה, אישור).
+     */
+    private void offerRestoreIfEmpty() {
+        final SqlStore s = store;
+        final String m = mode;
+        if (s == null || !restoreOffered.add(m) || !s.lists().isEmpty() || !s.smarts().isEmpty() || !s.unassigned().isEmpty()) return;
+        final Backups bk = backups(m);
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                Backups.Entry best = null;
+                int state = Backups.BAD;
+                for (Backups.Entry e : bk.list()) {
+                    int st = bk.verify(e);
+                    if (st == Backups.OK || st == Backups.OK_UNRECORDED) {
+                        best = e;
+                        state = st;
+                        break;
+                    }
+                }
+                if (best == null) return;
+                final Backups.Entry e = best;
+                final int st = state;
+                ui.post(new Runnable() {
+                    @Override
+                    public void run() {
+                        if (isFinishing() || s != store) return;
+                        new AlertDialog.Builder(DbScreen.this).setTitle(Words.Db.EMPTY_TITLE)
+                                .setMessage(Words.Db.emptyRestore(m, FullCheck.when(e)))
+                                .setPositiveButton(Words.Db.EMPTY_RESTORE, new DialogInterface.OnClickListener() {
+                                    @Override public void onClick(DialogInterface d, int w) { restoreAsk(e, st); }
+                                })
+                                .setNegativeButton(Words.Db.EMPTY_NOT_NOW, null).show();
+                    }
+                });
+            }
+        }).start();
+    }
+
     private void startDaily() {
         final SqlStore s = store;
         final String m = mode;

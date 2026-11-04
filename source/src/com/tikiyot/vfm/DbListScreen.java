@@ -37,6 +37,8 @@ public class DbListScreen extends ListScreen<Store.Member> {
     static String currentMode;
     /** מ0.12: ההקשר של התוכנה — לפקודות שרצות במסד (מיקום קובץ המסד). */
     static android.content.Context app;
+    /** מ0.20: כמה מסכי מסד מוצגים עכשיו — יורד ל־0: יוצאים מהמסד → עותק אם השתנה משהו. */
+    private static int visible;
 
     long listId() {
         return listId;
@@ -52,6 +54,40 @@ public class DbListScreen extends ListScreen<Store.Member> {
         if (a.atHome) return;
         goingHome = true;
         a.finish();
+    }
+
+    @Override
+    protected void onStart() {
+        super.onStart();
+        visible++;
+    }
+
+    @Override
+    protected void onStop() {
+        super.onStop();
+        if (--visible <= 0) {
+            visible = 0;
+            exitCopy(getApplicationContext(), mode);
+        }
+    }
+
+    /** מ0.20: עותק של המסד ביציאה, ברקע — רק אם השתנה משהו מאז העותק האחרון (Backups.before). */
+    static void exitCopy(final android.content.Context c, final String m) {
+        if (m == null) return;
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                SqlStore s = null;
+                try {
+                    s = SqlStore.open(DbScreen.dbFile(c, m), new IdCounter(DbScreen.counterFile()));
+                    DbScreen.backupsOf(c, m).before(s, Backups.OP_EXIT, System.currentTimeMillis());
+                } catch (Throwable t) {
+                    Log.e("DbListScreen.exitCopy", t);
+                } finally {
+                    if (s != null) s.close();
+                }
+            }
+        }).start();
     }
 
     @Override
