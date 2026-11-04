@@ -542,6 +542,14 @@ final class ImportTests {
                 && DbExport.target("שלי", "x", ed).equals(new File(ed, "שלי.txt"))
                 && DbExport.target(ed.getAbsolutePath() + "\\שלי.txt", "x", ed).equals(new File(ed, "שלי.txt")));
 
+        // שינוי שם בפקודה (מ0.21)
+        long rn = s.createList("לשינוי", ta);
+        DbListCmd.Res rr = DbListCmd.rename(s, M, sides("REN ידנית \"יעד-א/לשינוי\" \"שונה\"")[0], "שונה");
+        ck("REN: השם השתנה, ומוצאים לפי השם החדש", rr.error == null && s.item(rn).name.equals("שונה") && at(s, "יעד-א/שונה") == rn && at(s, "יעד-א/לשינוי") == 0);
+        s.createList("תפוס", ta);
+        ck("REN: שם תפוס באותה רשימה — לא; / בשם — לא", DbListCmd.rename(s, M, sides("REN ידנית \"יעד-א/שונה\" \"x\"")[0], "תפוס").error != null
+                && DbListCmd.rename(s, M, sides("REN ידנית \"יעד-א/שונה\" \"x\"")[0], "א/ב").error != null && s.item(rn).name.equals("שונה"));
+
         // ודא (מ0.14)
         ListCmd.Side vb = sides("VERIFY ידנית \"ספרים\" קיימת")[0];
         String[] fd = {""};

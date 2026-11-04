@@ -891,6 +891,11 @@ COPY ידנית "בדיקת פקודות" קובץ "%כאן%\יצוא-בדיקה
 ודא "%כאן%\יצוא-בדיקה.txt" קיים
 COPY קבצי ידנית "בדיקת פקודות" קובץ "%כאן%\יצוא-בדיקה-קבצים.txt"
 ודא "%כאן%\יצוא-בדיקה-קבצים.txt" קיים
+:: שינוי שם לרשימה (מ0.21)
+MD ידנית "בדיקת פקודות/לשינוי"
+REN ידנית "בדיקת פקודות/לשינוי" "שונה"
+ודא ידנית "בדיקת פקודות/שונה" קיימת
+ודא ידנית "בדיקת פקודות/לשינוי" חסרה
 :: קבצים בכונן — מחוץ לתיקיית התוכנה (בתוכה פקודות הקבצים חסומות, כדי לשמור עליה): תיקייה, העתקה מרשימה, מחיקה לסל, הסרה
 MD "%פנימי%\בדיקת מנהל קבצים (אפשר למחוק)"
 COPY קבצי ידנית "בדיקת פקודות/א/פנימית" תיקייה "%פנימי%\בדיקת מנהל קבצים (אפשר למחוק)"
@@ -920,6 +925,58 @@ COPY תוכן ידנית "בדיקת עומס" ידנית "בדיקת עומס\%
 ודא ידנית "בדיקת עומס\3" קיימת
 COMP ידנית "בדיקת עומס\1" ידנית "בדיקת עומס"
 ECHO סוף. הרשימה "בדיקת עומס" נשארת לראות — בבית של האופן שבשורת "אופן". "ניקוי" — מוחק אותה עכשיו; בהרצה הבאה — נמחקת ונבנית מחדש.
+===== קובץ: assets/tests/lachatz.vbat =====
+בדיקה
+ECHO בדיקת לחץ — מנסה לסבך את המערכת: שמות זהים ברמות שונות, שרשרת (העתקה → שינוי שם → העברה), קישור ומחיקה, ניסיונות מעגל, שמות קשים, עומק, שם תפוס. כל "ודא" ✅/❌. שורות שמסומנות "צפוי: דולגה" — אמורות להיחסם.
+אופן "בדיקות מערכת"
+RD ידנית "בדיקת לחץ"
+:: הכנה — "א" בשתי רמות, וקובץ בפנימית
+MD ידנית "בדיקת לחץ/א/א"
+MD ידנית "בדיקת לחץ/ב"
+COPY "בדיקת פקודות.vbat" ידנית "בדיקת לחץ/א/א"
+ודא ידנית "בדיקת לחץ/א/א" /רשימות:0 /פריטים:1
+ודא ידנית "בדיקת לחץ" /רשימות:3 /פריטים:1
+:: שרשרת — העתקה, שינוי שם לעותק, העברה; המקור לא משתנה
+COPY ידנית "בדיקת לחץ/א" ידנית "בדיקת לחץ/ב"
+REN ידנית "בדיקת לחץ/ב/א" "עותק"
+ודא ידנית "בדיקת לחץ/ב/עותק" /רשימות:1 /פריטים:1
+ודא ידנית "בדיקת לחץ/ב/א" חסרה
+ודא ידנית "בדיקת לחץ/א" /רשימות:1 /פריטים:1
+MOVE ידנית "בדיקת לחץ/ב/עותק" ידנית "בדיקת לחץ/א/א"
+ודא ידנית "בדיקת לחץ/ב" /רשימות:0 /פריטים:0
+ודא ידנית "בדיקת לחץ/א/א/עותק/א" /רשימות:0 /פריטים:1
+ודא ידנית "בדיקת לחץ/א" /רשימות:3 /פריטים:2
+:: קישור ומחיקה — נמחקת במקום אחד ונשארת בשני; במקום האחרון — נמחקת
+MD ידנית "בדיקת לחץ/ג"
+קשר ידנית "בדיקת לחץ/א/א/עותק" ידנית "בדיקת לחץ/ג"
+RD ידנית "בדיקת לחץ/א/א/עותק"
+ודא ידנית "בדיקת לחץ/ג/עותק" קיימת
+ודא ידנית "בדיקת לחץ/א/א/עותק" חסרה
+RD ידנית "בדיקת לחץ/ג/עותק"
+ודא ידנית "בדיקת לחץ/ג" /רשימות:0 /פריטים:0
+ודא ידנית "בדיקת לחץ/א" /רשימות:1 /פריטים:1
+:: ניסיונות מעגל — צפוי: דולגה (שתי השורות), ושום דבר לא השתנה
+MOVE ידנית "בדיקת לחץ/א" ידנית "בדיקת לחץ/א/א"
+קשר ידנית "בדיקת לחץ/א" ידנית "בדיקת לחץ/א"
+ודא ידנית "בדיקת לחץ/א" /רשימות:1 /פריטים:1
+:: תוכן לתוך רשימה שבתוכו — היעד עצמו יוצא מהפריטים
+COPY תוכן ידנית "בדיקת לחץ" ידנית "בדיקת לחץ/ב"
+ודא ידנית "בדיקת לחץ/ב" /רשימות:3 /פריטים:1
+:: שמות קשים
+MD ידנית "בדיקת לחץ/שם עם רווחים ו־😀 ו-English 123"
+ודא ידנית "בדיקת לחץ/שם עם רווחים ו־😀 ו-English 123" קיימת
+REN ידנית "בדיקת לחץ/שם עם רווחים ו־😀 ו-English 123" "שם ארוך מאוד מאוד מאוד מאוד מאוד מאוד מאוד מאוד מאוד מאוד מאוד מאוד מאוד מאוד"
+ודא ידנית "בדיקת לחץ/שם ארוך מאוד מאוד מאוד מאוד מאוד מאוד מאוד מאוד מאוד מאוד מאוד מאוד מאוד מאוד" קיימת
+:: עומק — עשר רמות, ומחיקת העליונה
+MD ידנית "בדיקת לחץ/עמוק/1/2/3/4/5/6/7/8/9/10"
+ודא ידנית "בדיקת לחץ/עמוק" /רשימות:10 /פריטים:0
+RD ידנית "בדיקת לחץ/עמוק"
+ודא ידנית "בדיקת לחץ/עמוק" חסרה
+:: שם תפוס — צפוי: דולגה
+MD ידנית "בדיקת לחץ/ד"
+REN ידנית "בדיקת לחץ/ד" "ג"
+ודא ידנית "בדיקת לחץ/ד" קיימת
+ECHO סוף בדיקת הלחץ. "בדיקת לחץ" נשארת לראות; שלוש שורות "דולגה" (שני ניסיונות מעגל ושם תפוס) — הן הצפויות.
 ===== קובץ: assets/tests/pkudot-kalul.vbat =====
 ECHO זה הקובץ הנכלל ("כלול"): השורות שלו רצות במקום השורה שכללה אותו.
 MD ידנית "בדיקת פקודות/מכלול"
@@ -1009,7 +1066,7 @@ cd $S; rm -rf out gen bld
 [ "$S" != "$DIR" ] && rm -rf $S
 ls -la $OUT
 ===== קובץ: build/m-version.txt =====
-33 מ0.20
+34 מ0.21
 ===== קובץ: build/test.sh =====
 #!/bin/bash
 # בדיקות על המחשב (80). יוצא בכישלון אם בדיקה אחת נכשלה — ואז build.sh לא בונה.
@@ -10600,6 +10657,35 @@ final class DbListCmd {
         return sb.toString();
     }
 
+    /** מ0.21: REN ידנית/חכמה "א\ב" "שם חדש" — שם תפוס באותה רשימה (אותו סוג) — לא; "/" או "\" בשם — לא. */
+    static Res rename(Store s, String mode, final ListCmd.Side a, String name) {
+        if (name.contains("/") || name.contains("\\")) return Res.err(Words.DbCmd.BAD_NAME);   // לפני הניקוי (שמוחק אותם)
+        final String n = a.kind == ListCmd.SMART_LIST ? name.trim() : Tree.cleanName(name);
+        if (n.isEmpty()) return Res.err(Words.DbCmd.BAD_NAME);
+        long id, parent;
+        if (a.kind == ListCmd.SMART_LIST) {
+            long[] r = smart(s, mode, a);
+            if (r == null) return Res.err(Words.ListCmdW.noSmart(a.raw));
+            id = r[1];
+            parent = r[0];
+        } else {
+            id = DbPaths.find(s, mode, a.path);
+            if (id == 0) return Res.err(Words.ListCmdW.noList(a.raw));
+            List<String> up = new ArrayList<String>(a.path.subList(0, a.path.size() - 1));
+            parent = up.isEmpty() ? Importer.home(s) : DbPaths.find(s, mode, up);
+        }
+        Store.Item it = s.item(id);
+        if (n.equals(it.name)) return Res.same(Words.DbCmd.renamed(a.label(), n));
+        if (parent != 0)
+            for (Store.Member m : s.members(parent))
+                if (m.item.id != id && m.item.type == it.type && m.item.name.equals(n)) return Res.err(Words.DbCmd.nameTaken(n));
+        final long fid = id;
+        s.atomic(new Store.Work() {
+            @Override public void run(Store t) { t.rename(fid, n); }
+        }, true);
+        return Res.ok(Words.DbCmd.renamed(a.label(), n));
+    }
+
     /**
      * מ0.17: LINK (קשר) — אותו פריט גם ביעד (רשימה משותפת); MOVE (העבר) — נכנס ליעד ויוצא מהמקום שלו. המקור: רשימה
      * (מהרשימה שמעליה, או מהבית), חכמה, תוכן של רשימה, או קבצים לפי תבנית — כמו ב-COPY.
@@ -10856,6 +10942,14 @@ final class DbListCmd {
             if (r.error != null) s.error = r.error;
             else s.describe = Words.DbCmd.inDb(r.text);
             return;
+        } else if (cmd.equals("REN")) {                                       // מ0.21: שינוי שם לרשימה — במסד
+            if (sd.size() != 2) { s.error = Words.DbCmd.USAGE_REN; return; }
+            final ListCmd.Side a = sd.get(0);
+            final String name = sd.get(1).raw == null ? "" : sd.get(1).raw.trim();
+            if (!a.list() || a.content || a.filesOf || a.home || a.mask != null || sd.get(1).list()) { s.error = Words.DbCmd.USAGE_REN; return; }
+            work = new Work() {
+                @Override public Res run(Store t, Finder f) { return rename(t, mode, a, name); }
+            };
         } else if (cmd.equals("MOVE") || cmd.equals(Batch.LINK)) {           // מ0.17: העברה וקישור — במסד
             if (sd.size() != 2) { s.error = Words.DbCmd.USAGE_LINK; return; }
             final ListCmd.Side a = sd.get(0), b = sd.get(1);
@@ -11935,7 +12029,7 @@ import java.util.List;
 final class DbTestMode {
 
     static final String ASSET = "tests/pkudot-masad.vbat", ASSET_CALL = "tests/pkudot-kalul.vbat", ASSET_LOAD = "tests/omes-masad.vbat",
-            ASSET_ALL = "tests/klali.vbat";
+            ASSET_ALL = "tests/klali.vbat", ASSET_STRESS = "tests/lachatz.vbat";
 
     /** בקובץ בדיקת העומס: מוחלף בשם האופן עם המסד הגדול ביותר (הנתונים האמיתיים). */
     static final String REAL = "%האופן-האמיתי%";  // תחביר
@@ -11994,6 +12088,13 @@ final class DbTestMode {
             } finally {
                 out4.close();
             }
+            final File stress = new File(Modes.dirOf(mode), Words.DbCmd.TEST_STRESS_FILE + "." + Batch.EXT);
+            FileOutputStream out5 = new FileOutputStream(stress);
+            try {
+                out5.write(Examples.asset(a, ASSET_STRESS).getBytes("UTF-8"));   // מ0.21: בדיקת הלחץ — מנסה לסבך
+            } finally {
+                out5.close();
+            }
             long home = DbVerbs.write(a, mode, new DbVerbs.Job() {
                 @Override
                 public long run(Store s, List<String> p) {
@@ -12006,7 +12107,7 @@ final class DbTestMode {
                             }
                         }
                     }, true);
-                    DbFiles.add(s, h[0], java.util.Arrays.asList(all.getAbsolutePath(), f.getAbsolutePath(), load.getAbsolutePath()), null, true);
+                    DbFiles.add(s, h[0], java.util.Arrays.asList(all.getAbsolutePath(), f.getAbsolutePath(), stress.getAbsolutePath(), load.getAbsolutePath()), null, true);
                     return h[0];
                 }
             }, null);
@@ -47608,6 +47709,7 @@ public final class Words {
                 TEST_CALL_FILE = "בדיקת כלול",  // בכונן
                 TEST_LOAD_FILE = "בדיקת עומס",  // בכונן
                 TEST_ALL_FILE = "בדיקה כללית",  // בכונן
+                TEST_STRESS_FILE = "בדיקת לחץ",  // בכונן
                 TOOLS_DIR = "כלים",  // בכונן
                 TEST_READY = "אופן \"בדיקות מערכת\" — נגיעה ב\"בדיקת פקודות\" מריצה את הבדיקה";
 
@@ -47646,6 +47748,17 @@ public final class Words {
         public static String exported(String what, String path, int lists, int files, int skipped) {
             return "יצוא: " + what + " ← " + path + " · " + lists + " רשימות, " + files + " קבצים"
                     + (skipped > 0 ? " · לא נכנסו (חכמות, רעיונות, כותרות — עוד לא בפורמט): " + skipped : "");
+        }
+
+        public static final String USAGE_REN = "צורה: REN ידנית \"א\\ב\" \"שם חדש\" (גם חכמה \"א\")",
+                BAD_NAME = "שם ריק, או עם / או \\ — לא אפשרי לרשימה";
+
+        public static String renamed(String label, String name) {
+            return label + " ← השם עכשיו \"" + name + "\"";
+        }
+
+        public static String nameTaken(String name) {
+            return "כבר יש באותה רשימה \"" + name + "\" — שם תפוס";
         }
 
         public static final String N_LINK = "קשר",  // תחביר
@@ -47785,7 +47898,7 @@ public final class Words {
 
         public static final String APP_NAME_M = "מנהל קבצים וירטואלי · מ";
         public static final String MENU = "מסד נתונים (מ)";
-        public static final String TITLE = "מסד נתונים · מ0.20";
+        public static final String TITLE = "מסד נתונים · מ0.21";
         /** מ0.9: המראה המוכר. */
         public static final String LIST_GONE = "הרשימה הזו כבר לא קיימת במסד", MENU_ACTIONS = "⚙ מסד: גיבוי, העתקה, בדיקה ופעולות",
                 MENU_OLD = "↩ הצד הישן (לפני המסד)",
@@ -49863,6 +49976,14 @@ final class ImportTests {
                 e1.getName().equals("רשימה ספרים.txt") && DbExport.target("*", "רשימה ספרים", ed).getName().equals("רשימה ספרים (2).txt")
                 && DbExport.target("שלי", "x", ed).equals(new File(ed, "שלי.txt"))
                 && DbExport.target(ed.getAbsolutePath() + "\\שלי.txt", "x", ed).equals(new File(ed, "שלי.txt")));
+
+        // שינוי שם בפקודה (מ0.21)
+        long rn = s.createList("לשינוי", ta);
+        DbListCmd.Res rr = DbListCmd.rename(s, M, sides("REN ידנית \"יעד-א/לשינוי\" \"שונה\"")[0], "שונה");
+        ck("REN: השם השתנה, ומוצאים לפי השם החדש", rr.error == null && s.item(rn).name.equals("שונה") && at(s, "יעד-א/שונה") == rn && at(s, "יעד-א/לשינוי") == 0);
+        s.createList("תפוס", ta);
+        ck("REN: שם תפוס באותה רשימה — לא; / בשם — לא", DbListCmd.rename(s, M, sides("REN ידנית \"יעד-א/שונה\" \"x\"")[0], "תפוס").error != null
+                && DbListCmd.rename(s, M, sides("REN ידנית \"יעד-א/שונה\" \"x\"")[0], "א/ב").error != null && s.item(rn).name.equals("שונה"));
 
         // ודא (מ0.14)
         ListCmd.Side vb = sides("VERIFY ידנית \"ספרים\" קיימת")[0];

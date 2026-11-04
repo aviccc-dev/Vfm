@@ -474,6 +474,35 @@ final class DbListCmd {
         return sb.toString();
     }
 
+    /** מ0.21: REN ידנית/חכמה "א\ב" "שם חדש" — שם תפוס באותה רשימה (אותו סוג) — לא; "/" או "\" בשם — לא. */
+    static Res rename(Store s, String mode, final ListCmd.Side a, String name) {
+        if (name.contains("/") || name.contains("\\")) return Res.err(Words.DbCmd.BAD_NAME);   // לפני הניקוי (שמוחק אותם)
+        final String n = a.kind == ListCmd.SMART_LIST ? name.trim() : Tree.cleanName(name);
+        if (n.isEmpty()) return Res.err(Words.DbCmd.BAD_NAME);
+        long id, parent;
+        if (a.kind == ListCmd.SMART_LIST) {
+            long[] r = smart(s, mode, a);
+            if (r == null) return Res.err(Words.ListCmdW.noSmart(a.raw));
+            id = r[1];
+            parent = r[0];
+        } else {
+            id = DbPaths.find(s, mode, a.path);
+            if (id == 0) return Res.err(Words.ListCmdW.noList(a.raw));
+            List<String> up = new ArrayList<String>(a.path.subList(0, a.path.size() - 1));
+            parent = up.isEmpty() ? Importer.home(s) : DbPaths.find(s, mode, up);
+        }
+        Store.Item it = s.item(id);
+        if (n.equals(it.name)) return Res.same(Words.DbCmd.renamed(a.label(), n));
+        if (parent != 0)
+            for (Store.Member m : s.members(parent))
+                if (m.item.id != id && m.item.type == it.type && m.item.name.equals(n)) return Res.err(Words.DbCmd.nameTaken(n));
+        final long fid = id;
+        s.atomic(new Store.Work() {
+            @Override public void run(Store t) { t.rename(fid, n); }
+        }, true);
+        return Res.ok(Words.DbCmd.renamed(a.label(), n));
+    }
+
     /**
      * מ0.17: LINK (קשר) — אותו פריט גם ביעד (רשימה משותפת); MOVE (העבר) — נכנס ליעד ויוצא מהמקום שלו. המקור: רשימה
      * (מהרשימה שמעליה, או מהבית), חכמה, תוכן של רשימה, או קבצים לפי תבנית — כמו ב-COPY.
@@ -730,6 +759,14 @@ final class DbListCmd {
             if (r.error != null) s.error = r.error;
             else s.describe = Words.DbCmd.inDb(r.text);
             return;
+        } else if (cmd.equals("REN")) {                                       // מ0.21: שינוי שם לרשימה — במסד
+            if (sd.size() != 2) { s.error = Words.DbCmd.USAGE_REN; return; }
+            final ListCmd.Side a = sd.get(0);
+            final String name = sd.get(1).raw == null ? "" : sd.get(1).raw.trim();
+            if (!a.list() || a.content || a.filesOf || a.home || a.mask != null || sd.get(1).list()) { s.error = Words.DbCmd.USAGE_REN; return; }
+            work = new Work() {
+                @Override public Res run(Store t, Finder f) { return rename(t, mode, a, name); }
+            };
         } else if (cmd.equals("MOVE") || cmd.equals(Batch.LINK)) {           // מ0.17: העברה וקישור — במסד
             if (sd.size() != 2) { s.error = Words.DbCmd.USAGE_LINK; return; }
             final ListCmd.Side a = sd.get(0), b = sd.get(1);

@@ -2257,6 +2257,7 @@ public final class Words {
                 TEST_CALL_FILE = "בדיקת כלול",  // בכונן
                 TEST_LOAD_FILE = "בדיקת עומס",  // בכונן
                 TEST_ALL_FILE = "בדיקה כללית",  // בכונן
+                TEST_STRESS_FILE = "בדיקת לחץ",  // בכונן
                 TOOLS_DIR = "כלים",  // בכונן
                 TEST_READY = "אופן \"בדיקות מערכת\" — נגיעה ב\"בדיקת פקודות\" מריצה את הבדיקה";
 
@@ -2295,6 +2296,17 @@ public final class Words {
         public static String exported(String what, String path, int lists, int files, int skipped) {
             return "יצוא: " + what + " ← " + path + " · " + lists + " רשימות, " + files + " קבצים"
                     + (skipped > 0 ? " · לא נכנסו (חכמות, רעיונות, כותרות — עוד לא בפורמט): " + skipped : "");
+        }
+
+        public static final String USAGE_REN = "צורה: REN ידנית \"א\\ב\" \"שם חדש\" (גם חכמה \"א\")",
+                BAD_NAME = "שם ריק, או עם / או \\ — לא אפשרי לרשימה";
+
+        public static String renamed(String label, String name) {
+            return label + " ← השם עכשיו \"" + name + "\"";
+        }
+
+        public static String nameTaken(String name) {
+            return "כבר יש באותה רשימה \"" + name + "\" — שם תפוס";
         }
 
         public static final String N_LINK = "קשר",  // תחביר
@@ -2434,7 +2446,7 @@ public final class Words {
 
         public static final String APP_NAME_M = "מנהל קבצים וירטואלי · מ";
         public static final String MENU = "מסד נתונים (מ)";
-        public static final String TITLE = "מסד נתונים · מ0.20";
+        public static final String TITLE = "מסד נתונים · מ0.21";
         /** מ0.9: המראה המוכר. */
         public static final String LIST_GONE = "הרשימה הזו כבר לא קיימת במסד", MENU_ACTIONS = "⚙ מסד: גיבוי, העתקה, בדיקה ופעולות",
                 MENU_OLD = "↩ הצד הישן (לפני המסד)",
