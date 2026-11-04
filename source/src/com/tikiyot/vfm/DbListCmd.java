@@ -602,6 +602,7 @@ final class DbListCmd {
                 s.error = Words.ListCmdW.NO_FILTER;
                 return;
             }
+        if (sim.modeError != null) { s.error = sim.modeError; return; }      // מ0.17.1: "אופן" שנכשל — לא לרוץ על אופן אחר
         final String mode = mode(sim);
         final Store db;
         try {
@@ -769,6 +770,7 @@ final class DbListCmd {
         if (!a.list() || a.content || a.filesOf || a.mask != null) { s.error = Words.DbCmd.VERIFY_USAGE; return; }
         final Expect e = expect(conds);
         if (e.error != null) { s.error = e.error; return; }
+        if (sim.modeError != null) { s.error = sim.modeError; return; }
         final String mode = mode(sim);
         Store db;
         try {

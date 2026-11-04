@@ -396,6 +396,8 @@ final class Batch {
         Store db;
         /** מ0.15: האופן מ"אופן" בקובץ; null — האופן שפתוח. */
         String mode;
+        /** מ0.17.1: "אופן" שנכשל — כל שורות המסד שאחריו נכשלות (לא לרוץ בטעות על אופן אחר). */
+        String modeError;
         final Map<String, List<String>> condFiles = new java.util.HashMap<String, List<String>>();
 
         boolean isDir(File d) {
@@ -752,9 +754,11 @@ final class Batch {
                 String m = tk.size() == 2 ? tk.get(1).trim() : "";
                 if (m.isEmpty()) s.error = Words.DbCmd.MODE_USAGE;
                 else if (!DbVerbs.active()) s.error = Words.DbCmd.VERIFY_DB_ONLY;
-                else if (!DbScreen.dbModes(DbListScreen.app).contains(m)) s.error = Words.DbCmd.noMode(m);
+                else if (!DbScreen.dbModes(DbListScreen.app).contains(m))
+                    s.error = sim.modeError = Words.DbCmd.noMode(m, DbScreen.dbModes(DbListScreen.app));
                 else {
                     sim.mode = m;
+                    sim.modeError = null;
                     sim.db = null;
                     s.noop = true;
                     s.describe = Words.DbCmd.modeNow(m);

@@ -17,7 +17,25 @@ final class DbTestMode {
 
     static final String ASSET = "tests/pkudot-masad.vbat", ASSET_CALL = "tests/pkudot-kalul.vbat", ASSET_LOAD = "tests/omes-masad.vbat";
 
+    /** בקובץ בדיקת העומס: מוחלף בשם האופן עם המסד הגדול ביותר (הנתונים האמיתיים). */
+    static final String REAL = "%האופן-האמיתי%";  // תחביר
+
     private DbTestMode() { }
+
+    /** מ0.17.1: האופן שהמסד שלו הגדול ביותר — חוץ מאופן הבדיקות. אין — אופן הבדיקות עצמו. */
+    static String realMode(Activity a, String test) {
+        String best = test;
+        long size = -1;
+        for (String m : DbScreen.dbModes(a)) {
+            if (m.equals(test)) continue;
+            long n = DbScreen.dbFile(a, m).length();
+            if (n > size) {
+                size = n;
+                best = m;
+            }
+        }
+        return best;
+    }
 
     static void open(final Activity a) {
         final String mode = Words.DbCmd.TEST_MODE;
@@ -45,7 +63,7 @@ final class DbTestMode {
             final File load = new File(Modes.dirOf(mode), Words.DbCmd.TEST_LOAD_FILE + "." + Batch.EXT);
             FileOutputStream out3 = new FileOutputStream(load);
             try {
-                out3.write(Examples.asset(a, ASSET_LOAD).getBytes("UTF-8"));   // מ0.17: בדיקת העומס — על הנתונים האמיתיים
+                out3.write(Examples.asset(a, ASSET_LOAD).replace(REAL, realMode(a, mode)).getBytes("UTF-8"));   // מ0.17: על הנתונים האמיתיים
             } finally {
                 out3.close();
             }

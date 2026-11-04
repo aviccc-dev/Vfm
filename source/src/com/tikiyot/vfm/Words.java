@@ -2289,8 +2289,10 @@ public final class Words {
                 H_CALL = "קובץ פקודות (מסלול, או שם בתיקייה של הקובץ הזה)",
                 CALL_FAILED = "כלול — הקובץ לא נמצא, או שהוא כבר בתוך עצמו (מעגל), או יותר מ־5 בתוך 5";
 
-        public static String noMode(String m) {
-            return "אין מסד לאופן \"" + m + "\"";
+        public static String noMode(String m, java.util.List<String> have) {
+            StringBuilder sb = new StringBuilder();
+            for (String h : have) sb.append(sb.length() > 0 ? ", " : "").append('"').append(h).append('"');
+            return "אין מסד לאופן \"" + m + "\" — יש: " + sb + " (השורות שאחרי זה במסד — לא ירוצו)";
         }
 
         public static String modeNow(String m) {
@@ -2404,7 +2406,7 @@ public final class Words {
 
         public static final String APP_NAME_M = "מנהל קבצים וירטואלי · מ";
         public static final String MENU = "מסד נתונים (מ)";
-        public static final String TITLE = "מסד נתונים · מ0.17";
+        public static final String TITLE = "מסד נתונים · מ0.17.1";
         /** מ0.9: המראה המוכר. */
         public static final String LIST_GONE = "הרשימה הזו כבר לא קיימת במסד", MENU_ACTIONS = "⚙ מסד: גיבוי, העתקה, בדיקה ופעולות",
                 MENU_OLD = "↩ הצד הישן (לפני המסד)",

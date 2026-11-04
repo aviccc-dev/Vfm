@@ -883,12 +883,13 @@ MOVE הורדות\*.epub לשלוח
 ===== קובץ: assets/tests/omes-masad.vbat =====
 בדיקה
 :: בדיקת עומס במסד — כמו בדיקת העומס שבזמנו הראתה שהמנוע הישן איטי, והביאה אותנו למסד.
-:: רצה על האופן שבשורת "אופן" (כאן: "עבודה אמיתית" — הנתונים האמיתיים), כולה בתוך רשימה חדשה "בדיקת עומס", ובסוף מוחקת אותה.
-:: לפני כל מחיקה — גיבוי של המסד. אופן אחר — לשנות את השורה (רק אופן שיש לו מסד).
-ECHO בדיקת עומס במסד: מעתיקה את כל מה שבבית לרשימה "בדיקת עומס", ואז 3 סבבים — בכל סבב תוכן הרשימה כולה נכנס לתת־רשימה חדשה (גדל בכל סבב). "מדידה" — הזמן של כל שורה. בסוף — נמחקת.
+:: רצה על האופן שבשורת "אופן" (בהתקנה — האופן עם המסד הגדול ביותר, כלומר הנתונים האמיתיים), כולה בתוך רשימה חדשה "בדיקת עומס".
+:: מעתיקה בלבד: המקור לא נוגע. בהרצה הבאה — נמחקת ונבנית מחדש (לפני מחיקה — גיבוי של המסד).
+ECHO בדיקת עומס במסד: מעתיקה את כל מה שבבית לרשימה "בדיקת עומס", ואז 3 סבבים — בכל סבב תוכן הרשימה כולה נכנס לתת־רשימה חדשה (גדל בכל סבב). "מדידה" — הזמן של כל שורה.
 מדידה
-אופן "עבודה אמיתית"
+אופן "%האופן-האמיתי%"
 RD ידנית "בדיקת עומס"
+ודא ידנית "בדיקת עומס" חסרה
 MD ידנית "בדיקת עומס"
 COPY תוכן ידנית "*" ידנית "בדיקת עומס"
 ודא ידנית "בדיקת עומס" קיימת
@@ -899,9 +900,7 @@ COPY תוכן ידנית "בדיקת עומס" ידנית "בדיקת עומס\%
 ודא ידנית "בדיקת עומס\1" קיימת
 ודא ידנית "בדיקת עומס\3" קיימת
 COMP ידנית "בדיקת עומס\1" ידנית "בדיקת עומס"
-RD ידנית "בדיקת עומס"
-ודא ידנית "בדיקת עומס" חסרה
-ECHO סוף. בדוח — הזמן של כל שורה ("מדידה"), ובסוף — כמה "ודא" עברו. הרשימה "בדיקת עומס" נמחקה.
+ECHO סוף. הרשימה "בדיקת עומס" נשארת לראות — בבית של האופן שבשורת "אופן". "ניקוי" — מוחק אותה עכשיו; בהרצה הבאה — נמחקת ונבנית מחדש.
 ===== קובץ: assets/tests/pkudot-kalul.vbat =====
 ECHO זה הקובץ הנכלל ("כלול"): השורות שלו רצות במקום השורה שכללה אותו.
 MD ידנית "בדיקת פקודות/מכלול"
@@ -991,7 +990,7 @@ cd $S; rm -rf out gen bld
 [ "$S" != "$DIR" ] && rm -rf $S
 ls -la $OUT
 ===== קובץ: build/m-version.txt =====
-28 מ0.17
+29 מ0.17.1
 ===== קובץ: build/test.sh =====
 #!/bin/bash
 # בדיקות על המחשב (80). יוצא בכישלון אם בדיקה אחת נכשלה — ואז build.sh לא בונה.
@@ -3859,6 +3858,8 @@ final class Batch {
         Store db;
         /** מ0.15: האופן מ"אופן" בקובץ; null — האופן שפתוח. */
         String mode;
+        /** מ0.17.1: "אופן" שנכשל — כל שורות המסד שאחריו נכשלות (לא לרוץ בטעות על אופן אחר). */
+        String modeError;
         final Map<String, List<String>> condFiles = new java.util.HashMap<String, List<String>>();
 
         boolean isDir(File d) {
@@ -4215,9 +4216,11 @@ final class Batch {
                 String m = tk.size() == 2 ? tk.get(1).trim() : "";
                 if (m.isEmpty()) s.error = Words.DbCmd.MODE_USAGE;
                 else if (!DbVerbs.active()) s.error = Words.DbCmd.VERIFY_DB_ONLY;
-                else if (!DbScreen.dbModes(DbListScreen.app).contains(m)) s.error = Words.DbCmd.noMode(m);
+                else if (!DbScreen.dbModes(DbListScreen.app).contains(m))
+                    s.error = sim.modeError = Words.DbCmd.noMode(m, DbScreen.dbModes(DbListScreen.app));
                 else {
                     sim.mode = m;
+                    sim.modeError = null;
                     sim.db = null;
                     s.noop = true;
                     s.describe = Words.DbCmd.modeNow(m);
@@ -10562,6 +10565,7 @@ final class DbListCmd {
                 s.error = Words.ListCmdW.NO_FILTER;
                 return;
             }
+        if (sim.modeError != null) { s.error = sim.modeError; return; }      // מ0.17.1: "אופן" שנכשל — לא לרוץ על אופן אחר
         final String mode = mode(sim);
         final Store db;
         try {
@@ -10729,6 +10733,7 @@ final class DbListCmd {
         if (!a.list() || a.content || a.filesOf || a.mask != null) { s.error = Words.DbCmd.VERIFY_USAGE; return; }
         final Expect e = expect(conds);
         if (e.error != null) { s.error = e.error; return; }
+        if (sim.modeError != null) { s.error = sim.modeError; return; }
         final String mode = mode(sim);
         Store db;
         try {
@@ -11658,7 +11663,25 @@ final class DbTestMode {
 
     static final String ASSET = "tests/pkudot-masad.vbat", ASSET_CALL = "tests/pkudot-kalul.vbat", ASSET_LOAD = "tests/omes-masad.vbat";
 
+    /** בקובץ בדיקת העומס: מוחלף בשם האופן עם המסד הגדול ביותר (הנתונים האמיתיים). */
+    static final String REAL = "%האופן-האמיתי%";  // תחביר
+
     private DbTestMode() { }
+
+    /** מ0.17.1: האופן שהמסד שלו הגדול ביותר — חוץ מאופן הבדיקות. אין — אופן הבדיקות עצמו. */
+    static String realMode(Activity a, String test) {
+        String best = test;
+        long size = -1;
+        for (String m : DbScreen.dbModes(a)) {
+            if (m.equals(test)) continue;
+            long n = DbScreen.dbFile(a, m).length();
+            if (n > size) {
+                size = n;
+                best = m;
+            }
+        }
+        return best;
+    }
 
     static void open(final Activity a) {
         final String mode = Words.DbCmd.TEST_MODE;
@@ -11686,7 +11709,7 @@ final class DbTestMode {
             final File load = new File(Modes.dirOf(mode), Words.DbCmd.TEST_LOAD_FILE + "." + Batch.EXT);
             FileOutputStream out3 = new FileOutputStream(load);
             try {
-                out3.write(Examples.asset(a, ASSET_LOAD).getBytes("UTF-8"));   // מ0.17: בדיקת העומס — על הנתונים האמיתיים
+                out3.write(Examples.asset(a, ASSET_LOAD).replace(REAL, realMode(a, mode)).getBytes("UTF-8"));   // מ0.17: על הנתונים האמיתיים
             } finally {
                 out3.close();
             }
@@ -47204,8 +47227,10 @@ public final class Words {
                 H_CALL = "קובץ פקודות (מסלול, או שם בתיקייה של הקובץ הזה)",
                 CALL_FAILED = "כלול — הקובץ לא נמצא, או שהוא כבר בתוך עצמו (מעגל), או יותר מ־5 בתוך 5";
 
-        public static String noMode(String m) {
-            return "אין מסד לאופן \"" + m + "\"";
+        public static String noMode(String m, java.util.List<String> have) {
+            StringBuilder sb = new StringBuilder();
+            for (String h : have) sb.append(sb.length() > 0 ? ", " : "").append('"').append(h).append('"');
+            return "אין מסד לאופן \"" + m + "\" — יש: " + sb + " (השורות שאחרי זה במסד — לא ירוצו)";
         }
 
         public static String modeNow(String m) {
@@ -47319,7 +47344,7 @@ public final class Words {
 
         public static final String APP_NAME_M = "מנהל קבצים וירטואלי · מ";
         public static final String MENU = "מסד נתונים (מ)";
-        public static final String TITLE = "מסד נתונים · מ0.17";
+        public static final String TITLE = "מסד נתונים · מ0.17.1";
         /** מ0.9: המראה המוכר. */
         public static final String LIST_GONE = "הרשימה הזו כבר לא קיימת במסד", MENU_ACTIONS = "⚙ מסד: גיבוי, העתקה, בדיקה ופעולות",
                 MENU_OLD = "↩ הצד הישן (לפני המסד)",
