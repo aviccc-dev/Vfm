@@ -550,6 +550,61 @@ final class ImportTests {
         ck("REN: שם תפוס באותה רשימה — לא; / בשם — לא", DbListCmd.rename(s, M, sides("REN ידנית \"יעד-א/שונה\" \"x\"")[0], "תפוס").error != null
                 && DbListCmd.rename(s, M, sides("REN ידנית \"יעד-א/שונה\" \"x\"")[0], "א/ב").error != null && s.item(rn).name.equals("שונה"));
 
+        // מ0.22: מיון, סידור ידני, ייבוא, העתקה בין מסדים, תפריט
+        long so = s.createList("מיון", home);
+        long fz = s.createFile(new Store.FileInfo("/s/z.txt", "פנימי", 10, 300, null)), fa2 = s.createFile(new Store.FileInfo("/s/aa.txt", "פנימי", 99, 100, null));
+        s.addMember(so, fz);
+        s.addMember(so, fa2);
+        long sub = s.createList("תת", so);
+        List<Store.Member> rows = new ArrayList<Store.Member>(s.members(so));
+        DbMore.sort(s, rows, Sort.NAME);
+        ck("מיון: רשימות קודם, ואז קבצים לפי שם", rows.get(0).item.id == sub && rows.get(1).item.id == fa2 && rows.get(2).item.id == fz);
+        DbMore.sort(s, rows, Sort.DATE);
+        ck("מיון לפי תאריך: החדש ראשון", rows.get(1).item.id == fz);
+        DbMore.sort(s, rows, Sort.SIZE);
+        ck("מיון לפי גודל: הגדול ראשון", rows.get(1).item.id == fa2);
+        DbMore.order(s, so, Arrays.asList(sub), DbMore.BOTTOM);
+        ck("סידור: לסוף", s.members(so).get(2).item.id == sub);
+        DbMore.order(s, so, Arrays.asList(sub), DbMore.UP);
+        ck("סידור: מקום אחד למעלה", s.members(so).get(1).item.id == sub);
+        DbMore.order(s, so, Arrays.asList(sub, fz), DbMore.TOP);
+        ck("סידור: כמה לראש — הסדר ביניהם נשמר", s.members(so).get(0).item.id == fz && s.members(so).get(1).item.id == sub);
+        DbMore.order(s, so, Arrays.asList(fa2), DbMore.DOWN);
+        ck("סידור: למטה בסוף — נשאר", s.members(so).get(2).item.id == fa2);
+
+        DbExport.Out ex2 = DbExport.list(s, books, false, "x", 0);
+        long imp = s.createList("מיובא", home);
+        DbMore.Imported im = DbMore.importText(s, imp, ex2.text);
+        ck("ייבוא: מה שיוצא — נכנס (רשימות וקבצים), בתוך היעד", im.lists == ex2.lists && im.files == ex2.files && im.bad == 0
+                && DbCount.of(s, imp, null).lists == ex2.lists && DbPaths.find(s, M, Tree.parsePath("מיובא/ספרים")) != 0);
+        DbMore.Imported im2 = DbMore.importText(s, imp, ex2.text);
+        ck("ייבוא שוב: אותן רשימות (לא כפולות), קבצים שכבר שם — לא שוב", im2.files == 0 && DbCount.of(s, imp, null).lists == ex2.lists);
+        DbMore.Imported im3 = DbMore.importText(s, imp, DbExport.paths(Arrays.asList("/s/a.pdf", "/s/q.txt"), "x", 0).text);
+        ck("ייבוא קבצי רשימה: המסלולים נכנסים ליעד עצמו", im3.files == 2 && s.contains(imp, s.findFile("/s/q.txt")));
+
+        MemStore other = new MemStore(IdCounter.memory());
+        long oh = other.createList("בית", 0);
+        other.setProp(oh, Store.P_HOME, "1");
+        long ob = other.createList("אחר", oh), obs = other.createList("פנים", ob);
+        long ofile = other.createFile(new Store.FileInfo("/o/x.pdf", "פנימי", 5, 7, "2:abc"));
+        other.addMember(obs, ofile);
+        other.addNote(ob, "רעיון שם");
+        DbListCmd.Res xr = DbListCmd.copyAcross(other, "שני", sides("COPY ידנית \"אחר\" ידנית \"מיובא\"")[0], s, imp, "\"מיובא\"");
+        long cx = DbPaths.find(s, M, Tree.parsePath("מיובא/אחר"));
+        ck("מאופן לאופן: עותק עצמאי — רשימות, רעיון, וקובץ לפי המסלול עם החתימה", xr.error == null && cx != 0 && DbPaths.find(s, M, Tree.parsePath("מיובא/אחר/פנים")) != 0
+                && s.findFile("/o/x.pdf") != 0 && "2:abc".equals(s.file(s.findFile("/o/x.pdf")).sig) && other.lists().size() == 3);
+        ck("מאופן לאופן: שוב — כבר יש בשם הזה", DbListCmd.copyAcross(other, "שני", sides("COPY ידנית \"אחר\" ידנית \"מיובא\"")[0], s, imp, "x").error != null);
+
+        long mn = s.createList("תפריט", home);
+        long bat = s.createFile(new Store.FileInfo("/s/run.vbat", "פנימי", 1, 0, null));
+        s.addMember(mn, bat);
+        s.addMember(mn, fz);
+        long msub = s.createList("משנה", mn);
+        long msm = s.createSmart("מוצאת", mn);
+        List<DbMore.Entry> me = DbMore.menu(s, mn);
+        ck("תפריט מהמסד: קובץ פקודות, תת־תפריט, חכמה — לפי הסדר; קובץ שאינו פקודות — לא", me.size() == 3 && me.get(0).kind == DbMore.E_FILE
+                && me.get(1).id == msub && me.get(2).id == msm);
+
         // ודא (מ0.14)
         ListCmd.Side vb = sides("VERIFY ידנית \"ספרים\" קיימת")[0];
         String[] fd = {""};
@@ -589,7 +644,7 @@ final class ImportTests {
                 && Importer.home(c) != 0 && DbPaths.find(c, M, Tree.parsePath("ספרים")) != 0);
         x = sides("RD ידנית \"ספרים\"");
         DbListCmd.remove(c, M, x[0]);
-        ck("העותק להדמיה: שינוי בו לא נוגע במסד", at(s, "ספרים") == books && DbPaths.find(c, M, Tree.parsePath("ספרים")) == 0);
+        ck("העותק להדמיה: שינוי בו לא נוגע במסד", at(s, "ספרים") == books && c.lists().size() < lists && s.lists().size() == lists);
         long nl = DbListCmd.newList(s, 0, "מהמסך");
         ck("הליבה (מסכים): רשימה חדשה — בבית", nl != 0 && s.listsOf(nl).equals(Arrays.asList(home)));
         long note = s.addNote(nl, "הערה");

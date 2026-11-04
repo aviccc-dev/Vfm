@@ -62,6 +62,7 @@ final class CmdMenu {
 
     private static void showList(final Activity a, final List<String> path, final File newIn, final Picked pick,
                                  final String screen, final boolean top) {
+        if (DbVerbs.active() && DbCmdMenu.show(a, path, newIn, pick, screen, top)) return;   // מ0.22: מהמסד, אם יש שם
         ModeCopy.Side side = Reserved.inUse();
         if (side == null) {                                                   // אין "שמור לתוכנה" בשום מקום — באופן הזה
             Reserved.ensureMode(Modes.current());
@@ -164,7 +165,7 @@ final class CmdMenu {
     }
 
     /** בבחירה: שורה בכתב · תיקייה במנהל הקבצים · פעולה של המסך (פקודות בלי קובץ). */
-    private static void extras(final Activity a, final String screen, final Picked pick, List<String> labels,
+    static void extras(final Activity a, final String screen, final Picked pick, List<String> labels,
                                List<Runnable> taps, List<Runnable> holds) {
         labels.add(Words.Top.T_LINE);
         taps.add(new Runnable() {
@@ -197,14 +198,14 @@ final class CmdMenu {
     }
 
     /** נגיעה: הרצה, או בחירה. */
-    private static void useFile(Activity a, File f, Picked pick) {
+    static void useFile(Activity a, File f, Picked pick) {
         Program p = Program.read(f);
         if (pick != null) pick.ok(p.isProgram() ? p.icon : "▶", p.title(f), Verbs.run(f.getAbsolutePath()), f);
         else BatchUi.run(a, f);
     }
 
     /** רשימה חכמה בתפריט — קובצי הפקודות שהיא מוצאת. */
-    private static void found(final Activity a, String title, String cond, final Picked pick) {
+    static void found(final Activity a, String title, String cond, final Picked pick) {
         final List<File> files = new ArrayList<File>();
         for (Library.Hit h : Library.get(a).search(cond, false, false).hits)
             if (h.rec != null && Batch.isBatch(h.path())) files.add(new File(h.path()));
@@ -238,7 +239,7 @@ final class CmdMenu {
     }
 
     /** פקודת מערכת — "שמירה בשם": שם חדש ← קובץ פקודות ב"הפקודות שלי" (המקור לא משתנה) ← העורך. */
-    private static void saveAs(final Activity a, final File sys) {
+    static void saveAs(final Activity a, final File sys) {
         final Program p = Program.read(sys);
         Ui.askText(a, Words.CmdM.SAVE_AS, p.title(sys) + Words.CmdM.MINE_SUFFIX, Words.Short.NAME_HINT, new Ui.Text1() {
             @Override

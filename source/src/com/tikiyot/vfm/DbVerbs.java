@@ -28,7 +28,7 @@ final class DbVerbs {
                 @Override public long run(Store s, List<String> p) { return DbPaths.ensure(s, mode, p); }
             }, path) : read(a, mode, path);
             if (id == 0) Ui.toast(a, Words.Verb.NOT_FOUND + c.arg);
-            else DbListScreen.open(a, mode, id);
+            else DbListScreen.open(a, mode, id, c.sort);                    // מ0.22: עם המיון שבפקודה
             return true;
         }
         if (c.kind.equals(Verbs.K_SMART)) {

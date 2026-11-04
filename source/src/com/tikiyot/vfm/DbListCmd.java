@@ -577,6 +577,54 @@ final class DbListCmd {
         return Res.ok(Words.DbCmd.exported(name, Bidi.path(to.getAbsolutePath()), o.lists, o.files, o.skipped));
     }
 
+    /** מ0.22: קובץ הייבוא — שם בלי מסלול: בתיקיית היצוא; "\\" כמו "/". */
+    static File importFile(String raw) {
+        String r = raw == null ? "" : raw.trim().replace('\\', '/');
+        File f = new File(r);
+        return f.isAbsolute() ? f : new File(exportDir(), r);
+    }
+
+    /** מ0.22: ייבוא — הטקסט (בפורמט היצוא) לתוך הרשימה. */
+    static Res importFrom(Store s, String mode, File in, ListCmd.Side b) {
+        long dest = b.home ? Importer.home(s) : DbPaths.find(s, mode, b.path);
+        if (dest == 0) return Res.err(b.home ? Words.DbCmd.NO_HOME : Words.ListCmdW.noList(b.raw));
+        String text;
+        try {
+            text = Files.readUtf8(in);
+        } catch (Throwable t) {
+            return Res.err(Words.DbCmd.cantRead(in.getName()));
+        }
+        DbMore.Imported r = DbMore.importText(s, dest, text);
+        return Res.ok(Words.DbCmd.imported(in.getName(), b.label(), r.lists, r.files, r.bad) + nowIn(s, dest));
+    }
+
+    /** מ0.22: העתקה מאופן אחר — המקור נפתח לקריאה בלבד; עותק עצמאי (קבצים — לפי המסלול). */
+    static Res copyFromMode(Store t, String mode, String srcMode, ListCmd.Side a, ListCmd.Side b) {
+        long dest = b.home ? Importer.home(t) : DbPaths.find(t, mode, b.path);
+        if (dest == 0) return Res.err(b.home ? Words.DbCmd.NO_HOME : Words.ListCmdW.noList(b.raw));
+        SqlStore src = null;
+        try {
+            src = SqlStore.openReadOnly(DbScreen.dbFile(DbListScreen.app, srcMode));
+            return copyAcross(src, srcMode, a, t, dest, b.label());
+        } finally {
+            if (src != null) src.close();
+        }
+    }
+
+    /** מ0.22: הליבה של ההעתקה בין מסדים (נבדקת במחשב על שני מסדים). */
+    static Res copyAcross(Store src, String srcMode, ListCmd.Side a, Store t, long dest, String destLabel) {
+        long id = DbPaths.find(src, srcMode, a.path);
+        if (id == 0) return Res.err(Words.ListCmdW.noList(Words.DbCmd.MODE_PREFIX + srcMode + "/" + ListCmd.pathText(a.path)));
+        int n = 0;
+        if (a.content) for (Store.Member m : src.members(id)) n += DbMore.copyAcross(src, m.item.id, t, dest);
+        else {
+            for (Store.Member m : t.members(dest))
+                if (m.item.type == Store.LIST && m.item.name.equals(src.item(id).name)) return Res.err(Words.DbCmd.SAME_NAME);
+            n = DbMore.copyAcross(src, id, t, dest);
+        }
+        return Res.ok(Words.DbCmd.fromMode(srcMode, ListCmd.pathText(a.path), destLabel, n) + nowIn(t, dest));
+    }
+
     /** התיקייה "יצוא" בתיקיית התוכנה. */
     static File exportDir() {
         return new File(Paths.data(), Words.DbCmd.EXPORT_DIR);
@@ -716,6 +764,47 @@ final class DbListCmd {
             final ListCmd.Side a = sd.get(0), b = sd.get(1);
             if (b.content || b.filesOf) { s.error = Words.ListCmdW.USAGE; return; }
             if (b.kind == ListCmd.SMART_LIST) { s.error = Words.ListCmdW.INTO_SMART; return; }
+            String fromMode = a.path == null || a.path.isEmpty() || !a.path.get(0).startsWith(Words.DbCmd.MODE_PREFIX) ? null
+                    : a.path.get(0).substring(Words.DbCmd.MODE_PREFIX.length()).trim();
+            if (fromMode != null) {                                          // מ0.22: מאופן אחר — "אופן:X/א\ב"
+                a.path = new ArrayList<String>(a.path.subList(1, a.path.size()));
+                if (a.path.isEmpty()) { s.error = Words.DbCmd.USAGE_FROM_MODE; return; }
+                if (!fromMode.equals(mode)) {
+                    if (!DbScreen.dbModes(DbListScreen.app).contains(fromMode)) { s.error = Words.DbCmd.noMode(fromMode, DbScreen.dbModes(DbListScreen.app)); return; }
+                    if (a.kind != ListCmd.LIST || a.filesOf || a.mask != null || b.kind != ListCmd.LIST) { s.error = Words.DbCmd.USAGE_FROM_MODE; return; }
+                    final String src = fromMode;
+                    work = new Work() {
+                        @Override public Res run(Store t, Finder f) { return copyFromMode(t, mode, src, a, b); }
+                    };
+                    s.target = b.label();
+                    Res pr;
+                    try { pr = work.run(db, find); } catch (Store.Failure e) { pr = Res.err(Words.Db.failed(e.getMessage())); }
+                    if (pr.error != null) { s.error = pr.error; return; }
+                    s.describe = Words.DbCmd.inDb(pr.text);
+                    final Work w = work;
+                    s.op = new ListCmd.Op() {
+                        @Override public String run(Library lib) { return real(mode, w, false, lib); }
+                    };
+                    return;
+                }
+            }
+            if (a.kind == ListCmd.EXPORT) {                                  // מ0.22: ייבוא מקובץ טקסט לרשימה
+                final File in = importFile(a.raw);
+                work = new Work() {
+                    @Override public Res run(Store t, Finder f) { return importFrom(t, mode, in, b); }
+                };
+                s.target = b.label();
+                if (in.isFile()) {
+                    Res pr = work.run(db, find);
+                    if (pr.error != null) { s.error = pr.error; return; }
+                    s.describe = Words.DbCmd.inDb(pr.text);
+                } else s.describe = Words.DbCmd.importLater(Bidi.path(in.getAbsolutePath()));   // ייווצר בשורות שלפני
+                final Work w = work;
+                s.op = new ListCmd.Op() {
+                    @Override public String run(Library lib) { return real(mode, w, false, lib); }
+                };
+                return;
+            }
             if (b.kind == ListCmd.EXPORT) {                                  // מ0.18: יצוא לקובץ טקסט
                 if (a.kind == ListCmd.SMART_LIST || a.content || a.mask != null || !a.list()) { s.error = Words.DbCmd.USAGE_EXPORT; return; }
                 work = new Work() {

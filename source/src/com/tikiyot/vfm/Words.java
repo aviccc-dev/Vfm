@@ -2149,7 +2149,7 @@ public final class Words {
                 USAGE_MD = "צורה: MD ידנית \"א\\ב\" — רשימה ידנית (חסרה — נוצרת בכל הדרך)",
                 CONTENT_SMART = "\"תוכן\" — רק לרשימה ידנית; לקבצים שרשימה חכמה מוצאת: קבצי חכמה",
                 INTO_SMART = "אי אפשר להכניס לתוך רשימה חכמה — היא מוצאת את הקבצים לבד, לפי התנאים שלה",
-                INTO_ITSELF = "אי אפשר להעתיק רשימה לתוך עצמה (או לתוך רשימה שבתוכה)",
+                INTO_ITSELF = "אי אפשר להכניס רשימה לתוך עצמה (או לתוך רשימה שבתוכה)",
                 MOVE_TO_LIST = "העברה לרשימה — אין לה מובן: לרשימה נכנסים רק המסלולים, והקבצים נשארים במקומם. להוספה — COPY",
                 MOVE_LATER = "העברה של רשימות — עדיין לא בפקודות; בינתיים — העתקה ואחריה מחיקה",
                 HOME_ONLY_CONTENT = "\"*\" הוא הבית — כמקור רק עם \"תוכן\": תוכן ידנית \"*\"",
@@ -2296,6 +2296,27 @@ public final class Words {
         public static String exported(String what, String path, int lists, int files, int skipped) {
             return "יצוא: " + what + " ← " + path + " · " + lists + " רשימות, " + files + " קבצים"
                     + (skipped > 0 ? " · לא נכנסו (חכמות, רעיונות, כותרות — עוד לא בפורמט): " + skipped : "");
+        }
+
+        public static final String MODE_PREFIX = "אופן:",  // תחביר
+                USAGE_FROM_MODE = "צורה: COPY ידנית \"אופן:שם האופן/א\\ב\" ידנית \"יעד\" (גם תוכן ידנית)",
+                ORDER_TITLE = "סידור", ORDER_UP = "⬆ מקום אחד למעלה", ORDER_DOWN = "⬇ מקום אחד למטה",
+                ORDER_TOP = "⏫ לראש הרשימה", ORDER_BOTTOM = "⏬ לסוף הרשימה";
+
+        public static String importLater(String path) {
+            return "ייבוא מ־" + path + " — ייקרא בהרצה (הקובץ עוד לא קיים — נוצר בשורות שלפני)";
+        }
+
+        public static String cantRead(String name) {
+            return "לא נקרא: " + name;
+        }
+
+        public static String imported(String file, String to, int lists, int files, int bad) {
+            return "ייבוא: " + file + " ← לתוך " + to + " · " + lists + " רשימות, " + files + " קבצים" + (bad > 0 ? " · שורות שלא הובנו: " + bad : "");
+        }
+
+        public static String fromMode(String mode, String path, String to, int n) {
+            return "מהאופן \"" + mode + "\": \"" + path + "\" ← לתוך " + to + " · " + n + " פריטים (עותק עצמאי)";
         }
 
         public static final String USAGE_REN = "צורה: REN ידנית \"א\\ב\" \"שם חדש\" (גם חכמה \"א\")",
@@ -2446,7 +2467,7 @@ public final class Words {
 
         public static final String APP_NAME_M = "מנהל קבצים וירטואלי · מ";
         public static final String MENU = "מסד נתונים (מ)";
-        public static final String TITLE = "מסד נתונים · מ0.21";
+        public static final String TITLE = "מסד נתונים · מ0.22";
         /** מ0.9: המראה המוכר. */
         public static final String LIST_GONE = "הרשימה הזו כבר לא קיימת במסד", MENU_ACTIONS = "⚙ מסד: גיבוי, העתקה, בדיקה ופעולות",
                 MENU_OLD = "↩ הצד הישן (לפני המסד)",

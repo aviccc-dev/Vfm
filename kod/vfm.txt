@@ -891,6 +891,18 @@ COPY ידנית "בדיקת פקודות" קובץ "%כאן%\יצוא-בדיקה
 ודא "%כאן%\יצוא-בדיקה.txt" קיים
 COPY קבצי ידנית "בדיקת פקודות" קובץ "%כאן%\יצוא-בדיקה-קבצים.txt"
 ודא "%כאן%\יצוא-בדיקה-קבצים.txt" קיים
+:: ייבוא מקובץ טקסט — מה שיוצא נכנס בחזרה (מ0.22)
+MD ידנית "בדיקת פקודות/מיובא"
+COPY קובץ "%כאן%\יצוא-בדיקה.txt" ידנית "בדיקת פקודות/מיובא"
+ודא ידנית "בדיקת פקודות/מיובא" /רשימות:6 /פריטים:1
+COPY קובץ "%כאן%\יצוא-בדיקה-קבצים.txt" ידנית "בדיקת פקודות/מיובא"
+ודא ידנית "בדיקת פקודות/מיובא" /רשימות:6 /פריטים:2
+:: העתקה עם "אופן:" (מ0.22) — כאן מאותו אופן, ולכן כמו העתקה רגילה
+MD ידנית "בדיקת פקודות/מאופן"
+COPY ידנית "אופן:בדיקות מערכת/בדיקת פקודות/א" ידנית "בדיקת פקודות/מאופן"
+ודא ידנית "בדיקת פקודות/מאופן" /רשימות:2 /פריטים:1
+:: הנוסח: הכנסה לתוך עצמה — צפוי: דולגה ("אי אפשר להכניס…")
+MOVE ידנית "בדיקת פקודות/א" ידנית "בדיקת פקודות/א/פנימית"
 :: שינוי שם לרשימה (מ0.21)
 MD ידנית "בדיקת פקודות/לשינוי"
 REN ידנית "בדיקת פקודות/לשינוי" "שונה"
@@ -1066,7 +1078,7 @@ cd $S; rm -rf out gen bld
 [ "$S" != "$DIR" ] && rm -rf $S
 ls -la $OUT
 ===== קובץ: build/m-version.txt =====
-34 מ0.21
+35 מ0.22
 ===== קובץ: build/test.sh =====
 #!/bin/bash
 # בדיקות על המחשב (80). יוצא בכישלון אם בדיקה אחת נכשלה — ואז build.sh לא בונה.
@@ -7890,6 +7902,7 @@ final class CmdMenu {
 
     private static void showList(final Activity a, final List<String> path, final File newIn, final Picked pick,
                                  final String screen, final boolean top) {
+        if (DbVerbs.active() && DbCmdMenu.show(a, path, newIn, pick, screen, top)) return;   // מ0.22: מהמסד, אם יש שם
         ModeCopy.Side side = Reserved.inUse();
         if (side == null) {                                                   // אין "שמור לתוכנה" בשום מקום — באופן הזה
             Reserved.ensureMode(Modes.current());
@@ -7992,7 +8005,7 @@ final class CmdMenu {
     }
 
     /** בבחירה: שורה בכתב · תיקייה במנהל הקבצים · פעולה של המסך (פקודות בלי קובץ). */
-    private static void extras(final Activity a, final String screen, final Picked pick, List<String> labels,
+    static void extras(final Activity a, final String screen, final Picked pick, List<String> labels,
                                List<Runnable> taps, List<Runnable> holds) {
         labels.add(Words.Top.T_LINE);
         taps.add(new Runnable() {
@@ -8025,14 +8038,14 @@ final class CmdMenu {
     }
 
     /** נגיעה: הרצה, או בחירה. */
-    private static void useFile(Activity a, File f, Picked pick) {
+    static void useFile(Activity a, File f, Picked pick) {
         Program p = Program.read(f);
         if (pick != null) pick.ok(p.isProgram() ? p.icon : "▶", p.title(f), Verbs.run(f.getAbsolutePath()), f);
         else BatchUi.run(a, f);
     }
 
     /** רשימה חכמה בתפריט — קובצי הפקודות שהיא מוצאת. */
-    private static void found(final Activity a, String title, String cond, final Picked pick) {
+    static void found(final Activity a, String title, String cond, final Picked pick) {
         final List<File> files = new ArrayList<File>();
         for (Library.Hit h : Library.get(a).search(cond, false, false).hits)
             if (h.rec != null && Batch.isBatch(h.path())) files.add(new File(h.path()));
@@ -8066,7 +8079,7 @@ final class CmdMenu {
     }
 
     /** פקודת מערכת — "שמירה בשם": שם חדש ← קובץ פקודות ב"הפקודות שלי" (המקור לא משתנה) ← העורך. */
-    private static void saveAs(final Activity a, final File sys) {
+    static void saveAs(final Activity a, final File sys) {
         final Program p = Program.read(sys);
         Ui.askText(a, Words.CmdM.SAVE_AS, p.title(sys) + Words.CmdM.MINE_SUFFIX, Words.Short.NAME_HINT, new Ui.Text1() {
             @Override
@@ -9684,6 +9697,113 @@ final class DbCount {
         }
     }
 }
+===== קובץ: src/com/tikiyot/vfm/DbCmdMenu.java =====
+package com.tikiyot.vfm;
+
+// מ0.22: תפריט הפקודות ⭐ ו"פתח תפריט <רשימה>" — מהמסד, כשעובדים במסד. אותה רשימה כמו בישן ("שמור לתוכנה / פקודות"
+// כברירת מחדל): באופן שפתוח, ואם אין שם — באופן ש"שמור לתוכנה" שלו בשימוש (Reserved.modeInUse). אין במסד — התפריט
+// הישן, כמו קודם. קובצי הפקודות — פקודות; תתי־רשימות — תפריטי משנה; חכמה — מה שהיא מוצאת. נגיעה ארוכה — עריכה.
+// אחראי: התפריט מהמסד (הרשימה — DbMore.menu). אסור לו: לגעת במנוע הישן.
+
+import android.app.Activity;
+import android.content.DialogInterface;
+
+import java.io.File;
+import java.util.ArrayList;
+import java.util.List;
+
+final class DbCmdMenu {
+
+    private DbCmdMenu() { }
+
+    /** false — אין במסד רשימה כזו (התפריט הישן ממשיך). */
+    static boolean show(Activity a, List<String> path, File newIn, CmdMenu.Picked pick, String screen, boolean top) {
+        String mode = DbListScreen.currentMode;
+        long id = find(a, mode, path);
+        if (id == 0) {
+            String other = Reserved.modeInUse();
+            if (other != null && !other.equals(mode) && DbScreen.dbModes(a).contains(other)) {
+                id = find(a, other, path);
+                if (id != 0) mode = other;
+            }
+        }
+        if (id == 0) return false;
+        open(a, mode, id, path, newIn, pick, screen, top);
+        return true;
+    }
+
+    private static long find(Activity a, String mode, List<String> path) {
+        if (mode == null || !DbScreen.dbFile(a, mode).isFile()) return 0;
+        SqlStore s = null;
+        try {
+            s = SqlStore.openReadOnly(DbScreen.dbFile(a, mode));
+            return DbPaths.find(s, mode, path);
+        } catch (Throwable t) {
+            Log.e("DbCmdMenu.find", t);
+            return 0;
+        } finally {
+            if (s != null) s.close();
+        }
+    }
+
+    private static void open(final Activity a, final String mode, final long id, final List<String> path, final File newIn,
+                             final CmdMenu.Picked pick, final String screen, final boolean top) {
+        List<DbMore.Entry> es;
+        SqlStore s = null;
+        try {
+            s = SqlStore.openReadOnly(DbScreen.dbFile(a, mode));
+            es = DbMore.menu(s, id);
+        } catch (Throwable t) {
+            Log.e("DbCmdMenu.open", t);
+            Ui.toast(a, Words.Db.failed(String.valueOf(t.getMessage())));
+            return;
+        } finally {
+            if (s != null) s.close();
+        }
+        final List<String> labels = new ArrayList<String>();
+        final List<Runnable> taps = new ArrayList<Runnable>(), holds = new ArrayList<Runnable>();
+        for (final DbMore.Entry e : es) {
+            if (e.kind == DbMore.E_FILE) {
+                final File f = new File(e.path);
+                if (!f.isFile()) continue;
+                Program p = Program.read(f);
+                labels.add((p.isProgram() ? p.icon : "▶") + "  " + p.title(f));
+                taps.add(new Runnable() {
+                    @Override public void run() { if (Reserved.isNew(f)) CmdMenu.create(a, newIn, pick); else CmdMenu.useFile(a, f, pick); }
+                });
+                holds.add(new Runnable() {
+                    @Override public void run() { if (Reserved.isSystem(f)) { if (!Reserved.isNew(f)) CmdMenu.saveAs(a, f); } else BatchUi.edit(a, f); }
+                });
+            } else if (e.kind == DbMore.E_LIST) {
+                final List<String> sub = new ArrayList<String>(path);
+                sub.add(e.label);
+                labels.add(e.label + "  ▸");
+                taps.add(new Runnable() {
+                    @Override public void run() { open(a, mode, e.id, sub, newIn, pick, screen, false); }
+                });
+                holds.add(null);
+            } else {
+                labels.add("📜 " + e.label + "  ▸");
+                taps.add(new Runnable() {
+                    @Override public void run() { CmdMenu.found(a, e.label, e.cond == null ? "" : e.cond, pick); }
+                });
+                holds.add(null);
+            }
+        }
+        if (top && pick != null) CmdMenu.extras(a, screen, pick, labels, taps, holds);
+        labels.add(Words.CmdM.ARRANGE);
+        taps.add(new Runnable() {
+            @Override public void run() { DbListScreen.open(a, mode, id); }
+        });
+        holds.add(null);
+        Ui.list(a, top && path.equals(Reserved.CMDS_PATH) ? Words.CmdM.TITLE : path.get(path.size() - 1), labels,
+                new DialogInterface.OnClickListener() {
+                    @Override public void onClick(DialogInterface d, int w) { taps.get(w).run(); }
+                }, new Ui.Index1() {
+                    @Override public void ok(int w) { if (holds.get(w) != null) holds.get(w).run(); }
+                });
+    }
+}
 ===== קובץ: src/com/tikiyot/vfm/DbExport.java =====
 package com.tikiyot.vfm;
 
@@ -10760,6 +10880,54 @@ final class DbListCmd {
         return Res.ok(Words.DbCmd.exported(name, Bidi.path(to.getAbsolutePath()), o.lists, o.files, o.skipped));
     }
 
+    /** מ0.22: קובץ הייבוא — שם בלי מסלול: בתיקיית היצוא; "\\" כמו "/". */
+    static File importFile(String raw) {
+        String r = raw == null ? "" : raw.trim().replace('\\', '/');
+        File f = new File(r);
+        return f.isAbsolute() ? f : new File(exportDir(), r);
+    }
+
+    /** מ0.22: ייבוא — הטקסט (בפורמט היצוא) לתוך הרשימה. */
+    static Res importFrom(Store s, String mode, File in, ListCmd.Side b) {
+        long dest = b.home ? Importer.home(s) : DbPaths.find(s, mode, b.path);
+        if (dest == 0) return Res.err(b.home ? Words.DbCmd.NO_HOME : Words.ListCmdW.noList(b.raw));
+        String text;
+        try {
+            text = Files.readUtf8(in);
+        } catch (Throwable t) {
+            return Res.err(Words.DbCmd.cantRead(in.getName()));
+        }
+        DbMore.Imported r = DbMore.importText(s, dest, text);
+        return Res.ok(Words.DbCmd.imported(in.getName(), b.label(), r.lists, r.files, r.bad) + nowIn(s, dest));
+    }
+
+    /** מ0.22: העתקה מאופן אחר — המקור נפתח לקריאה בלבד; עותק עצמאי (קבצים — לפי המסלול). */
+    static Res copyFromMode(Store t, String mode, String srcMode, ListCmd.Side a, ListCmd.Side b) {
+        long dest = b.home ? Importer.home(t) : DbPaths.find(t, mode, b.path);
+        if (dest == 0) return Res.err(b.home ? Words.DbCmd.NO_HOME : Words.ListCmdW.noList(b.raw));
+        SqlStore src = null;
+        try {
+            src = SqlStore.openReadOnly(DbScreen.dbFile(DbListScreen.app, srcMode));
+            return copyAcross(src, srcMode, a, t, dest, b.label());
+        } finally {
+            if (src != null) src.close();
+        }
+    }
+
+    /** מ0.22: הליבה של ההעתקה בין מסדים (נבדקת במחשב על שני מסדים). */
+    static Res copyAcross(Store src, String srcMode, ListCmd.Side a, Store t, long dest, String destLabel) {
+        long id = DbPaths.find(src, srcMode, a.path);
+        if (id == 0) return Res.err(Words.ListCmdW.noList(Words.DbCmd.MODE_PREFIX + srcMode + "/" + ListCmd.pathText(a.path)));
+        int n = 0;
+        if (a.content) for (Store.Member m : src.members(id)) n += DbMore.copyAcross(src, m.item.id, t, dest);
+        else {
+            for (Store.Member m : t.members(dest))
+                if (m.item.type == Store.LIST && m.item.name.equals(src.item(id).name)) return Res.err(Words.DbCmd.SAME_NAME);
+            n = DbMore.copyAcross(src, id, t, dest);
+        }
+        return Res.ok(Words.DbCmd.fromMode(srcMode, ListCmd.pathText(a.path), destLabel, n) + nowIn(t, dest));
+    }
+
     /** התיקייה "יצוא" בתיקיית התוכנה. */
     static File exportDir() {
         return new File(Paths.data(), Words.DbCmd.EXPORT_DIR);
@@ -10899,6 +11067,47 @@ final class DbListCmd {
             final ListCmd.Side a = sd.get(0), b = sd.get(1);
             if (b.content || b.filesOf) { s.error = Words.ListCmdW.USAGE; return; }
             if (b.kind == ListCmd.SMART_LIST) { s.error = Words.ListCmdW.INTO_SMART; return; }
+            String fromMode = a.path == null || a.path.isEmpty() || !a.path.get(0).startsWith(Words.DbCmd.MODE_PREFIX) ? null
+                    : a.path.get(0).substring(Words.DbCmd.MODE_PREFIX.length()).trim();
+            if (fromMode != null) {                                          // מ0.22: מאופן אחר — "אופן:X/א\ב"
+                a.path = new ArrayList<String>(a.path.subList(1, a.path.size()));
+                if (a.path.isEmpty()) { s.error = Words.DbCmd.USAGE_FROM_MODE; return; }
+                if (!fromMode.equals(mode)) {
+                    if (!DbScreen.dbModes(DbListScreen.app).contains(fromMode)) { s.error = Words.DbCmd.noMode(fromMode, DbScreen.dbModes(DbListScreen.app)); return; }
+                    if (a.kind != ListCmd.LIST || a.filesOf || a.mask != null || b.kind != ListCmd.LIST) { s.error = Words.DbCmd.USAGE_FROM_MODE; return; }
+                    final String src = fromMode;
+                    work = new Work() {
+                        @Override public Res run(Store t, Finder f) { return copyFromMode(t, mode, src, a, b); }
+                    };
+                    s.target = b.label();
+                    Res pr;
+                    try { pr = work.run(db, find); } catch (Store.Failure e) { pr = Res.err(Words.Db.failed(e.getMessage())); }
+                    if (pr.error != null) { s.error = pr.error; return; }
+                    s.describe = Words.DbCmd.inDb(pr.text);
+                    final Work w = work;
+                    s.op = new ListCmd.Op() {
+                        @Override public String run(Library lib) { return real(mode, w, false, lib); }
+                    };
+                    return;
+                }
+            }
+            if (a.kind == ListCmd.EXPORT) {                                  // מ0.22: ייבוא מקובץ טקסט לרשימה
+                final File in = importFile(a.raw);
+                work = new Work() {
+                    @Override public Res run(Store t, Finder f) { return importFrom(t, mode, in, b); }
+                };
+                s.target = b.label();
+                if (in.isFile()) {
+                    Res pr = work.run(db, find);
+                    if (pr.error != null) { s.error = pr.error; return; }
+                    s.describe = Words.DbCmd.inDb(pr.text);
+                } else s.describe = Words.DbCmd.importLater(Bidi.path(in.getAbsolutePath()));   // ייווצר בשורות שלפני
+                final Work w = work;
+                s.op = new ListCmd.Op() {
+                    @Override public String run(Library lib) { return real(mode, w, false, lib); }
+                };
+                return;
+            }
             if (b.kind == ListCmd.EXPORT) {                                  // מ0.18: יצוא לקובץ טקסט
                 if (a.kind == ListCmd.SMART_LIST || a.content || a.mask != null || !a.list()) { s.error = Words.DbCmd.USAGE_EXPORT; return; }
                 work = new Work() {
@@ -11182,6 +11391,237 @@ final class DbListCmd {
         }
     }
 }
+===== קובץ: src/com/tikiyot/vfm/DbMore.java =====
+package com.tikiyot.vfm;
+
+// מ0.22: עוד ליבה של המסד, לפקודות ולמסכים — מיון שורות, סידור ידני, ייבוא מטקסט (ההפך של DbExport), העתקה מאופן
+// לאופן (בין שני מסדים), ותפריט פקודות מרשימה במסד. הכול על Store, בלי ממשק — נבדק במחשב.
+// אחראי: הלוגיקה. אסור לו: לפתוח מסכים.
+
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+
+final class DbMore {
+
+    private DbMore() { }
+
+    // ---------- מיון (פתח רשימה … מיין:) ----------
+
+    /** סדר השורות לפי מיון: שם · גודל · תאריך (קבצים); ריק / לא מוכר — כמו ברשימה. רשימות לפני קבצים במיון. */
+    static void sort(final Store s, List<Store.Member> rows, String how) {
+        final String h = how == null ? "" : how.trim();
+        if (!h.equals(Sort.NAME) && !h.equals(Sort.SIZE) && !h.equals(Sort.DATE)) return;
+        Collections.sort(rows, new Comparator<Store.Member>() {
+            @Override
+            public int compare(Store.Member x, Store.Member y) {
+                boolean fx = x.item.type == Store.FILE, fy = y.item.type == Store.FILE;
+                if (fx != fy) return fx ? 1 : -1;
+                if (fx && !h.equals(Sort.NAME)) {
+                    Store.FileInfo a = s.file(x.item.id), b = s.file(y.item.id);
+                    long va = a == null ? 0 : h.equals(Sort.SIZE) ? a.size : a.mtime, vb = b == null ? 0 : h.equals(Sort.SIZE) ? b.size : b.mtime;
+                    if (va != vb) return va > vb ? -1 : 1;                   // הגדול / החדש ראשון
+                }
+                return x.item.name.compareToIgnoreCase(y.item.name);
+            }
+        });
+    }
+
+    // ---------- סידור ידני ----------
+
+    static final int UP = 0, DOWN = 1, TOP = 2, BOTTOM = 3;
+
+    /** מזיז את הפריטים שנבחרו ברשימה: מקום אחד למעלה/למטה, או לראש/לסוף (שומר על הסדר ביניהם). בעסקה אחת. */
+    static void order(Store s, final long list, final List<Long> ids, final int how) {
+        s.atomic(new Store.Work() {
+            @Override
+            public void run(Store t) {
+                List<Long> now = new ArrayList<Long>();
+                for (Store.Member m : t.members(list)) now.add(m.item.id);
+                List<Long> sel = new ArrayList<Long>();
+                for (Long id : now) if (ids.contains(id)) sel.add(id);          // לפי הסדר ברשימה
+                if (sel.isEmpty()) return;
+                if (how == TOP) for (int i = 0; i < sel.size(); i++) t.move(list, sel.get(i), i);
+                else if (how == BOTTOM) for (Long id : sel) t.move(list, id, now.size());
+                else if (how == UP) {
+                    for (Long id : sel) {
+                        List<Long> cur = ids(t, list);
+                        int p = cur.indexOf(id);
+                        if (p > 0 && !sel.contains(cur.get(p - 1))) t.move(list, id, p - 1);
+                    }
+                } else {
+                    for (int i = sel.size() - 1; i >= 0; i--) {
+                        List<Long> cur = ids(t, list);
+                        int p = cur.indexOf(sel.get(i));
+                        if (p >= 0 && p < cur.size() - 1 && !sel.contains(cur.get(p + 1))) t.move(list, sel.get(i), p + 1);
+                    }
+                }
+            }
+        }, true);
+    }
+
+    private static List<Long> ids(Store t, long list) {
+        List<Long> out = new ArrayList<Long>();
+        for (Store.Member m : t.members(list)) out.add(m.item.id);
+        return out;
+    }
+
+    // ---------- ייבוא מטקסט ----------
+
+    /** מה נכנס. */
+    static final class Imported {
+        int lists, files, bad;
+    }
+
+    /**
+     * ההפך של DbExport: "#N א / ב" — רשימה (בתוך into, בדרך שבכותרת; קיימת — אותה), @צלמית/@תיאור/@למה/@עיצוב —
+     * מאפיינים, "/מסלול | גודל" — קובץ. שורות לפני הכותרת הראשונה (קובץ "קבצי רשימה") — הקבצים נכנסים ל-into. בעסקה אחת.
+     */
+    static Imported importText(Store s, final long into, String text) {
+        final Imported r = new Imported();
+        final String[] lines = (text == null ? "" : text).split("\r\n|\r|\n");
+        s.atomic(new Store.Work() {
+            @Override
+            public void run(Store t) {
+                long cur = into;
+                boolean header = false;
+                Set<Long> counted = new HashSet<Long>();
+                for (String raw : lines) {
+                    String line = raw.trim();
+                    if (line.isEmpty()) continue;
+                    if (line.startsWith("#")) {
+                        int i = 1;
+                        while (i < line.length() && Character.isDigit(line.charAt(i))) i++;
+                        List<String> parts = new ArrayList<String>();
+                        for (String p : line.substring(i).split("/")) if (!p.trim().isEmpty()) parts.add(Tree.cleanName(p.trim()));
+                        if (parts.isEmpty()) { r.bad++; continue; }
+                        long at = into;
+                        for (String p : parts) {
+                            long c = 0;
+                            for (Store.Member m : t.members(at)) if (m.item.type == Store.LIST && m.item.name.equals(p)) c = m.item.id;
+                            if (c == 0) c = t.createList(p, at);
+                            at = c;
+                        }
+                        if (counted.add(at)) r.lists++;
+                        cur = at;
+                        header = true;
+                        continue;
+                    }
+                    if (line.startsWith("@")) {
+                        if (!header) continue;                                  // השורה הראשונה (@תיאור של השורש) — לא מאפיין
+                        String key = line.startsWith(Tree.ICON_LINE.trim()) ? Store.P_ICON : line.startsWith(Tree.DESC_LINE.trim()) ? Store.P_DESC
+                                : line.startsWith(Tree.WHY_LINE.trim()) ? Store.P_WHY : line.startsWith(Tree.DESIGN_LINE.trim()) ? Store.P_DESIGN : null;
+                        if (key != null) {
+                            int sp = line.indexOf(' ');
+                            t.setProp(cur, key, sp < 0 ? "" : line.substring(sp + 1).trim());
+                        }
+                        continue;
+                    }
+                    int bar = line.lastIndexOf(" | ");
+                    String path = bar >= 0 ? line.substring(0, bar).trim() : line;
+                    long size = -1;
+                    if (bar >= 0) try { size = Long.parseLong(line.substring(bar + 3).trim()); } catch (NumberFormatException ignored) { }
+                    if (!path.startsWith("/")) { r.bad++; continue; }
+                    long f = t.findFile(path);
+                    if (f == 0) f = t.createFile(new Store.FileInfo(path, Importer.driveOf(path), size, 0, null));
+                    if (t.addMember(cur, f)) r.files++;
+                }
+            }
+        }, true);
+        return r;
+    }
+
+    // ---------- העתקה מאופן לאופן ----------
+
+    /**
+     * מ"src" (מסד אחר) לתוך dest שב-dst: עותק עצמאי של הרשימה ושל מה שבתוכה — רשימות, חכמות (ההגדרה), רעיונות וכותרות;
+     * קובץ — לפי המסלול (קיים ב-dst — אותו פריט; אחרת — חדש, עם החתימה שהייתה). רשימה שמופיעה פעמיים — פעם אחת.
+     */
+    static int copyAcross(final Store src, final long srcId, Store dst, final long dest) {
+        final int[] n = {0};
+        dst.atomic(new Store.Work() {
+            @Override
+            public void run(Store t) {
+                n[0] = across(src, srcId, t, dest, new HashMap<Long, Long>());
+            }
+        }, true);
+        return n[0];
+    }
+
+    private static int across(Store src, long id, Store t, long into, Map<Long, Long> done) {
+        Store.Item it = src.item(id);
+        if (it == null) return 0;
+        if (it.type == Store.LIST) {
+            Long had = done.get(id);
+            if (had != null) {
+                if (!t.makesCycle(into, had)) t.addMember(into, had);
+                return 0;
+            }
+            long nid = t.createList(it.name, into);
+            done.put(id, nid);
+            for (String k : new String[]{Store.P_ICON, Store.P_DESC, Store.P_DESIGN, Store.P_WHY, Store.P_GROUP}) copyProp(src, id, t, nid, k);
+            int c = 1;
+            for (Store.Member m : src.members(id)) c += across(src, m.item.id, t, nid, done);
+            return c;
+        }
+        if (it.type == Store.SMART) {
+            long nid = t.createSmart(it.name, into);
+            for (String k : new String[]{Store.P_COND, Store.P_SORT, Store.P_DIR, Store.P_VIEW, Store.P_ICON, Store.P_DESC, Store.P_WHY})
+                copyProp(src, id, t, nid, k);
+            return 1;
+        }
+        if (it.type == Store.NOTE) { t.addNote(into, it.name); return 1; }
+        if (it.type == Store.TITLE) { t.addTitle(into, it.name); return 1; }
+        Store.FileInfo fi = src.file(id);
+        if (fi == null) return 0;
+        long f = t.findFile(fi.path);
+        if (f == 0) f = t.createFile(fi);
+        return t.addMember(into, f) ? 1 : 0;
+    }
+
+    private static void copyProp(Store src, long from, Store t, long to, String k) {
+        String v = src.prop(from, k);
+        if (v != null && !v.isEmpty()) t.setProp(to, k, v);
+    }
+
+    // ---------- תפריט פקודות מרשימה במסד ----------
+
+    /** שורה בתפריט: קובץ פקודות, תת־תפריט (רשימה), או חכמה (מה שהיא מוצאת). */
+    static final class Entry {
+        final int kind;
+        final String label, path, cond;
+        final long id;
+
+        Entry(int kind, String label, long id, String path, String cond) {
+            this.kind = kind;
+            this.label = label;
+            this.id = id;
+            this.path = path;
+            this.cond = cond;
+        }
+    }
+
+    static final int E_FILE = 0, E_LIST = 1, E_SMART = 2;
+
+    /** מה שבתפריט — לפי הסדר ברשימה: קובצי פקודות (vbat), תתי־רשימות, חכמות. השאר — לא בתפריט. */
+    static List<Entry> menu(Store s, long list) {
+        List<Entry> out = new ArrayList<Entry>();
+        for (Store.Member m : s.members(list)) {
+            Store.Item it = m.item;
+            if (it.type == Store.FILE) {
+                Store.FileInfo fi = s.file(it.id);
+                if (fi != null && Batch.isBatch(fi.path)) out.add(new Entry(E_FILE, it.name, it.id, fi.path, null));
+            } else if (it.type == Store.LIST) out.add(new Entry(E_LIST, it.name, it.id, null, null));
+            else if (it.type == Store.SMART) out.add(new Entry(E_SMART, it.name, it.id, null, s.prop(it.id, Store.P_COND)));
+        }
+        return out;
+    }
+}
 ===== קובץ: src/com/tikiyot/vfm/DbListScreen.java =====
 package com.tikiyot.vfm;
 
@@ -11205,7 +11645,9 @@ import java.util.List;
 
 public class DbListScreen extends ListScreen<Store.Member> {
 
-    static final String EXTRA_MODE = "mode", EXTRA_LIST = "list";
+    static final String EXTRA_MODE = "mode", EXTRA_LIST = "list", EXTRA_SORT = "sort";
+    /** מ0.22: מיון מהפקודה ("פתח רשימה … מיין:…"); ריק — הסדר של הרשימה. */
+    private String sortBy = "";
     private static final int MENU_DB = 1, MENU_DESIGN = 2, MENU_SETTINGS = 3, MENU_OLD = 4, MENU_CMDS = 5, MENU_TESTS = 6;
 
     private String mode;
@@ -11290,7 +11732,13 @@ public class DbListScreen extends ListScreen<Store.Member> {
 
     /** פותח רשימה במראה המוכר. */
     static void open(android.app.Activity a, String mode, long list) {
-        a.startActivity(new Intent(a, DbListScreen.class).putExtra(EXTRA_MODE, mode).putExtra(EXTRA_LIST, list));
+        open(a, mode, list, null);
+    }
+
+    /** מ0.22: עם מיון (שם · גודל · תאריך). */
+    static void open(android.app.Activity a, String mode, long list, String sort) {
+        a.startActivity(new Intent(a, DbListScreen.class).putExtra(EXTRA_MODE, mode).putExtra(EXTRA_LIST, list)
+                .putExtra(EXTRA_SORT, sort == null ? "" : sort));
     }
 
     @Override
@@ -11300,6 +11748,8 @@ public class DbListScreen extends ListScreen<Store.Member> {
         app = getApplicationContext();
         mode = getIntent().getStringExtra(EXTRA_MODE);
         listId = getIntent().getLongExtra(EXTRA_LIST, 0);
+        sortBy = getIntent().getStringExtra(EXTRA_SORT);
+        if (sortBy == null) sortBy = "";
         LinearLayout root = build(saved, Words.Db.APP_NAME_M, "db-list");
         modeBox = new TextView(this);                                         // כמו בבית הישן (Home, 105)
         modeBox.setTextSize(16);
@@ -11354,6 +11804,7 @@ public class DbListScreen extends ListScreen<Store.Member> {
             return;
         }
         rows.addAll(store.members(listId));
+        DbMore.sort(store, rows, sortBy);                                     // מ0.22: מיון מהפקודה
         rows.add(PLUS);                                                       // מ0.10.1: ➕ בסוף, כמו בבית הישן
         boolean home = "1".equals(store.prop(listId, Store.P_HOME));
         atHome = home;
@@ -11648,6 +12099,7 @@ public class DbListScreen extends ListScreen<Store.Member> {
         m.put(Actions.ALSO_TO_LIST, new Runnable() { @Override public void run() { toList(LINK); } });
         m.put(Actions.MOVE_TO_LIST, new Runnable() { @Override public void run() { toList(MOVE); } });
         m.put(Actions.REMOVE_FROM_LIST, new Runnable() { @Override public void run() { removeChosen(); } });
+        m.put(Actions.ORDER_LIST, new Runnable() { @Override public void run() { orderChosen(); } });   // מ0.22
         m.put(Actions.SETTINGS_LIST, new Runnable() {
             @Override public void run() {
                 List<Long> ids = chosenIds();
@@ -11703,6 +12155,27 @@ public class DbListScreen extends ListScreen<Store.Member> {
                         return DbListCmd.Res.ok(Words.ListCmdW.copied(c.done, c.skipped, c.why, "\"" + t.item(dest).name + "\""));
                     }
                 }, how == MOVE));
+            }
+        });
+    }
+
+    /** מ0.22: סידור ידני — למעלה · למטה · לראש · לסוף (דרך הליבה); הבחירה נשארת, כדי להזיז שוב. */
+    private void orderChosen() {
+        final List<Long> ids = chosenIds();
+        if (ids.isEmpty()) return;
+        final long in = here();
+        String[] how = {Words.DbCmd.ORDER_UP, Words.DbCmd.ORDER_DOWN, Words.DbCmd.ORDER_TOP, Words.DbCmd.ORDER_BOTTOM};
+        Ui.options(this, Words.DbCmd.ORDER_TITLE, how, new android.content.DialogInterface.OnClickListener() {
+            @Override
+            public void onClick(android.content.DialogInterface d, final int which) {
+                DbListCmd.now(mode, new DbListCmd.Work() {
+                    @Override public DbListCmd.Res run(Store t, DbListCmd.Finder f) {
+                        DbMore.order(t, in, ids, which);
+                        return DbListCmd.Res.ok("");
+                    }
+                }, false);
+                sortBy = "";
+                refresh();
             }
         });
     }
@@ -12152,7 +12625,7 @@ final class DbVerbs {
                 @Override public long run(Store s, List<String> p) { return DbPaths.ensure(s, mode, p); }
             }, path) : read(a, mode, path);
             if (id == 0) Ui.toast(a, Words.Verb.NOT_FOUND + c.arg);
-            else DbListScreen.open(a, mode, id);
+            else DbListScreen.open(a, mode, id, c.sort);                    // מ0.22: עם המיון שבפקודה
             return true;
         }
         if (c.kind.equals(Verbs.K_SMART)) {
@@ -23909,9 +24382,13 @@ final class ListCmd {
             cur = null;
         }
         if (cur != null) p.error = Words.ListCmdW.USAGE;                     // מילת סוג בלי שם אחריה
-        for (int i = 0; i < p.sides.size(); i++)                              // מ0.18: "קובץ" — רק יעד, ובלי תוכן/קבצי
-            if (p.sides.get(i).kind == EXPORT && (i != p.sides.size() - 1 || i == 0 || p.sides.get(i).content || p.sides.get(i).filesOf))
-                p.error = Words.DbCmd.USAGE_EXPORT;
+        for (int i = 0; i < p.sides.size(); i++) {                            // מ0.18: "קובץ" — יעד (יצוא); מ0.22: או מקור לרשימה (ייבוא)
+            Side x = p.sides.get(i);
+            if (x.kind != EXPORT) continue;
+            boolean export = i == p.sides.size() - 1 && i > 0;
+            boolean imp = i == 0 && p.sides.size() == 2 && p.sides.get(1).kind == LIST;
+            if ((!export && !imp) || x.content || x.filesOf) p.error = Words.DbCmd.USAGE_EXPORT;
+        }
         return p;
     }
 
@@ -24264,7 +24741,7 @@ final class ListCmd {
         if (cmd.equals("COPY")) {
             if (sd.size() != 2) { s.error = Words.ListCmdW.USAGE; return; }
             final Side a = sd.get(0), b = sd.get(1);
-            if (b.kind == EXPORT) { s.error = Words.DbCmd.VERIFY_DB_ONLY; return; }   // מ0.18: יצוא — מהמסד
+            if (b.kind == EXPORT || a.kind == EXPORT) { s.error = Words.DbCmd.VERIFY_DB_ONLY; return; }   // מ0.18–מ0.22: יצוא/ייבוא — במסד
             if (b.content || b.filesOf) { s.error = Words.ListCmdW.USAGE; return; }
             if (b.kind == SMART_LIST) { s.error = Words.ListCmdW.INTO_SMART; return; }
             if (b.kind == FS) {                                             // מרשימה לתיקייה — הקבצים עצמם (הביצוע הרגיל)
@@ -47601,7 +48078,7 @@ public final class Words {
                 USAGE_MD = "צורה: MD ידנית \"א\\ב\" — רשימה ידנית (חסרה — נוצרת בכל הדרך)",
                 CONTENT_SMART = "\"תוכן\" — רק לרשימה ידנית; לקבצים שרשימה חכמה מוצאת: קבצי חכמה",
                 INTO_SMART = "אי אפשר להכניס לתוך רשימה חכמה — היא מוצאת את הקבצים לבד, לפי התנאים שלה",
-                INTO_ITSELF = "אי אפשר להעתיק רשימה לתוך עצמה (או לתוך רשימה שבתוכה)",
+                INTO_ITSELF = "אי אפשר להכניס רשימה לתוך עצמה (או לתוך רשימה שבתוכה)",
                 MOVE_TO_LIST = "העברה לרשימה — אין לה מובן: לרשימה נכנסים רק המסלולים, והקבצים נשארים במקומם. להוספה — COPY",
                 MOVE_LATER = "העברה של רשימות — עדיין לא בפקודות; בינתיים — העתקה ואחריה מחיקה",
                 HOME_ONLY_CONTENT = "\"*\" הוא הבית — כמקור רק עם \"תוכן\": תוכן ידנית \"*\"",
@@ -47748,6 +48225,27 @@ public final class Words {
         public static String exported(String what, String path, int lists, int files, int skipped) {
             return "יצוא: " + what + " ← " + path + " · " + lists + " רשימות, " + files + " קבצים"
                     + (skipped > 0 ? " · לא נכנסו (חכמות, רעיונות, כותרות — עוד לא בפורמט): " + skipped : "");
+        }
+
+        public static final String MODE_PREFIX = "אופן:",  // תחביר
+                USAGE_FROM_MODE = "צורה: COPY ידנית \"אופן:שם האופן/א\\ב\" ידנית \"יעד\" (גם תוכן ידנית)",
+                ORDER_TITLE = "סידור", ORDER_UP = "⬆ מקום אחד למעלה", ORDER_DOWN = "⬇ מקום אחד למטה",
+                ORDER_TOP = "⏫ לראש הרשימה", ORDER_BOTTOM = "⏬ לסוף הרשימה";
+
+        public static String importLater(String path) {
+            return "ייבוא מ־" + path + " — ייקרא בהרצה (הקובץ עוד לא קיים — נוצר בשורות שלפני)";
+        }
+
+        public static String cantRead(String name) {
+            return "לא נקרא: " + name;
+        }
+
+        public static String imported(String file, String to, int lists, int files, int bad) {
+            return "ייבוא: " + file + " ← לתוך " + to + " · " + lists + " רשימות, " + files + " קבצים" + (bad > 0 ? " · שורות שלא הובנו: " + bad : "");
+        }
+
+        public static String fromMode(String mode, String path, String to, int n) {
+            return "מהאופן \"" + mode + "\": \"" + path + "\" ← לתוך " + to + " · " + n + " פריטים (עותק עצמאי)";
         }
 
         public static final String USAGE_REN = "צורה: REN ידנית \"א\\ב\" \"שם חדש\" (גם חכמה \"א\")",
@@ -47898,7 +48396,7 @@ public final class Words {
 
         public static final String APP_NAME_M = "מנהל קבצים וירטואלי · מ";
         public static final String MENU = "מסד נתונים (מ)";
-        public static final String TITLE = "מסד נתונים · מ0.21";
+        public static final String TITLE = "מסד נתונים · מ0.22";
         /** מ0.9: המראה המוכר. */
         public static final String LIST_GONE = "הרשימה הזו כבר לא קיימת במסד", MENU_ACTIONS = "⚙ מסד: גיבוי, העתקה, בדיקה ופעולות",
                 MENU_OLD = "↩ הצד הישן (לפני המסד)",
@@ -49985,6 +50483,61 @@ final class ImportTests {
         ck("REN: שם תפוס באותה רשימה — לא; / בשם — לא", DbListCmd.rename(s, M, sides("REN ידנית \"יעד-א/שונה\" \"x\"")[0], "תפוס").error != null
                 && DbListCmd.rename(s, M, sides("REN ידנית \"יעד-א/שונה\" \"x\"")[0], "א/ב").error != null && s.item(rn).name.equals("שונה"));
 
+        // מ0.22: מיון, סידור ידני, ייבוא, העתקה בין מסדים, תפריט
+        long so = s.createList("מיון", home);
+        long fz = s.createFile(new Store.FileInfo("/s/z.txt", "פנימי", 10, 300, null)), fa2 = s.createFile(new Store.FileInfo("/s/aa.txt", "פנימי", 99, 100, null));
+        s.addMember(so, fz);
+        s.addMember(so, fa2);
+        long sub = s.createList("תת", so);
+        List<Store.Member> rows = new ArrayList<Store.Member>(s.members(so));
+        DbMore.sort(s, rows, Sort.NAME);
+        ck("מיון: רשימות קודם, ואז קבצים לפי שם", rows.get(0).item.id == sub && rows.get(1).item.id == fa2 && rows.get(2).item.id == fz);
+        DbMore.sort(s, rows, Sort.DATE);
+        ck("מיון לפי תאריך: החדש ראשון", rows.get(1).item.id == fz);
+        DbMore.sort(s, rows, Sort.SIZE);
+        ck("מיון לפי גודל: הגדול ראשון", rows.get(1).item.id == fa2);
+        DbMore.order(s, so, Arrays.asList(sub), DbMore.BOTTOM);
+        ck("סידור: לסוף", s.members(so).get(2).item.id == sub);
+        DbMore.order(s, so, Arrays.asList(sub), DbMore.UP);
+        ck("סידור: מקום אחד למעלה", s.members(so).get(1).item.id == sub);
+        DbMore.order(s, so, Arrays.asList(sub, fz), DbMore.TOP);
+        ck("סידור: כמה לראש — הסדר ביניהם נשמר", s.members(so).get(0).item.id == fz && s.members(so).get(1).item.id == sub);
+        DbMore.order(s, so, Arrays.asList(fa2), DbMore.DOWN);
+        ck("סידור: למטה בסוף — נשאר", s.members(so).get(2).item.id == fa2);
+
+        DbExport.Out ex2 = DbExport.list(s, books, false, "x", 0);
+        long imp = s.createList("מיובא", home);
+        DbMore.Imported im = DbMore.importText(s, imp, ex2.text);
+        ck("ייבוא: מה שיוצא — נכנס (רשימות וקבצים), בתוך היעד", im.lists == ex2.lists && im.files == ex2.files && im.bad == 0
+                && DbCount.of(s, imp, null).lists == ex2.lists && DbPaths.find(s, M, Tree.parsePath("מיובא/ספרים")) != 0);
+        DbMore.Imported im2 = DbMore.importText(s, imp, ex2.text);
+        ck("ייבוא שוב: אותן רשימות (לא כפולות), קבצים שכבר שם — לא שוב", im2.files == 0 && DbCount.of(s, imp, null).lists == ex2.lists);
+        DbMore.Imported im3 = DbMore.importText(s, imp, DbExport.paths(Arrays.asList("/s/a.pdf", "/s/q.txt"), "x", 0).text);
+        ck("ייבוא קבצי רשימה: המסלולים נכנסים ליעד עצמו", im3.files == 2 && s.contains(imp, s.findFile("/s/q.txt")));
+
+        MemStore other = new MemStore(IdCounter.memory());
+        long oh = other.createList("בית", 0);
+        other.setProp(oh, Store.P_HOME, "1");
+        long ob = other.createList("אחר", oh), obs = other.createList("פנים", ob);
+        long ofile = other.createFile(new Store.FileInfo("/o/x.pdf", "פנימי", 5, 7, "2:abc"));
+        other.addMember(obs, ofile);
+        other.addNote(ob, "רעיון שם");
+        DbListCmd.Res xr = DbListCmd.copyAcross(other, "שני", sides("COPY ידנית \"אחר\" ידנית \"מיובא\"")[0], s, imp, "\"מיובא\"");
+        long cx = DbPaths.find(s, M, Tree.parsePath("מיובא/אחר"));
+        ck("מאופן לאופן: עותק עצמאי — רשימות, רעיון, וקובץ לפי המסלול עם החתימה", xr.error == null && cx != 0 && DbPaths.find(s, M, Tree.parsePath("מיובא/אחר/פנים")) != 0
+                && s.findFile("/o/x.pdf") != 0 && "2:abc".equals(s.file(s.findFile("/o/x.pdf")).sig) && other.lists().size() == 3);
+        ck("מאופן לאופן: שוב — כבר יש בשם הזה", DbListCmd.copyAcross(other, "שני", sides("COPY ידנית \"אחר\" ידנית \"מיובא\"")[0], s, imp, "x").error != null);
+
+        long mn = s.createList("תפריט", home);
+        long bat = s.createFile(new Store.FileInfo("/s/run.vbat", "פנימי", 1, 0, null));
+        s.addMember(mn, bat);
+        s.addMember(mn, fz);
+        long msub = s.createList("משנה", mn);
+        long msm = s.createSmart("מוצאת", mn);
+        List<DbMore.Entry> me = DbMore.menu(s, mn);
+        ck("תפריט מהמסד: קובץ פקודות, תת־תפריט, חכמה — לפי הסדר; קובץ שאינו פקודות — לא", me.size() == 3 && me.get(0).kind == DbMore.E_FILE
+                && me.get(1).id == msub && me.get(2).id == msm);
+
         // ודא (מ0.14)
         ListCmd.Side vb = sides("VERIFY ידנית \"ספרים\" קיימת")[0];
         String[] fd = {""};
@@ -50024,7 +50577,7 @@ final class ImportTests {
                 && Importer.home(c) != 0 && DbPaths.find(c, M, Tree.parsePath("ספרים")) != 0);
         x = sides("RD ידנית \"ספרים\"");
         DbListCmd.remove(c, M, x[0]);
-        ck("העותק להדמיה: שינוי בו לא נוגע במסד", at(s, "ספרים") == books && DbPaths.find(c, M, Tree.parsePath("ספרים")) == 0);
+        ck("העותק להדמיה: שינוי בו לא נוגע במסד", at(s, "ספרים") == books && c.lists().size() < lists && s.lists().size() == lists);
         long nl = DbListCmd.newList(s, 0, "מהמסך");
         ck("הליבה (מסכים): רשימה חדשה — בבית", nl != 0 && s.listsOf(nl).equals(Arrays.asList(home)));
         long note = s.addNote(nl, "הערה");

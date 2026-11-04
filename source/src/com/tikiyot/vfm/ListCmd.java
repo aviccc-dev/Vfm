@@ -132,9 +132,13 @@ final class ListCmd {
             cur = null;
         }
         if (cur != null) p.error = Words.ListCmdW.USAGE;                     // מילת סוג בלי שם אחריה
-        for (int i = 0; i < p.sides.size(); i++)                              // מ0.18: "קובץ" — רק יעד, ובלי תוכן/קבצי
-            if (p.sides.get(i).kind == EXPORT && (i != p.sides.size() - 1 || i == 0 || p.sides.get(i).content || p.sides.get(i).filesOf))
-                p.error = Words.DbCmd.USAGE_EXPORT;
+        for (int i = 0; i < p.sides.size(); i++) {                            // מ0.18: "קובץ" — יעד (יצוא); מ0.22: או מקור לרשימה (ייבוא)
+            Side x = p.sides.get(i);
+            if (x.kind != EXPORT) continue;
+            boolean export = i == p.sides.size() - 1 && i > 0;
+            boolean imp = i == 0 && p.sides.size() == 2 && p.sides.get(1).kind == LIST;
+            if ((!export && !imp) || x.content || x.filesOf) p.error = Words.DbCmd.USAGE_EXPORT;
+        }
         return p;
     }
 
@@ -487,7 +491,7 @@ final class ListCmd {
         if (cmd.equals("COPY")) {
             if (sd.size() != 2) { s.error = Words.ListCmdW.USAGE; return; }
             final Side a = sd.get(0), b = sd.get(1);
-            if (b.kind == EXPORT) { s.error = Words.DbCmd.VERIFY_DB_ONLY; return; }   // מ0.18: יצוא — מהמסד
+            if (b.kind == EXPORT || a.kind == EXPORT) { s.error = Words.DbCmd.VERIFY_DB_ONLY; return; }   // מ0.18–מ0.22: יצוא/ייבוא — במסד
             if (b.content || b.filesOf) { s.error = Words.ListCmdW.USAGE; return; }
             if (b.kind == SMART_LIST) { s.error = Words.ListCmdW.INTO_SMART; return; }
             if (b.kind == FS) {                                             // מרשימה לתיקייה — הקבצים עצמם (הביצוע הרגיל)

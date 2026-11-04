@@ -20,7 +20,9 @@ import java.util.List;
 
 public class DbListScreen extends ListScreen<Store.Member> {
 
-    static final String EXTRA_MODE = "mode", EXTRA_LIST = "list";
+    static final String EXTRA_MODE = "mode", EXTRA_LIST = "list", EXTRA_SORT = "sort";
+    /** מ0.22: מיון מהפקודה ("פתח רשימה … מיין:…"); ריק — הסדר של הרשימה. */
+    private String sortBy = "";
     private static final int MENU_DB = 1, MENU_DESIGN = 2, MENU_SETTINGS = 3, MENU_OLD = 4, MENU_CMDS = 5, MENU_TESTS = 6;
 
     private String mode;
@@ -105,7 +107,13 @@ public class DbListScreen extends ListScreen<Store.Member> {
 
     /** פותח רשימה במראה המוכר. */
     static void open(android.app.Activity a, String mode, long list) {
-        a.startActivity(new Intent(a, DbListScreen.class).putExtra(EXTRA_MODE, mode).putExtra(EXTRA_LIST, list));
+        open(a, mode, list, null);
+    }
+
+    /** מ0.22: עם מיון (שם · גודל · תאריך). */
+    static void open(android.app.Activity a, String mode, long list, String sort) {
+        a.startActivity(new Intent(a, DbListScreen.class).putExtra(EXTRA_MODE, mode).putExtra(EXTRA_LIST, list)
+                .putExtra(EXTRA_SORT, sort == null ? "" : sort));
     }
 
     @Override
@@ -115,6 +123,8 @@ public class DbListScreen extends ListScreen<Store.Member> {
         app = getApplicationContext();
         mode = getIntent().getStringExtra(EXTRA_MODE);
         listId = getIntent().getLongExtra(EXTRA_LIST, 0);
+        sortBy = getIntent().getStringExtra(EXTRA_SORT);
+        if (sortBy == null) sortBy = "";
         LinearLayout root = build(saved, Words.Db.APP_NAME_M, "db-list");
         modeBox = new TextView(this);                                         // כמו בבית הישן (Home, 105)
         modeBox.setTextSize(16);
@@ -169,6 +179,7 @@ public class DbListScreen extends ListScreen<Store.Member> {
             return;
         }
         rows.addAll(store.members(listId));
+        DbMore.sort(store, rows, sortBy);                                     // מ0.22: מיון מהפקודה
         rows.add(PLUS);                                                       // מ0.10.1: ➕ בסוף, כמו בבית הישן
         boolean home = "1".equals(store.prop(listId, Store.P_HOME));
         atHome = home;
@@ -463,6 +474,7 @@ public class DbListScreen extends ListScreen<Store.Member> {
         m.put(Actions.ALSO_TO_LIST, new Runnable() { @Override public void run() { toList(LINK); } });
         m.put(Actions.MOVE_TO_LIST, new Runnable() { @Override public void run() { toList(MOVE); } });
         m.put(Actions.REMOVE_FROM_LIST, new Runnable() { @Override public void run() { removeChosen(); } });
+        m.put(Actions.ORDER_LIST, new Runnable() { @Override public void run() { orderChosen(); } });   // מ0.22
         m.put(Actions.SETTINGS_LIST, new Runnable() {
             @Override public void run() {
                 List<Long> ids = chosenIds();
@@ -518,6 +530,27 @@ public class DbListScreen extends ListScreen<Store.Member> {
                         return DbListCmd.Res.ok(Words.ListCmdW.copied(c.done, c.skipped, c.why, "\"" + t.item(dest).name + "\""));
                     }
                 }, how == MOVE));
+            }
+        });
+    }
+
+    /** מ0.22: סידור ידני — למעלה · למטה · לראש · לסוף (דרך הליבה); הבחירה נשארת, כדי להזיז שוב. */
+    private void orderChosen() {
+        final List<Long> ids = chosenIds();
+        if (ids.isEmpty()) return;
+        final long in = here();
+        String[] how = {Words.DbCmd.ORDER_UP, Words.DbCmd.ORDER_DOWN, Words.DbCmd.ORDER_TOP, Words.DbCmd.ORDER_BOTTOM};
+        Ui.options(this, Words.DbCmd.ORDER_TITLE, how, new android.content.DialogInterface.OnClickListener() {
+            @Override
+            public void onClick(android.content.DialogInterface d, final int which) {
+                DbListCmd.now(mode, new DbListCmd.Work() {
+                    @Override public DbListCmd.Res run(Store t, DbListCmd.Finder f) {
+                        DbMore.order(t, in, ids, which);
+                        return DbListCmd.Res.ok("");
+                    }
+                }, false);
+                sortBy = "";
+                refresh();
             }
         });
     }
