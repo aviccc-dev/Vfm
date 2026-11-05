@@ -473,28 +473,28 @@ final class DbListCmd {
         return t.addMember(into, it.id) ? null : Words.DbCmd.ALREADY;
     }
 
-    /** עותק עצמאי של רשימה: מה שרק שלה — מועתק; רשימה שגם במקום אחר — אותה רשימה; חכמה — עותק של ההגדרה. */
+    /**
+     * עותק עצמאי של רשימה, עד הסוף: כל תת־רשימה — עותק (גם רשימה שנמצאת גם במקום אחר); חכמה — עותק של ההגדרה.
+     * מ0.24 (המשתמש: "העתק" — תמיד עותק; קישור — "צור קישור", בפקודות): קודם רשימה משותפת נשארה אותה רשימה.
+     */
     private static long copyList(Store t, long src, long into) {
+        return copyList(t, src, into, 0);
+    }
+
+    private static long copyList(Store t, long src, long into, int depth) {
         Store.Item it = t.item(src);
         long id = t.createList(it.name, into);
         copyProps(t, src, id, LIST_PROPS);
         for (Store.Member m : t.members(src)) {
             Store.Item x = m.item;
             if (x.type == Store.LIST) {
-                if (only(t, x.id, src)) copyList(t, x.id, id);
-                else if (!t.makesCycle(id, x.id)) t.addMember(id, x.id);
+                if (depth < 60) copyList(t, x.id, id, depth + 1);
             } else if (x.type == Store.SMART) copySmart(t, x.id, id);
             else if (x.type == Store.NOTE) t.addNote(id, x.name);
             else if (x.type == Store.TITLE) t.addTitle(id, x.name);
             else t.addMember(id, x.id);
         }
         return id;
-    }
-
-    /** הרשימה x נמצאת רק ב-parent (רשימה שגם בבית — משותפת). */
-    private static boolean only(Store t, long x, long parent) {
-        for (Long in : t.listsOf(x)) if (in != parent) return false;
-        return true;
     }
 
     private static long copySmart(Store t, long src, long into) {

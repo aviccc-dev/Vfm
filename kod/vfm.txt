@@ -910,6 +910,37 @@ RD "%פנימי%\בדיקת מעקב (אפשר למחוק)\יעד"
 RD "%פנימי%\בדיקת מעקב (אפשר למחוק)\מקור"
 RD "%פנימי%\בדיקת מעקב (אפשר למחוק)"
 ECHO סוף בדיקת מ0.23. "בדיקת מעקב" נשארת לראות. אחרי המחיקה בסוף, הקובץ בה אפור או שירד ממנה, לפי ההגדרה "קובץ שנמחק".
+===== קובץ: assets/tests/gersa-024.vbat =====
+בדיקה
+ECHO בדיקת מ0.24 — "העתקה" היא תמיד עותק עצמאי, גם של רשימה שנמצאת בשני מקומות; העברה; MD עמוק בכונן. הלוח שבמסך עובר דרך אותן פעולות (העתקה, העברה). כל "ודא" — ✅ או ❌.
+אופן "בדיקות מערכת"
+:: מה שנשאר מהפעם הקודמת
+RD ידנית "בדיקת מ0.24"
+MD ידנית "בדיקת מ0.24/א/משותפת"
+MD ידנית "בדיקת מ0.24/ב"
+MD ידנית "בדיקת מ0.24/ג"
+:: "משותפת" נמצאת גם ב־ב (קישור — רק בפקודה), ויש בה קובץ
+קשר ידנית "בדיקת מ0.24/א/משותפת" ידנית "בדיקת מ0.24/ב"
+COPY "בדיקת פקודות.vbat" ידנית "בדיקת מ0.24/א/משותפת"
+ודא ידנית "בדיקת מ0.24/ב/משותפת" /פריטים:1
+:: העתקה של א אל ג — "משותפת" צריכה לצאת עותק עצמאי, לא קישור
+COPY ידנית "בדיקת מ0.24/א" ידנית "בדיקת מ0.24/ג"
+ודא ידנית "בדיקת מ0.24/ג/א/משותפת" /פריטים:1
+:: מרוקנים את העותק — אם זה עותק, המקור לא משתנה
+RD תוכן ידנית "בדיקת מ0.24/ג/א/משותפת"
+ודא ידנית "בדיקת מ0.24/ג/א/משותפת" /פריטים:0
+ודא ידנית "בדיקת מ0.24/א/משותפת" /פריטים:1
+ודא ידנית "בדיקת מ0.24/ב/משותפת" /פריטים:1
+:: העברה (כמו "העבר" בלוח): יוצאת מ־ג ונכנסת ל־ב
+MOVE ידנית "בדיקת מ0.24/ג/א" ידנית "בדיקת מ0.24/ב"
+ודא ידנית "בדיקת מ0.24/ג" /רשימות:0
+ודא ידנית "בדיקת מ0.24/ב/א" קיימת
+:: MD עמוק בכונן, והסרה של כל התיקיות באותו קובץ. קודם: ההסרה של התיקייה שמעל "דולגה". עכשיו: אף שורה לא דולגת
+MD "%פנימי%\בדיקת מ0.24 (אפשר למחוק)\א\ב"
+RD "%פנימי%\בדיקת מ0.24 (אפשר למחוק)\א\ב"
+RD "%פנימי%\בדיקת מ0.24 (אפשר למחוק)\א"
+RD "%פנימי%\בדיקת מ0.24 (אפשר למחוק)"
+ECHO סוף בדיקת מ0.24. "בדיקת מ0.24" נשארת לראות. את הלוח עצמו (העתקה / העברה, ניווט, "הדבקה כאן", צירוף, הוצאה מהלוח) — בודקים במסך.
 ===== קובץ: assets/tests/klali.vbat =====
 בדיקה
 ECHO בדיקה כללית — שכל הפונקציות עובדות (לא עומס). כל "ודא" מסמן ✅ או ❌, ובסוף — כמה עברו. בכל גרסה נוספות כאן הבדיקות של מה שחדש.
@@ -947,6 +978,8 @@ DEL "%פנימי%\בדיקת מנהל קבצים (אפשר למחוק)\*.vbat"
 RD "%פנימי%\בדיקת מנהל קבצים (אפשר למחוק)"
 :: המסד עוקב אחרי הכונן — העברה ושינוי שם של קובץ שברשימה (מ0.23)
 כלול "בדיקת מ0.23.vbat"
+:: "העתקה" — תמיד עותק; העברה; MD עמוק בכונן (מ0.24)
+כלול "בדיקת מ0.24.vbat"
 ECHO סוף הבדיקה הכללית. "בדיקת פקודות" נשארת לראות; קובצי היצוא — בתיקיית אופן הבדיקות; התיקייה בכונן — הוסרה, והקובץ שהועתק אליה — בסל.
 ===== קובץ: assets/tests/lachatz.vbat =====
 בדיקה
@@ -1110,7 +1143,7 @@ cd $S; rm -rf out gen bld
 [ "$S" != "$DIR" ] && rm -rf $S
 ls -la $OUT
 ===== קובץ: build/m-version.txt =====
-36 מ0.23
+37 מ0.24
 ===== קובץ: build/test.sh =====
 #!/bin/bash
 # בדיקות על המחשב (80). יוצא בכישלון אם בדיקה אחת נכשלה — ואז build.sh לא בונה.
@@ -4570,6 +4603,10 @@ final class Batch {
             s.dest = d;
             s.describe = Words.Cmd.newFolder(Bidi.path(d.getAbsolutePath()));
             sim.dirs.add(d.getAbsolutePath());
+            for (File up = d.getParentFile(); up != null && !sim.isDir(up); up = up.getParentFile()) {   // מ0.24: כמו mkdirs —
+                sim.dirs.add(up.getAbsolutePath());                                                    // גם התיקיות שמעל
+                sim.gone.remove(up.getAbsolutePath());
+            }
         } else if (cmd.equals("RD")) {
             if (paths.size() != 1) { s.error = Words.Cmd.usage(cmd); return; }
             File d = new File(paths.get(0));
@@ -9531,6 +9568,8 @@ public final class Conf {
     public static final String READERS = "קוראים לכל כונן";  // תחביר
     /** 183: יעד קבוע ל"שליחה למכשיר" — חבילה/מחלקה; "" — לבחור בכל פעם. */
     public static final String SEND_TO = "שליחה למכשיר — יעד";  // תחביר
+    /** מ0.24: "העתקה"/"העברה" מוסיפות ללוח של המסד במקום להחליף אותו (DbClip). */
+    public static final String CLIP_ADD = "צירוף ללוח";  // תחביר
     /** מנהל הקבצים מוגבל לתיקיות אלה (76). ריק = כל הכוננים. */
 
     private static final String HEADER =
@@ -9724,6 +9763,135 @@ final class DateSize {
     String toCond() {
         String d = dateToken(), s = sizeToken();
         return (d + (d.isEmpty() || s.isEmpty() ? "" : " ") + s).trim();
+    }
+}
+===== קובץ: src/com/tikiyot/vfm/DbClip.java =====
+package com.tikiyot.vfm;
+
+// מ0.24: הלוח של המסד — "העתקה" / "העברה" מסמנים, מנווטים בעצמך, ו"הדבקה כאן" ברשימה (claude/yetzia-mipituach.md,
+// "לסט התיקונים הבא" פריט 3 — ההחלטות של המשתמש, 5.11.2026):
+//   · לוח קל — זוכר מה סומן (מספר זיהוי), ומדביק את מה שיש בזמן ההדבקה; פריט שכבר לא קיים — "המקור כבר לא קיים".
+//   · כל פריט שומר את הפעולה שלו: "ההבדל בין העתק להעביר הוא רק מה קורה למקור". כולם נכנסים ליעד; "העבר" יוצאים
+//     מהמקור ומהלוח, "העתק" נשארים בלוח (להדביק שוב).
+//   · רגיל — הלוח מתחלף; "צירוף" — מוסיף למה שיש (מצב שנשמר — ברירת המחדל).
+//   · "העתקה" — תמיד עותק עצמאי (DbListCmd.copyIds); קישור — רק בפקודות.
+//   · עולמות נפרדים: הלוח הזה — רק לרשימות; לתוך רשימה אפשר גם קבצים ותיקיות שהועתקו בכונן (Clip, בהעתקה בלבד).
+// אחראי: הלוח וההדבקה, בלי ממשק (נבדק במחשב). הממשק — DbListScreen.
+
+import java.util.ArrayList;
+import java.util.List;
+
+final class DbClip {
+
+    static final int COPY = 0, MOVE = 1;
+
+    /** פריט בלוח: מספר הזיהוי, הרשימה שממנה סומן (להעברה), הפעולה, ושם וסוג (להצגה). */
+    static final class Item {
+        final long id, from;
+        final int how, type;
+        final String name;
+
+        Item(long id, long from, int how, int type, String name) {
+            this.id = id;
+            this.from = from;
+            this.how = how;
+            this.type = type;
+            this.name = name;
+        }
+    }
+
+    private static final List<Item> items = new ArrayList<Item>();
+    /** האופן שממנו סומן — בין אופנים אין הדבקה מהלוח (יש פקודה: COPY "אופן:X/…"). */
+    private static String mode;
+
+    private DbClip() { }
+
+    /** מסמן ללוח. add — מוסיף למה שיש (אותו פריט מאותה רשימה — הפעולה מתעדכנת); אחרת, או מאופן אחר — הלוח מתחלף. */
+    static synchronized void put(String fromMode, long from, List<Store.Item> what, int how, boolean add) {
+        if (!add || mode == null || !mode.equals(fromMode)) items.clear();
+        mode = fromMode;
+        for (Store.Item it : what) {
+            for (int i = items.size() - 1; i >= 0; i--)
+                if (items.get(i).id == it.id && items.get(i).from == from) items.remove(i);
+            items.add(new Item(it.id, from, how, it.type, it.name));
+        }
+    }
+
+    static synchronized void clear() {
+        items.clear();
+        mode = null;
+    }
+
+    static synchronized boolean empty() {
+        return items.isEmpty();
+    }
+
+    static synchronized List<Item> items() {
+        return new ArrayList<Item>(items);
+    }
+
+    static synchronized void remove(Item it) {
+        items.remove(it);
+        if (items.isEmpty()) mode = null;
+    }
+
+    static synchronized String mode() {
+        return mode;
+    }
+
+    static synchronized boolean anyMove() {
+        for (Item it : items) if (it.how == MOVE) return true;
+        return false;
+    }
+
+    /** "3 להעתקה · 1 להעברה". */
+    static synchronized String label() {
+        int c = 0, m = 0;
+        for (Item it : items) if (it.how == MOVE) m++; else c++;
+        String s = c > 0 ? c + Words.ClipW.TO_COPY : "";
+        if (m > 0) s += (s.isEmpty() ? "" : " · ") + m + Words.ClipW.TO_MOVE;
+        return s;
+    }
+
+    /** אם אפשר להדביק כאן (null — אפשר); אחרת — למה לא. */
+    static synchronized String cannot(String here) {
+        if (items.isEmpty()) return null;
+        return mode != null && !mode.equals(here) ? Words.DbClipW.otherMode(mode) : null;
+    }
+
+    /**
+     * ההדבקה לתוך dest, בעסקה של מי שקורא (DbListCmd.now): כל פריט לפי הפעולה שלו. פריט שכבר לא קיים — לא נכנס
+     * ("המקור כבר לא קיים"). "העבר" שנכנס — יוצא מהלוח; השאר נשארים.
+     */
+    static DbListCmd.Copied paste(Store t, long dest) {
+        DbListCmd.Copied all = new DbListCmd.Copied();
+        List<Item> done = new ArrayList<Item>();
+        for (Item it : items()) {
+            DbListCmd.Copied one;
+            if (t.item(it.id) == null) {
+                one = new DbListCmd.Copied();
+                one.skipped = 1;
+                one.why = Words.DbClipW.GONE;
+            } else if (it.how == MOVE) {
+                one = DbListCmd.moveTo(t, java.util.Collections.singletonList(it.id), it.from, dest);
+                if (one.done == 1) done.add(it);
+            } else {
+                one = DbListCmd.copyIds(t, java.util.Collections.singletonList(it.id), dest);
+            }
+            all.done += one.done;
+            all.skipped += one.skipped;
+            if (all.why == null) all.why = one.why;
+        }
+        synchronized (DbClip.class) {
+            items.removeAll(done);
+            if (items.isEmpty()) mode = null;
+        }
+        return all;
+    }
+
+    /** קבצים ותיקיות שהועתקו בכונן (Clip) — נכנסים לרשימה; בהעברה — לא (עולמות נפרדים). */
+    static boolean diskForLists() {
+        return !Clip.isEmpty() && Clip.isCopy();
     }
 }
 ===== קובץ: src/com/tikiyot/vfm/DbCmdMenu.java =====
@@ -11136,28 +11304,28 @@ final class DbListCmd {
         return t.addMember(into, it.id) ? null : Words.DbCmd.ALREADY;
     }
 
-    /** עותק עצמאי של רשימה: מה שרק שלה — מועתק; רשימה שגם במקום אחר — אותה רשימה; חכמה — עותק של ההגדרה. */
+    /**
+     * עותק עצמאי של רשימה, עד הסוף: כל תת־רשימה — עותק (גם רשימה שנמצאת גם במקום אחר); חכמה — עותק של ההגדרה.
+     * מ0.24 (המשתמש: "העתק" — תמיד עותק; קישור — "צור קישור", בפקודות): קודם רשימה משותפת נשארה אותה רשימה.
+     */
     private static long copyList(Store t, long src, long into) {
+        return copyList(t, src, into, 0);
+    }
+
+    private static long copyList(Store t, long src, long into, int depth) {
         Store.Item it = t.item(src);
         long id = t.createList(it.name, into);
         copyProps(t, src, id, LIST_PROPS);
         for (Store.Member m : t.members(src)) {
             Store.Item x = m.item;
             if (x.type == Store.LIST) {
-                if (only(t, x.id, src)) copyList(t, x.id, id);
-                else if (!t.makesCycle(id, x.id)) t.addMember(id, x.id);
+                if (depth < 60) copyList(t, x.id, id, depth + 1);
             } else if (x.type == Store.SMART) copySmart(t, x.id, id);
             else if (x.type == Store.NOTE) t.addNote(id, x.name);
             else if (x.type == Store.TITLE) t.addTitle(id, x.name);
             else t.addMember(id, x.id);
         }
         return id;
-    }
-
-    /** הרשימה x נמצאת רק ב-parent (רשימה שגם בבית — משותפת). */
-    private static boolean only(Store t, long x, long parent) {
-        for (Long in : t.listsOf(x)) if (in != parent) return false;
-        return true;
     }
 
     private static long copySmart(Store t, long src, long into) {
@@ -11840,6 +12008,7 @@ public class DbListScreen extends ListScreen<Store.Member> {
     private long listId;
     private SqlStore store;
     private TextView modeBox;
+    private DbPasteBar pasteBar;
     /** הרשימה המוצגת היא הבית. */
     private boolean atHome;
     /** מ0.9.2: "בית" — כל המסכים שמעל הבית נסגרים אחד אחד, עד הבית (מסך המסד שבדרך — פותח אותו). */
@@ -11949,6 +12118,12 @@ public class DbListScreen extends ListScreen<Store.Member> {
         });
         modeBox.setVisibility(View.GONE);
         root.addView(modeBox, 0);
+        pasteBar = new DbPasteBar(this, new DbPasteBar.Place() {              // מ0.24: הלוח
+            @Override public String mode() { return mode; }
+
+            @Override public void paste() { pasteHere(); }
+        });
+        root.addView(pasteBar.view);
         done(root, Actions.Tool.LIST, own());                                // מ0.16: פס הבחירה — כמו ברשימה ידנית
     }
 
@@ -11979,6 +12154,7 @@ public class DbListScreen extends ListScreen<Store.Member> {
     @Override
     protected void refresh() {
         rows.clear();
+        if (pasteBar != null) pasteBar.refresh();
         if (!openStore()) {
             adapter.notifyDataSetChanged();
             return;
@@ -12282,9 +12458,9 @@ public class DbListScreen extends ListScreen<Store.Member> {
     /** מ0.16: הפעולות של פס הבחירה — כולן דרך הליבה של הפקודות (DbListCmd). */
     private java.util.Map<Actions.Action, Runnable> own() {
         java.util.Map<Actions.Action, Runnable> m = new java.util.HashMap<Actions.Action, Runnable>();
-        m.put(Actions.DUPLICATE_LIST, new Runnable() { @Override public void run() { toList(COPY); } });
-        m.put(Actions.ALSO_TO_LIST, new Runnable() { @Override public void run() { toList(LINK); } });
-        m.put(Actions.MOVE_TO_LIST, new Runnable() { @Override public void run() { toList(MOVE); } });
+        // מ0.24: ללוח (DbClip) — מנווטים ו"הדבקה כאן"; "קישור" — לא במסך (המשתמש: "קישור — בפקודות")
+        m.put(Actions.DUPLICATE_LIST, new Runnable() { @Override public void run() { toClip(DbClip.COPY); } });
+        m.put(Actions.MOVE_TO_LIST, new Runnable() { @Override public void run() { toClip(DbClip.MOVE); } });
         m.put(Actions.REMOVE_FROM_LIST, new Runnable() { @Override public void run() { removeChosen(); } });
         m.put(Actions.ORDER_LIST, new Runnable() { @Override public void run() { orderChosen(); } });   // מ0.22
         m.put(Actions.SETTINGS_LIST, new Runnable() {
@@ -12295,8 +12471,6 @@ public class DbListScreen extends ListScreen<Store.Member> {
         });
         return m;
     }
-
-    private static final int COPY = 0, LINK = 1, MOVE = 2;
 
     /** מה שנבחר — מספרי זיהוי (קבצים לפי המסלול, השאר לפי "#מספר"). */
     private List<Long> chosenIds() {
@@ -12312,38 +12486,68 @@ public class DbListScreen extends ListScreen<Store.Member> {
         return out;
     }
 
-    /** העתקה / קישור / העברה לרשימה שנבחרת. */
-    private void toList(final int how) {
-        final List<Long> ids = chosenIds();
-        if (ids.isEmpty()) return;
-        final List<Store.Item> lists = new ArrayList<Store.Item>();
-        List<String> labels = new ArrayList<String>();
-        for (Store.Item l : store.lists()) {
-            if ("1".equals(store.prop(l.id, Store.P_HOME)) || l.id == here()) continue;
-            lists.add(l);
-            List<Long> in = store.listsOf(l.id);
-            Store.Item up = in.isEmpty() ? null : store.item(in.get(0));
-            labels.add(up == null || "1".equals(store.prop(up.id, Store.P_HOME)) ? l.name : l.name + "  ‹ " + up.name);
+    /** מ0.24: מה שנבחר — ללוח, עם הפעולה (מחליף, או מוסיף אם "צירוף" פועל). */
+    private void toClip(int how) {
+        List<Store.Item> what = new ArrayList<Store.Item>();
+        for (Long id : chosenIds()) {
+            Store.Item it = store.item(id);
+            if (it != null) what.add(it);
         }
-        if (lists.isEmpty()) {
-            Ui.toast(this, Words.Db.NO_LISTS);
+        if (what.isEmpty()) return;
+        boolean add = DbPasteBar.adding();
+        DbClip.put(mode, here(), what, how, add);
+        sel.stop();
+        pasteBar.refresh();
+        Ui.toast(this, Words.DbClipW.marked(what.size(), add));
+    }
+
+    /** מ0.24: "הדבקה כאן" — מה שבלוח של המסד, וקבצים ותיקיות שהועתקו בכונן; תיקיות — רק הקבצים, או עם המבנה. */
+    private void pasteHere() {
+        final List<String> files = new ArrayList<String>(), dirs = new ArrayList<String>();
+        if (DbClip.diskForLists()) {
+            files.addAll(Clip.files());
+            dirs.addAll(Clip.dirs());
+        }
+        if (dirs.isEmpty()) {
+            pasteNow(files, dirs, false);
             return;
         }
-        final long from = here();
-        Ui.list(this, Words.DbCmd.COPY_TO_TITLE, labels, new android.content.DialogInterface.OnClickListener() {
+        Ui.options(this, Words.DbClipW.FOLDERS_HOW, new String[]{Words.DbClipW.ALL_FILES, Words.DbClipW.WITH_TREE},
+                new android.content.DialogInterface.OnClickListener() {
+                    @Override public void onClick(android.content.DialogInterface d, int which) { pasteNow(files, dirs, which == 1); }
+                });
+    }
+
+    private void pasteNow(final List<String> files, final List<String> dirs, final boolean structure) {
+        final long dest = here();
+        final boolean db = !DbClip.empty() && DbClip.cannot(mode) == null;
+        final boolean before = db && DbClip.anyMove();
+        final String m = mode;
+        if (!dirs.isEmpty()) Ui.toast(this, Words.DbClipW.ADDING);
+        new Thread(new Runnable() {
             @Override
-            public void onClick(android.content.DialogInterface d, int which) {
-                final long dest = lists.get(which).id;
-                done(DbListCmd.now(mode, new DbListCmd.Work() {
+            public void run() {
+                final List<Tree.Node> scanned = new ArrayList<Tree.Node>();
+                for (String d : dirs) scanned.add(Tree.scanFolder(new File(d), structure));      // ברקע
+                final DbListCmd.Res res = DbListCmd.nowRes(m, new DbListCmd.Work() {
                     @Override
                     public DbListCmd.Res run(Store t, DbListCmd.Finder f) {
-                        DbListCmd.Copied c = how == COPY ? DbListCmd.copyIds(t, ids, dest)
-                                : how == LINK ? DbListCmd.linkInto(t, ids, dest) : DbListCmd.moveTo(t, ids, from, dest);
-                        return DbListCmd.Res.ok(Words.ListCmdW.copied(c.done, c.skipped, c.why, "\"" + t.item(dest).name + "\""));
+                        DbListCmd.Copied c = db ? DbClip.paste(t, dest) : new DbListCmd.Copied();
+                        if (!files.isEmpty()) c.done += DbFiles.add(t, dest, files, null, true).added;
+                        for (Tree.Node n : scanned) c.done += DbMore.attach(t, dest, n, structure, true)[1];
+                        return DbListCmd.Res.ok(Words.VClipW.PASTED + c.done
+                                + (c.skipped > 0 ? Words.VClipW.SKIPPED + c.skipped + " (" + c.why + ")" : ""));
                     }
-                }, how == MOVE));
+                }, before);
+                runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        if (isFinishing()) return;
+                        done(res.error != null ? res.error : res.text);
+                    }
+                });
             }
-        });
+        }).start();
     }
 
     /** מ0.22: סידור ידני — למעלה · למטה · לראש · לסוף (דרך הליבה); הבחירה נשארת, כדי להזיז שוב. */
@@ -12462,9 +12666,6 @@ public class DbListScreen extends ListScreen<Store.Member> {
             @Override public void changed() { refresh(); }
         });
     }
-
-    @Override
-    protected void all(java.util.Set<String> files, java.util.Set<String> lists) { }
 
     List<Store.Member> shown() {
         return rows;
@@ -12773,6 +12974,146 @@ final class DbMore {
             sz.add(e.size);
         }
         return DbFiles.add(s, list, ps, sz, sign).added;
+    }
+}
+===== קובץ: src/com/tikiyot/vfm/DbPasteBar.java =====
+package com.tikiyot.vfm;
+
+// מ0.24: השורה של הלוח בתחתית מסך הרשימה של המסד (המשתמש: "בלוח: 3 להעתקה, 2 להעברה"; נגיעה — רשימת הפריטים,
+// ושם אפשר להוציא פריט). כפתורים: "הדבקה כאן", "צירוף" (מצב שנשמר), "ביטול" (מרוקן את הלוח). מה קורה בהדבקה —
+// DbListScreen (דרך DbClip). אחראי: השורה בלבד.
+
+import android.app.Activity;
+import android.view.Gravity;
+import android.view.View;
+import android.widget.Button;
+import android.widget.LinearLayout;
+import android.widget.TextView;
+
+import java.util.ArrayList;
+import java.util.List;
+
+final class DbPasteBar {
+
+    /** המקום: האופן, וההדבקה עצמה. */
+    interface Place {
+        String mode();
+
+        void paste();
+    }
+
+    final LinearLayout view;
+    private final TextView text;
+    private final Button paste, add;
+    private final Activity a;
+    private final Place place;
+
+    DbPasteBar(Activity a, Place place) {
+        this.a = a;
+        this.place = place;
+        view = new LinearLayout(a);
+        view.setOrientation(LinearLayout.HORIZONTAL);
+        view.setGravity(Gravity.CENTER_VERTICAL);
+        view.setBackgroundColor(Ui.HEADER);
+        view.setPadding(Ui.dp(a, 8), Ui.dp(a, 4), Ui.dp(a, 8), Ui.dp(a, 4));
+        text = new TextView(a);
+        text.setTextColor(Ui.TEXT);
+        text.setTextSize(14);
+        text.setOnClickListener(new View.OnClickListener() {
+            @Override public void onClick(View v) { show(); }
+        });
+        view.addView(text, new LinearLayout.LayoutParams(0, -2, 1f));
+        paste = button(Words.PASTE_HERE, new Runnable() {
+            @Override public void run() { DbPasteBar.this.place.paste(); }
+        });
+        add = button(Words.DbClipW.ADD_OFF, new Runnable() {
+            @Override
+            public void run() {
+                boolean on = !adding();
+                Conf.setBool(Conf.GENERAL, Conf.CLIP_ADD, on);
+                Ui.toast(DbPasteBar.this.a, on ? Words.DbClipW.ADD_ON_TOAST : Words.DbClipW.ADD_OFF_TOAST);
+                refresh();
+            }
+        });
+        button(Words.CANCEL, new Runnable() {
+            @Override
+            public void run() {
+                DbClip.clear();
+                Clip.clear();
+                refresh();
+            }
+        });
+        view.setVisibility(View.GONE);
+    }
+
+    /** "העתקה"/"העברה" מוסיפות ללוח (ברירת המחדל שנשמרה). */
+    static boolean adding() {
+        return Conf.is(Conf.GENERAL, Conf.CLIP_ADD, false);
+    }
+
+    private Button button(String label, final Runnable r) {
+        Button b = new Button(a);
+        b.setText(label);
+        b.setAllCaps(false);
+        b.setOnClickListener(new View.OnClickListener() {
+            @Override public void onClick(View v) { r.run(); }
+        });
+        view.addView(b);
+        return b;
+    }
+
+    /** מה בלוח עכשיו (בכל חזרה למסך — אולי סומן משהו במסך אחר, או הועתק בכונן). */
+    void refresh() {
+        boolean disk = DbClip.diskForLists();
+        if (DbClip.empty() && !disk) {
+            view.setVisibility(View.GONE);
+            return;
+        }
+        view.setVisibility(View.VISIBLE);
+        String why = DbClip.cannot(place.mode());
+        String s = DbClip.label();
+        if (disk) s += (s.isEmpty() ? "" : " · ") + Clip.label().replace(Words.ClipW.TO_COPY, "") + Words.DbClipW.FROM_DISK;
+        text.setText(Words.DbClipW.IN_CLIP + s + (why != null ? "\n" + why : ""));
+        paste.setEnabled(why == null || disk);
+        add.setText(adding() ? Words.DbClipW.ADD_ON : Words.DbClipW.ADD_OFF);
+    }
+
+    /** רשימת מה שבלוח; נגיעה — הפריט יוצא מהלוח. */
+    private void show() {
+        final List<DbClip.Item> items = DbClip.items();
+        final boolean disk = DbClip.diskForLists();
+        List<String> lines = new ArrayList<String>();
+        for (DbClip.Item it : items)
+            lines.add(icon(it.type) + it.name + (it.how == DbClip.MOVE ? Words.DbClipW.LINE_MOVE : Words.DbClipW.LINE_COPY));
+        final List<String> paths = new ArrayList<String>();
+        if (disk) {
+            paths.addAll(Clip.files());
+            paths.addAll(Clip.dirs());
+            for (String p : paths) lines.add(Words.DbClipW.DISK_LINE + new java.io.File(p).getName());
+        }
+        if (lines.isEmpty()) return;
+        Ui.list(a, Words.DbClipW.VIEW_TITLE, lines, new android.content.DialogInterface.OnClickListener() {
+            @Override
+            public void onClick(android.content.DialogInterface d, int which) {
+                if (which < items.size()) DbClip.remove(items.get(which));
+                else dropDisk(paths.get(which - items.size()));
+                refresh();
+                show();
+            }
+        });
+    }
+
+    /** הוצאה של קובץ או תיקייה מהלוח של הכונן (שאר מה שבו — נשאר, להעתקה). */
+    private static void dropDisk(String path) {
+        List<String> f = new ArrayList<String>(Clip.files()), d = new ArrayList<String>(Clip.dirs());
+        f.remove(path);
+        d.remove(path);
+        if (f.isEmpty() && d.isEmpty()) Clip.clear();
+        else Clip.set(f, d, true, Clip.warning());
+    }
+
+    private static String icon(int type) {
+        return type == Store.LIST ? "📁 " : type == Store.SMART ? "✨ " : type == Store.FILE ? "📄 " : "💡 ";
     }
 }
 ===== קובץ: src/com/tikiyot/vfm/DbPaths.java =====
@@ -14930,7 +15271,8 @@ import java.util.List;
 final class DbTestMode {
 
     static final String ASSET = "tests/pkudot-masad.vbat", ASSET_CALL = "tests/pkudot-kalul.vbat", ASSET_LOAD = "tests/omes-masad.vbat",
-            ASSET_ALL = "tests/klali.vbat", ASSET_STRESS = "tests/lachatz.vbat", ASSET_V23 = "tests/gersa-023.vbat";
+            ASSET_ALL = "tests/klali.vbat", ASSET_STRESS = "tests/lachatz.vbat", ASSET_V23 = "tests/gersa-023.vbat",
+            ASSET_V24 = "tests/gersa-024.vbat";
 
     /** בקובץ בדיקת העומס: מוחלף בשם האופן עם המסד הגדול ביותר (הנתונים האמיתיים). */
     static final String REAL = "%האופן-האמיתי%";  // תחביר
@@ -15003,6 +15345,13 @@ final class DbTestMode {
             } finally {
                 out6.close();
             }
+            final File v24 = new File(Modes.dirOf(mode), Words.DbCmd.TEST_V24_FILE + "." + Batch.EXT);
+            FileOutputStream out7 = new FileOutputStream(v24);
+            try {
+                out7.write(Examples.asset(a, ASSET_V24).getBytes("UTF-8"));   // מ0.24: בדיקת הגרסה (נכללת גם בכללית)
+            } finally {
+                out7.close();
+            }
             long home = DbVerbs.write(a, mode, new DbVerbs.Job() {
                 @Override
                 public long run(Store s, List<String> p) {
@@ -15015,7 +15364,7 @@ final class DbTestMode {
                             }
                         }
                     }, true);
-                    DbFiles.add(s, h[0], java.util.Arrays.asList(all.getAbsolutePath(), v23.getAbsolutePath(), f.getAbsolutePath(), stress.getAbsolutePath(), load.getAbsolutePath()), null, true);
+                    DbFiles.add(s, h[0], java.util.Arrays.asList(all.getAbsolutePath(), v24.getAbsolutePath(), v23.getAbsolutePath(), f.getAbsolutePath(), stress.getAbsolutePath(), load.getAbsolutePath()), null, true);
                     return h[0];
                 }
             }, null);
@@ -16357,7 +16706,6 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
 public class DiskScreen extends ListScreen<File> implements Clip.Holder, TopRow.Here {
 
@@ -16526,14 +16874,6 @@ public class DiskScreen extends ListScreen<File> implements Clip.Holder, TopRow.
     protected void hold(File f) {
         if (key(f) != null) sel.longPress(key(f));
         else if (dirKey(f) != null) sel.longPressDir(dirKey(f));
-    }
-
-    @Override
-    protected void all(Set<String> files, Set<String> lists) {
-        for (File f : rows) {
-            if (key(f) != null) files.add(key(f));
-            else if (dirKey(f) != null) sel.dirs.add(dirKey(f));               // 1.11.0: גם התיקיות
-        }
     }
 
     @Override
@@ -26143,11 +26483,12 @@ abstract class ListScreen<T> extends Activity {
         else if (listKey(r) != null) sel.longPressList(listKey(r));
     }
 
-    /** "בחירת הכול": ברירת מחדל — כל השורות שיש להן מפתח. */
+    /** "בחירת הכול": כל השורות שיש להן מפתח — קבצים, רשימות ותיקיות (מ0.24: מקום אחד לכל המסכים). */
     protected void all(Set<String> files, Set<String> lists) {
         for (T r : rows) {
             if (key(r) != null) files.add(key(r));
             else if (listKey(r) != null) lists.add(listKey(r));
+            else if (dirKey(r) != null) sel.dirs.add(dirKey(r));
         }
     }
 
@@ -49243,6 +49584,7 @@ public final class Words {
                 TEST_ALL_FILE = "בדיקה כללית",  // בכונן
                 TEST_STRESS_FILE = "בדיקת לחץ",  // בכונן
                 TEST_V23_FILE = "בדיקת מ0.23",  // בכונן
+                TEST_V24_FILE = "בדיקת מ0.24",  // בכונן
                 TOOLS_DIR = "כלים",  // בכונן
                 TEST_READY = "אופן \"בדיקות מערכת\" — נגיעה ב\"בדיקת פקודות\" מריצה את הבדיקה";
 
@@ -49415,6 +49757,30 @@ public final class Words {
                 PASTED = "הודבקו: ", SKIPPED = " · לא הודבקו: ", FAILED = "ההעתקה לא הצליחה";
     }
 
+    /** מ0.24: הלוח של המסד (DbClip, DbListScreen) */
+    public static final class DbClipW {
+        private DbClipW() { }
+
+        public static final String IN_CLIP = "📋 בלוח: ", FROM_DISK = " מהכונן", GONE = "המקור כבר לא קיים",
+                ADD_ON = "➕ צירוף ✓", ADD_OFF = "➕ צירוף",
+                VIEW_TITLE = "בלוח · נגיעה — הוצאה מהלוח", LINE_COPY = " — להעתקה", LINE_MOVE = " — להעברה",
+                DISK_LINE = "📂 מהכונן: ",
+                FOLDERS_HOW = "תיקיות מהכונן — איך להכניס לרשימה?",
+                ALL_FILES = "📸 רק הקבצים — כולל כל מה שבתתי־התיקיות, בלי המבנה",
+                WITH_TREE = "📸 הקבצים עם כל המבנה — תת־רשימה לכל תיקייה",
+                ADD_ON_TOAST = "מעכשיו \"העתקה\" ו\"העברה\" מוסיפות ללוח",
+                ADD_OFF_TOAST = "מעכשיו \"העתקה\" ו\"העברה\" מחליפות את מה שבלוח",
+                ADDING = "מדביק…";
+
+        public static String marked(int n, boolean add) {
+            return (add ? "צורפו ללוח: " : "סומנו ללוח: ") + n + " · נווט והדבק";
+        }
+
+        public static String otherMode(String m) {
+            return "הלוח מהאופן \"" + m + "\" — בין אופנים: בפקודה (COPY \"אופן:…\")";
+        }
+    }
+
     /** 1.16.1: תפריט הפקודות האחד (CmdMenu) */
     public static final class CmdM {
         private CmdM() { }
@@ -49460,7 +49826,7 @@ public final class Words {
 
         public static final String APP_NAME_M = "מנהל קבצים וירטואלי · מ";
         public static final String MENU = "מסד נתונים (מ)";
-        public static final String TITLE = "מסד נתונים · מ0.23";
+        public static final String TITLE = "מסד נתונים · מ0.24";
         /** מ0.9: המראה המוכר. */
         public static final String LIST_GONE = "הרשימה הזו כבר לא קיימת במסד", MENU_ACTIONS = "⚙ מסד: גיבוי, העתקה, בדיקה ופעולות",
                 MENU_OLD = "↩ הצד הישן (לפני המסד)",
@@ -51409,6 +51775,54 @@ final class ImportTests {
         return n;
     }
 
+    /** מ0.24: הלוח של המסד (DbClip) — כל פריט עם הפעולה שלו, צירוף, מקור שנמחק, אופן אחר; "העתק" — עותק עד הסוף. */
+    void fixes24(Store s) throws Exception {
+        long home = s.createList("בית", 0);
+        s.setProp(home, Store.P_HOME, "1");
+        long a = s.createList("א", home), b = s.createList("ב", home), c = s.createList("ג", home);
+        long sub = s.createList("משנה", a);
+        s.addMember(home, sub);                                              // רשימה שנמצאת בשני מקומות
+        DbFiles.add(s, a, Arrays.asList("/s/1.pdf", "/s/2.pdf"), null);
+        long f1 = s.findFile("/s/1.pdf"), f2 = s.findFile("/s/2.pdf");
+        DbClip.clear();
+        ck("לוח: ריק בהתחלה", DbClip.empty() && DbClip.cannot("x") == null);
+
+        DbClip.put("x", a, Arrays.asList(s.item(f1)), DbClip.COPY, false);
+        DbClip.put("x", a, Arrays.asList(s.item(f2)), DbClip.MOVE, false);
+        ck("לוח: בלי צירוף — מתחלף", DbClip.items().size() == 1 && DbClip.items().get(0).id == f2);
+        DbClip.put("x", a, Arrays.asList(s.item(f1), s.item(sub)), DbClip.COPY, true);
+        ck("לוח: צירוף — מוסיף; התווית לפי הפעולות", DbClip.items().size() == 3
+                && DbClip.label().equals("2" + Words.ClipW.TO_COPY + " · 1" + Words.ClipW.TO_MOVE) && DbClip.anyMove());
+        DbClip.put("x", a, Arrays.asList(s.item(f2)), DbClip.COPY, true);
+        ck("לוח: אותו פריט מאותה רשימה — הפעולה מתעדכנת, בלי כפילות", DbClip.items().size() == 3 && !DbClip.anyMove());
+        DbClip.put("x", a, Arrays.asList(s.item(f2)), DbClip.MOVE, true);
+        ck("לוח: אופן אחר — אי אפשר להדביק", DbClip.cannot("y") != null && DbClip.cannot("x") == null);
+
+        DbListCmd.Copied r = DbClip.paste(s, b);
+        ck("לוח: הדבקה — כולם נכנסים ליעד", r.done == 3 && s.contains(b, f1) && s.contains(b, f2));
+        ck("לוח: \"העבר\" — יצא מהמקור; \"העתק\" — נשאר במקור", !s.contains(a, f2) && s.contains(a, f1));
+        long subCopy = 0;
+        for (Store.Member m : s.members(b)) if (m.item.type == Store.LIST && m.item.name.equals("משנה")) subCopy = m.item.id;
+        ck("לוח: רשימה בהעתקה — עותק עצמאי (גם כשהיא בשני מקומות)", subCopy != 0 && subCopy != sub && s.listsOf(sub).size() == 2);
+        ck("לוח: אחרי הדבקה — \"העבר\" יצאו מהלוח, \"העתק\" נשארו", DbClip.items().size() == 2 && !DbClip.anyMove());
+
+        r = DbClip.paste(s, c);
+        ck("לוח: אפשר להדביק שוב במקום נוסף", r.done == 2 && s.contains(c, f1));
+        DbClip.clear();
+        long gone = s.createList("זמנית", home);
+        DbClip.put("x", home, Arrays.asList(s.item(gone)), DbClip.COPY, false);
+        DbListCmd.removeFrom(s, home, gone);
+        r = DbClip.paste(s, c);
+        ck("לוח: המקור נמחק לפני ההדבקה — לא נכנס, \"המקור כבר לא קיים\"", r.done == 0 && r.skipped == 1
+                && Words.DbClipW.GONE.equals(r.why));
+        DbClip.clear();
+        DbClip.put("x", home, Arrays.asList(s.item(a)), DbClip.MOVE, false);
+        r = DbClip.paste(s, sub);
+        ck("לוח: העברת רשימה לתוך עצמה — לא נכנסת, ונשארת בלוח", r.done == 0 && r.skipped == 1 && DbClip.items().size() == 1
+                && s.contains(home, a));
+        DbClip.clear();
+    }
+
     /** מ0.23: סט התיקונים — המסד עוקב אחרי הכונן, בורר הרשימות, בדיקת השם האחת, תיקייה לרשימה, הכלים ב־⭐. */
     void fixes23(Store s, File dir) throws Exception {
         final String M = "x";
@@ -51557,7 +51971,9 @@ final class ImportTests {
         ck("COPY רשימה במסד: אותם פריטי קבצים (לא קבצים חדשים)", filesIn(s, cHal) == 2 && s.findFile("/s/a.pdf") != 0
                 && s.listsOf(s.findFile("/s/a.pdf")).size() == 2);
         ck("COPY רשימה במסד: חכמה — עותק של ההגדרה; רעיון — הועתק", smartCopied && noteCopied);
-        ck("COPY רשימה במסד: רשימה שגם בבית — אותה רשימה, לא עותק", s.contains(cHal, shared) && s.listsOf(shared).size() == 3);
+        long cShared = at(s, "תורה/ספרים/הלכה/משותף");
+        ck("מ0.24: COPY רשימה במסד: גם רשימה שנמצאת גם בבית — עותק עצמאי (\"העתק\" — תמיד עותק)",
+                cShared != 0 && cShared != shared && !s.contains(cHal, shared) && s.listsOf(shared).size() == 2);
         ck("COPY רשימה במסד: המקור לא השתנה", filesIn(s, hal) == 2 && s.members(books).size() == 3);
         r = DbListCmd.copy(s, M, x[0], x[1], null, f);
         ck("COPY במסד: שוב — לא נכנסה (כבר יש בשם הזה)", r.error == null && r.text.contains(Words.DbCmd.SAME_NAME));
@@ -52287,6 +52703,12 @@ final class StoreTests {
             } finally {
                 fx.close();
             }
+            Store f4 = opener.fresh(new File(sub, "fix24-counter.txt"));       // מ0.24
+            try {
+                new ImportTests(o, name).fixes24(f4);
+            } finally {
+                f4.close();
+            }
             Store cs = opener.fresh(new File(sub, "count-counter.txt"));
             try {
                 new ImportTests(o, name).count(cs);
@@ -52931,6 +53353,8 @@ public final class Tests {
         Batch.Plan p = Batch.plan("@ECHO OFF\nבכאילו\nMD לשלוח\nMOVE הורדות\\*.pdf לשלוח\nDEL הורדות\\*.txt\nECHO סוף\n", root, vars);
         check("1.10.0: בכאילו — מזוהה", p.asIf && p.errors == 0);
         check("1.10.0: בלי בכאילו — רגיל", !Batch.plan("MD לשלוח", root, vars).asIf);
+        Batch.Plan md = Batch.plan("MD א24\\ב\\ג\nRD א24\\ב\\ג\nRD א24\\ב\nRD א24\n", root, vars);
+        check("מ0.24: MD של מסלול עמוק — גם התיקיות שמעל קיימות בהדמיה (RD שלהן לא נכשל)", md.errors == 0);
         java.util.List<Batch.AsIfRow> rows = Batch.asIfRows(p);
         String all = "";
         for (Batch.AsIfRow r : rows) all += r.icon + r.title + "|";

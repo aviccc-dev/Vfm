@@ -16,7 +16,6 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
 public class DiskScreen extends ListScreen<File> implements Clip.Holder, TopRow.Here {
 
@@ -185,14 +184,6 @@ public class DiskScreen extends ListScreen<File> implements Clip.Holder, TopRow.
     protected void hold(File f) {
         if (key(f) != null) sel.longPress(key(f));
         else if (dirKey(f) != null) sel.longPressDir(dirKey(f));
-    }
-
-    @Override
-    protected void all(Set<String> files, Set<String> lists) {
-        for (File f : rows) {
-            if (key(f) != null) files.add(key(f));
-            else if (dirKey(f) != null) sel.dirs.add(dirKey(f));               // 1.11.0: גם התיקיות
-        }
     }
 
     @Override

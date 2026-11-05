@@ -2269,6 +2269,7 @@ public final class Words {
                 TEST_ALL_FILE = "בדיקה כללית",  // בכונן
                 TEST_STRESS_FILE = "בדיקת לחץ",  // בכונן
                 TEST_V23_FILE = "בדיקת מ0.23",  // בכונן
+                TEST_V24_FILE = "בדיקת מ0.24",  // בכונן
                 TOOLS_DIR = "כלים",  // בכונן
                 TEST_READY = "אופן \"בדיקות מערכת\" — נגיעה ב\"בדיקת פקודות\" מריצה את הבדיקה";
 
@@ -2441,6 +2442,30 @@ public final class Words {
                 PASTED = "הודבקו: ", SKIPPED = " · לא הודבקו: ", FAILED = "ההעתקה לא הצליחה";
     }
 
+    /** מ0.24: הלוח של המסד (DbClip, DbListScreen) */
+    public static final class DbClipW {
+        private DbClipW() { }
+
+        public static final String IN_CLIP = "📋 בלוח: ", FROM_DISK = " מהכונן", GONE = "המקור כבר לא קיים",
+                ADD_ON = "➕ צירוף ✓", ADD_OFF = "➕ צירוף",
+                VIEW_TITLE = "בלוח · נגיעה — הוצאה מהלוח", LINE_COPY = " — להעתקה", LINE_MOVE = " — להעברה",
+                DISK_LINE = "📂 מהכונן: ",
+                FOLDERS_HOW = "תיקיות מהכונן — איך להכניס לרשימה?",
+                ALL_FILES = "📸 רק הקבצים — כולל כל מה שבתתי־התיקיות, בלי המבנה",
+                WITH_TREE = "📸 הקבצים עם כל המבנה — תת־רשימה לכל תיקייה",
+                ADD_ON_TOAST = "מעכשיו \"העתקה\" ו\"העברה\" מוסיפות ללוח",
+                ADD_OFF_TOAST = "מעכשיו \"העתקה\" ו\"העברה\" מחליפות את מה שבלוח",
+                ADDING = "מדביק…";
+
+        public static String marked(int n, boolean add) {
+            return (add ? "צורפו ללוח: " : "סומנו ללוח: ") + n + " · נווט והדבק";
+        }
+
+        public static String otherMode(String m) {
+            return "הלוח מהאופן \"" + m + "\" — בין אופנים: בפקודה (COPY \"אופן:…\")";
+        }
+    }
+
     /** 1.16.1: תפריט הפקודות האחד (CmdMenu) */
     public static final class CmdM {
         private CmdM() { }
@@ -2486,7 +2511,7 @@ public final class Words {
 
         public static final String APP_NAME_M = "מנהל קבצים וירטואלי · מ";
         public static final String MENU = "מסד נתונים (מ)";
-        public static final String TITLE = "מסד נתונים · מ0.23";
+        public static final String TITLE = "מסד נתונים · מ0.24";
         /** מ0.9: המראה המוכר. */
         public static final String LIST_GONE = "הרשימה הזו כבר לא קיימת במסד", MENU_ACTIONS = "⚙ מסד: גיבוי, העתקה, בדיקה ופעולות",
                 MENU_OLD = "↩ הצד הישן (לפני המסד)",

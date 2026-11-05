@@ -29,6 +29,7 @@ public class DbListScreen extends ListScreen<Store.Member> {
     private long listId;
     private SqlStore store;
     private TextView modeBox;
+    private DbPasteBar pasteBar;
     /** הרשימה המוצגת היא הבית. */
     private boolean atHome;
     /** מ0.9.2: "בית" — כל המסכים שמעל הבית נסגרים אחד אחד, עד הבית (מסך המסד שבדרך — פותח אותו). */
@@ -138,6 +139,12 @@ public class DbListScreen extends ListScreen<Store.Member> {
         });
         modeBox.setVisibility(View.GONE);
         root.addView(modeBox, 0);
+        pasteBar = new DbPasteBar(this, new DbPasteBar.Place() {              // מ0.24: הלוח
+            @Override public String mode() { return mode; }
+
+            @Override public void paste() { pasteHere(); }
+        });
+        root.addView(pasteBar.view);
         done(root, Actions.Tool.LIST, own());                                // מ0.16: פס הבחירה — כמו ברשימה ידנית
     }
 
@@ -168,6 +175,7 @@ public class DbListScreen extends ListScreen<Store.Member> {
     @Override
     protected void refresh() {
         rows.clear();
+        if (pasteBar != null) pasteBar.refresh();
         if (!openStore()) {
             adapter.notifyDataSetChanged();
             return;
@@ -471,9 +479,9 @@ public class DbListScreen extends ListScreen<Store.Member> {
     /** מ0.16: הפעולות של פס הבחירה — כולן דרך הליבה של הפקודות (DbListCmd). */
     private java.util.Map<Actions.Action, Runnable> own() {
         java.util.Map<Actions.Action, Runnable> m = new java.util.HashMap<Actions.Action, Runnable>();
-        m.put(Actions.DUPLICATE_LIST, new Runnable() { @Override public void run() { toList(COPY); } });
-        m.put(Actions.ALSO_TO_LIST, new Runnable() { @Override public void run() { toList(LINK); } });
-        m.put(Actions.MOVE_TO_LIST, new Runnable() { @Override public void run() { toList(MOVE); } });
+        // מ0.24: ללוח (DbClip) — מנווטים ו"הדבקה כאן"; "קישור" — לא במסך (המשתמש: "קישור — בפקודות")
+        m.put(Actions.DUPLICATE_LIST, new Runnable() { @Override public void run() { toClip(DbClip.COPY); } });
+        m.put(Actions.MOVE_TO_LIST, new Runnable() { @Override public void run() { toClip(DbClip.MOVE); } });
         m.put(Actions.REMOVE_FROM_LIST, new Runnable() { @Override public void run() { removeChosen(); } });
         m.put(Actions.ORDER_LIST, new Runnable() { @Override public void run() { orderChosen(); } });   // מ0.22
         m.put(Actions.SETTINGS_LIST, new Runnable() {
@@ -484,8 +492,6 @@ public class DbListScreen extends ListScreen<Store.Member> {
         });
         return m;
     }
-
-    private static final int COPY = 0, LINK = 1, MOVE = 2;
 
     /** מה שנבחר — מספרי זיהוי (קבצים לפי המסלול, השאר לפי "#מספר"). */
     private List<Long> chosenIds() {
@@ -501,38 +507,68 @@ public class DbListScreen extends ListScreen<Store.Member> {
         return out;
     }
 
-    /** העתקה / קישור / העברה לרשימה שנבחרת. */
-    private void toList(final int how) {
-        final List<Long> ids = chosenIds();
-        if (ids.isEmpty()) return;
-        final List<Store.Item> lists = new ArrayList<Store.Item>();
-        List<String> labels = new ArrayList<String>();
-        for (Store.Item l : store.lists()) {
-            if ("1".equals(store.prop(l.id, Store.P_HOME)) || l.id == here()) continue;
-            lists.add(l);
-            List<Long> in = store.listsOf(l.id);
-            Store.Item up = in.isEmpty() ? null : store.item(in.get(0));
-            labels.add(up == null || "1".equals(store.prop(up.id, Store.P_HOME)) ? l.name : l.name + "  ‹ " + up.name);
+    /** מ0.24: מה שנבחר — ללוח, עם הפעולה (מחליף, או מוסיף אם "צירוף" פועל). */
+    private void toClip(int how) {
+        List<Store.Item> what = new ArrayList<Store.Item>();
+        for (Long id : chosenIds()) {
+            Store.Item it = store.item(id);
+            if (it != null) what.add(it);
         }
-        if (lists.isEmpty()) {
-            Ui.toast(this, Words.Db.NO_LISTS);
+        if (what.isEmpty()) return;
+        boolean add = DbPasteBar.adding();
+        DbClip.put(mode, here(), what, how, add);
+        sel.stop();
+        pasteBar.refresh();
+        Ui.toast(this, Words.DbClipW.marked(what.size(), add));
+    }
+
+    /** מ0.24: "הדבקה כאן" — מה שבלוח של המסד, וקבצים ותיקיות שהועתקו בכונן; תיקיות — רק הקבצים, או עם המבנה. */
+    private void pasteHere() {
+        final List<String> files = new ArrayList<String>(), dirs = new ArrayList<String>();
+        if (DbClip.diskForLists()) {
+            files.addAll(Clip.files());
+            dirs.addAll(Clip.dirs());
+        }
+        if (dirs.isEmpty()) {
+            pasteNow(files, dirs, false);
             return;
         }
-        final long from = here();
-        Ui.list(this, Words.DbCmd.COPY_TO_TITLE, labels, new android.content.DialogInterface.OnClickListener() {
+        Ui.options(this, Words.DbClipW.FOLDERS_HOW, new String[]{Words.DbClipW.ALL_FILES, Words.DbClipW.WITH_TREE},
+                new android.content.DialogInterface.OnClickListener() {
+                    @Override public void onClick(android.content.DialogInterface d, int which) { pasteNow(files, dirs, which == 1); }
+                });
+    }
+
+    private void pasteNow(final List<String> files, final List<String> dirs, final boolean structure) {
+        final long dest = here();
+        final boolean db = !DbClip.empty() && DbClip.cannot(mode) == null;
+        final boolean before = db && DbClip.anyMove();
+        final String m = mode;
+        if (!dirs.isEmpty()) Ui.toast(this, Words.DbClipW.ADDING);
+        new Thread(new Runnable() {
             @Override
-            public void onClick(android.content.DialogInterface d, int which) {
-                final long dest = lists.get(which).id;
-                done(DbListCmd.now(mode, new DbListCmd.Work() {
+            public void run() {
+                final List<Tree.Node> scanned = new ArrayList<Tree.Node>();
+                for (String d : dirs) scanned.add(Tree.scanFolder(new File(d), structure));      // ברקע
+                final DbListCmd.Res res = DbListCmd.nowRes(m, new DbListCmd.Work() {
                     @Override
                     public DbListCmd.Res run(Store t, DbListCmd.Finder f) {
-                        DbListCmd.Copied c = how == COPY ? DbListCmd.copyIds(t, ids, dest)
-                                : how == LINK ? DbListCmd.linkInto(t, ids, dest) : DbListCmd.moveTo(t, ids, from, dest);
-                        return DbListCmd.Res.ok(Words.ListCmdW.copied(c.done, c.skipped, c.why, "\"" + t.item(dest).name + "\""));
+                        DbListCmd.Copied c = db ? DbClip.paste(t, dest) : new DbListCmd.Copied();
+                        if (!files.isEmpty()) c.done += DbFiles.add(t, dest, files, null, true).added;
+                        for (Tree.Node n : scanned) c.done += DbMore.attach(t, dest, n, structure, true)[1];
+                        return DbListCmd.Res.ok(Words.VClipW.PASTED + c.done
+                                + (c.skipped > 0 ? Words.VClipW.SKIPPED + c.skipped + " (" + c.why + ")" : ""));
                     }
-                }, how == MOVE));
+                }, before);
+                runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        if (isFinishing()) return;
+                        done(res.error != null ? res.error : res.text);
+                    }
+                });
             }
-        });
+        }).start();
     }
 
     /** מ0.22: סידור ידני — למעלה · למטה · לראש · לסוף (דרך הליבה); הבחירה נשארת, כדי להזיז שוב. */
@@ -651,9 +687,6 @@ public class DbListScreen extends ListScreen<Store.Member> {
             @Override public void changed() { refresh(); }
         });
     }
-
-    @Override
-    protected void all(java.util.Set<String> files, java.util.Set<String> lists) { }
 
     List<Store.Member> shown() {
         return rows;

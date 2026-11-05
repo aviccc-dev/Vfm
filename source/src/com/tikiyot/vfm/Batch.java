@@ -912,6 +912,10 @@ final class Batch {
             s.dest = d;
             s.describe = Words.Cmd.newFolder(Bidi.path(d.getAbsolutePath()));
             sim.dirs.add(d.getAbsolutePath());
+            for (File up = d.getParentFile(); up != null && !sim.isDir(up); up = up.getParentFile()) {   // מ0.24: כמו mkdirs —
+                sim.dirs.add(up.getAbsolutePath());                                                    // גם התיקיות שמעל
+                sim.gone.remove(up.getAbsolutePath());
+            }
         } else if (cmd.equals("RD")) {
             if (paths.size() != 1) { s.error = Words.Cmd.usage(cmd); return; }
             File d = new File(paths.get(0));

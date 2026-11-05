@@ -93,11 +93,12 @@ abstract class ListScreen<T> extends Activity {
         else if (listKey(r) != null) sel.longPressList(listKey(r));
     }
 
-    /** "בחירת הכול": ברירת מחדל — כל השורות שיש להן מפתח. */
+    /** "בחירת הכול": כל השורות שיש להן מפתח — קבצים, רשימות ותיקיות (מ0.24: מקום אחד לכל המסכים). */
     protected void all(Set<String> files, Set<String> lists) {
         for (T r : rows) {
             if (key(r) != null) files.add(key(r));
             else if (listKey(r) != null) lists.add(listKey(r));
+            else if (dirKey(r) != null) sel.dirs.add(dirKey(r));
         }
     }
 

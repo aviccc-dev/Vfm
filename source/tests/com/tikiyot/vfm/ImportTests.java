@@ -412,6 +412,54 @@ final class ImportTests {
         return n;
     }
 
+    /** מ0.24: הלוח של המסד (DbClip) — כל פריט עם הפעולה שלו, צירוף, מקור שנמחק, אופן אחר; "העתק" — עותק עד הסוף. */
+    void fixes24(Store s) throws Exception {
+        long home = s.createList("בית", 0);
+        s.setProp(home, Store.P_HOME, "1");
+        long a = s.createList("א", home), b = s.createList("ב", home), c = s.createList("ג", home);
+        long sub = s.createList("משנה", a);
+        s.addMember(home, sub);                                              // רשימה שנמצאת בשני מקומות
+        DbFiles.add(s, a, Arrays.asList("/s/1.pdf", "/s/2.pdf"), null);
+        long f1 = s.findFile("/s/1.pdf"), f2 = s.findFile("/s/2.pdf");
+        DbClip.clear();
+        ck("לוח: ריק בהתחלה", DbClip.empty() && DbClip.cannot("x") == null);
+
+        DbClip.put("x", a, Arrays.asList(s.item(f1)), DbClip.COPY, false);
+        DbClip.put("x", a, Arrays.asList(s.item(f2)), DbClip.MOVE, false);
+        ck("לוח: בלי צירוף — מתחלף", DbClip.items().size() == 1 && DbClip.items().get(0).id == f2);
+        DbClip.put("x", a, Arrays.asList(s.item(f1), s.item(sub)), DbClip.COPY, true);
+        ck("לוח: צירוף — מוסיף; התווית לפי הפעולות", DbClip.items().size() == 3
+                && DbClip.label().equals("2" + Words.ClipW.TO_COPY + " · 1" + Words.ClipW.TO_MOVE) && DbClip.anyMove());
+        DbClip.put("x", a, Arrays.asList(s.item(f2)), DbClip.COPY, true);
+        ck("לוח: אותו פריט מאותה רשימה — הפעולה מתעדכנת, בלי כפילות", DbClip.items().size() == 3 && !DbClip.anyMove());
+        DbClip.put("x", a, Arrays.asList(s.item(f2)), DbClip.MOVE, true);
+        ck("לוח: אופן אחר — אי אפשר להדביק", DbClip.cannot("y") != null && DbClip.cannot("x") == null);
+
+        DbListCmd.Copied r = DbClip.paste(s, b);
+        ck("לוח: הדבקה — כולם נכנסים ליעד", r.done == 3 && s.contains(b, f1) && s.contains(b, f2));
+        ck("לוח: \"העבר\" — יצא מהמקור; \"העתק\" — נשאר במקור", !s.contains(a, f2) && s.contains(a, f1));
+        long subCopy = 0;
+        for (Store.Member m : s.members(b)) if (m.item.type == Store.LIST && m.item.name.equals("משנה")) subCopy = m.item.id;
+        ck("לוח: רשימה בהעתקה — עותק עצמאי (גם כשהיא בשני מקומות)", subCopy != 0 && subCopy != sub && s.listsOf(sub).size() == 2);
+        ck("לוח: אחרי הדבקה — \"העבר\" יצאו מהלוח, \"העתק\" נשארו", DbClip.items().size() == 2 && !DbClip.anyMove());
+
+        r = DbClip.paste(s, c);
+        ck("לוח: אפשר להדביק שוב במקום נוסף", r.done == 2 && s.contains(c, f1));
+        DbClip.clear();
+        long gone = s.createList("זמנית", home);
+        DbClip.put("x", home, Arrays.asList(s.item(gone)), DbClip.COPY, false);
+        DbListCmd.removeFrom(s, home, gone);
+        r = DbClip.paste(s, c);
+        ck("לוח: המקור נמחק לפני ההדבקה — לא נכנס, \"המקור כבר לא קיים\"", r.done == 0 && r.skipped == 1
+                && Words.DbClipW.GONE.equals(r.why));
+        DbClip.clear();
+        DbClip.put("x", home, Arrays.asList(s.item(a)), DbClip.MOVE, false);
+        r = DbClip.paste(s, sub);
+        ck("לוח: העברת רשימה לתוך עצמה — לא נכנסת, ונשארת בלוח", r.done == 0 && r.skipped == 1 && DbClip.items().size() == 1
+                && s.contains(home, a));
+        DbClip.clear();
+    }
+
     /** מ0.23: סט התיקונים — המסד עוקב אחרי הכונן, בורר הרשימות, בדיקת השם האחת, תיקייה לרשימה, הכלים ב־⭐. */
     void fixes23(Store s, File dir) throws Exception {
         final String M = "x";
@@ -560,7 +608,9 @@ final class ImportTests {
         ck("COPY רשימה במסד: אותם פריטי קבצים (לא קבצים חדשים)", filesIn(s, cHal) == 2 && s.findFile("/s/a.pdf") != 0
                 && s.listsOf(s.findFile("/s/a.pdf")).size() == 2);
         ck("COPY רשימה במסד: חכמה — עותק של ההגדרה; רעיון — הועתק", smartCopied && noteCopied);
-        ck("COPY רשימה במסד: רשימה שגם בבית — אותה רשימה, לא עותק", s.contains(cHal, shared) && s.listsOf(shared).size() == 3);
+        long cShared = at(s, "תורה/ספרים/הלכה/משותף");
+        ck("מ0.24: COPY רשימה במסד: גם רשימה שנמצאת גם בבית — עותק עצמאי (\"העתק\" — תמיד עותק)",
+                cShared != 0 && cShared != shared && !s.contains(cHal, shared) && s.listsOf(shared).size() == 2);
         ck("COPY רשימה במסד: המקור לא השתנה", filesIn(s, hal) == 2 && s.members(books).size() == 3);
         r = DbListCmd.copy(s, M, x[0], x[1], null, f);
         ck("COPY במסד: שוב — לא נכנסה (כבר יש בשם הזה)", r.error == null && r.text.contains(Words.DbCmd.SAME_NAME));

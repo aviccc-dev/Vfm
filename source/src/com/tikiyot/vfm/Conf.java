@@ -25,6 +25,8 @@ public final class Conf {
     public static final String READERS = "קוראים לכל כונן";  // תחביר
     /** 183: יעד קבוע ל"שליחה למכשיר" — חבילה/מחלקה; "" — לבחור בכל פעם. */
     public static final String SEND_TO = "שליחה למכשיר — יעד";  // תחביר
+    /** מ0.24: "העתקה"/"העברה" מוסיפות ללוח של המסד במקום להחליף אותו (DbClip). */
+    public static final String CLIP_ADD = "צירוף ללוח";  // תחביר
     /** מנהל הקבצים מוגבל לתיקיות אלה (76). ריק = כל הכוננים. */
 
     private static final String HEADER =

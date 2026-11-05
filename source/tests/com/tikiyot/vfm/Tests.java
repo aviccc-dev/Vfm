@@ -511,6 +511,8 @@ public final class Tests {
         Batch.Plan p = Batch.plan("@ECHO OFF\nבכאילו\nMD לשלוח\nMOVE הורדות\\*.pdf לשלוח\nDEL הורדות\\*.txt\nECHO סוף\n", root, vars);
         check("1.10.0: בכאילו — מזוהה", p.asIf && p.errors == 0);
         check("1.10.0: בלי בכאילו — רגיל", !Batch.plan("MD לשלוח", root, vars).asIf);
+        Batch.Plan md = Batch.plan("MD א24\\ב\\ג\nRD א24\\ב\\ג\nRD א24\\ב\nRD א24\n", root, vars);
+        check("מ0.24: MD של מסלול עמוק — גם התיקיות שמעל קיימות בהדמיה (RD שלהן לא נכשל)", md.errors == 0);
         java.util.List<Batch.AsIfRow> rows = Batch.asIfRows(p);
         String all = "";
         for (Batch.AsIfRow r : rows) all += r.icon + r.title + "|";
