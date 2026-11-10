@@ -1166,7 +1166,7 @@ final class Batch {
 
     /** ini[0] — ההגדרות של האופן שבו נמצאה (null — האופן הפעיל). */
     static Tree.Node findList(String name, Tree[] tree, String[] err, Ini[] ini) {
-        List<String> path = Tree.parsePath(name);
+        List<String> path = Names.parsePath(name);
         if (path.isEmpty()) { err[0] = Words.Cmd.LIST_ONLY_COMP; return null; }
         List<Tree> trees = new ArrayList<Tree>();
         List<String> modes = new ArrayList<String>();
@@ -1236,7 +1236,7 @@ final class Batch {
     private static String wayOf(Tree.Node n) {
         List<String> parts = new ArrayList<String>();
         for (Tree.Node x = n; x != null && x.parent != null; x = x.parent) parts.add(0, x.name);
-        return join(parts, Tree.SEP);
+        return join(parts, Names.SEP);
     }
 
     /** 1.22.0: COMP /רשימה:<שם> <יעד> — כל מה שברשימה, לפי <מפתח כונן>/<מסלול>, מול היעד. */

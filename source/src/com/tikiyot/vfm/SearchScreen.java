@@ -214,7 +214,7 @@ public class SearchScreen extends Activity implements Clip.Holder {
         whyText = cfg != null ? cfg.target().get(Program.WHY, "")              // 1.13.0: "למה" של הכלי
                 : SmartLists.FILE_MANAGER.equals(title) ? Words.WhyW.VIRTUAL_FILES : "";
         whyKey = cfg != null ? Words.WhyW.KEY_TOOL + settingsId : Words.WhyW.KEY_SCREEN + title;
-        setTitle(pickInto != null ? Words.ADD_TO_LIST + ": " + Tree.label(pickInto)
+        setTitle(pickInto != null ? Words.ADD_TO_LIST + ": " + Names.label(pickInto)
                 : title != null && !title.isEmpty() ? title : Words.Look.SEARCH);
     }
 
@@ -430,7 +430,7 @@ public class SearchScreen extends Activity implements Clip.Holder {
         });
         bar = sel.bar;
         selected = sel.files;
-        sel.actions(this, Actions.Tool.SEARCH, pickInto != null ? Tree.label(pickInto) : null, new Runnable() {
+        sel.actions(this, Actions.Tool.SEARCH, pickInto != null ? Names.label(pickInto) : null, new Runnable() {
             @Override public void run() { stay(); }                            // 146: מסך יציב אחרי פעולה
         }, java.util.Collections.<Actions.Action, Runnable>singletonMap(Actions.ADD_TO_LIST, new Runnable() {
             @Override public void run() { addSelected(); }

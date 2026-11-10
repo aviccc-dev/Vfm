@@ -180,12 +180,12 @@ final class Verbs {
     }
 
     static String openList(List<String> path) {
-        return OPEN + " " + LIST + " " + Tree.key(path);
+        return OPEN + " " + LIST + " " + Names.key(path);
     }
 
     /** 1.17.0: רשימה מ"שמור לתוכנה" כתפריט. */
     static String openMenu(List<String> path) {
-        return OPEN + " " + MENU + " " + Tree.key(path);
+        return OPEN + " " + MENU + " " + Names.key(path);
     }
 
     /**
@@ -195,9 +195,9 @@ final class Verbs {
     static String listMoved(String line, List<String> from, List<String> to) {
         Cmd c = parse(line);
         if (c.error != null || !c.kind.equals(K_LIST)) return null;
-        List<String> p = Tree.moved(Tree.parsePath(c.arg), from, to);
+        List<String> p = Tree.moved(Names.parsePath(c.arg), from, to);
         if (p == null) return null;
-        return c.verb + " " + LIST + " " + Tree.key(p) + (c.sort.isEmpty() ? "" : " " + SORT + c.sort);
+        return c.verb + " " + LIST + " " + Names.key(p) + (c.sort.isEmpty() ? "" : " " + SORT + c.sort);
     }
 
     static String openSmart(String name) {
@@ -229,7 +229,7 @@ final class Verbs {
             return a;
         }
         if (a.startsWith(Buttons.FOLDER)) return openFolder(a.substring(Buttons.FOLDER.length()).trim());
-        if (a.startsWith(Buttons.LIST)) return openList(Tree.parsePath(a.substring(Buttons.LIST.length()).trim()));
+        if (a.startsWith(Buttons.LIST)) return openList(Names.parsePath(a.substring(Buttons.LIST.length()).trim()));
         if (a.startsWith(Buttons.SMART)) return openSmart(a.substring(Buttons.SMART.length()).trim());
         if (a.startsWith(Buttons.BATCH)) return run(a.substring(Buttons.BATCH.length()).trim());
         if (a.startsWith(Buttons.LINE)) return a.substring(Buttons.LINE.length()).trim();
@@ -327,7 +327,7 @@ final class Verbs {
         if (c.kind.equals(K_BACK)) {                                          // באג (1.17.6): בבית — יציאה מהתוכנה;
             a.onBackPressed();                                                // בבית של המסד — בחירת אופן (DbListScreen.onBackPressed)
         }
-        else if (c.kind.equals(K_MENU)) CmdMenu.showList(a, Tree.parsePath(c.arg), null, null);   // 1.17.0
+        else if (c.kind.equals(K_MENU)) CmdMenu.showList(a, Names.parsePath(c.arg), null, null);   // 1.17.0
         else if (c.kind.equals(K_TOOL)) {                                       // מ0.19: הכלי עם הפרמטרים שבשורה
             Target t = toolTarget(c.arg);
             Func f = t == null ? null : Func.byKind(t.kind);
@@ -389,8 +389,8 @@ final class Verbs {
             public boolean apply(Tree t) {
                 Tree.Node n = t.root;
                 for (String p : path) {
-                    Tree.Node c = n.child(Tree.cleanName(p));
-                    if (c == null) c = Tree.newChild(n, Tree.cleanName(p));
+                    Tree.Node c = n.child(Names.cleanName(p));
+                    if (c == null) c = Tree.newChild(n, Names.cleanName(p));
                     n = c;
                 }
                 return true;
@@ -406,7 +406,7 @@ final class Verbs {
         try {
             Library lib = Library.get(ctx);
             if (c.kind.equals(K_LIST)) {
-                Tree.Node n = Tree.load().find(Tree.parsePath(c.arg));
+                Tree.Node n = Tree.load().find(Names.parsePath(c.arg));
                 if (n == null) return new ArrayList<String>();
                 List<String> out = new ArrayList<String>();
                 collect(n, out);

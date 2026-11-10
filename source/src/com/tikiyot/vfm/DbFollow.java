@@ -29,7 +29,7 @@ final class DbFollow {
                     long src = t.findFile(from);
                     if (src == 0) continue;
                     long dst = t.findFile(to);
-                    if (dst == 0) t.moveFile(src, to, Importer.driveOf(to));
+                    if (dst == 0) t.moveFile(src, to, DbPaths.driveOf(to));
                     else {
                         for (Long l : t.listsOf(src)) {
                             t.addMember(l, dst);

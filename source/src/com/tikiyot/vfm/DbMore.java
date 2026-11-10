@@ -81,12 +81,13 @@ final class DbMore {
 
     /** מה נכנס. */
     static final class Imported {
-        int lists, files, bad;
+        int lists, files, bad, smarts;
     }
 
     /**
-     * ההפך של DbExport: "#N א / ב" — רשימה (בתוך into, בדרך שבכותרת; קיימת — אותה), @צלמית/@תיאור/@למה/@עיצוב —
-     * מאפיינים, "/מסלול | גודל" — קובץ. שורות לפני הכותרת הראשונה (קובץ "קבצי רשימה") — הקבצים נכנסים ל-into. בעסקה אחת.
+     * ההפך של DbExport (פורמט 1 ו־2): "#N א / ב" — רשימה (בתוך into, בדרך שבכותרת; קיימת — אותה), @צלמית/@תיאור/@למה/@עיצוב
+     * — מאפיינים, "/מסלול | גודל" — קובץ; ומפורמט 2: @תת-רשימה, @קישור, @חכמה (ואחריה שורות "+…"), @כותרת, @רעיון, @חבורה.
+     * שורות לפני הכותרת הראשונה — נכנסות ל-into. רשימה חכמה באותו שם באותה רשימה — אותה (ההגדרות מתעדכנות). בעסקה אחת.
      */
     static Imported importText(Store s, final long into, String text) {
         final Imported r = new Imported();
@@ -94,7 +95,7 @@ final class DbMore {
         s.atomic(new Store.Work() {
             @Override
             public void run(Store t) {
-                long cur = into;
+                long cur = into, smart = 0;
                 boolean header = false;
                 Set<Long> counted = new HashSet<Long>();
                 for (String raw : lines) {
@@ -103,28 +104,44 @@ final class DbMore {
                     if (line.startsWith("#")) {
                         int i = 1;
                         while (i < line.length() && Character.isDigit(line.charAt(i))) i++;
-                        List<String> parts = new ArrayList<String>();
-                        for (String p : line.substring(i).split("/")) if (!p.trim().isEmpty()) parts.add(Tree.cleanName(p.trim()));
-                        if (parts.isEmpty()) { r.bad++; continue; }
-                        long at = into;
-                        for (String p : parts) {
-                            long c = 0;
-                            for (Store.Member m : t.members(at)) if (m.item.type == Store.LIST && m.item.name.equals(p)) c = m.item.id;
-                            if (c == 0) c = t.createList(p, at);
-                            at = c;
-                        }
+                        long at = chain(t, into, line.substring(i), true);
+                        if (at == 0) { r.bad++; continue; }
                         if (counted.add(at)) r.lists++;
                         cur = at;
+                        smart = 0;
                         header = true;
                         continue;
                     }
+                    if (line.startsWith("+")) {                                 // מאפיין של הרשימה החכמה שמעל
+                        if (smart == 0) continue;
+                        for (String[] k : DbExport.SMART_PROPS)
+                            if (line.startsWith(k[0].trim())) t.setProp(smart, k[1], line.substring(k[0].trim().length()).trim());
+                        continue;
+                    }
+                    smart = 0;
                     if (line.startsWith("@")) {
-                        if (!header) continue;                                  // השורה הראשונה (@תיאור של השורש) — לא מאפיין
-                        String key = line.startsWith(Tree.ICON_LINE.trim()) ? Store.P_ICON : line.startsWith(Tree.DESC_LINE.trim()) ? Store.P_DESC
-                                : line.startsWith(Tree.WHY_LINE.trim()) ? Store.P_WHY : line.startsWith(Tree.DESIGN_LINE.trim()) ? Store.P_DESIGN : null;
-                        if (key != null) {
-                            int sp = line.indexOf(' ');
-                            t.setProp(cur, key, sp < 0 ? "" : line.substring(sp + 1).trim());
+                        String rest = line.indexOf(' ') < 0 ? "" : line.substring(line.indexOf(' ') + 1).trim();
+                        if (line.startsWith(DbExport.SUB.trim() + " ")) {
+                            if (cur != 0 && !rest.isEmpty() && child(t, cur, Names.cleanName(rest), Store.LIST, true) == 0) r.bad++;
+                        } else if (line.startsWith(DbExport.LINK.trim() + " ")) {
+                            long target = chain(t, into, rest, false);
+                            if (target == 0 || cur == 0 || t.makesCycle(cur, target)) r.bad++;
+                            else t.addMember(cur, target);
+                        } else if (line.startsWith(DbExport.SMART.trim() + " ")) {
+                            String name = rest.isEmpty() ? Words.SMART_LIST : rest;
+                            smart = cur == 0 ? 0 : child(t, cur, name, Store.SMART, false);
+                            if (smart == 0) smart = t.createSmart(name, cur);
+                            r.smarts++;
+                        } else if (line.startsWith(DbExport.TITLE.trim() + " ")) {
+                            if (cur != 0) t.addTitle(cur, rest);
+                        } else if (line.startsWith(DbExport.NOTE.trim() + " ")) {
+                            if (cur != 0) t.addNote(cur, rest.replace(" ⏎ ", "\n"));
+                        } else if (line.equals(DbExport.GROUP)) {
+                            if (header) t.setProp(cur, Store.P_GROUP, "1");
+                        } else if (header) {                                    // לפני הכותרת הראשונה (@תיאור של הקובץ) — לא מאפיין
+                            String key = line.startsWith(DbExport.ICON.trim() + " ") ? Store.P_ICON : line.startsWith(DbExport.DESC.trim() + " ") ? Store.P_DESC
+                                    : line.startsWith(DbExport.WHY.trim() + " ") ? Store.P_WHY : line.startsWith(DbExport.DESIGN.trim() + " ") ? Store.P_DESIGN : null;
+                            if (key != null) t.setProp(cur, key, rest);
                         }
                         continue;
                     }
@@ -132,14 +149,38 @@ final class DbMore {
                     String path = bar >= 0 ? line.substring(0, bar).trim() : line;
                     long size = -1;
                     if (bar >= 0) try { size = Long.parseLong(line.substring(bar + 3).trim()); } catch (NumberFormatException ignored) { }
-                    if (!path.startsWith("/")) { r.bad++; continue; }
+                    if (!path.startsWith("/") || cur == 0) { r.bad++; continue; }
                     long f = t.findFile(path);
-                    if (f == 0) f = t.createFile(new Store.FileInfo(path, Importer.driveOf(path), size, 0, null));
+                    if (f == 0) f = t.createFile(new Store.FileInfo(path, DbPaths.driveOf(path), size, 0, null));
                     if (t.addMember(cur, f)) r.files++;
                 }
             }
         }, true);
         return r;
+    }
+
+    /** הרשימה בדרך "א / ב" מתוך from (0 — עומדות לעצמן); create — מה שחסר נוצר. 0 — אין (או דרך ריקה). */
+    private static long chain(Store t, long from, String way, boolean create) {
+        long at = from;
+        boolean any = false;
+        for (String p : way.split("/")) {
+            if (p.trim().isEmpty()) continue;
+            any = true;
+            long c = child(t, at, Names.cleanName(p.trim()), Store.LIST, create);
+            if (c == 0) return 0;
+            at = c;
+        }
+        return any ? at : 0;
+    }
+
+    /** החבר בשם הזה ומהסוג הזה ב־in (0 — בין אלה שעומדות לעצמן); create (רק רשימה) — נוצר אם אין. */
+    private static long child(Store t, long in, String name, int type, boolean create) {
+        if (in != 0) {
+            for (Store.Member m : t.members(in)) if (m.item.type == type && m.item.name.equals(name)) return m.item.id;
+        } else if (type == Store.LIST) {
+            for (Store.Item it : t.lists()) if (it.name.equals(name) && t.listsOf(it.id).isEmpty()) return it.id;
+        }
+        return create && type == Store.LIST ? t.createList(name, in) : 0;
     }
 
     // ---------- העתקה מאופן לאופן ----------
@@ -232,7 +273,7 @@ final class DbMore {
 
     /** שם פנוי בין הרשימות (מאותו סוג) שבתוך list: "שם", ואם תפוס — "שם (2)"… */
     static String freeName(Store s, long list, int type, String name) {
-        String base = type == Store.SMART ? name.trim() : Tree.cleanName(name);
+        String base = type == Store.SMART ? name.trim() : Names.cleanName(name);
         if (base.isEmpty()) base = "?";
         java.util.Set<String> taken = new java.util.HashSet<String>();
         for (Store.Member m : s.members(list)) if (m.item.type == type) taken.add(m.item.name);

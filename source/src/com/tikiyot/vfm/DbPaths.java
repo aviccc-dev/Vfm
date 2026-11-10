@@ -17,7 +17,7 @@ final class DbPaths {
      */
     static long find(Store s, String mode, List<String> path) {
         if (path == null || path.isEmpty()) return 0;
-        long o = s.findByOrigin(Importer.originOf(mode, Tree.fullLabel(path)));
+        long o = s.findByOrigin(DbPaths.originOf(mode, Names.fullLabel(path)));
         Store.Item oi = o == 0 ? null : s.item(o);
         if (oi != null && oi.type == Store.LIST && oi.name.equals(path.get(path.size() - 1).trim())) return o;   // מ0.13.1: אחרי שינוי שם — לפי השמות
         long cur = top(s, path.get(0));
@@ -34,11 +34,11 @@ final class DbPaths {
         s.atomic(new Store.Work() {
             @Override
             public void run(Store t) {
-                String first = Tree.cleanName(path.get(0));
+                String first = Names.cleanName(path.get(0));
                 long cur = top(t, first);
-                if (cur == 0) cur = t.createList(first, Importer.home(t));    // מ0.10.1: חדשה בראש — בבית (אם יש)
+                if (cur == 0) cur = t.createList(first, DbPaths.home(t));    // מ0.10.1: חדשה בראש — בבית (אם יש)
                 for (int i = 1; i < path.size(); i++) {
-                    String name = Tree.cleanName(path.get(i));
+                    String name = Names.cleanName(path.get(i));
                     long c = child(t, cur, name);
                     cur = c != 0 ? c : t.createList(name, cur);
                 }
@@ -100,7 +100,7 @@ final class DbPaths {
     /** רשימה בשם הזה בראש: שאינה בתוך רשימה (חוץ מהבית); אם אין — כל רשימה בשם הזה. */
     private static long top(Store s, String name) {
         String n = name.trim();
-        long home = Importer.home(s), any = 0;
+        long home = DbPaths.home(s), any = 0;
         for (Store.Item it : s.lists()) {
             if (!it.name.equals(n) || it.id == home) continue;
             List<Long> in = new ArrayList<Long>(s.listsOf(it.id));
@@ -115,5 +115,50 @@ final class DbPaths {
         String n = name.trim();
         for (Store.Member m : s.members(list)) if (m.item.type == Store.LIST && m.item.name.equals(n)) return m.item.id;
         return 0;
+    }
+
+    // ---------- מ0.29: מה שהיה ב־Importer ונשאר אחרי מחיקת המנוע הישן ----------
+
+    /** כונן שלא זוהה ממסלולו. */
+    static final String UNKNOWN_DRIVE = "?";
+
+    /** רשימת הבית במסד (לפי הסימון), או 0. */
+    static long home(Store s) {
+        for (Store.Item it : s.lists()) if ("1".equals(s.prop(it.id, Store.P_HOME))) return it.id;
+        return 0;
+    }
+
+    /** רשימת הבית; אין — נוצרת (מסד חדש). */
+    static long ensureHome(Store s) {
+        long h = home(s);
+        if (h != 0) return h;
+        final long[] out = {0};
+        s.atomic(new Store.Work() {
+            @Override
+            public void run(Store t) {
+                out[0] = t.createList(Words.Db.HOME_NAME, 0);
+                t.setProp(out[0], Store.P_HOME, "1");
+            }
+        }, true);
+        return out[0];
+    }
+
+    /** הכונן של מסלול: "פנימי", או שם הכרטיס. */
+    static String driveOf(String path) {
+        if (Drive.internalPath(path)) return Drive.INTERNAL;
+        if (path.startsWith("/storage/")) {
+            int e = path.indexOf('/', 9);
+            String v = e < 0 ? path.substring(9) : path.substring(9, e);
+            if (!v.isEmpty() && !v.equals("emulated") && !v.equals("self")) return v;
+        }
+        return UNKNOWN_DRIVE;
+    }
+
+    /**
+     * מפתח המקור של רשימה שהגיעה מהמנוע הישן (בהעתקה שנעשתה עד מ0.28): שם האופן והמסלול המלא. רשימות ישנות במסד עדיין
+     * נושאות אותו, ו־find מוצא לפיו קודם (אחרי שינוי שם — לפי השמות).
+     */
+    static String originOf(String mode, String listPath) {
+        return "tree:" + mode + ":L:" + listPath;  // תחביר
     }
 }

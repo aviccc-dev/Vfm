@@ -20,7 +20,7 @@ public final class FnVirtual extends Func {
 
     /** מסלול הרשימה של המופע, מהפרמטר "רשימה". */
     static ArrayList<String> base(Target t) {
-        return Tree.parsePath(t.get(LIST, ""));                          // 165: פירוק אחד
+        return Names.parsePath(t.get(LIST, ""));                          // 165: פירוק אחד
     }
 
     /**
@@ -34,7 +34,7 @@ public final class FnVirtual extends Func {
             if (!f.kind.equals(KIND)) continue;
             List<String> nb = Tree.moved(base(f.target()), from, to);
             if (nb == null) continue;
-            Structure.setKey(f.id, LIST, Tree.key(nb));
+            Structure.setKey(f.id, LIST, Names.key(nb));
             n++;
         }
         n += Nested.listMoved(from, to);                                    // 167: גם קישורים מרשימות חכמות
@@ -146,7 +146,7 @@ public final class FnVirtual extends Func {
         pick.setAllCaps(false);
         final Runnable showChosen = new Runnable() {
             @Override
-            public void run() { chosenLabel.setText(chosen.isEmpty() ? Words.ListT.NO_LIST_PICKED : "📋 " + Tree.label(chosen)); }
+            public void run() { chosenLabel.setText(chosen.isEmpty() ? Words.ListT.NO_LIST_PICKED : "📋 " + Names.label(chosen)); }
         };
         pick.setOnClickListener(new android.view.View.OnClickListener() {
             @Override
@@ -194,7 +194,7 @@ public final class FnVirtual extends Func {
                         Ui.keepFormOpen();                                    // 98
                         return;
                     }
-                    list = Tree.key(chosen);
+                    list = Names.key(chosen);
                     if (n.isEmpty()) n = chosen.get(chosen.size() - 1);
                 } else {
                     if (n.isEmpty()) n = Words.LIST;

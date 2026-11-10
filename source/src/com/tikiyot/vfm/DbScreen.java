@@ -57,6 +57,12 @@ public class DbScreen extends Activity {
         return c.getDatabasePath(DB_PREFIX + mode + DB_SUFFIX);
     }
 
+    /** מ0.29: האופן כשעוד לא נבחר אחד: הראשון שיש לו מסד, ואם אין אף מסד (התקנה חדשה) — הדוגמאות. */
+    static String defaultMode(android.content.Context c) {
+        List<String> all = dbModes(c);
+        return all.isEmpty() ? DbExamples.MODE : all.get(0);
+    }
+
     /** האופנים שיש להם מסד כבר. */
     static List<String> dbModes(android.content.Context c) {
         List<String> out = new ArrayList<String>();
@@ -74,13 +80,13 @@ public class DbScreen extends Activity {
     /** האופן הפתוח: מה שנבחר בפעם הקודמת, ואם אין — האופן הפעיל במנוע הישן. */
     private String loadMode() {
         String m = getSharedPreferences(PREFS, MODE_PRIVATE).getString(PREF_MODE, "");
-        return m.isEmpty() ? Importer.activeMode(oldData()) : m;
+        return m.isEmpty() ? defaultMode(this) : m;
     }
 
     /** מ0.23: האופן של המסד בלי מסך פתוח (למשל שיתוף מאפליקציה אחרת): מה שנבחר בפעם הקודמת, ואם אין — הפעיל בישן. */
     static String savedMode(android.content.Context c) {
         String m = c.getSharedPreferences(PREFS, MODE_PRIVATE).getString(PREF_MODE, "");
-        return m.isEmpty() ? Importer.activeMode(oldData()) : m;
+        return m.isEmpty() ? defaultMode(c) : m;
     }
 
     /**
@@ -100,19 +106,8 @@ public class DbScreen extends Activity {
 
     private static void start(Activity a, boolean fresh) {
         String m = a.getSharedPreferences(PREFS, MODE_PRIVATE).getString(PREF_MODE, "");
-        if (m.isEmpty()) m = Importer.activeMode(oldData());
-        long home = 0;
-        if (Ui.hasFiles(a) && dbFile(a, m).isFile()) {
-            SqlStore s = null;
-            try {
-                s = SqlStore.openReadOnly(dbFile(a, m));
-                home = Importer.home(s);
-            } catch (Throwable t) {
-                Log.e("DbScreen.start", t);
-            } finally {
-                if (s != null) s.close();
-            }
-        }
+        if (m.isEmpty()) m = defaultMode(a);
+        long home = prepare(a, m);                                             // מ0.29: גם התקנה חדשה — ישר לבית (הדוגמאות)
         android.content.Intent i = home != 0 ? DbListScreen.intent(a, m, home, null) : new android.content.Intent(a, DbScreen.class);
         if (fresh) i.addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK | android.content.Intent.FLAG_ACTIVITY_CLEAR_TASK);
         a.startActivity(i);
@@ -140,7 +135,6 @@ public class DbScreen extends Activity {
 
     private void pickMode() {
         java.util.TreeSet<String> all = new java.util.TreeSet<String>(dbModes(this));
-        all.addAll(Importer.modes(oldData()));
         all.add(mode);
         final List<String> names = new ArrayList<String>(all);
         List<String> labels = new ArrayList<String>();
@@ -240,6 +234,7 @@ public class DbScreen extends Activity {
             }
             startDaily();
             offerRestoreIfEmpty();
+            firstSetup();
         }
         show();
         if (pendingDo != null && store != null && current() > 0) {            // מ0.10
@@ -255,9 +250,77 @@ public class DbScreen extends Activity {
         }
     }
 
+    /**
+     * מ0.29: מסד בלי בית (אופן חדש, או התקנה חדשה) — מקבל בית; באופן הדוגמאות — הדוגמאות מיובאות מקובץ היצוא שבהתקנה
+     * (עד כאן הן הגיעו מהמנוע הישן). מסד שיש בו בית — לא נוגעים.
+     */
+    private void firstSetup() {
+        setup(this, store, mode);
+    }
+
+    static void setup(android.content.Context c, Store store, String mode) {
+        try {
+            if (DbPaths.home(store) != 0) return;
+            // שמירה על הנתונים: מסד ריק שיש לאופן שלו גיבויים — אולי המסד אבד; לא ממלאים אותו, כדי שההצעה לשחזר מגיבוי
+            // (offerRestoreIfEmpty, במסך המסד) תופיע ולא תיחסם.
+            if (!backupsOf(c, mode).list().isEmpty()) return;
+            if (mode.equals(DbExamples.MODE)) {
+                DbExamples.files(DbExamples.asset(c, DbExamples.ASSET_DEMO));
+                DbExamples.install(store, DbExamples.asset(c, DbExamples.ASSET), Environment.getExternalStorageDirectory().getAbsolutePath());
+            } else DbPaths.ensureHome(store);
+        } catch (Throwable t) {
+            Log.e("DbScreen.setup", t);
+        }
+    }
+
+    /** מ0.29: המסד של האופן קיים ויש בו בית (נוצר אם צריך — setup). מחזיר את הבית; 0 — לא הצליח (אין גישה לקבצים, מסד פגום). */
+    static long prepare(android.content.Context c, String mode) {
+        if (!Ui.hasFiles(c)) return 0;
+        SqlStore s = null;
+        try {
+            if (dbFile(c, mode).isFile()) {                                    // קיים — רק קוראים (לא נוגעים במסד שיש בו בית)
+                s = SqlStore.openReadOnly(dbFile(c, mode));
+                long h = DbPaths.home(s);
+                if (h != 0) return h;
+                s.close();
+                s = null;
+            }
+            s = SqlStore.open(dbFile(c, mode), new IdCounter(counterFile()));
+            setup(c, s, mode);
+            return DbPaths.home(s);
+        } catch (Throwable t) {
+            Log.e("DbScreen.prepare", t);
+            return 0;
+        } finally {
+            if (s != null) s.close();
+        }
+    }
+
+    /** מ0.29 (באג 1): שחזור הדוגמאות באופן הדוגמאות — גיבוי של המסד לפני, ואז DbExamples.restore. מחזיר הודעה למסך. */
+    static String restoreExamples(android.content.Context c) {
+        SqlStore s = null;
+        try {
+            s = SqlStore.open(dbFile(c, DbExamples.MODE), new IdCounter(counterFile()));
+            try {
+                backupsOf(c, DbExamples.MODE).before(s, Backups.OP_RESTORE, System.currentTimeMillis());
+            } catch (Throwable t) {
+                Log.e("DbScreen.restoreExamples.backup", t);
+                return Words.Db.importBackupFailed(String.valueOf(t.getMessage()));
+            }
+            DbExamples.files(DbExamples.asset(c, DbExamples.ASSET_DEMO));
+            int n = DbExamples.restore(s, DbExamples.asset(c, DbExamples.ASSET), Environment.getExternalStorageDirectory().getAbsolutePath());
+            return Words.Db.examplesRestored(n);
+        } catch (Throwable t) {
+            Log.e("DbScreen.restoreExamples", t);
+            return Words.Db.failed(String.valueOf(t.getMessage()));
+        } finally {
+            if (s != null) s.close();
+        }
+    }
+
     /** מ0.9: הבית במראה המוכר (אם יש בית במסד). */
     private void openFamiliar() {
-        long h = store == null ? 0 : Importer.home(store);
+        long h = store == null ? 0 : DbPaths.home(store);
         if (h != 0) DbListScreen.open(this, mode, h);
         else Ui.toast(this, Words.Db.NO_HOME);
     }
@@ -363,7 +426,7 @@ public class DbScreen extends Activity {
                     t.setText(Words.Db.EMPTY);
                     rows.addView(t);
                 }
-                long home = Importer.home(store);                             // מ0.6: הבית — ראשון
+                long home = DbPaths.home(store);                             // מ0.6: הבית — ראשון
                 for (Store.Item it : all) if (it.id == home) rows.addView(row(it, store.count(it.id), -1, 0));
                 for (Store.Item it : all) if (it.id != home) rows.addView(row(it, store.count(it.id), -1, 0));
                 for (Store.Item it : smarts) rows.addView(row(it, -1, -1, 0));
@@ -690,7 +753,7 @@ public class DbScreen extends Activity {
                             Ui.toast(DbScreen.this, Words.Db.sameName(value.trim()));
                             break;
                         }
-                    store.createList(value, parent != 0 ? parent : Importer.home(store));   // מ0.10.1: בראש — בבית
+                    store.createList(value, parent != 0 ? parent : DbPaths.home(store));   // מ0.10.1: בראש — בבית
                 } catch (Store.Failure f) {
                     Ui.toast(DbScreen.this, Words.Db.failed(f.getMessage()));
                 }
@@ -705,7 +768,7 @@ public class DbScreen extends Activity {
             @Override
             public void ok(DbSmartForm.Result r) {
                 try {
-                    DbSmartForm.save(store, 0, parent != 0 ? parent : Importer.home(store), r);
+                    DbSmartForm.save(store, 0, parent != 0 ? parent : DbPaths.home(store), r);
                 } catch (Store.Failure f) {
                     Ui.toast(DbScreen.this, Words.Db.failed(f.getMessage()));
                 }

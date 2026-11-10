@@ -178,7 +178,7 @@ final class Design {
     // ---------- החלק הפרטי ----------
 
     static String key(List<String> path) {
-        return Tree.key(path);
+        return Names.key(path);
     }
 
     /** הצלמית של הרשימה: מהעיצוב (לפי המסלול); אם אין — מה שנשמר ברשימה ב־1.11.0; אחרת "". */

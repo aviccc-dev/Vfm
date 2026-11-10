@@ -186,7 +186,7 @@ final class Compare {
             if (f.isFile() && !Physical.isPartial(f.getName())) add(lib, src, f, skip);
         }
         for (Tree.Node c : n.children) list(lib, t, c, hidden, skip, src, seen);
-        for (String r : n.refs) list(lib, t, t.find(Tree.parsePath(r)), hidden, skip, src, seen);
+        for (String r : n.refs) list(lib, t, t.find(Names.parsePath(r)), hidden, skip, src, seen);
         for (String f : n.live) disk(lib, src, new File(f), hidden, skip);
         for (String r : n.smart) smart(lib, t, r, hidden, skip, src, seen);
     }
@@ -194,7 +194,7 @@ final class Compare {
     private static void smart(Library lib, Tree t, String ref, boolean hidden, String skip, Source src, Set<Object> seen) {
         if (!seen.add(ref)) return;
         if (ref.startsWith(Nested.MANUAL)) {
-            list(lib, t, t.find(Tree.parsePath(ref.substring(Nested.MANUAL.length()))), hidden, skip, src, seen);
+            list(lib, t, t.find(Names.parsePath(ref.substring(Nested.MANUAL.length()))), hidden, skip, src, seen);
             return;
         }
         String cond;

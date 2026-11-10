@@ -404,7 +404,7 @@ public class RunScreen extends Activity {
                 if (t.equals(Words.ListCmdW.HOME)) continue;
                 String m = plan.sim == null ? null : plan.sim.mode;
                 if (DbVerbs.active()) {                                         // מ0.23: במסד — קיימת במסד (גם "/" וגם "\\")
-                    List<String> p = Tree.parsePath(t.replace('\\', '/'));
+                    List<String> p = Names.parsePath(t.replace('\\', '/'));
                     if (!p.isEmpty() && DbVerbs.exists(this, m != null ? m : DbListScreen.currentMode, p)) return p;
                     continue;
                 }

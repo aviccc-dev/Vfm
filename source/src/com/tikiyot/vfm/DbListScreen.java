@@ -276,9 +276,14 @@ public class DbListScreen extends ListScreen<Store.Member> {
         final java.util.List<String> all = DbScreen.dbModes(this);
         java.util.List<String> labels = new java.util.ArrayList<String>();
         for (String m : all) labels.add(Words.Db.modeLine(m, m.equals(mode)));
+        final int count = all.size();
+        labels.add(Words.Db.MODE_NEW);                                        // מ0.29: אופן חדש, ושחזור הדוגמאות (באג 1)
+        labels.add(Words.Db.EXAMPLES_RESTORE);
         Ui.list(this, Words.Db.MODE_PICK, labels, new android.content.DialogInterface.OnClickListener() {
             @Override
             public void onClick(android.content.DialogInterface d, int which) {
+                if (which == count) { newMode(); return; }
+                if (which == count + 1) { askRestoreExamples(); return; }
                 String m = all.get(which);
                 if (m.equals(mode)) return;
                 DbScreen.saveMode(DbListScreen.this, m);
@@ -286,7 +291,7 @@ public class DbListScreen extends ListScreen<Store.Member> {
                 long h = 0;
                 try {
                     s = SqlStore.openReadOnly(DbScreen.dbFile(DbListScreen.this, m));
-                    h = Importer.home(s);
+                    h = DbPaths.home(s);
                 } catch (Throwable t) {
                     Log.e("DbListScreen.mode", t);
                 } finally {
@@ -300,6 +305,61 @@ public class DbListScreen extends ListScreen<Store.Member> {
                 open(DbListScreen.this, m, h);
             }
         });
+    }
+
+    /** מ0.29: אופן עבודה חדש — שם, ואז המסד שלו נפתח (נוצר עם בית ריק; "דוגמאות" — עם הדוגמאות). */
+    private void newMode() {
+        Ui.askText(this, Words.Db.MODE_NEW, "", Words.Db.MODE_NAME, new Ui.Text1() {
+            @Override
+            public void ok(String raw) {
+                String name = Names.cleanName(raw).replaceAll("[:*?\"<>|\n\t]", " ").trim();
+                if (raw.trim().isEmpty() || name.isEmpty()) return;
+                if (DbScreen.dbModes(DbListScreen.this).contains(name)) {
+                    Ui.toast(DbListScreen.this, Words.WorkModes.EXISTS);
+                    return;
+                }
+                openMode(name);
+            }
+        });
+    }
+
+    /** פותח אופן: המסד נוצר אם אין ומקבל בית (DbScreen.prepare), הבית נפתח, והמסך הזה נסגר. */
+    private void openMode(String name) {
+        long h = DbScreen.prepare(this, name);
+        if (h == 0) {
+            Ui.toast(this, Words.Db.NO_HOME);
+            return;
+        }
+        DbScreen.saveMode(this, name);
+        finish();
+        open(this, name, h);
+    }
+
+    /** מ0.29 (באג 1): שחזור הדוגמאות — באישור; רק רשימות הדוגמאות מוחלפות, ולפני כן גיבוי של המסד. */
+    private void askRestoreExamples() {
+        Ui.ask(this, Words.Db.EXAMPLES_RESTORE, Words.Db.EXAMPLES_RESTORE_WHAT, Words.NO_TOUCH_FILES, Words.Db.EXAMPLES_RESTORE_BACK,
+                Words.Db.EXAMPLES_RESTORE_GO, new Runnable() {
+                    @Override
+                    public void run() {
+                        final Physical.Busy busy = new Physical.Busy(DbListScreen.this, Words.Db.EXAMPLES_RESTORE);
+                        new Thread(new Runnable() {
+                            @Override
+                            public void run() {
+                                final String msg = DbScreen.restoreExamples(getApplicationContext());
+                                runOnUiThread(new Runnable() {
+                                    @Override
+                                    public void run() {
+                                        busy.close();
+                                        Ui.toast(DbListScreen.this, msg);
+                                        if (isFinishing()) return;
+                                        if (mode.equals(DbExamples.MODE)) reload();
+                                        else openMode(DbExamples.MODE);
+                                    }
+                                });
+                            }
+                        }).start();
+                    }
+                });
     }
 
     /** העיצוב: של הרשימה; בבית — של מסך הבית, ואם לא נבחר — רשת (כמו האריחים בבית). */
@@ -385,7 +445,7 @@ public class DbListScreen extends ListScreen<Store.Member> {
     private long homeCache = -1;
 
     private long homeOrZero() {
-        if (homeCache < 0) homeCache = Importer.home(store);
+        if (homeCache < 0) homeCache = DbPaths.home(store);
         return homeCache;
     }
 

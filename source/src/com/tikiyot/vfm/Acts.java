@@ -30,8 +30,8 @@ public final class Acts {
                 int n = Tree.addFiles(path, paths);
                 Library.get(a).learn(paths);
                 Ui.toast(a, n < 0 ? Words.LIST_NOT_FOUND
-                        : n == 0 ? Words.ActsW.ALREADY_IN_LIST + Tree.label(path) + "\""
-                        : Words.ActsW.ADDED_N + n + Words.ActsW.TO_LIST + Tree.label(path) + "\"");
+                        : n == 0 ? Words.ActsW.ALREADY_IN_LIST + Names.label(path) + "\""
+                        : Words.ActsW.ADDED_N + n + Words.ActsW.TO_LIST + Names.label(path) + "\"");
             }
         });
     }

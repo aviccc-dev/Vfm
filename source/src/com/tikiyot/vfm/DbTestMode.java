@@ -100,7 +100,7 @@ final class DbTestMode {
             long home = DbVerbs.write(a, mode, new DbVerbs.Job() {
                 @Override
                 public long run(Store s, List<String> p) {
-                    final long[] h = {Importer.home(s)};
+                    final long[] h = {DbPaths.home(s)};
                     s.atomic(new Store.Work() {
                         @Override public void run(Store t) {
                             if (h[0] == 0) {

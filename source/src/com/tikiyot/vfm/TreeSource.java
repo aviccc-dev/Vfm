@@ -29,6 +29,6 @@ final class TreeSource extends PickSource {
 
     @Override
     public String fullLabel(List<String> path) {
-        return Tree.fullLabel(path);
+        return Names.fullLabel(path);
     }
 }

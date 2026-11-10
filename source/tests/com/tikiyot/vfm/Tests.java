@@ -656,7 +656,7 @@ public final class Tests {
         Tree.Node n = t.find(Arrays.asList("לימוד"));
         check("1.13.0: @למה ו־@רשימה נקראים", n != null && n.why.equals("כל מה שלומדים עכשיו") && n.refs.size() == 1
                 && n.entries.size() == 1);
-        check("1.13.0: ההפניה מובילה לרשימה", t.find(Tree.parsePath(n.refs.get(0))) != null);
+        check("1.13.0: ההפניה מובילה לרשימה", t.find(Names.parsePath(n.refs.get(0))) != null);
         File tf2 = new File(home, "מבנה1130ב.txt");
         t.saveTo(tf2);
         Tree t2 = Tree.loadFrom(tf2);
@@ -731,7 +731,7 @@ public final class Tests {
             while (!stack.isEmpty()) {
                 Tree.Node en = stack.remove(stack.size() - 1);
                 stack.addAll(en.children);
-                for (String r : en.refs) if (et.find(Tree.parsePath(r)) == null) badRef.add(r);
+                for (String r : en.refs) if (et.find(Names.parsePath(r)) == null) badRef.add(r);
                 for (String r : en.smart) if (!ids.contains(r)) badRef.add(r);
             }
             check("1.13.0: הפניות בדוגמאות (@רשימה, @חכמה) — מובילות למשהו" + (badRef.isEmpty() ? "" : ": " + badRef), badRef.isEmpty());
@@ -740,7 +740,7 @@ public final class Tests {
                     && !concept.why.isEmpty());
             List<String> listNoWhy = new ArrayList<String>();
             for (java.util.Map.Entry<String, String> e : listWhy.entrySet()) {
-                Tree.Node ln = et.find(Tree.parsePath(e.getValue()));
+                Tree.Node ln = et.find(Names.parsePath(e.getValue()));
                 if (ln == null || ln.why.isEmpty()) listNoWhy.add(e.getKey());
             }
             check("1.15.0: כלי רשימה בדוגמאות — \"למה\" ברשימה עצמה" + (listNoWhy.isEmpty() ? "" : ": " + listNoWhy), listNoWhy.isEmpty());
@@ -1074,7 +1074,7 @@ public final class Tests {
         eq("60: שם שמסתיים ב' | 12' עם ' | ?' — השם שלם", "/storage/x/שם | 12", l.entries.get(1).path);
         eq("60: גודל לא ידוע", -1L, l.entries.get(1).size);
 
-        eq("שם עם / מוחלף", "א∕ב", Tree.cleanName("א/ב"));
+        eq("שם עם / מוחלף", "א∕ב", Names.cleanName("א/ב"));
         Tree.Node n = Tree.newChild(t.root, "א/ב");
         t.save();
         check("שם עם / נשמר ונקרא כרשימה אחת", Tree.load().find(Arrays.asList("א∕ב")) != null);
@@ -3622,7 +3622,7 @@ public final class Tests {
                         String v = fn.params.get(SmartLists.VIEW);
                         if (v != null && !Arrays.asList(FolderView.MODES).contains(v)) bad.add("תצוגה: " + fn.name);
                     }
-                    if (fn.kind.equals("וירטואלי") && tree.find(Tree.parsePath(fn.params.get("רשימה"))) == null)
+                    if (fn.kind.equals("וירטואלי") && tree.find(Names.parsePath(fn.params.get("רשימה"))) == null)
                         noList.add(fn.name);
                 }
             check("156: כל כלי — סוג מוכר, מזהה משלו, תנאי מובן" + (bad.isEmpty() ? "" : ": " + bad), bad.isEmpty());
@@ -4115,7 +4115,7 @@ public final class Tests {
             Tree.newChild(t.root, "ריקה");
             t.save();
 
-            Compare.Source src = Compare.ofList(lib, Tree.load(), Tree.load().find(Tree.parsePath("המסמכים שלי")), false, null);
+            Compare.Source src = Compare.ofList(lib, Tree.load(), Tree.load().find(Names.parsePath("המסמכים שלי")), false, null);
             eq("1.22.0: הרשימה — כל הקבצים, מכל הסוגים", 6, src.files.size());
             check("1.22.0: מסלול — מפתח הכונן ומתחילת הכונן", src.files.containsValue(Drive.INTERNAL + "/Docs/sub/b.txt")
                     && src.files.containsValue("ABCD-1234/מסמכים/חשבון-1.pdf") && src.files.containsValue("ABCD-1234/x/y.txt"));
@@ -4191,7 +4191,7 @@ public final class Tests {
                 if (hh.ix.path(hh.rec).contains("/גיבוי/")) st4++;
             check("1.22.4: עם מצב: — קבצי הגיבוי", st4 > 0);
             // 1.22.3: חכמות — גם מההגדרות של אופן אחר (Ini), ו"שמור לתוכנה / גיבוי" נוצרת לבד
-            Compare.Source viaIni = Compare.ofList(lib, Tree.load(), Tree.load().find(Tree.parsePath("המסמכים שלי")), false,
+            Compare.Source viaIni = Compare.ofList(lib, Tree.load(), Tree.load().find(Names.parsePath("המסמכים שלי")), false,
                     new File(r1, "גיבוי").getAbsolutePath(), Ini.load(sf));
             eq("1.22.3: רשימה מאופן אחר — גם החכמות (לפי ההגדרות שלו)", 6, viaIni.files.size());
             File rd = Reserved.testDir;
@@ -4698,8 +4698,8 @@ public final class Tests {
 
     /** 165–168: תת־רשימה בהעתקה, רשימה שלא נמצאה, קישור שעוקב אחרי רשימה שזזה, ניקוי יתומות. */
     private static void review8() {
-        eq("165: פירוק אחד — \"א/ב\"", Arrays.asList("לימוד", "רמחל"), Tree.parsePath("לימוד/רמחל"));
-        eq("165: ו\"א / ב\"", Arrays.asList("לימוד", "רמחל"), Tree.parsePath("לימוד / רמחל"));
+        eq("165: פירוק אחד — \"א/ב\"", Arrays.asList("לימוד", "רמחל"), Names.parsePath("לימוד/רמחל"));
+        eq("165: ו\"א / ב\"", Arrays.asList("לימוד", "רמחל"), Names.parsePath("לימוד / רמחל"));
         ModeCopy.Side s = side("ב165", "[פונקציה: רמחל]\nמזהה = f1\nסוג = וירטואלי\nרשימה = לימוד/רמחל\n\n"
                 + "[פונקציה: חסרה]\nמזהה = f2\nסוג = וירטואלי\nרשימה = אין/כזו\n", "#1 לימוד\n#2 לימוד / רמחל\n/x.pdf | 1\n");
         ModeCopy.Side d = side("ב165י", "", "#1 רמחל\n#1 אין\n#2 אין / כזו\n");

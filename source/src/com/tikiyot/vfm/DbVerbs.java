@@ -34,7 +34,7 @@ final class DbVerbs {
     static boolean run(final Activity a, Verbs.Cmd c) {
         final String mode = DbListScreen.currentMode;
         if (c.kind.equals(Verbs.K_LIST)) {
-            List<String> path = Tree.parsePath(c.arg);
+            List<String> path = Names.parsePath(c.arg);
             long id = c.verb.equals(Verbs.CREATE) ? write(a, mode, new Job() {
                 @Override public long run(Store s, List<String> p) { return DbPaths.ensure(s, mode, p); }
             }, path) : read(a, mode, path);
@@ -102,7 +102,7 @@ final class DbVerbs {
                 write(a, mode, new Job() {
                     @Override
                     public long run(Store s, List<String> p) {
-                        return DbSmartForm.save(s, 0, in != 0 ? in : Importer.home(s), r);
+                        return DbSmartForm.save(s, 0, in != 0 ? in : DbPaths.home(s), r);
                     }
                 }, null);
                 if (a instanceof DbListScreen) ((DbListScreen) a).reload();
@@ -130,7 +130,7 @@ final class DbVerbs {
                 write(a, mode, new Job() {
                     @Override
                     public long run(Store s, List<String> p) {
-                        DbFiles.add(s, in != 0 ? in : Importer.home(s), java.util.Collections.singletonList(file.getAbsolutePath()), null, true);
+                        DbFiles.add(s, in != 0 ? in : DbPaths.home(s), java.util.Collections.singletonList(file.getAbsolutePath()), null, true);
                         return in;
                     }
                 }, null);
@@ -167,7 +167,7 @@ final class DbVerbs {
     /** מ0.18.1: פותח רשימה לפי המסלול — באופן נתון (גם אם אינו האופן שפתוח). */
     static void openPath(Activity a, String mode, List<String> path) {
         long id = read(a, mode, path);
-        if (id == 0) Ui.toast(a, Words.Verb.NOT_FOUND + Tree.label(path));
+        if (id == 0) Ui.toast(a, Words.Verb.NOT_FOUND + Names.label(path));
         else {
             DbScreen.saveMode(a, mode);
             DbListScreen.open(a, mode, id);
@@ -182,7 +182,7 @@ final class DbVerbs {
         for (String[] o : opens) {
             if (o[1] == null) { Verbs.run(a, o[0], here); continue; }
             Verbs.Cmd c = Verbs.parse(o[0]);
-            if (c.kind.equals(Verbs.K_LIST)) openPath(a, o[1], Tree.parsePath(c.arg));
+            if (c.kind.equals(Verbs.K_LIST)) openPath(a, o[1], Names.parsePath(c.arg));
             else {
                 long id = readSmart(a, o[1], c.arg);
                 if (id == 0) Ui.toast(a, Words.Verb.NOT_FOUND + c.arg);

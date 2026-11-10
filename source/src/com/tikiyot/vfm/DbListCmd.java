@@ -69,7 +69,7 @@ final class DbListCmd {
 
     /** הרשימה הידנית של הצד: "*" — הבית; אחרת לפי המסלול (DbPaths). 0 — אין. */
     static long list(Store s, String mode, ListCmd.Side x) {
-        if (x.home) return Importer.home(s);
+        if (x.home) return DbPaths.home(s);
         return DbPaths.find(s, mode, x.path);
     }
 
@@ -78,7 +78,7 @@ final class DbListCmd {
         if (x.path == null || x.path.isEmpty()) return null;
         String name = x.path.get(x.path.size() - 1).trim();
         List<String> parent = new ArrayList<String>(x.path.subList(0, x.path.size() - 1));
-        long in = parent.isEmpty() ? Importer.home(s) : DbPaths.find(s, mode, parent);
+        long in = parent.isEmpty() ? DbPaths.home(s) : DbPaths.find(s, mode, parent);
         if (in != 0)
             for (Store.Member m : s.members(in))
                 if (m.item.type == Store.SMART && m.item.name.equals(name)) return new long[]{in, m.item.id};
@@ -204,7 +204,7 @@ final class DbListCmd {
             return Res.ok(Words.DbCmd.removed(what));
         }
         List<String> up = new ArrayList<String>(a.path.subList(0, a.path.size() - 1));
-        long parent = up.isEmpty() ? Importer.home(s) : DbPaths.find(s, mode, up);
+        long parent = up.isEmpty() ? DbPaths.home(s) : DbPaths.find(s, mode, up);
         removeFrom(s, parent, id);
         return Res.ok(Words.DbCmd.removed(Words.ListCmdW.list(a.label())));
     }
@@ -225,7 +225,7 @@ final class DbListCmd {
 
     /** COPY: לרשימה ידנית (או לבית). fsFiles — קבצים מהכונן (כשהמקור אינו רשימה); הקבצים עצמם לתיקייה — ב-plan. */
     static Res copy(Store s, String mode, ListCmd.Side a, ListCmd.Side b, final List<String> fsFiles, Finder f) {
-        final long dest = b.home ? Importer.home(s) : b.mask != null ? 0 : DbPaths.find(s, mode, b.path);
+        final long dest = b.home ? DbPaths.home(s) : b.mask != null ? 0 : DbPaths.find(s, mode, b.path);
         if (dest == 0) return Res.err(b.home ? Words.DbCmd.NO_HOME : Words.ListCmdW.noList(b.raw));
         if (!a.list() || a.filesOf) {                                        // מסלולים ← לרשימה
             List<String> paths = fsFiles;
@@ -382,7 +382,7 @@ final class DbListCmd {
     static String nameError(Store s, List<Long> parents, long self, int type, String raw) {
         String name = raw == null ? "" : raw;
         if (name.contains("/") || name.contains("\\")) return Words.DbCmd.BAD_NAME;
-        String n = type == Store.SMART ? name.trim() : Tree.cleanName(name);
+        String n = type == Store.SMART ? name.trim() : Names.cleanName(name);
         if (n.isEmpty()) return Words.DbCmd.BAD_NAME;
         for (Long p : parents) {
             if (p == null || p == 0) continue;
@@ -400,7 +400,7 @@ final class DbListCmd {
         Store.Item cur = s.item(id);
         if (cur == null) return null;
         if ((cur.type == Store.LIST || cur.type == Store.SMART) && !name.trim().isEmpty()) {
-            String n = cur.type == Store.LIST ? Tree.cleanName(name) : name.trim();
+            String n = cur.type == Store.LIST ? Names.cleanName(name) : name.trim();
             if (!n.equals(cur.name) || name.contains("/") || name.contains("\\")) {
                 String e = nameError(s, s.listsOf(id), id, cur.type, name);
                 if (e != null) return e;
@@ -410,7 +410,7 @@ final class DbListCmd {
             @Override public void run(Store t) {
                 Store.Item it = t.item(id);
                 if (it == null) return;
-                String n = it.type == Store.LIST ? Tree.cleanName(name) : name.trim();
+                String n = it.type == Store.LIST ? Names.cleanName(name) : name.trim();
                 if (!n.isEmpty() && !n.equals(it.name)) t.rename(id, n);
                 if (it.type == Store.NOTE || it.type == Store.TITLE || it.type == Store.FILE) return;
                 t.setProp(id, Store.P_ICON, icon.trim());
@@ -423,10 +423,10 @@ final class DbListCmd {
 
     /** רשימה ידנית חדשה בתוך parent (0 — בבית, אם יש). בלי בדיקת שם — למי שכבר בדק (ייבוא, העתקה). */
     static long newList(Store s, final long parent, final String name) {
-        final long into = parent != 0 ? parent : Importer.home(s);
+        final long into = parent != 0 ? parent : DbPaths.home(s);
         final long[] out = {0};
         s.atomic(new Store.Work() {
-            @Override public void run(Store t) { out[0] = t.createList(Tree.cleanName(name), into); }
+            @Override public void run(Store t) { out[0] = t.createList(Names.cleanName(name), into); }
         }, true);
         return out[0];
     }
@@ -440,7 +440,7 @@ final class DbListCmd {
     /** מ0.23: רשימה חדשה מהמסך (➕, הבורר) — אחרי nameError, כמו MD: שם תפוס באותה רשימה — שגיאה, לא כפולה. */
     static Made newListChecked(Store s, long parent, String name) {
         Made r = new Made();
-        long into = parent != 0 ? parent : Importer.home(s);
+        long into = parent != 0 ? parent : DbPaths.home(s);
         List<Long> ps = new ArrayList<Long>();
         ps.add(into);
         r.error = nameError(s, ps, 0, Store.LIST, name);
@@ -526,7 +526,7 @@ final class DbListCmd {
     /** מ0.21: REN ידנית/חכמה "א\ב" "שם חדש" — שם תפוס באותה רשימה (אותו סוג) — לא; "/" או "\" בשם — לא. */
     static Res rename(Store s, String mode, final ListCmd.Side a, String name) {
         if (name.contains("/") || name.contains("\\")) return Res.err(Words.DbCmd.BAD_NAME);   // לפני הניקוי (שמוחק אותם)
-        final String n = a.kind == ListCmd.SMART_LIST ? name.trim() : Tree.cleanName(name);
+        final String n = a.kind == ListCmd.SMART_LIST ? name.trim() : Names.cleanName(name);
         if (n.isEmpty()) return Res.err(Words.DbCmd.BAD_NAME);
         long id, parent;
         if (a.kind == ListCmd.SMART_LIST) {
@@ -538,7 +538,7 @@ final class DbListCmd {
             id = DbPaths.find(s, mode, a.path);
             if (id == 0) return Res.err(Words.ListCmdW.noList(a.raw));
             List<String> up = new ArrayList<String>(a.path.subList(0, a.path.size() - 1));
-            parent = up.isEmpty() ? Importer.home(s) : DbPaths.find(s, mode, up);
+            parent = up.isEmpty() ? DbPaths.home(s) : DbPaths.find(s, mode, up);
         }
         Store.Item it = s.item(id);
         if (n.equals(it.name)) return Res.same(Words.DbCmd.renamed(a.label(), n));
@@ -556,7 +556,7 @@ final class DbListCmd {
      * (מהרשימה שמעליה, או מהבית), חכמה, תוכן של רשימה, או קבצים לפי תבנית — כמו ב-COPY.
      */
     static Res link(Store s, String mode, ListCmd.Side a, ListCmd.Side b, boolean move) {
-        long dest = b.home ? Importer.home(s) : b.mask != null ? 0 : DbPaths.find(s, mode, b.path);
+        long dest = b.home ? DbPaths.home(s) : b.mask != null ? 0 : DbPaths.find(s, mode, b.path);
         if (dest == 0) return Res.err(b.home ? Words.DbCmd.NO_HOME : Words.ListCmdW.noList(b.raw));
         List<Long> ids = new ArrayList<Long>();
         long from;
@@ -584,7 +584,7 @@ final class DbListCmd {
             } else {
                 if (src == dest || s.contains(src, dest)) return Res.err(Words.ListCmdW.INTO_ITSELF);
                 List<String> up = new ArrayList<String>(a.path.subList(0, a.path.size() - 1));
-                from = up.isEmpty() ? Importer.home(s) : DbPaths.find(s, mode, up);
+                from = up.isEmpty() ? DbPaths.home(s) : DbPaths.find(s, mode, up);
                 ids.add(src);
                 label = Words.ListCmdW.list(a.label());
             }
@@ -634,7 +634,7 @@ final class DbListCmd {
 
     /** מ0.22: ייבוא — הטקסט (בפורמט היצוא) לתוך הרשימה. */
     static Res importFrom(Store s, String mode, File in, ListCmd.Side b) {
-        long dest = b.home ? Importer.home(s) : DbPaths.find(s, mode, b.path);
+        long dest = b.home ? DbPaths.home(s) : DbPaths.find(s, mode, b.path);
         if (dest == 0) return Res.err(b.home ? Words.DbCmd.NO_HOME : Words.ListCmdW.noList(b.raw));
         String text;
         try {
@@ -648,7 +648,7 @@ final class DbListCmd {
 
     /** מ0.22: העתקה מאופן אחר — המקור נפתח לקריאה בלבד; עותק עצמאי (קבצים — לפי המסלול). */
     static Res copyFromMode(Store t, String mode, String srcMode, ListCmd.Side a, ListCmd.Side b) {
-        long dest = b.home ? Importer.home(t) : DbPaths.find(t, mode, b.path);
+        long dest = b.home ? DbPaths.home(t) : DbPaths.find(t, mode, b.path);
         if (dest == 0) return Res.err(b.home ? Words.DbCmd.NO_HOME : Words.ListCmdW.noList(b.raw));
         SqlStore src = null;
         try {
@@ -980,15 +980,15 @@ final class DbListCmd {
             s.error = Words.Db.failed(String.valueOf(t.getMessage()));
             return null;
         }
-        final List<String> path = list ? Tree.parsePath(c.arg) : null;
+        final List<String> path = list ? Names.parsePath(c.arg) : null;
         final Work work = new Work() {
             @Override
             public Res run(Store t, Finder f) {
                 if (list) {
                     if (path == null || path.isEmpty()) return Res.err(Words.Verb.NOT_FOUND + c.arg);
-                    if (DbPaths.find(t, mode, path) != 0) return Res.same(Words.ListCmdW.exists(Tree.label(path)));
+                    if (DbPaths.find(t, mode, path) != 0) return Res.same(Words.ListCmdW.exists(Names.label(path)));
                     return DbPaths.ensure(t, mode, path) == 0 ? Res.err(Words.Verb.NOT_FOUND + c.arg)
-                            : Res.ok(Words.ListCmdW.created(Tree.label(path)));
+                            : Res.ok(Words.ListCmdW.created(Names.label(path)));
                 }
                 if (smartNew) {
                     long had = DbPaths.smart(t, c.arg);
@@ -1032,7 +1032,7 @@ final class DbListCmd {
             err[0] = Words.Db.failed(String.valueOf(t.getMessage()));
             return null;
         }
-        List<String> path = Tree.parsePath(name == null ? "" : name.replace('\\', '/'));
+        List<String> path = Names.parsePath(name == null ? "" : name.replace('\\', '/'));
         long id = DbPaths.find(db, mode, path);
         if (id == 0 && !path.isEmpty()) {
             List<String> in = new ArrayList<String>();

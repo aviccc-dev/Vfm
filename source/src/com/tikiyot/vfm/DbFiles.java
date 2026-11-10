@@ -51,7 +51,7 @@ final class DbFiles {
                 if (!f.isFile()) continue;
                 try {
                     String sig = Sig.of(f);
-                    if (sig != null) signed.put(p, new Store.FileInfo(p, Importer.driveOf(p), f.length(), f.lastModified(), sig));
+                    if (sig != null) signed.put(p, new Store.FileInfo(p, DbPaths.driveOf(p), f.length(), f.lastModified(), sig));
                 } catch (Throwable x) {
                     Log.e("DbFiles.sign", x);
                 }
@@ -63,7 +63,7 @@ final class DbFiles {
                     long id = t.findFile(e.getKey());
                     if (id == 0) {
                         Store.FileInfo fi = signed.get(e.getKey());
-                        id = t.createFile(fi != null ? fi : new Store.FileInfo(e.getKey(), Importer.driveOf(e.getKey()), e.getValue(), 0, null));
+                        id = t.createFile(fi != null ? fi : new Store.FileInfo(e.getKey(), DbPaths.driveOf(e.getKey()), e.getValue(), 0, null));
                         r.created++;
                     }
                     if (t.addMember(list, id)) r.added++;

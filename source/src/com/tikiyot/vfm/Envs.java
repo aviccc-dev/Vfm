@@ -61,7 +61,7 @@ final class Envs {
             Map<String, String> kv = new LinkedHashMap<String, String>();
             kv.put("סוג", FnVirtual.KIND);  // תחביר
             kv.put("תיאור", t.description);  // תחביר
-            kv.put(FnVirtual.LIST, Tree.key(path));
+            kv.put(FnVirtual.LIST, Names.key(path));
             home.addAll(block(Structure.FUNC + t.name, id, kv));               // הכלי שלה — ואחריו מה שעבר ממנה לבית
             home.addAll(moved);
             take(ini, t.id);
@@ -126,7 +126,7 @@ final class Envs {
     }
 
     private static String name(String s) {
-        String n = Tree.cleanName(s);
+        String n = Names.cleanName(s);
         return n.isEmpty() ? Words.LIST : n;
     }
 

@@ -70,7 +70,7 @@ final class CmdMenu {
         }
         final Tree.Node n = side == null ? null : side.tree.find(path);
         if (n == null) {
-            Ui.toast(a, Words.Verb.NOT_FOUND + Tree.label(path));
+            Ui.toast(a, Words.Verb.NOT_FOUND + Names.label(path));
             return;
         }
         final boolean here = Modes.current().equals(Reserved.modeInUse());
@@ -111,7 +111,7 @@ final class CmdMenu {
             holds.add(null);
         }
         for (String r : n.refs) {                                             // קישור ↪ — הרשימה שאליה הוא מקשר
-            final List<String> p = Tree.parsePath(r);
+            final List<String> p = Names.parsePath(r);
             if (side.tree.find(p) == null) continue;
             labels.add("↪ " + p.get(p.size() - 1) + "  ▸");
             keys.add("r" + r);

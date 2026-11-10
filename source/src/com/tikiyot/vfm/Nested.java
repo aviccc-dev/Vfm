@@ -107,7 +107,7 @@ final class Nested {
 
     static String manual(List<String> path) {
         StringBuilder sb = new StringBuilder(MANUAL);
-        for (int i = 0; i < path.size(); i++) sb.append(i > 0 ? Tree.SEP : "").append(path.get(i));
+        for (int i = 0; i < path.size(); i++) sb.append(i > 0 ? Names.SEP : "").append(path.get(i));
         return sb.toString();
     }
 
@@ -143,7 +143,7 @@ final class Nested {
         Item it = new Item();
         it.ref = ref;
         if (ref.startsWith(MANUAL)) {
-            it.path = Tree.parsePath(ref.substring(MANUAL.length()));         // 165
+            it.path = Names.parsePath(ref.substring(MANUAL.length()));         // 165
             it.name = it.path.get(it.path.size() - 1);
             it.gone = Tree.load().find(it.path) == null;
             return it;
@@ -253,7 +253,7 @@ final class Nested {
                 for (String r : l.value.split("\\|")) {
                     String ref = r.trim();
                     if (ref.startsWith(MANUAL)) {
-                        List<String> np = Tree.moved(Tree.parsePath(ref.substring(MANUAL.length())), from, to);
+                        List<String> np = Tree.moved(Names.parsePath(ref.substring(MANUAL.length())), from, to);
                         if (np != null) {
                             ref = manual(np);
                             changed = true;

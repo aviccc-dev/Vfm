@@ -80,7 +80,7 @@ final class Importer {
     /** מ0.6: מסלול הרשימה של כלי רשימה ידנית. כלי ישן בלי רשימה — הרשימה בשמו (כמו FnVirtual.ensureOwn). */
     static List<String> toolList(Structure.Func f) {
         String p = f.params.get(FnVirtual.LIST);
-        return Tree.parsePath(p == null || p.trim().isEmpty() ? f.name : p);
+        return Names.parsePath(p == null || p.trim().isEmpty() ? f.name : p);
     }
 
     /** מ0.6: מסלול קובץ הפקודות של כלי פקודה, או "" (אין / לא מסלול מלא). */
@@ -435,7 +435,7 @@ final class Importer {
         /** הפריט שהכלי מצביע עליו, או 0 (ואז נספר: סוג שלא מועתק, או שאין למה להצביע). */
         long tool(Structure.Func f) {
             if (FnVirtual.KIND.equals(f.kind)) {
-                long id = s.findByOrigin(originOf(src.mode, Tree.fullLabel(toolList(f))));
+                long id = s.findByOrigin(originOf(src.mode, Names.fullLabel(toolList(f))));
                 if (id == 0) {
                     r.homeMissing++;
                     return 0;
@@ -473,7 +473,7 @@ final class Importer {
 
         /** שלב א: הרשימה ותתי־הרשימות שלה קיימות במסד (עומדות לעצמן), עם המאפיינים. */
         void ensure(Tree.Node n) {
-            String key = originOf(src.mode, Tree.fullLabel(n.path()));
+            String key = originOf(src.mode, Names.fullLabel(n.path()));
             long id = s.findByOrigin(key);
             if (id == 0) {
                 id = s.createList(n.name, 0);
@@ -531,7 +531,7 @@ final class Importer {
 
         /** הפניה: אותה רשימה נכנסת גם לכאן — אלא אם תיסגר כך שרשרת (מעגל), או שהרשימה לא קיימת. */
         void ref(long id, String path) {
-            long target = s.findByOrigin(originOf(src.mode, Tree.fullLabel(Tree.parsePath(path))));
+            long target = s.findByOrigin(originOf(src.mode, Names.fullLabel(Names.parsePath(path))));
             if (target == 0) r.refMissing++;
             else if (s.makesCycle(id, target)) r.refCycles++;
             else if (s.addMember(id, target)) r.refsAdded++;
@@ -543,7 +543,7 @@ final class Importer {
          * ריקים מתמלאים (עריכת המשתמש נשמרת), כמו כל רשימה חכמה.
          */
         long live(Tree.Node n, String folder) {
-            String key = liveOrigin(src.mode, n.parent == null ? "" : Tree.fullLabel(n.path()), folder);
+            String key = liveOrigin(src.mode, n.parent == null ? "" : Names.fullLabel(n.path()), folder);
             Long seen = smarts.get(key);
             if (seen != null) return seen;
             long id = s.findByOrigin(key);

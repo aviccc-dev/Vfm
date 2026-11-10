@@ -68,7 +68,7 @@ final class BinBox {
     }
 
     private static String join(List<String> p) {
-        return Tree.join(p, Tree.SEP);
+        return Names.join(p, Names.SEP);
     }
 
     /** תיקייה חדשה בסל של הזיכרון הפנימי, או null (הכונן לא באינדקס). */
@@ -157,13 +157,13 @@ final class BinBox {
 
     private static String restoreOne(ModeCopy.Side src, String[] p, String mode) {
         if (p[0].equals(K_LIST) && p.length >= 2) {
-            ArrayList<String> path = Tree.parsePath(p[1]);
+            ArrayList<String> path = Names.parsePath(p[1]);
             if (path.isEmpty()) return null;
             List<String> parent = path.subList(0, path.size() - 1);
             return ModeCopy.restore(src, ModeCopy.Pick.list(path), mode, parent.isEmpty() ? null : parent);
         }
         if (p[0].equals(K_SMART) && p.length >= 4)
-            return ModeCopy.restore(src, ModeCopy.Pick.smart(p[1], p[2]), mode, Tree.parsePath(p[3]));
+            return ModeCopy.restore(src, ModeCopy.Pick.smart(p[1], p[2]), mode, Names.parsePath(p[3]));
         if (p[0].equals(K_TOOL) && p.length >= 3)                          // (עד 1.14 — גם הסביבה שבה היה; לבית)
             return ModeCopy.restore(src, ModeCopy.Pick.tool(p[1], p[2]), mode, null);
         if (p[0].equals(K_TILE) && p.length >= 3) {                         // סביבה מלפני 1.15 — כרשימה כסביבת עבודה

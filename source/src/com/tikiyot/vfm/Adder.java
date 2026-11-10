@@ -47,7 +47,7 @@ public final class Adder {
         }
         String what = folders.size() == 1 ? Words.AddW.THE_FOLDER + folders.get(0).getName() + "\"" : folders.size() + Words.AddW.FOLDERS_SUFFIX;
         if (!files.isEmpty()) what += Words.AddW.AND + Words.files(files.size());
-        Ui.options(a, Words.AddW.ADD_N + what + Words.AddW.TO_LIST + Tree.label(listPath) + "\"",
+        Ui.options(a, Words.AddW.ADD_N + what + Words.AddW.TO_LIST + Names.label(listPath) + "\"",
                 new String[]{folders.size() == 1 ? Words.AddW.LIVE : Words.AddW.EACH_LIVE,      // 1.9.0: ברירת המחדל
                         folders.size() == 1 ? Words.AddW.AS_SUBLIST : Words.AddW.EACH_AS_SUBLIST,
                         Words.AddW.FILES_ONLY},
@@ -112,7 +112,7 @@ public final class Adder {
                 }
                 String what = folders.size() == 1 ? Words.AddW.THE_FOLDER + folders.get(0).getName() + "\"" : folders.size() + Words.AddW.FOLDERS_SUFFIX;
                 if (!files.isEmpty()) what += Words.AddW.AND + Words.files(files.size());
-                Ui.options(a, Words.AddW.ADD_N + what + Words.AddW.TO_LIST + Tree.label(new ArrayList<String>(path)) + "\"",
+                Ui.options(a, Words.AddW.ADD_N + what + Words.AddW.TO_LIST + Names.label(new ArrayList<String>(path)) + "\"",
                         new String[]{folders.size() == 1 ? Words.AddW.LIVE : Words.AddW.EACH_LIVE,
                                 folders.size() == 1 ? Words.AddW.AS_SUBLIST : Words.AddW.EACH_AS_SUBLIST,
                                 Words.AddW.FILES_ONLY},

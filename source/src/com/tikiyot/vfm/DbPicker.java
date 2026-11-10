@@ -50,7 +50,7 @@ final class DbPicker {
          */
         static Snap of(Store s) {
             Snap n = new Snap();
-            n.home = Importer.home(s);
+            n.home = DbPaths.home(s);
             List<String> root = new ArrayList<String>();
             List<String> names = new ArrayList<String>();
             n.kids.put(key(root), names);
@@ -175,7 +175,7 @@ final class DbPicker {
 
         @Override
         String fullLabel(List<String> path) {
-            return Tree.fullLabel(path);
+            return Names.fullLabel(path);
         }
 
         @Override
@@ -217,7 +217,7 @@ final class DbPicker {
                         }
                         if (id == 0) return;
                         ArrayList<String> p = new ArrayList<String>(parent);
-                        p.add(Tree.cleanName(name));
+                        p.add(Names.cleanName(name));
                         snap.ids.put(key(p), id);
                         done.ok(p);
                     }
@@ -260,7 +260,7 @@ final class DbPicker {
                 return list;
             }
         }, null);
-        if (r[0] != null) Ui.toast(a, Words.Db.addedTo(r[0].added, r[0].already, Tree.fullLabel(path)));
+        if (r[0] != null) Ui.toast(a, Words.Db.addedTo(r[0].added, r[0].already, Names.fullLabel(path)));
         if (after != null) after.run();
     }
 
@@ -282,7 +282,7 @@ final class DbPicker {
         for (Map.Entry<String, Long> e : n.ids.entrySet()) {
             String k = e.getKey();
             List<String> p = new ArrayList<String>(java.util.Arrays.asList(k.substring(0, Math.max(0, k.length() - 1)).split("\u0001")));
-            String l = Tree.fullLabel(p);
+            String l = Names.fullLabel(p);
             String had = label.get(e.getValue());
             if (had == null || l.length() < had.length()) label.put(e.getValue(), l);   // רשימה משותפת — המסלול הקצר
         }

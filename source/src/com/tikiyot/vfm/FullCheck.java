@@ -101,7 +101,7 @@ final class FullCheck {
             Found f = verify(t, src, nodes, paths, defs, true);
             Importer.Report again = Importer.run(t, src, false);
             long ms = System.currentTimeMillis() - t0;
-            int tLists = t.lists().size() - (Importer.home(t) != 0 ? 1 : 0);   // מ0.6: רשימת הבית אינה רשימה מהעץ
+            int tLists = t.lists().size() - (DbPaths.home(t) != 0 ? 1 : 0);   // מ0.6: רשימת הבית אינה רשימה מהעץ
             out.append(Words.Db.modeTemp(tLists, r.filesNew, f.lists, f.membersWrong, f.filesMissing, f.sigWrong,
                     again.nothingToDo(), t.check() == null, ms)).append("\n");
             add(problems, mode, f, nodes.size() - 1, tLists, again.nothingToDo(), t.check());
@@ -151,7 +151,7 @@ final class FullCheck {
         try {
             Found f = verify(real, src, nodes, paths, defs, false);
             Importer.Report pre = Importer.run(real, src, false);
-            int realLists = real.lists().size() - (Importer.home(real) != 0 ? 1 : 0);   // מ0.7: בלי רשימת הבית
+            int realLists = real.lists().size() - (DbPaths.home(real) != 0 ? 1 : 0);   // מ0.7: בלי רשימת הבית
             out.append(Words.Db.modeReal(realLists, nodes.size() - 1, f.lists, f.membersWrong, f.filesMissing,
                     pre.listsNew, pre.filesNew, pre.filesUpdated, pre.linksAdded, pre.smartNew, real.check() == null)).append("\n");
             out.append(Words.Db.modeRealUnassigned(real.unassigned().size())).append("\n");
@@ -301,17 +301,17 @@ final class FullCheck {
         }
         for (int i = 1; i < nodes.size(); i++) {
             Tree.Node n = nodes.get(i);
-            long id = s.findByOrigin(Importer.originOf(src.mode, Tree.fullLabel(n.path())));
+            long id = s.findByOrigin(DbPaths.originOf(src.mode, Names.fullLabel(n.path())));
             if (id == 0) {
                 f.listsMissing++;
-                example(f, Words.Db.exListMissing(Tree.fullLabel(n.path())));
+                example(f, Words.Db.exListMissing(Names.fullLabel(n.path())));
                 continue;
             }
             f.lists++;
             Set<Long> want = new HashSet<Long>();
-            for (Tree.Node c : n.children) want.add(s.findByOrigin(Importer.originOf(src.mode, Tree.fullLabel(c.path()))));
+            for (Tree.Node c : n.children) want.add(s.findByOrigin(DbPaths.originOf(src.mode, Names.fullLabel(c.path()))));
             for (String ref : n.refs) {
-                long tg = s.findByOrigin(Importer.originOf(src.mode, Tree.fullLabel(Tree.parsePath(ref))));
+                long tg = s.findByOrigin(DbPaths.originOf(src.mode, Names.fullLabel(Names.parsePath(ref))));
                 if (tg != 0 && !s.makesCycle(id, tg)) want.add(tg);
             }
             for (String ref : n.smart) {
@@ -319,14 +319,14 @@ final class FullCheck {
                 if (d != null) want.add(s.findByOrigin(Importer.smartOrigin(src.mode, d.key)));
             }
             for (String lp : n.live)                                         // מ0.7: תיקייה חיה — רשימה חכמה של התיקייה
-                want.add(s.findByOrigin(Importer.liveOrigin(src.mode, Tree.fullLabel(n.path()), lp)));
+                want.add(s.findByOrigin(Importer.liveOrigin(src.mode, Names.fullLabel(n.path()), lp)));
             for (Tree.Entry e : n.entries) if (!e.bad) want.add(s.findFile(e.path));
             Set<Long> got = new HashSet<Long>();
             for (Store.Member m : s.members(id)) got.add(m.item.id);
             boolean ok = got.containsAll(want) && !want.contains(0L) && (!exact || want.containsAll(got));
             if (!ok) {
                 f.membersWrong++;
-                example(f, Words.Db.exMembers(Tree.fullLabel(n.path()), want.size(), got.size()));
+                example(f, Words.Db.exMembers(Names.fullLabel(n.path()), want.size(), got.size()));
             }
         }
         for (String p : paths) {
@@ -369,7 +369,7 @@ final class FullCheck {
         for (Structure.Func f : src.tools()) {
             h.tools++;
             if (FnVirtual.KIND.equals(f.kind)) {
-                long id = s.findByOrigin(Importer.originOf(src.mode, Tree.fullLabel(Importer.toolList(f))));
+                long id = s.findByOrigin(DbPaths.originOf(src.mode, Names.fullLabel(Importer.toolList(f))));
                 if (id == 0) h.missing++;
                 else want.add(id);
             } else if (FnSmart.KIND.equals(f.kind)) {
@@ -386,7 +386,7 @@ final class FullCheck {
             }
         }
         h.expected.addAll(want);
-        long id = Importer.home(s);
+        long id = DbPaths.home(s);
         if (id != 0) for (Store.Member m : s.members(id)) h.got.add(m.item.id);
         return h;
     }
@@ -479,14 +479,14 @@ final class FullCheck {
         List<String> names = new ArrayList<String>();
         for (int i = 1; i < nodes.size(); i++) {
             Tree.Node n = nodes.get(i);
-            long id = t.findByOrigin(Importer.originOf(src.mode, Tree.fullLabel(n.path())));
+            long id = t.findByOrigin(DbPaths.originOf(src.mode, Names.fullLabel(n.path())));
             if (id == 0 || t.count(id) > 0) continue;
             total++;
             if (skippedRefs(t, src, n, id) + skippedIn(src, n) + badIn(n) > 0) {
                 pending++;
             } else {
                 truly++;
-                if (names.size() < EXAMPLES) names.add(Tree.fullLabel(n.path()));
+                if (names.size() < EXAMPLES) names.add(Names.fullLabel(n.path()));
             }
         }
         out.append(Words.Db.modeEmpty(total, truly, pending)).append("\n");
@@ -497,7 +497,7 @@ final class FullCheck {
     private static int skippedRefs(Store t, Importer.Source src, Tree.Node n, long id) {
         int k = 0;
         for (String ref : n.refs) {
-            long tg = t.findByOrigin(Importer.originOf(src.mode, Tree.fullLabel(Tree.parsePath(ref))));
+            long tg = t.findByOrigin(DbPaths.originOf(src.mode, Names.fullLabel(Names.parsePath(ref))));
             if (tg == 0 || t.makesCycle(id, tg)) k++;
         }
         return k;
@@ -512,17 +512,17 @@ final class FullCheck {
         for (int i = 1; i < nodes.size(); i++) {
             Tree.Node n = nodes.get(i);
             if (n.refs.isEmpty()) continue;
-            long id = s.findByOrigin(Importer.originOf(src.mode, Tree.fullLabel(n.path())));
+            long id = s.findByOrigin(DbPaths.originOf(src.mode, Names.fullLabel(n.path())));
             if (id == 0) continue;
             Set<Long> got = new HashSet<Long>();
             for (Store.Member m : s.members(id)) got.add(m.item.id);
             for (String ref : n.refs) {
-                long tg = s.findByOrigin(Importer.originOf(src.mode, Tree.fullLabel(Tree.parsePath(ref))));
+                long tg = s.findByOrigin(DbPaths.originOf(src.mode, Names.fullLabel(Names.parsePath(ref))));
                 if (tg == 0) missing++;
                 else if (got.contains(tg)) copied++;
                 else if (s.makesCycle(id, tg)) {
                     cyc++;
-                    example(f, Words.Db.exCycle(Tree.fullLabel(n.path()), ref));
+                    example(f, Words.Db.exCycle(Names.fullLabel(n.path()), ref));
                 } else wrong++;
             }
         }

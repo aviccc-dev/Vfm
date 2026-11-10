@@ -76,7 +76,7 @@ final class ListCount {
         }
         for (String r : n.refs) {
             lists++;
-            Tree.Node target = t.find(Tree.parsePath(r));
+            Tree.Node target = t.find(Names.parsePath(r));
             if (target != null) add(t, target, ix, seen);
         }
     }

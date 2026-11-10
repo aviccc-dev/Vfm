@@ -108,11 +108,11 @@ final class ImportTests {
     }
 
     private static long listBy(Store s, String path) {
-        return s.findByOrigin(Importer.originOf("עבודה", path));
+        return s.findByOrigin(DbPaths.originOf("עבודה", path));
     }
 
     private static long listIn(Store s, String mode, String path) {
-        return s.findByOrigin(Importer.originOf(mode, path));
+        return s.findByOrigin(DbPaths.originOf(mode, path));
     }
 
     void run(Store s, File dir) throws Exception {
@@ -283,7 +283,7 @@ final class ImportTests {
                 && r.linksAdded == 6 && r.filesNew == 3 && r.rootFiles == 1);
         ck("חכמות: מה שלא מועתק — שתי הפניות, ושתי \"רשימות בתוך\"", r.smart == 2 && r.nested == 2 && r.skippedAny());
         ck("חכמות: ארבעה פריטים חכמים במסד", s.smarts().size() == 4 && s.lists().size() == 2);
-        long books = s.findByOrigin(Importer.originOf("חכם", "ספרים")), halacha = s.findByOrigin(Importer.originOf("חכם", "ספרים / הלכה"));
+        long books = s.findByOrigin(DbPaths.originOf("חכם", "ספרים")), halacha = s.findByOrigin(DbPaths.originOf("חכם", "ספרים / הלכה"));
         long rec = s.findByOrigin(Importer.smartOrigin("חכם", "s-rec")), img = s.findByOrigin(Importer.smartOrigin("חכם", "s-img"));
         long shot = s.findByOrigin(Importer.smartOrigin("חכם", "p-shot")), empty = s.findByOrigin(Importer.smartOrigin("חכם", "s-empty"));
         ck("חכמות: כל אחת נמצאת לפי מקורה; המקושרת לא קיבלה פריט משלה", rec != 0 && img != 0 && shot != 0 && empty != 0
@@ -341,23 +341,23 @@ final class ImportTests {
         write(new File(m, Paths.TREE), "#1 ספרים\n#2 ספרים / הלכה\n#1 מועדים\n#2 מועדים / הלכה\n");
         Importer.run(s, Importer.load(m), true);
         long books = listIn(s, "פק", "ספרים"), hal = listIn(s, "פק", "ספרים / הלכה"), moHal = listIn(s, "פק", "מועדים / הלכה");
-        ck("פקודות: פתח רשימה — לפי המקור", DbPaths.find(s, "פק", Tree.parsePath("ספרים/הלכה")) == hal
-                && DbPaths.find(s, "פק", Tree.parsePath("מועדים / הלכה")) == moHal);
-        ck("פקודות: לא קיימת — 0", DbPaths.find(s, "פק", Tree.parsePath("אין/כזו")) == 0 && DbPaths.find(s, "פק", Tree.parsePath("")) == 0);
+        ck("פקודות: פתח רשימה — לפי המקור", DbPaths.find(s, "פק", Names.parsePath("ספרים/הלכה")) == hal
+                && DbPaths.find(s, "פק", Names.parsePath("מועדים / הלכה")) == moHal);
+        ck("פקודות: לא קיימת — 0", DbPaths.find(s, "פק", Names.parsePath("אין/כזו")) == 0 && DbPaths.find(s, "פק", Names.parsePath("")) == 0);
         long n1 = s.createList("חדש", 0), n2 = s.createList("פנים", n1);
-        ck("פקודות: רשימה שנוצרה במסד (בלי מקור) — לפי השמות", DbPaths.find(s, "פק", Tree.parsePath("חדש/פנים")) == n2);
+        ck("פקודות: רשימה שנוצרה במסד (בלי מקור) — לפי השמות", DbPaths.find(s, "פק", Names.parsePath("חדש/פנים")) == n2);
         long last = s.lastId();
-        ck("פקודות: צור רשימה קיימת — אותה רשימה, בלי מספר חדש", DbPaths.ensure(s, "פק", Tree.parsePath("ספרים/הלכה")) == hal && s.lastId() == last);
-        long made = DbPaths.ensure(s, "פק", Tree.parsePath("ספרים/הלכה/שבת"));
+        ck("פקודות: צור רשימה קיימת — אותה רשימה, בלי מספר חדש", DbPaths.ensure(s, "פק", Names.parsePath("ספרים/הלכה")) == hal && s.lastId() == last);
+        long made = DbPaths.ensure(s, "פק", Names.parsePath("ספרים/הלכה/שבת"));
         ck("פקודות: צור רשימה — החלק החסר נוצר בתוך הקיים", made != 0 && s.listsOf(made).equals(Arrays.asList(hal)) && s.item(made).name.equals("שבת"));
-        long deep = DbPaths.ensure(s, "פק", Tree.parsePath("א/ב/ג"));
-        long a1 = DbPaths.find(s, "פק", Tree.parsePath("א"));
+        long deep = DbPaths.ensure(s, "פק", Names.parsePath("א/ב/ג"));
+        long a1 = DbPaths.find(s, "פק", Names.parsePath("א"));
         ck("פקודות: צור רשימה — כל הדרך, הראשונה עומדת לעצמה", deep != 0 && a1 != 0 && s.listsOf(a1).isEmpty()
-                && DbPaths.find(s, "פק", Tree.parsePath("א/ב/ג")) == deep);
+                && DbPaths.find(s, "פק", Names.parsePath("א/ב/ג")) == deep);
         long home = s.createList("בית", 0);
         s.setProp(home, Store.P_HOME, "1");
         s.addMember(home, books);
-        ck("פקודות: רשימה שבבית — עדיין בראש", DbPaths.find(s, "פק", Tree.parsePath("ספרים")) == books);
+        ck("פקודות: רשימה שבבית — עדיין בראש", DbPaths.find(s, "פק", Names.parsePath("ספרים")) == books);
         long sm = DbPaths.ensureSmart(s, "חדשים", "תאריך:שבוע", "תאריך");
         ck("פקודות: צור רשימה חכמה — נוצרת עם התנאי והמיון", sm != 0 && s.item(sm).type == Store.SMART && "תאריך:שבוע".equals(s.prop(sm, Store.P_COND))
                 && "תאריך".equals(s.prop(sm, Store.P_SORT)) && DbPaths.smart(s, "חדשים") == sm);
@@ -368,9 +368,9 @@ final class ImportTests {
         ck("פקודות: עדכן רשימה חכמה — התנאי; המיון רק אם נכתב", DbPaths.updateSmart(s, "חדשים", "תאריך:יום", "") == sm
                 && "תאריך:יום".equals(s.prop(sm, Store.P_COND)) && "תאריך".equals(s.prop(sm, Store.P_SORT)));
         ck("פקודות: עדכן רשימה חכמה שאינה — 0", DbPaths.updateSmart(s, "אין", "x", "") == 0);
-        long made2 = DbPaths.ensure(s, "פק", Tree.parsePath("חדשה בראש"));
+        long made2 = DbPaths.ensure(s, "פק", Names.parsePath("חדשה בראש"));
         ck("פקודות: צור רשימה חדשה בראש — נכנסת לבית", made2 != 0 && s.listsOf(made2).equals(Arrays.asList(home))
-                && DbPaths.find(s, "פק", Tree.parsePath("חדשה בראש")) == made2);
+                && DbPaths.find(s, "פק", Names.parsePath("חדשה בראש")) == made2);
         DbSmartForm.Result r = new DbSmartForm.Result();
         r.name = "מהטופס";
         r.cond = "סוג:ספרים";
@@ -403,7 +403,7 @@ final class ImportTests {
     }
 
     private static long at(Store s, String path) {
-        return DbPaths.find(s, "פק", Tree.parsePath(path));
+        return DbPaths.find(s, "פק", Names.parsePath(path));
     }
 
     private static int filesIn(Store s, long list) {
@@ -499,8 +499,8 @@ final class ImportTests {
         long sm = s.createSmart("חכמה-בבית", home), sm2 = s.createSmart("חכמה-בא", a), sm3 = s.createSmart("לבד", 0);
         DbPicker.Snap snap = DbPicker.Snap.of(s);
         ck("בורר: השורש — הרשימות שבבית, ואחריהן מה שאינו בשום רשימה", snap.kids.get("").equals(Arrays.asList("א", "ג", "א (2)", "עצמאית")));
-        ck("בורר: לכל מסלול — הרשימה הנכונה (גם הכפולה)", snap.id(Tree.parsePath("א/ב")) == b && snap.id(Tree.parsePath("א (2)")) == a2
-                && snap.id(Tree.parsePath("עצמאית")) == loose && snap.id(Tree.parsePath("אין")) == 0 && snap.home == home);
+        ck("בורר: לכל מסלול — הרשימה הנכונה (גם הכפולה)", snap.id(Names.parsePath("א/ב")) == b && snap.id(Names.parsePath("א (2)")) == a2
+                && snap.id(Names.parsePath("עצמאית")) == loose && snap.id(Names.parsePath("אין")) == 0 && snap.home == home);
         ck("בורר: כל המסלולים בצורת הפקודות", snap.paths().equals(Arrays.asList("א", "א\\ב", "ג", "א (2)", "עצמאית")));
         ck("בורר: החכמות בשם שהפקודות מכירות", snap.smarts.equals(Arrays.asList("חכמה-בבית", "לבד", "א\\חכמה-בא")));
         DbFiles.add(s, a2, Arrays.asList(p2), null);
@@ -540,7 +540,7 @@ final class ImportTests {
         subn.entries.add(new Tree.Entry("/storage/emulated/0/תיקייה/פנימית/b.txt", 4, false));
         scan.children.add(subn);
         int[] st = DbMore.attach(s, ok.id, scan, true, false);
-        long tl = DbPaths.find(s, M, Tree.parsePath("ד/תיקייה")), pl = DbPaths.find(s, M, Tree.parsePath("ד/תיקייה/פנימית"));
+        long tl = DbPaths.find(s, M, Names.parsePath("ד/תיקייה")), pl = DbPaths.find(s, M, Names.parsePath("ד/תיקייה/פנימית"));
         ck("תיקייה עם המבנה: רשימה לכל תיקייה, הקבצים בתוכן", st[0] == 2 && st[1] == 2 && tl != 0 && pl != 0
                 && s.count(tl) == 2 && s.count(pl) == 1);
         Tree.Node flat = new Tree.Node();
@@ -550,7 +550,7 @@ final class ImportTests {
         int[] sf = DbMore.attach(s, ok.id, flat, false, false);
         ck("תיקייה — הקבצים בלבד: ישר לתוך הרשימה, בלי רשימה חדשה", sf[0] == 0 && sf[1] == 2);
         int[] sa = DbMore.attach(s, ok.id, scan, true, false);
-        ck("תיקייה עם המבנה פעמיים — שם פנוי, לא מתערבב", sa[0] == 2 && DbPaths.find(s, M, Tree.parsePath("ד/תיקייה (2)")) != 0);
+        ck("תיקייה עם המבנה פעמיים — שם פנוי, לא מתערבב", sa[0] == 2 && DbPaths.find(s, M, Names.parsePath("ד/תיקייה (2)")) != 0);
 
         // --- יצוא וייבוא ב־⭐ (DbCmdMenu.ensureTools) ---
         long root = s.createList(Reserved.ROOT, home);
@@ -581,7 +581,7 @@ final class ImportTests {
         };
         long home = s.createList("בית", 0);
         s.setProp(home, Store.P_HOME, "1");
-        long hal = DbPaths.ensure(s, M, Tree.parsePath("ספרים/הלכה")), books = at(s, "ספרים");
+        long hal = DbPaths.ensure(s, M, Names.parsePath("ספרים/הלכה")), books = at(s, "ספרים");
         DbFiles.add(s, hal, Arrays.asList("/s/a.pdf", "/s/b.txt"), null);
         s.addNote(books, "רעיון");
         long sm = s.createSmart("חדשים", books);
@@ -692,7 +692,7 @@ final class ImportTests {
         write(new File(em, Paths.TREE), eo.text);
         MemStore back = new MemStore(IdCounter.memory());
         Importer.run(back, Importer.load(em), true);
-        long bb = DbPaths.find(back, "x", Tree.parsePath("ספרים"));
+        long bb = DbPaths.find(back, "x", Names.parsePath("ספרים"));
         ck("יצוא: נקרא בחזרה — אותן רשימות ואותם קבצים (" + eo.lists + "/" + eo.files + ")", bb != 0
                 && back.lists().size() == eo.lists && DbCount.of(back, bb, null).items == eo.files && eo.text.startsWith(Tree.DESC_LINE));
         File ed = new File(em, "יצוא");
@@ -738,7 +738,7 @@ final class ImportTests {
         long imp = s.createList("מיובא", home);
         DbMore.Imported im = DbMore.importText(s, imp, ex2.text);
         ck("ייבוא: מה שיוצא — נכנס (רשימות וקבצים), בתוך היעד", im.lists == ex2.lists && im.files == ex2.files && im.bad == 0
-                && DbCount.of(s, imp, null).lists == ex2.lists && DbPaths.find(s, M, Tree.parsePath("מיובא/ספרים")) != 0);
+                && DbCount.of(s, imp, null).lists == ex2.lists && DbPaths.find(s, M, Names.parsePath("מיובא/ספרים")) != 0);
         DbMore.Imported im2 = DbMore.importText(s, imp, ex2.text);
         ck("ייבוא שוב: אותן רשימות (לא כפולות), קבצים שכבר שם — לא שוב", im2.files == 0 && DbCount.of(s, imp, null).lists == ex2.lists);
         DbMore.Imported im3 = DbMore.importText(s, imp, DbExport.paths(Arrays.asList("/s/a.pdf", "/s/q.txt"), "x", 0).text);
@@ -752,8 +752,8 @@ final class ImportTests {
         other.addMember(obs, ofile);
         other.addNote(ob, "רעיון שם");
         DbListCmd.Res xr = DbListCmd.copyAcross(other, "שני", sides("COPY ידנית \"אחר\" ידנית \"מיובא\"")[0], s, imp, "\"מיובא\"");
-        long cx = DbPaths.find(s, M, Tree.parsePath("מיובא/אחר"));
-        ck("מאופן לאופן: עותק עצמאי — רשימות, רעיון, וקובץ לפי המסלול עם החתימה", xr.error == null && cx != 0 && DbPaths.find(s, M, Tree.parsePath("מיובא/אחר/פנים")) != 0
+        long cx = DbPaths.find(s, M, Names.parsePath("מיובא/אחר"));
+        ck("מאופן לאופן: עותק עצמאי — רשימות, רעיון, וקובץ לפי המסלול עם החתימה", xr.error == null && cx != 0 && DbPaths.find(s, M, Names.parsePath("מיובא/אחר/פנים")) != 0
                 && s.findFile("/o/x.pdf") != 0 && "2:abc".equals(s.file(s.findFile("/o/x.pdf")).sig) && other.lists().size() == 3);
         ck("מאופן לאופן: שוב — כבר יש בשם הזה", DbListCmd.copyAcross(other, "שני", sides("COPY ידנית \"אחר\" ידנית \"מיובא\"")[0], s, imp, "x").error != null);
 
@@ -803,7 +803,7 @@ final class ImportTests {
         long lists = s.lists().size();
         MemStore c = DbListCmd.copyOf(s);
         ck("העותק להדמיה: אותן רשימות, אותם קבצים, אותו בית, אותם מקורות", c.lists().size() == lists && c.findFile("/s/d.txt") != 0
-                && Importer.home(c) != 0 && DbPaths.find(c, M, Tree.parsePath("ספרים")) != 0);
+                && DbPaths.home(c) != 0 && DbPaths.find(c, M, Names.parsePath("ספרים")) != 0);
         x = sides("RD ידנית \"ספרים\"");
         DbListCmd.remove(c, M, x[0]);
         ck("העותק להדמיה: שינוי בו לא נוגע במסד", at(s, "ספרים") == books && c.lists().size() < lists && s.lists().size() == lists);
@@ -818,7 +818,7 @@ final class ImportTests {
         ck("הליבה (מסכים): עריכה — שם, צלמית, תיאור", s.item(nl).name.equals("מהמסך חדש") && "⭐".equals(s.prop(nl, Store.P_ICON))
                 && "תיאור".equals(s.prop(nl, Store.P_DESC)) && at(s, "מהמסך חדש") == nl);
         long hal2 = at(s, "ספרים"), copyInBooks = s.createList("זמני", hal2);
-        s.setOrigin(copyInBooks, Importer.originOf(M, "ספרים / זמני"));
+        s.setOrigin(copyInBooks, DbPaths.originOf(M, "ספרים / זמני"));
         DbListCmd.edit(s, copyInBooks, "קבוע", "", "", "");
         ck("שינוי שם: הפקודה מוצאת לפי השם החדש, לא לפי המקור הישן", at(s, "ספרים/קבוע") == copyInBooks && at(s, "ספרים/זמני") == 0);
         DbListCmd.removeFrom(s, home, nl);
@@ -945,12 +945,12 @@ final class ImportTests {
                 && src.toolSmart(src.tools().get(3)).key.equals("f-4") && "סוג:תמונות".equals(src.toolSmart(src.tools().get(3)).cond));
 
         Importer.Report pre = Importer.run(s, src, false);
-        ck("בית: תצוגה מקדימה לא שומרת", s.lists().isEmpty() && Importer.home(s) == 0 && pre.homeNew);
+        ck("בית: תצוגה מקדימה לא שומרת", s.lists().isEmpty() && DbPaths.home(s) == 0 && pre.homeNew);
         Importer.Report r = Importer.run(s, src, true);
         ck("בית: הדוח זהה לתצוגה המקדימה", same(pre, r));
         ck("בית: 10 כלים — 5 נכנסו, אחד כבר היה (אותה רשימה פעמיים), סוג אחד לא מועתק, 3 בלי רשימה או קובץ",
                 r.homeTools == 10 && r.homeAdded == 5 && r.homeKnown == 1 && r.homeSkipped == 1 && r.homeMissing == 3 && r.homeNew && r.skippedAny());
-        long h = Importer.home(s);
+        long h = DbPaths.home(s);
         ck("בית: רשימה אחת מסומנת, בשם בית, ומקורה האופן", h != 0 && s.item(h).name.equals(Words.Db.HOME_NAME)
                 && s.findByOrigin(Importer.homeOrigin("בית")) == h && "1".equals(s.prop(h, Store.P_HOME)));
         ck("בית: הכלים לפי הסדר", names(s, h).equals(Arrays.asList("פסח", "ספרים", "אחרונים", "תמונות", "גיבוי.vbat")));
@@ -1004,9 +1004,9 @@ final class ImportTests {
 
         // הבית נמחק: חוזר בהעתקה חוזרת, והרשימות עצמן לא נפגעו
         s.deleteList(h);
-        ck("בית: מחיקת הבית לא מוחקת את הרשימות שבו", s.item(pesach) != null && s.item(books) != null && Importer.home(s) == 0);
+        ck("בית: מחיקת הבית לא מוחקת את הרשימות שבו", s.item(pesach) != null && s.item(books) != null && DbPaths.home(s) == 0);
         Importer.Report back = Importer.run(s, src, true);
-        long h2 = Importer.home(s);
+        long h2 = DbPaths.home(s);
         ck("בית: בית שנמחק נוצר שוב, עם כל הכלים", back.homeNew && h2 != 0 && h2 != h && names(s, h2).size() == 5);
 
         // בית מסומן בלי מקור (לא מהעתקה) — משמש, לא נוצר שני; ומעגל נחסם
@@ -1015,7 +1015,7 @@ final class ImportTests {
         s.setProp(mine, Store.P_HOME, "1");
         s.addMember(pesach, mine);
         Importer.Report cyc = Importer.run(s, src, true);
-        ck("בית: בית מסומן קיים — משמש, ולא נוצר בית שני", !cyc.homeNew && Importer.home(s) == mine && s.findByOrigin(Importer.homeOrigin("בית")) == 0);
+        ck("בית: בית מסומן קיים — משמש, ולא נוצר בית שני", !cyc.homeNew && DbPaths.home(s) == mine && s.findByOrigin(Importer.homeOrigin("בית")) == 0);
         ck("בית: רשימה שהבית בתוכה — לא נכנסת לבית (מעגל), נספרת", cyc.homeMissing == 4 && !names(s, mine).contains("פסח")
                 && names(s, mine).equals(Arrays.asList("ספרים", "אחרונים", "תמונות", "גיבוי.vbat")));
         ck("בית: המסד תקין בסוף", s.check() == null);
@@ -1122,16 +1122,16 @@ final class ImportTests {
                 if (mode.equals("בית") && homeReal > 0) {
                     Store s = opener.fresh(new File(ctr, "fc-" + (n[0]++) + "-" + badCond + "h.txt"));
                     Importer.run(s, Importer.load(new File(old, Modes.DIR + "/בית")), true);
-                    if (homeReal == 2) s.removeMember(Importer.home(s), s.findFile(CMD));
+                    if (homeReal == 2) s.removeMember(DbPaths.home(s), s.findFile(CMD));
                     return s;
                 }
                 if (!mode.equals("ראשון")) return null;
                 Store s = opener.fresh(new File(ctr, "fc-" + (n[0]++) + "-" + badCond + "r.txt"));
                 Importer.run(s, Importer.load(new File(old, Modes.DIR + "/ראשון")), true);
                 if (sabotage) {
-                    long books = s.findByOrigin(Importer.originOf("ראשון", "ספרים"));
+                    long books = s.findByOrigin(DbPaths.originOf("ראשון", "ספרים"));
                     s.removeMember(books, s.findFile(A));
-                    s.removeMember(books, s.findByOrigin(Importer.originOf("ראשון", "מועדים / פסח")));   // כמו מסד ממ0.3: בלי הפניות
+                    s.removeMember(books, s.findByOrigin(DbPaths.originOf("ראשון", "מועדים / פסח")));   // כמו מסד ממ0.3: בלי הפניות
                 }
                 return s;
             }
@@ -1211,10 +1211,10 @@ final class ImportTests {
     }
 
     private void drives() {
-        ck("כונן: פנימי", Importer.driveOf("/storage/emulated/0/x/y.txt").equals(Drive.INTERNAL));
-        ck("כונן: כרטיס לפי מזהה", Importer.driveOf("/storage/ABCD-1234/x.txt").equals("ABCD-1234"));
-        ck("כונן: כרטיס בלי תת־תיקייה", Importer.driveOf("/storage/ABCD-1234").equals("ABCD-1234"));
-        ck("כונן: לא מזוהה", Importer.driveOf("/mnt/x").equals(Importer.UNKNOWN_DRIVE) && Importer.driveOf("/storage/self/p").equals(Importer.UNKNOWN_DRIVE));
+        ck("כונן: פנימי", DbPaths.driveOf("/storage/emulated/0/x/y.txt").equals(Drive.INTERNAL));
+        ck("כונן: כרטיס לפי מזהה", DbPaths.driveOf("/storage/ABCD-1234/x.txt").equals("ABCD-1234"));
+        ck("כונן: כרטיס בלי תת־תיקייה", DbPaths.driveOf("/storage/ABCD-1234").equals("ABCD-1234"));
+        ck("כונן: לא מזוהה", DbPaths.driveOf("/mnt/x").equals(DbPaths.UNKNOWN_DRIVE) && DbPaths.driveOf("/storage/self/p").equals(DbPaths.UNKNOWN_DRIVE));
     }
 
     private void modes(File dir) throws Exception {

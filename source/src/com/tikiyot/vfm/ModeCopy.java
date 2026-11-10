@@ -226,7 +226,7 @@ final class ModeCopy {
     private List<String> manualPath(Pick pick) {
         if (pick.kind == Pick.LIST) return pick.path;
         Map<String, String> kv = keys(src.ini, pick.id);
-        if (FnVirtual.KIND.equals(kv.get("סוג")) && kv.get(FnVirtual.LIST) != null) return Tree.parsePath(kv.get(FnVirtual.LIST));   // 165 // תחביר
+        if (FnVirtual.KIND.equals(kv.get("סוג")) && kv.get(FnVirtual.LIST) != null) return Names.parsePath(kv.get(FnVirtual.LIST));   // 165 // תחביר
         return null;
     }
 
@@ -347,7 +347,7 @@ final class ModeCopy {
         if (h == null || !h[0].startsWith(Structure.FUNC)) return null;
         Map<String, String> kv = keys(src.ini, toolId);
         if (FnVirtual.KIND.equals(kv.get("סוג")) && kv.get(FnVirtual.LIST) != null) {  // תחביר
-            String list = copyList(Tree.parsePath(kv.get(FnVirtual.LIST)));         // 165: גם תת־רשימה ("א/ב")
+            String list = copyList(Names.parsePath(kv.get(FnVirtual.LIST)));         // 165: גם תת־רשימה ("א/ב")
             if (list != null) kv.put(FnVirtual.LIST, list);
             else kv.remove(FnVirtual.LIST);                                          // 166: לא נמצאה — לא להיצמד לרשימה זרה
         }
@@ -383,7 +383,7 @@ final class ModeCopy {
     private String copyRef(String ref) {
         if (ref == null || ref.isEmpty()) return null;
         if (ids.containsKey(ref)) return ids.get(ref);
-        if (prefer && (ref.startsWith(Nested.MANUAL) ? dst.tree.find(Tree.parsePath(ref.substring(Nested.MANUAL.length()))) != null
+        if (prefer && (ref.startsWith(Nested.MANUAL) ? dst.tree.find(Names.parsePath(ref.substring(Nested.MANUAL.length()))) != null
                 : header(dst.ini, ref) != null)) return ref;
         String[] h0 = header(src.ini, ref);
         boolean tool = h0 != null && h0[0].startsWith(Structure.FUNC);
@@ -391,7 +391,7 @@ final class ModeCopy {
             return ref;                                                       // 1.13.1: באותו אופן — קישור נשאר קישור
         if (tool) return toolAsInner(ref, h0[0].substring(Structure.FUNC.length()).trim());
         if (ref.startsWith(Nested.MANUAL)) {
-            String list = copyList(Tree.parsePath(ref.substring(Nested.MANUAL.length())));   // 165
+            String list = copyList(Names.parsePath(ref.substring(Nested.MANUAL.length())));   // 165
             String out = list == null ? null : Nested.MANUAL + list;
             ids.put(ref, out);
             return out;

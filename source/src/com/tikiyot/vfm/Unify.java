@@ -26,7 +26,7 @@ final class Unify {
 
     private static boolean walk(ModeCopy.Side s, Tree.Node n) {
         boolean ch = false;
-        String owner = n.parent == null ? Words.MANUAL_LISTS : Tree.label(n.path());
+        String owner = n.parent == null ? Words.MANUAL_LISTS : Names.label(n.path());
         for (String lp : new ArrayList<String>(n.live)) {                     // תיקייה מתעדכנת ← רשימה חכמה
             String id = inner(s.ini, owner + " › " + new File(lp).getName(), folderKeys(lp));
             if (!n.smart.contains(id)) n.smart.add(id);
@@ -150,7 +150,7 @@ final class Unify {
         final List<String> ids = new ArrayList<String>();
         for (String f : folders) {
             Map<String, String> kv = folderKeys(f);
-            ids.add(Nested.newInner(Tree.label(listPath), new File(f).getName(), kv.get(SmartLists.COND),
+            ids.add(Nested.newInner(Names.label(listPath), new File(f).getName(), kv.get(SmartLists.COND),
                     kv.get(SmartLists.SORT), kv.get(SmartLists.VIEW)));
         }
         final List<String> p = listPath;

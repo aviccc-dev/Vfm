@@ -2503,6 +2503,11 @@ public final class Words {
 
     /** מ0.1: מנוע המסד — המסך (DbScreen) והבנייה השנייה (Flavor). */
     public static final class Db {
+        public static final String MODE_NEW = "➕ אופן חדש…", MODE_NAME = "שם האופן",
+                EXAMPLES_RESTORE = "↺ שחזור הדוגמאות", EXAMPLES_RESTORE_GO = "שחזור",
+                EXAMPLES_RESTORE_WHAT = "רשימות הדוגמאות באופן \"דוגמאות\" חוזרות למצב ההתחלתי. מה שהוספת להן — יוצא מהן. \"הדוגמאות שלי\", \"שמור לתוכנה\" ורשימות אחרות שהוספת לאופן — נשארות.",
+                EXAMPLES_RESTORE_BACK = "לפני השחזור נשמר גיבוי של המסד (⋮ ← גיבויים)";
+        public static String examplesRestored(int n) { return "הדוגמאות שוחזרו · הוחלפו " + n + " רשימות"; }
         public static final String ADD_DUPS = "⧉  כפולים";
         public static final String HOME_UNSAVED = "יש קובץ פקודות פתוח עם שינויים שלא נשמרו — לשמור או לסגור אותו, ואז בית";
         private Db() { }
