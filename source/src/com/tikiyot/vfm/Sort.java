@@ -221,18 +221,12 @@ public final class Sort {
         return new Store() {
             @Override
             public String get(String key, String def) {
-                Structure.Func fn = funcId != null ? Structure.byId(funcId) : null;      // 1.15.0: גם רשימה פנימית
-                if (fn != null) {
-                    String v = fn.params.get(key);
-                    return v == null || v.isEmpty() ? def : v;
-                }
                 return Conf.get(section, prefix + key, def);
             }
 
             @Override
             public void set(String key, String value) {
-                if (funcId != null && Structure.byId(funcId) != null) Structure.setById(funcId, key, value);
-                else Conf.set(section, prefix + key, value);
+                Conf.set(section, prefix + key, value);                         // מ0.29: אין עוד סעיף כלי בקובץ הראשי
             }
         };
     }

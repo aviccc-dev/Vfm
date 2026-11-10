@@ -35,7 +35,6 @@ public abstract class Func {
     public static synchronized List<Func> all() {
         if (all == null) {
             all = new ArrayList<Func>();
-            all.add(new FnVirtual());
             all.add(new FnSmart());
             all.add(new FnDup());
             all.add(new FnTrash());

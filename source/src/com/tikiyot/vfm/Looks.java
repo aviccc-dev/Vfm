@@ -348,7 +348,6 @@ final class Looks {
 
     /** צבע לפי סוג הכלי — כמו התוויות (160): ידנית ירוק, חכמה סגול; השאר אפור. */
     static int kindColor(String kind) {
-        if (FnVirtual.KIND.equals(kind)) return Ui.tagColor(Ui.MANUAL);
         if (FnSmart.KIND.equals(kind)) return Ui.tagColor(Ui.SMART);
         return Ui.tagColor(Drive.icon(true));
     }

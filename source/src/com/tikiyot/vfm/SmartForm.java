@@ -339,7 +339,7 @@ public final class SmartForm {
                     unlink.setVisibility(View.GONE);
                 } else {
                     SmartLists.Named n = named.get(current[0] - 1);
-                    String txt = Words.SmartF.shared(n.name, SmartLists.users(n.id));
+                    String txt = Words.SmartF.shared(n.name, 0);
                     shareNote.setText(txt);
                     shareTop.setText("🔗 " + txt);
                     shareTop.setVisibility(View.VISIBLE);
@@ -400,12 +400,7 @@ public final class SmartForm {
                 askSaveAs(a, start, new SaveAs() {
                     @Override
                     public void store(String n, boolean fresh) {
-                        String id = SmartLists.save(n, condOf(p), (String) sort.getSelectedItem(), dir[0],
-                                (String) view.getSelectedItem());
-                        named.clear();
-                        named.addAll(SmartLists.all());
-                        fillWhich.run();
-                        Ui.toast(a, Words.Named.SAVED_AS);
+                        Ui.toast(a, Words.Named.PRESETS_ONLY);                    // מ0.29: התבניות — המוכנות בלבד (אין עוד קובץ ראשי)
                     }
                 });
             }
@@ -522,8 +517,6 @@ public final class SmartForm {
                 Target out;
                 if (current[0] > 0) {                                         // 147: מקושר — השינוי נשמר ברשימה עצמה
                     SmartLists.Named l = named.get(current[0] - 1);
-                    if (!c.equals(l.cond) || !s.equals(l.sort) || !w.equals(l.view.isEmpty() ? FolderView.FLAT : l.view))
-                        SmartLists.save(l.name, c, s, dir[0], w);
                     if (n.isEmpty()) n = l.name;
                     out = Target.of(FnSmart.KIND, SmartLists.LINK, l.id, SmartLists.SORT, s, SmartLists.DIR, dir[0]);
                 } else {
@@ -728,7 +721,7 @@ public final class SmartForm {
                 };
                 if (old == null) store.run();
                 else Ui.ask(a, Words.Named.exists(n), Words.NO_TOUCH_FILES,
-                        Words.Named.overwrite(SmartLists.users(old.id)), null, Words.Named.UPDATE, store);
+                        Words.Named.overwrite(0), null, Words.Named.UPDATE, store);
             }
         });
     }

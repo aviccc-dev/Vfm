@@ -15,7 +15,7 @@ import java.io.FileNotFoundException;
 
 public class Provider extends ContentProvider {
 
-    public static final String AUTHORITY = Flavor.authority(Flavor.M);
+    public static final String AUTHORITY = "com.tikiyot.vfm.m.files";
 
     public static Uri uriFor(File f) {
         return new Uri.Builder().scheme("content").authority(AUTHORITY).path(f.getAbsolutePath()).build();
@@ -31,7 +31,7 @@ public class Provider extends ContentProvider {
     @Override
     public boolean onCreate() {
         // מ0.25: ההקשר של התוכנה כבר בעליית התהליך — לפקודות שרצות במסד לפני שמסך המסד הוצג (DbVerbs.active).
-        if (Flavor.M && getContext() != null && DbListScreen.app == null) DbListScreen.app = getContext().getApplicationContext();
+        if (getContext() != null && DbListScreen.app == null) DbListScreen.app = getContext().getApplicationContext();
         return true;
     }
 

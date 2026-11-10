@@ -16,7 +16,7 @@ final class DbVerbs {
 
     /** האם הפקודות עכשיו של המסד. */
     static boolean active() {
-        if (Flavor.M) {
+        {
             // מ0.25 (מחיקת המנוע הישן, שלב 1): בבניית מ הפקודות תמיד של המסד — גם כשמסך המסד עוד לא הוצג
             // (שיתוף מאפליקציה אחרת, קיצור דרך): האופן — זה שנשמר.
             if (DbListScreen.currentMode == null && DbListScreen.app != null)
@@ -27,7 +27,6 @@ final class DbVerbs {
                 }
             return DbListScreen.currentMode != null && DbListScreen.app != null;
         }
-        return DbListScreen.alive > 0 && DbListScreen.currentMode != null;
     }
 
     /** מבצע את הפקודה במסד; false — אינה פקודת רשימות (ממשיכה כרגיל: מסכים, תיקייה, חיפוש, הרצה). */

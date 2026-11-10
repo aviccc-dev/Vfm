@@ -41,7 +41,7 @@ public class IniListScreen extends Activity {
             public View getView(int pos, View convert, ViewGroup parent) {
                 View v = Ui.row(IniListScreen.this, convert);
                 File f = files.get(pos);
-                Ui.bindIcon(v, f.equals(Paths.structure()) ? "⭐" : "📄", Paths.relative(f),
+                Ui.bindIcon(v, "📄", Paths.relative(f),
                         f.exists() ? Files.size(f.length()) + " · " + Files.when(f.lastModified())
                                 : Words.IniList.MISSING_TAP_CREATES);
                 return v;
@@ -52,7 +52,6 @@ public class IniListScreen extends Activity {
             @Override
             public void onItemClick(AdapterView<?> a, View v, int pos, long id) {
                 File f = files.get(pos);
-                if (f.equals(Paths.structure())) Structure.ini();
                 Intent i = new Intent(IniListScreen.this, IniEditScreen.class);
                 i.putExtra(IniEditScreen.EXTRA_FILE, f.getAbsolutePath());
                 startActivity(i);
@@ -66,7 +65,6 @@ public class IniListScreen extends Activity {
     protected void onResume() {
         super.onResume();
         files.clear();
-        files.add(Paths.structure());
         collect(Paths.settings());
         adapter.notifyDataSetChanged();
     }

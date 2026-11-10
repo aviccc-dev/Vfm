@@ -65,12 +65,6 @@ public class ShareScreen extends Activity {
             }
         };
         list.setAdapter(adapter);
-        list.setOnItemClickListener(new AdapterView.OnItemClickListener() {
-            @Override
-            public void onItemClick(AdapterView<?> a, View v, int pos, long id) {
-                addTo(rows.get(pos).path);
-            }
-        });
         root.addView(list, new LinearLayout.LayoutParams(-1, 0, 1f));
 
         LinearLayout bar = new LinearLayout(this);
@@ -81,19 +75,7 @@ public class ShareScreen extends Activity {
         newFolder.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                final java.util.List<ArrayList<String>> bases =
-                        new ArrayList<ArrayList<String>>(FnVirtual.allBases().keySet());
-                final java.util.List<String> names = new ArrayList<String>(FnVirtual.allBases().values());
-                if (bases.isEmpty()) return;
-                if (bases.size() == 1) {
-                    createFolder(bases.get(0));
-                    return;
-                }
-                Ui.list(ShareScreen.this, Words.NEW_LIST + Words.ShareIn.INSIDE, names,
-                        new DialogInterface.OnClickListener() {
-                            @Override
-                            public void onClick(DialogInterface d, int w) { createFolder(bases.get(w)); }
-                        });
+                pick();
             }
         });
         Button cancel = new Button(this);
@@ -169,7 +151,7 @@ public class ShareScreen extends Activity {
         status.setText(Words.ShareIn.ADD_N + files.size() + Words.ShareIn.FILES_TO_LIST + Words.NO_TOUCH
                 + (unresolved > 0 ? "\n(" + unresolved + Words.ShareIn.NOT_IDENTIFIED : ""));
         // 126: הבורר האחד (תיקיות / עץ, חיפוש, תצוגה אחרונה) — במקום שורות משלו
-        if (!DbPicker.on(this) && FnVirtual.allBases().isEmpty()) {           // מ0.23: במסד — הרשימות של המסד
+        if (!DbPicker.on(this)) {                                             // מ0.29: רשימות — רק במסד
             status.setText(Words.ShareIn.NO_LISTS_YET);
             return;
         }
@@ -195,78 +177,7 @@ public class ShareScreen extends Activity {
             });
             return;
         }
-        ListPicker.choose(this, Words.ADD_TO_LIST, null, new ListPicker.Picked() {
-            @Override public void ok(ArrayList<String> path) { addTo(path); }
-        });
+        Ui.toast(this, Words.DbCmd.NO_DB);
     }
 
-    /** רשימות של פונקציות קיימות בלבד, לפי שם הפונקציה. בלי השורש, שאין אליו כניסה. */
-    private void buildRows() {
-        rows.clear();
-        Tree t = Tree.load();
-        for (java.util.Map.Entry<ArrayList<String>, String> e : FnVirtual.allBases().entrySet()) {
-            Tree.Node n = t.find(e.getKey());
-            if (n == null) continue;
-            Row r = new Row();
-            r.path = n.path();
-            r.label = e.getValue();
-            r.sub = n.entries.size() + Words.ShareIn.ITEMS_SUFFIX;
-            rows.add(r);
-            flatten(n, 1);
-        }
-        if (rows.isEmpty()) {
-            status.setText(Words.ShareIn.NO_LISTS_YET);
-            list.setVisibility(View.GONE);
-            newFolder.setVisibility(View.GONE);
-        }
-        adapter.notifyDataSetChanged();
-    }
-
-    private void flatten(Tree.Node n, int depth) {
-        for (Tree.Node c : n.children) {
-            Row r = new Row();
-            r.path = c.path();
-            StringBuilder indent = new StringBuilder();
-            for (int i = 0; i < depth; i++) indent.append("      ");
-            r.label = indent + c.name;
-            r.sub = c.entries.size() + Words.ShareIn.ITEMS_SUFFIX;
-            rows.add(r);
-            flatten(c, depth + 1);
-        }
-    }
-
-    private void addTo(List<String> path) {
-        int added = 0;
-        synchronized (Tree.LOCK) {                                   // 92
-            Tree t = Tree.load();
-            Tree.Node n = t.find(path);
-            if (n == null) {
-                Ui.toast(this, Words.LIST_NOT_FOUND);
-                buildRows();
-                return;
-            }
-            for (String p : files) {
-                if (Tree.contains(n.entries, p)) continue;
-                n.entries.add(new Tree.Entry(p, new File(p).length(), false));
-                added++;
-            }
-            if (added > 0) t.save();
-        }
-        Library.get(this).learn(files);           // קובץ ששותף ואינו באינדקס — נוסף מיד
-        Ui.toast(getApplicationContext(), added > 0 ? Words.ShareIn.ADDED_N + added + Words.ShareIn.TO_LIST : Words.ShareIn.ALREADY_THERE);
-        finish();
-    }
-
-    /** רשימה חדשה (החלון האחד — ListPicker.create), והקבצים נכנסים אליה. */
-    private void createFolder(final List<String> parent) {
-        ListPicker.create(this, new java.util.ArrayList<String>(parent), new PickDialog.Chosen() {
-            @Override
-            public void ok(java.util.ArrayList<String> path) {
-                Tree.addFiles(path, files);
-                Library.get(ShareScreen.this).learn(files);
-                Ui.toast(getApplicationContext(), Words.ShareIn.LIST_CREATED + path.get(path.size() - 1) + Words.ShareIn.AND_FILES_ADDED);
-                finish();
-            }
-        });
-    }
 }

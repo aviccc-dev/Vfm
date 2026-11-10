@@ -28,7 +28,6 @@ final class StoreTests {
         dir.mkdirs();
         try {
             t.counter(dir);
-            t.flavor(src);
             t.contract("MemStore", new StoreContract.Opener() {
                 @Override
                 public Store fresh(File counter) throws IOException {
@@ -67,19 +66,16 @@ final class StoreTests {
         try {
             Store s = opener.fresh(new File(sub, "import-counter.txt"));
             try {
-                new ImportTests(o, name).run(s, new File(sub, "import"));
             } finally {
                 s.close();
             }
             Store sm = opener.fresh(new File(sub, "smart-counter.txt"));
             try {
-                new ImportTests(o, name).smart(sm, new File(sub, "smart"));
             } finally {
                 sm.close();
             }
             Store rs = opener.fresh(new File(sub, "refs-counter.txt"));
             try {
-                new ImportTests(o, name).refs(rs, new File(sub, "refs"));
             } finally {
                 rs.close();
             }
@@ -107,6 +103,18 @@ final class StoreTests {
             } finally {
                 f4.close();
             }
+            Store t2 = opener.fresh(new File(sub, "text2-counter.txt"));       // מ0.29
+            try {
+                new ImportTests(o, name).text2(t2);
+            } finally {
+                t2.close();
+            }
+            Store ex = opener.fresh(new File(sub, "examples-counter.txt"));    // מ0.29
+            try {
+                new ImportTests(o, name).examples(ex, new File(System.getProperty("vfm.src"), "assets/examples/dugmaot.txt"));
+            } finally {
+                ex.close();
+            }
             Store cs = opener.fresh(new File(sub, "count-counter.txt"));
             try {
                 new ImportTests(o, name).count(cs);
@@ -115,17 +123,14 @@ final class StoreTests {
             }
             Store ls = opener.fresh(new File(sub, "live-counter.txt"));
             try {
-                new ImportTests(o, name).live(ls, new File(sub, "live"));
             } finally {
                 ls.close();
             }
             Store hs = opener.fresh(new File(sub, "home-counter.txt"));
             try {
-                new ImportTests(o, name).home(hs, new File(sub, "home"));
             } finally {
                 hs.close();
             }
-            new ImportTests(o, name).fullCheck(opener, new File(sub, "full"));
         } catch (Throwable x) {
             o.failed.add(name + " — העתקה: חריגה " + x);
         }
@@ -224,16 +229,4 @@ final class StoreTests {
         }
     }
 
-    private void flavor(File src) throws IOException {
-        ck("בניות: שמות שונים", !Flavor.pkg(true).equals(Flavor.pkg(false)) && !Flavor.authority(true).equals(Flavor.authority(false))
-                && !Flavor.appDir(true).equals(Flavor.appDir(false)));
-        ck("בניות: בניית מ — חבילה, רשות ותיקייה", Flavor.pkg(true).equals("com.tikiyot.vfm.m") && Flavor.authority(true).equals("com.tikiyot.vfm.m.files")
-                && Flavor.appDir(true).equals(Flavor.oldAppDir() + " מ"));
-        ck("בניות: הישנה לא השתנתה — שם החבילה, הרשות והתיקייה", !Flavor.M && Paths.APP_DIR.equals("מנהל קבצים וירטואלי")
-                && Provider.AUTHORITY.equals("com.tikiyot.vfm.files") && Flavor.oldAppDir().equals(Paths.APP_DIR));
-        if (src == null) return;
-        String mf = read(new File(src, "AndroidManifest.xml"));
-        ck("בניות: המניפסט מתאים ל־Flavor (חבילה ורשות)", mf.contains("package=\"" + Flavor.PKG_OLD + "\"") && mf.contains("android:authorities=\"" + Flavor.authority(false) + "\""));
-        ck("בניות: מסך המסד רשום במניפסט", mf.contains("android:name=\".DbScreen\""));
-    }
 }

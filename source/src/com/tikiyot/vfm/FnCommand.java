@@ -25,30 +25,6 @@ public final class FnCommand extends Func {
         return p.isEmpty() ? null : new File(p);
     }
 
-    static File file(Structure.Func f) {
-        return file(f.target());
-    }
-
-    /** 1.13.1: השם באריח — עם הסימן שמאחוריו קובץ טקסט. */
-    static String nameOf(Structure.Func f) {
-        return f.name + " 📝";
-    }
-
-    /** הצלמית של הכלי: של התוכנה, או ▶. */
-    static String iconOf(Structure.Func f) {
-        File x = file(f);
-        Program p = x == null ? null : Program.read(x);
-        return p != null && p.isProgram() ? p.icon : "▶";
-    }
-
-    /** "למה": של התוכנה, ובלעדיו — של הכלי. */
-    static String whyOf(Structure.Func f) {
-        File x = file(f);
-        Program p = x == null ? null : Program.read(x);
-        String w = p != null ? p.why : "";
-        return !w.isEmpty() ? w : f.target().get(Program.WHY, "");
-    }
-
     @Override
     public void open(Activity a, Target t) {
         File f = file(t);

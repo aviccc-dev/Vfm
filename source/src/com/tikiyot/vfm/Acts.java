@@ -24,16 +24,7 @@ public final class Acts {
             DbPicker.addFiles(a, paths, null);
             return;
         }
-        ListPicker.choose(a, Words.ADD_TO_LIST + " · " + Words.NO_TOUCH, null, new ListPicker.Picked() {
-            @Override
-            public void ok(java.util.ArrayList<String> path) {
-                int n = Tree.addFiles(path, paths);
-                Library.get(a).learn(paths);
-                Ui.toast(a, n < 0 ? Words.LIST_NOT_FOUND
-                        : n == 0 ? Words.ActsW.ALREADY_IN_LIST + Names.label(path) + "\""
-                        : Words.ActsW.ADDED_N + n + Words.ActsW.TO_LIST + Names.label(path) + "\"");
-            }
-        });
+        Ui.toast(a, Words.DbCmd.NO_DB);                                       // מ0.29: רשימות — רק במסד
     }
 
     /** בקשת השיתוף עצמה — במקום אחד (80.7): גם השיתוף מהפס הצף משתמש בה. */

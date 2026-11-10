@@ -515,15 +515,7 @@ final class Sig {
     /** מעדכן את הרשימות (והחתימות) לפי מה שנמצא. מחזיר כמה פריטים עודכנו. */
     static int apply(Map<String, String> moved) {
         if (moved.isEmpty()) return 0;
-        int n;
-        synchronized (Tree.LOCK) {
-            Tree t = Tree.load();
-            n = 0;
-            for (Map.Entry<String, String> e : moved.entrySet())
-                n += t.replacePath(e.getKey(), e.getValue(), new File(e.getValue()).length());
-            if (n > 0) t.save();
-        }
-        if (Flavor.M) n = DbFollow.movedEverywhere(moved);                 // מ0.23: הרשימות שהמשתמש רואה — במסד
+        int n = DbFollow.movedEverywhere(moved);                             // הרשימות — במסד
         moved(moved);
         return n;
     }

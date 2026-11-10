@@ -83,9 +83,6 @@ public class SearchScreen extends Activity implements Clip.Holder {
     private boolean placed;
     /** 159: התיקייה שבה נפתחים (מבחוץ: "פתיחת התיקייה", הדבקה). */
     private String startDir;
-    /** 161: הרשימה הזו (כלי, הגדרה נפוצה או פנימית) — והרשימות שבתוכה, בראש. */
-    private String owner;
-    private final List<Nested.Item> inner = new ArrayList<Nested.Item>();
     private TextView where;
     /** 153 — החיפוש האחד: ההגדרות (מקורות, סוגים, תאריך, גודל) בחלונית במסך, וחלות מיד; המילים — בשורת ההקלדה. */
     private SmartForm.Parts parts;
@@ -128,7 +125,7 @@ public class SearchScreen extends Activity implements Clip.Holder {
 
     /** 1.17.3: רשימה חכמה (כלי, או רשימה בתוך רשימה) — ולא חיפוש פתוח; לשורות הכפתורים. */
     boolean isList() {
-        return funcId != null || owner != null;
+        return funcId != null;
     }
     /**
      * 1.15.0: איפה נשמרות ההגדרות של המסך ("למה", הכפתורים הדולקים, המיון…): הכלי — או רשימה חכמה פנימית (מאז שהסביבות
@@ -139,12 +136,8 @@ public class SearchScreen extends Activity implements Clip.Holder {
     private String whyText = "", whyKey = "";
 
     /** הגדרה של המסך: בסעיף הכלי (לפי המזהה), או בהגדרות הכלליות כשלא נפתח מכלי. */
-    private String setting(Structure.Func fn, String key, String def) {
-        if (fn != null) {
-            String v = fn.params.get(key);
-            return v == null || v.isEmpty() ? def : v;
-        }
-        return Conf.get(Conf.SEARCH, key, def);
+    private String setting(String key, String def) {
+        return Conf.get(Conf.SEARCH, key, def);                               // מ0.29: אין עוד סעיף כלי בקובץ הראשי
     }
 
     private void saveSetting(final String key, final String value) {
@@ -152,8 +145,7 @@ public class SearchScreen extends Activity implements Clip.Holder {
         new Thread(new Runnable() {
             @Override
             public void run() {
-                if (id != null && Structure.byId(id) != null) Structure.setById(id, key, value);
-                else Conf.set(Conf.SEARCH, key, value);
+                Conf.set(Conf.SEARCH, key, value);
             }
         }).start();
     }
@@ -197,23 +189,18 @@ public class SearchScreen extends Activity implements Clip.Holder {
         if (v != null) view = v;
         startDir = getIntent().getStringExtra(EXTRA_DIR);
         hidden = getIntent().getBooleanExtra(EXTRA_HIDDEN, false);
-        Structure.Func fn = Structure.func(funcId);
-        if (fn == null) funcId = null;
-        owner = getIntent().getStringExtra(EXTRA_OWNER);                   // 161
-        if (owner == null) owner = Nested.ownerOf(fn);
-        settingsId = funcId != null ? funcId : owner != null && Nested.kindOf(owner) == Nested.Kind.INNER ? owner : null;
-        Structure.Func cfg = settingsId == null ? null : Structure.byId(settingsId);
-        paths = "כן".equals(setting(cfg, SmartLists.PATHS, "לא"));  // תחביר
-        loose = !"לא".equals(setting(cfg, SmartLists.LOOSE, "כן"));  // תחביר
+        funcId = null;                                                        // מ0.29: אין עוד כלים בקובץ הראשי (המנוע הישן נמחק)
+        settingsId = null;
+        paths = "כן".equals(setting(SmartLists.PATHS, "לא"));  // תחביר
+        loose = !"לא".equals(setting(SmartLists.LOOSE, "כן"));  // תחביר
         Sort.Store st = Sort.tool(settingsId, Conf.SEARCH, "");
         srt = Sort.withAdded(Sort.RANK, true, st);
         if (extraSort != null && st.get(SmartLists.SORT, "").isEmpty()) srt.prefer(extraSort);
         if (fixed && getWindow() != null)
             getWindow().setSoftInputMode(android.view.WindowManager.LayoutParams.SOFT_INPUT_STATE_ALWAYS_HIDDEN);
-        String title = fn != null ? fn.name : getIntent().getStringExtra(EXTRA_TITLE);
-        whyText = cfg != null ? cfg.target().get(Program.WHY, "")              // 1.13.0: "למה" של הכלי
-                : SmartLists.FILE_MANAGER.equals(title) ? Words.WhyW.VIRTUAL_FILES : "";
-        whyKey = cfg != null ? Words.WhyW.KEY_TOOL + settingsId : Words.WhyW.KEY_SCREEN + title;
+        String title = getIntent().getStringExtra(EXTRA_TITLE);
+        whyText = SmartLists.FILE_MANAGER.equals(title) ? Words.WhyW.VIRTUAL_FILES : "";
+        whyKey = Words.WhyW.KEY_SCREEN + title;
         setTitle(pickInto != null ? Words.ADD_TO_LIST + ": " + Names.label(pickInto)
                 : title != null && !title.isEmpty() ? title : Words.Look.SEARCH);
     }
@@ -236,7 +223,7 @@ public class SearchScreen extends Activity implements Clip.Holder {
             @Override public int count(String c) { return lib.search(c, paths, loose).total; }
             @Override public List<Library.Hit> hits(String c) { return lib.search(c, paths, loose).hits; }
             @Override public String loadState() {
-                String v = setting(settingsId == null ? null : Structure.byId(settingsId), Quick.STATE, "");
+                String v = setting(Quick.STATE, "");
                 return v.isEmpty() ? null : v;
             }
             @Override public void saveState(String s) { saveSetting(Quick.STATE, s.isEmpty() ? Quick.SEP : s); }
@@ -322,13 +309,6 @@ public class SearchScreen extends Activity implements Clip.Holder {
                 Object o = rows.get(pos);
                 if (o instanceof String) return Ui.header(SearchScreen.this, convert, (String) o, true);
                 View v = Ui.row(SearchScreen.this, convert);
-                if (o instanceof Nested.Item) {                               // 161: רשימה בתוך הרשימה
-                    Nested.Item it = (Nested.Item) o;
-                    Ui.bindIcon(v, "", it.name, it.sub);
-                    Ui.kind(v, it.smart && it.local ? Ui.SMART : Ui.LINK, it.icon);   // 1.17.0: מה שאינו שלה — קישור ↪
-                    v.setBackgroundColor(0x00000000);
-                    return v;
-                }
                 if (o instanceof FolderView.Folder) {                         // 148: תיקייה בתצוגה בתיקיות
                     FolderView.Folder f = (FolderView.Folder) o;
                     boolean top = here == null;
@@ -370,10 +350,6 @@ public class SearchScreen extends Activity implements Clip.Holder {
             @Override
             public void onItemClick(AdapterView<?> a, View v, int pos, long id) {
                 Object o = rows.get(pos);
-                if (o instanceof Nested.Item) {                               // 161
-                    if (!sel.on()) openInner((Nested.Item) o);
-                    return;
-                }
                 if (o instanceof Library.Hit) tap((Library.Hit) o);
                 else if (o instanceof FolderView.Folder) {                    // 148: נכנסים לתיקייה
                     FolderView.Folder f = (FolderView.Folder) o;
@@ -389,10 +365,6 @@ public class SearchScreen extends Activity implements Clip.Holder {
             @Override
             public boolean onItemLongClick(AdapterView<?> a, View v, int pos, long id) {
                 Object o = rows.get(pos);
-                if (o instanceof Nested.Item) {                               // 161: הוצאה
-                    innerActions((Nested.Item) o);
-                    return true;
-                }
                 if (o instanceof FolderView.Folder) {                         // 148: הכלל האחיד (59)
                     sel.longPressDir(((FolderView.Folder) o).path);
                     return true;
@@ -466,42 +438,24 @@ public class SearchScreen extends Activity implements Clip.Holder {
     }
 
     /**
-     * 153: "שמירה" — הכלי הזה (רשימה עם שם — היא; כלי "חיפוש" ישן — הופך לרשימה חכמה).
-     * "שמירה בשם" — רשימה עם שם, וכלי חדש שמקשר אליה (באותו מקום כמו זה, או במסך הבית); שם קיים — עדכון.
+     * "שמירה בשם" — רשימה חכמה חדשה במסד, בבית של האופן הפתוח, עם התנאי, המיון והתצוגה שעל המסך.
+     * מ0.29: עד כאן נשמרה "הגדרה נפוצה" בקובץ הראשי של המנוע הישן (ולכן לא הופיעה במסד).
      */
     private void save(boolean as) {
-        final String q = query(), s = srt.by, d = srt.desc ? "יורד" : "", w = view;  // תחביר
-        final Structure.Func fn = funcId == null ? null : Structure.func(funcId);
-        if (!as && fn == null && owner != null && Nested.kindOf(owner) != Nested.Kind.TOOL) {   // 161: הגדרה נפוצה או פנימית
-            SmartLists.Named l = SmartLists.byId(owner);
-            if (l == null) l = SmartLists.byId(Nested.linkOf(owner));         // 1.15.0: פנימית שמקושרת להגדרה נפוצה
-            if (l != null) SmartLists.save(l.name, q, s, d, w);
-            else Nested.saveInner(owner, q, s, w);
-            Ui.toast(this, Words.Find.saved(getTitle().toString()));
-            return;
-        }
-        if (!as && fn != null) {
-            SmartLists.Named l = SmartLists.byId(SmartLists.linkOf(fn.target()));
-            if (l != null) SmartLists.save(l.name, q, s, d, w);
-            else Structure.updateFunc(funcId, fn.name, fn.description,
-                    Target.of(FnSmart.KIND, SmartLists.COND, q, SmartLists.SORT, s, SmartLists.VIEW, w));
-            Ui.toast(this, Words.Find.saved(fn.name));
-            return;
-        }
-        SmartForm.askSaveAs(this, fn != null ? fn.name : input.getText().toString().trim(), new SmartForm.SaveAs() {
+        final String q = query(), s = srt.by, w = view;
+        SmartForm.askSaveAs(this, input.getText().toString().trim(), new SmartForm.SaveAs() {
             @Override
             public void store(String n, boolean fresh) {
-                String id = SmartLists.save(n, q, s, d, w);
-                if (fresh) {                                                  // חדשה — וכלי שמקשר אליה
-                    Target t = Target.of(FnSmart.KIND, SmartLists.LINK, id, SmartLists.SORT, s, SmartLists.DIR, d);
-                    String nid = Structure.addDirectFunc(n, FnSmart.KIND, "", t);
-                    if (nid != null) {
-                        funcId = nid;
-                        setTitle(n);
-                        invalidateOptionsMenu();
-                    }
-                }
-                Ui.toast(SearchScreen.this, Words.Find.saved(n));
+                final DbSmartForm.Result r = new DbSmartForm.Result();
+                r.name = n;
+                r.cond = q;
+                r.sort = s;
+                r.view = w;
+                String mode = DbListScreen.currentMode;
+                long id = mode == null ? 0 : DbVerbs.write(SearchScreen.this, mode, new DbVerbs.Job() {
+                    @Override public long run(Store st, List<String> p) { return DbSmartForm.save(st, 0, DbPaths.home(st), r); }
+                }, null);
+                Ui.toast(SearchScreen.this, id != 0 ? Words.Find.saved(n) : Words.DbCmd.NO_DB);
             }
         });
     }
@@ -512,130 +466,8 @@ public class SearchScreen extends Activity implements Clip.Holder {
         lib.start(null);
         lib.returned();                                                  // 110
         loadInList();
-        loadInner();
         search();
         showClip();
-    }
-
-    // ---------- 161: רשימה בתוך רשימה ----------
-
-    private void loadInner() {
-        inner.clear();
-        if (owner != null && pickInto == null) inner.addAll(Nested.items(Nested.refs(owner)));
-    }
-
-    /** הרשימות הפנימיות — בראש הרשימה (ברצף; ובתיקיות — במקום שבו מתחילים). */
-    private void addInner() {
-        if (inner.isEmpty()) return;
-        if (folderMode() && (fv == null || here != null && !here.equals(fv.start()))) return;
-        for (Nested.Item it : inner) it.sub = innerSub(it);                   // פעם אחת להצגה
-        rows.addAll(0, inner);
-    }
-
-    private String innerSub(Nested.Item it) {
-        if (it.gone) return Words.Inner.GONE;
-        if (!it.smart) {
-            Tree.Node n = Tree.load().find(it.path);
-            int[] t = n == null ? new int[]{0, 0} : n.totals();
-            return (t[0] > 0 ? t[0] + Words.Look.LISTS_DOT : "") + Words.items(t[1]);
-        }
-        if (it.dup != null) return Func.byKind(FnDup.KIND).title;
-        int n = lib.ready ? lib.search(it.cond, false, true).hits.size() : 0;
-        return (it.common ? Words.Named.TITLE + " · " : "") + Words.files(n);
-    }
-
-    private void openInner(Nested.Item it) {
-        if (it.gone) {
-            Ui.toast(this, Words.Inner.GONE);
-            return;
-        }
-        if (!it.smart) {
-            Ui.toast(this, Words.Inner.GONE);                                 // מ0.26: רשימה ידנית של המנוע הישן — אין עוד
-            return;
-        }
-        Nested.open(this, it);                                                // 1.15.1: גם כפולים
-    }
-
-    /** פתיחת רשימה חכמה פנימית — במסך הזה, עם הבעלים שלה. */
-    static android.content.Intent innerIntent(android.content.Context c, Nested.Item it) {
-        android.content.Intent i = new android.content.Intent(c, SearchScreen.class);
-        i.putExtra(EXTRA_QUERY, it.cond);
-        i.putExtra(EXTRA_FIXED, true);
-        i.putExtra(EXTRA_TITLE, it.name);
-        i.putExtra(EXTRA_SORT, it.sort.isEmpty() ? Sort.NAME : it.sort);
-        i.putExtra(EXTRA_VIEW, it.view.isEmpty() ? FolderView.FLAT : it.view);
-        i.putExtra(EXTRA_OWNER, it.ref);
-        return i;
-    }
-
-    private void innerActions(final Nested.Item it) {
-        Ui.ask(this, Words.Inner.REMOVE + ": " + it.name, Words.NO_TOUCH_FILES, Words.Inner.removeWhat(it.local && Nested.uses(it.ref) <= 1),
-                null, Words.Inner.REMOVE, new Runnable() {
-                    @Override
-                    public void run() {
-                        Nested.remove(owner, it.ref);
-                        loadInner();
-                        search();
-                    }
-                });
-    }
-
-    /** "➕ רשימה בתוך הרשימה": הגדרה נפוצה קיימת · רשימה ידנית קיימת · חדשה. */
-    private void addInnerMenu() {
-        Ui.options(this, Words.Inner.ADD, new String[]{Words.Inner.COMMON, Words.Inner.MANUAL, Words.Inner.NEW},
-                new android.content.DialogInterface.OnClickListener() {
-                    @Override
-                    public void onClick(android.content.DialogInterface d, int w) {
-                        if (w == 0) pickCommon();
-                        else if (w == 1) pickManual();
-                        else newInner();
-                    }
-                });
-    }
-
-    private void added(boolean ok) {
-        if (!ok) Ui.toast(this, Words.Inner.ALREADY);
-        loadInner();
-        search();
-    }
-
-    private void pickCommon() {
-        final List<SmartLists.Named> all = SmartLists.all();
-        if (all.isEmpty()) {
-            Ui.toast(this, Words.Inner.NONE_COMMON);
-            return;
-        }
-        List<String> names = new ArrayList<String>();
-        for (SmartLists.Named n : all) names.add(n.name);
-        Ui.list(this, Words.Inner.COMMON, names, new android.content.DialogInterface.OnClickListener() {
-            @Override
-            public void onClick(android.content.DialogInterface d, int w) {    // 1.17.3: מתבנית — עותק משלה
-                String id = Structure.copyInner(all.get(w).id, all.get(w).name);
-                if (id != null) added(Nested.add(owner, id));
-            }
-        });
-    }
-
-    private void pickManual() {
-        ListPicker.choose(this, Words.Inner.MANUAL, null, new ListPicker.Picked() {
-            @Override public void ok(ArrayList<String> path) { added(Nested.add(owner, Nested.manual(path))); }
-        });
-    }
-
-    private void newInner() {
-        SmartForm.show(this, null, null, new Func.Done() {
-            @Override
-            public void ok(String name, Target t) {
-                String link = SmartLists.linkOf(t);
-                if (!link.isEmpty()) {                                        // בחר הגדרה נפוצה בטופס — קישור
-                    added(Nested.add(owner, link));
-                    return;
-                }
-                String id = Nested.newInner(getTitle().toString(), name, t.get(SmartLists.COND, ""),
-                        t.get(SmartLists.SORT, Sort.NAME), t.get(SmartLists.VIEW, FolderView.FLAT));
-                added(Nested.add(owner, id));
-            }
-        });
     }
 
     // ---------- 149: הלוח ברשימה החכמה ----------
@@ -709,8 +541,6 @@ public class SearchScreen extends Activity implements Clip.Holder {
     private void loadInList() {
         inList.clear();
         if (pickInto == null) return;
-        Tree.Node n = Tree.load().find(pickInto);
-        if (n != null) for (Tree.Entry e : n.entries) inList.add(e.path);
     }
 
     // ---------- נגיעות ובחירה ----------
@@ -732,10 +562,7 @@ public class SearchScreen extends Activity implements Clip.Holder {
                 startActivity(fileManager(this, "", hit.path(), null));         // 159
             }
         } else if (pickInto != null) {
-            int n = Tree.addFiles(pickInto, Collections.singletonList(hit.path()));
-            Ui.toast(this, n > 0 ? Words.Look.ADDED_TO_LIST : Words.Look.ALREADY_IN_LIST);
-            loadInList();
-            adapter.notifyDataSetChanged();
+            Ui.toast(this, Words.DbCmd.NO_DB);                                // מ0.29: בחירה לתוך רשימה של המנוע הישן — אין עוד
         } else {                                                              // 1.13.1: קובץ פקודות — כקובץ (תפריט: הרצה / עריכה)
             Ui.open(this, new File(hit.path()));
         }
@@ -881,7 +708,6 @@ public class SearchScreen extends Activity implements Clip.Holder {
             }
             rows.add(hit);
         }
-        addInner();                                                           // 161
         adapter.notifyDataSetChanged();
         showLegend(r);
         StringBuilder byType = new StringBuilder();
@@ -1030,7 +856,6 @@ public class SearchScreen extends Activity implements Clip.Holder {
         srt.apply(files, HIT);
         rows.addAll(dirs);
         rows.addAll(files);
-        addInner();                                                           // 161
         StringBuilder w = new StringBuilder();
         if (here == null) w.append("📂 ").append(Words.Views.SOURCES);
         else {
@@ -1119,9 +944,7 @@ public class SearchScreen extends Activity implements Clip.Holder {
         if (FolderView.ALL.equals(view)) menu.add(0, 8, 7, hidden ? Words.Here.HIDE_HIDDEN : Words.Here.SHOW_HIDDEN);   // 149
         if (pickInto != null && folderMode() && here != null) menu.add(0, 9, 8, Words.Here.ADD_FOLDER);
         if (pickInto == null) {                                               // 153
-            if (funcId != null || owner != null && Nested.kindOf(owner) != Nested.Kind.TOOL) menu.add(0, 6, 5, Words.Find.SAVE);
             menu.add(0, 7, 6, Words.Find.SAVE_AS);
-            if (owner != null) menu.add(0, 10, 9, Words.Inner.ADD);           // 161
         }
         return true;
     }
@@ -1134,10 +957,6 @@ public class SearchScreen extends Activity implements Clip.Holder {
         }
         if (item.getItemId() == 1) {
             sel.flip();
-            return true;
-        }
-        if (item.getItemId() == 10) {                                         // 161
-            addInnerMenu();
             return true;
         }
         if (item.getItemId() == 8) {                                          // 149: מוסתרים, בפתיחה הזו

@@ -1,10 +1,11 @@
 #!/bin/bash
 # שימוש: build.sh <תיקיית המקור המלאה> <קובץ יעד> [m]
-# בלי הפרמטר השלישי — הבנייה הישנה (com.tikiyot.vfm). עם "m" — בניית מנוע המסד (com.tikiyot.vfm.m): אותו קוד מקור,
-# עותק זמני שבו הסקריפט מחליף את Flavor, את המניפסט (חבילה, רשות, גרסה), את שם התוכנה ואת הצלמית.
+# מ0.29: בנייה אחת — מנוע המסד (com.tikiyot.vfm.m); המנוע הישן נמחק, ואין עוד "בנייה ישנה". הפרמטר השלישי חייב להיות "m".
+# עותק זמני שבו הסקריפט מתאים את המניפסט (חבילה, רשות, גרסה), את שם התוכנה ואת הצלמית.
 # הגרסה של בניית מ — build/m-version.txt: "<versionCode> <versionName>".
 set -e
-DIR=$1; OUT=$2; FLAVOR=${3:-old}
+DIR=$1; OUT=$2; FLAVOR=${3:-m}
+[ "$FLAVOR" = "m" ] || { echo "הבנייה נעצרה: יש רק בניית מ"; exit 1; }
 T=/home/claude/tools
 KEY=$DIR/signing/tv-key.jks
 bash $DIR/build/test.sh $DIR || { echo "הבנייה נעצרה: בדיקה נכשלה"; exit 1; }
@@ -14,9 +15,6 @@ if [ "$FLAVOR" = "m" ]; then
   S=$(mktemp -d)
   cp -r $DIR/src $DIR/res $DIR/assets $DIR/AndroidManifest.xml $S/
   VC=$(cut -d' ' -f1 $DIR/build/m-version.txt); VN=$(cut -d' ' -f2- $DIR/build/m-version.txt | tr -d '\n')
-  F=$S/src/com/tikiyot/vfm/Flavor.java
-  sed -i 's|public static final boolean M = false;  // BUILD-FLAVOR|public static final boolean M = true;  // BUILD-FLAVOR|' $F
-  grep -q 'boolean M = true;' $F || { echo "הבנייה נעצרה: שורת BUILD-FLAVOR לא נמצאה"; exit 1; }
   sed -i -e 's|package="com.tikiyot.vfm"|package="com.tikiyot.vfm.m"|' \
          -e 's|android:name="\.|android:name="com.tikiyot.vfm.|g' \
          -e 's|com\.tikiyot\.vfm\.files|com.tikiyot.vfm.m.files|' \

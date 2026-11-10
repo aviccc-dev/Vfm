@@ -287,7 +287,10 @@ final class DbMore {
      * אותה תיקייה כבר שם (אותו תנאי) — בלי כפולה, 0. אחרת — מספר החכמה החדשה.
      */
     static long liveFolder(Store s, final long list, String folder) {
-        final java.util.Map<String, String> kv = Unify.folderKeys(folder);
+        final java.util.Map<String, String> kv = new java.util.LinkedHashMap<String, String>();   // מ0.29: מה שהיה Unify.folderKeys
+        kv.put(SmartLists.COND, Cond.SOURCE + ":" + Cond.quote(folder));
+        kv.put(SmartLists.SORT, Sort.NAME);
+        kv.put(SmartLists.VIEW, FolderView.ALL);
         final String cond = kv.get(SmartLists.COND);
         for (Store.Member m : s.members(list))
             if (m.item.type == Store.SMART && cond.equals(s.prop(m.item.id, Store.P_COND))) return 0;

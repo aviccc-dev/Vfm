@@ -48,10 +48,6 @@ final class PickerModel {
     private List<Row> all;
     private List<String> allNorm;
 
-    PickerModel(Tree t, Map<ArrayList<String>, String> bases, List<String> except, List<String> base) {
-        this(new TreeSource(t), bases, except, base);
-    }
-
     /** bases: נקודות פתיחה בשמן (רק כשלא נקבעה רשימה של כלי), או null. except: צומת שאינו יעד, או null. */
     PickerModel(PickSource src, Map<ArrayList<String>, String> bases, List<String> except, List<String> base) {
         this.src = src;

@@ -1156,89 +1156,6 @@ final class Batch {
                 Compare.Result.files(r.onlyA, r.onlyADirs), Compare.Result.files(r.onlyB, r.onlyBDirs), r.same);
     }
 
-    /**
-     * 1.22.1: הרשימה לפי שם — הדרך כמו שנכתבה ("א / ב"); אחרת בתוך "שמור לתוכנה"; אחרת — שם יחיד בכל העץ.
-     * ואם אין באופן הזה — באופן שבו נמצא "שמור לתוכנה" (Reserved). כמה רשימות באותו שם — שגיאה שמראה את הדרכים.
-     */
-    static Tree.Node findList(String name, Tree[] tree, String[] err) {
-        return findList(name, tree, err, null);
-    }
-
-    /** ini[0] — ההגדרות של האופן שבו נמצאה (null — האופן הפעיל). */
-    static Tree.Node findList(String name, Tree[] tree, String[] err, Ini[] ini) {
-        List<String> path = Names.parsePath(name);
-        if (path.isEmpty()) { err[0] = Words.Cmd.LIST_ONLY_COMP; return null; }
-        List<Tree> trees = new ArrayList<Tree>();
-        List<String> modes = new ArrayList<String>();
-        List<Ini> inis = new ArrayList<Ini>();
-        trees.add(Tree.load());
-        modes.add(Modes.current());
-        inis.add(null);
-        try {                                                                 // 1.22.2: גם באופני העבודה האחרים
-            if (Tree.testFile == null)
-                for (String m : Modes.all()) {
-                    if (m.equals(Modes.current())) continue;
-                    File tf = ModeCopy.treeOf(m), mf = ModeCopy.mainOf(m);
-                    if (!tf.isFile() || !mf.isFile()) continue;
-                    trees.add(Tree.loadFrom(tf));
-                    modes.add(m);
-                    inis.add(Ini.load(mf));
-                }
-        } catch (Throwable ignored) {
-        }
-        for (Tree t : trees) {
-            Tree.Node n = t.find(path);
-            if (n == null) {
-                List<String> under = new ArrayList<String>(Reserved.ROOT_PATH);
-                under.addAll(path);
-                n = t.find(under);
-            }
-            if (n == null && path.size() == 1) {
-                List<Tree.Node> found = new ArrayList<Tree.Node>();
-                byName(t.root, path.get(0), found);
-                if (found.size() > 1) {
-                    List<String> ways = new ArrayList<String>();
-                    for (Tree.Node f : found) ways.add(wayOf(f));
-                    err[0] = Words.Cmd.listAmbiguous(name, join(ways, " · "));
-                    return null;
-                }
-                if (found.size() == 1) n = found.get(0);
-            }
-            if (n != null) {
-                tree[0] = t;
-                if (ini != null) ini[0] = inis.get(trees.indexOf(t));
-                return n;
-            }
-        }
-        // 1.22.2: מה התוכנה כן רואה — כדי שיהיה ברור למה לא נמצא
-        StringBuilder seen = new StringBuilder();
-        for (int k = 0; k < trees.size(); k++) {
-            Tree t = trees.get(k);
-            List<String> top = new ArrayList<String>();
-            for (Tree.Node c : t.root.children) top.add(c.name);
-            Tree.Node res = t.find(Reserved.ROOT_PATH);
-            List<String> in = new ArrayList<String>();
-            if (res != null) for (Tree.Node c : res.children) in.add(c.name);
-            seen.append(Words.Cmd.listsSeen(modes.get(k), join(top, " · "), res == null ? null : join(in, " · ")));
-        }
-        err[0] = Words.Cmd.listNotFound(name) + seen;
-        return null;
-    }
-
-    private static void byName(Tree.Node n, String name, List<Tree.Node> out) {
-        for (Tree.Node c : n.children) {
-            if (c.name.equals(name)) out.add(c);
-            byName(c, name, out);
-        }
-    }
-
-    /** "א / ב / ג" — הדרך לרשימה. */
-    private static String wayOf(Tree.Node n) {
-        List<String> parts = new ArrayList<String>();
-        for (Tree.Node x = n; x != null && x.parent != null; x = x.parent) parts.add(0, x.name);
-        return join(parts, Names.SEP);
-    }
-
     /** 1.22.0: COMP /רשימה:<שם> <יעד> — כל מה שברשימה, לפי <מפתח כונן>/<מסלול>, מול היעד. */
     private static void compList(Step s, List<String> args, List<String> paths, Sim sim) {
         if (paths.size() != 1) { s.error = Words.Cmd.usage("COMP"); return; }
@@ -1252,11 +1169,8 @@ final class Batch {
             src = DbListCmd.compSource(sim, s.listName, skip.getAbsolutePath(), err);
             if (src == null) { s.error = err[0]; return; }
         } else {
-            Tree[] tt = {null};
-            Ini[] ini = {null};
-            Tree.Node n = findList(s.listName, tt, err, ini);
-            if (n == null) { s.error = err[0]; return; }
-            src = Compare.ofList(sim.lib, tt[0], n, s.hidden, skip.getAbsolutePath(), ini[0]);
+            s.error = Words.DbCmd.NO_DB;                                      // מ0.29: רשימות — רק במסד
+            return;
         }
         if (src.files.isEmpty() && src.emptyDirs.isEmpty()) { s.error = Words.Cmd.listEmpty(s.listName); return; }
         Compare.Result r = Compare.byList(sim.lib, src, sim.underWiped(b.getAbsolutePath()) ? GHOST : b, s.hidden);   // מ0.27

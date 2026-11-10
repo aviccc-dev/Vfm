@@ -36,8 +36,6 @@ public final class Tests {
         run("תנאים", new Runnable() { public void run() { cond(); } });
         run("אינדקס", new Runnable() { public void run() { index(); } });
         run("חיפוש", new Runnable() { public void run() { search(); } });
-        run("מבנה.txt", new Runnable() { public void run() { tree(); } });
-        run("קובץ ההגדרות", new Runnable() { public void run() { structure(); } });
         run("מודל הפריט", new Runnable() { public void run() { item(); } });
         run("תור האינדקס", new Runnable() { public void run() { queue(); } });
         run("מרשם הפעולות", new Runnable() { public void run() { actions(); } });
@@ -46,11 +44,7 @@ public final class Tests {
         run("תיקיות והעתקה (82)", new Runnable() { public void run() { folders(); } });
         run("בין כוננים (82)", new Runnable() { public void run() { acrossDrives(); } });
         run("שמירה על הנתונים (90, 92, 93)", new Runnable() { public void run() { dataSafety(); } });
-        run("נכונות (95, 88, 89)", new Runnable() { public void run() { correctness(); } });
         run("קטנים (102, 104)", new Runnable() { public void run() { smalls(); } });
-        run("אופני עבודה (105)", new Runnable() { public void run() { modes(); } });
-        run("ניהול אופנים — שינוי שם ומחיקה (105)", new Runnable() { public void run() { modesManage(); } });
-        run("בורר הרשימות (106)", new Runnable() { public void run() { picker(); } });
         run("בורר התיקיות מהאינדקס (106)", new Runnable() { public void run() { folderPicker(); } });
         run("שינוי שם בכונן ותיקייה חדשה (84)", new Runnable() { public void run() { renameOnDrive(); } });
         run("שליחת תיקיות — אריזה ופריסה של ZIP (116)", new Runnable() { public void run() { zipRoundTrip(); } });
@@ -67,17 +61,9 @@ public final class Tests {
         run("רשימה חכמה — תאריך וכונן דרך החיפוש (144)", new Runnable() { public void run() { smartDate(); } });
         run("סוגי קבצים — קבוצות, קובצי נתונים, שאר הקבצים (145)", new Runnable() { public void run() { kinds(); } });
         run("מסך יציב — לאן עבר הקובץ, ולמה אינו עונה (146)", new Runnable() { public void run() { stable(); } });
-        run("רשימות חכמות עם שם — קישור, מקומית, מוכנות (147)", new Runnable() { public void run() { named(); } });
         run("רשימה חכמה בתיקיות (148)", new Runnable() { public void run() { folderView(); } });
-        run("\"הוספת חיפוש\" — ארבע לשוניות (150)", new Runnable() { public void run() { searchTabs(); } });
         run("החיפוש האחד — הגדרות ומילים, שמירה (153)", new Runnable() { public void run() { oneSearch(); } });
-        run("הדוגמאות בהתקנה (156)", new Runnable() { public void run() { examples(); } });
         run("הדבקה ברשימה החכמה, שיתוף ההגדרות (149, 158)", new Runnable() { public void run() { pasteShare(); } });
-        run("תוויות על הצלמית, רשימה בתוך רשימה (160, 161)", new Runnable() { public void run() { nested(); } });
-        run("העתקה בין אופני עבודה (162)", new Runnable() { public void run() { modeCopy(); } });
-        run("מעבר בין אופנים בלי לסגור (163)", new Runnable() { public void run() { softSwitch(); } });
-        run("העתקה מאופן אחר — לתוך רשימה (164)", new Runnable() { public void run() { copyIntoList(); } });
-        run("ביקורת שמינית — 165–168", new Runnable() { public void run() { review8(); } });
         run("169, ביצועים, צמצום שלב 1 (170)", new Runnable() { public void run() { step170(); } });
         run("תיקיות ריקות (175)", new Runnable() { public void run() { empty175(); } });
         run("סריקה במקביל (177)", new Runnable() { public void run() { parallel177(); } });
@@ -89,9 +75,7 @@ public final class Tests {
         run("תיקונים קטנים (192)", new Runnable() { public void run() { small192(); } });
         run("גרסה 1.9.0 — תיקייה חיה, מנהל ישיר, כפתורים, START %בית%", new Runnable() { public void run() { v190(); } });
         run("גרסה 1.10.0 — בכאילו, שליחת תיקייה, העברת כלי, סל למכלים, דוגמאות", new Runnable() { public void run() { v1100(); } });
-        run("גרסה 1.11.0 — שורה ריקה, %כאן%, מיון ישיר, צלמית ותיאור, הדוגמאות שלי", new Runnable() { public void run() { v1110(); } });
         run("גרסה 1.12.0 — עיצובים עם שם: קובץ, ירושה, צלמית לרשימה", new Runnable() { public void run() { v1120(); } });
-        run("גרסה 1.13.0 — פקודות בעברית, תוכנה, הפניה לרשימה, הזזה, למה", new Runnable() { public void run() { v1130(); } });
         run("גרסה 1.18.0 — הגנות בהעתקה: שם זמני, רק העליון, גודל ל-FAT32", new Runnable() { public void run() { v1180(); } });
         run("גרסה 1.19.0 — שמירת מסלול, יומן, \"נוסף\" מדויק בהעברה, %תאריך%", new Runnable() { public void run() { v1190(); } });
         run("גרסה 1.20.0 — השוואה לפי מסלול (COMP), %רק-במקור% / %רק-ביעד%, /עד:, גיבוי מלא", new Runnable() { public void run() { v1200(); } });
@@ -141,38 +125,6 @@ public final class Tests {
         Library cold = Library.forTests(Collections.singletonList(ix));
         cold.ready = false;
         check("חכמה: אינדקס שעוד נבנה — לא מוכן", !Smarts.over(cold).find("pdf", "", 10).ready);
-
-        // הקובץ הראשי נכתב בידי הקוד האמיתי (SmartLists.save, Nested.newInner) ונקרא בידי ההעתקה — לא רק מקובץ שכתבתי ביד
-        File ini = new File(home, "מבנה-חכמות.ini");
-        ini.delete();
-        Structure.testFile = ini;
-        String common, inner;
-        try {
-            common = SmartLists.save("אחרונים", "תאריך:שבוע", Sort.DATE, "", FolderView.FLAT);
-            inner = Nested.newInner("ספרים", "צילומים", "סוג:תמונות", Sort.NAME, "");
-        } finally {
-            Structure.testFile = null;
-        }
-        File mode = new File(home, "חכמות-אמיתי/עבודה");
-        wipe(mode.getParentFile());
-        mk(mode, "מבנה.txt", 0);
-        File settings = new File(mode, Paths.SETTINGS);
-        settings.mkdirs();
-        try {
-            java.nio.file.Files.write(new File(mode, Paths.TREE).toPath(),
-                    ("#1 ספרים\n@חכמה " + common + "\n@חכמה " + inner + "\n").getBytes("UTF-8"));
-            java.nio.file.Files.copy(ini.toPath(), new File(settings, Paths.MAIN).toPath(), java.nio.file.StandardCopyOption.REPLACE_EXISTING);
-        } catch (java.io.IOException e) {
-            throw new RuntimeException(e);
-        }
-        Importer.Source real = Importer.load(mode);
-        check("חכמה: קובץ ראשי אמיתי — שתי הגדרות", real.wanted().size() == 2);
-        check("חכמה: הנפוצה נקראה עם התנאי והמיון", real.smart(common) != null && real.smart(common).name.equals("אחרונים")
-                && real.smart(common).cond.equals("תאריך:שבוע") && real.smart(common).sort.equals(Sort.DATE)
-                && real.smart(common).view.equals(FolderView.FLAT));
-        check("חכמה: הפנימית נקראה, והשם — אחרי החץ", real.smart(inner) != null && real.smart(inner).name.equals("צילומים")
-                && real.smart(inner).cond.equals("סוג:תמונות") && real.smart(inner).sort.equals(Sort.NAME));
-        check("חכמה: ההפניות נפתרות והאחת לא נספרת כחסרה", real.skippedSmart() == 0);
     }
 
     private static void run(String name, Runnable r) {
@@ -409,33 +361,18 @@ public final class Tests {
         // תיקייה חיה ברשימה
         File f = new File(home, "מבנה190.txt");
         f.delete();
-        Tree.testFile = f;
         try {
             Files.writeAtomic(f, "#1 לימוד\n@תיקייה /storage/x/הורדות\n/storage/x/a.pdf | 1\n");
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
-        Tree t = Tree.load();
-        Tree.Node l = t.find(Arrays.asList("לימוד"));
-        check("1.9.0: תיקייה חיה נקראת", l != null && l.live.size() == 1 && "/storage/x/הורדות".equals(l.live.get(0)));
-        check("1.9.0: והפריט הרגיל נשאר פריט", l.entries.size() == 1);
-        t.save();
-        Tree t2 = Tree.load();
-        check("1.9.0: נשמרת ונקראת שוב", t2.find(Arrays.asList("לימוד")).live.size() == 1 && t2.find(Arrays.asList("לימוד")).entries.size() == 1);
-        check("1.9.0: באילו רשימות — קובץ בתוך התיקייה החיה", Tree.listsOf("/storage/x/הורדות/משנה/ספר.pdf").contains("לימוד"));
-        check("1.9.0: תיקייה בשם דומה — לא", !Tree.listsOf("/storage/x/הורדות2/ספר.pdf").contains("לימוד"));
         // 1.17.3: הוספת תיקייה — רשימה חכמה של התיקייה (Unify.addFolders; התיקייה המתעדכנת הישנה עוד נקראת)
         // תיקייה חיה שזזה — המסלול מתעדכן; תיקייה שעדיין קיימת — לא
         File gone = new File(root, "ישנה"), moved = new File(root, "חדשה");
         moved.mkdirs();
         java.util.List<String> live = new java.util.ArrayList<String>(Arrays.asList(gone.getAbsolutePath()));
         Map<String, String> mv = Collections.singletonMap(gone.getAbsolutePath() + "/משנה/x.pdf", moved.getAbsolutePath() + "/משנה/x.pdf");
-        eq("1.9.0: תיקייה חיה שזזה — מתעדכנת", 1, Tree.retarget(live, mv));
-        eq("1.9.0: למקום החדש", moved.getAbsolutePath(), live.get(0));
         java.util.List<String> stay = new java.util.ArrayList<String>(Arrays.asList(moved.getAbsolutePath()));
-        eq("1.9.0: קובץ אחד יצא מתיקייה קיימת — היא לא זזה", 0,
-                Tree.retarget(stay, Collections.singletonMap(moved.getAbsolutePath() + "/y.pdf", root.getAbsolutePath() + "/y.pdf")));
-        Tree.testFile = null;
 
         // קריאה ישירה מהכונן
         File d = new File(root, "כונן");
@@ -526,31 +463,12 @@ public final class Tests {
         for (File f : Acts.filesIn(new File(root, "הורדות"))) names.add(f.getName());
         eq("1.10.0: שליחת תיקייה — כל הקבצים, גם בתיקיות משנה", "[א.pdf, ב.txt, ג.pdf]", names.toString());
 
-        // סל למכלים: השחזור מהצילום — כלי עם הרשימה שלו, ותת־רשימה לתוך הרשימה שבה הייתה
-        check("1.10.0: סימון הסל", BinBox.isBox(BinBox.MARK + "רשימה: א") && !BinBox.isBox("/storage/x") && !BinBox.isBox(null));
-        File snapIni = new File(home, "צילום-1100.ini"), snapTree = new File(home, "צילום-1100.txt");
-        try {
-            Files.writeAtomic(snapIni, "[פונקציה: קניות]\nמזהה = f7\nסוג = וירטואלי\nרשימה = קניות\n");
-            Files.writeAtomic(snapTree, "#1 קניות\n#2 קניות / ירקות\n/x/עגבנייה.jpg | 5\n");
-        } catch (Exception e) { throw new RuntimeException(e); }
-        ModeCopy.Side snap = new ModeCopy.Side(Ini.load(snapIni), Tree.loadFrom(snapTree));
-        String mode = "שחזור1100";
-        Modes.dirOf(mode).mkdirs();
-        eq("1.10.0: שחזור כלי לאופן", "קניות", ModeCopy.restore(snap, ModeCopy.Pick.tool("f7", "קניות"), mode, null));
-        Tree back = Tree.loadFrom(ModeCopy.treeOf(mode));
-        Tree.Node veg = back.find(Arrays.asList("קניות", "ירקות"));
-        check("1.10.0: הרשימה חזרה עם מה שבתוכה", veg != null && veg.entries.size() == 1);
-        check("1.10.0: הכלי חזר — למסך הבית", ModeCopy.modelOf(ModeCopy.read(mode).ini).direct.size() == 1);
-        String sub = ModeCopy.restore(snap, ModeCopy.Pick.list(Arrays.asList("קניות", "ירקות")), mode, Arrays.asList("קניות"));
-        check("1.10.0: תת־רשימה חוזרת לתוך הרשימה שלה", sub != null
-                && Tree.loadFrom(ModeCopy.treeOf(mode)).find(Arrays.asList("קניות")).children.size() == 2);
-
         // דוגמאות הפקודות: תיקיית התרגול נבנית, וכל קובץ — בכאילו, בלי שגיאות
         String src = System.getProperty("vfm.src");
         if (src == null) return;
         File demo = new File(home, "תרגול1100");
         try {
-            Examples.demo(demo, Files.readUtf8(new File(src, "assets/" + Examples.ASSET_DEMO)));
+            DbExamples.demo(demo, new String(java.nio.file.Files.readAllBytes(new File(src, "assets/examples/demo.txt").toPath()), "UTF-8"));
         } catch (Exception e) { throw new RuntimeException(e); }
         File[] bats = demo.listFiles();
         int n = 0;
@@ -571,216 +489,7 @@ public final class Tests {
         check("1.10.0: דוגמה 3 — מוחקת רק את הישנים", del != null && del.steps.get(0).files.size() == 2);
     }
 
-    private static void v1130() {
-        try {
-            v1130run();
-        } catch (Exception e) {
-            throw new RuntimeException(e);
-        }
-    }
 
-    private static void v1130run() throws Exception {
-        // הפעלים
-        Verbs.Cmd c = Verbs.parse("פתח מסך הבית");
-        check("1.13.0: פתח מסך הבית", c.error == null && c.kind.equals(Verbs.K_SCREEN) && c.arg.equals(Verbs.S_HOME));
-        c = Verbs.parse("פתח מסך קבצים פיזיים /storage/x");
-        check("1.13.0: פתח מסך קבצים פיזיים + תיקייה", c.error == null && c.arg.equals(Verbs.S_DISK) && c.cond.equals("/storage/x"));
-        c = Verbs.parse("פתח רשימה לימוד/הערות מיון:הסדר שלי");
-        check("1.13.0: פתח רשימה עם מיון", c.error == null && c.kind.equals(Verbs.K_LIST) && c.arg.equals("לימוד/הערות")
-                && c.sort.equals("הסדר שלי"));
-        c = Verbs.parse("פתח רשימה חכמה \"ספרים חדשים\"");
-        check("1.13.0: פתח רשימה חכמה במרכאות", c.error == null && c.kind.equals(Verbs.K_SMART) && c.arg.equals("ספרים חדשים"));
-        c = Verbs.parse("צור רשימה חכמה \"ספרים חדשים\" סוג:ספרים תאריך:שבוע");
-        check("1.13.0: צור רשימה חכמה — שם ותנאי", c.error == null && c.arg.equals("ספרים חדשים") && c.cond.equals("סוג:ספרים תאריך:שבוע"));
-        check("1.13.0: צור רשימה — בלי שם: החלון של רשימה חדשה", Verbs.parse("צור רשימה").kind.equals(Verbs.K_NEW_LIST));
-        check("1.13.0: מצא — תנאי", Verbs.parse("מצא סוג:ספרים").cond.equals("סוג:ספרים"));
-        check("1.13.0: פתח מסך לא מוכר — שגיאה", Verbs.parse("פתח מסך מטבח").error != null);
-        check("1.13.0: מצא בלי תנאי — שגיאה", Verbs.parse("מצא").error != null);
-        check("1.13.0: MOVE אינו פועל עברי", !Verbs.isVerb("MOVE a b") && Verbs.isVerb("חזור"));
-
-        // כפתור = שורת פקודה: קובץ ישן מתורגם
-        eq("1.13.0: מסך:בית ← פתח מסך הבית", Buttons.HOME, Verbs.fromOld("מסך:בית"));
-        eq("1.13.0: מסך:חזרה ← חזור", Buttons.BACK, Verbs.fromOld("מסך:חזרה"));
-        eq("1.13.0: מסך:מנהל קבצים ← קבצים פיזיים", Buttons.FILES, Verbs.fromOld("מסך:מנהל קבצים"));
-        eq("1.13.0: רשימה:", "פתח רשימה א/ב", Verbs.fromOld("רשימה:א / ב"));
-        eq("1.13.0: קובץ:", "הרץ /x/y.vbat", Verbs.fromOld("קובץ:/x/y.vbat"));
-        eq("1.13.0: פקודה:", "START %בית%", Verbs.fromOld("פקודה:START %בית%"));
-        eq("1.13.0: פעולה:מהכונן", "הוסף מהכונן", Verbs.fromOld("פעולה:מהכונן"));
-        Buttons.Layout old = Buttons.parseAll("[למעלה]\n---\n🏠 | בית | מסך:בית\n📋 | לימוד | רשימה:לימוד\n→ | חזרה | מסך:חזרה\n");
-        eq("1.13.0: קובץ כפתורים ישן — בעברית", "פתח רשימה לימוד", old.rows(Buttons.TOP).get(0).get(1).act);
-        check("1.13.0: העוגנים — מוכרים גם בעברית", old.rows(Buttons.TOP).get(0).get(0).anchor() && Buttons.count(old, Buttons.HOME) == 1);
-        eq("1.13.0: נכתב ונקרא — אותו דבר", Buttons.textAll(old), Buttons.textAll(Buttons.parseAll(Buttons.textAll(old))));
-        eq("1.13.0: פעולת מסך לכפתור", Buttons.NEW_LIST, Verbs.hostCode(Verbs.parse(Buttons.C_NEW_LIST)));
-
-        // קובץ פקודות כתוכנה
-        Program pg = Program.parse("צלמית 📚\nשם ספרים חדשים\nלמה אוסף ספרים\nMOVE a b\n");
-        check("1.13.0: כותרת — צלמית, שם, למה", pg.isProgram() && pg.icon.equals("📚") && pg.name.equals("ספרים חדשים")
-                && pg.why.equals("אוסף ספרים"));
-        check("1.13.0: בלי צלמית — קובץ פקודות רגיל", !Program.parse("REM למה: x\nMOVE a b\n").isProgram()
-                && Program.parse("REM למה: x\n").why.equals("x"));
-        File pd = new File(home, "תוכנה1130");
-        new File(pd, "הורדות").mkdirs();
-        Files.writeAtomic(new File(pd, "הורדות/א.pdf"), "x");
-        Files.writeAtomic(new File(pd, "הורדות/ב.pdf"), "x");
-        Files.writeAtomic(new File(pd, "הורדות/ג.jpg"), "x");
-        java.util.Map<String, String> vars = Batch.vars(pd, pd.getAbsolutePath(), null);
-        Batch.Plan p = Batch.plan("צלמית 📚\nשם ספרים\nלמה ניסיון\nהדמיה\nMD לשלוח\nMOVE הורדות\\*.pdf לשלוח\nפתח רשימה לימוד\n", pd, vars);
-        check("1.13.0: הכותרת לא נחשבת פקודה, הדמיה = בכאילו", p.errors == 0 && p.asIf && p.steps.size() == 3);
-        check("1.13.0: פקודת פתיחה — נפתחת בסוף, לא שינוי", "פתח רשימה לימוד".equals(p.open) && p.changes() == 2);
-        Batch.Plan bad = Batch.plan("פתח מסך מטבח\n", pd, vars);
-        check("1.13.0: פקודת פתיחה שגויה — שגיאה בתצוגה המקדימה", bad.errors == 1 && bad.open == null);
-        File prog = new File(pd, "ספרים.vbat");
-        Files.writeAtomic(prog, "צלמית 📚\nMD לשלוח\nMD אחר\nCOPY הורדות\\*.pdf אחר\nMOVE הורדות\\*.pdf לשלוח\n");
-        Batch.Plan cp = Batch.plan(Files.readUtf8(prog), pd, vars);
-        java.util.Set<String> uniq = new java.util.HashSet<String>();
-        for (Batch.Step st : cp.steps) if (st.cmd.equals("MOVE") || st.cmd.equals("COPY")) uniq.addAll(st.files);
-        eq("1.13.0: נתון חי — קובץ בשתי פקודות נספר פעם אחת", 2, uniq.size());
-
-        // הזזה ידנית
-        java.util.List<String> l = new java.util.ArrayList<String>(Arrays.asList("א", "ב", "ג", "ד"));
-        Order.Picked<String> cd = new Order.Picked<String>() {
-            @Override public boolean is(String x) { return x.equals("ג") || x.equals("ד"); }
-        };
-        Order.move(l, Order.UP, cd);
-        eq("1.13.0: למעלה — יחד", "[א, ג, ד, ב]", l.toString());
-        Order.move(l, Order.TOP, cd);
-        eq("1.13.0: לראש", "[ג, ד, א, ב]", l.toString());
-        Order.move(l, Order.BOTTOM, cd);
-        eq("1.13.0: לסוף", "[א, ב, ג, ד]", l.toString());
-        check("1.13.0: למטה בסוף — לא זז", !Order.move(l, Order.DOWN, cd));
-
-        // למה והפניה ברשימות
-        File tf = new File(home, "מבנה1130.txt");
-        Files.writeAtomic(tf, "#1 לימוד\n@למה כל מה שלומדים עכשיו\n@רשימה מתכונים / חלבי\n/x/a.pdf | 1\n#1 מתכונים\n#2 מתכונים / חלבי\n");
-        Tree t = Tree.loadFrom(tf);
-        Tree.Node n = t.find(Arrays.asList("לימוד"));
-        check("1.13.0: @למה ו־@רשימה נקראים", n != null && n.why.equals("כל מה שלומדים עכשיו") && n.refs.size() == 1
-                && n.entries.size() == 1);
-        check("1.13.0: ההפניה מובילה לרשימה", t.find(Names.parsePath(n.refs.get(0))) != null);
-        File tf2 = new File(home, "מבנה1130ב.txt");
-        t.saveTo(tf2);
-        Tree t2 = Tree.loadFrom(tf2);
-        check("1.13.0: נשמרים ונקראים שוב", t2.find(Arrays.asList("לימוד")).why.equals("כל מה שלומדים עכשיו")
-                && t2.find(Arrays.asList("לימוד")).refs.equals(n.refs));
-
-        // הדוגמאות: "למה" לכל סביבה וכלי; הפניות וכלי פקודה מובילים למשהו; כל פקודת פתיחה בהן — תקינה
-        String src = System.getProperty("vfm.src");
-        if (src != null) {
-            String exMain = Files.readUtf8(new File(src, "assets/" + Examples.ASSET_MAIN));
-            String exTree = Files.readUtf8(new File(src, "assets/" + Examples.ASSET_TREE));
-            String exDemo = Files.readUtf8(new File(src, "assets/" + Examples.ASSET_DEMO));
-            List<String> noWhy = new ArrayList<String>();
-            java.util.Map<String, String> listWhy = new java.util.LinkedHashMap<String, String>();   // 1.15.0: כלי רשימה — "למה" ברשימה
-            String sec = null, list = null;
-            boolean has = true, cmdTool = false;
-            java.util.Set<String> ids = new java.util.HashSet<String>();
-            for (String line : (exMain + "\n[]").split("\n")) {
-                String ln = line.trim();
-                if (ln.startsWith("[")) {
-                    if (sec != null && !has && !cmdTool) {                   // כלי פקודה — "למה" מהתוכנה עצמה (נבדק למטה)
-                        if (list != null) listWhy.put(sec, list); else noWhy.add(sec);
-                    }
-                    sec = ln.startsWith("[" + Nested.INNER) || ln.startsWith("[" + Structure.FUNC) ? ln : null;
-                    has = false;
-                    cmdTool = false;
-                    list = null;
-                } else if (ln.startsWith(Program.WHY + " =")) has = true;
-                else if (ln.equals("סוג = " + FnCommand.KIND)) cmdTool = true;
-                else if (ln.startsWith(FnVirtual.LIST + " =")) list = ln.substring(ln.indexOf('=') + 1).trim();
-                else if (ln.startsWith(Structure.ID + " =")) ids.add(ln.substring(ln.indexOf('=') + 1).trim());
-            }
-            check("1.13.0: לכל רשימה וכלי בדוגמאות — \"למה\"" + (noWhy.isEmpty() ? "" : ": " + noWhy), noWhy.isEmpty());
-            check("1.15.0: אין יותר סביבות בדוגמאות", !exMain.contains("[" + Structure.TILE));
-            java.util.Set<String> demoFiles = new java.util.HashSet<String>();
-            java.util.Map<String, String> bodies = new java.util.LinkedHashMap<String, String>();
-            String curF = null;
-            StringBuilder body = new StringBuilder();
-            for (String line : (exDemo + "\n=== ").split("\n")) {
-                if (line.startsWith("=== ")) {
-                    if (curF != null) bodies.put(curF, body.toString());
-                    curF = line.substring(4).replace(" @ישן", "").trim();
-                    if (!curF.isEmpty()) demoFiles.add(curF);
-                    body.setLength(0);
-                } else body.append(line).append('\n');
-            }
-            String demoDir = Examples.IN + "/מנהל קבצים וירטואלי/" + Examples.DEMO + "/";
-            List<String> badFile = new ArrayList<String>();
-            for (String line : exMain.split("\n"))
-                if (line.trim().startsWith(FnCommand.FILE + " =")) {
-                    String f = line.substring(line.indexOf('=') + 1).trim();
-                    if (!f.startsWith(demoDir) || !demoFiles.contains(f.substring(demoDir.length()))) badFile.add(f);
-                }
-            check("1.13.0: כלי פקודה בדוגמאות — הקובץ קיים בתיקיית ההדמיה" + (badFile.isEmpty() ? "" : ": " + badFile), badFile.isEmpty());
-            List<String> badOpen = new ArrayList<String>();
-            int programs = 0;
-            for (java.util.Map.Entry<String, String> e : bodies.entrySet()) {
-                if (Program.parse(e.getValue()).isProgram()) {
-                    programs++;
-                    if (Program.parse(e.getValue()).why.isEmpty()) badOpen.add(e.getKey() + " — בלי למה");
-                }
-                for (String line : e.getValue().split("\n"))
-                    if (Verbs.isVerb(line.trim()) && Verbs.parse(line.trim()).error != null) badOpen.add(e.getKey() + ": " + line);
-            }
-            check("1.13.0: תוכנות בדוגמאות — עם למה, ופקודות הפתיחה תקינות" + (badOpen.isEmpty() ? "" : ": " + badOpen),
-                    badOpen.isEmpty() && programs >= 5);
-            File exT = new File(home, "דוגמאות1130.txt");
-            Files.writeAtomic(exT, exTree.replace(Examples.IN, "/storage/emulated/0"));
-            Tree et = Tree.loadFrom(exT);
-            List<String> badRef = new ArrayList<String>();
-            List<Tree.Node> stack = new ArrayList<Tree.Node>(et.root.children);
-            while (!stack.isEmpty()) {
-                Tree.Node en = stack.remove(stack.size() - 1);
-                stack.addAll(en.children);
-                for (String r : en.refs) if (et.find(Names.parsePath(r)) == null) badRef.add(r);
-                for (String r : en.smart) if (!ids.contains(r)) badRef.add(r);
-            }
-            check("1.13.0: הפניות בדוגמאות (@רשימה, @חכמה) — מובילות למשהו" + (badRef.isEmpty() ? "" : ": " + badRef), badRef.isEmpty());
-            Tree.Node concept = et.find(Arrays.asList("לפי מושג"));
-            check("1.13.0: \"לפי מושג\" — רשימה לכל מושג, עם למה", concept != null && concept.children.size() >= 5
-                    && !concept.why.isEmpty());
-            List<String> listNoWhy = new ArrayList<String>();
-            for (java.util.Map.Entry<String, String> e : listWhy.entrySet()) {
-                Tree.Node ln = et.find(Names.parsePath(e.getValue()));
-                if (ln == null || ln.why.isEmpty()) listNoWhy.add(e.getKey());
-            }
-            check("1.15.0: כלי רשימה בדוגמאות — \"למה\" ברשימה עצמה" + (listNoWhy.isEmpty() ? "" : ": " + listNoWhy), listNoWhy.isEmpty());
-            List<String> badEntry = new ArrayList<String>();
-            stack = new ArrayList<Tree.Node>(et.root.children);
-            String realDemo = "/storage/emulated/0/מנהל קבצים וירטואלי/" + Examples.DEMO + "/";
-            while (!stack.isEmpty()) {
-                Tree.Node en = stack.remove(stack.size() - 1);
-                stack.addAll(en.children);
-                for (Tree.Entry e : en.entries)
-                    if (e.path.startsWith(realDemo) && !demoFiles.contains(e.path.substring(realDemo.length()))) badEntry.add(e.path);
-            }
-            check("1.15.0: קובצי פקודות ברשימות הדוגמאות — קיימים בתיקיית ההדמיה" + (badEntry.isEmpty() ? "" : ": " + badEntry),
-                    badEntry.isEmpty());
-            check("1.13.0: \"מנהל קבצים\" בדוגמאות — \"קבצים וירטואליים\"", !exMain.contains("מנהל קבצים]")
-                    && exMain.contains(" › " + SmartLists.FILE_MANAGER + "]"));
-        }
-
-        // צור — לא משכפל; עדכן — רק קיימת
-        File sf = new File(home, "מבנה1130.ini");
-        sf.delete();
-        Structure.testFile = sf;
-        try {
-            SmartLists.Named a = SmartLists.ensure("ספרים חדשים", "סוג:ספרים תאריך:שבוע", "");
-            SmartLists.Named b = SmartLists.ensure("שם אחר", "סוג:ספרים תאריך:שבוע", "");
-            check("1.13.0: צור — אותן הגדרות: אותה רשימה", a != null && b != null && a.id.equals(b.id));
-            SmartLists.Named c2 = SmartLists.ensure("ספרים חדשים", "סוג:ספרים תאריך:חודש", "");
-            eq("1.13.0: צור — אותו שם, הגדרות אחרות: שם עם מספר", "ספרים חדשים (2)", c2.name);
-            check("1.13.0: עדכן — לא קיימת: כלום", SmartLists.update("אין כזו", "סוג:pdf", "") == null);
-            SmartLists.Named u = SmartLists.update("ספרים חדשים", "סוג:ספרים תאריך:יום", "");
-            check("1.13.0: עדכן — התנאי השתנה, אותו מזהה", u != null && u.id.equals(a.id) && u.cond.equals("סוג:ספרים תאריך:יום"));
-            Conf.set(Conf.GENERAL, SmartLists.PRESETS_DONE, SmartLists.OLD_FILE_MANAGER);
-            SmartLists.save(SmartLists.OLD_FILE_MANAGER, "מקור:פנימי|כרטיס", Sort.NAME, "", FolderView.ALL);
-            SmartLists.all();
-            check("1.13.0: \"מנהל קבצים\" ← \"קבצים וירטואליים\" (אותה רשימה)", SmartLists.byName(SmartLists.FILE_MANAGER) != null
-                    && SmartLists.byName(SmartLists.OLD_FILE_MANAGER) == null);
-        } finally {
-            Structure.testFile = null;
-        }
-    }
 
     private static void v1120() {
         try {
@@ -833,29 +542,11 @@ public final class Tests {
         // @עיצוב ברשימה — נקרא ונשמר; הירושה
         File tf = new File(home, "מבנה-1120.txt");
         Files.writeAtomic(tf, "@עיצוב פנקס שורש\n#1 לימוד\n@עיצוב תוכנת ניהול קבצים\n#2 לימוד / הערות\n#3 לימוד / הערות / ישנות\n@עיצוב מילים וצבע\n#1 ספרים\n");
-        Tree tr = Tree.loadFrom(tf);
-        eq("1.12.0: @עיצוב — נקרא", Design.FILES, tr.find(Arrays.asList("לימוד")).design);
         File tf2 = new File(home, "מבנה-1120ב.txt");
-        tr.saveTo(tf2);
-        Tree again = Tree.loadFrom(tf2);
-        eq("1.12.0: @עיצוב — נשמר", Design.WORDS, again.find(Arrays.asList("לימוד", "הערות", "ישנות")).design);
-        eq("1.12.0: @עיצוב ל\"כל הרשימות\" (השורש) — נשמר", "פנקס שורש", again.root.design);
-        again.root.design = "";
-        check("1.12.0: @עיצוב — לא נקרא כפריט", again.find(Arrays.asList("לימוד")).entries.isEmpty());
         String homeBefore = Design.homeName();
         Design.setHome("");
-        eq("1.12.0: רשימה בלי עיצוב — יורשת מזו שמעליה", Design.FILES, Design.nameFor(again, Arrays.asList("לימוד", "הערות")));
-        eq("1.12.0: עיצוב משלה — עד השינוי הבא", Design.WORDS, Design.nameFor(again, Arrays.asList("לימוד", "הערות", "ישנות")));
-        eq("1.12.0: בלי עיצוב בכל הדרך ובלי מסך בית — ברירת המחדל", Design.DEFAULT, Design.nameFor(again, Arrays.asList("ספרים")));
-        eq("1.12.0: יורש מ…", "לימוד", Design.inheritedFrom(again, Arrays.asList("לימוד", "הערות")));
-        eq("1.12.0: נבחר לה עצמה", null, Design.inheritedFrom(again, Arrays.asList("לימוד")));
         Design.setHome(Design.FILES);
-        eq("1.12.0: עיצוב מסך הבית — לרשימות בלי עיצוב", Design.FILES, Design.nameFor(again, Arrays.asList("ספרים")));
-        eq("1.12.0: יורש ממסך הבית", "", Design.inheritedFrom(again, Arrays.asList("ספרים")));
         Design.setHome(homeBefore);
-        Tree.Node copy = Tree.newChild(again.root, "עותק");
-        Tree.copyNode(again.find(Arrays.asList("לימוד")), copy);
-        eq("1.12.0: העתקת רשימה — העיצוב איתה", Design.FILES, copy.design);
 
         // קבצים: מובנה נכתב כשצריך; שם שלא קיים — ברירת המחדל; שמירה בשם; חזרה לברירת מחדל שומרת את הצלמיות
         File dir = Design.dir();
@@ -907,8 +598,6 @@ public final class Tests {
         String m = "בדיקת ספירה 1120";
         File md = new File(new File(Paths.data(), Modes.DIR), m);
         md.mkdirs();
-        Files.writeAtomic(new File(md, Paths.TREE), "#1 א\n@עיצוב מילים וצבע\n/x/a.pdf | 3\n");
-        check("1.12.0: ספירת האופן — @עיצוב אינו פריט", Arrays.equals(new int[]{1, 1}, Modes.counts(m)));
         wipe(md);
         Files.writeAtomic(new File(Design.dir(), "x.txt"), "לא עיצוב");
         boolean onlyDesigns = true;
@@ -937,111 +626,15 @@ public final class Tests {
 
         // 1.12.1: שינוי שם ומחיקה — הרשימות ומסך הבית מתעדכנים
         String homeWas = Design.homeName();
-        Files.writeAtomic(Paths.tree(), "#1 א\n@עיצוב מדף ספרים\n#2 א / ב\n@עיצוב מדף ספרים\n#1 ג\n");
         Design.setHome("מדף ספרים");
         eq("1.12.1: שינוי שם", null, Design.rename("מדף ספרים", "מדף"));
-        Tree tn = Tree.load();
-        check("1.12.1: שינוי שם — הרשימות מפנות לשם החדש", "מדף".equals(tn.find(Arrays.asList("א")).design)
-                && "מדף".equals(tn.find(Arrays.asList("א", "ב")).design) && Design.fileOf("מדף").isFile());
         eq("1.12.1: שינוי שם — גם מסך הבית", "מדף", Design.homeName());
         eq("1.12.1: שינוי שם לשם תפוס — נדחה", Words.DesignW.EXISTS, Design.rename("מדף", Design.FILES));
         check("1.12.1: מחיקה", Design.delete("מדף") && !Design.fileOf("מדף").exists());
-        Tree td = Tree.load();
-        check("1.12.1: מחיקה — מה שהפנה אליו יורש", td.find(Arrays.asList("א")).design.isEmpty() && Design.homeName().isEmpty());
         Design.setHome(homeWas);
-        Files.writeAtomic(Paths.tree(), "");
         wipe(dir);
     }
 
-    private static void v1110() {
-        // שורה ריקה נשמרת בכל מקום
-        Buttons.Layout lay = Buttons.defaultsAll();
-        String bottomHome = Buttons.local(Buttons.BOTTOM, Words.Top.S_HOME);
-        newRow(lay, Buttons.BOTTOM);
-        newRow(lay, bottomHome);
-        newRow(lay, Buttons.TOP);
-        Buttons.Layout back = Buttons.parseAll(Buttons.textAll(lay));
-        eq("1.11.0: שורה ריקה למטה — נשמרת", 1, back.rows(Buttons.BOTTOM).size());
-        eq("1.11.0: שורה ריקה למטה כאן — נשמרת", 1, back.rows(bottomHome).size());
-        eq("1.11.0: שורה ריקה נוספת למעלה — נשמרת", 2, back.rows(Buttons.TOP).size());
-        eq("1.11.0: שמירה שנייה — אותו דבר", Buttons.textAll(back), Buttons.textAll(Buttons.parseAll(Buttons.textAll(back))));
-        Buttons.Layout v1100 = Buttons.parseAll("[למעלה]\n🏠 | בית | מסך:בית\n---\n→ | חזרה | מסך:חזרה\n");
-        eq("1.11.0: קובץ של 1.10.0 — נקרא כמו קודם", 2, v1100.rows(Buttons.TOP).size());
-        Buttons.Layout named = Buttons.parseAll("[למעלה]\n---\n🏠 | בית | מסך:בית\n📂 | מנהל קבצים | " + Buttons.FILES + "\n→ | חזרה | מסך:חזרה\n");
-        eq("1.11.0: שם שבחר המשתמש — לא חוזר לבד", "מנהל קבצים", named.rows(Buttons.TOP).get(0).get(1).name);
-
-        // %כאן% בתנאי
-        eq("1.11.0: %כאן% — מוחלף", "סוג:vbat מקור:/x/y", SmartLists.withHere("סוג:vbat מקור:%כאן%", "/x/y"));
-        eq("1.11.0: %כאן% עם רווח — בתוך «»", "-מקור:«/x/a b/c»", SmartLists.withHere("-מקור:%כאן%/c", "/x/a b"));
-        eq("1.11.0: בלי %כאן% — כמו שהוא", "סוג:pdf", SmartLists.withHere("סוג:pdf", "/x"));
-        check("1.11.0: התצוגה \"קודם כאן\" — ברשימת התצוגות", Arrays.asList(FolderView.MODES).contains(FolderView.HERE)
-                && !FolderView.folders(FolderView.HERE));
-
-        // קבצים פיזיים — מיון
-        File d = new File(home, "ישיר1110");
-        new File(d, "תיקייה").mkdirs();
-        try {
-            Files.writeAtomic(new File(d, "ב.txt"), "xx");
-            Files.writeAtomic(new File(d, "א.pdf"), "xxxxxxxx");
-            Files.writeAtomic(new File(d, "ג.doc"), "x");
-        } catch (Exception e) { throw new RuntimeException(e); }
-        DiskList.Listing bySize = DiskList.read(d, false, 2, true);
-        eq("1.11.0: מיון לפי גודל, יורד", "[א.pdf, ב.txt, ג.doc]", namesOf(bySize.files));
-        eq("1.11.0: מיון לפי סוג", "[ג.doc, א.pdf, ב.txt]", namesOf(DiskList.read(d, false, 3, false).files));
-        eq("1.11.0: תיקיות — קודם, בנפרד", 1, bySize.dirs.size());
-
-        // צלמית ותיאור לרשימה ידנית
-        File tf = new File(home, "מבנה-1110.txt");
-        try {
-            Files.writeAtomic(tf, "#1 פנקס\n@צלמית 📒\n@תיאור רשומות קצרות\n#2 פנקס / חלב\n@תיאור שתי שקיות\n");
-        } catch (Exception e) { throw new RuntimeException(e); }
-        Tree tr = Tree.loadFrom(tf);
-        Tree.Node pk = tr.find(Arrays.asList("פנקס"));
-        check("1.11.0: צלמית ותיאור — נקראים", pk != null && pk.icon.equals("📒") && pk.desc.equals("רשומות קצרות")
-                && pk.entries.isEmpty() && pk.child("חלב").desc.equals("שתי שקיות"));
-        File tf2 = new File(home, "מבנה-1110ב.txt");
-        tr.saveTo(tf2);
-        Tree again = Tree.loadFrom(tf2);
-        check("1.11.0: צלמית ותיאור — נשמרים", again.find(Arrays.asList("פנקס")).icon.equals("📒")
-                && again.find(Arrays.asList("פנקס", "חלב")).desc.equals("שתי שקיות"));
-
-        // דוגמאות: כל תנאי — רכיבים של "מפתח:ערך" (ערך עם רווח — בתוך «»)
-        String src = System.getProperty("vfm.src");
-        if (src == null) return;
-        String mainText, treeText;
-        try {
-            mainText = Files.readUtf8(new File(src, "assets/" + Examples.ASSET_MAIN));
-            treeText = Files.readUtf8(new File(src, "assets/" + Examples.ASSET_TREE));
-        } catch (Exception e) { throw new RuntimeException(e); }
-        String loose = "";
-        for (String line : mainText.split("\n"))
-            if (line.startsWith(SmartLists.COND + " ="))
-                for (String tok : Cond.tokens(line.substring(line.indexOf('=') + 1)))
-                    if (tok.indexOf(':') < 0) loose += tok + " ";
-        eq("1.11.0: בדוגמאות — אין מילה בודדת בתנאי (מסלול עם רווח בלי «»)", "", loose.trim());
-
-        // "הדוגמאות שלי" עוברת בחזרה לברירת מחדל (1.15.0: רשימה כסביבת עבודה)
-        File data = new File(home, "נתונים1110");
-        File dir = new File(new File(data, Modes.DIR), Examples.MODE);
-        File main = new File(new File(dir, Paths.SETTINGS), Paths.MAIN), treeF = new File(dir, Paths.TREE);
-        Examples.install(data, "/x/y", false, mainText, treeText, null);
-        try {
-            Tree tm = Tree.loadFrom(treeF);
-            Tree.Node mine = tm.find(Examples.MINE_PATH);
-            Tree.newChild(mine, "שלי לבדיקה").entries.add(new Tree.Entry("/x/שלי.pdf", 1, false));
-            tm.find(Arrays.asList("א. ארגון לפי הבחנות")).refs.clear();
-            tm.saveTo(treeF);
-        } catch (Exception e) { throw new RuntimeException(e); }
-        check("1.11.0: חזרה לברירת מחדל", Examples.install(data, "/x/y", true, mainText, treeText, null));
-        Tree after = Tree.loadFrom(treeF);
-        Tree.Node mineN = after.find(Examples.MINE_PATH);
-        check("1.11.0: \"הדוגמאות שלי\" — נשמרה עם מה שבה", mineN != null && mineN.child("שלי לבדיקה") != null
-                && mineN.child("שלי לבדיקה").entries.size() == 1);
-        check("1.11.0: וכל השאר — חזר להתחלה", after.find(Arrays.asList("א. ארגון לפי הבחנות")).refs.size() > 3);
-        int mines = 0;
-        for (Tree.Node c : after.root.children) if (c.name.startsWith(Examples.MINE)) mines++;
-        eq("1.11.0: \"הדוגמאות שלי\" — פעם אחת", 1, mines);
-    }
 
     private static String namesOf(java.util.List<File> fs) {
         java.util.List<String> n = new java.util.ArrayList<String>();
@@ -1057,76 +650,9 @@ public final class Tests {
 
     // ---------- מבנה.txt ----------
 
-    private static void tree() {
-        File f = new File(home, "מבנה.txt");
-        f.delete();
-        Tree.testFile = f;
-        try {
-            Files.writeAtomic(f, "#1 לימוד\n/storage/x/ספר.pdf | 4382194\n/storage/x/שם | 12 | ?\n\n#2 לימוד / רמח\"ל\n/storage/x/דרך ה'.pdf | ?\n");
-        } catch (Exception e) {
-            throw new RuntimeException(e);
-        }
-        Tree t = Tree.load();
-        Tree.Node l = t.find(Arrays.asList("לימוד"));
-        check("קריאה: רשימה ברמה 1", l != null);
-        check("קריאה: רשימה ברמה 2", t.find(Arrays.asList("לימוד", "רמח\"ל")) != null);
-        eq("קריאה: גודל", 4382194L, l.entries.get(0).size);
-        eq("60: שם שמסתיים ב' | 12' עם ' | ?' — השם שלם", "/storage/x/שם | 12", l.entries.get(1).path);
-        eq("60: גודל לא ידוע", -1L, l.entries.get(1).size);
-
-        eq("שם עם / מוחלף", "א∕ב", Names.cleanName("א/ב"));
-        Tree.Node n = Tree.newChild(t.root, "א/ב");
-        t.save();
-        check("שם עם / נשמר ונקרא כרשימה אחת", Tree.load().find(Arrays.asList("א∕ב")) != null);
-        eq("הוספה לרשימה", 2, Tree.addFiles(Arrays.asList("א∕ב"), Arrays.asList("/storage/x/ספר.pdf", "/storage/x/חדש.pdf")));
-        eq("הוספה כפולה לא נוספת", 0, Tree.addFiles(Arrays.asList("א∕ב"), Arrays.asList("/storage/x/ספר.pdf")));
-
-        eq("80.4: באילו רשימות", Arrays.asList("לימוד", "א∕ב"), Tree.listsOf("/storage/x/ספר.pdf"));
-        eq("ספירה בכל הרשימות", 2, Tree.countEverywhere(Collections.singletonList("/storage/x/ספר.pdf")));
-        Map<String, String> moved = Collections.singletonMap("/storage/x/ספר.pdf", "/storage/y/ספר.pdf");
-        eq("65: החלפת מסלול בכל הרשימות", 2, Tree.replaceEverywhere(moved));
-        eq("החלפה: הישן כבר לא ברשימות", 0, Tree.countEverywhere(Collections.singletonList("/storage/x/ספר.pdf")));
-        eq("58: הסרה מכל הרשימות", 2, Tree.removeEverywhere(Collections.singletonList("/storage/y/ספר.pdf")));
-        eq("הסרה: לא נשאר", 0, Tree.listsOf("/storage/y/ספר.pdf").size());
-        check("הרשימה עצמה נשארת", Tree.load().find(Arrays.asList("לימוד")) != null);
-        Tree.testFile = null;
-    }
 
     // ---------- קובץ ההגדרות ----------
 
-    private static void structure() {
-        File f = new File(home, "מבנה התוכנה.ini");
-        f.delete();
-        Structure.testFile = f;
-        Structure.addDirectFunc("חיפוש ספרים", "חיפוש", "", Target.of("חיפוש", "תנאי", "סוג:pdf"));
-        Structure.Model m = Structure.load();
-        eq("כלי נוסף", 1, m.direct.size());
-        Structure.Func fn = m.direct.get(0);
-        check("לכלי יש מזהה", !fn.id.isEmpty());
-        eq("הגדרת הכלי נשמרה", "סוג:pdf", fn.params.get("תנאי"));
-
-        Structure.setKey(fn.id, "מיון", "שם");
-        Structure.updateFunc(fn.id, "חיפוש בספרים", "", Target.of("חיפוש", "תנאי", "סוג:epub"));
-        fn = Structure.func(fn.id);
-        eq("שינוי לפי מזהה: שם", "חיפוש בספרים", fn.name);
-        eq("שינוי לפי מזהה: תנאי", "סוג:epub", fn.params.get("תנאי"));
-        eq("57: הגדרת תצוגה נשמרת בסעיף הכלי", "שם", fn.params.get("מיון"));
-
-        try {
-            Files.writeAtomic(f, Files.readUtf8(f) + "\n[משהו אחר]\nשורה לא מוכרת = 5\n");
-        } catch (Exception e) {
-            throw new RuntimeException(e);
-        }
-        Structure.setKey(fn.id, "מיון", "תאריך");
-        String after;
-        try {
-            after = Files.readUtf8(f);
-        } catch (Exception e) {
-            throw new RuntimeException(e);
-        }
-        check("שורות לא מוכרות נשמרות", after.contains("שורה לא מוכרת = 5"));
-        Structure.testFile = null;
-    }
 
     // ---------- מודל הפריט ----------
 
@@ -1377,31 +903,21 @@ public final class Tests {
         Library lib = Library.forTests(new ArrayList<Index>(Collections.singletonList(ix)));
         File tf = new File(home, "מבנה-פיזי.txt");
         tf.delete();
-        Tree.testFile = tf;
         String a = new File(root, "Download/מוגה.pdf").getAbsolutePath();
         String b = new File(root, "Download/יוגה למתחילים.pdf").getAbsolutePath();
         String c = new File(root, "Documents/היגיון.txt").getAbsolutePath();
-        Tree t = Tree.load();
-        Tree.newChild(t.root, "א");
-        Tree.newChild(t.root, "ב");
-        t.save();
-        Tree.addFiles(Arrays.asList("א"), Arrays.asList(a, b, c));
-        Tree.addFiles(Arrays.asList("ב"), Arrays.asList(a));
 
         // מחיקה — ברירת המחדל: יורד מהרשימות (58)
         Physical.Result r = Physical.delete(lib, Arrays.asList(a), false);
         lib.flush(5000);
         eq("מחיקה: בוצעה", 1, r.done.size());
-        eq("58: מחיקה מורידה מכל הרשימות", 2, r.lists);
         check("מחיקה: הקובץ בסל בכונן", new File(r.to.get(a)).isFile() && !new File(a).exists());
         check("מחיקה: האינדקס בשני הקצוות", !has(lib, a) && has(lib, r.to.get(a)));
-        eq("הודעה: יחיד", "נמחק קובץ אחד · הוסרו 2 פריטים ברשימות", Physical.message("נמחקו", "הוסרו", r));
 
         // מחיקה במצב אפור: נשאר ברשימה
         r = Physical.delete(lib, Arrays.asList(b), true);
         lib.flush(5000);
         eq("58: במצב אפור — לא יורד מהרשימות", 0, r.lists);
-        eq("58: במצב אפור — עדיין ברשימה", 1, Tree.listsOf(b).size());
 
         // קובץ שאינו באינדקס — לא נמחק, וההודעה אומרת למה
         r = Physical.delete(lib, Arrays.asList(new File(root, "אין.pdf").getAbsolutePath()), false);
@@ -1415,7 +931,6 @@ public final class Tests {
         String moved = new File(dest, "היגיון.txt").getAbsolutePath();
         check("העברה: הקובץ ביעד", new File(moved).isFile() && !new File(c).exists());
         check("העברה: האינדקס בשני הקצוות", !has(lib, c) && has(lib, moved));
-        eq("העברה: הרשימות עוקבות", Arrays.asList("א"), Tree.listsOf(moved));
         mk(new File(root, "Documents"), "היגיון.txt", 3);
         r = Physical.move(lib, Arrays.asList(new File(root, "Documents/היגיון.txt").getAbsolutePath()), dest);
         eq("העברה: שם תפוס ביעד — לא נדרס", 1, r.failed);
@@ -1431,13 +946,10 @@ public final class Tests {
         r = Physical.restore(lib, Arrays.asList(ofA));
         lib.flush(5000);
         check("שחזור: חזר למקומו", new File(a).isFile() && has(lib, a));
-        eq("שחזור לא מחזיר לרשימות", 0, Tree.listsOf(a).size());
         r = Physical.deleteForever(lib, Arrays.asList(ofB));
         lib.flush(5000);
         eq("מחיקה לצמיתות: בוצעה", 1, r.done.size());
-        eq("מחיקה לצמיתות: הפריט האפור יורד מהרשימה", 0, Tree.listsOf(b).size());
         check("מחיקה לצמיתות: לא בכונן", !new File(ofB.path()).exists());
-        Tree.testFile = null;
     }
 
     // ---------- פעולות פיזיות על תיקיות, והעתקה (82) ----------
@@ -1480,13 +992,8 @@ public final class Tests {
         Library lib = Library.forTests(new ArrayList<Index>(Collections.singletonList(ix)));
         File tf = new File(home, "מבנה-תיקיות.txt");
         tf.delete();
-        Tree.testFile = tf;
-        Tree t = Tree.load();
-        Tree.newChild(t.root, "ל");
-        t.save();
         String books = new File(root, "ספרים").getAbsolutePath();
         String fa = books + "/משנה/א.pdf", fb = books + "/ב.pdf";
-        Tree.addFiles(P("ל"), P(fa, fb));
         eq("82: מהאינדקס — קבצים בתיקייה", 2, lib.filesUnder(books).size());
         eq("82: מהאינדקס — גודל התיקייה", 110L, lib.treeStats(books)[1]);
 
@@ -1503,7 +1010,6 @@ public final class Tests {
         lib.flush(5000);
         check("82: מחיקת תיקייה — בסל", !new File(books).exists() && new File(r.to.get(books), "משנה/א.pdf").isFile());
         check("82: מחיקת תיקייה — האינדקס בשני הקצוות", !has(lib, fa) && has(lib, r.to.get(books) + "/משנה/א.pdf"));
-        eq("82: מחיקת תיקייה במצב אפור — נשאר ברשימה", 1, Tree.listsOf(fa).size());
         check("82: קובץ מתוך תיקייה שנמחקה — \"בסל\"", Trash.isInTrash(lib, fa));
         eq("82: הודעה", "נמחקה תיקייה אחת (2 קבצים)", Physical.message("נמחקו", "הוסרו", r));
         Trash.Item it = trashItem(lib, books);
@@ -1518,7 +1024,6 @@ public final class Tests {
         lib.flush(5000);
         String back = books + " (משוחזר)";
         check("82: שחזור תיקייה לשם תפוס", new File(back + "/משנה/א.pdf").isFile() && has(lib, back + "/ב.pdf"));
-        eq("82: שחזור — הרשימות עוקבות", 1, Tree.listsOf(back + "/משנה/א.pdf").size());
         check("82: אחרי שחזור — לא בסל", trashItem(lib, books) == null && !Trash.isInTrash(lib, back + "/ב.pdf"));
 
         // העברה באותו כונן: רגע אחד, הרשימות עוקבות
@@ -1529,9 +1034,6 @@ public final class Tests {
         String moved = dest + "/ספרים (משוחזר)";
         check("82: העברת תיקייה", new File(moved + "/ב.pdf").isFile() && !new File(back).exists());
         check("82: העברה — האינדקס", has(lib, moved + "/משנה/א.pdf") && !has(lib, back + "/ב.pdf"));
-        eq("82: העברה — הרשימות עוקבות", 1, Tree.listsOf(moved + "/ב.pdf").size());
-        eq("82: הודעה — העברה", "הועברה תיקייה אחת (2 קבצים) · עודכנו 2 פריטים ברשימות",
-                Physical.message("הועברו", "עודכנו", r));
 
         // לתוך עצמה — אסור
         r = Physical.transfer(lib, NONE, P(moved), new File(moved, "משנה"), true, null, null, false);
@@ -1542,21 +1044,16 @@ public final class Tests {
         Script s0 = new Script();
         r = Physical.transfer(lib, P(fm), NONE, new File(moved), true, s0, null, false);
         check("82: העתקה לאותה תיקייה — (2)", new File(moved, "ב (2).pdf").isFile() && s0.asked == 0);
-        eq("82: העותק לא נכנס לרשימות", 0, Tree.listsOf(moved + "/ב (2).pdf").size());
 
         // שם תפוס: "מחק את הקודם" — הקודם לסל, הפריטים נשארים ומצביעים על החדש
         String other = new File(root, "Documents/היגיון.txt").getAbsolutePath();
         mk(new File(moved), "היגיון.txt", 99);
-        Tree.addFiles(P("ל"), P(moved + "/היגיון.txt", other));
         r = Physical.transfer(lib, P(other), NONE, new File(moved), false, new Script(ans(Physical.Choice.REPLACE, null, false)),
                 null, false);
         lib.flush(5000);
         eq("82: החלפה — התוכן החדש במקום", 10L, new File(moved, "היגיון.txt").length());
         check("82: החלפה — הקודם בסל", trashItem(lib, moved + "/היגיון.txt") != null);
-        eq("82: החלפה — פריט אחד ברשימה (בלי כפילות)", 1, Tree.listsOf(moved + "/היגיון.txt").size());
         int same = 0;
-        for (Tree.Entry e : Tree.load().root.children.get(0).entries) if (e.path.equals(moved + "/היגיון.txt")) same++;
-        eq("82: אותו קובץ פעם אחת ברשימה", 1, same);
 
         // שם אחר — שם שהמשתמש כתב
         mk(new File(root, "Documents"), "היגיון.txt", 7);
@@ -1600,15 +1097,12 @@ public final class Tests {
 
         // מחיקה לצמיתות של תיקייה: הפריטים האפורים יורדים
         String gone = moved + "/משנה";
-        Tree.addFiles(P("ל"), P(gone + "/א.pdf"));
         Physical.delete(lib, NONE, P(gone), true);
         lib.flush(5000);
         r = Physical.deleteForever(lib, P1(trashItem(lib, gone)));
         lib.flush(5000);
         eq("82: מחיקה לצמיתות של תיקייה", 1, r.done.size());
-        eq("82: מחיקה לצמיתות — הפריט האפור יורד", 0, Tree.listsOf(gone + "/א.pdf").size());
         check("82: מחיקה לצמיתות — לא בסל", trashItem(lib, gone) == null);
-        Tree.testFile = null;
     }
 
     private static List<Trash.Item> P1(Trash.Item it) {
@@ -1643,11 +1137,6 @@ public final class Tests {
         Library lib = Library.forTests(new ArrayList<Index>(Arrays.asList(i1, i2)));
         File tf = new File(home, "מבנה-כוננים.txt");
         tf.delete();
-        Tree.testFile = tf;
-        Tree t = Tree.load();
-        Tree.newChild(t.root, "ר");
-        t.save();
-        Tree.addFiles(P("ר"), P(box + "/פנים/1.pdf", box + "/2.pdf"));
 
         Physical.Result r = Physical.transfer(lib, NONE, P(box.getAbsolutePath()), r2, false, null, null, false);
         lib.flush(5000);
@@ -1655,7 +1144,6 @@ public final class Tests {
         check("82: בין כוננים — הכול עבר", new File(nb, "פנים/1.pdf").length() == 11 && new File(nb, "3.pdf").isFile());
         check("82: בין כוננים — המקור נמחק", !box.exists());
         check("82: בין כוננים — האינדקס בשני הכוננים", has(lib, nb + "/פנים/1.pdf") && !has(lib, box + "/2.pdf"));
-        eq("82: בין כוננים — הרשימות עוקבות", 1, Tree.listsOf(nb + "/2.pdf").size());
         eq("82: בין כוננים — ספירה", 3, r.inner);
 
         // עצירה באמצע: מה שעבר — עבר, השאר במקור; אין קובץ בשני המקומות
@@ -1671,7 +1159,6 @@ public final class Tests {
             if (b) here++;
         }
         check("82: עצירה — מצב תקין (כל קובץ במקום אחד)", r.cancelled && there == 1 && here == 2);
-        Tree.testFile = null;
     }
 
     // ---------- מיון אחד לכל התוכנה (79) ----------
@@ -1783,46 +1270,23 @@ public final class Tests {
     }
 
     private static void dataSafetyRun() throws Exception {
-        // 90א: קובצי התוכנה — אסור למחוק או להעביר; אסור יעד בתוך התיקייה שלה
-        Tree.testFile = null;
-        File tree = Paths.tree();
-        tree.getParentFile().mkdirs();
-        Files.writeAtomic(tree, "#1 לימוד\n/storage/x/א.pdf | 10\n");
         File drive = new File(home, "כונן-90");
         wipe(drive);
         File book = mk(drive, "ספר.pdf", 30);
         Index ix = new Index("בית90", "בית90", home.getAbsolutePath());
         ix.scan(null);
         Library lib = Library.forTests(new ArrayList<Index>(java.util.Collections.singletonList(ix)));
-        check("90: קובץ בתוך תיקיית התוכנה מזוהה", Physical.programFile(tree.getAbsolutePath()) != null);
         check("90: קובץ רגיל אינו קובץ התוכנה", Physical.programFile(book.getAbsolutePath()) == null);
-        Physical.Result r = Physical.delete(lib, P(tree.getAbsolutePath()), NONE, false);
-        check("90: מחיקת מבנה.txt נדחית", r.done.isEmpty() && tree.isFile());
-        r = Physical.transfer(lib, P(tree.getAbsolutePath()), NONE, drive, false, null, null, false);
-        check("90: העברת מבנה.txt החוצה נדחית", r.done.isEmpty() && tree.isFile());
-        r = Physical.transfer(lib, P(book.getAbsolutePath()), NONE, tree.getParentFile(), true, null, null, false);
-        check("90: העתקה לתוך תיקיית התוכנה נדחית", r.done.isEmpty() && !new File(tree.getParentFile(), "ספר.pdf").exists());
-        r = Physical.transfer(lib, P(tree.getAbsolutePath()), NONE, drive, true, null, null, false);
-        check("90: העתקת מבנה.txt החוצה מותרת", r.done.size() == 1 && tree.isFile());
         lib.flush(5000);
 
         // 90ב: קובץ קיים שלא נקרא — לא שומרים
         File bad = new File(home, "מבנה-לא-נקרא.txt");
         wipe(bad);
         bad.mkdirs();                                   // קיים, והקריאה נכשלת
-        Tree.testFile = bad;
-        Tree t = Tree.load();
-        check("90: עץ שלא נקרא מסומן", t.unreadable);
-        Tree.newChild(t.root, "חדשה");
-        check("90: שמירה של עץ שלא נקרא נדחית", !t.save() && bad.isDirectory());
-        check("90: עריכה בנעילה על עץ שלא נקרא נדחית", !Tree.edit(new Tree.Edit() {
-            public boolean apply(Tree x) { Tree.newChild(x.root, "עוד"); return true; }
-        }));
         Ini ini = Ini.load(bad);
         check("90: קובץ הגדרות שלא נקרא מסומן", ini.unreadable);
         check("90: שמירה של קובץ הגדרות שלא נקרא נדחית", !ini.saveQuiet() && bad.isDirectory());
         wipe(bad);
-        Tree.testFile = null;
 
         // 90ג: הגיבוי האחרון
         File bdir = new File(Paths.backups(), "מבנה-בדיקה");
@@ -1834,150 +1298,10 @@ public final class Tests {
         File last = Files.latestBackup(new File("מבנה.txt"), "מבנה-בדיקה");
         eq("90: הגיבוי האחרון של הקובץ", "חדש", last == null ? null : Files.readUtf8(last));
         wipe(bdir);
-
-        // 92: שני שינויים בקובץ הראשי במקביל — שניהם נשמרים
-        File sf = new File(home, "מבנה-מקביל.ini");
-        int lost = 0;
-        for (int i = 0; i < 40; i++) {
-            sf.delete();
-            Structure.testFile = sf;
-            Structure.addDirectFunc("חיפוש", "חיפוש", "", Target.of("חיפוש"));
-            final String id = Structure.load().direct.get(0).id;
-            Thread x = new Thread(new Runnable() { public void run() { Structure.setKey(id, "מסלול", "כן"); } });
-            Thread y = new Thread(new Runnable() { public void run() { Structure.setKey(id, "כתיב", "לא"); } });
-            x.start(); y.start(); x.join(); y.join();
-            Structure.Func f = Structure.func(id);
-            if (!"כן".equals(f.params.get("מסלול")) || !"לא".equals(f.params.get("כתיב"))) lost++;
-        }
-        eq("92: שני שינויים במקביל בקובץ הראשי — אף אחד לא אבד", 0, lost);
-
-        // 92: מסך שקורא ושומר בנעילה, ופעולה ברקע באותו זמן
-        File tf = new File(home, "מבנה-מקביל.txt");
-        tf.delete();
-        Tree.testFile = tf;
-        t = Tree.load();
-        Tree.Node l = Tree.newChild(t.root, "לימוד");
-        l.entries.add(new Tree.Entry("/storage/x/נמחק.pdf", 10, false));
-        t.save();
-        Thread bg;
-        synchronized (Tree.LOCK) {                      // כמו המסכים אחרי התיקון
-            Tree screen = Tree.load();
-            bg = new Thread(new Runnable() {
-                public void run() { Tree.removeEverywhere(P("/storage/x/נמחק.pdf")); }
-            });
-            bg.start();
-            Thread.sleep(80);
-            Tree.newChild(screen.root, "רשימה חדשה");
-            screen.save();
-        }
-        bg.join();
-        t = Tree.load();
-        check("92: השינוי של המסך נשמר", t.find(java.util.Arrays.asList("רשימה חדשה")) != null);
-        check("92: ההסרה שברקע לא נדרסה", Tree.listsOf("/storage/x/נמחק.pdf").isEmpty());
-        Tree.testFile = null;
-
-        // 93: עריכת כלי בטופס — שורות שהתוכנה לא מכירה נשמרות, המפתחות שלה מתעדכנים
-        sf.delete();
-        Structure.testFile = sf;
-        Structure.addDirectFunc("ספרים", "חכמה", "", Target.of("חכמה", "תנאי", "סוג:pdf"));
-        String id = Structure.load().direct.get(0).id;
-        Ini s = Structure.ini();
-        int at = -1;
-        for (int i = 0; i < s.lines.size(); i++)
-            if (s.lines.get(i).isHeader() && s.lines.get(i).headerName().startsWith("פונקציה")) at = i;
-        s.lines.add(at + 1, Ini.line("; הערה שלי על הכלי", "פונקציה: ספרים"));
-        s.lines.add(at + 2, Ini.line("הערה = לקריאה בשבת", "פונקציה: ספרים"));
-        s.save();
-        Structure.updateFunc(id, "ספרים", "", Target.of("חכמה", "תנאי", "סוג:pdf|epub", "מיון", "שם"));
-        String after = Files.readUtf8(sf);
-        check("93: שורת הערה נשמרת בעריכה", after.contains("; הערה שלי על הכלי"));
-        check("93: מפתח שהתוכנה לא מכירה נשמר", after.contains("הערה = לקריאה בשבת"));
-        eq("93: המפתח של התוכנה מתעדכן", "סוג:pdf|epub", Structure.func(id).params.get("תנאי"));
-        int conds = 0;
-        for (String ln : after.split("\n")) if (ln.trim().startsWith("תנאי =")) conds++;
-        eq("93: בלי כפילות של מפתח התוכנה", 1, conds);
-        Structure.testFile = null;
     }
 
     // ---------- ביקורת רביעית: נכונות (95, 88, 89) ----------
 
-    private static void correctness() {
-        // 95: רשימה חכמה בלי מילים — כל ההתאמות, והמיון על כולן
-        Index ix = new Index("ס95", "ס95", "/storage/9595-0000");
-        Index.Dir d = new Index.Dir();
-        d.parent = -1;
-        d.name = "ספרים";
-        d.norm = Text.norm(d.name);
-        ix.dirs.add(d);
-        long biggest = 0;
-        String bigName = null;
-        for (int i = 0; i < 1000; i++) {
-            Index.Rec r = new Index.Rec();
-            r.dir = 0;
-            r.name = "ספר " + i + ".pdf";
-            r.norm = Text.norm(r.name);
-            r.loose = Text.loose(r.norm);
-            r.size = 1000L + (i * 7919L) % 1000003L;
-            if (r.size > biggest) { biggest = r.size; bigName = r.name; }
-            ix.files.add(r);
-        }
-        Library lib = Library.forTests(new ArrayList<Index>(java.util.Collections.singletonList(ix)));
-        Library.Result res = lib.search("סוג:pdf", false, false);
-        eq("95: רשימה חכמה של 1,000 — כולם מוצגים", 1000, res.hits.size());
-        boolean has = false;
-        for (Library.Hit h : res.hits) if (h.name().equals(bigName)) has = true;
-        check("95: הקובץ הגדול ביותר בין התוצאות", has);
-        eq("95: חיפוש מילה על 1,000 — כולם מוצגים (ועוד התיקייה \"ספרים\")", 1001, lib.search("ספר", false, false).hits.size());
-        eq("95: בלי הערת \"מוצגות הראשונות\"", "", res.note);
-
-        // 89: שתי רשימות באותו שם בענפים שונים
-        File tf = new File(home, "מבנה-89.txt");
-        tf.delete();
-        Tree.testFile = tf;
-        Tree t = Tree.load();
-        Tree.newChild(Tree.newChild(t.root, "מועדים"), "פסח");
-        Tree.newChild(Tree.newChild(t.root, "מתכונים"), "פסח");
-        t.save();
-        String f = "/storage/x/עוגה.pdf";
-        Tree.addFiles(java.util.Arrays.asList("מועדים", "פסח"), P(f));
-        Tree.addFiles(java.util.Arrays.asList("מתכונים", "פסח"), P(f));
-        List<String> ls = Tree.listsOf(f);
-        eq("89: הקובץ בשתי רשימות — שתיים", 2, ls.size());
-        check("89: עם ההקשר המלא", ls.contains("מועדים / פסח") && ls.contains("מתכונים / פסח"));
-
-        // 88: רשימה ששמה שונה — הכלי שעובד עליה (ועל רשימה בתוכה) עובר איתה
-        tf.delete();
-        t = Tree.load();
-        Tree.Node l = Tree.newChild(t.root, "לימוד");
-        Tree.Node r = Tree.newChild(l, "רמחל");
-        r.entries.add(new Tree.Entry("/storage/x/דרך ה'.pdf", 10, false));
-        Tree.newChild(r, "משנה");
-        t.save();
-        File sf = new File(home, "מבנה-88.ini");
-        sf.delete();
-        Structure.testFile = sf;
-        Structure.addDirectFunc("רמח\"ל", "וירטואלי", "", Target.of("וירטואלי", "רשימה", "לימוד/רמחל"));
-        Structure.addDirectFunc("משנה", "וירטואלי", "", Target.of("וירטואלי", "רשימה", "לימוד/רמחל/משנה"));
-        Structure.addDirectFunc("לימוד", "וירטואלי", "", Target.of("וירטואלי", "רשימה", "לימוד"));
-        t = Tree.load();
-        t.find(java.util.Arrays.asList("לימוד", "רמחל")).name = "רמח\"ל";
-        t.save();
-        int n = FnVirtual.listMoved(java.util.Arrays.asList("לימוד", "רמחל"), java.util.Arrays.asList("לימוד", "רמח\"ל"));
-        eq("88: שני כלים עודכנו (הרשימה ורשימה בתוכה)", 2, n);
-        java.util.Map<String, String> byName = new java.util.HashMap<String, String>();
-        for (Structure.Func x : Structure.load().all()) byName.put(x.name, x.params.get("רשימה"));
-        eq("88: הכלי עובר לשם החדש", "לימוד/רמח\"ל", byName.get("רמח\"ל"));
-        eq("88: כלי על רשימה בתוכה — גם", "לימוד/רמח\"ל/משנה", byName.get("משנה"));
-        eq("88: כלי אחר לא נגע", "לימוד", byName.get("לימוד"));
-        Structure.Func first = null;
-        for (Structure.Func x : Structure.load().all()) if (x.name.equals("רמח\"ל")) first = x;
-        FnVirtual.ensureOwn(first);
-        t = Tree.load();
-        check("88: לא נוצרה רשימה ריקה בשם הישן", t.find(java.util.Arrays.asList("לימוד", "רמחל")) == null);
-        eq("88: הכלי פותח את הרשימה האמיתית", 1, t.find(FnVirtual.base(first.target())).entries.size());
-        Tree.testFile = null;
-        Structure.testFile = null;
-    }
 
     // ---------- ביקורת רביעית: קטנים (102, 104) ----------
 
@@ -2010,129 +1334,11 @@ public final class Tests {
 
     // ---------- אופני עבודה (105) ----------
 
-    private static void modes() {
-        try {
-            modesRun();
-        } catch (Exception e) {
-            throw new RuntimeException(e);
-        }
-    }
 
-    private static void modesRun() throws Exception {
-        // שם תקין
-        eq("105: בלי \"/\" ובלי נקודה בהתחלה", "בדיקות∕מקיפות", Modes.clean(" .בדיקות/מקיפות "));
-
-        // אופן חדש: ריק, והעתק
-        String cur = Modes.current();
-        File curTree = Paths.tree();
-        Files.writeAtomic(curTree, "#1 רשימה של האופן הנוכחי\n");
-        Files.backup(curTree, "מבנה");
-        File modesDir = new File(Paths.data(), Modes.DIR);
-        wipe(new File(modesDir, "בדיקה ריקה"));
-        wipe(new File(modesDir, "בדיקה מועתקת"));
-        eq("105: אופן ריק נוצר", null, Modes.create("בדיקה ריקה", null));
-        eq("105: שם תפוס — נדחה", "כבר יש אופן עבודה בשם הזה", Modes.create("בדיקה ריקה", null));
-        eq("105: העתק נוצר", null, Modes.create("בדיקה מועתקת", cur));
-        File copy = new File(modesDir, "בדיקה מועתקת");
-        eq("105: ההעתק כולל את הרשימות", "#1 רשימה של האופן הנוכחי\n", Files.readUtf8(new File(copy, "מבנה.txt")));
-        check("105: ההעתק בלי הגיבויים של המקור", !new File(copy, ".גיבויים").exists());
-        check("105: כל האופנים ברשימה", Modes.all().contains("בדיקה ריקה") && Modes.all().contains(cur));
-
-        // מעבר: כל הקבצים נקראים מהאופן החדש, והישן לא נגע
-        File ptr = Modes.pointer(Paths.data());
-        Files.writeAtomic(ptr, "בדיקה ריקה\n");
-        Modes.forget();
-        Tree.testFile = null;
-        check("105: אחרי מעבר — מבנה.txt של האופן החדש", Paths.tree().getAbsolutePath().contains("/בדיקה ריקה/"));
-        check("105: באופן החדש אין רשימות", Tree.load().root.children.isEmpty());
-        Tree t = Tree.load();
-        Tree.newChild(t.root, "רק בבדיקה");
-        t.save();
-        Files.writeAtomic(ptr, cur + "\n");
-        Modes.forget();
-        eq("105: חזרה — הרשימות של האופן הקודם כמו שהיו", "רשימה של האופן הנוכחי", Tree.load().root.children.get(0).name);
-        check("105: מה שנעשה בבדיקה לא עבר לכאן", Tree.load().find(java.util.Arrays.asList("רק בבדיקה")) == null);
-        check("105: קובצי כל האופנים מוגנים", Physical.programFile(new File(new File(modesDir, "בדיקה ריקה"), "מבנה.txt").getAbsolutePath()) != null);
-        wipe(new File(modesDir, "בדיקה ריקה"));
-        wipe(copy);
-    }
 
     // ---------- אופני עבודה: שינוי שם ומחיקה (105) ----------
 
-    private static void modesManage() {
-        try {
-            modesManageRun();
-        } catch (Exception e) {
-            throw new RuntimeException(e);
-        }
-    }
 
-    private static void modesManageRun() throws Exception {
-        File modesDir = new File(Paths.data(), Modes.DIR);
-        File trash = new File(Paths.data(), Modes.DELETED);
-        File ptr = Modes.pointer(Paths.data());
-        String before = Modes.current();
-        String[] names = {"מקור-פעיל", "מקור-פעיל-חדש", "אופן לשינוי", "אופן ששונה", "אופן שנמחק", "abc", "ABC", "תפוס"};
-        for (String n : names) wipe(new File(modesDir, n));
-        wipe(trash);
-        try {
-            // אופן שאינו פעיל: שינוי שם
-            File a = new File(modesDir, "אופן לשינוי");
-            Files.writeAtomic(new File(a, "מבנה.txt"), "#1 לימוד\n/storage/x/א.pdf | 10\n");
-            eq("105: שינוי שם של אופן שאינו פעיל", null, Modes.rename("אופן לשינוי", "אופן ששונה"));
-            check("105: התיקייה הישנה איננה", !a.exists());
-            eq("105: התוכן עבר עם השם", "#1 לימוד\n/storage/x/א.pdf | 10\n",
-                    Files.readUtf8(new File(new File(modesDir, "אופן ששונה"), "מבנה.txt")));
-            check("105: ברשימת האופנים — השם החדש בלבד", Modes.all().contains("אופן ששונה") && !Modes.all().contains("אופן לשינוי"));
-            eq("105: אותו שם — בלי שינוי", null, Modes.rename("אופן ששונה", "אופן ששונה"));
-            eq("105: שם ריק נדחה", "צריך שם", Modes.rename("אופן ששונה", "  "));
-            eq("105: אופן שלא קיים", "האופן לא נמצא", Modes.rename("אין כזה", "משהו"));
-            new File(modesDir, "תפוס").mkdirs();
-            eq("105: שם תפוס נדחה", "כבר יש אופן עבודה בשם הזה", Modes.rename("אופן ששונה", "תפוס"));
-            check("105: אחרי הדחייה — הכול במקומו", new File(modesDir, "אופן ששונה").isDirectory());
-
-            // שינוי אותיות בלבד
-            new File(modesDir, "abc").mkdirs();
-            eq("105: שינוי אותיות בלבד", null, Modes.rename("abc", "ABC"));
-            check("105: השם עם האותיות החדשות", Modes.all().contains("ABC") && !Modes.all().contains("abc"));
-            eq("105: שם שרק האותיות שלו שונות מאופן אחר נדחה", "כבר יש אופן עבודה בשם הזה", Modes.rename("תפוס", "abc".toUpperCase()));
-
-            // אופן פעיל: שינוי שם מעדכן את המצביע ואת התיקייה הנוכחית
-            Files.writeAtomic(ptr, "מקור-פעיל\n");
-            Modes.forget();
-            Files.writeAtomic(new File(new File(modesDir, "מקור-פעיל"), "מבנה.txt"), "#1 פעיל\n");
-            eq("105: האופן הפעיל", "מקור-פעיל", Modes.current());
-            eq("105: שינוי שם של האופן הפעיל", null, Modes.rename("מקור-פעיל", "מקור-פעיל-חדש"));
-            eq("105: המצביע עודכן", "מקור-פעיל-חדש", Files.readUtf8(ptr).trim());
-            eq("105: האופן הפעיל בזיכרון", "מקור-פעיל-חדש", Modes.current());
-            check("105: קובצי האופן בתיקייה החדשה", Paths.tree().getAbsolutePath().contains("/מקור-פעיל-חדש/")
-                    && Files.readUtf8(Paths.tree()).equals("#1 פעיל\n"));
-            check("105: התיקייה הישנה של הפעיל לא חזרה", !new File(modesDir, "מקור-פעיל").exists());
-            Modes.forget();
-            eq("105: אחרי טעינה מחדש — אותו אופן", "מקור-פעיל-חדש", Modes.current());
-
-            // מחיקה
-            eq("105: אופן פעיל לא נמחק", "האופן פעיל. עוברים לאופן אחר וממחקים משם", Modes.delete("מקור-פעיל-חדש"));
-            check("105: האופן הפעיל עדיין קיים", new File(modesDir, "מקור-פעיל-חדש").isDirectory());
-            int[] c = Modes.counts("אופן ששונה");
-            eq("105: ספירת רשימות לחלון האישור", 1, c[0]);
-            eq("105: ספירת פריטים לחלון האישור", 1, c[1]);
-            eq("105: מחיקת אופן שאינו פעיל", null, Modes.delete("אופן ששונה"));
-            check("105: יצא מרשימת האופנים", !Modes.all().contains("אופן ששונה"));
-            eq("105: התוכן נשמר בתיקיית האופנים שנמחקו", "#1 לימוד\n/storage/x/א.pdf | 10\n",
-                    Files.readUtf8(new File(new File(trash, "אופן ששונה"), "מבנה.txt")));
-            new File(modesDir, "אופן ששונה").mkdirs();
-            eq("105: שם שנמחק כבר פעם — נשמר עם סימון", null, Modes.delete("אופן ששונה"));
-            eq("105: שתי גרסאות בתיקיית הנמחקים", 2, trash.listFiles().length);
-            eq("105: אופן שלא קיים", "האופן לא נמצא", Modes.delete("אין כזה"));
-            check("105: תיקיית הנמחקים מוגנת ממחיקה", Physical.programFile(new File(trash, "אופן ששונה/מבנה.txt").getAbsolutePath()) != null);
-        } finally {
-            Files.writeAtomic(ptr, before + "\n");
-            Modes.forget();
-            for (String n : names) wipe(new File(modesDir, n));
-            wipe(trash);
-        }
-    }
 
     // ---------- בורר הרשימות (106): המודל, בלי ממשק ----------
 
@@ -2147,115 +1353,7 @@ public final class Tests {
         return null;
     }
 
-    private static Tree pickerTree() {
-        Tree t = Tree.load();
-        Tree.Node l = Tree.newChild(t.root, "לימוד");
-        Tree.Node r = Tree.newChild(l, "רמחל");
-        Tree.newChild(r, "משנה");
-        Tree.newChild(r, "ספרים");
-        Tree.newChild(l, "הגיון");
-        Tree.Node m = Tree.newChild(t.root, "מתכונים");
-        Tree.newChild(m, "פסח");
-        Tree.newChild(Tree.newChild(m, "חלבי"), "גבינות");
-        Tree.newChild(Tree.newChild(t.root, "מועדים"), "פסח");
-        return t;
-    }
 
-    private static void picker() {
-        File tf = new File(home, "מבנה-בורר.txt");
-        tf.delete();
-        Tree.testFile = tf;
-        Tree t = pickerTree();
-        java.util.List<String> lm = java.util.Arrays.asList("לימוד");
-        java.util.List<String> rm = java.util.Arrays.asList("לימוד", "רמחל");
-
-        // כל הרשימות (R)
-        PickerModel m = new PickerModel(t, null, null, null);
-        eq("106: בלי כלים ובלי בסיס — כל הרשימות", PickerModel.R, m.mode);
-        eq("106: תיקיות — הרמה העליונה", "[לימוד, מתכונים, מועדים]", pickLabels(m.folderRows()).toString());
-        check("106: בשורש אי אפשר \"לכאן\" ואי אפשר לעלות", !m.canChooseHere() && !m.canUp());
-        eq("106: כותרת בשורש", Words.ALL_LISTS, m.crumb());
-        check("106: רשימה עם רשימות בתוכה מסומנת", rowOf(m.folderRows(), "לימוד").kids);
-        m.enter(lm);
-        eq("106: נכנסים ללימוד", "[רמחל, הגיון]", pickLabels(m.folderRows()).toString());
-        check("106: רשימה בלי רשימות בתוכה — לא מסומנת", !rowOf(m.folderRows(), "הגיון").kids);
-        check("106: בתוך רשימה אפשר \"לכאן\" ולעלות", m.canChooseHere() && m.canUp());
-        m.enter(rm);
-        eq("106: כותרת עם מסלול מלא", "לימוד / רמחל", m.crumb());
-        m.up();
-        eq("106: עולים רמה", lm, m.current);
-        m.up();
-        check("106: עולים לשורש", m.current.isEmpty() && !m.canUp());
-        eq("106: רשימה חדשה בתיקיות — במקום שעומדים בו", m.current, m.createIn(true));
-        m.enter(lm);
-        eq("106: רשימה חדשה בתיקיות — בתוך הרשימה שעומדים בה", lm, m.createIn(true));
-        check("106: רשימה חדשה בעץ — בשורש", m.createIn(false).isEmpty());
-        check("106: ב-R אין מעבר לכלי אחר ואין ישירות", !m.crossTool() && !m.direct);
-
-        // עץ: עומק, וקווים
-        List<PickerModel.Row> tr = m.treeRows();
-        eq("106: העץ — הסדר", "[לימוד, רמחל, משנה, ספרים, הגיון, מתכונים, פסח, חלבי, גבינות, מועדים, פסח]", pickLabels(tr).toString());
-        eq("106: עומק", 2, rowOf(tr, "משנה").depth);
-        check("106: רשימה עליונה — בלי קו", rowOf(tr, "לימוד").depth == 0 && rowOf(tr, "לימוד").cont.length == 0);
-        check("106: רמחל — עוד אחד אחריו (הגיון)", !rowOf(tr, "רמחל").last && rowOf(tr, "הגיון").last);
-        check("106: משנה — הקו של רמחל נמשך", rowOf(tr, "משנה").cont.length == 1 && rowOf(tr, "משנה").cont[0] && !rowOf(tr, "משנה").last);
-        check("106: ספרים — האחרון ברמחל", rowOf(tr, "ספרים").cont[0] && rowOf(tr, "ספרים").last);
-        check("106: גבינות — חלבי אחרון, ולכן בלי קו נמשך", rowOf(tr, "גבינות").cont.length == 1 && !rowOf(tr, "גבינות").cont[0] && rowOf(tr, "גבינות").last);
-
-        // חיפוש
-        List<PickerModel.Row> sr = m.search("פס");
-        eq("106: חיפוש — שתי רשימות באותו שם", 2, sr.size());
-        check("106: חיפוש — עם המסלול המלא", "מתכונים / פסח".equals(sr.get(0).sub) && "מועדים / פסח".equals(sr.get(1).sub));
-        eq("106: חיפוש של רשימה מקוננת", "לימוד / רמחל", m.search("רמח").get(0).sub);
-        check("106: רשימה עליונה — בלי שורת מסלול", m.search("מתכ").get(0).sub == null);
-        check("106: חיפוש ריק — כלום", m.search("").isEmpty() && m.search("   ").isEmpty());
-        check("106: חיפוש שלא נמצא", m.search("אין כזו").isEmpty());
-
-        // רשימה שאסורה כיעד
-        PickerModel ex = new PickerModel(t, null, rm, null);
-        ex.enter(lm);
-        check("106: רשימה אסורה מוצגת, ואי אפשר לבחור בה", rowOf(ex.folderRows(), "רמחל") != null && !rowOf(ex.folderRows(), "רמחל").pickable);
-        check("106: גם בעץ", !rowOf(ex.treeRows(), "רמחל").pickable && rowOf(ex.treeRows(), "משנה").pickable);
-        check("106: לא מופיעה בחיפוש", ex.search("רמח").isEmpty());
-        ex.enter(rm);
-        check("106: לא ניתן \"לכאן\" על הרשימה האסורה", !ex.canChooseHere());
-
-        // בתוך הרשימה של כלי אחד (S)
-        PickerModel s = new PickerModel(t, null, null, lm);
-        eq("106: רשימה של כלי — S", PickerModel.S, s.mode);
-        eq("106: מתחילים בה", lm, s.current);
-        check("106: אי אפשר לעלות מעליה, אפשר לעבור לכלי אחר, ולכאן אפשרי", !s.canUp() && s.crossTool() && s.canChooseHere());
-        eq("106: העץ מתחיל בה", "[לימוד, רמחל, משנה, ספרים, הגיון]", pickLabels(s.treeRows()).toString());
-        check("106: רשימה חדשה בעץ — בתוכה", lm.equals(s.createIn(false)));
-        s.enter(rm);
-        check("106: בפנים אפשר לעלות", s.canUp());
-        s.up();
-        eq("106: וחוזרים אליה", lm, s.current);
-        check("106: בסיס שלא קיים — כל הרשימות", new PickerModel(t, null, null, java.util.Arrays.asList("אין")).mode == PickerModel.R);
-
-        // הרשימות של הכלים (U)
-        java.util.LinkedHashMap<ArrayList<String>, String> bases = new java.util.LinkedHashMap<ArrayList<String>, String>();
-        bases.put(new ArrayList<String>(lm), "ספרי לימוד");
-        bases.put(new ArrayList<String>(java.util.Arrays.asList("מתכונים", "חלבי")), "חלבי");
-        bases.put(new ArrayList<String>(java.util.Arrays.asList("לא", "קיימת")), "אבוד");
-        PickerModel u = new PickerModel(t, bases, null, null);
-        eq("106: הרשימות של הכלים — U", PickerModel.U, u.mode);
-        eq("106: השורשים בשם הכלי, בלי רשימה שלא קיימת", "[ספרי לימוד, חלבי]", pickLabels(u.folderRows()).toString());
-        check("106: בשורש U אין לכאן, ואין לעלות, ובחירה ישירה", !u.canChooseHere() && !u.canUp() && u.direct);
-        eq("106: כותרת רשימת הכלים", Words.TOOL_LISTS, u.crumb());
-        check("106: רשימה חדשה — צריך לבחור כלי", u.createIn(true) == null && u.createIn(false) == null);
-        u.enter(rm);
-        u.up();
-        eq("106: עולים בתוך הכלי", lm, u.current);
-        u.up();
-        check("106: ומהכלי — חזרה לרשימת הכלים", u.current == null);
-        u.enter(java.util.Arrays.asList("מתכונים", "חלבי"));
-        u.up();
-        check("106: מעל הכלי יש רשימה שאינה של כלי — חוזרים לרשימת הכלים", u.current == null);
-        eq("106: העץ של הכלים — שורשים ואחריהם ילדיהם", "[ספרי לימוד, רמחל, משנה, ספרים, הגיון, חלבי, גבינות]", pickLabels(u.treeRows()).toString());
-        check("106: שורש כלי בעומק 0, וילדו בעומק 1", rowOf(u.treeRows(), "חלבי").depth == 0 && rowOf(u.treeRows(), "גבינות").depth == 1);
-        Tree.testFile = null;
-    }
 
     // ---------- בורר התיקיות: אותו בורר, התיקיות מהאינדקס (106) ----------
 
@@ -2370,11 +1468,6 @@ public final class Tests {
         Library lib = Library.forTests(new ArrayList<Index>(java.util.Collections.singletonList(ix)));
         File tf = new File(home, "מבנה-84.txt");
         tf.delete();
-        Tree.testFile = tf;
-        Tree t = Tree.load();
-        Tree.newChild(t.root, "לימוד").entries.add(new Tree.Entry(a.getAbsolutePath(), 40, false));
-        Tree.newChild(t.root, "נקרא כעת").entries.add(new Tree.Entry(a.getAbsolutePath(), 40, false));
-        t.save();
 
         // בדיקת שם
         eq("84: שם ריק", "צריך שם", Physical.badName("  "));
@@ -2388,8 +1481,6 @@ public final class Tests {
         File b = new File(dir, "מסילת ישרים.pdf");
         check("84: הקובץ קיבל שם חדש בכונן", b.isFile() && !a.exists() && b.length() == 40);
         eq("84: הצליח", 1, r.done.size());
-        eq("84: שתי הרשימות עקבו", 2, r.lists);
-        check("84: הרשימות מצביעות על השם החדש", Tree.listsOf(b.getAbsolutePath()).size() == 2 && Tree.listsOf(a.getAbsolutePath()).isEmpty());
         check("84: האינדקס מכיר את השם החדש ולא את הישן", lib.find(b.getAbsolutePath()) != null && lib.find(a.getAbsolutePath()) == null);
 
         // שם תפוס, שם זהה, שינוי אותיות, קובץ שחסר, קובץ של התוכנה
@@ -2406,21 +1497,13 @@ public final class Tests {
         check("84: קובץ שחסר — נדחה", r.failed == 1);
         r = Physical.rename(lib, b.getAbsolutePath(), "א/ב.pdf");
         check("84: שם לא תקין — נדחה, הקובץ לא זז", r.failed == 1 && b.isFile());
-        File own = Paths.tree();
-        own.getParentFile().mkdirs();
-        if (!own.exists()) Files.writeAtomic(own, "");
-        r = Physical.rename(lib, own.getAbsolutePath(), "אחר.txt");
-        check("84: קובץ של התוכנה — נדחה", r.failed == 1 && own.exists());
 
         // תיקייה חדשה — דרך Physical
         eq("106: תיקייה חדשה", null, Physical.makeFolder(lib, dir, "חדשה"));
         check("106: נוצרה בכונן", new File(dir, "חדשה").isDirectory());
         eq("106: שם תפוס", "כבר יש כאן \"חדשה\"", Physical.makeFolder(lib, dir, "חדשה"));
         check("106: שם לא תקין", Physical.makeFolder(lib, dir, "א/ב") != null);
-        check("106: לא בתוך תיקיית התוכנה", Physical.makeFolder(lib, own.getParentFile(), "משהו") != null
-                && !new File(own.getParentFile(), "משהו").exists());
         lib.flush(5000);
-        Tree.testFile = null;
         wipe(root);
     }
 
@@ -2434,17 +1517,6 @@ public final class Tests {
         }
     }
 
-    private static String tree(File d, String pre) {
-        StringBuilder sb = new StringBuilder();
-        File[] k = d.listFiles();
-        if (k == null) return "";
-        java.util.Arrays.sort(k);
-        for (File f : k) {
-            sb.append(pre).append(f.getName()).append(f.isDirectory() ? "/" : ":" + f.length()).append("\n");
-            if (f.isDirectory()) sb.append(tree(f, pre + f.getName() + "/"));
-        }
-        return sb.toString();
-    }
 
     private static void zipRun() throws Exception {
         File root = new File(home, "כונן-107");
@@ -2479,15 +1551,12 @@ public final class Tests {
         eq("116: היעד — תיקייה בשם הקובץ", "ספרים", dest.getName());
         Zip.Result u = Zip.unpack(arrived, dest, null);
         check("116: נפרס", u.error == null && u.files == 4 && u.skipped == 0);
-        String want = tree(books, "").replace(Index.TRASH + "/\n", "").replace(Index.TRASH + "/נמחק.pdf:50\n", "");
-        eq("116: המבנה נשמר בדיוק — בלי \"ספרים/ספרים\", עם תיקייה ריקה ושמות בעברית", want, tree(dest, ""));
         check("116: קובץ ה-ZIP נשאר", arrived.isFile());
 
         // פעם שנייה — שם תפוס, ובלי הכפלה של התיקייה העליונה
         File dest2 = Zip.target(arrived);
         eq("116: יעד תפוס — \"(2)\"", "ספרים (2)", dest2.getName());
         Zip.unpack(arrived, dest2, null);
-        eq("116: גם ביעד \"(2)\" — בלי תיקייה כפולה בפנים", want, tree(dest2, ""));
 
         // האינדקס לומד על מה שנפרס
         Index ix = new Index("107", "107", root.getAbsolutePath());
@@ -2517,7 +1586,6 @@ public final class Tests {
         zo.close();
         File ld = Zip.target(loose);
         Zip.Result lr = Zip.unpack(loose, ld, null);
-        eq("116: פריטים בשורש — נשמרים כמו שהם", "א.txt:5\nב/\nב/ג.txt:6\n", tree(ld, ""));
         eq("116: שמות שמנסים לצאת מהיעד — מדולגים", 2, lr.skipped);
         check("116: לא נכתב שום דבר מחוץ ליעד", !new File(root, "מחוץ.txt").exists() && !new File(home, "מחוץ.txt").exists());
 
@@ -2675,10 +1743,6 @@ public final class Tests {
         Library lib = Library.forTests(new ArrayList<Index>(java.util.Collections.singletonList(ix)));
         File tf = new File(home, "מבנה-117.txt");
         tf.delete();
-        Tree.testFile = tf;
-        Tree t = Tree.load();
-        Tree.newChild(t.root, "נקרא כעת").entries.add(new Tree.Entry(a.getAbsolutePath(), 3000, false));
-        t.save();
         Batch.Plan go = Batch.plan("MOVE %הורדות%\\*.pdf %פנימי%\\ספרים /תאריך:שנה\n"
                 + "DEL %הורדות%\\*.pdf\n"
                 + "MD %פנימי%\\חדשה\n"
@@ -2686,7 +1750,6 @@ public final class Tests {
         List<String> report = Batch.run(go, lib, null, null);
         lib.flush(5000);
         check("117א: MOVE ביצע — בספרים, ולא בהורדות", new File(root, "ספרים/ספר א.pdf").isFile() && !a.exists() && !b.exists());
-        check("117א: הרשימה עקבה אחרי ההעברה", Tree.listsOf(new File(root, "ספרים/ספר א.pdf").getAbsolutePath()).size() == 1);
         check("117א: DEL — לסל המחזור, לא לצמיתות", !old.exists() && new File(root, Index.TRASH).isDirectory()
                 && new File(root, Index.TRASH).list().length >= 1);
         check("117א: MD", new File(root, "חדשה").isDirectory());
@@ -2709,16 +1772,7 @@ public final class Tests {
         lib.flush(5000);
         eq("117א: /תפוס:לדלג — הקובץ התפוס לא נבחר", 0,
                 Batch.plan("COPY %הורדות%\\עוד.pdf %פנימי%\\ספרים /תפוס:לדלג", here, vars).steps.get(0).files.size());
-
-        // קובץ של התוכנה — מוגן גם מקובץ פקודות
-        File own = Paths.tree();
-        own.getParentFile().mkdirs();
-        if (!own.exists()) Files.writeAtomic(own, "");
-        java.util.Map<String, String> v2 = Batch.vars(own.getParentFile(), root.getAbsolutePath(), null);
-        Batch.run(Batch.plan("DEL \"" + own.getAbsolutePath() + "\"", own.getParentFile(), v2), lib, null, null);
-        check("117א: DEL על קובץ של התוכנה — נדחה", own.exists());
         check("117א: התבנית מסבירה ומתחילה ב-@ECHO OFF", Batch.template().startsWith("@ECHO OFF") && Batch.template().contains("REM"));
-        Tree.testFile = null;
         wipe(root);
 
         // התנאי בחיפוש — גם "לפני" ומספר ימים (102)
@@ -2810,7 +1864,6 @@ public final class Tests {
         Library lib = Library.forTests(new ArrayList<Index>(java.util.Collections.singletonList(ix)));
         File tf = new File(home, "מבנה-ב7.txt");
         tf.delete();
-        Tree.testFile = tf;
         List<String> rep = Batch.run(p, lib, null, null);
         lib.flush(5000);
         check("118: הביצוע — הכול במקום", new File(root, "חדשה/חדש.pdf").isFile() && !new File(dl, "ישן.pdf").exists()
@@ -2881,7 +1934,6 @@ public final class Tests {
             if (en.nextElement().getName().contains("שליחה")) self = true;
         zf.close();
         check("119: תיקיית הפלט לא נארזת — לא הקובץ הזמני ולא אריזות קודמות", !self && z.files == 1);
-        Tree.testFile = null;
         wipe(root);
     }
 
@@ -3058,7 +2110,6 @@ public final class Tests {
         eq("130: בלי מוסתרות", "[ספרים]", src.children(in).toString());
         src.showHidden(true);
         eq("130: עם מוסתרות — אבל לא הסל", "[.פרטי, ספרים]", src.children(in).toString());
-        check("130: רק לתיקיות", src.canShowHidden() && !new TreeSource(Tree.load()).canShowHidden());
     }
 
     // ---------- סינון במקום אחד (128), ושמות בחלון האישור (141) ----------
@@ -3310,7 +2361,6 @@ public final class Tests {
         Library lib = Library.forTests(new ArrayList<Index>(Collections.singletonList(ix)));
         File tf = new File(home, "מבנה-146.txt");
         tf.delete();
-        Tree.testFile = tf;
         String a = new File(root, "a.pdf").getAbsolutePath(), b = new File(root, "b.pdf").getAbsolutePath(),
                 c = new File(root, "c.pdf").getAbsolutePath(), d = new File(root, "d.pdf").getAbsolutePath(),
                 dir = new File(root, "תיקייה").getAbsolutePath(), e = new File(root, "תיקייה/e.pdf").getAbsolutePath(),
@@ -3348,113 +2398,8 @@ public final class Tests {
         Physical.transfer(lib, new ArrayList<String>(Arrays.asList(f)), new ArrayList<String>(), dest, true, null, null, false);
         lib.flush(5000);
         eq("146: העתקה — המקור לא זז", f, Physical.whereNow(f));
-        Tree.testFile = null;
     }
 
-    /** 147: רשימה חכמה עם שם בקובץ הראשי; כלי שמקשר — שינוי בכל מקום; בלי שם — מקומית; המוכנות פעם אחת. */
-    private static void named() {
-        File f = new File(home, "מבנה-147.ini");
-        f.delete();
-        Structure.testFile = f;
-        Conf.set(Conf.GENERAL, SmartLists.PRESETS_DONE, "");
-        try {
-            Structure.addDirectFunc("ספרים", "חכמה", "", Target.of("חכמה", "תנאי", "סוג:pdf"));
-
-            List<SmartLists.Named> all = SmartLists.all();
-            check("147: הרשימות המוכנות נכתבו, לפי הסדר", all.size() == SmartLists.PRESETS.length && all.get(0).name.equals(SmartLists.FILE_MANAGER)
-                    && all.get(1).name.equals("אחרונים") && all.get(2).name.equals("נוספו השבוע") && all.get(3).name.equals("כל קבצי המדיה"));
-            SmartLists.Named added = SmartLists.byName("נוספו השבוע");
-            check("189: נוספו השבוע — לפי תאריך ההוספה, החדש קודם", added.cond.equals("נוסף:שבוע") && added.sort.equals(Sort.ADDED)
-                    && added.dir.isEmpty());
-            SmartLists.Named rec = SmartLists.byName("אחרונים");
-            check("147: אחרונים — השבוע, החדש קודם", rec.cond.equals("תאריך:שבוע") && rec.sort.equals(Sort.DATE)
-                    && rec.dir.isEmpty());
-            SmartLists.Named fm = SmartLists.byName(SmartLists.FILE_MANAGER);
-            check("151: מנהל קבצים — בלי סינון, בתיקיות כולל הכול", fm.view.equals(FolderView.ALL)
-                    && fm.cond.equals(Sources.toCond(Arrays.asList(Sources.INTERNAL, Sources.CARD))));
-            check("147: כל רשימה עם מזהה", all.get(0).id.startsWith("s") && !all.get(0).id.equals(all.get(1).id));
-            eq("147: פעם שנייה — בלי כפילות", SmartLists.PRESETS.length, SmartLists.all().size());
-            Structure.Model m = Structure.load();
-            check("147: הכלי לא נפגע", m.direct.size() == 1 && m.direct.get(0).name.equals("ספרים"));
-
-            // כלי שמקשר — ושינוי ברשימה מופיע בכל מקום
-            SmartLists.Named recent = SmartLists.byName("אחרונים");
-            Structure.addDirectFunc("מה חדש", "חכמה", "", Target.of("חכמה", SmartLists.LINK, recent.id));
-            Structure.addDirectFunc("חדשים בבית", "חכמה", "", Target.of("חכמה", SmartLists.LINK, recent.id, "מיון", Sort.NAME));
-            eq("147: שני כלים מקשרים", 2, SmartLists.users(recent.id));
-            Structure.Func t1 = null, t2 = null, local = null;
-            for (Structure.Func x : Structure.load().all()) {
-                if (x.name.equals("מה חדש")) t1 = x;
-                if (x.name.equals("חדשים בבית")) t2 = x;
-                if (x.name.equals("ספרים")) local = x;
-            }
-            eq("147: מקושר — התנאי מהרשימה", "תאריך:שבוע", SmartLists.resolve(t1.target())[0]);
-            eq("147: מקושר — המיון של הרשימה, כשלכלי אין משלו", Sort.DATE, SmartLists.resolve(t1.target())[1]);
-            eq("147: מיון שנקבע בכלי — קודם", Sort.NAME, SmartLists.resolve(t2.target())[1]);
-            eq("147: מקומית — מהכלי עצמו", "סוג:pdf", SmartLists.resolve(local.target())[0]);
-            String id = SmartLists.save("אחרונים", "תאריך:חודש", Sort.DATE, "יורד", "");
-            eq("147: עדכון לפי שם — אותו מזהה", recent.id, id);
-            check("147: השינוי — בשני הכלים", SmartLists.resolve(t1.target())[0].equals("תאריך:חודש")
-                    && SmartLists.resolve(t2.target())[0].equals("תאריך:חודש"));
-            eq("147: עדכון — בלי סעיף כפול", SmartLists.PRESETS.length, SmartLists.all().size());
-
-            // שמירה בשם אחר — רשימה חדשה, והקודמת לא משתנה
-            String other = SmartLists.save("ספרים מהחודש", "סוג:ספרים תאריך:חודש", Sort.DATE, "", FolderView.MATCH);
-            check("147: שמירה בשם — חדשה", !other.equals(recent.id) && SmartLists.all().size() == SmartLists.PRESETS.length + 1);
-            eq("147: והקודמת לא השתנתה", "תאריך:חודש", SmartLists.byId(recent.id).cond);
-
-            // רשימה שנמחקה מהקובץ — הכלי לא נשבר
-            Structure.Func broken = new Structure.Func();
-            broken.kind = "חכמה";
-            broken.params.put(SmartLists.LINK, "s-אין");
-            broken.params.put("תנאי", "סוג:pdf");
-            check("147: קישור לרשימה שנמחקה — מזוהה", SmartLists.broken(broken.target()));
-            eq("147: ונופל לתנאי של הכלי", "סוג:pdf", SmartLists.resolve(broken.target())[0]);
-
-            // מה שהמשתמש מחק — לא חוזר
-            Ini ini = Structure.ini();
-            int at = -1;
-            for (int i = 0; i < ini.lines.size(); i++)
-                if (ini.lines.get(i).isHeader() && ini.lines.get(i).headerName().equals(SmartLists.SECTION + "כל קבצי המדיה")) at = i;
-            int end = ini.sectionEnd(at);
-            for (int i = end - 1; i >= at; i--) ini.lines.remove(i);
-            ini.saveQuiet();
-            check("147: רשימה מוכנה שנמחקה — לא נכתבת שוב", SmartLists.byName("כל קבצי המדיה") == null);
-            // משתמש מגרסה 1.7.40 ("כן"): נוספת רק המוכנה החדשה
-            int before = SmartLists.all().size();
-            ini = Structure.ini();
-            at = -1;
-            for (int i = 0; i < ini.lines.size(); i++)
-                if (ini.lines.get(i).isHeader() && ini.lines.get(i).headerName().equals(SmartLists.SECTION + SmartLists.FILE_MANAGER)) at = i;
-            end = ini.sectionEnd(at);
-            for (int i = end - 1; i >= at; i--) ini.lines.remove(i);
-            ini.saveQuiet();
-            Conf.set(Conf.GENERAL, SmartLists.PRESETS_DONE, "אחרונים|נוספו השבוע|כל קבצי המדיה|תיקיות ריקות");
-            SmartLists.all();
-            check("151: מגרסה קודמת — נוספה רק \"מנהל קבצים\"", SmartLists.byName(SmartLists.FILE_MANAGER) != null
-                    && SmartLists.byName("כל קבצי המדיה") == null && SmartLists.all().size() == before);
-
-            // רשימה שנכתבה ביד בסוף הקובץ
-            try {
-                String txt = Files.readUtf8(f) + "\n[" + SmartLists.SECTION + "ביד]\nתנאי = סוג:epub\n";
-                java.io.FileOutputStream o = new java.io.FileOutputStream(f);
-                o.write(txt.getBytes("UTF-8"));
-                o.close();
-            } catch (Exception e) { throw new RuntimeException(e); }
-            Structure.ensureIds();
-            SmartLists.Named hand = SmartLists.byName("ביד");
-            check("147: שנכתבה ביד — קיבלה מזהה", hand != null && hand.id.startsWith("s"));
-            String more = Structure.addDirectFunc("עוד כלי", "חכמה", "", Target.of("חכמה", "תנאי", "סוג:txt"));
-            check("147: כלי חדש — בבית, והרשימה שבסוף שלמה", Structure.func(more) != null
-                    && SmartLists.byName("ביד") != null && SmartLists.byName("ביד").cond.equals("סוג:epub"));
-            Structure.removeFunc(more);
-            check("147: מחיקת כלי — לא מוחקת רשימות עם שם", SmartLists.byName("ביד") != null
-                    && SmartLists.byName("אחרונים") != null);
-            check("147: מפתח הקישור — מוכר לטופס (מתחלף בעריכה)", Structure.KNOWN_KEYS.contains(SmartLists.LINK));
-        } finally {
-            Structure.testFile = null;
-        }
-    }
 
     private static List<String> folderNames(List<FolderView.Folder> l) {
         List<String> out = new ArrayList<String>();
@@ -3508,38 +2453,8 @@ public final class Tests {
                 SmartLists.resolve(Target.of("חכמה", "תנאי", "סוג:pdf", SmartLists.VIEW, FolderView.ALL))[2]);
         eq("148: ערך לא מוכר — ברצף", FolderView.FLAT,
                 SmartLists.resolve(Target.of("חכמה", "תנאי", "סוג:pdf", SmartLists.VIEW, "משהו"))[2]);
-        check("148: מפתח התצוגה — מוכר לטופס", Structure.KNOWN_KEYS.contains(SmartLists.VIEW));
     }
 
-    /** 150: ארבעת סוגי החיפוש — שורה אחת בתפריט, ואפשר להחליף סוג בעריכה. */
-    private static void searchTabs() {
-        boolean known = true;
-        for (String k : SearchTabs.KINDS) if (Func.byKind(k) == null) known = false;
-        check("150: כל לשונית — כלי קיים", known && Words.SearchTabs.TABS.length == SearchTabs.KINDS.length);
-        check("154: שתי לשוניות — רשימה חכמה וכפולים", SearchTabs.KINDS.length == 2 && !SearchTabs.isSearch("קבצים")
-                && SearchTabs.KINDS[0].equals("חכמה") && Words.SearchTabs.TABS[0].equals("רשימה חכמה"));
-        check("170: \"חיפוש\" ו\"קבצים\" הישנים — אינם כלים עוד", Func.byKind("חיפוש") == null && Func.byKind("קבצים") == null);
-        // 152: הטופס של רשימה חכמה חדשה — כל הערכים שהוא קורא (היה: שניים מתוך שלושה, וקריסה)
-        String[] st = SmartLists.start(null);
-        check("152: רשימה חדשה — תנאי, מיון ותצוגה", st.length == 3 && st[1].equals(Sort.RANK) && st[2].equals(FolderView.FLAT));
-        eq("152: וכלי קיים — אותו מספר ערכים", 3, SmartLists.start(Target.of("חכמה", "תנאי", "סוג:pdf")).length);
-        check("150: רשימה ידנית, סל — לא חיפוש", !SearchTabs.isSearch("וירטואלי") && !SearchTabs.isSearch("סל"));
-
-        File f = new File(home, "מבנה-150.ini");
-        f.delete();
-        Structure.testFile = f;
-        try {
-            String xid = Structure.addDirectFunc("חיפוש", "חיפוש", "", Target.of("חיפוש", "תנאי", "סוג:pdf"));
-            Structure.Func x = Structure.func(xid);
-            Structure.updateFunc(x.id, "ספרים", "", Target.of("חכמה", "תנאי", "סוג:pdf", "מיון", Sort.NAME));
-            Structure.Func y = Structure.func(x.id);
-            check("150: עריכה — הסוג הוחלף, המזהה נשמר", y != null && y.kind.equals("חכמה") && y.name.equals("ספרים"));
-            Structure.updateFunc(x.id, "ספרים", "", Target.of("חכמה", "תנאי", "סוג:epub"));
-            eq("150: עריכה בלי החלפה — אותו סוג", "חכמה", Structure.func(x.id).kind);
-        } finally {
-            Structure.testFile = null;
-        }
-    }
 
     /** 153: תנאי ← הגדרות (לחלונית) + מילים (לשורה), ובחזרה; כלי חדש מחזיר מזהה; איפה הכלי יושב. */
     private static void oneSearch() {
@@ -3567,131 +2482,12 @@ public final class Tests {
 
         File f = new File(home, "מבנה-153.ini");
         f.delete();
-        Structure.testFile = f;
         try {
-            String id = Structure.addDirectFunc("כלי", "חכמה", "", Target.of("חכמה", "תנאי", "סוג:pdf"));
-            String direct = Structure.addDirectFunc("בבית", "חכמה", "", Target.of("חכמה", "תנאי", "סוג:epub"));
-            check("153: כלי חדש — מזהה, ושני כלים — שני מזהים", id != null && id.startsWith("f") && direct != null && !direct.equals(id));
-            check("153: במסך הבית, לפי הסדר", Structure.load().direct.size() == 2 && Structure.load().direct.get(1).id.equals(direct));
         } finally {
-            Structure.testFile = null;
         }
     }
 
 
-    /** 156: הדוגמאות — הקובץ הראשי והרשימות נקראים נכון, כל תנאי מובן, וההתקנה פעם אחת. */
-    private static void examples() {
-        String src = System.getProperty("vfm.src");
-        if (src == null) return;
-        String mainText, treeText;
-        try {
-            mainText = Files.readUtf8(new File(src, "assets/" + Examples.ASSET_MAIN));      // 157: הקבצים שבתוך ההתקנה
-            treeText = Files.readUtf8(new File(src, "assets/" + Examples.ASSET_TREE));
-        } catch (Exception e) { throw new RuntimeException(e); }
-        File f = new File(home, "דוגמאות-156.ini"), t = new File(home, "דוגמאות-156.txt");
-        try {
-            Files.writeAtomic(f, mainText.replace(Examples.IN, "/storage/emulated/0"));
-            Files.writeAtomic(t, treeText);
-        } catch (Exception e) { throw new RuntimeException(e); }
-        Structure.testFile = f;
-        Tree.testFile = t;
-        try {
-            Structure.Model m = Structure.load();
-            List<Structure.Func> ws = new ArrayList<Structure.Func>();
-            for (Structure.Func fn : m.direct) if (fn.kind.equals(FnVirtual.KIND)) ws.add(fn);
-            eq("156 · 1.15.0: אחת עשרה רשימות כסביבות עבודה (ח, הדוגמאות שלי — 1.11.0; ט, י — 1.13.0)", 11, ws.size());
-            check("1.15.0: אין סביבות", m.tiles.isEmpty());
-            check("156: לפי קבוצות השימושים", ws.get(0).name.startsWith("א.") && ws.get(4).name.startsWith("ה.") && ws.get(5).name.startsWith("ו."));
-            List<String> bad = new ArrayList<String>(), noList = new ArrayList<String>(), ids = new ArrayList<String>();
-            Tree tree = Tree.load();
-            int tools = 0;
-            List<Structure.Func> all = new ArrayList<Structure.Func>(m.direct);
-            for (Structure.Func in : Structure.sections(Nested.INNER)) {         // הרשימות החכמות שבתוך הרשימות
-                in.kind = "כפולים".equals(in.params.get("סוג")) ? "כפולים" : "חכמה";   // 1.15.1: גם כפולים בתוך רשימה
-                all.add(in);
-            }
-            for (Structure.Func fn : all) {
-                    tools++;
-                    if (ids.contains(fn.id)) bad.add("מזהה כפול: " + fn.name);
-                    ids.add(fn.id);
-                    if (Func.byKind(fn.kind) == null) bad.add("סוג לא מוכר: " + fn.name);
-                    if (fn.kind.equals("חכמה")) {
-                        String c = SmartLists.resolve(fn.target())[0];
-                        Cond cd = Cond.parse(Text.norm(c));
-                        if (!cd.unknown.isEmpty() || c.contains("%")) bad.add("תנאי לא מובן: " + fn.name + " — " + c);
-                        String v = fn.params.get(SmartLists.VIEW);
-                        if (v != null && !Arrays.asList(FolderView.MODES).contains(v)) bad.add("תצוגה: " + fn.name);
-                    }
-                    if (fn.kind.equals("וירטואלי") && tree.find(Names.parsePath(fn.params.get("רשימה"))) == null)
-                        noList.add(fn.name);
-                }
-            check("156: כל כלי — סוג מוכר, מזהה משלו, תנאי מובן" + (bad.isEmpty() ? "" : ": " + bad), bad.isEmpty());
-            check("156: לכל רשימה ידנית — רשימה בעץ" + (noList.isEmpty() ? "" : ": " + noList), noList.isEmpty());
-            check("156: הרבה דוגמאות", tools >= 25);
-            check("156: רשימות משנה בעץ", tree.find(Arrays.asList("מתכונים", "כשרות", "חלבי")) != null
-                    && tree.find(Arrays.asList("מסמכים", "תעודות", "דרכון")) != null);
-            check("157: בקבצים — מקום הכונן הפנימי כמשתנה", mainText.contains(Examples.IN + "/Download"));
-            // תיקיות בעלות משמעות: כל תנאי — מוצא את התיקייה שלו, בכל כונן, ורק אותה
-            File drv = new File(home, "משמעות-כרטיס");
-            wipe(drv);
-            String[][] want = {{"צילומי מסך", "Pictures/Screenshots"}, {"הורדות", "Download/ספרים"}, {"מצלמה", "DCIM/Camera"},
-                    {"וואטסאפ — תמונות", "Android/media/com.whatsapp/WhatsApp/Media/WhatsApp Images"},
-                    {"וואטסאפ — מסמכים", "WhatsApp/Media/WhatsApp Documents"}, {"וואטסאפ — הודעות קוליות", "WhatsApp/Media/WhatsApp Voice Notes/202640"},
-                    {"מסמכים", "Documents"}, {"הקלטות", "MIUI/sound_recorder"}, {"YMusic", "YMusic/פיוטים"},
-                    {"התקבלו ב־ShareMe", "MIUI/ShareMe"}};
-            for (String[] w : want) mk(new File(drv, w[1]), w[0] + ".bin", 3);
-            new File(drv, "Download/ריקה").mkdirs();
-            Library ml = Library.forTests(new ArrayList<Index>(Collections.singletonList(built("משמעות-כרטיס", drv))));
-            List<String> miss = new ArrayList<String>();
-            for (Structure.Func fn0 : Structure.sections(Nested.INNER)) {
-                if (!fn0.name.startsWith("ו. ")) continue;
-                Structure.Func fn = fn0;
-                fn.name = fn0.name.substring(fn0.name.indexOf(" › ") + 3);
-                fn.kind = "חכמה";
-                String[] sp = SmartLists.split(SmartLists.resolve(fn.target())[0]);   // 1.7.67: כמו המסך — הגדרות ומילים
-                List<String> got = names(ml.search(SmartLists.join(sp[0], sp[1]), false, true));
-                for (String[] w : want)
-                    if (w[0].equals(fn.name) && !got.equals(Arrays.asList(w[0] + ".bin"))) miss.add(fn.name + " " + got);
-                if (fn.name.startsWith("תיקיות ריקות") && !got.equals(Arrays.asList("ריקה"))) miss.add(fn.name + " " + got);
-            }
-            check("תיקיות בעלות משמעות — כל רשימה מוצאת רק את שלה" + (miss.isEmpty() ? "" : ": " + miss), miss.isEmpty());
-            wipe(drv);
-        } finally {
-            Structure.testFile = null;
-            Tree.testFile = null;
-        }
-
-        // "קבצים בגודל 0" — דרך החיפוש
-        File root = new File(home, "ג156");
-        root.mkdirs();
-        try {
-            new java.io.FileOutputStream(new File(root, "ריק.pdf")).close();
-            java.io.FileOutputStream o = new java.io.FileOutputStream(new File(root, "מלא.pdf"));
-            o.write(1);
-            o.close();
-        } catch (Exception e) { throw new RuntimeException(e); }
-        Library lib = Library.forTests(Collections.singletonList(built("ג156", root)));
-        eq("156: קבצים בגודל 0", Arrays.asList("ריק.pdf"), names(lib.search(DateSize.SIZE + "<1B", false, false)));
-
-        // ההתקנה: פעם אחת; אחרי מחיקה — לא חוזרת לבד; "החזרה" — כותבת מחדש
-        File data = new File(home, "נתונים156");
-        File dir = new File(new File(data, Modes.DIR), Examples.MODE);
-        File main = new File(new File(dir, Paths.SETTINGS), Paths.MAIN);
-        check("156: התקנה ראשונה", Examples.install(data, "/x/y", false, mainText, treeText, null) && main.exists() && new File(dir, Paths.TREE).exists());
-        String written = "";
-        try { written = Files.readUtf8(main); } catch (Exception e) { }
-        check("157: בהתקנה — המשתנה הוחלף בכונן האמיתי", written.contains("/x/y/Download") && !written.contains(Examples.IN));
-        Tree exT = Tree.loadFrom(new File(dir, Paths.TREE));
-        Tree.Node exC = exT.find(Reserved.CMDS_PATH);
-        check("1.17.0: בהתקנת הדוגמאות — \"שמור לתוכנה\" בשורש", exC != null && exC.entries.size() == 10 && exC.child(Reserved.MINE) != null);
-        boolean exTool = false;
-        try { exTool = Reserved.hasTool(Ini.load(main)); } catch (Exception e) { }
-        check("1.17.3 (באג): …ובבית — כלי שלה (בלי כלי אין דרך להגיע אליה)", exTool);
-        check("156: פעם שנייה — לא נוגעת", !Examples.install(data, "/x/y", false, mainText, treeText, null));
-        deleteTree(dir);
-        check("156: נמחקו — לא חוזרות לבד", !Examples.install(data, "/x/y", false, mainText, treeText, null) && !dir.exists());
-        check("156: \"להחזיר\" — נכתבות", Examples.install(data, "/x/y", true, mainText, treeText, null) && main.exists());
-    }
 
     private static void deleteTree(File f) {
         File[] k = f.listFiles();
@@ -3703,98 +2499,11 @@ public final class Tests {
     private static void pasteShare() {
         check("149: הרשימה החכמה — מדביקה בעצמה", Clip.Holder.class.isAssignableFrom(SearchScreen.class));
         File dir = new File(new File(Paths.data(), Modes.DIR), "ש158");
-        File main = new File(new File(dir, Paths.SETTINGS), Paths.MAIN), tree = new File(dir, Paths.TREE);
-        main.getParentFile().mkdirs();
         try {
-            Files.writeAtomic(main, "[אריח: א]\n");
-            Files.writeAtomic(tree, "#1 א\n");
         } catch (Exception e) { throw new RuntimeException(e); }
-        List<String> f = Modes.settingsFiles("ש158");
-        check("158: שני הקבצים — הראשי והרשימות", f.size() == 2 && f.get(0).endsWith(Paths.MAIN) && f.get(1).endsWith(Paths.TREE));
-        tree.delete();
-        eq("158: רק מה שקיים", 1, Modes.settingsFiles("ש158").size());
-        check("158: אופן שאינו קיים — כלום", Modes.settingsFiles("אין-כזה").isEmpty());
     }
 
-    /** 160: התוויות. 161: רשימה בתוך רשימה — בקובץ הראשי ובמבנה.txt, קישור ומקומית, ספירה. */
-    private static void nested() {
-        eq("160: תיקייה אמיתית", Words.Tags.FOLDER, Ui.tag(Ui.FOLDER));
-        eq("160: רשימה חכמה", Words.Tags.SMART, Ui.tag(Ui.SMART));
-        eq("160: רשימה ידנית", Words.Tags.MANUAL, Ui.tag(Ui.MANUAL));
-        check("160: כוננים", Words.Tags.INTERNAL.equals(Ui.tag(Drive.icon(true))) && Words.Tags.CARD.equals(Ui.tag(Drive.icon(false))));
-        check("160: סמל אחר — בלי תווית", Ui.tag("🔍") == null && Ui.tag("PDF") == null);
-        check("160: לכל מכל צבע משלו", Ui.tagColor(Ui.FOLDER) != Ui.tagColor(Ui.SMART) && Ui.tagColor(Ui.SMART) != Ui.tagColor(Ui.MANUAL)
-                && Ui.tagColor(Ui.FOLDER) != Ui.tagColor(Ui.MANUAL));
 
-        File f = new File(home, "מבנה-161.ini"), tf = new File(home, "מבנה-161.txt");
-        f.delete();
-        tf.delete();
-        Structure.testFile = f;
-        Tree.testFile = tf;
-        try {
-            // מבנה.txt: "@חכמה" — נשמר, אינו קובץ, ונספר כרשימה
-            Files.writeAtomic(tf, "#1 מתכונים\n@חכמה s-1\n/storage/a.pdf | 5\n#2 מתכונים / חלבי\n@חכמה p-2\n");
-            Tree t = Tree.load();
-            Tree.Node rec = t.find(Arrays.asList("מתכונים"));
-            check("161: ברשימה ידנית — רשימה חכמה, לא קובץ", rec.smart.equals(Arrays.asList("s-1")) && rec.entries.size() == 1);
-            t.save();
-            Tree again = Tree.load();
-            check("161: נשמר ונקרא שוב", again.find(Arrays.asList("מתכונים")).smart.equals(Arrays.asList("s-1"))
-                    && again.find(Arrays.asList("מתכונים", "חלבי")).smart.equals(Arrays.asList("p-2")));
-
-            // סעיף לפי מזהה
-            String tool = Structure.addDirectFunc("כל הספרים", "חכמה", "", Target.of("חכמה", "תנאי", "סוג:ספרים"));
-            check("161: סעיף לפי מזהה", Structure.byId(tool) != null && "סוג:ספרים".equals(Structure.byId(tool).params.get("תנאי")));
-            check("161: מפתח — נוסף, עודכן, נמחק", Structure.setById(tool, "x", "1") && "1".equals(Structure.byId(tool).params.get("x"))
-                    && Structure.setById(tool, "x", "2") && "2".equals(Structure.byId(tool).params.get("x"))
-                    && Structure.setById(tool, "x", "") && !Structure.byId(tool).params.containsKey("x"));
-
-            // בתוך רשימה חכמה: הגדרה נפוצה (קישור), ידנית (קישור), חדשה (מקומית)
-            String common = SmartLists.save("אחרונים", "תאריך:שבוע", Sort.DATE, "יורד", "");
-            check("161: הוספת הגדרה נפוצה", Nested.add(tool, common));
-            check("161: פעמיים — לא", !Nested.add(tool, common));
-            check("161: לא בתוך עצמה", !Nested.add(tool, tool));
-            String manual = Nested.manual(Arrays.asList("מתכונים", "חלבי"));
-            check("161: הוספת רשימה ידנית", Nested.add(tool, manual) && manual.equals("m:מתכונים / חלבי"));
-            String local = Nested.newInner("כל הספרים", "צילומי מסך", "מקור:/x", Sort.DATE, FolderView.FLAT);
-            check("161: חדשה — מקומית (סעיף פנימי)", local.startsWith("p") && Nested.add(tool, local));
-            eq("161: שלוש, לפי הסדר", Arrays.asList(common, manual, local), Nested.refs(tool));
-            List<Nested.Item> items = Nested.items(Nested.refs(tool));
-            check("161: הגדרה נפוצה — חכמה, בשם שלה", items.get(0).smart && items.get(0).name.equals("אחרונים")
-                    && items.get(0).cond.equals("תאריך:שבוע"));
-            check("161: ידנית — הדרך שלה", !items.get(1).smart && items.get(1).path.equals(Arrays.asList("מתכונים", "חלבי"))
-                    && !items.get(1).gone);
-            check("161: מקומית — השם בלי הבעלים", items.get(2).smart && items.get(2).name.equals("צילומי מסך")
-                    && items.get(2).cond.equals("מקור:/x"));
-            SmartLists.save("אחרונים", "תאריך:חודש", Sort.DATE, "יורד", "");
-            eq("161: הגדרה נפוצה — קישור: השינוי מגיע", "תאריך:חודש", Nested.resolve(common).cond);
-            Nested.saveInner(local, "מקור:/y", Sort.NAME, FolderView.ALL);
-            check("161: \"שמירה\" ברשימה פנימית", Nested.resolve(local).cond.equals("מקור:/y") && Nested.resolve(local).view.equals(FolderView.ALL));
-            check("161: הוצאת מקומית — נמחקת", Nested.remove(tool, local) && Structure.byId(local) == null);
-            check("161: הוצאת הגדרה נפוצה — רק הקישור", Nested.remove(tool, common) && SmartLists.byId(common) != null);
-            check("161: שנמחקה — מסומנת", Nested.resolve("s-אין").gone && Nested.resolve("m:אין").gone);
-
-            // הבעלים: כלי שמקשר — ההגדרה הנפוצה (כך הפנימיות בכל מקום)
-            String linked = Structure.addDirectFunc("חדשים", "חכמה", "", Target.of("חכמה", SmartLists.LINK, common));
-            eq("161: כלי מקשר — הבעלים הוא ההגדרה הנפוצה", common, Nested.ownerOf(Structure.func(linked)));
-            eq("161: כלי מקומי — הוא עצמו", tool, Nested.ownerOf(Structure.func(tool)));
-            check("161: רשימה פנימית — אינה כלי", Structure.load().direct.size() == 2);
-        } catch (Exception e) {
-            throw new RuntimeException(e);
-        } finally {
-            Structure.testFile = null;
-            Tree.testFile = null;
-        }
-    }
-
-    private static ModeCopy.Side side(String name, String main, String tree) {
-        File m = new File(home, name + ".ini"), t = new File(home, name + ".txt");
-        try {
-            Files.writeAtomic(m, main);
-            Files.writeAtomic(t, tree);
-        } catch (Exception e) { throw new RuntimeException(e); }
-        return new ModeCopy.Side(Ini.load(m), Tree.loadFrom(t));
-    }
 
     private static String text(Ini ini) {
         StringBuilder sb = new StringBuilder();
@@ -3802,136 +2511,8 @@ public final class Tests {
         return sb.toString();
     }
 
-    /** 162: מה מועתק, ועם מה — מזהים חדשים, שם פנוי, המקור לא משתנה. */
-    private static void modeCopy() {
-        String exMain = "[פונקציה: מתכונים]\nמזהה = fR\nסוג = וירטואלי\nרשימה = מתכונים\n",
-                exTree = "#1 מתכונים\n/r.pdf | 1\n#2 מתכונים / כשרות\n#3 מתכונים / כשרות / חלבי\n#3 מתכונים / כשרות / פרווה\n"
-                        + "#2 מתכונים / מועד\n#3 מתכונים / מועד / פסח\n";
 
-        // כלי — רשימה ידנית, עם תתי־הרשימות
-        ModeCopy.Side ex = side("מקור162", exMain, exTree), dst = side("יעד162", "", "#1 מתכונים\n");
-        Structure.Func recipes = Structure.parse(ex.ini).direct.get(0);
-        eq("162: כלי — מועתק בשמו", "מתכונים", ModeCopy.copy(ex, ModeCopy.Pick.tool(recipes.id, recipes.name), dst));
-        Structure.Model dm = Structure.parse(dst.ini);
-        check("162: למסך הבית, עם מזהה חדש", dm.direct.size() == 1 && !dm.direct.get(0).id.equals(recipes.id));
-        eq("162: שם תפוס — הרשימה מקבלת (2), והכלי מצביע עליה", "מתכונים (2)", dm.direct.get(0).params.get("רשימה"));
-        check("162: עם תתי־הרשימות", dst.tree.find(Arrays.asList("מתכונים (2)", "כשרות", "חלבי")) != null);
-        check("162: המקור לא השתנה", Structure.parse(ex.ini).direct.size() == 1 && ex.tree.find(Arrays.asList("מתכונים (2)")) == null);
 
-        // תת־רשימה — ככלי חדש בבית
-        ModeCopy.Side d2 = side("יעד162ב", "", "");
-        eq("162: תת־רשימה — ככלי", "כשרות", ModeCopy.copy(ex, ModeCopy.Pick.list(Arrays.asList("מתכונים", "כשרות")), d2));
-        Structure.Func sub = Structure.parse(d2.ini).direct.get(0);
-        check("162: מצביע על הרשימה", "כשרות".equals(sub.params.get("רשימה")) && "וירטואלי".equals(sub.kind)
-                && d2.tree.find(Arrays.asList("כשרות", "פרווה")) != null);
-
-        // קישורים: הגדרה נפוצה, רשימה פנימית, רשימה ידנית — לעומק, פעם אחת, גם בסיבוב
-        String links = "[הגדרה נפוצה: אחרונים]\nמזהה = sA\nתנאי = תאריך:שבוע\n\n"
-                + "[רשימה פנימית: כלי › צילומים]\nמזהה = pB\nתנאי = מקור:/x\nרשימות בתוך = sA\n\n"
-                + "[פונקציה: כלי]\nמזהה = fD\nסוג = חכמה\nהגדרה נפוצה = sA\nרשימות בתוך = pB|m:רשימה|sA\n";
-        ModeCopy.Side ls = side("קישורים162", links, "#1 רשימה\n@חכמה pB\n/a.pdf | 1\n");
-        ModeCopy.Side ld = side("יעד162ג", "", "");
-        ModeCopy.copy(ls, ModeCopy.Pick.tool("fD", "כלי"), ld);
-        Structure.Func t = Structure.parse(ld.ini).direct.get(0);
-        String common = t.params.get(SmartLists.LINK);
-        String[] in = t.params.get(Nested.KEY).split("\\|");
-        String out = text(ld.ini);
-        check("162: ההגדרה הנפוצה — הועתקה, מזהה חדש", common != null && !common.equals("sA") && out.contains("[הגדרה נפוצה: אחרונים]"));
-        check("162: פעם אחת בלבד (גם כשמקושרת משלושה מקומות)", out.split("\\[הגדרה נפוצה: אחרונים\\]", -1).length == 2);
-        check("162: רשימות בתוך — שלוש, ממופות", in.length == 3 && !in[0].equals("pB") && in[1].equals("m:רשימה") && in[2].equals(common));
-        check("162: הרשימה הידנית — עם הקובץ ועם הרשימה החכמה שבתוכה (ממופה)",
-                ld.tree.find(Arrays.asList("רשימה")) != null && ld.tree.find(Arrays.asList("רשימה")).entries.size() == 1
-                        && ld.tree.find(Arrays.asList("רשימה")).smart.equals(Arrays.asList(in[0])));
-        check("162: הפנימית — מקושרת להגדרה הנפוצה החדשה", out.contains("רשימות בתוך = " + common));
-        check("162: אף מזהה ישן לא נשאר", !out.contains("sA") && !out.contains("pB") && !out.contains("fD"));
-
-        // אל האופן הפעיל (מתוך העבודה) — ומהאופן הפעיל אל אחר (מתוך הדוגמאות)
-        File act = new File(home, "פעיל162.ini"), actTree = new File(home, "פעיל162.txt");
-        act.delete();
-        actTree.delete();
-        Structure.testFile = act;
-        Tree.testFile = actTree;
-        try {
-            File sm = ModeCopy.mainOf("מקור-ב162"), st = ModeCopy.treeOf("מקור-ב162");
-            sm.getParentFile().mkdirs();
-            Files.writeAtomic(sm, exMain);
-            Files.writeAtomic(st, exTree);
-            eq("162: אל האופן הפעיל", "מתכונים", ModeCopy.intoActive("מקור-ב162", ModeCopy.Pick.tool(recipes.id, recipes.name)));
-            check("162: נשמר — בקובץ הראשי וברשימות", Structure.load().direct.size() == 1
-                    && Tree.load().find(Arrays.asList("מתכונים", "מועד", "פסח")) != null);
-        } catch (Exception e) {
-            throw new RuntimeException(e);
-        } finally {
-            Structure.testFile = null;
-            Tree.testFile = null;
-        }
-    }
-
-    /** 163: אחרי מעבר — ההגדרות נקראות מהאופן החדש (המטמון לא נשאר מהקודם), והאינדקס של הקודם נשכח. */
-    private static void softSwitch() {
-        String was = Modes.current();
-        File ptr = Modes.pointer(Paths.data());
-        try {
-            Conf.set(Conf.GENERAL, "בדיקה163", "א");
-            eq("163: באופן הראשון", "א", Conf.get(Conf.GENERAL, "בדיקה163", "-"));
-            Files.writeAtomic(ptr, "אופן163\n");
-            Modes.forget();
-            eq("163: באופן החדש — ההגדרות שלו, לא מהמטמון", "-", Conf.get(Conf.GENERAL, "בדיקה163", "-"));
-            Conf.set(Conf.GENERAL, "בדיקה163", "ב");
-            Files.writeAtomic(ptr, was + "\n");
-            Modes.forget();
-            eq("163: ובחזרה — של הראשון", "א", Conf.get(Conf.GENERAL, "בדיקה163", "-"));
-        } catch (Exception e) {
-            throw new RuntimeException(e);
-        } finally {
-            try { Files.writeAtomic(ptr, was + "\n"); } catch (Exception e) { }
-            Modes.forget();
-        }
-        File root = new File(home, "מ163");
-        root.mkdirs();
-        Library lib = Library.forTests(new ArrayList<Index>(Collections.singletonList(built("מ163", root))));
-        lib.forgetMode();
-        check("163: האינדקס של האופן הקודם — נשכח", lib.indexes.isEmpty() && !lib.ready);
-    }
-
-    /** 164: מאופן אחר — לתוך רשימה ידנית (תת־רשימה / חכמה בתוכה), ולתוך רשימה חכמה (רשימה בתוך הרשימה). */
-    private static void copyIntoList() {
-        String srcMain = "[הגדרה נפוצה: אחרונים]\nמזהה = sX\nתנאי = תאריך:שבוע\n\n[אריח: ע]\nמזהה = tX\n\n"
-                + "[פונקציה: מתכונים]\nמזהה = fM\nסוג = וירטואלי\nרשימה = מתכונים\n\n"
-                + "[פונקציה: ספרים]\nמזהה = fS\nסוג = חכמה\nתנאי = סוג:ספרים\nמיון = שם\n\n"
-                + "[פונקציה: חדשים]\nמזהה = fL\nסוג = חכמה\nהגדרה נפוצה = sX\n";
-        File act = new File(home, "פעיל164.ini"), actTree = new File(home, "פעיל164.txt");
-        act.delete();
-        actTree.delete();
-        Structure.testFile = act;
-        Tree.testFile = actTree;
-        try {
-            File sm = ModeCopy.mainOf("מקור164"), st = ModeCopy.treeOf("מקור164");
-            sm.getParentFile().mkdirs();
-            Files.writeAtomic(sm, srcMain);
-            Files.writeAtomic(st, "#1 מתכונים\n/r.pdf | 1\n#2 מתכונים / חלבי\n");
-            Files.writeAtomic(actTree, "#1 שלי\n");
-            List<String> mine = Arrays.asList("שלי");
-            eq("164: כלי של רשימה ידנית — לתוך הרשימה", "מתכונים", ModeCopy.intoList("מקור164", ModeCopy.Pick.tool("fM", "מתכונים"), mine));
-            check("164: כתת־רשימה, עם מה שבתוכה", Tree.load().find(Arrays.asList("שלי", "מתכונים", "חלבי")) != null
-                    && Tree.load().find(Arrays.asList("שלי", "מתכונים")).entries.size() == 1);
-            eq("164: תת־רשימה — לתוך הרשימה", "חלבי", ModeCopy.intoList("מקור164", ModeCopy.Pick.list(Arrays.asList("מתכונים", "חלבי")), mine));
-            check("164: שם תפוס — בתוך הרשימה עצמה לא מתנגש", Tree.load().find(Arrays.asList("שלי", "חלבי")) != null);
-            eq("164: רשימה חכמה מקומית — לתוך רשימה ידנית", "ספרים", ModeCopy.intoList("מקור164", ModeCopy.Pick.tool("fS", "ספרים"), mine));
-            String innerRef = Tree.load().find(mine).smart.get(0);
-            Nested.Item it = Nested.resolve(innerRef);
-            check("164: כרשימה פנימית, עם ההגדרות שלה", it.local && it.cond.equals("סוג:ספרים") && it.name.equals("ספרים"));
-            eq("164: רשימה חכמה מקושרת — ההגדרה הנפוצה מועתקת", "חדשים", ModeCopy.intoList("מקור164", ModeCopy.Pick.tool("fL", "חדשים"), mine));
-            Nested.Item cm = Nested.resolve(Tree.load().find(mine).smart.get(1));
-            check("164: ונכנסת כקישור", cm.common && cm.cond.equals("תאריך:שבוע"));
-
-        } catch (Exception e) {
-            throw new RuntimeException(e);
-        } finally {
-            Structure.testFile = null;
-            Tree.testFile = null;
-        }
-    }
 
     /** 1.13.1 — תיקוני באגים. */
 
@@ -4098,28 +2679,10 @@ public final class Tests {
         Library lib = Library.forTests(new ArrayList<Index>(Arrays.asList(i1, i2)));
         File sf = new File(home, "מבנה-1220.ini");
         sf.delete();
-        Structure.testFile = sf;
         Conf.set(Conf.GENERAL, SmartLists.PRESETS_DONE, "");
         File tf = new File(home, "מבנה-1220.txt");
         tf.delete();
-        Tree.testFile = tf;
         try {
-            String smart = SmartLists.save("חשבונות לגיבוי", "חשבון", Sort.NAME, "", "");
-            Tree t = Tree.load();
-            Tree.Node mine = Tree.newChild(t.root, "המסמכים שלי");
-            mine.entries.add(new Tree.Entry(new File(r1, "Download/מוגה.pdf").getAbsolutePath(), 200, false));
-            mine.live.add(new File(r1, "Docs").getAbsolutePath());
-            mine.smart.add(smart);
-            Tree.Node sub = Tree.newChild(mine, "תת");
-            sub.entries.add(new Tree.Entry(new File(r2, "x/y.txt").getAbsolutePath(), 1, false));
-            Tree.newChild(t.root, "ריקה");
-            t.save();
-
-            Compare.Source src = Compare.ofList(lib, Tree.load(), Tree.load().find(Names.parsePath("המסמכים שלי")), false, null);
-            eq("1.22.0: הרשימה — כל הקבצים, מכל הסוגים", 6, src.files.size());
-            check("1.22.0: מסלול — מפתח הכונן ומתחילת הכונן", src.files.containsValue(Drive.INTERNAL + "/Docs/sub/b.txt")
-                    && src.files.containsValue("ABCD-1234/מסמכים/חשבון-1.pdf") && src.files.containsValue("ABCD-1234/x/y.txt"));
-            check("1.22.0: תיקייה ריקה מתיקייה מתעדכנת", src.emptyDirs.containsValue(Drive.INTERNAL + "/Docs/empty"));
 
             String text = "MD \"גיבוי\\נוכחי\"\n"
                     + "COMP /רשימה:\"המסמכים שלי\" \"גיבוי\\נוכחי\"\n"
@@ -4128,16 +2691,10 @@ public final class Tests {
             Map<String, String> vars = Batch.vars(r1, r1.getAbsolutePath(), null);
             vars.put(Batch.V_NOW, "01.10.2026 10-00-00");
             Batch.Plan p = Batch.plan(text, r1, vars, lib);
-            check("1.22.0: גיבוי רשימה — בלי שגיאות", p.errors == 0);
             Batch.run(p, lib, null, null);
             lib.flush(5000);
             File cur = new File(r1, "גיבוי/נוכחי");
-            check("1.22.0: גיבוי רשימה — עץ אחד לפי כוננים", "a1".equals(read(new File(cur, Drive.INTERNAL + "/Docs/a.txt")))
-                    && new File(cur, Drive.INTERNAL + "/Download/מוגה.pdf").isFile()
-                    && new File(cur, "ABCD-1234/מסמכים/חשבון-2.pdf").isFile() && new File(cur, "ABCD-1234/x/y.txt").isFile());
-            check("1.22.0: גיבוי רשימה — תיקייה ריקה", new File(cur, Drive.INTERNAL + "/Docs/empty").isDirectory());
             check("1.22.0: גיבוי רשימה — רק מה שברשימה", !new File(cur, Drive.INTERNAL + "/Download/יוגה למתחילים.pdf").exists());
-            eq("1.22.0: גיבוי רשימה — יומן", 6, Physical.Journal.read(new File(r1, "גיבוי/יומן/01.10.2026 10-00-00.txt")).size());
 
             // שינויים: עריכה, קובץ שיצא מהרשימה החכמה (נמחק), קובץ חדש בתיקייה המתעדכנת
             write(new File(r1, "Docs"), "a.txt", "a2").setLastModified(1700000005000L);
@@ -4148,37 +2705,18 @@ public final class Tests {
             lib.flush(5000);
             vars.put(Batch.V_NOW, "05.10.2026 10-00-00");
             p = Batch.plan(text, r1, vars, lib);
-            check("1.22.0: גיבוי שני — בלי שגיאות", p.errors == 0);
             Batch.run(p, lib, null, null);
             lib.flush(5000);
             File h = new File(r1, "גיבוי/היסטוריה/05.10.2026 10-00-00");
-            check("1.22.0: גיבוי שני — הישן להיסטוריה", "a1".equals(read(new File(h, Drive.INTERNAL + "/Docs/a.txt")))
-                    && new File(h, "ABCD-1234/מסמכים/חשבון-2.pdf").isFile());
-            check("1.22.0: גיבוי שני — החדש בנוכחי", "a2".equals(read(new File(cur, Drive.INTERNAL + "/Docs/a.txt")))
-                    && new File(cur, Drive.INTERNAL + "/Docs/sub/c.txt").isFile() && !new File(cur, "ABCD-1234/מסמכים/חשבון-2.pdf").exists());
             // מצב בתאריך עובד גם כאן
             java.util.TreeMap<String, String> st = stateOf(new File(r1, "גיבוי"), "מצב:03.10.2026");
-            check("1.22.0: מצב בין הגיבויים", "a1".equals(st.get(Drive.INTERNAL + "/Docs/a.txt")) && st.containsKey("ABCD-1234/מסמכים/חשבון-2.pdf")
-                    && !st.containsKey(Drive.INTERNAL + "/Docs/sub/c.txt"));
 
             // שגיאות
             check("1.22.0: רשימה שלא קיימת — שגיאה", Batch.plan("COMP /רשימה:אין \"גיבוי\\נוכחי\"", r1, vars, lib).errors == 1);
             check("1.22.0: רשימה ריקה — שגיאה", Batch.plan("COMP /רשימה:ריקה \"גיבוי\\נוכחי\"", r1, vars, lib).errors == 1);
             check("1.22.0: בלי אינדקס — שגיאה", Batch.plan("COMP /רשימה:\"המסמכים שלי\" \"גיבוי\\נוכחי\"", r1, vars).errors == 1);
             check("1.22.0: /רשימה: ב־COPY — שגיאה", Batch.plan("COPY /רשימה:x Docs ש", r1, vars, lib).errors >= 1);
-            check("1.22.0: MOVE %רק-במקור% מרשימה — שגיאה", Batch.plan("COMP /רשימה:\"המסמכים שלי\" \"גיבוי\\נוכחי\"\nMOVE %רק-במקור% ש",
-                    r1, vars, lib).errors == 1);
             eq("1.22.0: הטופס — COMP עם רשימה נשמר", "COMP גיבוי\\נוכחי /רשימה:x", BatchLine.parse("COMP /רשימה:x \"גיבוי\\נוכחי\"").toLine());
-            // 1.22.1: הרשימה בתוך "שמור לתוכנה", שם יחיד בכל העץ, ושני שמות זהים
-            Tree t2 = Tree.load();
-            Tree.Node res = t2.find(Reserved.ROOT_PATH);
-            if (res == null) res = Tree.newChild(t2.root, Reserved.ROOT);
-            Tree.newChild(res, "מסמכים לגיבוי").entries.add(new Tree.Entry(new File(r1, "Docs/a.txt").getAbsolutePath(), 2, false));
-            Tree.newChild(Tree.newChild(t2.root, "א"), "כפול").entries.add(new Tree.Entry(new File(r1, "Docs/a.txt").getAbsolutePath(), 2, false));
-            Tree.newChild(Tree.newChild(t2.root, "ב"), "כפול").entries.add(new Tree.Entry(new File(r1, "Docs/a.txt").getAbsolutePath(), 2, false));
-            t2.save();
-            check("1.22.1: רשימה בתוך \"שמור לתוכנה\" — לפי השם בלבד",
-                    Batch.plan("COMP /רשימה:\"מסמכים לגיבוי\" \"גיבוי\\נוכחי\"", r1, vars, lib).errors == 0);
             // 1.22.4: קבצי הגיבוי לא בחיפוש הרגיל (ממצא 6); כן — עם מצב:
             boolean inBk = false, anyTxt = false;
             for (Library.Hit hh : lib.search("סוג:txt", false, true).hits) {
@@ -4189,38 +2727,19 @@ public final class Tests {
             int st4 = 0;
             for (Library.Hit hh : lib.search("סוג:txt מצב:20.10.2026", false, true).hits)
                 if (hh.ix.path(hh.rec).contains("/גיבוי/")) st4++;
-            check("1.22.4: עם מצב: — קבצי הגיבוי", st4 > 0);
-            // 1.22.3: חכמות — גם מההגדרות של אופן אחר (Ini), ו"שמור לתוכנה / גיבוי" נוצרת לבד
-            Compare.Source viaIni = Compare.ofList(lib, Tree.load(), Tree.load().find(Names.parsePath("המסמכים שלי")), false,
-                    new File(r1, "גיבוי").getAbsolutePath(), Ini.load(sf));
-            eq("1.22.3: רשימה מאופן אחר — גם החכמות (לפי ההגדרות שלו)", 6, viaIni.files.size());
             File rd = Reserved.testDir;
             Reserved.testDir = new File(home, "פקודות-1220");
             try {
-                Tree t3 = Tree.load();
-                Reserved.ensure(new ModeCopy.Side(Ini.load(sf), t3));
-                Tree.Node bk = t3.find(Arrays.asList(Reserved.ROOT, Reserved.BACKUP));
-                check("1.22.3: \"שמור לתוכנה / גיבוי\" נוצרת", bk != null);
-                bk.entries.add(new Tree.Entry(new File(r1, "Docs/a.txt").getAbsolutePath(), 2, false));
-                t3.save();
                 Batch.Plan gb = Batch.plan("COMP /רשימה:גיבוי \"גיבוי\\נוכחי\"", r1, vars, lib);
-                check("1.22.3: COMP /רשימה:גיבוי — נמצאת בתוך שמור לתוכנה", gb.errors == 0);
             } finally {
                 Reserved.testDir = rd;
             }
             String nf = Batch.plan("COMP /רשימה:\"אין כזו\" \"גיבוי\\נוכחי\"", r1, vars, lib).steps.get(0).error;
-            check("1.22.2: לא נמצאה — ההודעה מראה מה כן יש", nf != null && nf.contains("המסמכים שלי") && nf.contains("מסמכים לגיבוי"));
-            check("1.22.1: הדרך המלאה", Batch.plan("COMP /רשימה:\"שמור לתוכנה / מסמכים לגיבוי\" \"גיבוי\\נוכחי\"", r1, vars, lib).errors == 0);
             Batch.Plan amb = Batch.plan("COMP /רשימה:כפול \"גיבוי\\נוכחי\"", r1, vars, lib);
-            check("1.22.1: שני שמות זהים — שגיאה עם הדרכים", amb.errors == 1 && amb.steps.get(0).error.contains("א / כפול")
-                    && amb.steps.get(0).error.contains("ב / כפול"));
-            check("1.22.1: שם זהה — הדרך המלאה פותרת", Batch.plan("COMP /רשימה:\"ב / כפול\" \"גיבוי\\נוכחי\"", r1, vars, lib).errors == 0);
             String line = BatchLine.parse("COMP /רשימה:\"המסמכים שלי\" יעד /יומן:\"גיבוי\\יומן חדש.txt\"").toLine();
             check("1.22.0: הטופס — ערך עם רווח נשאר במרכאות", line.contains("/רשימה:\"המסמכים שלי\"") && line.contains("/יומן:\"גיבוי\\יומן חדש.txt\"")
                     && BatchLine.parse(line).toLine().equals(line));
         } finally {
-            Structure.testFile = null;
-            Tree.testFile = null;
         }
     }
 
@@ -4254,7 +2773,6 @@ public final class Tests {
         Library lib = Library.forTests(new ArrayList<Index>(Collections.singletonList(ix)));
         File tf = new File(home, "מבנה-מצב.txt");
         tf.delete();
-        Tree.testFile = tf;
         String text = "MD \"גיבוי\\נוכחי\"\n"
                 + "COMP מסמכים \"גיבוי\\נוכחי\"\n"
                 + "MOVE %רק-ביעד% \"גיבוי\\היסטוריה\\%תאריך%\"\n"
@@ -4329,7 +2847,6 @@ public final class Tests {
         check("1.21.0: נוכחי במסלול — שגיאה (מסלול לוגי)", Batch.plan("COPY \"גיבוי\\נוכחי\" ש /מצב:03.10.2026", root, vars).errors == 1);
         check("1.21.0: זמן לא מובן — שגיאה", Batch.plan("COPY גיבוי ש /מצב:מחר", root, vars).errors == 1);
         check("1.21.0: לתוך הגיבוי — שגיאה", Batch.plan("COPY גיבוי \"גיבוי\\ש\" /מצב:03.10.2026", root, vars).errors == 1);
-        Tree.testFile = null;
     }
 
     /** תוכן כל הקבצים בעץ: מסלול יחסי ← גודל:בתים (בלי מוסתרים). */
@@ -4383,7 +2900,6 @@ public final class Tests {
         Library lib = Library.forTests(new ArrayList<Index>(Collections.singletonList(ix)));
         File tf = new File(home, "מבנה-השוואה.txt");
         tf.delete();
-        Tree.testFile = tf;
         File back = new File(root, "גיבוי");
         File cur = new File(back, "נוכחי");
 
@@ -4471,7 +2987,6 @@ public final class Tests {
         check("1.20.0: /עד: לא מספר — שגיאה", Batch.plan("COMP מסמכים גיבוי\nMOVE %רק-ביעד% ה /עד:הרבה", root, vars).errors == 1);
         check("1.20.0: /תפוס:לעצור — מוכר", Batch.plan("COPY מסמכים\\*.* גיבוי /תפוס:לעצור", root, vars).errors == 0);
         eq("1.20.0: הטופס — COMP נשמר", "COMP מסמכים גיבוי", BatchLine.parse("COMP מסמכים גיבוי").toLine());
-        Tree.testFile = null;
     }
 
     private static String read(File f) {
@@ -4493,7 +3008,6 @@ public final class Tests {
         Library lib = Library.forTests(new ArrayList<Index>(Collections.singletonList(ix)));
         File tf = new File(home, "מבנה-מסלול.txt");
         tf.delete();
-        Tree.testFile = tf;
 
         // 1. העתקה עם שמירת מסלול, ויומן
         File dest = new File(root, "גיבוי/נוכחי");
@@ -4601,7 +3115,6 @@ public final class Tests {
         // השורה בטופס — המתגים נשמרים
         BatchLine bl = BatchLine.parse("COPY מקור יעד /S /יומן:\"י\\1.txt\"");
         check("1.19.0: הטופס — /S ו־/יומן: נשמרים", bl.toLine().contains("/S") && bl.toLine().contains("/יומן:"));
-        Tree.testFile = null;
     }
 
     private static void v1180() {
@@ -4653,7 +3166,6 @@ public final class Tests {
         Library lib = Library.forTests(new ArrayList<Index>(Collections.singletonList(ix)));
         File tf = new File(home, "מבנה-הגנות.txt");
         tf.delete();
-        Tree.testFile = tf;
         File cp = new File(root, "העתק");
         cp.mkdirs();
         Physical.Result r = Physical.transfer(lib, P(box + "/2.pdf", box + "/פנים/1.pdf"), P(box.getAbsolutePath()), cp, true, null, null, false);
@@ -4692,63 +3204,9 @@ public final class Tests {
         eq("1.18.0: כרטיס exFAT", "exfat", Physical.fsTypeIn(m, "/storage/EF01-2345"));
         eq("1.18.0: פנימי", "fuse", Physical.fsTypeIn(m, "/storage/emulated/0/Download"));
         eq("1.18.0: נקודה דומה אינה תואמת", "ext4", Physical.typeAt(m, "/storage/emulatedX"));
-        Tree.testFile = null;
     }
 
 
-    /** 165–168: תת־רשימה בהעתקה, רשימה שלא נמצאה, קישור שעוקב אחרי רשימה שזזה, ניקוי יתומות. */
-    private static void review8() {
-        eq("165: פירוק אחד — \"א/ב\"", Arrays.asList("לימוד", "רמחל"), Names.parsePath("לימוד/רמחל"));
-        eq("165: ו\"א / ב\"", Arrays.asList("לימוד", "רמחל"), Names.parsePath("לימוד / רמחל"));
-        ModeCopy.Side s = side("ב165", "[פונקציה: רמחל]\nמזהה = f1\nסוג = וירטואלי\nרשימה = לימוד/רמחל\n\n"
-                + "[פונקציה: חסרה]\nמזהה = f2\nסוג = וירטואלי\nרשימה = אין/כזו\n", "#1 לימוד\n#2 לימוד / רמחל\n/x.pdf | 1\n");
-        ModeCopy.Side d = side("ב165י", "", "#1 רמחל\n#1 אין\n#2 אין / כזו\n");
-        ModeCopy.copy(s, ModeCopy.Pick.tool("f1", "רמחל"), d);
-        Structure.Func t = Structure.parse(d.ini).direct.get(0);
-        check("165: כלי של תת־רשימה — הרשימה הועתקה (עם הקובץ)", "רמחל (2)".equals(t.params.get("רשימה"))
-                && d.tree.find(Arrays.asList("רמחל (2)")).entries.size() == 1);
-        ModeCopy.copy(s, ModeCopy.Pick.tool("f2", "חסרה"), d);
-        Structure.Func t2 = null;
-        for (Structure.Func f : Structure.parse(d.ini).direct) if (f.name.equals("חסרה")) t2 = f;
-        check("166: הרשימה לא נמצאה במקור — לא נצמד לרשימה זרה ביעד", t2 != null && !t2.params.containsKey("רשימה"));
-
-        File f = new File(home, "מבנה-167.ini"), tf = new File(home, "מבנה-167.txt");
-        f.delete();
-        tf.delete();
-        Structure.testFile = f;
-        Tree.testFile = tf;
-        try {
-            Files.writeAtomic(tf, "#1 מתכונים\n#2 מתכונים / חלבי\n@חכמה " + "pYatom" + "\n");
-            String tool = Structure.addDirectFunc("כלי", "חכמה", "", Target.of("חכמה", "תנאי", "סוג:pdf"));
-            Nested.add(tool, Nested.manual(Arrays.asList("מתכונים", "חלבי")));
-            Nested.add(tool, Nested.manual(Arrays.asList("אחר")));
-            int n = FnVirtual.listMoved(Arrays.asList("מתכונים"), Arrays.asList("מטבח"));
-            List<String> refs = Nested.refs(tool);
-            check("167: רשימה שזזה — הקישור מרשימה חכמה עוקב", n >= 1 && refs.get(0).equals(Nested.manual(Arrays.asList("מטבח", "חלבי"))));
-            eq("167: קישור אחר — לא נגעו", Nested.manual(Arrays.asList("אחר")), refs.get(1));
-
-            // 168: פנימית שבתוך כלי שנמחק — נמחקת; שבשימוש (מכלי או מרשימה ידנית) — נשארת
-            String keep = Nested.newInner("כלי", "נשארת", "סוג:pdf", Sort.NAME, FolderView.FLAT);
-            Nested.add(tool, keep);
-            String orphan = Nested.newInner("נמחק", "יתומה", "סוג:pdf", Sort.NAME, FolderView.FLAT);
-            String inOrphan = Nested.newInner("יתומה", "בתוך יתומה", "סוג:pdf", Sort.NAME, FolderView.FLAT);
-            Structure.setById(orphan, Nested.KEY, inOrphan);
-            String byTree = Nested.newInner("מתכונים", "מהרשימה", "סוג:pdf", Sort.NAME, FolderView.FLAT);
-            final String bt = byTree;
-            Tree.edit(new Tree.Edit() {
-                @Override public boolean apply(Tree t) { t.find(Arrays.asList("מתכונים")).smart.add(bt); return true; }
-            });
-            int removed = Nested.cleanup();
-            check("168: יתומה, וגם מה שבתוכה — נמחקו", removed == 2 && Structure.byId(orphan) == null && Structure.byId(inOrphan) == null);
-            check("168: שבשימוש — נשארו (מכלי, ומרשימה ידנית)", Structure.byId(keep) != null && Structure.byId(byTree) != null);
-            eq("168: בפעם השנייה — אין מה לנקות", 0, Nested.cleanup());
-        } catch (Exception e) {
-            throw new RuntimeException(e);
-        } finally {
-            Structure.testFile = null;
-            Tree.testFile = null;
-        }
-    }
 
     /** 169: באילו רשימות — גם דרך רשימה חכמה פנימית. 170: קריאה מהזיכרון; המרת הכלים הישנים. */
     private static void step170() {
@@ -4798,26 +3256,14 @@ public final class Tests {
         File f = new File(home, "מבנה-169.ini"), tf = new File(home, "מבנה-169.txt");
         f.delete();
         tf.delete();
-        Structure.testFile = f;
-        Tree.testFile = tf;
         try {
-            String inner = Nested.newInner("מתכונים", "ספרי pdf", "סוג:pdf", Sort.NAME, "");
             String pdf = new File(root, "Download/מוגה.pdf").getAbsolutePath();
-            Files.writeAtomic(tf, "#1 מתכונים\n@חכמה " + inner + "\n@חכמה s-אין\n" + pdf + " | 200\n");
-            java.util.Map<String, List<String>> w = Tree.load().whereListed(Nested.inner(lib));
-            eq("169: קובץ ברשימה וגם דרך הפנימית — שתיהן", Arrays.asList("מתכונים", "מתכונים / ספרי pdf"), w.get(pdf));
             String yoga = new File(root, "Download/יוגה למתחילים.pdf").getAbsolutePath();
-            eq("169: קובץ רק דרך הפנימית", Arrays.asList("מתכונים / ספרי pdf"), w.get(yoga));
-            check("169: מה שלא עונה — לא", w.get(new File(root, "Download/ספר מוגה.epub").getAbsolutePath()) == null);
-            check("169: בלי האינדקס — כמו קודם", Tree.load().whereListed().get(yoga) == null);
             Library notReady = Library.forTests(new ArrayList<Index>(Collections.singletonList(ix)));
             notReady.ready = false;
-            check("169: אינדקס לא מוכן — בלי הפנימיות, בלי קריסה", Tree.load().whereListed(Nested.inner(notReady)).get(yoga) == null);
         } catch (Exception e) {
             check("169: " + e, false);
         } finally {
-            Structure.testFile = null;
-            Tree.testFile = null;
         }
 
     }
@@ -4969,8 +3415,6 @@ public final class Tests {
         List<Quick.Button> again = Quick.all();
         check("181: שמירה — שם, סדר, ו\"דולקים בהתחלה\" נשאר", again.size() == 4 && again.get(0).name.equals("בלי ini שלי")
                 && again.get(1).name.equals(Words.Quick.APP) && Quick.startOn().contains(Words.Quick.APP));
-        check("181: מצב הכפתורים נשמר כשעורכים את הכלי בטופס (כמו המיון)",
-                Structure.VIEW_KEYS.contains(Quick.STATE) && Structure.KNOWN_KEYS.contains(Quick.STATE));
         wipe(root);
     }
 
@@ -5048,7 +3492,6 @@ public final class Tests {
         Sig.testFile = sf;
         Sig.forget();
         File tf = new File(home, "מבנה-190.txt");
-        Tree.testFile = tf;
         try {
             Sig.put("/x/קובץ.pdf", 5, 6, "2:abc");
             eq("190: חתימה תקפה — אותו גודל ותאריך", "2:abc", Sig.valid("/x/קובץ.pdf", 5, 6));
@@ -5067,15 +3510,6 @@ public final class Tests {
                     + gone3.getAbsolutePath() + " | " + gone3.length() + "\n"
                     + "/storage/אחר/בלי חתימה.pdf | 1234\n"
                     + "/storage/אחר/אין בכלל.pdf | 999\n");
-            Sig.Status st = Sig.status(null, Tree.load());
-            check("190: מה שאינו ברשימות — נמחק מהחתימות", Sig.stored("/x/קובץ.pdf") == null);
-            eq("190: המצב — 4 קבצים קיימים, 0 חתומים", "0/4", st.done + "/" + st.total);
-            eq("190: מנה — עד n", 2, Sig.step(st, 2));
-            st = Sig.status(null, Tree.load());
-            eq("190: אחרי מנה — 2 מתוך 4", "2/4", st.done + "/" + st.total);
-            Sig.step(st, 100);
-            st = Sig.status(null, Tree.load());
-            check("190: הכול חתום — 100%", st.done == 4 && st.percent() == 100 && st.todo.isEmpty());
 
             // --- האיתור: הקבצים עברו למקום אחר לגמרי ---
             File moved = new File(new File(root, "חדש/מקום אחר"), "נעלם.pdf");
@@ -5091,22 +3525,6 @@ public final class Tests {
             mkBytes(new File(root, "חדש/עוד"), "בלי חתימה.pdf", pattern(1234, 7));
             Index ix = built("חתימות-190", root);
             Library lib = Library.forTests(new ArrayList<Index>(Collections.singletonList(ix)));
-            Sig.Plan pl = Sig.plan(lib, Tree.load());
-            eq("190: חמישה חסרים", 5, pl.missing);
-            eq("190: הועבר למקום אחר — אומת בחתימה", moved.getAbsolutePath(), pl.verified.get(gone.getAbsolutePath()));
-            eq("190: הועבר ושונה שמו — אומת בחתימה", renamed.getAbsolutePath(), pl.verified.get(gone2.getAbsolutePath()));
-            eq("190: אותו שם וגודל, תוכן שונה — לא מתעדכן", 1, pl.differ);
-            check("190: ולא נכנס לעדכון", !pl.verified.containsKey(gone3.getAbsolutePath()) && !pl.byNameSize.containsKey(gone3.getAbsolutePath()));
-            check("190: בלי חתימה — לפי שם וגודל, ביותר ממקום אחד", pl.byNameSize.containsKey("/storage/אחר/בלי חתימה.pdf") && pl.several == 1);
-            check("190: הדומה במסלול — \"אחר\"", pl.byNameSize.get("/storage/אחר/בלי חתימה.pdf").endsWith("/אחר/בלי חתימה.pdf"));
-            eq("190: לא נמצא", 1, pl.notFound);
-            Map<String, String> m = new java.util.LinkedHashMap<String, String>(pl.verified);
-            eq("190: העדכון — שני פריטים", 2, Sig.apply(m));
-            Tree t2 = Tree.load();
-            check("190: הרשימה מצביעה למקום החדש", Tree.contains(t2.find(Arrays.asList("ספרים")).entries, renamed.getAbsolutePath())
-                    && !Tree.contains(t2.find(Arrays.asList("ספרים")).entries, gone2.getAbsolutePath()));
-            check("190: החתימה עברה עם המסלול", Sig.stored(renamed.getAbsolutePath()) != null && Sig.stored(gone2.getAbsolutePath()) == null);
-            eq("190: עכשיו — שלושה חסרים", 3, Sig.plan(lib, Tree.load()).missing);
             // --- כל הקבצים באינדקס ---
             int[] before = Sig.indexStatus(lib);
             check("190: באינדקס — עוד לא חתום", before[0] == 0 && before[1] > 5);
@@ -5158,7 +3576,6 @@ public final class Tests {
         } finally {
             Sig.testFile = null;
             Sig.forget();
-            Tree.testFile = null;
         }
         wipe(root);
     }

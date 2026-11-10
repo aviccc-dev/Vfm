@@ -397,39 +397,6 @@ public class SettingsScreen extends Activity {
         });
     }
 
-    /** רשימות שנשארו בלי פונקציה (ממחיקות קודמות ומהשורש הישן). מוצגות לפני שנמחקות. */
-    private void cleanOrphans() {
-        java.util.Set<String> owned = new java.util.HashSet<String>();
-        for (java.util.ArrayList<String> b : FnVirtual.allBases().keySet()) if (!b.isEmpty()) owned.add(b.get(0));
-        Tree t = Tree.load();
-        final java.util.List<String> orphans = new java.util.ArrayList<String>();
-        for (Tree.Node c : t.root.children) if (!owned.contains(c.name)) orphans.add(c.name);
-        final int loose = t.root.entries.size();
-        if (orphans.isEmpty() && loose == 0) {
-            Ui.toast(this, Words.Prefs.NO_ORPHANS);
-            return;
-        }
-        StringBuilder names = new StringBuilder();
-        for (String n : orphans) names.append(names.length() > 0 ? ", " : "").append(n);
-        Ui.ask(this, Words.Prefs.DELETE_ORPHANS, Words.NO_TOUCH_FILES,
-                (orphans.isEmpty() ? "" : orphans.size() + Words.Prefs.LISTS_COLON + names)
-                        + (loose > 0 ? (orphans.isEmpty() ? "" : " · ") + loose + Words.Prefs.ITEMS_OLD_ROOT : ""),
-                Words.BACKUP_SAVED, Words.Prefs.DELETE, new Runnable() {
-                    @Override
-                    public void run() {
-                        synchronized (Tree.LOCK) {
-                            Files.backupNamed(Paths.tree(), Words.Prefs.BEFORE_CLEAN);
-                            Tree tt = Tree.load();
-                            java.util.Iterator<Tree.Node> it = tt.root.children.iterator();
-                            while (it.hasNext()) if (orphans.contains(it.next().name)) it.remove();
-                            tt.root.entries.clear();
-                            tt.save();
-                        }
-                        Ui.toast(SettingsScreen.this, Words.Prefs.DELETED);
-                    }
-                });
-    }
-
     private void showLog() {
         final String text = Log.device() + "\n\n" + Log.read();
         TextView tv = new TextView(this);

@@ -38,7 +38,7 @@ final class DbCmdMenu {
      */
     static String otherMode(Activity a, String mode, List<String> path) {
         List<String> all = new ArrayList<String>(DbScreen.dbModes(a));
-        if (all.remove(Examples.MODE)) all.add(0, Examples.MODE);
+        if (all.remove(DbExamples.MODE)) all.add(0, DbExamples.MODE);
         for (String m : all) if (!m.equals(mode) && find(a, m, path) != 0) return m;
         return null;
     }

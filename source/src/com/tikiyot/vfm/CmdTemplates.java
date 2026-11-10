@@ -62,7 +62,7 @@ final class CmdTemplates {
 
     static List<Tpl> system(Context c) {
         try {
-            return parse(Examples.asset(c, ASSET));
+            return parse(DbExamples.asset(c, ASSET));
         } catch (Throwable t) {
             Log.e("הפקודות הנפוצות של התוכנה", t);
             return new ArrayList<Tpl>();

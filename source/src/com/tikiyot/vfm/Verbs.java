@@ -195,7 +195,11 @@ final class Verbs {
     static String listMoved(String line, List<String> from, List<String> to) {
         Cmd c = parse(line);
         if (c.error != null || !c.kind.equals(K_LIST)) return null;
-        List<String> p = Tree.moved(Names.parsePath(c.arg), from, to);
+        List<String> was = Names.parsePath(c.arg), p = null;
+        if (was.size() >= from.size() && was.subList(0, from.size()).equals(from)) {   // היא עצמה, או בתוכה
+            p = new ArrayList<String>(to);
+            p.addAll(was.subList(from.size(), was.size()));
+        }
         if (p == null) return null;
         return c.verb + " " + LIST + " " + Names.key(p) + (c.sort.isEmpty() ? "" : " " + SORT + c.sort);
     }
@@ -381,23 +385,6 @@ final class Verbs {
         a.startActivity(i);
     }
 
-    /** "צור רשימה <שם>" — רשימה ידנית: קיימת — כמו שהיא; חסרה — נוצרת (בכל הדרך). */
-    static void ensureList(final List<String> path) {
-        if (path.isEmpty() || Tree.load().find(path) != null) return;
-        Tree.edit(new Tree.Edit() {
-            @Override
-            public boolean apply(Tree t) {
-                Tree.Node n = t.root;
-                for (String p : path) {
-                    Tree.Node c = n.child(Names.cleanName(p));
-                    if (c == null) c = Tree.newChild(n, Names.cleanName(p));
-                    n = c;
-                }
-                return true;
-            }
-        });
-    }
-
     // ---------- הנתון החי ----------
 
     /** הקבצים שפקודת פתיחה מציגה עכשיו (מהאינדקס ומהרשימות) — או null: היא לא מסננת קבצים (מסך, חזור). */
@@ -405,13 +392,7 @@ final class Verbs {
         if (c == null || c.error != null) return null;
         try {
             Library lib = Library.get(ctx);
-            if (c.kind.equals(K_LIST)) {
-                Tree.Node n = Tree.load().find(Names.parsePath(c.arg));
-                if (n == null) return new ArrayList<String>();
-                List<String> out = new ArrayList<String>();
-                collect(n, out);
-                return out;
-            }
+            if (c.kind.equals(K_LIST)) return null;                             // מ0.29: רשימה במסד — לא נספרת כאן
             if (c.kind.equals(K_FOLDER)) return lib.filesUnder(c.arg);
             String cond = null;
             if (c.kind.equals(K_FIND)) cond = c.cond;
@@ -429,8 +410,4 @@ final class Verbs {
         }
     }
 
-    private static void collect(Tree.Node n, List<String> out) {
-        for (Tree.Entry e : n.entries) if (!e.bad) out.add(e.path);
-        for (Tree.Node c : n.children) collect(c, out);
-    }
 }

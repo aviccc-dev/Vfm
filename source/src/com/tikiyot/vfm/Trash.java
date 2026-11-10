@@ -11,6 +11,9 @@ import java.util.Map;
 
 public final class Trash {
 
+    /** מ0.29: תחילית "המקום המקורי" של מה שהוסר במנוע הישן (רשימה, כלי, אופן) — נשאר בסל, אבל אין לו עוד שחזור. */
+    static final String OLD_BOX = "📦 ";
+
     /** מתחיל בנקודה, ולכן אינו נכנס לאינדקס ואינו מופיע בסל. */
     public static final String LOG = ".יומן מחיקות.txt";  // בכונן
 
@@ -236,7 +239,7 @@ public final class Trash {
                     continue;
                 }
                 lib.dirChanged(f.getParent());
-                if (it.original != null && !BinBox.isBox(it.original)) for (String r : rel) origs.add(it.original + "/" + r);
+                if (it.original != null) for (String r : rel) origs.add(it.original + "/" + r);
             } else {
                 if (f.isFile() && !f.delete()) continue;
                 lib.fileRemoved(it.path());

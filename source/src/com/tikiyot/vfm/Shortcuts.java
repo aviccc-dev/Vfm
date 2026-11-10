@@ -29,13 +29,6 @@ final class Shortcuts {
         return out;
     }
 
-    /** כלי "פקודה" בבית שמפנה לקובץ. */
-    static void add(Activity a, File f, String name, Runnable changed) {
-        if (f == null) return;
-        Structure.addDirectFunc(name, FnCommand.KIND, "", Target.of(FnCommand.KIND, FnCommand.FILE, f.getAbsolutePath()));
-        changed.run();
-        Ui.toast(a, Words.CmdTool.added(name));
-    }
 
     /**
      * קיצור: קובץ בתיקייה, עם הצלמית והשם (ושורה, אם יש) — ומחזיר אותו (null — נכשל). כבר יש קובץ בשם הזה ובאותה

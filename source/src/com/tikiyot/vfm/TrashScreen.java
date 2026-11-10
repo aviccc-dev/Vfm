@@ -73,10 +73,6 @@ public class TrashScreen extends ListScreen<Trash.Item> {
     @Override
     protected void bind(View v, Trash.Item it) {
         String when = deletedAt(it.name());
-        if (BinBox.isBox(it.original)) {                                     // 1.10.0: רשימה / כלי / אופן שהוסרו
-            Ui.bindIcon(v, "📦", shownName(it.name()), Words.Box.REMOVED + (when != null ? " " + when : "") + " · " + it.original.substring(BinBox.MARK.length()));
-            return;
-        }
         String status = (it.dir ? Words.Bin.DELETED_FEM : Words.Bin.DELETED) + (when != null ? " " + when : "")
                 + (it.dir ? " · " + Words.files(it.files) + " · " + Files.size(it.size) : "")
                 + (it.original == null ? Words.Bin.NO_ORIGINAL : "");
@@ -86,8 +82,7 @@ public class TrashScreen extends ListScreen<Trash.Item> {
 
     @Override
     protected void open(Trash.Item it) {
-        if (BinBox.isBox(it.original)) Ui.toast(this, Words.Box.HOW);
-        else if (it.dir) Ui.toast(this, Words.Bin.FOLDER_IN_TRASH);
+        if (it.dir) Ui.toast(this, Words.Bin.FOLDER_IN_TRASH);
         else Ui.open(this, new File(it.path()));
     }
 

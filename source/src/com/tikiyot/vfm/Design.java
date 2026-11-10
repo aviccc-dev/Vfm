@@ -487,24 +487,8 @@ final class Design {
 
     /** כל מה שמפנה לעיצוב from — מפנה עכשיו ל־to ("" — יורש). */
     static void renameRefs(final String from, final String to) {
-        Tree.edit(new Tree.Edit() {
-            @Override
-            public boolean apply(Tree t) {
-                return renameIn(t.root, from, to);
-            }
-        });
         if (from.equals(homeName())) setHome(to);
-        if (Flavor.M) DbFollow.designRenamedEverywhere(from, to);          // מ0.23: גם הרשימות במסד
-    }
-
-    private static boolean renameIn(Tree.Node n, String from, String to) {
-        boolean changed = false;
-        if (n.design.equals(from)) {
-            n.design = to;
-            changed = true;
-        }
-        for (Tree.Node c : n.children) changed |= renameIn(c, from, to);
-        return changed;
+        DbFollow.designRenamedEverywhere(from, to);                          // הרשימות — במסד
     }
 
     /** מחיקת עיצוב: הקובץ לגיבויים; מה שהפנה אליו — יורש (ומגיע בסוף לברירת המחדל). */

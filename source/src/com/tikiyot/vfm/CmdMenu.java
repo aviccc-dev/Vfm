@@ -63,105 +63,10 @@ final class CmdMenu {
     private static void showList(final Activity a, final List<String> path, final File newIn, final Picked pick,
                                  final String screen, final boolean top) {
         if (DbVerbs.active() && DbCmdMenu.show(a, path, newIn, pick, screen, top)) return;   // מ0.22: מהמסד, אם יש שם
-        ModeCopy.Side side = Reserved.inUse();
-        if (side == null) {                                                   // אין "שמור לתוכנה" בשום מקום — באופן הזה
-            Reserved.ensureMode(Modes.current());
-            side = Reserved.inUse();
-        }
-        final Tree.Node n = side == null ? null : side.tree.find(path);
-        if (n == null) {
-            Ui.toast(a, Words.Verb.NOT_FOUND + Names.label(path));
-            return;
-        }
-        final boolean here = Modes.current().equals(Reserved.modeInUse());
-        final List<String> labels = new ArrayList<String>();
-        final List<Runnable> taps = new ArrayList<Runnable>(), holds = new ArrayList<Runnable>();
-        final List<String> keys = new ArrayList<String>();                    // 1.17.2: לסדר החופשי של הרשימה
-        for (Tree.Entry e : n.entries) {                                      // קובצי הפקודות שבה
-            final File f = new File(e.path);
-            if (!Batch.isBatch(f.getName()) || !f.isFile()) continue;
-            Program p = Program.read(f);
-            labels.add((p.isProgram() ? p.icon : "▶") + "  " + p.title(f));
-            keys.add("f" + e.path);
-            taps.add(new Runnable() {
-                @Override public void run() { if (Reserved.isNew(f)) create(a, newIn, pick); else useFile(a, f, pick); }
-            });
-            holds.add(new Runnable() {
-                @Override public void run() { if (Reserved.isSystem(f)) { if (!Reserved.isNew(f)) saveAs(a, f); } else BatchUi.edit(a, f); }
-            });
-        }
-        for (final Tree.Node c : n.children) {                                // תתי־רשימות — תפריטי משנה
-            labels.add(c.name + "  ▸");
-            keys.add("c" + c.name);
-            taps.add(new Runnable() {
-                @Override public void run() { showList(a, c.path(), newIn, pick, screen, false); }
-            });
-            holds.add(null);
-        }
-        for (String r : n.smart) {                                            // רשימה חכמה — מה שהיא מוצאת
-            Structure.Func f = Structure.byId(side.ini, r);
-            if (f == null) continue;
-            final String name = f.name.substring(f.name.lastIndexOf(" › ") >= 0 ? f.name.lastIndexOf(" › ") + 3 : 0);
-            final String cond = f.params.containsKey(SmartLists.COND) ? f.params.get(SmartLists.COND) : "";
-            labels.add("📜 " + name + "  ▸");
-            keys.add("s" + r);
-            taps.add(new Runnable() {
-                @Override public void run() { found(a, name, cond, pick); }
-            });
-            holds.add(null);
-        }
-        for (String r : n.refs) {                                             // קישור ↪ — הרשימה שאליה הוא מקשר
-            final List<String> p = Names.parsePath(r);
-            if (side.tree.find(p) == null) continue;
-            labels.add("↪ " + p.get(p.size() - 1) + "  ▸");
-            keys.add("r" + r);
-            taps.add(new Runnable() {
-                @Override public void run() { showList(a, p, newIn, pick, screen, false); }
-            });
-            holds.add(null);
-        }
-        if (!n.order.isEmpty()) {                                             // 1.17.2: התפריט — בסדר של הרשימה
-            final java.util.Map<String, Integer> at = new java.util.HashMap<String, Integer>();
-            for (int i = 0; i < n.order.size(); i++) at.put(n.order.get(i), i);
-            Integer[] idx = new Integer[keys.size()];
-            for (int i = 0; i < idx.length; i++) idx[i] = i;
-            java.util.Arrays.sort(idx, new java.util.Comparator<Integer>() {
-                @Override
-                public int compare(Integer x, Integer y) {
-                    Integer rx = at.get(keys.get(x)), ry = at.get(keys.get(y));
-                    return (rx != null ? rx : 100000 + x) - (ry != null ? ry : 100000 + y);
-                }
-            });
-            List<String> l2 = new ArrayList<String>();
-            List<Runnable> t2 = new ArrayList<Runnable>(), h2 = new ArrayList<Runnable>();
-            for (Integer i : idx) {
-                l2.add(labels.get(i));
-                t2.add(taps.get(i));
-                h2.add(holds.get(i));
-            }
-            labels.clear();
-            labels.addAll(l2);
-            taps.clear();
-            taps.addAll(t2);
-            holds.clear();
-            holds.addAll(h2);
-        }
-        if (top && pick != null) extras(a, screen, pick, labels, taps, holds);
-        labels.add(Words.CmdM.ARRANGE);
-        taps.add(new Runnable() {
-            @Override
-            public void run() {
-                if (here && DbVerbs.active()) DbVerbs.openPath(a, DbListScreen.currentMode, path);   // מ0.26: הרשימה — במסד
-                else Ui.toast(a, Words.CmdM.FROM_EXAMPLES);
-            }
-        });
-        holds.add(null);
-        Ui.list(a, top && path.equals(Reserved.CMDS_PATH) ? Words.CmdM.TITLE : path.get(path.size() - 1), labels,
-                new DialogInterface.OnClickListener() {
-                    @Override public void onClick(DialogInterface d, int w) { taps.get(w).run(); }
-                }, new Ui.Index1() {
-                    @Override public void ok(int w) { if (holds.get(w) != null) holds.get(w).run(); }
-                });
+        // מ0.29: אין רשימה כזו באף מסד. "שמור לתוכנה" — ברירות המחדל נכנסות לאופן הזה מקובץ הדוגמאות (עד כאן — מהמנוע הישן).
+        if (DbVerbs.active() && !path.isEmpty() && path.get(0).equals(Reserved.ROOT) && DbScreen.ensureReserved(a, DbListScreen.currentMode)
+                && DbCmdMenu.show(a, path, newIn, pick, screen, top)) return;
+        Ui.toast(a, Words.Verb.NOT_FOUND + Names.label(path));
     }
 
     /** בבחירה: שורה בכתב · תיקייה במנהל הקבצים · פעולה של המסך (פקודות בלי קובץ). */

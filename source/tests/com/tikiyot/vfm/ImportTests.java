@@ -90,16 +90,6 @@ final class ImportTests {
 
     static final String SIGS2 = SIGS1 + "2:00000000000000cc\t5\t9\t" + C + "\n";
 
-    private static boolean same(Importer.Report a, Importer.Report b) {
-        return a.listsNew == b.listsNew && a.listsKnown == b.listsKnown && a.smartNew == b.smartNew && a.smartKnown == b.smartKnown
-                && a.nested == b.nested && a.filesNew == b.filesNew && a.filesKnown == b.filesKnown
-                && a.filesUpdated == b.filesUpdated && a.filesWithSig == b.filesWithSig && a.linksAdded == b.linksAdded
-                && a.linksKnown == b.linksKnown && a.rootFiles == b.rootFiles && a.propsSet == b.propsSet
-                && a.badLines == b.badLines && a.refsAdded == b.refsAdded && a.refsKnown == b.refsKnown && a.refCycles == b.refCycles
-                && a.refMissing == b.refMissing && a.smart == b.smart && a.live == b.live
-                && a.homeTools == b.homeTools && a.homeAdded == b.homeAdded && a.homeKnown == b.homeKnown
-                && a.homeSkipped == b.homeSkipped && a.homeMissing == b.homeMissing && a.homeNew == b.homeNew;
-    }
 
     private static List<String> names(Store s, long list) {
         List<String> out = new ArrayList<String>();
@@ -112,124 +102,9 @@ final class ImportTests {
     }
 
     private static long listIn(Store s, String mode, String path) {
-        return s.findByOrigin(DbPaths.originOf(mode, path));
+        return DbPaths.find(s, mode, Names.parsePath(path));                   // מ0.29: לפי השמות (אין עוד מפתח מקור מהישן)
     }
 
-    void run(Store s, File dir) throws Exception {
-        File m1 = new File(dir, "v1/עבודה"), m2 = new File(dir, "v2/עבודה");   // אותו אופן בשתי גרסאות
-        write(new File(m1, Paths.TREE), TREE1);
-        write(new File(m1, Sig.FILE), SIGS1);
-        write(new File(m2, Paths.TREE), TREE2);
-        write(new File(m2, Sig.FILE), SIGS2);
-        Importer.Source src1 = Importer.load(m1);
-
-        // מקור: החתימות — רק תקינות ובגרסה הנוכחית
-        ck("חתימות: נקראת רק שורה תקינה בגרסה הנוכחית", src1.sigs.size() == 1 && src1.sigs.get(A) != null
-                && src1.sigs.get(A).size == 100 && src1.sigs.get(A).mtime == 1700 && src1.sigs.get(A).sig.equals("2:00000000000000aa"));
-
-        // תצוגה מקדימה: הדוח מלא, והמסד נשאר ריק
-        Importer.Report pre = Importer.run(s, src1, false);
-        ck("תצוגה מקדימה: לא נשמר דבר", s.lists().isEmpty() && s.lastId() == 0 && s.findFile(A) == 0);
-        ck("תצוגה מקדימה: ארבע רשימות חדשות, שלושה קבצים, שישה קישורים (מ0.7: גם התיקייה החיה)", pre.listsNew == 4 && pre.listsKnown == 0
-                && pre.filesNew == 3 && pre.linksAdded == 6 && pre.linksKnown == 0 && pre.smartNew == 1);
-        ck("תצוגה מקדימה: מה שלא מועתק נספר (ההפניה — מ0.4 — כבר מועתקת)", pre.badLines == 1 && pre.refsAdded == 1 && pre.refCycles == 0 && pre.refMissing == 0 && pre.smart == 1 && pre.live == 1 && pre.skippedAny());
-        ck("תצוגה מקדימה: קובץ עם חתימה נספר", pre.filesWithSig == 1);
-
-        // העתקה
-        Importer.Report r = Importer.run(s, src1, true);
-        ck("העתקה: הדוח זהה לתצוגה המקדימה", same(pre, r));
-        ck("העתקה: ארבע רשימות", s.lists().size() == 4);
-        long books = listBy(s, "ספרים"), halacha = listBy(s, "ספרים / הלכה"), moadim = listBy(s, "מועדים"), pesach = listBy(s, "מועדים / פסח");
-        ck("העתקה: כל רשימה נמצאה לפי מקורה", books != 0 && halacha != 0 && moadim != 0 && pesach != 0);
-        ck("העתקה: השם הוא השם האחרון, לא המסלול", s.item(halacha).name.equals("הלכה") && s.item(pesach).name.equals("פסח"));
-        ck("העתקה: תת־רשימה בתוך האב", s.listsOf(halacha).equals(Arrays.asList(books)) && s.listsOf(pesach).equals(Arrays.asList(books, moadim)));
-        ck("העתקה: רשימה עליונה עומדת לעצמה", s.listsOf(books).isEmpty() && s.listsOf(moadim).isEmpty());
-        ck("העתקה: הסדר החופשי — קובץ, רשימה, ואז מה שלא נזכר (תיקייה חיה, הפניה, ואז קבצים)", names(s, books).equals(Arrays.asList("ב.pdf", "הלכה", "x", "פסח", "א.pdf")));
-        long live = s.findByOrigin(Importer.liveOrigin("עבודה", "ספרים", "/storage/emulated/0/x"));
-        ck("מ0.7: תיקייה חיה — רשימה חכמה של התיקייה, כמו ההסבה של המנוע הישן", live != 0 && s.item(live).type == Store.SMART
-                && s.item(live).name.equals("x") && s.listsOf(live).equals(Arrays.asList(books))
-                && (Cond.SOURCE + ":" + Cond.quote("/storage/emulated/0/x")).equals(s.prop(live, Store.P_COND))
-                && Sort.NAME.equals(s.prop(live, Store.P_SORT)) && FolderView.ALL.equals(s.prop(live, Store.P_VIEW)));
-        ck("העתקה: צלמית, תיאור ו\"למה\"", "📘".equals(s.prop(books, Store.P_ICON)) && "ספרי לימוד".equals(s.prop(books, Store.P_DESC))
-                && "ללמוד".equals(s.prop(books, Store.P_WHY)) && s.prop(books, Store.P_DESIGN) == null && s.prop(halacha, Store.P_ICON) == null);
-        long fa = s.findFile(A), fb = s.findFile(B), fc = s.findFile(C);
-        ck("העתקה: קובץ שבשתי רשימות הוא פריט אחד", fa != 0 && s.listsOf(fa).equals(Arrays.asList(books, halacha))
-                && s.listsOf(fb).equals(Arrays.asList(books, pesach)));
-        ck("העתקה: חתימה, גודל ותאריך מהקובץ שלהן", "2:00000000000000aa".equals(s.file(fa).sig) && s.file(fa).size == 100 && s.file(fa).mtime == 1700);
-        ck("העתקה: בלי חתימה — הגודל מהרשימה, בלי תאריך", s.file(fc).sig == null && s.file(fc).size == 5 && s.file(fc).mtime == 0);
-        ck("העתקה: הכונן", s.file(fa).drive.equals(Drive.INTERNAL) && s.file(fc).drive.equals("ABCD-1234"));
-        ck("העתקה: המסד תקין", s.check() == null);
-
-        // העתקה חוזרת של אותו מקור: אין מה לעשות, ושום דבר לא משתנה
-        long last = s.lastId();
-        Importer.Report again = Importer.run(s, src1, true);
-        ck("חוזרת: אין שינוי", again.nothingToDo() && again.listsKnown == 4 && again.filesKnown == 3 && again.linksKnown == 6 && again.smartKnown == 1);
-        ck("חוזרת: לא נוצרו מספרי זיהוי", s.lastId() == last && s.lists().size() == 4);
-
-        // המשתמש שינה במסד; המקור התקדם
-        s.rename(books, "ספרים שלי");
-        s.setProp(pesach, Store.P_DESC, "שלי");
-        Importer.Source src2 = Importer.load(m2);
-        Importer.Report pre2 = Importer.run(s, src2, false);
-        Importer.Report r2 = Importer.run(s, src2, true);
-        ck("עדכון: התצוגה המקדימה זהה להעתקה", same(pre2, r2));
-        ck("עדכון: רשימה חדשה וקובץ חדש", r2.listsNew == 1 && r2.filesNew == 1 && r2.listsKnown == 4);
-        ck("עדכון: חתימה חדשה עדכנה קובץ קיים", r2.filesUpdated == 1 && "2:00000000000000cc".equals(s.file(fc).sig) && s.file(fc).mtime == 9);
-        ck("עדכון: שם שהמשתמש שינה לא נדרס, והרשימה זוהתה", s.item(books).name.equals("ספרים שלי") && listBy(s, "ספרים") == books);
-        ck("עדכון: מאפיין ריק התמלא, מאפיין שיש לא נדרס", "🕯".equals(s.prop(halacha, Store.P_ICON)) && "📘".equals(s.prop(books, Store.P_ICON))
-                && r2.propsSet == 1);
-        ck("עדכון: מה שהמשתמש כתב במסד נשמר", "שלי".equals(s.prop(pesach, Store.P_DESC)));
-        ck("עדכון: מה שיצא מהמקור לא נמחק מהמסד", s.listsOf(fa).contains(halacha));
-        long fd = s.findFile(D);
-        ck("עדכון: הקובץ החדש נוסף לסוף הרשימה", fd != 0 && names(s, halacha).get(names(s, halacha).size() - 1).equals("ד.pdf"));
-        ck("עדכון: חמישה קישורים ישנים נשארו, אחד חדש", r2.linksAdded == 1 && r2.linksKnown == 4);
-        ck("עדכון: המסד תקין", s.check() == null);
-
-        // שני אופנים עם אותה רשימה באותו מסלול: שתי רשימות, בלי ערבוב קבצים (באג שנתפס במכשיר)
-        File other = new File(dir, "v4/ניסוי");
-        write(new File(other, Paths.TREE), "#1 ספרים\n" + D + " | 40\n");
-        int before = s.lists().size();
-        long booksOther;
-        Importer.Report ro = Importer.run(s, Importer.load(other), true);
-        booksOther = listIn(s, "ניסוי", "ספרים");
-        ck("שני אופנים: הרשימה של האופן השני נוצרה בנפרד", ro.listsNew == 1 && ro.listsKnown == 0 && s.lists().size() == before + 1
-                && booksOther != 0 && booksOther != books);
-        ck("שני אופנים: הקבצים לא התערבבו", names(s, booksOther).equals(Arrays.asList("ד.pdf")) && !s.listsOf(fb).contains(booksOther));
-        ck("שני אופנים: הרשימה של האופן הראשון לא השתנתה", s.count(books) == 5 && s.listsOf(fa).contains(books));
-        ck("שני אופנים: אותו קובץ הוא פריט אחד בשני האופנים", s.listsOf(s.findFile(D)).contains(booksOther) && s.findFile(D) == fd);
-
-        // כישלון באמצע: הכול חוזר
-        final Store real = s;
-        final int[] calls = {0};
-        Store flaky = (Store) Proxy.newProxyInstance(Store.class.getClassLoader(), new Class<?>[]{Store.class}, new InvocationHandler() {
-            @Override
-            public Object invoke(final Object proxy, Method m, Object[] args) throws Throwable {
-                if (m.getName().equals("atomic")) {
-                    final Store.Work w = (Store.Work) args[0];
-                    real.atomic(new Store.Work() {
-                        @Override public void run(Store x) { w.run((Store) proxy); }
-                    }, ((Boolean) args[1]).booleanValue());
-                    return null;
-                }
-                if (m.getName().equals("createFile") && ++calls[0] == 2) throw new Store.Failure("injected");
-                try {
-                    return m.invoke(real, args);
-                } catch (InvocationTargetException e) {
-                    throw e.getCause();
-                }
-            }
-        });
-        write(new File(dir, "v3/עבודה/" + Paths.TREE), "#1 חדשה אחת\n/x/1 | 1\n/x/2 | 2\n/x/3 | 3\n");
-        int listsBefore = s.lists().size();
-        boolean threw = false;
-        try {
-            Importer.run(flaky, Importer.load(new File(dir, "v3/עבודה")), true);
-        } catch (Store.Failure e) {
-            threw = true;
-        }
-        ck("כישלון באמצע: ההודעה מגיעה למי שקרא", threw);
-        ck("כישלון באמצע: שום דבר לא נשאר", s.lists().size() == listsBefore && s.findFile("/x/1") == 0 && listBy(s, "חדשה אחת") == 0);
-    }
 
 
     // ---------- רשימות חכמות (מ0.3) ----------
@@ -260,86 +135,12 @@ final class ImportTests {
             + "[רשימה פנימית: ספרים › צילומי מסך]\nמזהה = p-shot\nתנאי = סוג:תמונות צילום\nמיון = גודל\nרשימות בתוך = m:ספרים|s-img\n\n"
             + "[פונקציה: כלי]\nמזהה = f-1\nסוג = חיפוש\nתנאי = x\n";
 
-    static void writeSmartMode(File mode) throws IOException {
-        write(new File(mode, Paths.TREE), SMART_TREE);
-        write(new File(new File(mode, Paths.SETTINGS), Paths.MAIN), SMART_INI);
-    }
 
-    /** מסד חדש לחלוטין (מופע Store משלו): העתקת חכמות, חברות וסדר, "לא משויכים", עדכון בלי דריסה, ומה שנמחק חוזר. */
-    void smart(Store s, File dir) throws Exception {
-        File m = new File(dir, "חכם");
-        writeSmartMode(m);
-        Importer.Source src = Importer.load(m);
-        ck("חכמות: נקראו 4 הגדרות — הנפוצות ואחריהן הפנימית שאינה מקושרת", src.wanted().size() == 4
-                && src.wanted().get(0).key.equals("s-rec") && src.wanted().get(3).key.equals("p-shot"));
-        ck("חכמות: פנימית מקושרת היא אותה הגדרה כמו הנפוצה", src.smart("p-link") != null && src.smart("p-link").key.equals("s-rec"));
-        ck("חכמות: כלי ונמחקה אינן הגדרה", src.smart("f-1") == null && src.smart("s-gone") == null && src.skippedSmart() == 2);
-
-        Importer.Report pre = Importer.run(s, src, false);
-        ck("חכמות: תצוגה מקדימה לא שומרת", s.smarts().isEmpty() && s.lists().isEmpty() && s.lastId() == 0);
-        Importer.Report r = Importer.run(s, src, true);
-        ck("חכמות: הדוח זהה לתצוגה המקדימה", same(pre, r));
-        ck("חכמות: ארבע חדשות, שתי רשימות, 6 קישורים (קובץ וחכמה), 3 קבצים", r.smartNew == 4 && r.smartKnown == 0 && r.listsNew == 2
-                && r.linksAdded == 6 && r.filesNew == 3 && r.rootFiles == 1);
-        ck("חכמות: מה שלא מועתק — שתי הפניות, ושתי \"רשימות בתוך\"", r.smart == 2 && r.nested == 2 && r.skippedAny());
-        ck("חכמות: ארבעה פריטים חכמים במסד", s.smarts().size() == 4 && s.lists().size() == 2);
-        long books = s.findByOrigin(DbPaths.originOf("חכם", "ספרים")), halacha = s.findByOrigin(DbPaths.originOf("חכם", "ספרים / הלכה"));
-        long rec = s.findByOrigin(Importer.smartOrigin("חכם", "s-rec")), img = s.findByOrigin(Importer.smartOrigin("חכם", "s-img"));
-        long shot = s.findByOrigin(Importer.smartOrigin("חכם", "p-shot")), empty = s.findByOrigin(Importer.smartOrigin("חכם", "s-empty"));
-        ck("חכמות: כל אחת נמצאת לפי מקורה; המקושרת לא קיבלה פריט משלה", rec != 0 && img != 0 && shot != 0 && empty != 0
-                && s.findByOrigin(Importer.smartOrigin("חכם", "p-link")) == 0);
-        ck("חכמות: סוג, שם ותנאי", s.item(rec).type == Store.SMART && s.item(rec).name.equals("אחרונים") && "תאריך:שבוע".equals(s.prop(rec, Store.P_COND))
-                && "תאריך".equals(s.prop(rec, Store.P_SORT)) && "ברצף".equals(s.prop(rec, Store.P_VIEW)) && s.prop(rec, Store.P_DIR) == null);
-        ck("חכמות: פנימית — שם אחרי החץ, תנאי ומיון", s.item(shot).name.equals("צילומי מסך") && "סוג:תמונות צילום".equals(s.prop(shot, Store.P_COND))
-                && "גודל".equals(s.prop(shot, Store.P_SORT)));
-        ck("חכמות: נפוצה בלי תנאי נוצרת, בלי תנאי", s.item(empty) != null && s.prop(empty, Store.P_COND) == null);
-        ck("חכמות: הנפוצות עומדות לעצמן", s.listsOf(rec).equals(Arrays.asList(books)) && s.listsOf(empty).isEmpty());
-        ck("חכמות: הסדר — מה ש־@סדר קבע, אחריו תת־רשימות, חכמות ואז קבצים",
-                names(s, books).equals(Arrays.asList("תמונות", "הלכה", "אחרונים", "צילומי מסך", "א.pdf")));
-        ck("חכמות: אותה חכמה בשתי רשימות — פריט אחד", s.listsOf(img).equals(Arrays.asList(books, halacha))
-                && names(s, halacha).equals(Arrays.asList("תמונות", "ב.pdf")));
-        ck("חכמות: לא משויכים — רק הקובץ מהשורש", names(s, books).size() == 5 && s.unassigned().size() == 1
-                && s.unassigned().get(0).name.equals("ש.pdf") && s.findFile(E) == s.unassigned().get(0).id);
-        ck("חכמות: המסד תקין", s.check() == null);
-
-        long last = s.lastId();
-        Importer.Report again = Importer.run(s, src, true);
-        ck("חכמות חוזרת: אין שינוי ואין מספרים חדשים", again.nothingToDo() && again.smartKnown == 4 && again.linksKnown == 6 && s.lastId() == last);
-
-        // המשתמש עורך: התנאי שלו לא נדרס; מאפיין שנמחק חוזר; חכמה שנמחקה חוזרת
-        s.setProp(rec, Store.P_COND, "משלי");
-        s.rename(rec, "אחרונים שלי");
-        s.setProp(img, Store.P_SORT, "");
-        Importer.Report upd = Importer.run(s, src, true);
-        ck("חכמות עדכון: התנאי והשם של המשתמש נשארים", "משלי".equals(s.prop(rec, Store.P_COND)) && s.item(rec).name.equals("אחרונים שלי"));
-        ck("חכמות עדכון: מאפיין ריק התמלא פעם אחת", "שם".equals(s.prop(img, Store.P_SORT)) && upd.propsSet == 1 && upd.smartNew == 0);
-        s.deleteList(img);
-        Importer.Report back = Importer.run(s, src, true);
-        long img2 = s.findByOrigin(Importer.smartOrigin("חכם", "s-img"));
-        ck("חכמות: חכמה שנמחקה במסד חוזרת בהעתקה חוזרת, ומתחברת מחדש לשתי הרשימות", back.smartNew == 1 && img2 != 0 && img2 != img
-                && s.listsOf(img2).size() == 2 && back.linksAdded == 2);
-        ck("חכמות: המסד תקין בסוף", s.check() == null);
-
-        // בלי קובץ ראשי: ההפניות נספרות כלא־נמצאו, ושום דבר לא קורס
-        File bare = new File(dir, "בלי-ראשי/חכם2");
-        write(new File(bare, Paths.TREE), SMART_TREE);
-        Importer.Source noIni = Importer.load(bare);
-        ck("חכמות: בלי קובץ ראשי — אין הגדרות, וכל ההפניות לא נמצאו", noIni.ini != null && noIni.wanted().isEmpty() && noIni.skippedSmart() == 6);
-        // קובץ ראשי עם הפניה מעגלית של פנימית שמקשרת לפנימית אחרת (לא נפוצה): לא נתקע
-        File loop = new File(dir, "מעגל/חכם3");
-        write(new File(loop, Paths.TREE), "#1 א\n@חכמה p-a\n");
-        write(new File(new File(loop, Paths.SETTINGS), Paths.MAIN),
-                "[רשימה פנימית: א › אחת]\nמזהה = p-a\nהגדרה נפוצה = p-b\nתנאי = x\n\n[רשימה פנימית: א › שתיים]\nמזהה = p-b\nהגדרה נפוצה = p-a\nתנאי = y\n");
-        Importer.Source lp = Importer.load(loop);
-        ck("חכמות: קישור בין שתי פנימיות לא נתקע — כל אחת היא הגדרה בפני עצמה", lp.wanted().size() == 1 && "x".equals(lp.wanted().get(0).cond));
-    }
 
     // ---------- פקודות רשימות במסד (מ0.10) ----------
 
     void paths(Store s, File dir) throws Exception {
-        File m = new File(dir, "פק");
-        write(new File(m, Paths.TREE), "#1 ספרים\n#2 ספרים / הלכה\n#1 מועדים\n#2 מועדים / הלכה\n");
-        Importer.run(s, Importer.load(m), true);
+        DbMore.importText(s, 0, "#1 ספרים\n#2 ספרים / הלכה\n#1 מועדים\n#2 מועדים / הלכה\n");   // מ0.29: הייבוא של המסד (עד כאן — ההעתקה מהישן)
         long books = listIn(s, "פק", "ספרים"), hal = listIn(s, "פק", "ספרים / הלכה"), moHal = listIn(s, "פק", "מועדים / הלכה");
         ck("פקודות: פתח רשימה — לפי המקור", DbPaths.find(s, "פק", Names.parsePath("ספרים/הלכה")) == hal
                 && DbPaths.find(s, "פק", Names.parsePath("מועדים / הלכה")) == moHal);
@@ -508,7 +309,6 @@ final class ImportTests {
         ck("בורר: איפה כל קובץ — מסלול מלא", where.get(p2) != null && where.get(p2).containsAll(Arrays.asList("א", "א (2)"))
                 && where.get(p2).size() == 2 && where.get(p3) == null);
         Tree mt = DbPicker.asTree(s);
-        ck("בורר: עץ בזיכרון לחתימות — כל רשימה עם הקבצים שלה, ולא נשמר", mt.root.children.size() == s.lists().size() && !mt.save());
 
         // --- בדיקת השם האחת (REN, הגדרות, ➕) ---
         ck("שם: ➕ רשימה חדשה בשם תפוס — שגיאה, לא כפולה", DbListCmd.newListChecked(s, home, "ג").error != null
@@ -530,7 +330,7 @@ final class ImportTests {
         long live = DbMore.liveFolder(s, ok.id, "/storage/emulated/0/תמונות");
         ck("תיקייה חיה: חכמה בתוך הרשימה, בשם התיקייה, עם התנאי של התיקייה", live != 0 && s.item(live).type == Store.SMART
                 && s.item(live).name.equals("תמונות") && s.listsOf(live).equals(Arrays.asList(ok.id))
-                && Unify.folderKeys("/storage/emulated/0/תמונות").get(SmartLists.COND).equals(s.prop(live, Store.P_COND)));
+                && (Cond.SOURCE + ":" + Cond.quote("/storage/emulated/0/תמונות")).equals(s.prop(live, Store.P_COND)));
         ck("תיקייה חיה: אותה תיקייה שוב — בלי כפולה", DbMore.liveFolder(s, ok.id, "/storage/emulated/0/תמונות") == 0);
         Tree.Node scan = new Tree.Node();
         scan.name = "תיקייה";
@@ -689,12 +489,11 @@ final class ImportTests {
         // יצוא (מ0.18): הטקסט נקרא בחזרה בהעתקה מהישן — אותן רשימות ואותם קבצים
         DbExport.Out eo = DbExport.list(s, books, false, "רשימה ספרים", 0);
         File em = new File(System.getProperty("java.io.tmpdir"), "export" + System.nanoTime());
-        write(new File(em, Paths.TREE), eo.text);
         MemStore back = new MemStore(IdCounter.memory());
-        Importer.run(back, Importer.load(em), true);
-        long bb = DbPaths.find(back, "x", Names.parsePath("ספרים"));
+        DbMore.importText(back, 0, eo.text);                                  // מ0.29: נקרא בחזרה בייבוא של המסד
+        long bb = DbPaths.find(back, "פק", Names.parsePath("ספרים"));
         ck("יצוא: נקרא בחזרה — אותן רשימות ואותם קבצים (" + eo.lists + "/" + eo.files + ")", bb != 0
-                && back.lists().size() == eo.lists && DbCount.of(back, bb, null).items == eo.files && eo.text.startsWith(Tree.DESC_LINE));
+                && back.lists().size() == eo.lists && DbCount.of(back, bb, null).items == eo.files && eo.text.startsWith(DbExport.DESC));
         File ed = new File(em, "יצוא");
         ed.mkdirs();
         File e1 = DbExport.target("*", "רשימה ספרים", ed);
@@ -874,40 +673,6 @@ final class ImportTests {
             + "#1 ב\n"
             + "@תיקייה /s/y\n";
 
-    void live(Store s, File dir) throws Exception {
-        File m = new File(dir, "חי");
-        write(new File(m, Paths.TREE), LIVE_TREE);
-        Importer.Source src = Importer.load(m);
-        ck("חיות: נקראו — אחת בשורש, שתיים ב־א, אחת ב־ב", src.tree.root.live.size() == 1 && src.tree.root.children.get(0).live.size() == 2
-                && src.tree.root.children.get(1).live.size() == 1);
-        Importer.Report pre = Importer.run(s, src, false);
-        Importer.Report r = Importer.run(s, src, true);
-        ck("חיות: הדוח זהה לתצוגה המקדימה", same(pre, r));
-        ck("חיות: ארבע נספרו וארבע רשימות חכמות נוצרו — ולא נחשבות \"לא מועתק\"", r.live == 4 && r.smartNew == 4 && !r.skippedAny());
-        long a = listIn(s, "חי", "א"), b = listIn(s, "חי", "ב");
-        ck("חיות: הסדר — מה ש־@סדר קבע (גם תיקייה חיה), ואחריו השאר", names(s, a).equals(Arrays.asList("x", "a.pdf", "y")));
-        long ya = s.findByOrigin(Importer.liveOrigin("חי", "א", "/s/y")), yb = s.findByOrigin(Importer.liveOrigin("חי", "ב", "/s/y"));
-        ck("חיות: אותה תיקייה בשתי רשימות — שתי רשימות חכמות (כמו בהסבה של הישן)", ya != 0 && yb != 0 && ya != yb
-                && s.listsOf(ya).equals(Arrays.asList(a)) && s.listsOf(yb).equals(Arrays.asList(b)));
-        long root = s.findByOrigin(Importer.liveOrigin("חי", "", "/s/r"));
-        ck("חיות: בשורש — עומדת לעצמה", root != 0 && s.listsOf(root).isEmpty() && s.item(root).name.equals("r"));
-        long x = s.findByOrigin(Importer.liveOrigin("חי", "א", "/s/x/"));
-        ck("חיות: קו נטוי בסוף — השם בלעדיו, והתנאי כמו בהסבה של הישן", x != 0 && s.item(x).name.equals("x")
-                && Unify.folderKeys("/s/x/").get(SmartLists.COND).equals(s.prop(x, Store.P_COND)));
-        long last = s.lastId();
-        Importer.Report again = Importer.run(s, src, true);
-        ck("חיות חוזרת: אין שינוי ואין מספרים חדשים", again.nothingToDo() && again.smartKnown == 4 && s.lastId() == last);
-        s.setProp(ya, Store.P_COND, "משלי");
-        s.setProp(ya, Store.P_VIEW, "");
-        Importer.Report upd = Importer.run(s, src, true);
-        ck("חיות: התנאי של המשתמש נשאר, ומאפיין שנמחק חוזר", "משלי".equals(s.prop(ya, Store.P_COND))
-                && FolderView.ALL.equals(s.prop(ya, Store.P_VIEW)) && upd.propsSet == 1);
-        s.deleteList(yb);
-        Importer.Report back = Importer.run(s, src, true);
-        long yb2 = s.findByOrigin(Importer.liveOrigin("חי", "ב", "/s/y"));
-        ck("חיות: רשימה חכמה שנמחקה במסד חוזרת, למקומה", back.smartNew == 1 && yb2 != 0 && yb2 != yb && s.listsOf(yb2).equals(Arrays.asList(b)));
-        ck("חיות: המסד תקין", s.check() == null);
-    }
 
     // ---------- מסך הבית (מ0.6) ----------
 
@@ -930,103 +695,7 @@ final class ImportTests {
             + "[פונקציה: שוב ספרים]\nמזהה = f-9\nסוג = וירטואלי\nרשימה = ספרים\n\n"
             + "[פונקציה: ישן]\nמזהה = f-10\nסוג = וירטואלי\n";
 
-    static void writeHomeMode(File mode) throws IOException {
-        write(new File(mode, Paths.TREE), HOME_TREE);
-        write(new File(new File(mode, Paths.SETTINGS), Paths.MAIN), HOME_INI);
-    }
 
-    /** מסד חדש: הבית נוצר עם הכלים לפי הסדר; מה שלא מועתק נספר; העתקה חוזרת; מה שהמשתמש שינה; בית שנמחק; מעגל. */
-    void home(Store s, File dir) throws Exception {
-        File m = new File(dir, "בית");
-        writeHomeMode(m);
-        Importer.Source src = Importer.load(m);
-        ck("בית: נקראו עשרה כלים לפי הסדר", src.tools().size() == 10 && src.tools().get(0).name.equals("פסח") && src.tools().get(9).name.equals("ישן"));
-        ck("בית: כלי חכם מקושר — אותה הגדרה כמו הנפוצה; עצמאי — ההגדרה שבו", src.toolSmart(src.tools().get(2)).key.equals("s-rec")
-                && src.toolSmart(src.tools().get(3)).key.equals("f-4") && "סוג:תמונות".equals(src.toolSmart(src.tools().get(3)).cond));
-
-        Importer.Report pre = Importer.run(s, src, false);
-        ck("בית: תצוגה מקדימה לא שומרת", s.lists().isEmpty() && DbPaths.home(s) == 0 && pre.homeNew);
-        Importer.Report r = Importer.run(s, src, true);
-        ck("בית: הדוח זהה לתצוגה המקדימה", same(pre, r));
-        ck("בית: 10 כלים — 5 נכנסו, אחד כבר היה (אותה רשימה פעמיים), סוג אחד לא מועתק, 3 בלי רשימה או קובץ",
-                r.homeTools == 10 && r.homeAdded == 5 && r.homeKnown == 1 && r.homeSkipped == 1 && r.homeMissing == 3 && r.homeNew && r.skippedAny());
-        long h = DbPaths.home(s);
-        ck("בית: רשימה אחת מסומנת, בשם בית, ומקורה האופן", h != 0 && s.item(h).name.equals(Words.Db.HOME_NAME)
-                && s.findByOrigin(Importer.homeOrigin("בית")) == h && "1".equals(s.prop(h, Store.P_HOME)));
-        ck("בית: הכלים לפי הסדר", names(s, h).equals(Arrays.asList("פסח", "ספרים", "אחרונים", "תמונות", "גיבוי.vbat")));
-        long pesach = listIn(s, "בית", "מועדים / פסח"), books = listIn(s, "בית", "ספרים");
-        long rec = s.findByOrigin(Importer.smartOrigin("בית", "s-rec")), img = s.findByOrigin(Importer.smartOrigin("בית", "f-4"));
-        ck("בית: רשימה — אותה רשימה (גם במקומה), לא עותק", s.members(h).get(0).item.id == pesach && s.listsOf(pesach).size() == 2
-                && s.members(h).get(1).item.id == books);
-        ck("בית: חכמה מקושרת — הפריט של הנפוצה, בלי פריט משלה", s.members(h).get(2).item.id == rec
-                && s.findByOrigin(Importer.smartOrigin("בית", "f-3")) == 0);
-        ck("בית: חכמה עצמאית — פריט משלה עם התנאי והמיון", img != 0 && s.item(img).type == Store.SMART && s.item(img).name.equals("תמונות")
-                && "סוג:תמונות".equals(s.prop(img, Store.P_COND)) && "שם".equals(s.prop(img, Store.P_SORT)));
-        ck("בית: פקודה — פריט הקובץ (אותו פריט כמו בשורש הרשימות)", s.members(h).get(4).item.id == s.findFile(CMD) && s.item(s.findFile(CMD)).type == Store.FILE);
-        ck("בית: קובץ הפקודות בבית אינו \"לא משויך\"", s.unassigned().isEmpty());
-        ck("בית: התיאור של הכלי עבר לרשימה שלא היה לה", "לחג".equals(s.prop(pesach, Store.P_DESC)));
-        ck("בית: המסד תקין", s.check() == null);
-
-        long last = s.lastId();
-        Importer.Report again = Importer.run(s, src, true);
-        ck("בית חוזרת: אין שינוי ואין מספרים חדשים", again.nothingToDo() && again.homeKnown == 6 && again.homeAdded == 0 && !again.homeNew
-                && s.lastId() == last);
-
-        // מ0.19: עם כותב כלים — הכלי שלא הועתק נעשה קובץ פקודות קטן ("פתח כלי …") ונכנס לבית
-        final File tdir = new File(dir, "כלים");
-        Importer.toolFiles = new Importer.ToolFiles() {
-            @Override public File write(String icon, String name, String line) { return Shortcuts.write(tdir, icon, name, line); }
-        };
-        Importer.Report tr;
-        try {
-            tr = Importer.run(s, src, true);
-        } finally {
-            Importer.toolFiles = null;
-        }
-        Store.Item lastIt = s.members(h).get(s.members(h).size() - 1).item;
-        String tline = "";
-        try { tline = Files.readUtf8(new File(s.file(lastIt.id).path)); } catch (Throwable ignored) { }
-        ck("בית: כלי שאינו רשימה/חכמה/פקודה — קובץ פקודות בבית, עם \"פתח כלי\" (" + tline.replace('\n', '|') + ")",
-                tr.homeToolFiles == 1 && tr.homeSkipped == 0 && tr.homeAdded == 1 && tline.contains(Verbs.OPEN + " " + Verbs.TOOL + " \""));
-        String kindLine = tline.substring(tline.indexOf(Verbs.OPEN + " " + Verbs.TOOL));
-        Verbs.Cmd vc = Verbs.parse(kindLine.trim());
-        Target tt = Verbs.toolTarget(vc.arg);
-        ck("בית: השורה נקראת בחזרה — הסוג והפרמטרים של הכלי", vc.error == null && Verbs.K_TOOL.equals(vc.kind) && tt != null && Func.byKind(tt.kind) != null);
-        s.removeMember(h, lastIt.id);
-        ck("פתח כלי: סוג לא מוכר — שגיאה", Verbs.parse("פתח כלי \"אין כזה\"").error != null);
-
-        // המשתמש מסדר ומוציא: הסדר שלו נשמר, ומה שהוציא חוזר לסוף
-        s.move(h, img, 0);
-        s.removeMember(h, s.findFile(CMD));
-        Importer.Report upd = Importer.run(s, src, true);
-        ck("בית: הסדר של המשתמש נשמר, והפקודה שהוצאה חוזרת לסוף", upd.homeAdded == 1
-                && names(s, h).equals(Arrays.asList("תמונות", "פסח", "ספרים", "אחרונים", "גיבוי.vbat")));
-
-        // הבית נמחק: חוזר בהעתקה חוזרת, והרשימות עצמן לא נפגעו
-        s.deleteList(h);
-        ck("בית: מחיקת הבית לא מוחקת את הרשימות שבו", s.item(pesach) != null && s.item(books) != null && DbPaths.home(s) == 0);
-        Importer.Report back = Importer.run(s, src, true);
-        long h2 = DbPaths.home(s);
-        ck("בית: בית שנמחק נוצר שוב, עם כל הכלים", back.homeNew && h2 != 0 && h2 != h && names(s, h2).size() == 5);
-
-        // בית מסומן בלי מקור (לא מהעתקה) — משמש, לא נוצר שני; ומעגל נחסם
-        s.deleteList(h2);
-        long mine = s.createList("הבית שלי", 0);
-        s.setProp(mine, Store.P_HOME, "1");
-        s.addMember(pesach, mine);
-        Importer.Report cyc = Importer.run(s, src, true);
-        ck("בית: בית מסומן קיים — משמש, ולא נוצר בית שני", !cyc.homeNew && DbPaths.home(s) == mine && s.findByOrigin(Importer.homeOrigin("בית")) == 0);
-        ck("בית: רשימה שהבית בתוכה — לא נכנסת לבית (מעגל), נספרת", cyc.homeMissing == 4 && !names(s, mine).contains("פסח")
-                && names(s, mine).equals(Arrays.asList("ספרים", "אחרונים", "תמונות", "גיבוי.vbat")));
-        ck("בית: המסד תקין בסוף", s.check() == null);
-
-        // רק כלים שלא מועתקים — אין בית
-        File only = new File(dir, "רק-כפולים/אחר");
-        write(new File(only, Paths.TREE), "#1 א\n");
-        write(new File(new File(only, Paths.SETTINGS), Paths.MAIN), "[פונקציה: כפולים]\nמזהה = f-1\nסוג = כפולים\n");
-        Importer.Report none = Importer.run(s, Importer.load(only), false);
-        ck("בית: רק כלים שלא מועתקים — לא נוצר בית", !none.homeNew && none.homeTools == 1 && none.homeSkipped == 1 && none.homeAdded == 0);
-    }
 
     // ---------- הפניות בין רשימות (מ0.4) ----------
 
@@ -1045,38 +714,82 @@ final class ImportTests {
             + "#1 ג\n"
             + "@רשימה ב\n";
 
-    void refs(Store s, File dir) throws Exception {
-        File m = new File(dir, "הפניות");
-        write(new File(m, Paths.TREE), REF_TREE);
-        Importer.Source src = Importer.load(m);
-        Importer.Report pre = Importer.run(s, src, false);
-        ck("הפניות: תצוגה מקדימה לא שומרת", s.lists().isEmpty());
-        Importer.Report r = Importer.run(s, src, true);
-        ck("הפניות: הדוח זהה לתצוגה המקדימה", same(pre, r));
-        ck("הפניות: שתיים הועתקו, שלוש נחסמו כמעגל, אחת לרשימה שלא קיימת", r.refsAdded == 2 && r.refCycles == 3 && r.refMissing == 1
-                && r.refsKnown == 0 && r.skippedAny());
-        long a = listIn(s, "הפניות", "א"), b = listIn(s, "הפניות", "ב"), c = listIn(s, "הפניות", "ג"), in = listIn(s, "הפניות", "ב / פנימית");
-        ck("הפניות: הפניה לרשימה שמופיעה מאוחר בקובץ — הועתקה, ולפי @סדר", names(s, a).equals(Arrays.asList("ג", "a1")));
-        ck("הפניות: אותה רשימה בשני מקומות", s.listsOf(a).equals(Arrays.asList(b)) && s.listsOf(c).equals(Arrays.asList(a)));
-        ck("הפניות: תת־רשימה בתוך האב, וההפניה שלה לאב נחסמה", s.listsOf(in).equals(Arrays.asList(b)) && s.count(in) == 0);
-        ck("הפניות: השרשרת שנסגרת נחסמה", s.count(c) == 0 && s.contains(b, c) && !s.contains(c, b));
-        boolean noCycle = true;
-        for (Store.Item l : s.lists()) noCycle &= !s.contains(l.id, l.id);
-        ck("הפניות: אין אף רשימה בתוך עצמה", noCycle && s.check() == null);
-        long last = s.lastId();
-        Importer.Report again = Importer.run(s, src, true);
-        ck("הפניות חוזרת: אין שינוי", again.nothingToDo() && again.refsKnown == 2 && again.refCycles == 3 && again.refMissing == 1
-                && s.lastId() == last);
-        s.removeMember(a, c);
-        Importer.Report back = Importer.run(s, src, true);
-        ck("הפניות: הפניה שהמשתמש הסיר חוזרת בהעתקה חוזרת (כמו קובץ)", back.refsAdded == 1 && s.listsOf(c).equals(Arrays.asList(a)));
+
+    // ---------- מ0.29: פורמט היצוא 2, הייבוא, והדוגמאות כקובץ יצוא ----------
+
+    /** יצוא ← ייבוא למסד ריק ← יצוא: אותו טקסט; חכמות, קישור, כותרת, רעיון, חבורה והסדר — נשמרים. */
+    void text2(Store s) throws Exception {
+        long home = DbPaths.ensureHome(s);
+        ck("בית: נוצר ומסומן, ופעם שנייה — אותו", home != 0 && DbPaths.home(s) == home && DbPaths.ensureHome(s) == home);
+        long a = s.createList("א", home), sm = s.createSmart("חכמה ראשונה", home), b = s.createList("ב", home);
+        s.setProp(sm, Store.P_COND, "סוג:ספרים");
+        s.setProp(sm, Store.P_SORT, "תאריך");
+        s.setProp(sm, Store.P_VIEW, "ברצף");
+        s.setProp(sm, Store.P_WHY, "למה כך");
+        long f1 = s.createFile(new Store.FileInfo("/storage/emulated/0/x/1.pdf", "פנימי", 10, 0, null));
+        long f2 = s.createFile(new Store.FileInfo("/storage/emulated/0/x/2.pdf", "פנימי", -1, 0, null));
+        s.addMember(a, f1);
+        long in = s.createList("פנימית", a);
+        s.addMember(a, f2);                                                   // הסדר: קובץ, תת־רשימה, קובץ
+        s.setProp(in, Store.P_ICON, "📚");
+        s.setProp(in, Store.P_GROUP, "1");
+        long sm2 = s.createSmart("בתוך", in);
+        s.setProp(sm2, Store.P_COND, "מקור:«/storage/emulated/0/x»");
+        s.addTitle(in, "כותרת");
+        s.addNote(in, "רעיון\nבשתי שורות");
+        s.addMember(b, in);                                                   // אותה רשימה בשני מקומות — קישור
+        DbExport.Out o = DbExport.list(s, home, true, "בית", 0);
+        ck("פורמט 2: הכול בפורמט (אין דילוגים), 3 רשימות ו־2 קבצים", o.skipped == 0 && o.lists == 3 && o.files == 2);
+        ck("פורמט 2: חכמה עם המאפיינים שלה", o.text.contains(DbExport.SMART + "חכמה ראשונה\n+תנאי סוג:ספרים\n+מיון תאריך\n+תצוגה ברצף\n+למה למה כך\n"));
+        ck("פורמט 2: רשימה שכבר הופיעה — קישור", o.text.contains(DbExport.LINK + "א / פנימית\n"));
+        ck("פורמט 2: הסדר — קובץ, תת־רשימה, קובץ", o.text.contains("/storage/emulated/0/x/1.pdf | 10\n" + DbExport.SUB + "פנימית\n/storage/emulated/0/x/2.pdf | ?\n"));
+        MemStore back = new MemStore(IdCounter.memory());
+        long h2 = DbPaths.ensureHome(back);
+        DbMore.Imported im = DbMore.importText(back, h2, o.text);
+        DbExport.Out o2 = DbExport.list(back, h2, true, "בית", 0);
+        ck("פורמט 2: ייבוא למסד ריק ויצוא שוב — אותו טקסט", o.text.equals(o2.text) && im.bad == 0 && im.lists == 3 && im.files == 2 && im.smarts == 2);
+        long in2 = DbPaths.find(back, "x", Names.parsePath("א/פנימית"));
+        ck("פורמט 2: הקישור — אותה רשימה בשני מקומות", in2 != 0 && back.listsOf(in2).size() == 2);
+        ck("פורמט 2: חבורה, צלמית, כותרת ורעיון (עם שורה חדשה)", "1".equals(back.prop(in2, Store.P_GROUP)) && "📚".equals(back.prop(in2, Store.P_ICON))
+                && names(back, in2).contains("כותרת") && names(back, in2).contains("רעיון\nבשתי שורות"));
+        DbMore.Imported again = DbMore.importText(back, h2, o.text);
+        ck("פורמט 2: ייבוא שני — בלי רשימות, קבצים או חכמות כפולים", again.files == 0 && back.lists().size() == 4 && back.smarts().size() == 2);
+        ck("פורמט 2: המסד תקין", back.check() == null && s.check() == null);
     }
 
-    // ---------- הבדיקה המלאה (FullCheck) ----------
-
-    /** opener — יוצר Store חדש. sabotage — האם המסד ה"אמיתי" חסר קישור אחד. */
-    private String fullReport(final StoreContract.Opener opener, File dir, final boolean sabotage, final boolean selfOk) throws Exception {
-        return fullReport(opener, dir, sabotage, selfOk, false);
+    /** הדוגמאות — הקובץ שבהתקנה: נקרא כולו, מיובא לבית, ושחזור מחליף רק את רשימות הדוגמאות. */
+    void examples(Store s, File asset) throws Exception {
+        String text = new String(java.nio.file.Files.readAllBytes(asset.toPath()), "UTF-8");
+        List<String> tops = DbExamples.tops(text);
+        ck("דוגמאות: בקובץ יש רשימות בבית, ובהן \"הדוגמאות שלי\" ו\"שמור לתוכנה\"", tops.size() >= 10 && tops.contains(DbExamples.MINE) && tops.contains(Reserved.ROOT));
+        DbMore.Imported im = DbExamples.install(s, text, "/storage/emulated/0");
+        long home = DbPaths.home(s);
+        ck("דוגמאות: מיובאות בלי שורות שלא הובנו (" + im.lists + " רשימות, " + im.smarts + " חכמות, " + im.files + " קבצים)",
+                im.bad == 0 && im.lists > 50 && im.smarts > 30 && im.files > 20 && s.count(home) == tops.size());
+        ck("דוגמאות: \"%פנימי%\" הוחלף בשורש — אין פריט שמתחיל ב-%", s.findFile("/storage/emulated/0/" + Paths.APP_DIR + "/" + Reserved.SYS_DIR + "/בית.vbat") != 0);
+        ck("דוגמאות: \"שמור לתוכנה / פקודות / הפקודות שלי\" קיימת", DbPaths.find(s, "x", Reserved.MINE_PATH) != 0 && DbPaths.find(s, "x", Reserved.CMDS_PATH) != 0);
+        ck("דוגמאות: המסד תקין אחרי הייבוא", s.check() == null);
+        int lists = s.lists().size(), smarts = s.smarts().size();
+        long mine = DbPaths.find(s, "x", Names.parsePath(DbExamples.MINE)), cmdsMine = DbPaths.find(s, "x", Reserved.MINE_PATH);
+        long userList = s.createList("של המשתמש", home), inMine = s.createList("שמרתי כאן", mine);
+        long fUser = s.createFile(new Store.FileInfo("/storage/emulated/0/my.vbat", "פנימי", 5, 0, null));
+        s.addMember(cmdsMine, fUser);
+        long first = 0;
+        for (Store.Member m : s.members(home)) if (m.item.type == Store.LIST && m.item.name.equals(tops.get(0))) first = m.item.id;
+        long added = s.createList("הוספתי לדוגמה", first);
+        int n = DbExamples.restore(s, text, "/storage/emulated/0");
+        ck("שחזור: הוחלפו כל רשימות הדוגמאות חוץ משתי של המשתמש", n == tops.size() - 2);
+        ck("שחזור: רשימה שהמשתמש הוסיף לבית — נשארה", s.item(userList) != null && s.listsOf(userList).contains(home));
+        ck("שחזור: \"הדוגמאות שלי\" — אותה רשימה, עם מה שבה", DbPaths.find(s, "x", Names.parsePath(DbExamples.MINE)) == mine && s.listsOf(inMine).contains(mine));
+        ck("שחזור: פקודה של המשתמש ב\"הפקודות שלי\" — נשארה", s.listsOf(fUser).contains(cmdsMine));
+        ck("שחזור: מה שנוסף לרשימת דוגמאות — יצא איתה", s.item(added) == null || s.listsOf(added).isEmpty());
+        ck("שחזור: אותו מספר רשימות וחכמות כמו אחרי התקנה (ועוד שתי הרשימות של המשתמש)", s.lists().size() == lists + 2 && s.smarts().size() == smarts);
+        ck("שחזור: המסד תקין", s.check() == null);
+        String part = DbExamples.reservedPart(text);
+        MemStore other = new MemStore(IdCounter.memory());
+        DbExamples.install(other, part, "/storage/emulated/0");
+        ck("שמור לתוכנה לבד: רק היא בבית, עם הפקודות", other.count(DbPaths.home(other)) == 1 && DbPaths.find(other, "x", Reserved.CMDS_PATH) != 0
+                && other.count(DbPaths.find(other, "x", Reserved.CMDS_PATH)) > 5);
     }
 
     /** מנוע הערכה מדומה: "סוג:תמונות" — 3, "סוג:תמונות צילום" — 2 (או הערה "לא הובן" כש־badCond), כל השאר — 0. */
@@ -1090,124 +803,11 @@ final class ImportTests {
         };
     }
 
-    private String fullReport(final StoreContract.Opener opener, File dir, final boolean sabotage, final boolean selfOk,
-                              final boolean badCond) throws Exception {
-        return fullReport(opener, dir, sabotage, selfOk, badCond, 0);
-    }
-
-    /** homeReal: 0 — לאופן "בית" אין מסד אמיתי; 1 — יש, מועתק; 2 — יש, וחסר בו כלי בבית. */
-    private String fullReport(final StoreContract.Opener opener, File dir, final boolean sabotage, final boolean selfOk,
-                              final boolean badCond, final int homeReal) throws Exception {
-        final File old = new File(dir, "olddata-" + sabotage + selfOk + badCond + homeReal);
-        writeSmartMode(new File(old, Modes.DIR + "/חכם"));
-        writeHomeMode(new File(old, Modes.DIR + "/בית"));
-        write(new File(old, Modes.DIR + "/חי/" + Paths.TREE), LIVE_TREE);
-        write(new File(old, Modes.DIR + "/הפניות/" + Paths.TREE), REF_TREE);
-        write(new File(old, Modes.DIR + "/ראשון/" + Paths.TREE), TREE1);
-        write(new File(old, Modes.DIR + "/ראשון/" + Sig.FILE), SIGS1);
-        write(new File(old, Modes.DIR + "/שני/" + Paths.TREE), TREE2);
-        write(new File(old, Modes.DIR + "/שני/" + Sig.FILE), SIGS2);
-        final int[] n = {0};
-        final File ctr = dir;
-        return FullCheck.run(old, new FullCheck.Env() {
-            @Override public String header() { return "HEADER"; }
-            @Override public String selfTest() { return "SELFTEST"; }
-            @Override public boolean selfTestOk() { return selfOk; }
-            @Override public Store openTemp() throws Exception { return opener.fresh(new File(ctr, "fc-" + (n[0]++) + "-" + badCond + ".txt")); }
-            @Override public Smarts.Finder finder() { return fake(badCond); }
-            @Override public File scratch() { File w = new File(ctr, "scratch-" + System.nanoTime()); w.mkdirs(); return w; }
-            @Override public Backups backups(String mode) { return mode.equals("ראשון") ? new Backups(new File(ctr, "backups-" + mode), new File(ctr, "bk-tmp")) : null; }
-            @Override
-            public Store openReal(String mode) throws Exception {
-                if (mode.equals("בית") && homeReal > 0) {
-                    Store s = opener.fresh(new File(ctr, "fc-" + (n[0]++) + "-" + badCond + "h.txt"));
-                    Importer.run(s, Importer.load(new File(old, Modes.DIR + "/בית")), true);
-                    if (homeReal == 2) s.removeMember(DbPaths.home(s), s.findFile(CMD));
-                    return s;
-                }
-                if (!mode.equals("ראשון")) return null;
-                Store s = opener.fresh(new File(ctr, "fc-" + (n[0]++) + "-" + badCond + "r.txt"));
-                Importer.run(s, Importer.load(new File(old, Modes.DIR + "/ראשון")), true);
-                if (sabotage) {
-                    long books = s.findByOrigin(DbPaths.originOf("ראשון", "ספרים"));
-                    s.removeMember(books, s.findFile(A));
-                    s.removeMember(books, s.findByOrigin(DbPaths.originOf("ראשון", "מועדים / פסח")));   // כמו מסד ממ0.3: בלי הפניות
-                }
-                return s;
-            }
-        });
-    }
-
-    void fullCheck(StoreContract.Opener opener, File dir) throws Exception {
-        String ok = fullReport(opener, dir, false, true);
-        ck("בדיקה מלאה: הכול תקין — פסק דין ירוק", ok.startsWith(Words.Db.VERDICT_OK));
-        ck("בדיקה מלאה: הדוח כולל כותרת, בדיקה עצמית ושני אופנים", ok.contains("HEADER") && ok.contains("SELFTEST")
-                && ok.contains(Words.Db.modeHead("ראשון")) && ok.contains(Words.Db.modeHead("שני")));
-        ck("בדיקה מלאה: אופן בלי מסד אמיתי מדווח כך", ok.contains(Words.Db.REAL_NONE));
-        ck("בדיקה מלאה: מה שלא מועתק מופיע", ok.contains("1 הפניות") && ok.contains("1 הפניות חכמות שלא נמצאו"));
-        ck("בדיקה מלאה: רשימה ריקה בלי סיבה מוצגת בשמה", ok.contains(Words.Db.modeEmpty(1, 1, 0)) && ok.contains("   חדשה") && ok.contains(Words.Db.modeEmpty(0, 0, 0)));
-        String bad = fullReport(opener, dir, true, true);
-        ck("בדיקה מלאה: מסד אמיתי שחסרים בו קישור והפניה — פסק דין אדום, בעיה אחת (העתקה חוזרת תשלים)", bad.startsWith(Words.Db.verdictBad(1)) && bad.contains(Words.Db.pRealBehind("ראשון", 0, 0, 0, 1, 0, 1)));
-        ck("בדיקה מלאה: רשימות חכמות — במקור 4, נמצאו 4, אפס שגויות; לא משויכים צפוי 1 ונמצא 1",
-                ok.contains(Words.Db.modeTempSmart(4, 4, 0, 1, 1)));
-        ck("בדיקה מלאה: הערכה מול האינדקס — 3 תנאים, 2 עם תוצאות, אחד בלי, אחד בלי תנאי",
-                ok.contains("נבדקו 3 תנאים · עם תוצאות: 2 · בלי תוצאות: 1 · לא הובנו: 0 · בלי תנאי: 1 · סה״כ 5 קבצים")
-                        && ok.contains(Words.Db.evalNoHits("אחרונים")));
-        ck("בדיקה מלאה: הפניות — 6 במקור, 2 הועתקו, 3 נחסמו כמעגל, 1 לא קיימת, אפס שגויות, אפס מעגלים במסד",
-                ok.contains(Words.Db.modeRefs(6, 2, 3, 1, 0, 0)));
-        ck("בדיקה מלאה: הפניה מהמנוע הישן — מועתקת", ok.contains(Words.Db.modeRefs(1, 1, 0, 0, 0, 0)));
-        ck("בדיקה מלאה: מסך הבית — 10 כלים, 5 צפויים ונמצאו, אחד לא מועתק, 3 בלי רשימה או קובץ, אותו סדר",
-                ok.contains(Words.Db.modeHome(10, 5, 5, 1, 3, true)));
-        ck("בדיקה מלאה: תיקיות חיות — נספרות כמועתקות, והחברות נבדקת (פסק הדין ירוק)",
-                ok.contains(Words.Db.modeSource(2, 1, 0, 0, 0, 0, 4, 0)));
-        ck("בדיקה מלאה: אופן בלי כלים — בית ריק בלי בעיה", ok.contains(Words.Db.modeHome(0, 0, 0, 0, 0, true)));
-        String hok = fullReport(opener, dir, false, true, false, 1);
-        ck("בדיקה מלאה: בית במסד האמיתי — הכול נמצא", hok.startsWith(Words.Db.VERDICT_OK) && hok.contains(Words.Db.modeRealHome(5, 5, 0)));
-        String hbad = fullReport(opener, dir, false, true, false, 2);
-        ck("בדיקה מלאה: חסר כלי בבית במסד האמיתי — פסק דין אדום, בעיה אחת", hbad.startsWith(Words.Db.verdictBad(1))
-                && hbad.contains(Words.Db.pHomeBehind("בית", 1)) && hbad.contains(Words.Db.modeRealHome(5, 4, 1)));
-        String badc = fullReport(opener, dir, false, true, true);
-        ck("בדיקה מלאה: תנאי שהמנוע לא הבין — פסק דין אדום", badc.startsWith(Words.Db.verdictBad(1)) && badc.contains(Words.Db.pSmartCond("חכם", 1))
-                && badc.contains(Words.Db.evalBad("צילומי מסך", "לא הובן")));
-        String self = fullReport(opener, dir, false, false);
-        ck("בדיקה מלאה: בדיקה עצמית שנכשלה — פסק דין אדום", self.startsWith(Words.Db.verdictBad(1)) && self.contains(Words.Db.pSelfTest()));
-        // מ0.5: גיבוי
-        ck("בדיקה מלאה: תיקיית גיבויים ריקה — מדווח, לא בעיה", ok.contains(Words.Db.BACKUPS_NONE));
-        boolean sql = label.contains("SqlStore");
-        ck("בדיקה מלאה: עותק, גיבוי טקסט ושחזור — זהים למסד (רק על SQLite)",
-                sql == (ok.contains("עותק דרך SQLite — זהה") && ok.contains("שוחזר למסד ריק וזהה") && ok.contains("שחזור מעותק — זהה")));
-        if (!sql) return;
-        File bdir = new File(dir, "backups-ראשון");
-        Backups bk = new Backups(bdir, new File(dir, "bk-tmp"));
-        SqlStore s = (SqlStore) opener.fresh(new File(dir, "bk-counter.txt"));
-        try {
-            s.createList("x", 0);
-            bk.daily(s, System.currentTimeMillis());
-            bk.manual(s, System.currentTimeMillis());
-        } finally {
-            s.close();
-        }
-        String withBk = fullReport(opener, dir, false, true);
-        ck("בדיקה מלאה: הגיבויים בתיקייה נבדקים — 4 תקינים (יומי, טקסט, ידני כעותק וכטקסט)", withBk.startsWith(Words.Db.VERDICT_OK)
-                && withBk.contains("גיבויים בתיקייה: 4 (יומיים 1, לפני פעולה 0, טקסט 1, ידניים 2)") && withBk.contains("תקינים: 4 · שונו: 0 · פגומים: 0"));
-        Backups.Entry victim = bk.list().get(bk.list().size() - 1);
-        java.io.RandomAccessFile raf = new java.io.RandomAccessFile(victim.file, "rw");
-        try {
-            raf.seek(victim.file.length() / 2);
-            raf.write(new byte[]{1, 2, 3, 4, 5, 6, 7, 8});
-        } finally {
-            raf.close();
-        }
-        String changed = fullReport(opener, dir, false, true);
-        ck("בדיקה מלאה: גיבוי שהשתנה אחרי שנרשם — פסק דין אדום", changed.startsWith(Words.Db.verdictBad(1)) && changed.contains(Words.Db.pBackupsChanged("ראשון", 1)));
-    }
-
     // ---------- בלי Store ----------
 
     static void pure(StoreTests.Out o, File dir) throws Exception {
         ImportTests t = new ImportTests(o, "העתקה");
         t.drives();
-        t.modes(dir);
     }
 
     private void drives() {
@@ -1217,22 +817,4 @@ final class ImportTests {
         ck("כונן: לא מזוהה", DbPaths.driveOf("/mnt/x").equals(DbPaths.UNKNOWN_DRIVE) && DbPaths.driveOf("/storage/self/p").equals(DbPaths.UNKNOWN_DRIVE));
     }
 
-    private void modes(File dir) throws Exception {
-        File old = new File(dir, "olddata");
-        ck("אופנים: אין תיקייה — אין אופנים, ואופן ברירת מחדל", Importer.modes(old).isEmpty() && Importer.activeMode(old).equals(Modes.FIRST));
-        write(new File(old, Modes.DIR + "/עבודה אמיתית/" + Paths.TREE), "");
-        write(new File(old, Modes.DIR + "/ניסוי/" + Paths.TREE), "");
-        write(new File(old, Modes.DIR + "/.מוסתר/" + Paths.TREE), "");
-        write(new File(old, Modes.DIR + "/בלי מבנה/אחר.txt"), "");
-        ck("אופנים: רק אלה שיש בהם מבנה.txt, בלי מוסתרים, לפי שם", Importer.modes(old).equals(Arrays.asList("ניסוי", "עבודה אמיתית")));
-        write(Modes.pointer(old), "ניסוי\n");
-        ck("אופנים: האופן הפעיל נקרא מהמצביע", Importer.activeMode(old).equals("ניסוי"));
-        boolean threw = false;
-        try {
-            Importer.load(new File(old, Modes.DIR + "/בלי מבנה"));
-        } catch (Store.Failure e) {
-            threw = true;
-        }
-        ck("מקור: אין מבנה.txt — עוצר", threw);
-    }
 }

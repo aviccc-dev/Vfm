@@ -436,36 +436,6 @@ final class TopRow {
         pick(a, screen, cb);
     }
 
-    /** 1.17.0: "☰ תפריט" — רשימה מ"שמור לתוכנה" (המשתמש: "בכפתורים תהיה אפשרות לקחת רשימה כתפריט — רק משמור לתוכנה"). */
-    private static void menus(Activity a, final Chosen cb) {
-        ModeCopy.Side side = Reserved.inUse();
-        Tree.Node root = side == null ? null : side.tree.find(Reserved.ROOT_PATH);
-        if (root == null) {
-            Ui.toast(a, Words.Verb.NOT_FOUND + Reserved.ROOT);
-            return;
-        }
-        final List<List<String>> paths = new ArrayList<List<String>>();
-        List<String> labels = new ArrayList<String>();
-        collect(root, 0, paths, labels);
-        Ui.list(a, Words.Top.T_MENU, labels, new DialogInterface.OnClickListener() {
-            @Override
-            public void onClick(DialogInterface d, int k) {
-                List<String> p = paths.get(k);
-                cb.ok("☰", p.get(p.size() - 1), Verbs.openMenu(p));
-            }
-        });
-    }
-
-    private static void collect(Tree.Node n, int depth, List<List<String>> paths, List<String> labels) {
-        for (Tree.Node c : n.children) {
-            StringBuilder in = new StringBuilder();
-            for (int i = 0; i < depth; i++) in.append("    ");
-            paths.add(c.path());
-            labels.add(in + "☰ " + c.name);
-            collect(c, depth + 1, paths, labels);
-        }
-    }
-
     /**
      * "מה הכפתור יעשה?" — 1.16.1: אותו תפריט כמו ➕ בבית (המשתמש: "שני המקומות אמורים להיות זהים; ההבדל היחיד —
      * הפלוס מוסיף במסך הבית, והשני מוסיף כפתור במקום שמחליטים"): רשימה ידנית · רשימה חכמה · פקודה (תפריט הפקודות
@@ -484,28 +454,7 @@ final class TopRow {
                 });
                 else if (w == 1 && DbPicker.on(a)) dbSmart(a, cb);                // מ0.23: החכמות של המסד
                 else if (w == 3 && DbPicker.on(a)) dbMenus(a, cb);
-                else if (w == 0) ListPicker.choose(a, Words.Main.ADD_MANUAL.trim(), null, new ListPicker.Picked() {
-                    @Override
-                    public void ok(ArrayList<String> path) {
-                        if (path.isEmpty()) return;
-                        cb.ok("📋", path.get(path.size() - 1), Verbs.openList(path));
-                    }
-                });
-                else if (w == 1) {
-                    final List<SmartLists.Named> all = SmartLists.all();
-                    if (all.isEmpty()) {
-                        Ui.toast(a, Words.Top.NO_SMART);
-                        return;
-                    }
-                    List<String> names = new ArrayList<String>();
-                    for (SmartLists.Named n : all) names.add("✨ " + n.name);
-                    Ui.list(a, Words.Main.ADD_SMART.trim(), names, new DialogInterface.OnClickListener() {
-                        @Override
-                        public void onClick(DialogInterface d2, int k) {
-                            cb.ok("✨", all.get(k).name, Verbs.openSmart(all.get(k).name));
-                        }
-                    });
-                } else if (w == 3) menus(a, cb);                                  // 1.17.0: רשימה מ"שמור לתוכנה" כתפריט
+                else if (w == 0 || w == 1 || w == 3) Ui.toast(a, Words.DbCmd.NO_DB);   // מ0.29: רשימות — רק במסד
                 else CmdMenu.show(a, null, new CmdMenu.Picked() {
                     @Override
                     public void ok(String icon, String name, String line, File file) { cb.ok(icon, name, line); }

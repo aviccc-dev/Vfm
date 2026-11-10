@@ -24,7 +24,6 @@ final class DbPicker {
 
     /** האם בוחרים מהמסד: בבניית מ, לא בצד הישן, ויש מסד לאופן. */
     static boolean on(android.content.Context c) {
-        if (!Flavor.M) return false;
         String m = mode(c);
         return m != null && !m.isEmpty() && DbScreen.dbFile(c, m).isFile();
     }
@@ -335,7 +334,11 @@ final class DbPicker {
     /** הרשימות שהחתימות עובדות עליהן: במסד — של המסד (האופן הפתוח); אחרת — העץ הישן. */
     static Tree listsForSig() {
         android.content.Context c = DbListScreen.app;
-        if (c == null || !on(c)) return Tree.load();
+        if (c == null || !on(c)) {
+            Tree none = Tree.memory();
+            none.unreadable = true;                                           // אין מסד — לא מסיקים שום דבר
+            return none;
+        }
         SqlStore s = null;
         try {
             s = SqlStore.openReadOnly(DbScreen.dbFile(c, mode(c)));

@@ -41,7 +41,7 @@ public class IniEditScreen extends Activity {
             return;
         }
         file = new File(p);
-        readOnly = file.getAbsolutePath().startsWith(Paths.mirror().getAbsolutePath());
+        readOnly = false;
         setTitle(file.getName() + (readOnly ? Words.IniEd.READ_ONLY_SUFFIX : ""));
 
         LinearLayout root = Ui.screen(this);
@@ -123,9 +123,6 @@ public class IniEditScreen extends Activity {
                 unknown++;
         }
         info.setText(Paths.relative(file)
-                + (readOnly ? Words.IniEd.COPY_NOTE
-                        + Paths.structure().getName() + "\"." : "")
-                + (file.equals(Paths.structure()) ? Words.IniEd.ID_LINES_NOTE : "")
                 + (unknown > 0 ? "\n" + unknown + Words.IniEd.UNKNOWN_KEPT : ""));
         adapter.notifyDataSetChanged();
     }
@@ -146,7 +143,6 @@ public class IniEditScreen extends Activity {
 
     private void write() {
         if (ini.saveQuiet()) {
-            if (file.equals(Paths.structure())) Mirror.rebuild();
             rebuild();
         } else {
             Ui.toast(this, Words.IniEd.SAVE_FAILED_LOG);
@@ -156,10 +152,6 @@ public class IniEditScreen extends Activity {
     private boolean locked(Ini.Line l) {
         if (readOnly) {
             Ui.toast(this, Words.IniEd.READ_ONLY_COPY);
-            return true;
-        }
-        if (Structure.ID.equals(l.key) && file.equals(Paths.structure())) {
-            Ui.toast(this, Words.IniEd.ID_NOT_EDITABLE);
             return true;
         }
         return false;

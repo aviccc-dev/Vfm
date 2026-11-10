@@ -97,7 +97,7 @@ final class DbFollow {
     /** בבניית מ, אחרי שמסך המסד נפתח פעם אחת (יש הקשר) — על כל מסד של אופן. אחרת — 0, בלי כלום. */
     private static int each(boolean write, Each e) {
         android.content.Context c = DbListScreen.app;
-        if (!Flavor.M || c == null) return 0;
+        if (c == null) return 0;
         int sum = 0;
         List<String> modes;
         try {

@@ -408,9 +408,6 @@ public class RunScreen extends Activity {
                     if (!p.isEmpty() && DbVerbs.exists(this, m != null ? m : DbListScreen.currentMode, p)) return p;
                     continue;
                 }
-                List<String> p = new ArrayList<String>();
-                for (String x : t.split("\\\\")) if (!x.trim().isEmpty()) p.add(x.trim());
-                if (Tree.load().find(p) != null) return p;
             }
         return null;
     }

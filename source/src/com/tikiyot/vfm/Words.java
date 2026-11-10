@@ -197,6 +197,7 @@ public final class Words {
 
     // ---------- רשימות חכמות עם שם (147) ----------
     public static final class Named {
+        public static final String PRESETS_ONLY = "תבנית חדשה לא נשמרת בגרסה הזו — רק התבניות המוכנות";
         private Named() { }
 
         // 154: "הגדרות נפוצות" (המשתמש: "צריך לשנות את השם — במקום 'שמירה בשם' — הגדרות נפוצות")
@@ -1227,6 +1228,7 @@ public final class Words {
     /** 1.10.0: מכלים בסל המחזור (BinBox) */
     public static final class Box {
         private Box() { }
+        public static final String OLD_ENGINE = "הוסר במנוע הישן — אין שחזור בגרסה הזו";
 
         public static final String LIST = "רשימה";
         public static final String LISTS = "רשימות";

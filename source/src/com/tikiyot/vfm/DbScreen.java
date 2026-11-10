@@ -296,6 +296,28 @@ public class DbScreen extends Activity {
         }
     }
 
+    /**
+     * מ0.29: "שמור לתוכנה" (פקודות המערכת, "הפקודות שלי", גיבוי) באופן שאין לו — מקובץ הדוגמאות, לבית של האופן.
+     * false — לא הצליח.
+     */
+    static boolean ensureReserved(android.content.Context c, String mode) {
+        if (mode == null || !dbFile(c, mode).isFile()) return false;
+        SqlStore s = null;
+        try {
+            s = SqlStore.open(dbFile(c, mode), new IdCounter(counterFile()));
+            if (DbPaths.find(s, mode, Reserved.ROOT_PATH) != 0) return true;
+            DbExamples.files(null);
+            DbExamples.install(s, DbExamples.reservedPart(DbExamples.asset(c, DbExamples.ASSET)),
+                    Environment.getExternalStorageDirectory().getAbsolutePath());
+            return DbPaths.find(s, mode, Reserved.ROOT_PATH) != 0;
+        } catch (Throwable t) {
+            Log.e("DbScreen.ensureReserved", t);
+            return false;
+        } finally {
+            if (s != null) s.close();
+        }
+    }
+
     /** מ0.29 (באג 1): שחזור הדוגמאות באופן הדוגמאות — גיבוי של המסד לפני, ואז DbExamples.restore. מחזיר הודעה למסך. */
     static String restoreExamples(android.content.Context c) {
         SqlStore s = null;
@@ -391,9 +413,6 @@ public class DbScreen extends Activity {
                 }));
                 buttons.addView(button(Words.Db.NEW_SMART, new Runnable() {
                     @Override public void run() { newSmart(0); }
-                }));
-                buttons.addView(button(Words.Db.IMPORT, new Runnable() {
-                    @Override public void run() { importStart(); }
                 }));
             } else if (inSmart) {
                 final Store.Item sm = curItem;
@@ -1143,7 +1162,7 @@ public class DbScreen extends Activity {
                     public void run() {
                         if (isFinishing() || s != store) return;
                         new AlertDialog.Builder(DbScreen.this).setTitle(Words.Db.EMPTY_TITLE)
-                                .setMessage(Words.Db.emptyRestore(m, FullCheck.when(e)))
+                                .setMessage(Words.Db.emptyRestore(m, when(e)))
                                 .setPositiveButton(Words.Db.EMPTY_RESTORE, new DialogInterface.OnClickListener() {
                                     @Override public void onClick(DialogInterface d, int w) { restoreAsk(e, st); }
                                 })
@@ -1199,7 +1218,7 @@ public class DbScreen extends Activity {
 
     private View backupsRow() {
         List<Backups.Entry> all = backups(mode).list();
-        String sub = all.isEmpty() ? Words.Db.BACKUPS_EMPTY_SUB : Words.Db.backupsSub(all.size(), FullCheck.when(all.get(0)));
+        String sub = all.isEmpty() ? Words.Db.BACKUPS_EMPTY_SUB : Words.Db.backupsSub(all.size(), when(all.get(0)));
         return specialRow(Words.Db.BACKUPS, sub, new Runnable() {
             @Override public void run() { backupMenu(); }
         });
@@ -1225,7 +1244,7 @@ public class DbScreen extends Activity {
                         if (canBackup) labels.add(Words.Db.BACKUP_NOW);
                         for (int i = 0; i < all.size(); i++) {
                             Backups.Entry e = all.get(i);
-                            labels.add(Words.Db.backupEntry(states[i], Words.Db.backupKind(e.kind, e.op, e.text), FullCheck.when(e),
+                            labels.add(Words.Db.backupEntry(states[i], Words.Db.backupKind(e.kind, e.op, e.text), when(e),
                                     e.file.length()));
                         }
                         if (labels.isEmpty()) labels.add(Words.Db.BACKUPS_EMPTY_SUB);
@@ -1316,7 +1335,7 @@ public class DbScreen extends Activity {
                             return;
                         }
                         SqlStore s = store;
-                        String label = Words.Db.backupKind(e.kind, e.op, e.text) + " · " + FullCheck.when(e);
+                        String label = Words.Db.backupKind(e.kind, e.op, e.text) + " · " + when(e);
                         String q = Words.Db.restoreQuestion(label, res.lists, res.items, s == null ? 0 : s.lists().size(),
                                 s == null ? 0 : s.itemCount(), s == null);
                         new AlertDialog.Builder(DbScreen.this).setMessage(q).setCancelable(false)
@@ -1378,114 +1397,6 @@ public class DbScreen extends Activity {
         rows.addView(backupsRow());
     }
 
-    // ---------- מ0.2: העתקה מהמנוע הישן ----------
-
-    private static File oldData() {
-        return new File(Environment.getExternalStorageDirectory(), Flavor.oldAppDir());
-    }
-
-    private void importStart() {
-        final File old = oldData();
-        final List<String> modes = Importer.modes(old);
-        if (modes.isEmpty()) {
-            new AlertDialog.Builder(this).setTitle(Words.Db.IMPORT_TITLE).setMessage(Words.Db.IMPORT_NO_OLD)
-                    .setPositiveButton(Words.OK, null).show();
-            return;
-        }
-        // כל אופן נכנס למסד של אותו אופן (באג שנתפס במכשיר: שלושה אופנים במסד אחד התערבבו)
-        if (modes.contains(mode)) {
-            importPreview(old, mode);
-            return;
-        }
-        final String active = Importer.activeMode(old);
-        final List<String> labels = new ArrayList<String>();
-        for (String m : modes) labels.add(Words.Db.modeLine(m, m.equals(active)));
-        Ui.list(this, Words.Db.IMPORT_PICK, labels, new DialogInterface.OnClickListener() {
-            @Override
-            public void onClick(DialogInterface d, int which) {
-                switchMode(modes.get(which));
-                importPreview(old, modes.get(which));
-            }
-        });
-    }
-
-    /** קורא את המקור ומריץ את ההעתקה בלי לשמור: אותה ריצה, אותו דוח. */
-    private void importPreview(final File old, final String mode) {
-        importRun(old, mode, false, Words.Db.IMPORT_READING);
-    }
-
-    private void importRun(final File old, final String mode, final boolean keep, String message) {
-        final AlertDialog wait = new AlertDialog.Builder(this).setTitle(Words.Db.IMPORT_TITLE).setMessage(message)
-                .setCancelable(false).show();
-        new Thread(new Runnable() {
-            @Override
-            public void run() {
-                String err = null;
-                Importer.Report rep = null;
-                try {
-                    Importer.Source src = Importer.load(new File(new File(old, Modes.DIR), mode));
-                    if (keep) {
-                        try {
-                            backups(mode).before(store, Backups.OP_IMPORT, System.currentTimeMillis());
-                        } catch (Throwable t) {
-                            Log.e("DbScreen.import.backup", t);
-                            throw new BackupFailed(Words.Db.importBackupFailed(String.valueOf(t.getMessage())));
-                        }
-                    }
-                    final java.io.File toolDir = new java.io.File(Modes.dirOf(mode), Words.DbCmd.TOOLS_DIR);   // מ0.19
-                    Importer.toolFiles = keep ? new Importer.ToolFiles() {
-                        @Override public java.io.File write(String icon, String name, String line) { return Shortcuts.write(toolDir, icon, name, line); }
-                    } : null;
-                    try {
-                        rep = Importer.run(store, src, keep);
-                    } finally {
-                        Importer.toolFiles = null;
-                    }
-                } catch (BackupFailed t) {
-                    err = t.getMessage();
-                } catch (Throwable t) {
-                    Log.e("DbScreen.import", t);
-                    err = Words.Db.importFailed(String.valueOf(t.getMessage()));
-                }
-                final String error = err;
-                final Importer.Report report = rep;
-                runOnUiThread(new Runnable() {
-                    @Override
-                    public void run() {
-                        wait.dismiss();
-                        if (isFinishing()) return;
-                        if (error != null) {
-                            new AlertDialog.Builder(DbScreen.this).setTitle(Words.Db.IMPORT_TITLE).setMessage(error)
-                                    .setPositiveButton(Words.OK, null).show();
-                        } else if (keep) {
-                            new AlertDialog.Builder(DbScreen.this).setTitle(Words.Db.IMPORT_DONE_TITLE).setMessage(reportText(true, mode, report))
-                                    .setPositiveButton(Words.OK, null).show();
-                            show();
-                        } else if (report.nothingToDo()) {
-                            new AlertDialog.Builder(DbScreen.this).setTitle(Words.Db.IMPORT_TITLE)
-                                    .setMessage(Words.Db.IMPORT_NOTHING + (report.skippedAny() ? "\n\n" + reportText(false, mode, report) : ""))
-                                    .setPositiveButton(Words.OK, null).show();
-                        } else {
-                            new AlertDialog.Builder(DbScreen.this).setTitle(Words.Db.IMPORT_PREVIEW_TITLE).setMessage(reportText(false, mode, report))
-                                    .setPositiveButton(Words.Db.IMPORT_YES, new DialogInterface.OnClickListener() {
-                                        @Override
-                                        public void onClick(DialogInterface d, int w) {
-                                            importRun(old, mode, true, Words.Db.IMPORT_COPYING);
-                                        }
-                                    }).setNegativeButton(Words.CANCEL, null).show();
-                        }
-                    }
-                });
-            }
-        }).start();
-    }
-
-    private static String reportText(boolean done, String mode, Importer.Report r) {
-        return Words.Db.importReport(done, mode, r.listsNew, r.listsKnown, r.smartNew, r.smartKnown, r.filesNew, r.filesKnown,
-                r.filesUpdated, r.linksAdded, r.refsAdded, r.propsSet, r.rootFiles, r.badLines, r.refCycles, r.refMissing, r.smart, r.nested, r.live)
-                + Words.Db.importHome(done, r.homeNew, r.homeTools, r.homeAdded, r.homeKnown, r.homeSkipped, r.homeMissing);
-    }
-
     // ---------- בדיקה מלאה (מ0.2.2) ----------
 
     /** כל הבדיקות במקום אחד: דוח טקסט אחד, שמועתק ללוח ואפשר לשלוח. */
@@ -1497,7 +1408,7 @@ public class DbScreen extends Activity {
             public void run() {
                 String text;
                 try {
-                    text = FullCheck.run(oldData(), checkEnv());
+                    text = selfTestText(new boolean[1]);                          // מ0.29: הבדיקה העצמית של המסד (ההשוואה לישן — נמחקה איתו)
                 } catch (Throwable t) {
                     Log.e("DbScreen.fullCheck", t);
                     text = Words.Db.failed(String.valueOf(t));
@@ -1544,67 +1455,9 @@ public class DbScreen extends Activity {
         }
     }
 
-    private FullCheck.Env checkEnv() {
-        final File tmp = new File(getCacheDir(), "mfull");
-        deleteAll(tmp);
-        tmp.mkdirs();
-        final String[] selfText = {""};
-        final boolean[] selfOk = {false};
-        final int[] seq = {0};
-        return new FullCheck.Env() {
-            @Override
-            public String header() {
-                String v = "?";
-                try {
-                    v = getPackageManager().getPackageInfo(getPackageName(), 0).versionName;
-                } catch (Throwable ignored) {
-                }
-                return Words.Db.headerLine(v, android.os.Build.VERSION.RELEASE, android.os.Build.MODEL, android.os.Build.VERSION.SDK_INT);
-            }
-
-            @Override
-            public String selfTest() {
-                String text = selfTestText(selfOk);
-                selfText[0] = Words.Db.selfTestLine(selfOk[0], text);
-                return selfText[0];
-            }
-
-            @Override
-            public boolean selfTestOk() {
-                return selfOk[0];
-            }
-
-            @Override
-            public Store openTemp() throws Exception {
-                int n = seq[0]++;
-                return SqlStore.open(new File(tmp, "t" + n + ".db"), new IdCounter(new File(tmp, "t" + n + "-counter.txt")));
-            }
-
-            @Override
-            public Smarts.Finder finder() {
-                Library lib = Library.get(DbScreen.this);
-                lib.start(null);
-                return Smarts.over(lib);
-            }
-
-            @Override
-            public Store openReal(String mode) throws Exception {
-                File f = dbFile(DbScreen.this, mode);
-                return f.exists() ? SqlStore.open(f, new IdCounter(counterFile())) : null;
-            }
-
-            @Override
-            public File scratch() {
-                File w = new File(tmp, "s" + (seq[0]++));
-                w.mkdirs();
-                return w;
-            }
-
-            @Override
-            public Backups backups(String mode) {
-                return DbScreen.this.backups(mode);
-            }
-        };
+    /** מתי נעשה גיבוי — לתצוגה. */
+    static String when(Backups.Entry e) {
+        return new java.text.SimpleDateFormat("dd.MM.yyyy HH:mm", java.util.Locale.US).format(new java.util.Date(e.made > 0 ? e.made : e.when));
     }
 
     /** אותן בדיקות שרצות במחשב (StoreContract), על SQLite האמיתי של המכשיר, במסד זמני נפרד. ok[0] — האם עברו. */

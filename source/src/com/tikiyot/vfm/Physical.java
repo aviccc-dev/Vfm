@@ -263,17 +263,15 @@ public final class Physical {
     // (התיקייה שלו משותפת לתוכנה הישנה, עד המעבר לתיקייה נפרדת — claude/yetzia-mipituach.md).
 
     static int listsMoved(java.util.Map<String, String> moved) {
-        int n = Tree.replaceEverywhere(moved);
-        return Flavor.M ? DbFollow.movedEverywhere(moved) : n;
+        return DbFollow.movedEverywhere(moved);
     }
 
     static int listsGone(java.util.Collection<String> gone) {
-        int n = Tree.removeEverywhere(gone);
-        return Flavor.M ? DbFollow.goneEverywhere(gone) : n;
+        return DbFollow.goneEverywhere(gone);
     }
 
     static int listsCount(java.util.Collection<String> paths) {
-        return Flavor.M ? DbFollow.countEverywhere(paths) : Tree.countEverywhere(paths);
+        return DbFollow.countEverywhere(paths);
     }
 
     /** קובץ או תיקייה אל ".נמחקו" של אותו כונן. מחזיר את המקום בסל, או null. */
@@ -854,10 +852,8 @@ public final class Physical {
                 r.fail(Words.Disk.NO_ORIGINAL_PLACE);
                 continue;
             }
-            if (BinBox.isBox(it.original)) {                         // 1.10.0: רשימה / כלי / אופן שהוסרו מהתוכנה
-                String made = BinBox.restore(lib, it);
-                if (made == null) r.fail(Words.RESTORE_FAILED);
-                else r.done.add(it.path());
+            if (it.original.startsWith(Trash.OLD_BOX)) {                    // מ0.29: "📦" — רשימה / כלי / אופן שהוסרו במנוע הישן
+                r.fail(Words.Box.OLD_ENGINE);
                 continue;
             }
             String dst = Trash.restore(lib, it);

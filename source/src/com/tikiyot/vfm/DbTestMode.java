@@ -52,48 +52,48 @@ final class DbTestMode {
             final File f = new File(Modes.dirOf(mode), Words.DbCmd.TEST_FILE + "." + Batch.EXT);
             FileOutputStream out = new FileOutputStream(f);
             try {
-                out.write(Examples.asset(a, ASSET).getBytes("UTF-8"));
+                out.write(DbExamples.asset(a, ASSET).getBytes("UTF-8"));
             } finally {
                 out.close();
             }
             FileOutputStream out2 = new FileOutputStream(new File(Modes.dirOf(mode), Words.DbCmd.TEST_CALL_FILE + "." + Batch.EXT));
             try {
-                out2.write(Examples.asset(a, ASSET_CALL).getBytes("UTF-8"));   // מ0.15: הקובץ שהבדיקה כוללת
+                out2.write(DbExamples.asset(a, ASSET_CALL).getBytes("UTF-8"));   // מ0.15: הקובץ שהבדיקה כוללת
             } finally {
                 out2.close();
             }
             final File load = new File(Modes.dirOf(mode), Words.DbCmd.TEST_LOAD_FILE + "." + Batch.EXT);
             FileOutputStream out3 = new FileOutputStream(load);
             try {
-                out3.write(Examples.asset(a, ASSET_LOAD).replace(REAL, realMode(a, mode)).getBytes("UTF-8"));   // מ0.17: על הנתונים האמיתיים
+                out3.write(DbExamples.asset(a, ASSET_LOAD).replace(REAL, realMode(a, mode)).getBytes("UTF-8"));   // מ0.17: על הנתונים האמיתיים
             } finally {
                 out3.close();
             }
             final File all = new File(Modes.dirOf(mode), Words.DbCmd.TEST_ALL_FILE + "." + Batch.EXT);
             FileOutputStream out4 = new FileOutputStream(all);
             try {
-                out4.write(Examples.asset(a, ASSET_ALL).getBytes("UTF-8"));   // מ0.18: הבדיקה הכללית — מתעדכנת בכל גרסה
+                out4.write(DbExamples.asset(a, ASSET_ALL).getBytes("UTF-8"));   // מ0.18: הבדיקה הכללית — מתעדכנת בכל גרסה
             } finally {
                 out4.close();
             }
             final File stress = new File(Modes.dirOf(mode), Words.DbCmd.TEST_STRESS_FILE + "." + Batch.EXT);
             FileOutputStream out5 = new FileOutputStream(stress);
             try {
-                out5.write(Examples.asset(a, ASSET_STRESS).getBytes("UTF-8"));   // מ0.21: בדיקת הלחץ — מנסה לסבך
+                out5.write(DbExamples.asset(a, ASSET_STRESS).getBytes("UTF-8"));   // מ0.21: בדיקת הלחץ — מנסה לסבך
             } finally {
                 out5.close();
             }
             final File v23 = new File(Modes.dirOf(mode), Words.DbCmd.TEST_V23_FILE + "." + Batch.EXT);
             FileOutputStream out6 = new FileOutputStream(v23);
             try {
-                out6.write(Examples.asset(a, ASSET_V23).getBytes("UTF-8"));   // מ0.23: בדיקת הגרסה (נכללת גם בכללית)
+                out6.write(DbExamples.asset(a, ASSET_V23).getBytes("UTF-8"));   // מ0.23: בדיקת הגרסה (נכללת גם בכללית)
             } finally {
                 out6.close();
             }
             final File v24 = new File(Modes.dirOf(mode), Words.DbCmd.TEST_V24_FILE + "." + Batch.EXT);
             FileOutputStream out7 = new FileOutputStream(v24);
             try {
-                out7.write(Examples.asset(a, ASSET_V24).getBytes("UTF-8"));   // מ0.24: בדיקת הגרסה (נכללת גם בכללית)
+                out7.write(DbExamples.asset(a, ASSET_V24).getBytes("UTF-8"));   // מ0.24: בדיקת הגרסה (נכללת גם בכללית)
             } finally {
                 out7.close();
             }
