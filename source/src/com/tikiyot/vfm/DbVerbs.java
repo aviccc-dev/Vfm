@@ -96,7 +96,7 @@ final class DbVerbs {
 
     /** רשימה חכמה חדשה — בטופס המוכר — בתוך in (0 — בתוך הבית, אם יש). */
     static void newSmart(final Activity a, final String mode, final long in) {
-        DbSmartForm.show(a, null, 0, new DbSmartForm.Done() {
+        DbSmartForm.showNew(a, new DbSmartForm.Done() {
             @Override
             public void ok(final DbSmartForm.Result r) {
                 write(a, mode, new Job() {
@@ -107,6 +107,8 @@ final class DbVerbs {
                 }, null);
                 if (a instanceof DbListScreen) ((DbListScreen) a).reload();
             }
+        }, new Func.Done() {
+            @Override public void ok(String name, Target t) { saveDups(a, mode, in, name, t); }   // מ0.28: נבחר "כפולים" בפס הסוג
         });
     }
 
@@ -114,12 +116,11 @@ final class DbVerbs {
      * מ0.25 (באג 27): כפולים — אותו טופס כמו בבית הישן (FnDup); נשמר כקובץ פקודות קטן ("פתח כלי "כפולים" …") שנכנס לרשימה,
      * כמו שהייבוא מהישן עושה לכלי כפולים קיים (מ0.19). נגיעה — פותחת את מסך הכפולים עם ההגדרות האלה.
      */
-    static void newDups(final Activity a, final String mode, final long in) {
+    static void saveDups(final Activity a, final String mode, final long in, String name, final Target t) {
         final Func f = Func.byKind(FnDup.KIND);
         if (f == null) return;
-        f.configure(a, null, null, new Func.Done() {
-            @Override
-            public void ok(String name, Target t) {
+        {
+            {
                 final java.io.File file = Shortcuts.write(f.icon, name == null || name.isEmpty() ? f.title : name,
                         Verbs.toolLine(t.kind, t.params));
                 if (file == null) {
@@ -136,7 +137,7 @@ final class DbVerbs {
                 if (a instanceof DbListScreen) ((DbListScreen) a).reload();
                 f.open(a, t);
             }
-        });
+        }
     }
 
     /** פקודה (מתפריט הפקודות האחד) — קובץ הפקודות נכנס לרשימה. */

@@ -634,17 +634,16 @@ public class DbListScreen extends ListScreen<Store.Member> {
     private void addMenu() {
         final boolean home = atHome;
         // מ0.25 (באג 27; המשתמש: "הכפולים לא נכנס עדיין בגרסה החדשה… למה לשנות ממה שהיה הקודם?"): כפולים — שוב ב־➕, באותו טופס
-        String[] items = home ? new String[]{Words.Main.ADD_MANUAL, Words.Main.ADD_SMART, Words.Main.ADD_CMD, Words.Db.ADD_DUPS}
-                : new String[]{Words.Main.ADD_MANUAL, Words.Main.ADD_SMART, Words.Main.ADD_CMD, Words.Db.ADD_DUPS,
-                Words.Db.ADD_FROM_FOLDER, Words.Db.ADD_FROM_SEARCH};
+        // מ0.28 (המשתמש: "כפולים אמור להיות באותו תפריט של רשימה חכמה בתור עוד אופציה"): לא שורה נפרדת — בטופס הרשימה החכמה
+        String[] items = home ? new String[]{Words.Main.ADD_MANUAL, Words.Main.ADD_SMART, Words.Main.ADD_CMD}
+                : new String[]{Words.Main.ADD_MANUAL, Words.Main.ADD_SMART, Words.Main.ADD_CMD, Words.Db.ADD_FROM_FOLDER, Words.Db.ADD_FROM_SEARCH};
         Ui.options(this, Words.Main.WHAT_TO_ADD, items, new android.content.DialogInterface.OnClickListener() {
             @Override
             public void onClick(android.content.DialogInterface d, int which) {
                 if (which == 0) DbVerbs.newList(DbListScreen.this, mode, listId);
                 else if (which == 1) DbVerbs.newSmart(DbListScreen.this, mode, listId);
                 else if (which == 2) DbVerbs.addCommand(DbListScreen.this, mode, listId);
-                else if (which == 3) DbVerbs.newDups(DbListScreen.this, mode, listId);
-                else DbVerbs.addFiles(DbListScreen.this, mode, listId, which == 4 ? DbScreen.DO_FOLDER : DbScreen.DO_SEARCH);
+                else DbVerbs.addFiles(DbListScreen.this, mode, listId, which == 3 ? DbScreen.DO_FOLDER : DbScreen.DO_SEARCH);
             }
         });
     }

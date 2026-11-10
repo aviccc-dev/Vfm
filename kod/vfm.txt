@@ -1142,7 +1142,7 @@ cd $S; rm -rf out gen bld
 [ "$S" != "$DIR" ] && rm -rf $S
 ls -la $OUT
 ===== קובץ: build/m-version.txt =====
-40 מ0.27
+41 מ0.28
 ===== קובץ: build/test.sh =====
 #!/bin/bash
 # בדיקות על המחשב (80). יוצא בכישלון אם בדיקה אחת נכשלה — ואז build.sh לא בונה.
@@ -12819,17 +12819,16 @@ public class DbListScreen extends ListScreen<Store.Member> {
     private void addMenu() {
         final boolean home = atHome;
         // מ0.25 (באג 27; המשתמש: "הכפולים לא נכנס עדיין בגרסה החדשה… למה לשנות ממה שהיה הקודם?"): כפולים — שוב ב־➕, באותו טופס
-        String[] items = home ? new String[]{Words.Main.ADD_MANUAL, Words.Main.ADD_SMART, Words.Main.ADD_CMD, Words.Db.ADD_DUPS}
-                : new String[]{Words.Main.ADD_MANUAL, Words.Main.ADD_SMART, Words.Main.ADD_CMD, Words.Db.ADD_DUPS,
-                Words.Db.ADD_FROM_FOLDER, Words.Db.ADD_FROM_SEARCH};
+        // מ0.28 (המשתמש: "כפולים אמור להיות באותו תפריט של רשימה חכמה בתור עוד אופציה"): לא שורה נפרדת — בטופס הרשימה החכמה
+        String[] items = home ? new String[]{Words.Main.ADD_MANUAL, Words.Main.ADD_SMART, Words.Main.ADD_CMD}
+                : new String[]{Words.Main.ADD_MANUAL, Words.Main.ADD_SMART, Words.Main.ADD_CMD, Words.Db.ADD_FROM_FOLDER, Words.Db.ADD_FROM_SEARCH};
         Ui.options(this, Words.Main.WHAT_TO_ADD, items, new android.content.DialogInterface.OnClickListener() {
             @Override
             public void onClick(android.content.DialogInterface d, int which) {
                 if (which == 0) DbVerbs.newList(DbListScreen.this, mode, listId);
                 else if (which == 1) DbVerbs.newSmart(DbListScreen.this, mode, listId);
                 else if (which == 2) DbVerbs.addCommand(DbListScreen.this, mode, listId);
-                else if (which == 3) DbVerbs.newDups(DbListScreen.this, mode, listId);
-                else DbVerbs.addFiles(DbListScreen.this, mode, listId, which == 4 ? DbScreen.DO_FOLDER : DbScreen.DO_SEARCH);
+                else DbVerbs.addFiles(DbListScreen.this, mode, listId, which == 3 ? DbScreen.DO_FOLDER : DbScreen.DO_SEARCH);
             }
         });
     }
@@ -15444,6 +15443,28 @@ final class DbSmartForm {
         SmartForm.show(a, name, t, new Func.Done() {
             @Override
             public void ok(String n, Target out) {
+                done.ok(result(n, out));
+            }
+        });
+    }
+
+    /**
+     * מ0.28 (המשתמש: "כפולים אמור להיות באותו תפריט של רשימה חכמה בתור עוד אופציה"): רשימה חכמה חדשה — הטופס עם הפס
+     * "סוג: חכמה | כפולים" (SearchTabs, כמו בבית הישן). חכמה — done; כפולים — dups (השם וההגדרות של הכפולים).
+     */
+    static void showNew(Activity a, final Done done, final Func.Done dups) {
+        SearchTabs.configure(a, FnSmart.KIND, null, null, new Func.Done() {
+            @Override
+            public void ok(String n, Target out) {
+                if (FnDup.KIND.equals(out.kind)) dups.ok(n, out);
+                else done.ok(result(n, out));
+            }
+        });
+    }
+
+    private static Result result(String n, Target out) {
+        {
+            {
                 Result r = new Result();
                 r.name = n == null ? "" : n.trim();
                 r.cond = out.get(SmartLists.COND, "");
@@ -15460,9 +15481,9 @@ final class DbSmartForm {
                 r.icon = out.get(Program.ICON, "");
                 r.desc = out.get(DESC, "");
                 r.why = out.get(Program.WHY, "");
-                done.ok(r);
+                return r;
             }
-        });
+        }
     }
 
     /** שומר בעסקה אחת: smart = 0 — נוצרת (בתוך into, אם לא 0). מחזיר את מספר הזיהוי. */
@@ -15716,7 +15737,7 @@ final class DbVerbs {
 
     /** רשימה חכמה חדשה — בטופס המוכר — בתוך in (0 — בתוך הבית, אם יש). */
     static void newSmart(final Activity a, final String mode, final long in) {
-        DbSmartForm.show(a, null, 0, new DbSmartForm.Done() {
+        DbSmartForm.showNew(a, new DbSmartForm.Done() {
             @Override
             public void ok(final DbSmartForm.Result r) {
                 write(a, mode, new Job() {
@@ -15727,6 +15748,8 @@ final class DbVerbs {
                 }, null);
                 if (a instanceof DbListScreen) ((DbListScreen) a).reload();
             }
+        }, new Func.Done() {
+            @Override public void ok(String name, Target t) { saveDups(a, mode, in, name, t); }   // מ0.28: נבחר "כפולים" בפס הסוג
         });
     }
 
@@ -15734,12 +15757,11 @@ final class DbVerbs {
      * מ0.25 (באג 27): כפולים — אותו טופס כמו בבית הישן (FnDup); נשמר כקובץ פקודות קטן ("פתח כלי "כפולים" …") שנכנס לרשימה,
      * כמו שהייבוא מהישן עושה לכלי כפולים קיים (מ0.19). נגיעה — פותחת את מסך הכפולים עם ההגדרות האלה.
      */
-    static void newDups(final Activity a, final String mode, final long in) {
+    static void saveDups(final Activity a, final String mode, final long in, String name, final Target t) {
         final Func f = Func.byKind(FnDup.KIND);
         if (f == null) return;
-        f.configure(a, null, null, new Func.Done() {
-            @Override
-            public void ok(String name, Target t) {
+        {
+            {
                 final java.io.File file = Shortcuts.write(f.icon, name == null || name.isEmpty() ? f.title : name,
                         Verbs.toolLine(t.kind, t.params));
                 if (file == null) {
@@ -15756,7 +15778,7 @@ final class DbVerbs {
                 if (a instanceof DbListScreen) ((DbListScreen) a).reload();
                 f.open(a, t);
             }
-        });
+        }
     }
 
     /** פקודה (מתפריט הפקודות האחד) — קובץ הפקודות נכנס לרשימה. */
