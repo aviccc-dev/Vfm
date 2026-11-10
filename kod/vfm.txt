@@ -1143,7 +1143,7 @@ cd $S; rm -rf out gen bld
 [ "$S" != "$DIR" ] && rm -rf $S
 ls -la $OUT
 ===== קובץ: build/m-version.txt =====
-37 מ0.24
+38 מ0.25
 ===== קובץ: build/test.sh =====
 #!/bin/bash
 # בדיקות על המחשב (80). יוצא בכישלון אם בדיקה אחת נכשלה — ואז build.sh לא בונה.
@@ -3738,6 +3738,8 @@ final class Batch {
         boolean failTaken;
         /** 1.21.0: COPY … /מצב:<זמן> — שחזור: לכל קובץ — תיקיית היעד שלו (המסלול הלוגי). */
         final List<String> targets = new ArrayList<String>();
+        /** מ0.25: כמה קבצים דולגו בגלל /תפוס:לדלג — לתיאור ולדוח ("דולגו", לא "אין קבצים"). */
+        int skipped;
         long stateWhen = Long.MIN_VALUE;
         /** 1.22.0: COMP /רשימה:<שם> — המקור הוא רשימה ידנית (עם כל מה שבתוכה). */
         String listName;
@@ -3783,6 +3785,11 @@ final class Batch {
         Sim sim;
         /** 1.13.0: פקודת פתיחה בעברית (פתח / מצא / חזור…) — נפתחת בסוף ההרצה, כמו START; null — אין. */
         String open;
+        /**
+         * מ0.25 (באג 7): כל פקודות הפתיחה בסדר הכתיבה (לא רק האחרונה). לכל אחת: [השורה, האופן] — האופן אינו null כשהחלק
+         * הכותב כבר בוצע כשלב רגיל במסד (צור / עדכן), ואז בסוף רק פותחים, באופן של הקובץ.
+         */
+        final List<String[]> opens = new ArrayList<String[]>();
         /** 216: משהו בהרצה לא הלך חלק (שורה שדולגה, כשל, עצירה) — אז הדוח מוצג; אחרת — הודעה קצרה בלבד. */
         boolean trouble;
         /** 1.25.0: שורת "מדידה" — זמן לכל שורה, סיכום, ויומן (אם נכתב /יומן:). */
@@ -3800,8 +3807,8 @@ final class Batch {
 
         int changes() {
             int n = 0;
-            for (Step s : steps) if (s.error == null && !s.noop && !s.cmd.equals("ECHO") && !s.cmd.equals("START") && !s.cmd.equals(OPEN)
-                    && !s.cmd.equals("COMP")) n++;
+            for (Step s : steps) if (s.error == null && !s.noop && !s.cmd.equals("ECHO") && !s.cmd.equals("START")
+                    && !(s.cmd.equals(OPEN) && s.op == null) && !s.cmd.equals("COMP")) n++;
             return n;
         }
     }
@@ -3902,7 +3909,7 @@ final class Batch {
         for (Step s : plan.steps)
             if (s.error == null && s.share)
                 out.add(new AsIfRow("📤", Words.AsIf.SHARE, s.describe));
-        if (plan.open != null) out.add(new AsIfRow("▶", Verbs.label(Verbs.parse(plan.open)), Words.AsIf.AT_END));
+        for (String[] o : plan.opens) out.add(new AsIfRow("▶", Verbs.label(Verbs.parse(o[0])), Words.AsIf.AT_END));   // מ0.25: כולן, בסדר
         if (plan.start != null)
             out.add(new AsIfRow("▶", isHome(plan.start) ? Words.Cmd.HOME_AT_END : plan.start.getName(), Words.AsIf.AT_END));
         if (out.isEmpty()) out.add(new AsIfRow("·", Words.AsIf.NOTHING, ""));
@@ -4415,8 +4422,13 @@ final class Batch {
                 Verbs.Cmd vc = Verbs.parse(s.open);
                 s.error = vc.error;
                 s.describe = Verbs.describe(vc);
+                String doneIn = null;
+                if (s.error == null && DbVerbs.active()) doneIn = DbListCmd.planVerb(s, vc, sim);   // מ0.25: החלק הכותב — בסדר השורות
                 if (s.error != null) plan.errors++;
-                else plan.open = s.open;
+                else {
+                    plan.open = s.open;
+                    plan.opens.add(new String[]{s.open, doneIn});
+                }
                 plan.steps.add(s);
                 continue;
             }
@@ -4664,7 +4676,7 @@ final class Batch {
             }
             if (s.skipTaken)
                 for (java.util.Iterator<String> it = s.files.iterator(); it.hasNext(); )
-                    if (sim.isFile(new File(dest, new File(it.next()).getName()))) it.remove();
+                    if (sim.isFile(new File(dest, new File(it.next()).getName()))) { it.remove(); s.skipped++; }
             List<String> what = new ArrayList<String>();
             if (!s.files.isEmpty() || s.dirs.isEmpty()) what.add(Words.files(s.files.size()));
             if (!s.dirs.isEmpty()) what.add(Words.folders(s.dirs.size()));
@@ -4749,7 +4761,7 @@ final class Batch {
         walk(s, src, mask, flt, sim, mask == null && flt.tests.isEmpty(), true);
         if (s.skipTaken)
             for (java.util.Iterator<String> it = s.files.iterator(); it.hasNext(); )
-                if (sim.isFile(new File(dest, Physical.rel(s.keepRoot, it.next())))) it.remove();
+                if (sim.isFile(new File(dest, Physical.rel(s.keepRoot, it.next())))) { it.remove(); s.skipped++; }
         List<String> what = new ArrayList<String>();
         what.add(Words.files(s.files.size()));
         if (!s.dirs.isEmpty()) what.add(Words.Cmd.emptyFolders(s.dirs.size()));
@@ -4899,13 +4911,18 @@ final class Batch {
         if (!b.isDirectory() && !sim.isDir(b)) { s.error = Words.Cmd.compareNoDest(args.get(0)); return; }
         if (sim.lib == null || !sim.lib.ready) { s.error = Words.Cmd.NEEDS_INDEX; return; }
         String[] err = {null};
-        Tree[] tt = {null};
-        Ini[] ini = {null};
-        Tree.Node n = findList(s.listName, tt, err, ini);
-        if (n == null) { s.error = err[0]; return; }
-        Tree t = tt[0];
         File skip = b.getName().equals(State.CURRENT) && b.getParentFile() != null ? b.getParentFile() : b;
-        Compare.Source src = Compare.ofList(sim.lib, t, n, s.hidden, skip.getAbsolutePath(), ini[0]);
+        Compare.Source src;
+        if (DbVerbs.active()) {                                             // מ0.25 (באג 2): עובדים במסד — הרשימה מהמסד
+            src = DbListCmd.compSource(sim, s.listName, skip.getAbsolutePath(), err);
+            if (src == null) { s.error = err[0]; return; }
+        } else {
+            Tree[] tt = {null};
+            Ini[] ini = {null};
+            Tree.Node n = findList(s.listName, tt, err, ini);
+            if (n == null) { s.error = err[0]; return; }
+            src = Compare.ofList(sim.lib, tt[0], n, s.hidden, skip.getAbsolutePath(), ini[0]);
+        }
         if (src.files.isEmpty() && src.emptyDirs.isEmpty()) { s.error = Words.Cmd.listEmpty(s.listName); return; }
         Compare.Result r = Compare.byList(sim.lib, src, b, s.hidden);
         sim.compare = r;
@@ -4956,7 +4973,7 @@ final class Batch {
             s.dirs.clear();
             for (String f : items) {
                 File to = new File(dest, r.relA.get(f));
-                if (s.skipTaken && sim.isFile(to)) continue;
+                if (s.skipTaken && sim.isFile(to)) { s.skipped++; continue; }
                 s.files.add(f);
                 s.targets.add(to.getParentFile().getAbsolutePath());
                 if (new File(f).isDirectory()) sim.dirs.add(to.getAbsolutePath());
@@ -4968,7 +4985,7 @@ final class Batch {
         }
         if (s.skipTaken)
             for (java.util.Iterator<String> it = s.files.iterator(); it.hasNext(); )
-                if (sim.isFile(new File(dest, Physical.rel(s.keepRoot, it.next())))) it.remove();
+                if (sim.isFile(new File(dest, Physical.rel(s.keepRoot, it.next())))) { it.remove(); s.skipped++; }
         List<String> what = new ArrayList<String>();
         what.add(Words.files(s.files.size()));
         if (!s.dirs.isEmpty()) what.add(Words.folders(s.dirs.size()));
@@ -5043,6 +5060,7 @@ final class Batch {
                 if (new File(s.targets.get(k), new File(s.files.get(k)).getName()).exists()) {
                     s.files.remove(k);
                     s.targets.remove(k);
+                    s.skipped++;
                 }
         s.describe = Words.Cmd.restore(Words.files(s.files.size()), new java.text.SimpleDateFormat("dd.MM.yyyy HH:mm", Locale.ROOT)
                 .format(new java.util.Date(s.stateWhen)), Bidi.path(dest.getAbsolutePath()));   // בכונן
@@ -5156,7 +5174,8 @@ final class Batch {
     }
 
     private static String filtered(Step s) {
-        return s.total > s.files.size() && s.dirs.isEmpty() ? Words.Cmd.filtered(s.files.size(), s.total) : "";
+        String f = s.total > s.files.size() + s.skipped && s.dirs.isEmpty() ? Words.Cmd.filtered(s.files.size(), s.total) : "";
+        return f + (s.skipped > 0 ? Words.Cmd.skippedTaken(s.skipped) : "");
     }
 
     // ---------- ביצוע ----------
@@ -5232,7 +5251,7 @@ final class Batch {
                 report.add(Words.Cmd.line(s.label(), s.describe));
                 continue;
             }
-            if (s.cmd.equals("ECHO") || s.cmd.equals("START") || s.cmd.equals(OPEN)) continue;
+            if (s.cmd.equals("ECHO") || s.cmd.equals("START") || (s.cmd.equals(OPEN) && s.op == null)) continue;
             if (s.op != null) {                                                // 1.24.0: רשימות
                 report.add(Words.Cmd.line(s.label(), s.op.run(lib)));
                 continue;
@@ -5257,7 +5276,7 @@ final class Batch {
                 if (s.files.isEmpty() && s.dirs.isEmpty()) out = Words.Cmd.NO_FILES;
                 else out = stage(plan, s, progress);
             } else if (s.cmd.equals("COPY") || s.cmd.equals("MOVE")) {
-                if (s.files.isEmpty() && s.dirs.isEmpty()) out = Words.Cmd.NO_FILES;
+                if (s.files.isEmpty() && s.dirs.isEmpty()) out = s.skipped > 0 ? Words.Cmd.skippedTaken(s.skipped).substring(3) : Words.Cmd.NO_FILES;
                 else {
                     boolean copy = s.cmd.equals("COPY");
                     Physical.Journal j = s.journal == null ? null : new Physical.Journal(new File(s.journal), s.text);   // 1.19.0
@@ -5269,6 +5288,7 @@ final class Batch {
                                     !s.fromCompare)
                             : Physical.transfer(lib, s.files, s.dirs, s.dest, copy, ask, progress, grey, j);
                     out = result(r, copy ? Words.Cmd.COPIED : Words.Cmd.MOVED);
+                    if (s.skipped > 0) out += Words.Cmd.skippedTaken(s.skipped);
                     if (j != null) {
                         j.close();
                         if (j.failed()) {
@@ -5540,9 +5560,30 @@ public class BatchEditScreen extends Activity {
         }
     }
 
+    /** מ0.25 (באג 30): העורכים הפתוחים — "בית" מנקה את כל המסכים, ולא יאבד שינוי שלא נשמר. */
+    private static final java.util.Set<BatchEditScreen> OPEN = java.util.Collections.newSetFromMap(
+            new java.util.WeakHashMap<BatchEditScreen, Boolean>());
+
+    static boolean anyUnsaved() {
+        for (BatchEditScreen e : OPEN)
+            try {
+                if (e != null && !e.isFinishing() && !e.plain().equals(e.saved)) return true;
+            } catch (Throwable t) {
+                Log.e("BatchEditScreen.anyUnsaved", t);
+            }
+        return false;
+    }
+
+    @Override
+    protected void onDestroy() {
+        OPEN.remove(this);
+        super.onDestroy();
+    }
+
     @Override
     protected void onCreate(Bundle b) {
         super.onCreate(b);
+        OPEN.add(this);
         String p = getIntent() != null ? getIntent().getStringExtra(EXTRA_FILE) : null;
         file = p == null ? null : new File(p);                                 // 1.28.0: בלי קובץ — טיוטה, ושם בשמירה
         vars = BatchUi.vars(this, here());
@@ -7014,7 +7055,7 @@ final class BatchUi {
                                     if (plan.changes() > 0) Ui.toast(a, Words.Cmd.doneShort(report.size()));
                                     openStart(a, plan.start);
                                 }
-                                if (plan.open != null && !plan.trouble) Verbs.run(a, plan.open, f.getParentFile());   // 1.13.0
+                                if (!plan.trouble) DbVerbs.runOpens(a, plan.opens, f.getParentFile());   // 1.13.0; מ0.25: כולן, בסדר
                                 if (plan.trouble && plan.start != null && !Batch.isHome(plan.start) && plan.start.isFile()) Ui.open(a, plan.start);   // 186
                                 if (!plan.shared.isEmpty()) {                 // 203: כל מה שלשיתוף — שליחה אחת
                                     Ui.toast(a, Words.Cmd.sending(plan.shared.size()));
@@ -9041,6 +9082,11 @@ final class Compare {
         }
     }
 
+    /** מ0.25: קובץ אחד למקור (לרשימה מהמסד — DbListCmd.compSource). */
+    static void addFile(Library lib, Source src, File f, String skip) {
+        if (f.isFile() && !Physical.isPartial(f.getName())) add(lib, src, f, skip);
+    }
+
     private static void add(Library lib, Source src, File f, String skip) {
         String p = f.getAbsolutePath();
         if (skip != null && p.startsWith(skip + "/")) return;
@@ -10021,6 +10067,11 @@ final class DbCmdMenu {
                 + ListCmd.FILE_WORD + " \"*\""});   // תחביר
         out.add(new String[]{"📥", Words.DbCmd.TOOL_IMPORT, "COPY " + ListCmd.FILE_WORD + " \"<" + Words.DbCmd.HOLE_FILE + ">\" "
                 + ListCmd.MANUAL + " \"<" + Words.DbCmd.HOLE_INTO + ">\""});   // תחביר
+        // מ0.25 (באג 28; המשתמש: "יכולים להישאר בפקודות. ותרשום לך להכניס אותם לשמורים לתוכנה"): הכלים שלא עברו לבית
+        // (סל והגדרות — כבר בפקודות המערכת). כפולים — גם כאן, עם ברירות המחדל.
+        out.add(new String[]{"⧉", Words.DbCmd.TOOL_DUPS, Verbs.toolLine(FnDup.KIND, new java.util.LinkedHashMap<String, String>())});
+        out.add(new String[]{"📌", Words.DbCmd.TOOL_BAR, Verbs.toolLine("פס", new java.util.LinkedHashMap<String, String>())});   // תחביר
+        out.add(new String[]{"🔗", Words.DbCmd.TOOL_APP, Verbs.toolLine("אפליקציה", new java.util.LinkedHashMap<String, String>())});   // תחביר; בלי חבילה — נשאל
         return out;
     }
 
@@ -11705,9 +11756,23 @@ final class DbListCmd {
                 List<String> fs = files(db, mode, a, find, err);
                 if (fs == null) { s.error = err[0]; return; }
                 s.dest = fsDest;
-                for (String x : fs) if (sim.isFile(new File(x))) s.files.add(new File(x).getAbsolutePath());
-                s.describe = Words.Cmd.transfer(true, Words.files(s.files.size()), Bidi.path(fsDest.getAbsolutePath()));
-                for (String x : s.files) sim.move(x, new File(fsDest, new File(x).getName()), true);
+                // מ0.25 (באג 4): /תפוס:לדלג ו־/מסלול גם מרשימה לתיקייה. /מסלול — המסלול המלא של הקובץ מהכונן, בתוך היעד
+                // (המשתמש: "אם הבקשה עם מסלול אז עם כל המסלול"); לכל קובץ תיקיית יעד משלו (targets, כמו בשחזור).
+                for (String x : fs) {
+                    File src = new File(x);
+                    if (!sim.isFile(src)) continue;
+                    File dir = s.recursive ? fullPathUnder(fsDest, src) : fsDest;
+                    File to = new File(dir, src.getName());
+                    if (s.skipTaken && sim.isFile(to)) { s.skipped++; continue; }
+                    s.files.add(src.getAbsolutePath());
+                    if (s.recursive) {
+                        s.targets.add(dir.getAbsolutePath());
+                        for (File up = dir; up != null && !up.equals(fsDest); up = up.getParentFile()) sim.dirs.add(up.getAbsolutePath());
+                    }
+                    sim.move(src.getAbsolutePath(), to, true);
+                }
+                s.describe = Words.Cmd.transfer(true, Words.files(s.files.size()), Bidi.path(fsDest.getAbsolutePath()))
+                        + (s.recursive ? Words.Cmd.KEEP_PATH : "") + (s.skipped > 0 ? Words.Cmd.skippedTaken(s.skipped) : "");
                 return;
             }
             work = new Work() {
@@ -11766,6 +11831,94 @@ final class DbListCmd {
         s.op = new ListCmd.Op() {
             @Override public String run(Library lib) { return real(mode, w, before, lib); }
         };
+    }
+
+    /**
+     * מ0.25 (באג 7; המשתמש: "כל הפעלים בפקודות רצים לפי הסדר בו הם כתובים"): החלק הכותב של פועל בעברית — "צור רשימה",
+     * "צור רשימה חכמה", "עדכן רשימה חכמה" — הוא שלב רגיל: על העותק בתכנון (שורות מאוחרות רואות אותו), ובהרצה על המסד, במקומו.
+     * מחזיר את האופן אם זה פועל כותב (ואז בסוף רק פותחים את המסך), null — אינו כותב (נשאר כולו לסוף).
+     */
+    static String planVerb(final Batch.Step s, final Verbs.Cmd c, final Batch.Sim sim) {
+        final boolean list = c.kind.equals(Verbs.K_LIST) && c.verb.equals(Verbs.CREATE);
+        final boolean smartNew = c.kind.equals(Verbs.K_SMART) && c.verb.equals(Verbs.CREATE);
+        final boolean smartUpd = c.kind.equals(Verbs.K_SMART) && c.verb.equals(Verbs.UPDATE);
+        if (!list && !smartNew && !smartUpd) return null;
+        if (sim.modeError != null) { s.error = sim.modeError; return null; }
+        final String mode = mode(sim);
+        final Store db;
+        try {
+            db = sim(sim, mode);
+        } catch (Throwable t) {
+            Log.e("DbListCmd.sim", t);
+            s.error = Words.Db.failed(String.valueOf(t.getMessage()));
+            return null;
+        }
+        final List<String> path = list ? Tree.parsePath(c.arg) : null;
+        final Work work = new Work() {
+            @Override
+            public Res run(Store t, Finder f) {
+                if (list) {
+                    if (path == null || path.isEmpty()) return Res.err(Words.Verb.NOT_FOUND + c.arg);
+                    if (DbPaths.find(t, mode, path) != 0) return Res.same(Words.ListCmdW.exists(Tree.label(path)));
+                    return DbPaths.ensure(t, mode, path) == 0 ? Res.err(Words.Verb.NOT_FOUND + c.arg)
+                            : Res.ok(Words.ListCmdW.created(Tree.label(path)));
+                }
+                if (smartNew) {
+                    long had = DbPaths.smart(t, c.arg);
+                    long id = DbPaths.ensureSmart(t, c.arg, c.cond, c.sort);
+                    if (id == 0) return Res.err(Words.Verb.NOT_FOUND + c.arg);
+                    return id == had ? Res.same(Words.ListCmdW.exists(c.arg)) : Res.ok(Words.ListCmdW.created(c.arg));
+                }
+                return DbPaths.updateSmart(t, c.arg, c.cond, c.sort) == 0 ? Res.err(Words.Verb.NOT_FOUND + c.arg)
+                        : Res.ok(Words.DbCmd.updated(c.arg));
+            }
+        };
+        Res r;
+        try {
+            r = work.run(db, finder(sim));                                   // ההדמיה — על העותק
+        } catch (Throwable e) {
+            r = Res.err(Words.Db.failed(String.valueOf(e.getMessage())));
+        }
+        if (r.error != null) { s.error = r.error; return null; }
+        if (!r.noop) {
+            s.describe = Words.DbCmd.inDb(r.text);
+            s.op = new ListCmd.Op() {
+                @Override public String run(Library lib) { return real(mode, work, false, lib); }
+            };
+        }
+        return mode;
+    }
+
+    /**
+     * מ0.25 (באג 2): המקור של COMP /רשימה:<שם> — מהמסד (עד עכשיו נקרא עץ הרשימות של המנוע הישן, והרשימה שבמסד לא נמצאה).
+     * הרשימה: הדרך כמו שנכתבה ("א/ב"); ואם אין — בתוך "שמור לתוכנה". כל הקבצים שבה, בכל העומק, כולל מה שהרשימות החכמות
+     * שבתוכה מוצאות עכשיו. null — שגיאה (ב־err).
+     */
+    static Compare.Source compSource(Batch.Sim sim, String name, String skip, String[] err) {
+        if (sim.modeError != null) { err[0] = sim.modeError; return null; }
+        final String mode = mode(sim);
+        Store db;
+        try {
+            db = sim(sim, mode);
+        } catch (Throwable t) {
+            Log.e("DbListCmd.compSource", t);
+            err[0] = Words.Db.failed(String.valueOf(t.getMessage()));
+            return null;
+        }
+        List<String> path = Tree.parsePath(name == null ? "" : name.replace('\\', '/'));
+        long id = DbPaths.find(db, mode, path);
+        if (id == 0 && !path.isEmpty()) {
+            List<String> in = new ArrayList<String>();
+            in.add(Reserved.ROOT);
+            in.addAll(path);
+            id = DbPaths.find(db, mode, in);
+        }
+        if (id == 0) { err[0] = Words.ListCmdW.noList(name); return null; }
+        Set<String> out = new LinkedHashSet<String>();
+        if (!deep(db, id, finder(sim), out, new HashSet<Long>())) { err[0] = Words.ListCmdW.INDEX_NOT_READY; return null; }
+        Compare.Source src = new Compare.Source();
+        for (String p : out) Compare.addFile(sim.lib, src, new File(p), skip);
+        return src;
     }
 
     // ---------- מ0.14: ודא ----------
@@ -11975,6 +12128,24 @@ final class DbListCmd {
             if (s != null) s.close();
         }
     }
+
+    /**
+     * מ0.25: תיקיית היעד של קובץ כשמבקשים /מסלול מרשימה — היעד + המסלול המלא של התיקייה שלו בכונן (בלי שורש הכונן):
+     * /storage/emulated/0/Download/א/ב.pdf ← <יעד>/Download/א. כרטיס: /storage/XXXX-XXXX/… — אותו דבר. מסלול אחר — כולו.
+     */
+    static File fullPathUnder(File dest, File src) {
+        String p = src.getParentFile() == null ? "" : src.getParentFile().getAbsolutePath();
+        String rel = p;
+        if (p.startsWith("/storage/emulated/")) {
+            int e = p.indexOf('/', "/storage/emulated/".length());
+            rel = e < 0 ? "" : p.substring(e + 1);
+        } else if (p.startsWith("/storage/")) {
+            int e = p.indexOf('/', "/storage/".length());
+            rel = e < 0 ? "" : p.substring(e + 1);
+        }
+        while (rel.startsWith("/")) rel = rel.substring(1);
+        return rel.isEmpty() ? dest : new File(dest, rel);
+    }
 }
 ===== קובץ: src/com/tikiyot/vfm/DbListScreen.java =====
 package com.tikiyot.vfm;
@@ -12033,9 +12204,7 @@ public class DbListScreen extends ListScreen<Store.Member> {
     }
 
     static void goHome(DbListScreen a) {
-        if (a.atHome) return;
-        goingHome = true;
-        a.finish();
+        Home.go(a);                                                           // מ0.25: דרך אחת — הבית נפתח מחדש
     }
 
     @Override
@@ -12092,8 +12261,17 @@ public class DbListScreen extends ListScreen<Store.Member> {
 
     /** מ0.22: עם מיון (שם · גודל · תאריך). */
     static void open(android.app.Activity a, String mode, long list, String sort) {
-        a.startActivity(new Intent(a, DbListScreen.class).putExtra(EXTRA_MODE, mode).putExtra(EXTRA_LIST, list)
-                .putExtra(EXTRA_SORT, sort == null ? "" : sort));
+        a.startActivity(intent(a, mode, list, sort));
+    }
+
+    static Intent intent(android.content.Context a, String mode, long list, String sort) {
+        return new Intent(a, DbListScreen.class).putExtra(EXTRA_MODE, mode).putExtra(EXTRA_LIST, list)
+                .putExtra(EXTRA_SORT, sort == null ? "" : sort);
+    }
+
+    /** מ0.25: האם המסך הזה הוא הבית. */
+    boolean isHomeScreen() {
+        return atHome;
     }
 
     @Override
@@ -12229,6 +12407,19 @@ public class DbListScreen extends ListScreen<Store.Member> {
                 });
             }
         }).start();
+    }
+
+    /**
+     * מ0.25 (באג 29; המשתמש: "כפתור חזרה — סוכם שבסופו פותח את המעבר בין האופנים ולא סוגר את התוכנה"): בבית — "חזור"
+     * (כפתור המכשיר וגם הפקודה) פותח את בחירת האופן, כמו בבית הישן מ־1.17.6. בחירה פעילה — קודם מסתיימת.
+     */
+    @Override
+    public void onBackPressed() {
+        if (atHome && isTaskRoot() && !sel.on()) {
+            modeMenu();
+            return;
+        }
+        super.onBackPressed();
     }
 
     /** מעבר בין האופנים שיש להם מסד (כמו בבית הישן — לפי השם). */
@@ -12593,15 +12784,18 @@ public class DbListScreen extends ListScreen<Store.Member> {
     /** ➕: בבית — כמו בבית הישן (רשימה ידנית, רשימה חכמה, פקודה); ברשימה — גם קבצים מתיקייה ומחיפוש. */
     private void addMenu() {
         final boolean home = atHome;
-        String[] items = home ? new String[]{Words.Main.ADD_MANUAL, Words.Main.ADD_SMART, Words.Main.ADD_CMD}
-                : new String[]{Words.Main.ADD_MANUAL, Words.Main.ADD_SMART, Words.Main.ADD_CMD, Words.Db.ADD_FROM_FOLDER, Words.Db.ADD_FROM_SEARCH};
+        // מ0.25 (באג 27; המשתמש: "הכפולים לא נכנס עדיין בגרסה החדשה… למה לשנות ממה שהיה הקודם?"): כפולים — שוב ב־➕, באותו טופס
+        String[] items = home ? new String[]{Words.Main.ADD_MANUAL, Words.Main.ADD_SMART, Words.Main.ADD_CMD, Words.Db.ADD_DUPS}
+                : new String[]{Words.Main.ADD_MANUAL, Words.Main.ADD_SMART, Words.Main.ADD_CMD, Words.Db.ADD_DUPS,
+                Words.Db.ADD_FROM_FOLDER, Words.Db.ADD_FROM_SEARCH};
         Ui.options(this, Words.Main.WHAT_TO_ADD, items, new android.content.DialogInterface.OnClickListener() {
             @Override
             public void onClick(android.content.DialogInterface d, int which) {
                 if (which == 0) DbVerbs.newList(DbListScreen.this, mode, listId);
                 else if (which == 1) DbVerbs.newSmart(DbListScreen.this, mode, listId);
                 else if (which == 2) DbVerbs.addCommand(DbListScreen.this, mode, listId);
-                else DbVerbs.addFiles(DbListScreen.this, mode, listId, which == 3 ? DbScreen.DO_FOLDER : DbScreen.DO_SEARCH);
+                else if (which == 3) DbVerbs.newDups(DbListScreen.this, mode, listId);
+                else DbVerbs.addFiles(DbListScreen.this, mode, listId, which == 4 ? DbScreen.DO_FOLDER : DbScreen.DO_SEARCH);
             }
         });
     }
@@ -12620,7 +12814,7 @@ public class DbListScreen extends ListScreen<Store.Member> {
         menu.add(0, MENU_BACKUPS, 0, Words.Db.BACKUPS);                     // מ0.23: ישר, לא דרך מסך המסד
         menu.add(0, MENU_DB, 0, Words.Db.MENU_ACTIONS);
         menu.add(0, MENU_TESTS, 0, Words.DbCmd.MENU_TESTS);
-        menu.add(0, MENU_OLD, 0, Words.Db.MENU_OLD);
+        // מ0.25: "↩ הצד הישן" יצא — מחיקת המנוע הישן, שלב 1: אין עוד דרך אליו מבניית מ.
     }
 
     @Override
@@ -13680,6 +13874,17 @@ public class DbScreen extends Activity {
      * מסך המסד (שם מבקשים הרשאה, מעתיקים מהישן, משחזרים).
      */
     static void start(Activity a) {
+        start(a, false);
+    }
+
+    /** מ0.25 (באג 30): "בית" — הבית נפתח מחדש וכל שאר המסכים נסגרים (המשימה מתנקה). */
+    static void startFresh(Activity a) {
+        DbListScreen.goingHome = false;
+        start(a, true);
+        a.overridePendingTransition(0, 0);
+    }
+
+    private static void start(Activity a, boolean fresh) {
         String m = a.getSharedPreferences(PREFS, MODE_PRIVATE).getString(PREF_MODE, "");
         if (m.isEmpty()) m = Importer.activeMode(oldData());
         long home = 0;
@@ -13694,8 +13899,9 @@ public class DbScreen extends Activity {
                 if (s != null) s.close();
             }
         }
-        if (home != 0) DbListScreen.open(a, m, home);
-        else a.startActivity(new android.content.Intent(a, DbScreen.class));
+        android.content.Intent i = home != 0 ? DbListScreen.intent(a, m, home, null) : new android.content.Intent(a, DbScreen.class);
+        if (fresh) i.addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK | android.content.Intent.FLAG_ACTIVITY_CLEAR_TASK);
+        a.startActivity(i);
     }
 
     /** מ0.9.1: האופן שנבחר — נזכר גם למסך המסד וגם למראה המוכר. */
@@ -15397,6 +15603,17 @@ final class DbVerbs {
 
     /** האם הפקודות עכשיו של המסד. */
     static boolean active() {
+        if (Flavor.M) {
+            // מ0.25 (מחיקת המנוע הישן, שלב 1): בבניית מ הפקודות תמיד של המסד — גם כשמסך המסד עוד לא הוצג
+            // (שיתוף מאפליקציה אחרת, קיצור דרך): האופן — זה שנשמר.
+            if (DbListScreen.currentMode == null && DbListScreen.app != null)
+                try {
+                    DbListScreen.currentMode = DbScreen.savedMode(DbListScreen.app);
+                } catch (Throwable t) {
+                    Log.e("DbVerbs.active", t);
+                }
+            return DbListScreen.currentMode != null && DbListScreen.app != null;
+        }
         return DbListScreen.alive > 0 && DbListScreen.currentMode != null && !Home.inOld;
     }
 
@@ -15480,6 +15697,35 @@ final class DbVerbs {
         });
     }
 
+    /**
+     * מ0.25 (באג 27): כפולים — אותו טופס כמו בבית הישן (FnDup); נשמר כקובץ פקודות קטן ("פתח כלי "כפולים" …") שנכנס לרשימה,
+     * כמו שהייבוא מהישן עושה לכלי כפולים קיים (מ0.19). נגיעה — פותחת את מסך הכפולים עם ההגדרות האלה.
+     */
+    static void newDups(final Activity a, final String mode, final long in) {
+        final Func f = Func.byKind(FnDup.KIND);
+        if (f == null) return;
+        f.configure(a, null, null, new Func.Done() {
+            @Override
+            public void ok(String name, Target t) {
+                final java.io.File file = Shortcuts.write(f.icon, name == null || name.isEmpty() ? f.title : name,
+                        Verbs.toolLine(t.kind, t.params));
+                if (file == null) {
+                    Ui.toast(a, Words.SAVE_FAILED);
+                    return;
+                }
+                write(a, mode, new Job() {
+                    @Override
+                    public long run(Store s, List<String> p) {
+                        DbFiles.add(s, in != 0 ? in : Importer.home(s), java.util.Collections.singletonList(file.getAbsolutePath()), null, true);
+                        return in;
+                    }
+                }, null);
+                if (a instanceof DbListScreen) ((DbListScreen) a).reload();
+                f.open(a, t);
+            }
+        });
+    }
+
     /** פקודה (מתפריט הפקודות האחד) — קובץ הפקודות נכנס לרשימה. */
     static void addCommand(final Activity a, final String mode, final long in) {
         CmdMenu.show(a, null, new CmdMenu.Picked() {
@@ -15511,6 +15757,26 @@ final class DbVerbs {
         else {
             DbScreen.saveMode(a, mode);
             DbListScreen.open(a, mode, id);
+        }
+    }
+
+    /**
+     * מ0.25 (באג 7): פקודות הפתיחה של קובץ — כולן, בסדר הכתיבה. o[1] != null — החלק הכותב כבר בוצע באופן הזה (צור / עדכן),
+     * ולכן כאן רק פותחים (בלי ליצור שוב, ובאופן של הקובץ — לא באופן שפתוח).
+     */
+    static void runOpens(Activity a, List<String[]> opens, java.io.File here) {
+        for (String[] o : opens) {
+            if (o[1] == null) { Verbs.run(a, o[0], here); continue; }
+            Verbs.Cmd c = Verbs.parse(o[0]);
+            if (c.kind.equals(Verbs.K_LIST)) openPath(a, o[1], Tree.parsePath(c.arg));
+            else {
+                long id = readSmart(a, o[1], c.arg);
+                if (id == 0) Ui.toast(a, Words.Verb.NOT_FOUND + c.arg);
+                else {
+                    DbScreen.saveMode(a, o[1]);
+                    openSmart(a, o[1], id, c.sort);
+                }
+            }
         }
     }
 
@@ -18850,8 +19116,14 @@ public final class FnApp extends Func {
     }
 
     @Override
-    public void open(Activity a, Target t) {
+    public void open(final Activity a, Target t) {
         String pkg = t.get("חבילה", "");  // תחביר
+        if (pkg.isEmpty()) {                                                  // מ0.25: בלי חבילה — שואלים (פרמטר חסר נשאל), ופותחים
+            configure(a, null, null, new Done() {
+                @Override public void ok(String name, Target picked) { open(a, picked); }
+            });
+            return;
+        }
         Intent i = pkg.isEmpty() ? null : a.getPackageManager().getLaunchIntentForPackage(pkg);
         if (i == null) Ui.toast(a, Words.AppT.APP_NOT_FOUND); else a.startActivity(i);
     }
@@ -20572,13 +20844,15 @@ public class Home extends Activity {
             openOld(a);
             return;
         }
-        if (a instanceof DbListScreen) {                                       // מ0.9.2: במראה המוכר של המסד — הבית של המסד
-            DbListScreen.goHome((DbListScreen) a);
-            return;
-        }
-        if (DbListScreen.alive > 0) {                                         // גם ממסך שנפתח ממנו (רשימה חכמה, קבצים)
-            DbListScreen.goingHome = true;
-            a.finish();
+        if (Flavor.M) {
+            // מ0.25 (באג 30; המשתמש: "כפתור בית לא תמיד עובד… מבצע 'חזור' לעיתים"): לא סימון שכל מסך צריך לבדוק — הבית נפתח
+            // מחדש, וכל המסכים שמעליו נסגרים יחד. עריכה שלא נשמרה — לא מנקים (כדי לא לאבד אותה).
+            if (a instanceof DbListScreen && ((DbListScreen) a).isHomeScreen()) return;
+            if (BatchEditScreen.anyUnsaved()) {
+                Ui.toast(a, Words.Db.HOME_UNSAVED);
+                return;
+            }
+            DbScreen.startFresh(a);
             return;
         }
         a.startActivity(new android.content.Intent(a, Home.class)
@@ -31953,7 +32227,12 @@ public class Provider extends ContentProvider {
                 || p.startsWith("/data/media/")) ? new File(p) : null;
     }
 
-    @Override public boolean onCreate() { return true; }
+    @Override
+    public boolean onCreate() {
+        // מ0.25: ההקשר של התוכנה כבר בעליית התהליך — לפקודות שרצות במסד לפני שמסך המסד הוצג (DbVerbs.active).
+        if (Flavor.M && getContext() != null && DbListScreen.app == null) DbListScreen.app = getContext().getApplicationContext();
+        return true;
+    }
 
 
     @Override
@@ -33156,9 +33435,10 @@ public class RunScreen extends Activity {
                     else Verbs.run(RunScreen.this, Verbs.openList(open), file.getParentFile());
                 }
             }));
-        if (plan.open != null && !plan.trouble)
-            bs.add(btn("▶ " + Verbs.label(Verbs.parse(plan.open)), new View.OnClickListener() {
-                @Override public void onClick(View v) { Verbs.run(RunScreen.this, plan.open, file.getParentFile()); }
+        if (plan.open != null && !plan.trouble)                                    // מ0.25: כל פקודות הפתיחה, בסדר
+            bs.add(btn("▶ " + Verbs.label(Verbs.parse(plan.open)) + (plan.opens.size() > 1 ? " (+" + (plan.opens.size() - 1) + ")" : ""),
+                    new View.OnClickListener() {
+                @Override public void onClick(View v) { DbVerbs.runOpens(RunScreen.this, plan.opens, file.getParentFile()); }
             }));
         if (plan.start != null)
             bs.add(btn("▶ " + (Batch.isHome(plan.start) ? Words.Cmd.HOME_AT_END : plan.start.getName()), new View.OnClickListener() {
@@ -47566,6 +47846,8 @@ public final class Words {
         public static final String JOURNAL_USAGE = "/יומן:<קובץ> — רק ב־COPY וב־MOVE, עם שם קובץ";
         public static final String JOURNAL_FAILED = " · היומן לא נכתב";
         public static final String KEEP_PATH = " · שומר מסלול";
+        /** מ0.25: /תפוס:לדלג — כמה דולגו. מתחיל ב־" · " (שלושה תווים) — מי שמציג לבד חותך. */
+        public static String skippedTaken(int n) { return " · דולגו " + n + " (שם תפוס)"; }
         /** 1.20.0 */
         public static final String NO_COMPARE = "אין השוואה (COMP) בשורה קודמת";
         public static final String COMPARE_BROKEN = "שורה קודמת על אותה השוואה נכשלה — לא ממשיכים עליה";
@@ -49562,9 +49844,11 @@ public final class Words {
 
     /** מ0.12: פקודות הרשימות על המסד (DbListCmd) */
     public static final class DbCmd {
+        public static String updated(String name) { return "עודכנה: " + name; }
         private DbCmd() { }
 
         // מ0.23: יצוא וייבוא — קובצי פקודות מוכנים ב־⭐
+        public static final String TOOL_BAR = "פס צף", TOOL_APP = "פתיחת אפליקציה", TOOL_DUPS = "כפולים בכל הכוננים";   // בכונן (מ0.25)
         public static final String TOOL_EXPORT = "יצוא רשימה", TOOL_IMPORT = "ייבוא רשימה",   // בכונן
                 HOLE_EXPORT = "רשימה-לייצוא", HOLE_FILE = "שם-הקובץ-בתיקיית-יצוא", HOLE_INTO = "לתוך-רשימה";   // תחביר
 
@@ -49814,6 +50098,8 @@ public final class Words {
 
     /** מ0.1: מנוע המסד — המסך (DbScreen) והבנייה השנייה (Flavor). */
     public static final class Db {
+        public static final String ADD_DUPS = "⧉  כפולים";
+        public static final String HOME_UNSAVED = "יש קובץ פקודות פתוח עם שינויים שלא נשמרו — לשמור או לסגור אותו, ואז בית";
         private Db() { }
 
         // מ0.23: בורר הרשימות של המסד

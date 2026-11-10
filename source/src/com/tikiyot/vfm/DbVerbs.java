@@ -16,6 +16,17 @@ final class DbVerbs {
 
     /** האם הפקודות עכשיו של המסד. */
     static boolean active() {
+        if (Flavor.M) {
+            // מ0.25 (מחיקת המנוע הישן, שלב 1): בבניית מ הפקודות תמיד של המסד — גם כשמסך המסד עוד לא הוצג
+            // (שיתוף מאפליקציה אחרת, קיצור דרך): האופן — זה שנשמר.
+            if (DbListScreen.currentMode == null && DbListScreen.app != null)
+                try {
+                    DbListScreen.currentMode = DbScreen.savedMode(DbListScreen.app);
+                } catch (Throwable t) {
+                    Log.e("DbVerbs.active", t);
+                }
+            return DbListScreen.currentMode != null && DbListScreen.app != null;
+        }
         return DbListScreen.alive > 0 && DbListScreen.currentMode != null && !Home.inOld;
     }
 

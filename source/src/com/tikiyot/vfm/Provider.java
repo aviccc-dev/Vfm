@@ -28,7 +28,12 @@ public class Provider extends ContentProvider {
                 || p.startsWith("/data/media/")) ? new File(p) : null;
     }
 
-    @Override public boolean onCreate() { return true; }
+    @Override
+    public boolean onCreate() {
+        // מ0.25: ההקשר של התוכנה כבר בעליית התהליך — לפקודות שרצות במסד לפני שמסך המסד הוצג (DbVerbs.active).
+        if (Flavor.M && getContext() != null && DbListScreen.app == null) DbListScreen.app = getContext().getApplicationContext();
+        return true;
+    }
 
 
     @Override

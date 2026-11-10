@@ -664,7 +664,7 @@ public class DbListScreen extends ListScreen<Store.Member> {
         menu.add(0, MENU_BACKUPS, 0, Words.Db.BACKUPS);                     // מ0.23: ישר, לא דרך מסך המסד
         menu.add(0, MENU_DB, 0, Words.Db.MENU_ACTIONS);
         menu.add(0, MENU_TESTS, 0, Words.DbCmd.MENU_TESTS);
-        menu.add(0, MENU_OLD, 0, Words.Db.MENU_OLD);
+        // מ0.25: "↩ הצד הישן" יצא — מחיקת המנוע הישן, שלב 1: אין עוד דרך אליו מבניית מ.
     }
 
     @Override
