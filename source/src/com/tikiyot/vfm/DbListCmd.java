@@ -1007,6 +1007,38 @@ final class DbListCmd {
         return mode;
     }
 
+    /**
+     * מ0.25 (באג 2): המקור של COMP /רשימה:<שם> — מהמסד (עד עכשיו נקרא עץ הרשימות של המנוע הישן, והרשימה שבמסד לא נמצאה).
+     * הרשימה: הדרך כמו שנכתבה ("א/ב"); ואם אין — בתוך "שמור לתוכנה". כל הקבצים שבה, בכל העומק, כולל מה שהרשימות החכמות
+     * שבתוכה מוצאות עכשיו. null — שגיאה (ב־err).
+     */
+    static Compare.Source compSource(Batch.Sim sim, String name, String skip, String[] err) {
+        if (sim.modeError != null) { err[0] = sim.modeError; return null; }
+        final String mode = mode(sim);
+        Store db;
+        try {
+            db = sim(sim, mode);
+        } catch (Throwable t) {
+            Log.e("DbListCmd.compSource", t);
+            err[0] = Words.Db.failed(String.valueOf(t.getMessage()));
+            return null;
+        }
+        List<String> path = Tree.parsePath(name == null ? "" : name.replace('\\', '/'));
+        long id = DbPaths.find(db, mode, path);
+        if (id == 0 && !path.isEmpty()) {
+            List<String> in = new ArrayList<String>();
+            in.add(Reserved.ROOT);
+            in.addAll(path);
+            id = DbPaths.find(db, mode, in);
+        }
+        if (id == 0) { err[0] = Words.ListCmdW.noList(name); return null; }
+        Set<String> out = new LinkedHashSet<String>();
+        if (!deep(db, id, finder(sim), out, new HashSet<Long>())) { err[0] = Words.ListCmdW.INDEX_NOT_READY; return null; }
+        Compare.Source src = new Compare.Source();
+        for (String p : out) Compare.addFile(sim.lib, src, new File(p), skip);
+        return src;
+    }
+
     // ---------- מ0.14: ודא ----------
 
     /** מה לוודא: קיימת/חסרה, ומספרי רשימות ופריטים (-1 — לא נבדק). */

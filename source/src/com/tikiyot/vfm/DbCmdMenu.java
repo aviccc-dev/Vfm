@@ -124,6 +124,11 @@ final class DbCmdMenu {
                 + ListCmd.FILE_WORD + " \"*\""});   // תחביר
         out.add(new String[]{"📥", Words.DbCmd.TOOL_IMPORT, "COPY " + ListCmd.FILE_WORD + " \"<" + Words.DbCmd.HOLE_FILE + ">\" "
                 + ListCmd.MANUAL + " \"<" + Words.DbCmd.HOLE_INTO + ">\""});   // תחביר
+        // מ0.25 (באג 28; המשתמש: "יכולים להישאר בפקודות. ותרשום לך להכניס אותם לשמורים לתוכנה"): הכלים שלא עברו לבית
+        // (סל והגדרות — כבר בפקודות המערכת). כפולים — גם כאן, עם ברירות המחדל.
+        out.add(new String[]{"⧉", Words.DbCmd.TOOL_DUPS, Verbs.toolLine(FnDup.KIND, new java.util.LinkedHashMap<String, String>())});
+        out.add(new String[]{"📌", Words.DbCmd.TOOL_BAR, Verbs.toolLine("פס", new java.util.LinkedHashMap<String, String>())});   // תחביר
+        out.add(new String[]{"🔗", Words.DbCmd.TOOL_APP, Verbs.toolLine("אפליקציה", new java.util.LinkedHashMap<String, String>())});   // תחביר; בלי חבילה — נשאל
         return out;
     }
 

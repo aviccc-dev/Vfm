@@ -2253,6 +2253,7 @@ public final class Words {
         private DbCmd() { }
 
         // מ0.23: יצוא וייבוא — קובצי פקודות מוכנים ב־⭐
+        public static final String TOOL_BAR = "פס צף", TOOL_APP = "פתיחת אפליקציה", TOOL_DUPS = "כפולים בכל הכוננים";   // בכונן (מ0.25)
         public static final String TOOL_EXPORT = "יצוא רשימה", TOOL_IMPORT = "ייבוא רשימה",   // בכונן
                 HOLE_EXPORT = "רשימה-לייצוא", HOLE_FILE = "שם-הקובץ-בתיקיית-יצוא", HOLE_INTO = "לתוך-רשימה";   // תחביר
 
@@ -2502,6 +2503,7 @@ public final class Words {
 
     /** מ0.1: מנוע המסד — המסך (DbScreen) והבנייה השנייה (Flavor). */
     public static final class Db {
+        public static final String ADD_DUPS = "⧉  כפולים";
         public static final String HOME_UNSAVED = "יש קובץ פקודות פתוח עם שינויים שלא נשמרו — לשמור או לסגור אותו, ואז בית";
         private Db() { }
 

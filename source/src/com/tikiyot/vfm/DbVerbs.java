@@ -99,6 +99,35 @@ final class DbVerbs {
         });
     }
 
+    /**
+     * מ0.25 (באג 27): כפולים — אותו טופס כמו בבית הישן (FnDup); נשמר כקובץ פקודות קטן ("פתח כלי "כפולים" …") שנכנס לרשימה,
+     * כמו שהייבוא מהישן עושה לכלי כפולים קיים (מ0.19). נגיעה — פותחת את מסך הכפולים עם ההגדרות האלה.
+     */
+    static void newDups(final Activity a, final String mode, final long in) {
+        final Func f = Func.byKind(FnDup.KIND);
+        if (f == null) return;
+        f.configure(a, null, null, new Func.Done() {
+            @Override
+            public void ok(String name, Target t) {
+                final java.io.File file = Shortcuts.write(f.icon, name == null || name.isEmpty() ? f.title : name,
+                        Verbs.toolLine(t.kind, t.params));
+                if (file == null) {
+                    Ui.toast(a, Words.SAVE_FAILED);
+                    return;
+                }
+                write(a, mode, new Job() {
+                    @Override
+                    public long run(Store s, List<String> p) {
+                        DbFiles.add(s, in != 0 ? in : Importer.home(s), java.util.Collections.singletonList(file.getAbsolutePath()), null, true);
+                        return in;
+                    }
+                }, null);
+                if (a instanceof DbListScreen) ((DbListScreen) a).reload();
+                f.open(a, t);
+            }
+        });
+    }
+
     /** פקודה (מתפריט הפקודות האחד) — קובץ הפקודות נכנס לרשימה. */
     static void addCommand(final Activity a, final String mode, final long in) {
         CmdMenu.show(a, null, new CmdMenu.Picked() {

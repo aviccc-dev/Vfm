@@ -245,6 +245,11 @@ final class Compare {
         }
     }
 
+    /** מ0.25: קובץ אחד למקור (לרשימה מהמסד — DbListCmd.compSource). */
+    static void addFile(Library lib, Source src, File f, String skip) {
+        if (f.isFile() && !Physical.isPartial(f.getName())) add(lib, src, f, skip);
+    }
+
     private static void add(Library lib, Source src, File f, String skip) {
         String p = f.getAbsolutePath();
         if (skip != null && p.startsWith(skip + "/")) return;

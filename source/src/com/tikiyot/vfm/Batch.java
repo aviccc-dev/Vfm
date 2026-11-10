@@ -1220,13 +1220,18 @@ final class Batch {
         if (!b.isDirectory() && !sim.isDir(b)) { s.error = Words.Cmd.compareNoDest(args.get(0)); return; }
         if (sim.lib == null || !sim.lib.ready) { s.error = Words.Cmd.NEEDS_INDEX; return; }
         String[] err = {null};
-        Tree[] tt = {null};
-        Ini[] ini = {null};
-        Tree.Node n = findList(s.listName, tt, err, ini);
-        if (n == null) { s.error = err[0]; return; }
-        Tree t = tt[0];
         File skip = b.getName().equals(State.CURRENT) && b.getParentFile() != null ? b.getParentFile() : b;
-        Compare.Source src = Compare.ofList(sim.lib, t, n, s.hidden, skip.getAbsolutePath(), ini[0]);
+        Compare.Source src;
+        if (DbVerbs.active()) {                                             // מ0.25 (באג 2): עובדים במסד — הרשימה מהמסד
+            src = DbListCmd.compSource(sim, s.listName, skip.getAbsolutePath(), err);
+            if (src == null) { s.error = err[0]; return; }
+        } else {
+            Tree[] tt = {null};
+            Ini[] ini = {null};
+            Tree.Node n = findList(s.listName, tt, err, ini);
+            if (n == null) { s.error = err[0]; return; }
+            src = Compare.ofList(sim.lib, tt[0], n, s.hidden, skip.getAbsolutePath(), ini[0]);
+        }
         if (src.files.isEmpty() && src.emptyDirs.isEmpty()) { s.error = Words.Cmd.listEmpty(s.listName); return; }
         Compare.Result r = Compare.byList(sim.lib, src, b, s.hidden);
         sim.compare = r;

@@ -17,8 +17,14 @@ public final class FnApp extends Func {
     }
 
     @Override
-    public void open(Activity a, Target t) {
+    public void open(final Activity a, Target t) {
         String pkg = t.get("חבילה", "");  // תחביר
+        if (pkg.isEmpty()) {                                                  // מ0.25: בלי חבילה — שואלים (פרמטר חסר נשאל), ופותחים
+            configure(a, null, null, new Done() {
+                @Override public void ok(String name, Target picked) { open(a, picked); }
+            });
+            return;
+        }
         Intent i = pkg.isEmpty() ? null : a.getPackageManager().getLaunchIntentForPackage(pkg);
         if (i == null) Ui.toast(a, Words.AppT.APP_NOT_FOUND); else a.startActivity(i);
     }
