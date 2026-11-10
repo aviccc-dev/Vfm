@@ -56,6 +56,7 @@ public final class Tests {
         run("שליחת תיקיות — אריזה ופריסה של ZIP (116)", new Runnable() { public void run() { zipRoundTrip(); } });
         run("שליחה למכשיר — רק תוכנות העברה (117)", new Runnable() { public void run() { transferApps(); } });
         run("קובצי פקודות בסגנון bat — המנוע (117א)", new Runnable() { public void run() { batch(); } });
+        run("מ0.27: RD /S ואחריו MD ו־COMP — ההדמיה שוכחת מה שהיה בתיקייה", new Runnable() { public void run() { m027(); } });
         run("קובצי פקודות — השורה כשדות לטופס (117א, שלב 2)", new Runnable() { public void run() { batchForm(); } });
         run("תיקוני הביקורות השישית והשביעית (118–122, 134, 135, 139)", new Runnable() { public void run() { review7(); } });
         run("תיקוני באגים 123, 124, 137", new Runnable() { public void run() { review7b(); } });
@@ -2560,6 +2561,23 @@ public final class Tests {
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
+    }
+
+    /** מ0.27 (נמצא בהרצה במכשיר, 10.11): אחרי RD /S, MD לתת־תיקייה נחשב "כבר קיימת" ולא רץ, ו־COMP השווה מול מה שנמחק. */
+    private static void m027() {
+        File root = new File(home, "כונן-027");
+        wipe(root);
+        File here = new File(root, "כאן");
+        here.mkdirs();
+        File src = new File(root, "מקור"), work = new File(root, "עבודה");
+        mk(src, "א.txt", 10);
+        mk(new File(work, "נוכחי"), "א.txt", 10);
+        java.util.Map<String, String> vars = Batch.vars(here, root.getAbsolutePath(), null);
+        Batch.Plan p = Batch.plan("RD \"" + work + "\" /S\nMD \"" + work + "/נוכחי\"\nCOMP \"" + src + "\" \"" + work + "/נוכחי\"\n"
+                + "COPY %רק-במקור% \"" + work + "/נוכחי\"", here, vars);
+        eq("מ0.27: בלי שגיאות", 0, p.errors);
+        check("מ0.27: MD אחרי RD /S — רץ (לא \"כבר קיימת\")", !p.steps.get(1).noop);
+        eq("מ0.27: COMP אחרי RD /S — מול תיקייה ריקה: הקובץ רק במקור", 1, p.steps.get(3).files.size());
     }
 
     private static void batchRun() throws Exception {

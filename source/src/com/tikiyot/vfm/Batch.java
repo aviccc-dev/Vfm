@@ -382,6 +382,9 @@ final class Batch {
 
     // ---------- תכנון ----------
 
+    /** מ0.27: יעד שנמחק בשורה קודמת (RD) — ההשוואה מולו היא מול תיקייה ריקה, לא מול מה שעוד בכונן בזמן התכנון. */
+    private static final File GHOST = new File("/\u0000none");
+
     /** מתכנן את כל הקובץ, בלי לשנות דבר. */
     /**
      * מה שהשורות הקודמות ייצרו או יזיזו — כדי שהתכנון יכיר אותן לפני שבוצעו (118): תיקייה מ-MD,
@@ -390,6 +393,29 @@ final class Batch {
     static final class Sim {
         final java.util.Set<String> dirs = new java.util.HashSet<String>();
         final java.util.Set<String> gone = new java.util.HashSet<String>();
+        /**
+         * מ0.27: תיקיות ש־RD מחק בשורה קודמת — כל מה שהיה בהן בכונן כבר לא נחשב (גם אם התיקייה נוצרת שוב ב־MD):
+         * רק מה שהשורות שאחרי יוצרות. בלי זה MD אחרי RD /S נחשב "כבר קיימת" ולא רץ, ו־COMP השווה מול מה שנמחק.
+         */
+        final java.util.Set<String> wiped = new java.util.HashSet<String>();
+
+        boolean underWiped(String p) {
+            for (String w : wiped) if (p.equals(w) || p.startsWith(w + "/")) return true;
+            return false;
+        }
+
+        /** RD: התיקייה וכל מה שבתוכה — יוצאים מההדמיה. */
+        void wipe(String d) {
+            wiped.add(d);
+            gone.add(d);
+            String in = d + "/";
+            for (java.util.Iterator<String> it = dirs.iterator(); it.hasNext(); ) {
+                String x = it.next();
+                if (x.equals(d) || x.startsWith(in)) it.remove();
+            }
+            for (java.util.Iterator<String> it = added.keySet().iterator(); it.hasNext(); ) if (it.next().startsWith(in)) it.remove();
+        }
+
         /** קובץ שיהיה ← הקובץ שממנו הוא בא (לגודל ולתאריך). */
         final Map<String, File> added = new LinkedHashMap<String, File>();
         /** 1.20.0: ההשוואה האחרונה (COMP), והאינדקס לחתימות שכבר חושבו (יכול להיות null). */
@@ -407,12 +433,13 @@ final class Batch {
 
         boolean isDir(File d) {
             String p = d.getAbsolutePath();
-            return !gone.contains(p) && (d.isDirectory() || dirs.contains(p));
+            if (gone.contains(p)) return false;
+            return dirs.contains(p) || (d.isDirectory() && !underWiped(p));
         }
 
         boolean isFile(File f) {
             String p = f.getAbsolutePath();
-            return added.containsKey(p) || (!gone.contains(p) && f.isFile());
+            return added.containsKey(p) || (!gone.contains(p) && f.isFile() && !underWiped(p));
         }
 
         /** המקור האמיתי (לגודל ולתאריך). */
@@ -424,7 +451,7 @@ final class Batch {
         /** הקבצים שיהיו בתיקייה, ממוינים. */
         List<File> files(File dir) {
             java.util.TreeMap<String, File> out = new java.util.TreeMap<String, File>();
-            File[] all = dir.listFiles();
+            File[] all = underWiped(dir.getAbsolutePath()) ? null : dir.listFiles();
             if (all != null)
                 for (File x : all)
                     if (x.isFile() && !gone.contains(x.getAbsolutePath())) out.put(x.getName(), x);
@@ -936,7 +963,7 @@ final class Batch {
             }
             s.dirs.add(d.getAbsolutePath());
             s.describe = Words.Cmd.folderToTrash(Bidi.path(d.getAbsolutePath()));
-            sim.gone.add(d.getAbsolutePath());
+            sim.wipe(d.getAbsolutePath());
         } else if (cmd.equals("DEL")) {
             if (paths.size() != 1) { s.error = Words.Cmd.usage(cmd); return; }
             if (s.recursive) { s.error = Words.Cmd.DEL_S; return; }
@@ -1121,7 +1148,8 @@ final class Batch {
         if (!a.isDirectory()) { s.error = Words.Cmd.compareNoSource(args.get(0)); return; }
         if (!b.isDirectory() && !sim.isDir(b)) { s.error = Words.Cmd.compareNoDest(args.get(1)); return; }
         if (Physical.inside(a, b) || Physical.inside(b, a)) { s.error = Words.Disk.NOT_INTO_ITSELF; return; }
-        Compare.Result r = Compare.byPath(sim.lib, a, b, s.hidden);
+        Compare.Result r = Compare.byPath(sim.lib, a, sim.underWiped(b.getAbsolutePath()) ? GHOST : b, s.hidden);   // מ0.27
+        r.b = b.getAbsolutePath();
         sim.compare = r;
         s.dest = b;
         s.describe = Words.Cmd.compared(Bidi.path(r.a), Bidi.path(r.b),
@@ -1231,7 +1259,8 @@ final class Batch {
             src = Compare.ofList(sim.lib, tt[0], n, s.hidden, skip.getAbsolutePath(), ini[0]);
         }
         if (src.files.isEmpty() && src.emptyDirs.isEmpty()) { s.error = Words.Cmd.listEmpty(s.listName); return; }
-        Compare.Result r = Compare.byList(sim.lib, src, b, s.hidden);
+        Compare.Result r = Compare.byList(sim.lib, src, sim.underWiped(b.getAbsolutePath()) ? GHOST : b, s.hidden);   // מ0.27
+        r.b = b.getAbsolutePath();
         sim.compare = r;
         s.dest = b;
         s.describe = Words.Cmd.compared(s.listName, Bidi.path(r.b),
