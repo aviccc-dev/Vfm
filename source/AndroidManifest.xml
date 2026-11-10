@@ -44,7 +44,6 @@
 
         <activity android:name=".SearchScreen" android:exported="false"
             android:windowSoftInputMode="stateVisible|adjustResize" />
-        <activity android:name=".VirtualScreen" android:exported="false" />
         <activity android:name=".DupScreen" android:exported="false" />
         <activity android:name=".TrashScreen" android:exported="false" />
         <activity android:name=".DiskScreen" android:exported="false" />

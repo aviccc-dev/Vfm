@@ -219,13 +219,7 @@ public final class Modes {
      */
     public static void reenter(Activity a) {
         Library lib = Library.get(a);
-        if (lib.busy || !(a instanceof Home)) {
-            relaunch(a);
-            return;
-        }
-        forget();
-        lib.forgetMode();
-        ((Home) a).enter();
+        relaunch(a);                                                          // מ0.26: הבית הישן נמחק — תמיד סגירה ופתיחה
     }
 
     /** סוגר את התוכנה ופותח אותה מחדש (אחרי שהמצביע כבר נכתב והאינדקס נשמר). */

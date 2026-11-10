@@ -24,7 +24,7 @@ final class DbPicker {
 
     /** האם בוחרים מהמסד: בבניית מ, לא בצד הישן, ויש מסד לאופן. */
     static boolean on(android.content.Context c) {
-        if (!Flavor.M || Home.inOld) return false;
+        if (!Flavor.M) return false;
         String m = mode(c);
         return m != null && !m.isEmpty() && DbScreen.dbFile(c, m).isFile();
     }

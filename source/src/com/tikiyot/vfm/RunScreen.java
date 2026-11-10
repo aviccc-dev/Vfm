@@ -375,13 +375,6 @@ public class RunScreen extends Activity {
             public void run() {
                 List<String> gone = new ArrayList<String>();
                 if (DbVerbs.active()) gone = DbListCmd.removeLists(made, plan.sim == null ? null : plan.sim.mode);                // מ0.12: במסד
-                else for (List<String> p : made) {
-                    if (Tree.load().find(p) == null) continue;
-                    List<String> parent = new ArrayList<String>(p.subList(0, p.size() - 1));
-                    String leaf = p.get(p.size() - 1);
-                    VClip.remove(parent, java.util.Collections.singletonList(new VClip.Item(VClip.LIST, leaf, leaf)));
-                    gone.add(ListCmd.pathText(p));
-                }
                 Log.i(Words.Run.CLEANED + ": " + gone);
                 bodies[3].addView(warn(Words.Run.CLEANED + ": " + join(gone)));
                 b.setEnabled(false);

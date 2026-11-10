@@ -27,7 +27,7 @@ final class DbVerbs {
                 }
             return DbListScreen.currentMode != null && DbListScreen.app != null;
         }
-        return DbListScreen.alive > 0 && DbListScreen.currentMode != null && !Home.inOld;
+        return DbListScreen.alive > 0 && DbListScreen.currentMode != null;
     }
 
     /** מבצע את הפקודה במסד; false — אינה פקודת רשימות (ממשיכה כרגיל: מסכים, תיקייה, חיפוש, הרצה). */

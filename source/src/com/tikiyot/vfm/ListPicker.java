@@ -25,6 +25,10 @@ public final class ListPicker {
     /** base: הרשימה של המופע. אם null — הרשימות של כל הכלים. */
     public static void choose(final Activity a, final String title, final List<String> except,
                               final List<String> base, final Picked cb) {
+        if (Flavor.M) {                                                       // מ0.26: רשימות — רק במסד; הבורר הישן לא כותב עוד
+            Ui.toast(a, Words.DbCmd.NO_DB);
+            return;
+        }
         PickerModel m = new PickerModel(new TreeSource(Tree.load()), base == null ? FnVirtual.allBases() : null, except, base);
         PickDialog.Creator creator = new PickDialog.Creator() {
             @Override
@@ -43,6 +47,10 @@ public final class ListPicker {
 
     /** רשימה חדשה בתוך parent: שם, יצירה, ו־done עם המסלול שלה (גם למסך השיתוף). */
     static void create(final Activity a, final ArrayList<String> parent, final PickDialog.Chosen done) {
+        if (Flavor.M) {
+            Ui.toast(a, Words.DbCmd.NO_DB);
+            return;
+        }
         Ui.askText(a, Words.NEW_LIST, "", Words.ListP.LIST_NAME, new Ui.Text1() {
             @Override
             public void ok(String name) {

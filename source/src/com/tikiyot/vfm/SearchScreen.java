@@ -550,7 +550,7 @@ public class SearchScreen extends Activity implements Clip.Holder {
             return;
         }
         if (!it.smart) {
-            VirtualScreen.open(this, it.path, null, null);                    // 1.13.1: החזרה — לכאן
+            Ui.toast(this, Words.Inner.GONE);                                 // מ0.26: רשימה ידנית של המנוע הישן — אין עוד
             return;
         }
         Nested.open(this, it);                                                // 1.15.1: גם כפולים

@@ -397,8 +397,6 @@ final class Batch {
         Library lib;
         /** 1.24.0: הרשימות בזיכרון — מה יהיה בהן אחרי השורות שלפני (ListCmd); null — עוד לא נטען. לא נשמר. */
         Tree tree;
-        /** 1.25.4: הקבצים של רשימות חכמות — חיפוש אחד לכל תנאי, לכל הקובץ (גם בעותקים שלהן). */
-        ListCmd.Lenient files;
         /** מ0.12: כשעובדים במסד — עותק של המסד בזיכרון (DbListCmd), והקבצים לכל תנאי; null — עוד לא נטען. לא נשמר. */
         Store db;
         /** מ0.15: האופן מ"אופן" בקובץ; null — האופן שפתוח. */
@@ -880,7 +878,7 @@ final class Batch {
             }
         }
         if (DbVerbs.active()) DbListCmd.plan(s, cmd, lp, sw, sim, fsFiles, fsDest);   // מ0.12: עובדים במסד
-        else ListCmd.plan(s, cmd, lp, sw, sim, fsFiles, fsDest);
+        else s.error = Words.DbCmd.NO_DB;                                    // מ0.26: המנוע הישן נמחק — רשימות רק במסד
     }
 
     private static void plan(Step s, String cmd, List<String> args, List<String> paths, List<String> sw, Sim sim) {

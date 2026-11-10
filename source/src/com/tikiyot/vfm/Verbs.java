@@ -325,8 +325,7 @@ final class Verbs {
             return true;
         }
         if (c.kind.equals(K_BACK)) {                                          // באג (1.17.6): בבית — יציאה מהתוכנה;
-            if (a instanceof Home) ((Home) a).modeMenu();                     // עכשיו — בחירת אופן עבודה (המשתמש)
-            else a.onBackPressed();
+            a.onBackPressed();                                                // בבית של המסד — בחירת אופן (DbListScreen.onBackPressed)
         }
         else if (c.kind.equals(K_MENU)) CmdMenu.showList(a, Tree.parsePath(c.arg), null, null);   // 1.17.0
         else if (c.kind.equals(K_TOOL)) {                                       // מ0.19: הכלי עם הפרמטרים שבשורה
@@ -341,17 +340,9 @@ final class Verbs {
             if (new File(c.arg).isDirectory()) DiskScreen.open(a, c.arg);
             else Ui.toast(a, Words.Verb.NOT_FOUND + c.arg);
         } else if (c.kind.equals(K_LIST)) {
-            ArrayList<String> path = Tree.parsePath(c.arg);
-            if (c.verb.equals(CREATE)) ensureList(path);
-            if (path.isEmpty() || Tree.load().find(path) == null) Ui.toast(a, Words.Verb.NOT_FOUND + c.arg);
-            else VirtualScreen.open(a, path, c.sort, null);                    // 1.13.1: החזרה — למסך שקרא
+            Ui.toast(a, Words.DbCmd.NO_DB);                                   // מ0.26: רשימות — רק במסד (DbVerbs.run, למעלה)
         } else if (c.kind.equals(K_SMART)) {
-            SmartLists.Named n;
-            if (c.verb.equals(CREATE)) n = SmartLists.ensure(c.arg, c.cond, c.sort);
-            else if (c.verb.equals(UPDATE)) n = SmartLists.update(c.arg, c.cond, c.sort);
-            else n = SmartLists.byName(c.arg);
-            if (n == null) Ui.toast(a, Words.Verb.NOT_FOUND + c.arg);
-            else openSmart(a, n, c.sort);
+            Ui.toast(a, Words.DbCmd.NO_DB);
         } else if (c.kind.equals(K_FIND)) {
             Intent i = new Intent(a, SearchScreen.class);
             i.putExtra(SearchScreen.EXTRA_QUERY, c.cond);

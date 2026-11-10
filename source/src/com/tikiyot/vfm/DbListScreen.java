@@ -95,7 +95,6 @@ public class DbListScreen extends ListScreen<Store.Member> {
     protected void onResume() {
         super.onResume();
         currentMode = mode;
-        Home.inOld = false;                                                   // מ0.11.1: חזרנו לצד של המסד
         if (!goingHome) return;
         if (atHome) goingHome = false;
         else finish();
@@ -672,7 +671,6 @@ public class DbListScreen extends ListScreen<Store.Member> {
         if (id == MENU_DB) actions();
         else if (id == MENU_CMDS) CmdMenu.show(this, null);
         else if (id == MENU_SETTINGS) startActivity(new Intent(this, SettingsScreen.class));
-        else if (id == MENU_OLD) Home.openOld(this);
         else if (id == MENU_DESIGN) design();
         else if (id == MENU_TESTS) DbTestMode.open(this);
         else if (id == MENU_BACKUPS) startActivity(new Intent(this, DbScreen.class).putExtra(DbScreen.EXTRA_MODE, mode)

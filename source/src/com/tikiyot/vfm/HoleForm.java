@@ -85,11 +85,9 @@ final class HoleForm {
                             @Override public void ok(String mode, long id, List<String> path) { e.setText(ListCmd.pathText(path)); }
                         });
                     } else if (kind == CmdTemplates.HOLE_MANUAL) {
-                        ListPicker.choose(a, h, null, new ArrayList<String>(), new ListPicker.Picked() {   // כל הרשימות
-                            @Override public void ok(ArrayList<String> path) { e.setText(ListCmd.pathText(path)); }
-                        });
+                        Ui.toast(a, Words.DbCmd.NO_DB);                         // מ0.26: רשימות — רק במסד
                     } else if (kind == CmdTemplates.HOLE_SMART) {
-                        final List<String> names = DbPicker.on(a) ? DbPicker.names(a).get("smart") : ListCmd.smartNames();   // מ0.23
+                        final List<String> names = DbPicker.on(a) ? DbPicker.names(a).get("smart") : new ArrayList<String>();   // מ0.23
                         if (names.isEmpty()) {
                             Ui.toast(a, Words.Ed.NO_SMART);
                             return;
@@ -114,7 +112,6 @@ final class HoleForm {
         final List<String> all = new ArrayList<String>();
         all.add(ListCmd.HOME);
         if (DbPicker.on(a)) all.addAll(DbPicker.names(a).get("manual"));     // מ0.23: עובדים במסד
-        else ListCmd.manualPaths(Tree.load().root, "", all);
         String[] shown = new String[all.size()];
         final boolean[] on = new boolean[all.size()];
         List<String> now = CmdTemplates.many(Bidi.strip(e.getText().toString()));

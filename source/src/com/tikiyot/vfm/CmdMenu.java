@@ -151,7 +151,7 @@ final class CmdMenu {
         taps.add(new Runnable() {
             @Override
             public void run() {
-                if (here) VirtualScreen.open(a, path, null, null);
+                if (here && DbVerbs.active()) DbVerbs.openPath(a, DbListScreen.currentMode, path);   // מ0.26: הרשימה — במסד
                 else Ui.toast(a, Words.CmdM.FROM_EXAMPLES);
             }
         });

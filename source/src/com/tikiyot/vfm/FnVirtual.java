@@ -127,7 +127,8 @@ public final class FnVirtual extends Func {
 
     @Override
     public void open(Activity a, Target t) {
-        VirtualScreen.open(a, base(t), null, t.get(Program.WHY, ""));        // 1.13.0: "למה" של הכלי
+        if (DbVerbs.active()) DbVerbs.openPath(a, DbListScreen.currentMode, base(t));   // מ0.26: הרשימה — במסד
+        else Ui.toast(a, Words.DbCmd.NO_DB);
     }
 
     @Override

@@ -874,6 +874,15 @@ final class DbListCmd {
                 List<String> fs = files(db, mode, a, find, err);
                 if (fs == null) { s.error = err[0]; return; }
                 s.dest = fsDest;
+                // מ0.26: המתגים של שורת רשימה לא נקראים ב־Batch.plan (שם רק שורות כונן) — נקראים כאן. במ0.25 זה הוחמץ,
+                // ולכן התיקון לא פעל במכשיר ("הועתקו 1" במקום "דולגו", והקובץ ישר בתיקייה).
+                for (String x : sw) {
+                    String u = x.toUpperCase(java.util.Locale.ROOT);
+                    if (u.equals("/Y") || x.equals(Batch.SW_TAKEN + Batch.TAKEN_REPLACE)) s.replace = true;
+                    if (x.equals(Batch.SW_TAKEN + Batch.TAKEN_SKIP)) s.skipTaken = true;
+                    if (x.equals(Batch.SW_TAKEN + Batch.TAKEN_STOP)) s.failTaken = true;
+                    if (u.equals("/S") || x.equals(Batch.SW_KEEP)) s.recursive = true;
+                }
                 // מ0.25 (באג 4): /תפוס:לדלג ו־/מסלול גם מרשימה לתיקייה. /מסלול — המסלול המלא של הקובץ מהכונן, בתוך היעד
                 // (המשתמש: "אם הבקשה עם מסלול אז עם כל המסלול"); לכל קובץ תיקיית יעד משלו (targets, כמו בשחזור).
                 for (String x : fs) {
