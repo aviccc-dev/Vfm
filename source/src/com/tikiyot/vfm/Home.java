@@ -43,13 +43,15 @@ public class Home extends Activity {
             openOld(a);
             return;
         }
-        if (a instanceof DbListScreen) {                                       // מ0.9.2: במראה המוכר של המסד — הבית של המסד
-            DbListScreen.goHome((DbListScreen) a);
-            return;
-        }
-        if (DbListScreen.alive > 0) {                                         // גם ממסך שנפתח ממנו (רשימה חכמה, קבצים)
-            DbListScreen.goingHome = true;
-            a.finish();
+        if (Flavor.M) {
+            // מ0.25 (באג 30; המשתמש: "כפתור בית לא תמיד עובד… מבצע 'חזור' לעיתים"): לא סימון שכל מסך צריך לבדוק — הבית נפתח
+            // מחדש, וכל המסכים שמעליו נסגרים יחד. עריכה שלא נשמרה — לא מנקים (כדי לא לאבד אותה).
+            if (a instanceof DbListScreen && ((DbListScreen) a).isHomeScreen()) return;
+            if (BatchEditScreen.anyUnsaved()) {
+                Ui.toast(a, Words.Db.HOME_UNSAVED);
+                return;
+            }
+            DbScreen.startFresh(a);
             return;
         }
         a.startActivity(new android.content.Intent(a, Home.class)

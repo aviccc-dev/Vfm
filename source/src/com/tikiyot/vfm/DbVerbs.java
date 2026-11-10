@@ -133,6 +133,26 @@ final class DbVerbs {
         }
     }
 
+    /**
+     * מ0.25 (באג 7): פקודות הפתיחה של קובץ — כולן, בסדר הכתיבה. o[1] != null — החלק הכותב כבר בוצע באופן הזה (צור / עדכן),
+     * ולכן כאן רק פותחים (בלי ליצור שוב, ובאופן של הקובץ — לא באופן שפתוח).
+     */
+    static void runOpens(Activity a, List<String[]> opens, java.io.File here) {
+        for (String[] o : opens) {
+            if (o[1] == null) { Verbs.run(a, o[0], here); continue; }
+            Verbs.Cmd c = Verbs.parse(o[0]);
+            if (c.kind.equals(Verbs.K_LIST)) openPath(a, o[1], Tree.parsePath(c.arg));
+            else {
+                long id = readSmart(a, o[1], c.arg);
+                if (id == 0) Ui.toast(a, Words.Verb.NOT_FOUND + c.arg);
+                else {
+                    DbScreen.saveMode(a, o[1]);
+                    openSmart(a, o[1], id, c.sort);
+                }
+            }
+        }
+    }
+
     interface Job {
         long run(Store s, List<String> path);
     }

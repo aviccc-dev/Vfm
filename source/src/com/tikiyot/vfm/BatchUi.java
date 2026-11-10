@@ -175,7 +175,7 @@ final class BatchUi {
                                     if (plan.changes() > 0) Ui.toast(a, Words.Cmd.doneShort(report.size()));
                                     openStart(a, plan.start);
                                 }
-                                if (plan.open != null && !plan.trouble) Verbs.run(a, plan.open, f.getParentFile());   // 1.13.0
+                                if (!plan.trouble) DbVerbs.runOpens(a, plan.opens, f.getParentFile());   // 1.13.0; מ0.25: כולן, בסדר
                                 if (plan.trouble && plan.start != null && !Batch.isHome(plan.start) && plan.start.isFile()) Ui.open(a, plan.start);   // 186
                                 if (!plan.shared.isEmpty()) {                 // 203: כל מה שלשיתוף — שליחה אחת
                                     Ui.toast(a, Words.Cmd.sending(plan.shared.size()));

@@ -88,6 +88,17 @@ public class DbScreen extends Activity {
      * מסך המסד (שם מבקשים הרשאה, מעתיקים מהישן, משחזרים).
      */
     static void start(Activity a) {
+        start(a, false);
+    }
+
+    /** מ0.25 (באג 30): "בית" — הבית נפתח מחדש וכל שאר המסכים נסגרים (המשימה מתנקה). */
+    static void startFresh(Activity a) {
+        DbListScreen.goingHome = false;
+        start(a, true);
+        a.overridePendingTransition(0, 0);
+    }
+
+    private static void start(Activity a, boolean fresh) {
         String m = a.getSharedPreferences(PREFS, MODE_PRIVATE).getString(PREF_MODE, "");
         if (m.isEmpty()) m = Importer.activeMode(oldData());
         long home = 0;
@@ -102,8 +113,9 @@ public class DbScreen extends Activity {
                 if (s != null) s.close();
             }
         }
-        if (home != 0) DbListScreen.open(a, m, home);
-        else a.startActivity(new android.content.Intent(a, DbScreen.class));
+        android.content.Intent i = home != 0 ? DbListScreen.intent(a, m, home, null) : new android.content.Intent(a, DbScreen.class);
+        if (fresh) i.addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK | android.content.Intent.FLAG_ACTIVITY_CLEAR_TASK);
+        a.startActivity(i);
     }
 
     /** מ0.9.1: האופן שנבחר — נזכר גם למסך המסד וגם למראה המוכר. */

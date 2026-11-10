@@ -47,6 +47,8 @@ final class Batch {
         boolean failTaken;
         /** 1.21.0: COPY … /מצב:<זמן> — שחזור: לכל קובץ — תיקיית היעד שלו (המסלול הלוגי). */
         final List<String> targets = new ArrayList<String>();
+        /** מ0.25: כמה קבצים דולגו בגלל /תפוס:לדלג — לתיאור ולדוח ("דולגו", לא "אין קבצים"). */
+        int skipped;
         long stateWhen = Long.MIN_VALUE;
         /** 1.22.0: COMP /רשימה:<שם> — המקור הוא רשימה ידנית (עם כל מה שבתוכה). */
         String listName;
@@ -92,6 +94,11 @@ final class Batch {
         Sim sim;
         /** 1.13.0: פקודת פתיחה בעברית (פתח / מצא / חזור…) — נפתחת בסוף ההרצה, כמו START; null — אין. */
         String open;
+        /**
+         * מ0.25 (באג 7): כל פקודות הפתיחה בסדר הכתיבה (לא רק האחרונה). לכל אחת: [השורה, האופן] — האופן אינו null כשהחלק
+         * הכותב כבר בוצע כשלב רגיל במסד (צור / עדכן), ואז בסוף רק פותחים, באופן של הקובץ.
+         */
+        final List<String[]> opens = new ArrayList<String[]>();
         /** 216: משהו בהרצה לא הלך חלק (שורה שדולגה, כשל, עצירה) — אז הדוח מוצג; אחרת — הודעה קצרה בלבד. */
         boolean trouble;
         /** 1.25.0: שורת "מדידה" — זמן לכל שורה, סיכום, ויומן (אם נכתב /יומן:). */
@@ -109,8 +116,8 @@ final class Batch {
 
         int changes() {
             int n = 0;
-            for (Step s : steps) if (s.error == null && !s.noop && !s.cmd.equals("ECHO") && !s.cmd.equals("START") && !s.cmd.equals(OPEN)
-                    && !s.cmd.equals("COMP")) n++;
+            for (Step s : steps) if (s.error == null && !s.noop && !s.cmd.equals("ECHO") && !s.cmd.equals("START")
+                    && !(s.cmd.equals(OPEN) && s.op == null) && !s.cmd.equals("COMP")) n++;
             return n;
         }
     }
@@ -211,7 +218,7 @@ final class Batch {
         for (Step s : plan.steps)
             if (s.error == null && s.share)
                 out.add(new AsIfRow("📤", Words.AsIf.SHARE, s.describe));
-        if (plan.open != null) out.add(new AsIfRow("▶", Verbs.label(Verbs.parse(plan.open)), Words.AsIf.AT_END));
+        for (String[] o : plan.opens) out.add(new AsIfRow("▶", Verbs.label(Verbs.parse(o[0])), Words.AsIf.AT_END));   // מ0.25: כולן, בסדר
         if (plan.start != null)
             out.add(new AsIfRow("▶", isHome(plan.start) ? Words.Cmd.HOME_AT_END : plan.start.getName(), Words.AsIf.AT_END));
         if (out.isEmpty()) out.add(new AsIfRow("·", Words.AsIf.NOTHING, ""));
@@ -724,8 +731,13 @@ final class Batch {
                 Verbs.Cmd vc = Verbs.parse(s.open);
                 s.error = vc.error;
                 s.describe = Verbs.describe(vc);
+                String doneIn = null;
+                if (s.error == null && DbVerbs.active()) doneIn = DbListCmd.planVerb(s, vc, sim);   // מ0.25: החלק הכותב — בסדר השורות
                 if (s.error != null) plan.errors++;
-                else plan.open = s.open;
+                else {
+                    plan.open = s.open;
+                    plan.opens.add(new String[]{s.open, doneIn});
+                }
                 plan.steps.add(s);
                 continue;
             }
@@ -973,7 +985,7 @@ final class Batch {
             }
             if (s.skipTaken)
                 for (java.util.Iterator<String> it = s.files.iterator(); it.hasNext(); )
-                    if (sim.isFile(new File(dest, new File(it.next()).getName()))) it.remove();
+                    if (sim.isFile(new File(dest, new File(it.next()).getName()))) { it.remove(); s.skipped++; }
             List<String> what = new ArrayList<String>();
             if (!s.files.isEmpty() || s.dirs.isEmpty()) what.add(Words.files(s.files.size()));
             if (!s.dirs.isEmpty()) what.add(Words.folders(s.dirs.size()));
@@ -1058,7 +1070,7 @@ final class Batch {
         walk(s, src, mask, flt, sim, mask == null && flt.tests.isEmpty(), true);
         if (s.skipTaken)
             for (java.util.Iterator<String> it = s.files.iterator(); it.hasNext(); )
-                if (sim.isFile(new File(dest, Physical.rel(s.keepRoot, it.next())))) it.remove();
+                if (sim.isFile(new File(dest, Physical.rel(s.keepRoot, it.next())))) { it.remove(); s.skipped++; }
         List<String> what = new ArrayList<String>();
         what.add(Words.files(s.files.size()));
         if (!s.dirs.isEmpty()) what.add(Words.Cmd.emptyFolders(s.dirs.size()));
@@ -1265,7 +1277,7 @@ final class Batch {
             s.dirs.clear();
             for (String f : items) {
                 File to = new File(dest, r.relA.get(f));
-                if (s.skipTaken && sim.isFile(to)) continue;
+                if (s.skipTaken && sim.isFile(to)) { s.skipped++; continue; }
                 s.files.add(f);
                 s.targets.add(to.getParentFile().getAbsolutePath());
                 if (new File(f).isDirectory()) sim.dirs.add(to.getAbsolutePath());
@@ -1277,7 +1289,7 @@ final class Batch {
         }
         if (s.skipTaken)
             for (java.util.Iterator<String> it = s.files.iterator(); it.hasNext(); )
-                if (sim.isFile(new File(dest, Physical.rel(s.keepRoot, it.next())))) it.remove();
+                if (sim.isFile(new File(dest, Physical.rel(s.keepRoot, it.next())))) { it.remove(); s.skipped++; }
         List<String> what = new ArrayList<String>();
         what.add(Words.files(s.files.size()));
         if (!s.dirs.isEmpty()) what.add(Words.folders(s.dirs.size()));
@@ -1352,6 +1364,7 @@ final class Batch {
                 if (new File(s.targets.get(k), new File(s.files.get(k)).getName()).exists()) {
                     s.files.remove(k);
                     s.targets.remove(k);
+                    s.skipped++;
                 }
         s.describe = Words.Cmd.restore(Words.files(s.files.size()), new java.text.SimpleDateFormat("dd.MM.yyyy HH:mm", Locale.ROOT)
                 .format(new java.util.Date(s.stateWhen)), Bidi.path(dest.getAbsolutePath()));   // בכונן
@@ -1465,7 +1478,8 @@ final class Batch {
     }
 
     private static String filtered(Step s) {
-        return s.total > s.files.size() && s.dirs.isEmpty() ? Words.Cmd.filtered(s.files.size(), s.total) : "";
+        String f = s.total > s.files.size() + s.skipped && s.dirs.isEmpty() ? Words.Cmd.filtered(s.files.size(), s.total) : "";
+        return f + (s.skipped > 0 ? Words.Cmd.skippedTaken(s.skipped) : "");
     }
 
     // ---------- ביצוע ----------
@@ -1541,7 +1555,7 @@ final class Batch {
                 report.add(Words.Cmd.line(s.label(), s.describe));
                 continue;
             }
-            if (s.cmd.equals("ECHO") || s.cmd.equals("START") || s.cmd.equals(OPEN)) continue;
+            if (s.cmd.equals("ECHO") || s.cmd.equals("START") || (s.cmd.equals(OPEN) && s.op == null)) continue;
             if (s.op != null) {                                                // 1.24.0: רשימות
                 report.add(Words.Cmd.line(s.label(), s.op.run(lib)));
                 continue;
@@ -1566,7 +1580,7 @@ final class Batch {
                 if (s.files.isEmpty() && s.dirs.isEmpty()) out = Words.Cmd.NO_FILES;
                 else out = stage(plan, s, progress);
             } else if (s.cmd.equals("COPY") || s.cmd.equals("MOVE")) {
-                if (s.files.isEmpty() && s.dirs.isEmpty()) out = Words.Cmd.NO_FILES;
+                if (s.files.isEmpty() && s.dirs.isEmpty()) out = s.skipped > 0 ? Words.Cmd.skippedTaken(s.skipped).substring(3) : Words.Cmd.NO_FILES;
                 else {
                     boolean copy = s.cmd.equals("COPY");
                     Physical.Journal j = s.journal == null ? null : new Physical.Journal(new File(s.journal), s.text);   // 1.19.0
@@ -1578,6 +1592,7 @@ final class Batch {
                                     !s.fromCompare)
                             : Physical.transfer(lib, s.files, s.dirs, s.dest, copy, ask, progress, grey, j);
                     out = result(r, copy ? Words.Cmd.COPIED : Words.Cmd.MOVED);
+                    if (s.skipped > 0) out += Words.Cmd.skippedTaken(s.skipped);
                     if (j != null) {
                         j.close();
                         if (j.failed()) {

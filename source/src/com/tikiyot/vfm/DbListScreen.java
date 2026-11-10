@@ -54,9 +54,7 @@ public class DbListScreen extends ListScreen<Store.Member> {
     }
 
     static void goHome(DbListScreen a) {
-        if (a.atHome) return;
-        goingHome = true;
-        a.finish();
+        Home.go(a);                                                           // מ0.25: דרך אחת — הבית נפתח מחדש
     }
 
     @Override
@@ -113,8 +111,17 @@ public class DbListScreen extends ListScreen<Store.Member> {
 
     /** מ0.22: עם מיון (שם · גודל · תאריך). */
     static void open(android.app.Activity a, String mode, long list, String sort) {
-        a.startActivity(new Intent(a, DbListScreen.class).putExtra(EXTRA_MODE, mode).putExtra(EXTRA_LIST, list)
-                .putExtra(EXTRA_SORT, sort == null ? "" : sort));
+        a.startActivity(intent(a, mode, list, sort));
+    }
+
+    static Intent intent(android.content.Context a, String mode, long list, String sort) {
+        return new Intent(a, DbListScreen.class).putExtra(EXTRA_MODE, mode).putExtra(EXTRA_LIST, list)
+                .putExtra(EXTRA_SORT, sort == null ? "" : sort);
+    }
+
+    /** מ0.25: האם המסך הזה הוא הבית. */
+    boolean isHomeScreen() {
+        return atHome;
     }
 
     @Override
@@ -250,6 +257,19 @@ public class DbListScreen extends ListScreen<Store.Member> {
                 });
             }
         }).start();
+    }
+
+    /**
+     * מ0.25 (באג 29; המשתמש: "כפתור חזרה — סוכם שבסופו פותח את המעבר בין האופנים ולא סוגר את התוכנה"): בבית — "חזור"
+     * (כפתור המכשיר וגם הפקודה) פותח את בחירת האופן, כמו בבית הישן מ־1.17.6. בחירה פעילה — קודם מסתיימת.
+     */
+    @Override
+    public void onBackPressed() {
+        if (atHome && isTaskRoot() && !sel.on()) {
+            modeMenu();
+            return;
+        }
+        super.onBackPressed();
     }
 
     /** מעבר בין האופנים שיש להם מסד (כמו בבית הישן — לפי השם). */

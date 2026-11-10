@@ -81,9 +81,30 @@ public class BatchEditScreen extends Activity {
         }
     }
 
+    /** מ0.25 (באג 30): העורכים הפתוחים — "בית" מנקה את כל המסכים, ולא יאבד שינוי שלא נשמר. */
+    private static final java.util.Set<BatchEditScreen> OPEN = java.util.Collections.newSetFromMap(
+            new java.util.WeakHashMap<BatchEditScreen, Boolean>());
+
+    static boolean anyUnsaved() {
+        for (BatchEditScreen e : OPEN)
+            try {
+                if (e != null && !e.isFinishing() && !e.plain().equals(e.saved)) return true;
+            } catch (Throwable t) {
+                Log.e("BatchEditScreen.anyUnsaved", t);
+            }
+        return false;
+    }
+
+    @Override
+    protected void onDestroy() {
+        OPEN.remove(this);
+        super.onDestroy();
+    }
+
     @Override
     protected void onCreate(Bundle b) {
         super.onCreate(b);
+        OPEN.add(this);
         String p = getIntent() != null ? getIntent().getStringExtra(EXTRA_FILE) : null;
         file = p == null ? null : new File(p);                                 // 1.28.0: בלי קובץ — טיוטה, ושם בשמירה
         vars = BatchUi.vars(this, here());

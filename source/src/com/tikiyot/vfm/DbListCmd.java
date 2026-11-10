@@ -874,9 +874,23 @@ final class DbListCmd {
                 List<String> fs = files(db, mode, a, find, err);
                 if (fs == null) { s.error = err[0]; return; }
                 s.dest = fsDest;
-                for (String x : fs) if (sim.isFile(new File(x))) s.files.add(new File(x).getAbsolutePath());
-                s.describe = Words.Cmd.transfer(true, Words.files(s.files.size()), Bidi.path(fsDest.getAbsolutePath()));
-                for (String x : s.files) sim.move(x, new File(fsDest, new File(x).getName()), true);
+                // מ0.25 (באג 4): /תפוס:לדלג ו־/מסלול גם מרשימה לתיקייה. /מסלול — המסלול המלא של הקובץ מהכונן, בתוך היעד
+                // (המשתמש: "אם הבקשה עם מסלול אז עם כל המסלול"); לכל קובץ תיקיית יעד משלו (targets, כמו בשחזור).
+                for (String x : fs) {
+                    File src = new File(x);
+                    if (!sim.isFile(src)) continue;
+                    File dir = s.recursive ? fullPathUnder(fsDest, src) : fsDest;
+                    File to = new File(dir, src.getName());
+                    if (s.skipTaken && sim.isFile(to)) { s.skipped++; continue; }
+                    s.files.add(src.getAbsolutePath());
+                    if (s.recursive) {
+                        s.targets.add(dir.getAbsolutePath());
+                        for (File up = dir; up != null && !up.equals(fsDest); up = up.getParentFile()) sim.dirs.add(up.getAbsolutePath());
+                    }
+                    sim.move(src.getAbsolutePath(), to, true);
+                }
+                s.describe = Words.Cmd.transfer(true, Words.files(s.files.size()), Bidi.path(fsDest.getAbsolutePath()))
+                        + (s.recursive ? Words.Cmd.KEEP_PATH : "") + (s.skipped > 0 ? Words.Cmd.skippedTaken(s.skipped) : "");
                 return;
             }
             work = new Work() {
@@ -935,6 +949,62 @@ final class DbListCmd {
         s.op = new ListCmd.Op() {
             @Override public String run(Library lib) { return real(mode, w, before, lib); }
         };
+    }
+
+    /**
+     * מ0.25 (באג 7; המשתמש: "כל הפעלים בפקודות רצים לפי הסדר בו הם כתובים"): החלק הכותב של פועל בעברית — "צור רשימה",
+     * "צור רשימה חכמה", "עדכן רשימה חכמה" — הוא שלב רגיל: על העותק בתכנון (שורות מאוחרות רואות אותו), ובהרצה על המסד, במקומו.
+     * מחזיר את האופן אם זה פועל כותב (ואז בסוף רק פותחים את המסך), null — אינו כותב (נשאר כולו לסוף).
+     */
+    static String planVerb(final Batch.Step s, final Verbs.Cmd c, final Batch.Sim sim) {
+        final boolean list = c.kind.equals(Verbs.K_LIST) && c.verb.equals(Verbs.CREATE);
+        final boolean smartNew = c.kind.equals(Verbs.K_SMART) && c.verb.equals(Verbs.CREATE);
+        final boolean smartUpd = c.kind.equals(Verbs.K_SMART) && c.verb.equals(Verbs.UPDATE);
+        if (!list && !smartNew && !smartUpd) return null;
+        if (sim.modeError != null) { s.error = sim.modeError; return null; }
+        final String mode = mode(sim);
+        final Store db;
+        try {
+            db = sim(sim, mode);
+        } catch (Throwable t) {
+            Log.e("DbListCmd.sim", t);
+            s.error = Words.Db.failed(String.valueOf(t.getMessage()));
+            return null;
+        }
+        final List<String> path = list ? Tree.parsePath(c.arg) : null;
+        final Work work = new Work() {
+            @Override
+            public Res run(Store t, Finder f) {
+                if (list) {
+                    if (path == null || path.isEmpty()) return Res.err(Words.Verb.NOT_FOUND + c.arg);
+                    if (DbPaths.find(t, mode, path) != 0) return Res.same(Words.ListCmdW.exists(Tree.label(path)));
+                    return DbPaths.ensure(t, mode, path) == 0 ? Res.err(Words.Verb.NOT_FOUND + c.arg)
+                            : Res.ok(Words.ListCmdW.created(Tree.label(path)));
+                }
+                if (smartNew) {
+                    long had = DbPaths.smart(t, c.arg);
+                    long id = DbPaths.ensureSmart(t, c.arg, c.cond, c.sort);
+                    if (id == 0) return Res.err(Words.Verb.NOT_FOUND + c.arg);
+                    return id == had ? Res.same(Words.ListCmdW.exists(c.arg)) : Res.ok(Words.ListCmdW.created(c.arg));
+                }
+                return DbPaths.updateSmart(t, c.arg, c.cond, c.sort) == 0 ? Res.err(Words.Verb.NOT_FOUND + c.arg)
+                        : Res.ok(Words.DbCmd.updated(c.arg));
+            }
+        };
+        Res r;
+        try {
+            r = work.run(db, finder(sim));                                   // ההדמיה — על העותק
+        } catch (Throwable e) {
+            r = Res.err(Words.Db.failed(String.valueOf(e.getMessage())));
+        }
+        if (r.error != null) { s.error = r.error; return null; }
+        if (!r.noop) {
+            s.describe = Words.DbCmd.inDb(r.text);
+            s.op = new ListCmd.Op() {
+                @Override public String run(Library lib) { return real(mode, work, false, lib); }
+            };
+        }
+        return mode;
     }
 
     // ---------- מ0.14: ודא ----------
@@ -1143,5 +1213,23 @@ final class DbListCmd {
         } finally {
             if (s != null) s.close();
         }
+    }
+
+    /**
+     * מ0.25: תיקיית היעד של קובץ כשמבקשים /מסלול מרשימה — היעד + המסלול המלא של התיקייה שלו בכונן (בלי שורש הכונן):
+     * /storage/emulated/0/Download/א/ב.pdf ← <יעד>/Download/א. כרטיס: /storage/XXXX-XXXX/… — אותו דבר. מסלול אחר — כולו.
+     */
+    static File fullPathUnder(File dest, File src) {
+        String p = src.getParentFile() == null ? "" : src.getParentFile().getAbsolutePath();
+        String rel = p;
+        if (p.startsWith("/storage/emulated/")) {
+            int e = p.indexOf('/', "/storage/emulated/".length());
+            rel = e < 0 ? "" : p.substring(e + 1);
+        } else if (p.startsWith("/storage/")) {
+            int e = p.indexOf('/', "/storage/".length());
+            rel = e < 0 ? "" : p.substring(e + 1);
+        }
+        while (rel.startsWith("/")) rel = rel.substring(1);
+        return rel.isEmpty() ? dest : new File(dest, rel);
     }
 }

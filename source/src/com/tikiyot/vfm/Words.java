@@ -251,6 +251,8 @@ public final class Words {
         public static final String JOURNAL_USAGE = "/יומן:<קובץ> — רק ב־COPY וב־MOVE, עם שם קובץ";
         public static final String JOURNAL_FAILED = " · היומן לא נכתב";
         public static final String KEEP_PATH = " · שומר מסלול";
+        /** מ0.25: /תפוס:לדלג — כמה דולגו. מתחיל ב־" · " (שלושה תווים) — מי שמציג לבד חותך. */
+        public static String skippedTaken(int n) { return " · דולגו " + n + " (שם תפוס)"; }
         /** 1.20.0 */
         public static final String NO_COMPARE = "אין השוואה (COMP) בשורה קודמת";
         public static final String COMPARE_BROKEN = "שורה קודמת על אותה השוואה נכשלה — לא ממשיכים עליה";
@@ -2247,6 +2249,7 @@ public final class Words {
 
     /** מ0.12: פקודות הרשימות על המסד (DbListCmd) */
     public static final class DbCmd {
+        public static String updated(String name) { return "עודכנה: " + name; }
         private DbCmd() { }
 
         // מ0.23: יצוא וייבוא — קובצי פקודות מוכנים ב־⭐
@@ -2499,6 +2502,7 @@ public final class Words {
 
     /** מ0.1: מנוע המסד — המסך (DbScreen) והבנייה השנייה (Flavor). */
     public static final class Db {
+        public static final String HOME_UNSAVED = "יש קובץ פקודות פתוח עם שינויים שלא נשמרו — לשמור או לסגור אותו, ואז בית";
         private Db() { }
 
         // מ0.23: בורר הרשימות של המסד

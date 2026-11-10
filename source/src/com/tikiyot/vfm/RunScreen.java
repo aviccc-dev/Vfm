@@ -308,9 +308,10 @@ public class RunScreen extends Activity {
                     else Verbs.run(RunScreen.this, Verbs.openList(open), file.getParentFile());
                 }
             }));
-        if (plan.open != null && !plan.trouble)
-            bs.add(btn("▶ " + Verbs.label(Verbs.parse(plan.open)), new View.OnClickListener() {
-                @Override public void onClick(View v) { Verbs.run(RunScreen.this, plan.open, file.getParentFile()); }
+        if (plan.open != null && !plan.trouble)                                    // מ0.25: כל פקודות הפתיחה, בסדר
+            bs.add(btn("▶ " + Verbs.label(Verbs.parse(plan.open)) + (plan.opens.size() > 1 ? " (+" + (plan.opens.size() - 1) + ")" : ""),
+                    new View.OnClickListener() {
+                @Override public void onClick(View v) { DbVerbs.runOpens(RunScreen.this, plan.opens, file.getParentFile()); }
             }));
         if (plan.start != null)
             bs.add(btn("▶ " + (Batch.isHome(plan.start) ? Words.Cmd.HOME_AT_END : plan.start.getName()), new View.OnClickListener() {
