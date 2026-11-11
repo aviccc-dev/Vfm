@@ -98,6 +98,25 @@ public class DbScreen extends Activity {
     }
 
     /** מ0.25 (באג 30): "בית" — הבית נפתח מחדש וכל שאר המסכים נסגרים (המשימה מתנקה). */
+    /** מ0.35: הגיבויים של האופן הנוכחי — מההגדרות (הכניסה עברה לשם מ־⋮ של מסך הרשימות). */
+    static void openBackups(Activity a) {
+        String m = DbListScreen.currentMode != null ? DbListScreen.currentMode : savedMode(a);
+        if (m == null || m.isEmpty()) m = defaultMode(a);
+        long home = 0;
+        SqlStore s = null;
+        try {
+            s = SqlStore.openReadOnly(dbFile(a, m));
+            home = DbPaths.home(s);
+        } catch (Throwable t) {
+            Log.e("DbScreen.openBackups", t);
+        } finally {
+            if (s != null) s.close();
+        }
+        android.content.Intent i = new android.content.Intent(a, DbScreen.class).putExtra(EXTRA_MODE, m);
+        if (home != 0) i.putExtra(EXTRA_AT, home).putExtra(EXTRA_DO, DO_BACKUPS);   // בלי בית (מסד פגום או ריק) — מסך המסד, שמציע שחזור
+        a.startActivity(i);
+    }
+
     static void startFresh(Activity a) {
         DbListScreen.goingHome = false;
         start(a, true);

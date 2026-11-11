@@ -2528,7 +2528,7 @@ public final class Words {
         public static final String MODE_NEW = "➕ אופן חדש…", MODE_NAME = "שם האופן",
                 EXAMPLES_RESTORE = "↺ שחזור הדוגמאות", EXAMPLES_RESTORE_GO = "שחזור",
                 EXAMPLES_RESTORE_WHAT = "רשימות הדוגמאות באופן \"דוגמאות\" חוזרות למצב ההתחלתי. מה שהוספת להן — יוצא מהן. \"הדוגמאות שלי\", \"שמור לתוכנה\" ורשימות אחרות שהוספת לאופן — נשארות.",
-                EXAMPLES_RESTORE_BACK = "לפני השחזור נשמר גיבוי של המסד (⋮ ← גיבויים)";
+                EXAMPLES_RESTORE_BACK = "לפני השחזור נשמר גיבוי של המסד (הגדרות ← גיבויים)";
         public static String examplesRestored(int n) { return "הדוגמאות שוחזרו · הוחלפו " + n + " רשימות"; }
         public static final String ADD_DUPS = "⧉  כפולים";
         public static final String HOME_UNSAVED = "יש קובץ פקודות פתוח עם שינויים שלא נשמרו — לשמור או לסגור אותו, ואז בית";
@@ -2544,7 +2544,7 @@ public final class Words {
 
         public static final String APP_NAME_M = "מנהל קבצים וירטואלי · מ";
         public static final String MENU = "מסד נתונים (מ)";
-        public static final String TITLE = "מסד נתונים · מ0.24";
+        public static final String TITLE = "מסד נתונים";
         /** מ0.9: המראה המוכר. */
         public static final String LIST_GONE = "הרשימה הזו כבר לא קיימת במסד", MENU_ACTIONS = "⚙ מסד: גיבוי, העתקה, בדיקה ופעולות",
                 MENU_OLD = "↩ הצד הישן (לפני המסד)",
@@ -2569,7 +2569,7 @@ public final class Words {
         }
         /** מ0.6: שם רשימת הבית במסד (בתצוגה — עם 🏠). */
         public static final String HOME_NAME = "בית", HOME_MARK = "🏠 ";
-        public static final String NOTICE = "מנוע המסד בבנייה. גיבוי: עותק יומי כשיש שינוי, וגם לפני העתקה, מחיקת רשימה ומחיקה לצמיתות — בתיקייה \"גיבוי מסד\" שבתיקיית התוכנה. \"העתקה מהישן\" רק קוראת מהמנוע הישן ולא משנה בו דבר. לכל אופן עבודה מסד משלו — כל אופן נכנס למסד של אותו אופן. אפשר להעתיק שוב: מה שכבר הועתק מתעדכן ולא מוכפל. רשימה חכמה שומרת רק את התנאי — הקבצים נמצאים בכל פתיחה מהאינדקס.";
+        public static final String NOTICE = "המסד של האופן: כל הרשימות שלו. גיבוי — לפני מחיקת רשימה ולפני שחזור, וביציאה אחרי שינוי; בתיקייה \"גיבוי מסד\" שבתיקיית התוכנה. לכל אופן מסד משלו. רשימה חכמה שומרת רק את התנאי — הקבצים נמצאים בכל פתיחה מהאינדקס.";
         public static final String NEED_ACCESS = "כדי לשמור את מונה המזהים בתיקיית הנתונים, התוכנה צריכה הרשאת גישה לכל הקבצים.";
         public static final String ALL_LISTS = "כל הרשימות";
         public static final String CRUMB_SEP = " › ";

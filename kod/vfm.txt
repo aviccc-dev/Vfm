@@ -975,7 +975,7 @@ cd $S; rm -rf out gen bld
 ls -la $OUT
 
 ===== קובץ: build/m-version.txt =====
-47 מ0.34
+48 מ0.35
 
 ===== קובץ: build/test.sh =====
 #!/bin/bash
@@ -12573,7 +12573,7 @@ public class DbListScreen extends ListScreen<Store.Member> {
         menu.add(0, MENU_CMDS, 0, Words.BATCH_MENU);
         menu.add(0, MENU_SETTINGS, 0, Words.Main.SETTINGS);
         menu.add(0, MENU_DESIGN, 0, Words.DesignW.MENU);
-        menu.add(0, MENU_BACKUPS, 0, Words.Db.BACKUPS);                     // מ0.23: ישר, לא דרך מסך המסד
+        // מ0.35 (המשתמש, 11.11.2026, על הגיבויים: "בינתיים שתעבור להגדרות. היא לא צריכה להיות במקום כזה מרכזי") — הכניסה בהגדרות
         menu.add(0, MENU_DB, 0, Words.Db.MENU_ACTIONS);
         menu.add(0, MENU_TESTS, 0, Words.DbCmd.MENU_TESTS);
         menu.add(0, MENU_DIAG, 0, Words.DbCmd.MENU_DIAG);                     // מ0.30
@@ -12588,8 +12588,6 @@ public class DbListScreen extends ListScreen<Store.Member> {
         else if (id == MENU_DESIGN) design();
         else if (id == MENU_TESTS) DbTestMode.open(this);
         else if (id == MENU_DIAG) Diag.run(this, mode);
-        else if (id == MENU_BACKUPS) startActivity(new Intent(this, DbScreen.class).putExtra(DbScreen.EXTRA_MODE, mode)
-                .putExtra(DbScreen.EXTRA_AT, listId).putExtra(DbScreen.EXTRA_DO, DbScreen.DO_BACKUPS));
         else return false;
         return true;
     }
@@ -13744,6 +13742,25 @@ public class DbScreen extends Activity {
     }
 
     /** מ0.25 (באג 30): "בית" — הבית נפתח מחדש וכל שאר המסכים נסגרים (המשימה מתנקה). */
+    /** מ0.35: הגיבויים של האופן הנוכחי — מההגדרות (הכניסה עברה לשם מ־⋮ של מסך הרשימות). */
+    static void openBackups(Activity a) {
+        String m = DbListScreen.currentMode != null ? DbListScreen.currentMode : savedMode(a);
+        if (m == null || m.isEmpty()) m = defaultMode(a);
+        long home = 0;
+        SqlStore s = null;
+        try {
+            s = SqlStore.openReadOnly(dbFile(a, m));
+            home = DbPaths.home(s);
+        } catch (Throwable t) {
+            Log.e("DbScreen.openBackups", t);
+        } finally {
+            if (s != null) s.close();
+        }
+        android.content.Intent i = new android.content.Intent(a, DbScreen.class).putExtra(EXTRA_MODE, m);
+        if (home != 0) i.putExtra(EXTRA_AT, home).putExtra(EXTRA_DO, DO_BACKUPS);   // בלי בית (מסד פגום או ריק) — מסך המסד, שמציע שחזור
+        a.startActivity(i);
+    }
+
     static void startFresh(Activity a) {
         DbListScreen.goingHome = false;
         start(a, true);
@@ -30577,6 +30594,9 @@ public class SettingsScreen extends Activity {
                 startActivity(new Intent(SettingsScreen.this, IniListScreen.class));
             }
         });
+        button(root, Words.Db.BACKUPS, new Runnable() {                                 // מ0.35: הגיבויים של המסד — מכאן
+            @Override public void run() { DbScreen.openBackups(SettingsScreen.this); }
+        });
         button(root, Words.Prefs.CHECK_PATH, new Runnable() {
             @Override public void run() { checkPath(); }
         });
@@ -41425,7 +41445,7 @@ public final class Words {
         public static final String MODE_NEW = "➕ אופן חדש…", MODE_NAME = "שם האופן",
                 EXAMPLES_RESTORE = "↺ שחזור הדוגמאות", EXAMPLES_RESTORE_GO = "שחזור",
                 EXAMPLES_RESTORE_WHAT = "רשימות הדוגמאות באופן \"דוגמאות\" חוזרות למצב ההתחלתי. מה שהוספת להן — יוצא מהן. \"הדוגמאות שלי\", \"שמור לתוכנה\" ורשימות אחרות שהוספת לאופן — נשארות.",
-                EXAMPLES_RESTORE_BACK = "לפני השחזור נשמר גיבוי של המסד (⋮ ← גיבויים)";
+                EXAMPLES_RESTORE_BACK = "לפני השחזור נשמר גיבוי של המסד (הגדרות ← גיבויים)";
         public static String examplesRestored(int n) { return "הדוגמאות שוחזרו · הוחלפו " + n + " רשימות"; }
         public static final String ADD_DUPS = "⧉  כפולים";
         public static final String HOME_UNSAVED = "יש קובץ פקודות פתוח עם שינויים שלא נשמרו — לשמור או לסגור אותו, ואז בית";
@@ -41441,7 +41461,7 @@ public final class Words {
 
         public static final String APP_NAME_M = "מנהל קבצים וירטואלי · מ";
         public static final String MENU = "מסד נתונים (מ)";
-        public static final String TITLE = "מסד נתונים · מ0.24";
+        public static final String TITLE = "מסד נתונים";
         /** מ0.9: המראה המוכר. */
         public static final String LIST_GONE = "הרשימה הזו כבר לא קיימת במסד", MENU_ACTIONS = "⚙ מסד: גיבוי, העתקה, בדיקה ופעולות",
                 MENU_OLD = "↩ הצד הישן (לפני המסד)",
@@ -41466,7 +41486,7 @@ public final class Words {
         }
         /** מ0.6: שם רשימת הבית במסד (בתצוגה — עם 🏠). */
         public static final String HOME_NAME = "בית", HOME_MARK = "🏠 ";
-        public static final String NOTICE = "מנוע המסד בבנייה. גיבוי: עותק יומי כשיש שינוי, וגם לפני העתקה, מחיקת רשימה ומחיקה לצמיתות — בתיקייה \"גיבוי מסד\" שבתיקיית התוכנה. \"העתקה מהישן\" רק קוראת מהמנוע הישן ולא משנה בו דבר. לכל אופן עבודה מסד משלו — כל אופן נכנס למסד של אותו אופן. אפשר להעתיק שוב: מה שכבר הועתק מתעדכן ולא מוכפל. רשימה חכמה שומרת רק את התנאי — הקבצים נמצאים בכל פתיחה מהאינדקס.";
+        public static final String NOTICE = "המסד של האופן: כל הרשימות שלו. גיבוי — לפני מחיקת רשימה ולפני שחזור, וביציאה אחרי שינוי; בתיקייה \"גיבוי מסד\" שבתיקיית התוכנה. לכל אופן מסד משלו. רשימה חכמה שומרת רק את התנאי — הקבצים נמצאים בכל פתיחה מהאינדקס.";
         public static final String NEED_ACCESS = "כדי לשמור את מונה המזהים בתיקיית הנתונים, התוכנה צריכה הרשאת גישה לכל הקבצים.";
         public static final String ALL_LISTS = "כל הרשימות";
         public static final String CRUMB_SEP = " › ";

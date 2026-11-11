@@ -719,7 +719,7 @@ public class DbListScreen extends ListScreen<Store.Member> {
         menu.add(0, MENU_CMDS, 0, Words.BATCH_MENU);
         menu.add(0, MENU_SETTINGS, 0, Words.Main.SETTINGS);
         menu.add(0, MENU_DESIGN, 0, Words.DesignW.MENU);
-        menu.add(0, MENU_BACKUPS, 0, Words.Db.BACKUPS);                     // מ0.23: ישר, לא דרך מסך המסד
+        // מ0.35 (המשתמש, 11.11.2026, על הגיבויים: "בינתיים שתעבור להגדרות. היא לא צריכה להיות במקום כזה מרכזי") — הכניסה בהגדרות
         menu.add(0, MENU_DB, 0, Words.Db.MENU_ACTIONS);
         menu.add(0, MENU_TESTS, 0, Words.DbCmd.MENU_TESTS);
         menu.add(0, MENU_DIAG, 0, Words.DbCmd.MENU_DIAG);                     // מ0.30
@@ -734,8 +734,6 @@ public class DbListScreen extends ListScreen<Store.Member> {
         else if (id == MENU_DESIGN) design();
         else if (id == MENU_TESTS) DbTestMode.open(this);
         else if (id == MENU_DIAG) Diag.run(this, mode);
-        else if (id == MENU_BACKUPS) startActivity(new Intent(this, DbScreen.class).putExtra(DbScreen.EXTRA_MODE, mode)
-                .putExtra(DbScreen.EXTRA_AT, listId).putExtra(DbScreen.EXTRA_DO, DbScreen.DO_BACKUPS));
         else return false;
         return true;
     }

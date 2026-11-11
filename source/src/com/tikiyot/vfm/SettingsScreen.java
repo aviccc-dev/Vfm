@@ -76,6 +76,9 @@ public class SettingsScreen extends Activity {
                 startActivity(new Intent(SettingsScreen.this, IniListScreen.class));
             }
         });
+        button(root, Words.Db.BACKUPS, new Runnable() {                                 // מ0.35: הגיבויים של המסד — מכאן
+            @Override public void run() { DbScreen.openBackups(SettingsScreen.this); }
+        });
         button(root, Words.Prefs.CHECK_PATH, new Runnable() {
             @Override public void run() { checkPath(); }
         });
