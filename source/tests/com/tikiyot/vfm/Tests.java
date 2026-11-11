@@ -1723,6 +1723,13 @@ public final class Tests {
                     + "המתן 1\nרענן עמוק\nהודעה סוף\n"
                     + "מחק תיקייה \"%כאן%\\יעד\\חדשה\" /עמוק\n", w, wv);
             eq("מ0.38: שורות שעמוד המעבדה כותב — בלי שגיאות במנוע", 0, lp.errors);
+            File yd = new File(w, "כרטיס-י"), dd = new File(w, "הורדות-י");      // קובץ ההחזרה שנשלח למשתמש (12.11.2026) — מתוכנן בלי שגיאה
+            mk(new File(yd, "YMusic"), "מעבדה עורך 1.html", 5);
+            dd.mkdirs();
+            java.util.Map<String, String> yv = Batch.vars(w, w.getAbsolutePath(), yd.getAbsolutePath());
+            yv.put(Batch.V_DOWNLOADS, dd.getAbsolutePath());
+            Batch.Plan yp = Batch.plan("בדיקה\nהעבר \"%כרטיס%\\YMusic\" \"%הורדות%\" /עמוק /תאריך:יום /תפוס:לשאול\n", w, yv);
+            check("מ0.39: קובץ ההחזרה להורדות — בלי שגיאה, וקובץ אחד", yp.errors == 0 && yp.steps.get(yp.steps.size() - 1).files.size() == 1);
             Batch.Plan kp = Batch.plan("צור תיקייה \"%כאן%\\ק\\תת\"\nכתוב \"%כאן%\\ק\\תת\\ב.txt\" \"x\"\nכתוב \"%כאן%\\ק\\א.txt\" \"y\"\n"
                     + "העתק \"%כאן%\\ק\" \"%כאן%\\ע\" /עמוק\n", w, wv);
             Batch.Step ks = kp.steps.get(kp.steps.size() - 1);
