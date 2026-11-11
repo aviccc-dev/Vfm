@@ -372,7 +372,7 @@ final class Batch {
     /** מ0.15: אופן — מכאן והלאה הפקודות במסד של אופן אחר; CALL — שורות של קובץ אחר במקום השורה. */
     static final String MODE = "MODE", CALL = "CALL", CONT = "CONTINUE";
     /** מ0.37 — הפקודות הקטנות: כתוב לקובץ · המתן · גבה (המסד) · רענן (האינדקס) · דוח (היומן לקובץ). */
-    static final String WRITE = "WRITE", WAIT = "WAIT", BACKUP = "BACKUP", REFRESH = "REFRESH", REPORT = "REPORT";
+    static final String WRITE = "WRITE", WAIT = "WAIT", BACKUP = "BACKUP", REFRESH = "REFRESH", REPORT = "REPORT", LAB = "LAB";
     static final String SW_APPEND = "/הוסף", W_DEEP = "עמוק", W_ERROR = "שגיאה";   // תחביר
     static final String V_TIME = "שעה", V_UNIQUE = "ייחודי";   // תחביר
     /** מ0.17: קישור — אותה רשימה / אותו פריט גם במקום נוסף (במסד). */
@@ -971,6 +971,16 @@ final class Batch {
                 continue;
             }
             if (Program.isHeader(line)) continue;                             // 1.13.0: צלמית / שם / למה — כותרת התוכנה
+            if (Lab.isLine(line)) {                                           // מ0.38: הוסף מעבדה · החלף מעבדה (לפני הפועל "הוסף")
+                Step s = new Step();
+                s.line = n + 1;
+                s.text = shown;
+                s.cmd = LAB;
+                Lab.plan(s, line, here, vars);
+                if (s.error != null) plan.errors++;
+                plan.steps.add(s);
+                continue;
+            }
             if (Verbs.isVerb(line)) {                                         // 1.13.0: פקודות הפתיחה בעברית — נפתחות בסוף
                 Step s = new Step();
                 s.line = n + 1;

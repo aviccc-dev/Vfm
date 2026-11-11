@@ -56,6 +56,7 @@
         <activity android:name=".IniListScreen" android:exported="false" />
         <activity android:name=".IniEditScreen" android:exported="false" />
         <activity android:name=".BatchEditScreen" android:exported="false" android:windowSoftInputMode="adjustResize" />
+        <activity android:name=".LabScreen" android:exported="false" android:windowSoftInputMode="adjustResize" android:configChanges="orientation|screenSize|keyboardHidden" />
 
         <activity android:name=".ShareScreen" android:exported="true"
             android:excludeFromRecents="true"
@@ -805,7 +806,7 @@ RD "%פנימי%\בדיקת מנהל קבצים (אפשר למחוק)"
 כלול "בדיקת מ0.23.vbat"
 :: "העתקה" — תמיד עותק; העברה; MD עמוק בכונן (מ0.24)
 כלול "בדיקת מ0.24.vbat"
-:: הפקודות הקטנות (מ0.37) — כתוב, ודא (מכיל, קבצים, תיקייה, שגיאה), רענן, רעיון וכותרת, גבה
+:: הפקודות הקטנות (מ0.37) — כתוב, ודא (מכיל, קבצים, תיקייה, שגיאה), רענן, רעיון וכותרת
 MD "%פנימי%\בדיקת מ0.37 (אפשר למחוק)"
 כתוב "%פנימי%\בדיקת מ0.37 (אפשר למחוק)\א.txt" "שלום"
 כתוב "%פנימי%\בדיקת מ0.37 (אפשר למחוק)\א.txt" " עולם" /הוסף
@@ -822,9 +823,24 @@ MD ידנית "בדיקת מ0.37"
 COPY ידנית "בדיקת מ0.37" קובץ "%פנימי%\בדיקת מ0.37 (אפשר למחוק)\יצוא.txt"
 ודא "%פנימי%\בדיקת מ0.37 (אפשר למחוק)\יצוא.txt" מכיל "רעיון לבדיקה"
 ודא "%פנימי%\בדיקת מ0.37 (אפשר למחוק)\יצוא.txt" מכיל "כותרת לבדיקה"
-גבה
 RD "%פנימי%\בדיקת מ0.37 (אפשר למחוק)" /S
 ודא "%פנימי%\בדיקת מ0.37 (אפשר למחוק)" חסר
+:: הפקודות בעברית (מ0.38) — צור תיקייה, העתק, שנה, העבר, השווה, מחק, מחק תיקייה, /עמוק
+צור תיקייה "%פנימי%\בדיקת מ0.38 (אפשר למחוק)\מקור\תת"
+צור תיקייה "%פנימי%\בדיקת מ0.38 (אפשר למחוק)\יעד"
+כתוב "%פנימי%\בדיקת מ0.38 (אפשר למחוק)\מקור\א.txt" "אחת"
+כתוב "%פנימי%\בדיקת מ0.38 (אפשר למחוק)\מקור\תת\ב.txt" "שתיים"
+העתק "%פנימי%\בדיקת מ0.38 (אפשר למחוק)\מקור" "%פנימי%\בדיקת מ0.38 (אפשר למחוק)\יעד" /עמוק
+ודא "%פנימי%\בדיקת מ0.38 (אפשר למחוק)\יעד\תת\ב.txt" מכיל "שתיים"
+שנה "%פנימי%\בדיקת מ0.38 (אפשר למחוק)\יעד\א.txt" "חדש.txt"
+העבר "%פנימי%\בדיקת מ0.38 (אפשר למחוק)\יעד\חדש.txt" "%פנימי%\בדיקת מ0.38 (אפשר למחוק)\מקור"
+ודא "%פנימי%\בדיקת מ0.38 (אפשר למחוק)\מקור\חדש.txt" קיים
+השווה "%פנימי%\בדיקת מ0.38 (אפשר למחוק)\מקור" "%פנימי%\בדיקת מ0.38 (אפשר למחוק)\יעד"
+מחק "%פנימי%\בדיקת מ0.38 (אפשר למחוק)\מקור\חדש.txt"
+ודא "%פנימי%\בדיקת מ0.38 (אפשר למחוק)\מקור\חדש.txt" חסר
+מחק תיקייה "%פנימי%\בדיקת מ0.38 (אפשר למחוק)" /עמוק
+ודא "%פנימי%\בדיקת מ0.38 (אפשר למחוק)" חסר
+הודעה הפקודות בעברית — עברו.
 ECHO סוף הבדיקה הכללית. "בדיקת פקודות" נשארת לראות; קובצי היצוא — בתיקיית אופן הבדיקות; התיקייה בכונן — הוסרה, והקובץ שהועתק אליה — בסל.
 
 ===== קובץ: assets/tests/lachatz.vbat =====
@@ -1013,7 +1029,7 @@ cd $S; rm -rf out gen bld
 ls -la $OUT
 
 ===== קובץ: build/m-version.txt =====
-50 מ0.37
+51 מ0.38
 
 ===== קובץ: build/test.sh =====
 #!/bin/bash
@@ -3888,7 +3904,7 @@ final class Batch {
     /** מ0.15: אופן — מכאן והלאה הפקודות במסד של אופן אחר; CALL — שורות של קובץ אחר במקום השורה. */
     static final String MODE = "MODE", CALL = "CALL", CONT = "CONTINUE";
     /** מ0.37 — הפקודות הקטנות: כתוב לקובץ · המתן · גבה (המסד) · רענן (האינדקס) · דוח (היומן לקובץ). */
-    static final String WRITE = "WRITE", WAIT = "WAIT", BACKUP = "BACKUP", REFRESH = "REFRESH", REPORT = "REPORT";
+    static final String WRITE = "WRITE", WAIT = "WAIT", BACKUP = "BACKUP", REFRESH = "REFRESH", REPORT = "REPORT", LAB = "LAB";
     static final String SW_APPEND = "/הוסף", W_DEEP = "עמוק", W_ERROR = "שגיאה";   // תחביר
     static final String V_TIME = "שעה", V_UNIQUE = "ייחודי";   // תחביר
     /** מ0.17: קישור — אותה רשימה / אותו פריט גם במקום נוסף (במסד). */
@@ -4459,11 +4475,12 @@ final class Batch {
             prev = ln;
             if (clock.skip(plan, ln.loops, ln.rounds)) continue;               // לולאה שעברה את הגבול — גם בתכנון
             int n = ln.num - 1;
-            String line = clean(ln.text);
+            final String shown = clean(ln.text);                                 // מ0.38: מה שנכתב (לדוח) — גם כשהוא בעברית
+            String line = Commands.normal(shown);
             if (ln.error != null) {
                 Step s = new Step();
                 s.line = ln.num;
-                s.text = line;
+                s.text = shown;
                 s.cmd = LOOP;
                 s.error = ln.error;
                 plan.errors++;
@@ -4486,10 +4503,20 @@ final class Batch {
                 continue;
             }
             if (Program.isHeader(line)) continue;                             // 1.13.0: צלמית / שם / למה — כותרת התוכנה
+            if (Lab.isLine(line)) {                                           // מ0.38: הוסף מעבדה · החלף מעבדה (לפני הפועל "הוסף")
+                Step s = new Step();
+                s.line = n + 1;
+                s.text = shown;
+                s.cmd = LAB;
+                Lab.plan(s, line, here, vars);
+                if (s.error != null) plan.errors++;
+                plan.steps.add(s);
+                continue;
+            }
             if (Verbs.isVerb(line)) {                                         // 1.13.0: פקודות הפתיחה בעברית — נפתחות בסוף
                 Step s = new Step();
                 s.line = n + 1;
-                s.text = line;
+                s.text = shown;
                 s.cmd = OPEN;
                 s.open = Verbs.withVars(line, vars);
                 Verbs.Cmd vc = Verbs.parse(s.open);
@@ -4514,11 +4541,14 @@ final class Batch {
             if (cmd.equals("REM")) continue;
             Step s = new Step();
             s.line = n + 1;
-            s.text = line;
+            s.text = shown;
             if (cmd.equals("ECHO.")) cmd = "ECHO";                   // 139: שורה ריקה, כמו ב-bat
             s.cmd = cmd;
             if (cmd.equals("ECHO")) {
-                String rest = line.length() > 4 ? line.substring(4).trim() : "";
+                int w0 = 0;                                                      // מ0.38: אחרי המילה הראשונה (ECHO או "הודעה")
+                while (w0 < line.length() && !Character.isWhitespace(line.charAt(w0))) w0++;
+                String rest = cmd.equals("ECHO") && tk.get(0).toUpperCase(Locale.ROOT).startsWith("ECHO.") ? line.substring(4).trim()
+                        : line.substring(w0).trim();
                 if (rest.equalsIgnoreCase("OFF") || rest.equalsIgnoreCase("ON")) continue;
                 rest = Verbs.withVars(rest, vars);                               // מ0.30 (ממצא 46): גם ב־ECHO המשתנים מוחלפים
                 plan.echoes.add(rest.startsWith(".") ? rest.substring(1) : rest);
@@ -5389,7 +5419,7 @@ final class Batch {
     /** 1.26.0: רק פתיחת מסכים ורשימות (פקודות התפריט ⭐) — הרצה מהירה, בלי מסך ההרצה. */
     static boolean onlyOpens(String text) {
         for (String raw : Bidi.strip(text).replace("\r", "").split("\n")) {
-            String line = clean(raw);
+            String line = Commands.normal(clean(raw));
             if (line.isEmpty() || line.startsWith("::") || Program.isHeader(line)) continue;
             if (isLoopStart(line) || isLoopEnd(line) || line.startsWith(MEASURE) || line.equals(AS_IF) || line.equals(AS_IF2)) return false;
             if (Verbs.isVerb(line)) continue;
@@ -5580,6 +5610,8 @@ public class BatchEditScreen extends Activity {
     private LinearLayout menu, panel;
     private Button modeBtn;
     private String saved = "";
+    /** מ0.38: הקובץ כמו שנפתח — הפקודות בעברית. לא נחשב שינוי עד שנוגעים בו. */
+    private String opened = "";
     private boolean templates, advOpen, selfEdit, panelStale;
     /** השורה שנבחרה בתפריט (מספר בין השורות שאינן ריקות), או -1. */
     private int sel = -1;
@@ -5614,11 +5646,16 @@ public class BatchEditScreen extends Activity {
     static boolean anyUnsaved() {
         for (BatchEditScreen e : OPEN)
             try {
-                if (e != null && !e.isFinishing() && !e.plain().equals(e.saved)) return true;
+                if (e != null && !e.isFinishing() && e.dirty()) return true;
             } catch (Throwable t) {
                 Log.e("BatchEditScreen.anyUnsaved", t);
             }
         return false;
+    }
+
+    private boolean dirty() {
+        String now = plain();
+        return !now.equals(saved) && !now.equals(opened);
     }
 
     @Override
@@ -5709,7 +5746,8 @@ public class BatchEditScreen extends Activity {
             saved = "";
         }
         Bidi.watch(text);                                                      // 204
-        text.setText(Bidi.mark(saved));
+        opened = Commands.hebrewText(saved);
+        text.setText(Bidi.mark(opened));
         text.setOnFocusChangeListener(new View.OnFocusChangeListener() {
             @Override
             public void onFocusChange(View v, boolean has) {
@@ -5833,7 +5871,8 @@ public class BatchEditScreen extends Activity {
     }
 
     /** ההגדרה של שורה: פקודת קבצים, פועל, או כותרת; null — לא מוכרת. */
-    private static Commands.Def defOf(String line) {
+    private static Commands.Def defOf(String typed) {
+        String line = Commands.normal(typed);                                  // מ0.38: "צור תיקייה" היא MD, לא הפועל "צור"
         if (line.startsWith("::")) return Commands.get("REM");                // 1.25.4: הערה — כמו REM
         if (Batch.isLoopStart(line)) return Commands.Defs.LOOP;               // 1.25.0
         if (Batch.isLoopEnd(line)) return Commands.Defs.END;
@@ -6261,7 +6300,7 @@ public class BatchEditScreen extends Activity {
         }
         final EditText e = Ui.field(this, "", p.type == Commands.Type.PERCENT ? "20" : "");
         boolean path = p.type == Commands.Type.PATH || p.type == Commands.Type.FILES;
-        e.setTextDirection(path ? View.TEXT_DIRECTION_LTR : View.TEXT_DIRECTION_FIRST_STRONG);
+        e.setTextDirection(View.TEXT_DIRECTION_FIRST_STRONG);   // מ0.38: גם מסלול — לפי האות הראשונה (עברית מתחילה מימין)
         if (p.type == Commands.Type.PERCENT) e.setInputType(InputType.TYPE_CLASS_NUMBER);
         Bidi.watch(e);
         e.setText(v);
@@ -6444,7 +6483,7 @@ public class BatchEditScreen extends Activity {
         int at = anchor >= 0 && anchor < rows.size() ? rows.get(anchor).end : e.length();
         StringBuilder sb = new StringBuilder();
         boolean empty = Bidi.strip(e.toString()).trim().isEmpty();
-        for (String l : ls) sb.append(sb.length() > 0 || !empty ? "\n" : "").append(Bidi.mark(l));
+        for (String l : ls) sb.append(sb.length() > 0 || !empty ? "\n" : "").append(Bidi.mark(Commands.hebrew(l)));
         if (empty) {
             selfEdit = true;
             e.replace(0, e.length(), sb.toString());
@@ -6747,7 +6786,7 @@ public class BatchEditScreen extends Activity {
 
     @Override
     public void onBackPressed() {
-        if (!plain().equals(saved)) {
+        if (dirty()) {
             Ui.ask(this, Words.Cmd.ASK_SAVE, Words.Cmd.fileNamed(name()), null, null, Words.SAVE, new Runnable() {
                 @Override
                 public void run() {
@@ -7281,7 +7320,11 @@ final class Bidi {
                     int logical = strip(cur.substring(0, Math.min(sel, cur.length()))).length();
                     String want = mark(cur);
                     if (want.equals(ed.toString())) return;
-                    ed.replace(0, ed.length(), want);
+                    String have = ed.toString();                              // מ0.38: מחליפים רק את מה שהשתנה — המקלדת לא "קופצת"
+                    int p = 0, hs = have.length(), ws = want.length();
+                    while (p < hs && p < ws && have.charAt(p) == want.charAt(p)) p++;
+                    while (hs > p && ws > p && have.charAt(hs - 1) == want.charAt(ws - 1)) { hs--; ws--; }
+                    ed.replace(p, hs, want, p, ws);
                     int pos = 0, n = 0;
                     while (pos < want.length() && n < logical) {
                         if (want.charAt(pos) != LRM) n++;
@@ -7739,12 +7782,14 @@ final class CmdLine {
     }
 
     static CmdLine parse(String line) {
-        String l = Bidi.strip(line == null ? "" : line).trim();
+        String typed = Bidi.strip(line == null ? "" : line).trim();
+        String l = Commands.normal(typed);                                     // מ0.38: "צור תיקייה", "/עמוק" — כמו שהמנוע קורא
         List<String> tk = Batch.tokens(l);
         String w = tk.isEmpty() ? "" : tk.get(0);
         Commands.Def d = Commands.get(w);
         if (d != null && d.family != Commands.Family.FILE) d = null;
-        CmdLine c = new CmdLine(w, d, l);
+        if (d != null && !typed.startsWith(w)) w = Commands.word(d);            // נכתב בשתי מילים — כך גם נשאר
+        CmdLine c = new CmdLine(w, d, typed);
         if (isText(d)) c.rest = l.length() > w.length() ? l.substring(w.length()).trim() : "";
         else for (int i = 1; i < tk.size(); i++) c.tokens.add(tk.get(i));
         return c;
@@ -7752,7 +7797,7 @@ final class CmdLine {
 
     /** פקודה חדשה, בלי ערכים. */
     static CmdLine of(Commands.Def d) {
-        CmdLine c = new CmdLine(d.name, d, d.name);
+        CmdLine c = new CmdLine(Commands.word(d), d, Commands.word(d));       // מ0.38: פקודה חדשה — בעברית
         c.changed = true;
         return c;
     }
@@ -7766,7 +7811,7 @@ final class CmdLine {
         if (!changed) return raw;
         if (isText(def)) return rest.isEmpty() ? word : word + " " + rest;
         StringBuilder sb = new StringBuilder(word);
-        for (String t : tokens) sb.append(' ').append(quote(t));
+        for (String t : tokens) sb.append(' ').append(quote(Batch.isSwitch(t) ? Commands.switchWord(t) : t));   // מ0.38
         return sb.toString();
     }
 
@@ -8429,7 +8474,7 @@ final class Commands {
         /** "COPY <מקור> <יעד> [/S] [/תפוס:…] …" — לפקודות הקבצים נבנה מהפרמטרים; לפעלים — מהמילון. */
         String usage() {
             if (family == Family.VERB) return Words.Verb.usage(name);
-            StringBuilder sb = new StringBuilder(name);
+            StringBuilder sb = new StringBuilder(word(this));                     // מ0.38: בעברית
             for (Param p : params) if (!p.compat) sb.append(' ').append(p.usage());
             if (alternative != null) sb.append("  ·  ").append(alternative);
             return sb.toString();
@@ -8512,7 +8557,8 @@ final class Commands {
                 sw(Batch.SW_LIMIT, null, Type.PERCENT, Words.Def.P_LIMIT, Words.Def.H_LIMIT)));
         if (state) ps.add(sw(Batch.SW_STATE, null, Type.TIME, Words.Def.P_STATE, Words.Def.H_STATE));
         ps.addAll(filters());
-        return new Def(name, name.equals("COPY") ? Words.Def.N_COPY : Words.Def.N_MOVE, null, Family.FILE,
+        return new Def(name, name.equals("COPY") ? Words.Def.N_COPY : Words.Def.N_MOVE,
+                name.equals("COPY") ? new String[]{HE_COPY, HE_DUP} : new String[]{HE_MOVE}, Family.FILE,
                 name.equals("COPY") ? Words.Def.W_COPY : Words.Def.W_MOVE,
                 ps.toArray(new Param[0]), null);
     }
@@ -8522,21 +8568,125 @@ final class Commands {
                 new Param[]{pos(Type.TEXT, Words.Def.P_ARG, Words.Verb.usage(name))}, null);
     }
 
+    /**
+     * מ0.38 (המשתמש, 11.11.2026: "לכל הפקודות יהיו תואם עברי, כולל הפרמטרים" · על טבלת השמות: "עזוב, תריץ כך. אחר כך זה לא
+     * סיפור לעדכן"): השם העברי של כל פקודת קבצים. האנגלי ממשיך לעבוד; העורך כותב את העברי.
+     */
+    static final String HE_COPY = "העתק", HE_DUP = "הכפל", HE_MOVE = "העבר", HE_DEL = "מחק", HE_REN = "שנה", HE_UNLIST = "בטל",   // תחביר
+            HE_COMP = "השווה", HE_START = "הפעל", HE_ECHO = "הודעה", HE_REM = "הערה",   // תחביר
+            HE_MD = "צור תיקייה", HE_RD = "מחק תיקייה", HE_DEEP = "/עמוק", HE_HIDDEN = "/נסתרים";   // תחביר
+    private static final String[][] TWO_WORDS = {{HE_MD, "MD"}, {HE_RD, "RD"}};
+    private static final String[][] HE_SWITCHES = {{HE_DEEP, "/S"}, {HE_HIDDEN, "/A:H"}};
+
+    /** השורה בצורה שהמנוע קורא: "צור תיקייה" ← MD, "מחק תיקייה" ← RD, והמתגים העבריים ← האנגליים (מחוץ למרכאות). */
+    static String normal(String line) {
+        String l = line == null ? "" : line.trim();
+        for (String[] m : TWO_WORDS)
+            if (l.equals(m[0]) || l.startsWith(m[0] + " ")) {
+                l = m[1] + l.substring(m[0].length());
+                break;
+            }
+        if (l.indexOf('/') < 0) return l;
+        StringBuilder out = new StringBuilder();
+        boolean q = false;
+        int i = 0;
+        while (i < l.length()) {
+            char c = l.charAt(i);
+            if (c == '"') q = !q;
+            boolean start = !q && c == '/' && (i == 0 || Character.isWhitespace(l.charAt(i - 1)));
+            String hit = null, to = null;
+            if (start) for (String[] m : HE_SWITCHES) {
+                int e = i + m[0].length();
+                if (l.startsWith(m[0], i) && (e == l.length() || Character.isWhitespace(l.charAt(e)))) { hit = m[0]; to = m[1]; }
+            }
+            if (hit != null) {
+                out.append(to);
+                i += hit.length();
+            } else {
+                out.append(c);
+                i++;
+            }
+        }
+        return out.toString();
+    }
+
+    /**
+     * מ0.38: השורה כמו שהעורך מציג אותה — הפקודה והמתגים בעברית (המשתמש: "הכל בפלפון כבר מתחילים על צד שמאל").
+     * שורה של רשימות (מילת סוג: ידנית, חכמה…) ושורה שכבר בעברית — כמו שהן.
+     */
+    static String hebrew(String line) {
+        if (line == null) return "";
+        String l = line.trim();
+        if (l.isEmpty() || l.charAt(0) > 0x7F || l.startsWith("::")) return line;
+        int sp = 0;
+        while (sp < l.length() && !Character.isWhitespace(l.charAt(sp))) sp++;
+        Def d = get(l.substring(0, sp));
+        if (d == null || d.family != Family.FILE) return line;
+        ListCmd.Parsed lp = d.name.equals("ECHO") || d.name.equals("REM") ? null : ListCmd.parse(l, new java.util.ArrayList<String>());
+        if (lp != null) return line;
+        String rest = l.substring(sp);
+        if (d.name.equals("ECHO") || d.name.equals("REM")) return word(d) + rest;
+        StringBuilder out = new StringBuilder(word(d));
+        boolean q = false;
+        int i = 0;
+        while (i < rest.length()) {
+            char c = rest.charAt(i);
+            if (c == '"') q = !q;
+            String hit = null, to = null;
+            if (!q && c == '/' && i > 0 && Character.isWhitespace(rest.charAt(i - 1))) for (String[] m : HE_SWITCHES) {
+                int e = i + m[1].length();
+                if (rest.regionMatches(true, i, m[1], 0, m[1].length()) && (e == rest.length() || Character.isWhitespace(rest.charAt(e)))) { hit = m[1]; to = m[0]; }
+            }
+            if (hit != null) {
+                out.append(to);
+                i += hit.length();
+            } else {
+                out.append(c);
+                i++;
+            }
+        }
+        return out.toString();
+    }
+
+    /** קובץ שלם — שורה שורה. */
+    static String hebrewText(String text) {
+        if (text == null || text.isEmpty()) return "";
+        String[] ls = text.split("\n", -1);
+        StringBuilder sb = new StringBuilder();
+        for (int i = 0; i < ls.length; i++) sb.append(i > 0 ? "\n" : "").append(hebrew(ls[i]));
+        return sb.toString();
+    }
+
+    /** המילה שהעורך כותב לפקודה: העברית (אם יש), אחרת השם. */
+    static String word(Def d) {
+        if (d.family != Family.FILE) return d.name;
+        if (d.name.equals("MD")) return HE_MD;
+        if (d.name.equals("RD")) return HE_RD;
+        for (String a : d.aliases) if (!a.isEmpty() && a.charAt(0) >= 0x5D0 && a.charAt(0) <= 0x5EA) return a;
+        return d.name;
+    }
+
+    /** המתג כמו שהעורך כותב אותו: העברי (אם יש). */
+    static String switchWord(String key) {
+        for (String[] m : HE_SWITCHES) if (m[1].equalsIgnoreCase(key)) return m[0];
+        return key;
+    }
+
     /** כל הפקודות — בסדר שבו הן מוצגות. */
     static final List<Def> ALL = Collections.unmodifiableList(Arrays.asList(
             transfer("COPY", Words.Def.H_COPY_SRC, true),
             transfer("MOVE", Words.Def.H_MOVE_SRC, false),
-            new Def("DEL", Words.Def.N_DEL, new String[]{"ERASE"}, Family.FILE, Words.Def.W_DEL,
+            new Def("DEL", Words.Def.N_DEL, new String[]{"ERASE", HE_DEL}, Family.FILE, Words.Def.W_DEL,
                     list(pos(Type.FILES, Words.Def.P_FILES, Words.Def.H_DEL_SRC), filters()), null),
-            new Def("REN", Words.Def.N_REN, new String[]{"RENAME"}, Family.FILE, Words.Def.W_REN, list(
+            new Def("REN", Words.Def.N_REN, new String[]{"RENAME", HE_REN}, Family.FILE, Words.Def.W_REN, list(
                     pos(Type.PATH, Words.Def.P_FILE, Words.Def.H_REN_SRC),
                     pos(Type.NAME, Words.Def.P_NEW_NAME, Words.Def.H_NEW_NAME)), null),
             new Def("MD", Words.Def.N_MD, new String[]{"MKDIR"}, Family.FILE, Words.Def.W_MD,
                     list(pos(Type.PATH, Words.Def.P_FOLDER, Words.Def.H_MD)), null),
-            new Def("RD", Words.Def.N_RD, new String[]{"RMDIR"}, Family.FILE, Words.Def.W_RD, list(
+            new Def("RD", Words.Def.N_RD, new String[]{"RMDIR", HE_UNLIST}, Family.FILE, Words.Def.W_RD, list(
                     pos(Type.PATH, Words.Def.P_FOLDER, Words.Def.H_RD),
                     sw("/S", null, Type.FLAG, Words.Def.P_NOT_EMPTY, Words.Def.H_NOT_EMPTY)), null),
-            new Def("COMP", Words.Def.N_COMP, null, Family.FILE, Words.Def.W_COMP, list(
+            new Def("COMP", Words.Def.N_COMP, new String[]{HE_COMP}, Family.FILE, Words.Def.W_COMP, list(
                     pos(Type.PATH, Words.Def.P_SOURCE, Words.Def.H_COMP_SRC),
                     pos(Type.PATH, Words.Def.P_DEST, Words.Def.H_COMP_DEST),
                     hidden(),
@@ -8565,10 +8715,10 @@ final class Commands {
                     list(pos(Type.PATH, Words.Def.P_FILE, Words.DbCmd.H_REPORT)), null),
             new Def(Batch.CALL, Words.DbCmd.N_CALL, new String[]{Words.DbCmd.N_CALL}, Family.FILE, Words.DbCmd.W_CALL,
                     list(pos(Type.PATH, Words.Def.P_FILE, Words.DbCmd.H_CALL)), null),
-            new Def("START", Words.Def.N_START, null, Family.FILE, Words.Def.W_START,
+            new Def("START", Words.Def.N_START, new String[]{HE_START}, Family.FILE, Words.Def.W_START,
                     list(pos(Type.PATH, Words.Def.P_WHAT_OPEN, Words.Def.H_START, Words.Def.U_START)), null),
-            new Def("ECHO", Words.Def.N_ECHO, null, Family.FILE, Words.Def.W_ECHO, list(pos(Type.TEXT, Words.Def.P_TEXT, Words.Def.H_TEXT)), null),
-            new Def("REM", Words.Def.N_REM, null, Family.FILE, Words.Def.W_REM, list(pos(Type.TEXT, Words.Def.P_TEXT, Words.Def.H_TEXT)), null),
+            new Def("ECHO", Words.Def.N_ECHO, new String[]{HE_ECHO}, Family.FILE, Words.Def.W_ECHO, list(pos(Type.TEXT, Words.Def.P_TEXT, Words.Def.H_TEXT)), null),
+            new Def("REM", Words.Def.N_REM, new String[]{HE_REM}, Family.FILE, Words.Def.W_REM, list(pos(Type.TEXT, Words.Def.P_TEXT, Words.Def.H_TEXT)), null),
             verb(Verbs.OPEN, Words.Def.W_OPEN),
             verb(Verbs.CREATE, Words.Def.W_CREATE),
             verb(Verbs.UPDATE, Words.Def.W_UPDATE),
@@ -19067,7 +19217,7 @@ final class HoleForm {
             final int kind = CmdTemplates.holeKind(lines, h);
             box.addView(Ui.label(a, h + Words.Ed.holeKind(kind)));
             final EditText e = Ui.field(a, "", "");
-            e.setTextDirection(kind == CmdTemplates.HOLE_PATH ? View.TEXT_DIRECTION_LTR : View.TEXT_DIRECTION_FIRST_STRONG);
+            e.setTextDirection(View.TEXT_DIRECTION_FIRST_STRONG);   // מ0.38
             if (kind == CmdTemplates.HOLE_NUMBER) e.setInputType(InputType.TYPE_CLASS_NUMBER);
             if (kind == CmdTemplates.HOLE_MANY) {
                 e.setSingleLine(false);
@@ -38096,8 +38246,8 @@ final class Verbs {
     static final String NOTE_WORD = "רעיון", TITLE_WORD = "כותרת";   // תחביר
     static final String S_HOME = "הבית", S_SEARCH = "חיפוש", S_COMMANDS = "פקודות", S_DISK = "קבצים פיזיים",   // תחביר
             S_VIRTUAL = "קבצים וירטואליים", S_SETTINGS = "הגדרות", S_TRASH = "סל", S_EDITOR = "עורך פקודות",   // תחביר
-            S_BACKUPS = "גיבויים", S_DIAG = "אבחון";   // תחביר — מ0.37
-    static final String[] SCREENS = {S_HOME, S_SEARCH, S_COMMANDS, S_DISK, S_VIRTUAL, S_SETTINGS, S_TRASH, S_EDITOR, S_BACKUPS, S_DIAG};
+            S_BACKUPS = "גיבויים", S_DIAG = "אבחון", S_LAB = "מעבדה";   // תחביר — מ0.37; מ0.38: מעבדה
+    static final String[] SCREENS = {S_HOME, S_SEARCH, S_COMMANDS, S_DISK, S_VIRTUAL, S_SETTINGS, S_TRASH, S_EDITOR, S_BACKUPS, S_DIAG, S_LAB};
     static final String A_DRIVE = "מהכונן", A_SEARCH = "מחיפוש";   // תחביר
     static final String SORT = "מיון:";   // תחביר
 
@@ -38446,6 +38596,7 @@ final class Verbs {
         else if (s.equals(S_EDITOR)) a.startActivity(new Intent(a, BatchEditScreen.class));   // 1.28.0: בלי קובץ — טיוטה
         else if (s.equals(S_BACKUPS)) DbScreen.openBackups(a);                // מ0.37
         else if (s.equals(S_DIAG)) Diag.run(a, DbListScreen.currentMode);     // מ0.37: דוח האבחון כפקודה
+        else if (s.equals(S_LAB)) LabScreen.open(a, c.cond);                    // מ0.38: המעבדה — רק בפקודה
     }
 
     static void openSmart(Activity a, SmartLists.Named n, String sort) {
@@ -41784,6 +41935,26 @@ public final class Words {
             return sb.append("SQLite: ").append(info).toString();
         }
     }
+
+    /** מ0.38 — המעבדה (Lab, LabScreen). */
+    public static final class Lab {
+        public static final String UNNAMED = "ניסוי", NO_FILE = "אין קובץ כזה", NOT_HTML = "זה לא עמוד מעבדה (צריך קובץ html)",
+                TOO_BIG = "הקובץ גדול מדי למעבדה (עד 5MB)", NO_DIR = "לא נוצרה תיקיית המעבדה",
+                ADD_USAGE = "הוסף מעבדה — או: הוסף מעבדה \"<קובץ html>\". בלי קובץ: החדש ביותר בהורדות ששמו מתחיל ב\"מעבדה\"",
+                NONE_IN_DOWNLOADS = "אין בהורדות קובץ ששמו מתחיל ב\"מעבדה\" ונגמר ב־html",
+                SWITCH_USAGE = "החלף מעבדה \"<ניסוי>\" \"<גרסה>\"",
+                TITLE = "🧪 מעבדה", EMPTY = "אין עדיין ניסויים. מורידים עמוד מעבדה להורדות, ומריצים את הפקודה: הוסף מעבדה",
+                VERSIONS = "גרסאות", NOT_FOUND = "אין במעבדה ניסוי בשם הזה", ONLY_COMMANDS = "המעבדה כותבת רק קובצי פקודות",
+                NO_FILES_HERE = "אין כאן קבצים", PICK_FILE = "בחירת קובץ", RUN_FILE = "הרצה מהמעבדה";
+        public static String noVersion(String exp, String ver) { return "בניסוי \"" + exp + "\" אין גרסה \"" + ver + "\""; }
+        public static String noExperiment(String exp) { return "אין במעבדה ניסוי \"" + exp + "\""; }
+        public static String addWill(String file) { return "יוסיף למעבדה את " + file; }
+        public static String added(String exp, String ver) { return "נוסף למעבדה: \"" + exp + "\", גרסה " + ver + " — היא הפעילה"; }
+        public static String switchWill(String exp, String ver) { return "יעביר את \"" + exp + "\" לגרסה " + ver; }
+        public static String switched(String exp, String ver) { return "\"" + exp + "\" — עכשיו בגרסה " + ver; }
+        public static String version(String ver) { return "גרסה " + ver; }
+        public static String row(String exp, String ver, int n) { return exp + " · גרסה " + ver + (n > 1 ? " (" + n + " גרסאות)" : ""); }
+    }
 }
 
 ===== קובץ: src/com/tikiyot/vfm/Zip.java =====
@@ -44414,6 +44585,8 @@ public final class Tests {
         run("מ0.27: RD /S ואחריו MD ו־COMP — ההדמיה שוכחת מה שהיה בתיקייה", new Runnable() { public void run() { m027(); } });
         run("מ0.30: RD ואחריו MD לאותה תיקייה; ECHO עם משתנה; רשימה שאינה בבית", new Runnable() { public void run() { m030(); } });
         run("מ0.32: RD לתת־תיקייה ואז לתיקייה", new Runnable() { public void run() { m032(); } });
+        run("מ0.38: הפקודות והמתגים בעברית", new Runnable() { public void run() { m038(); } });
+        run("מ0.38: המעבדה", new Runnable() { public void run() { m038lab(); } });
         run("מ0.37: הפקודות הקטנות — כתוב, ודא (תיקייה, מכיל, קבצים, שגיאה), דוח, המתן, משתנים, רעיון וכותרת", new Runnable() { public void run() { m037(); } });
         run("קובצי פקודות — השורה כשדות לטופס (117א, שלב 2)", new Runnable() { public void run() { batchForm(); } });
         run("תיקוני הביקורות השישית והשביעית (118–122, 134, 135, 139)", new Runnable() { public void run() { review7(); } });
@@ -46012,6 +46185,124 @@ public final class Tests {
         eq("מ0.27: COMP אחרי RD /S — מול תיקייה ריקה: הקובץ רק במקור", 1, p.steps.get(3).files.size());
     }
 
+    private static void m038lab() {
+        String[] a = Lab.nameOf("<title>x</title><meta name=\"vfm-lab\" content=\"עורך\"><meta content=\"3\" name=\"vfm-lab-version\">", "בלה.html");
+        check("מ0.38: שם וגרסה — מתוך העמוד (meta)", a[0].equals("עורך") && a[1].equals("3"));
+        a = Lab.nameOf("<p>", "מעבדה עורך 2 (1).html");
+        check("מ0.38: בלי meta — משם הקובץ, בלי \"(1)\" של הדפדפן", a[0].equals("עורך") && a[1].equals("2"));
+        a = Lab.nameOf("<p>", "מעבדה.html");
+        check("מ0.38: בלי שם בכלל — \"ניסוי\" וגרסה לפי הזמן", a[0].equals(Words.Lab.UNNAMED) && !a[1].isEmpty());
+        eq("מ0.38: שם לא תקין — מתוקן לדומה", "א-ב (ג) חו״ל", Lab.safe("א/ב <ג> חו\"ל*"));
+        File dl = new File(home, "הורדות-038");
+        wipe(dl);
+        dl.mkdirs();
+        File root = Lab.root();
+        wipe(root);
+        try {
+            File p1 = new File(dl, "מעבדה עורך 1.html");
+            Files.writeAtomic(p1, "<meta name=\"vfm-lab\" content=\"עורך\"><meta name=\"vfm-lab-version\" content=\"1\">אחת");
+            p1.setLastModified(System.currentTimeMillis() - 60000);
+            File p2 = new File(dl, "מעבדה עורך 2.html");
+            Files.writeAtomic(p2, "<meta name=\"vfm-lab\" content=\"עורך\"><meta name=\"vfm-lab-version\" content=\"2\">שתיים");
+            Files.writeAtomic(new File(dl, "אחר.html"), "x");
+            check("מ0.38: \"הוסף מעבדה\" בלי קובץ — החדש ביותר בהורדות שמתחיל ב\"מעבדה\"", Lab.newest(dl).getName().equals(p2.getName()));
+            Lab.add(root, p1);
+            Lab.add(root, p2);
+            eq("מ0.38: שתי גרסאות, לפי הסדר", "[1, 2]", Lab.versions(root, "עורך").toString());
+            eq("מ0.38: האחרונה שנוספה — הפעילה", "2", Lab.active(root, "עורך"));
+            check("מ0.38: החלפת גרסה", Lab.setActive(root, "עורך", "1") == null && "1".equals(Lab.active(root, "עורך"))
+                    && Files.readUtf8(Lab.page(root, "עורך")).endsWith("אחת"));
+            check("מ0.38: גרסה שאין — שגיאה, והפעילה לא זזה", Lab.setActive(root, "עורך", "9") != null && "1".equals(Lab.active(root, "עורך")));
+            check("מ0.38: ניסוי שאין — שגיאה", Lab.setActive(root, "אין", "1") != null);
+            Lab.add(root, p1);
+            eq("מ0.38: אותה גרסה שוב — מחליפה, לא מכפילה", 2, Lab.versions(root, "עורך").size());
+            boolean threw = false;
+            try { Lab.add(root, new File(dl, "אין.html")); } catch (Exception e) { threw = true; }
+            check("מ0.38: קובץ שאין — לא נוסף", threw);
+            eq("מ0.38: רשימת הניסויים", "[עורך]", Lab.experiments(root).toString());
+            java.util.Map<String, String> vars = Batch.vars(dl, home.getAbsolutePath(), null);
+            vars.put(Batch.V_DOWNLOADS, dl.getAbsolutePath());
+            Batch.Plan pl = Batch.plan("הוסף מעבדה\nהוסף מעבדה \"%כאן%\\מעבדה עורך 1.html\"\nהחלף מעבדה \"עורך\" \"2\"\nהחלף מעבדה עורך\nהוסף מעבדה \"%כאן%\\אין.html\"\n", dl, vars);
+            eq("מ0.38: פקודות המעבדה — שתי שורות שגיאה (בלי גרסה; קובץ שאין)", 2, pl.errors);
+            check("מ0.38: \"הוסף מעבדה\" לא נבלע בפועל \"הוסף\"", pl.steps.get(0).cmd.equals(Batch.LAB) && pl.steps.get(0).op != null);
+            String r = pl.steps.get(2).op.run(null);
+            check("מ0.38: \"החלף מעבדה\" רץ", "2".equals(Lab.active(root, "עורך")) && r.contains("2"));
+            eq("מ0.38: הפועל \"פתח מסך מעבדה\" מוכר", null, Verbs.parse("פתח מסך מעבדה \"עורך\"").error);
+            File w = new File(home, "עורך-מעבדה-038");                       // מה שעמוד המעבדה כותב — המנוע קורא בלי שגיאות
+            wipe(w);
+            mk(new File(w, "מקור"), "א.pdf", 5);
+            mk(new File(w, "מקור"), "ב.tmp", 5);
+            mk(new File(w, "יעד"), "x.txt", 5);
+            java.util.Map<String, String> wv = Batch.vars(w, w.getAbsolutePath(), null);
+            Batch.Plan lp = Batch.plan("הערה ניסוי\n"
+                    + "העתק \"%כאן%\\מקור\" \"%כאן%\\יעד\" /עמוק /תפוס:לדלג /תאריך:חודש /נסתרים\n"
+                    + "העבר \"%כאן%\\מקור\\*.pdf\" \"%כאן%\\יעד\" /תפוס:להחליף\n"
+                    + "מחק \"%כאן%\\מקור\\*.tmp\" /נסתרים /תאריך:שבוע\n"
+                    + "צור תיקייה \"%כאן%\\יעד\\חדשה\"\n"
+                    + "שנה \"%כאן%\\יעד\\x.txt\" \"חו״ל- 1.txt\"\n"
+                    + "השווה \"%כאן%\\מקור\" \"%כאן%\\יעד\" /נסתרים\n"
+                    + "ודא \"%כאן%\\יעד\" קיים\n"
+                    + "המתן 1\nרענן עמוק\nהודעה סוף\n"
+                    + "מחק תיקייה \"%כאן%\\יעד\\חדשה\" /עמוק\n", w, wv);
+            eq("מ0.38: שורות שעמוד המעבדה כותב — בלי שגיאות במנוע", 0, lp.errors);
+        } catch (Exception e) {
+            check("מ0.38: המעבדה — " + e, false);
+        }
+    }
+
+    private static void m038() {
+        File root = new File(home, "כונן-038");
+        wipe(root);
+        File here = new File(root, "כאן"), src = new File(root, "מקור");
+        here.mkdirs();
+        mk(src, "א.txt", 10);
+        mk(new File(src, "תת"), "ב.txt", 10);
+        mk(src, ".נסתר", 5);
+        java.util.Map<String, String> vars = Batch.vars(here, root.getAbsolutePath(), null);
+        String r = root.getAbsolutePath();
+        String he = "הערה זו שורת הערה\n"
+                + "הודעה שלום מהבדיקה\n"
+                + "צור תיקייה \"" + r + "/יעד\"\n"
+                + "העתק \"" + r + "/מקור\" \"" + r + "/יעד\" /עמוק /נסתרים\n"
+                + "שנה \"" + r + "/מקור/א.txt\" \"חדש.txt\"\n"
+                + "העבר \"" + r + "/מקור/חדש.txt\" \"" + r + "/יעד\" /תפוס:להחליף\n"
+                + "השווה \"" + r + "/מקור\" \"" + r + "/יעד\"\n"
+                + "מחק \"" + r + "/יעד/חדש.txt\"\n"
+                + "מחק תיקייה \"" + r + "/יעד\" /עמוק\n";
+        String en = "REM x\nECHO שלום מהבדיקה\nMD \"" + r + "/יעד\"\nCOPY \"" + r + "/מקור\" \"" + r + "/יעד\" /S /A:H\n"
+                + "REN \"" + r + "/מקור/א.txt\" \"חדש.txt\"\nMOVE \"" + r + "/מקור/חדש.txt\" \"" + r + "/יעד\" /תפוס:להחליף\n"
+                + "COMP \"" + r + "/מקור\" \"" + r + "/יעד\"\nDEL \"" + r + "/יעד/חדש.txt\"\nRD \"" + r + "/יעד\" /S\n";
+        Batch.Plan ph = Batch.plan(he, here, vars), pe = Batch.plan(en, here, vars);
+        eq("מ0.38: קובץ שכולו בעברית — בלי שגיאות", 0, ph.errors);
+        eq("מ0.38: אותו מספר שורות כמו באנגלית", pe.steps.size(), ph.steps.size());
+        boolean same = ph.steps.size() == pe.steps.size();
+        for (int i = 0; same && i < ph.steps.size(); i++) {
+            Batch.Step a = ph.steps.get(i), b2 = pe.steps.get(i);
+            same = a.cmd.equals(b2.cmd) && a.files.equals(b2.files) && a.dirs.equals(b2.dirs) && a.recursive == b2.recursive && a.hidden == b2.hidden
+                    && String.valueOf(a.describe).equals(String.valueOf(b2.describe));
+        }
+        check("מ0.38: כל שורה בעברית מתוכננת בדיוק כמו המקבילה באנגלית (פקודה, קבצים, /עמוק, /נסתרים)", same);
+        check("מ0.38: ההודעה — בלי המילה \"הודעה\"", ph.echoes.size() == 1 && ph.echoes.get(0).equals("שלום מהבדיקה"));
+        check("מ0.38: בדוח נשארת השורה כמו שנכתבה, בעברית", ph.steps.get(1).text.startsWith("צור תיקייה"));
+        eq("מ0.38: מתג עברי בתוך מרכאות — לא נוגעים", "MD \"x /עמוק\"", Commands.normal("צור תיקייה \"x /עמוק\""));
+        eq("מ0.38: \"צור רשימה\" נשארת פועל", "צור רשימה א", Commands.normal("צור רשימה א"));
+        CmdLine c = CmdLine.parse("צור תיקייה \"" + r + "/חדשה\"");
+        check("מ0.38: העורך מזהה \"צור תיקייה\" כ־MD", c.def != null && c.def.name.equals("MD") && c.text().startsWith("צור תיקייה"));
+        check("מ0.38: פקודה חדשה מהתפריט נכתבת בעברית", CmdLine.of(Commands.get("COPY")).text().equals("העתק")
+                && CmdLine.of(Commands.get("RD")).text().equals("מחק תיקייה") && Commands.get("העבר").name.equals("MOVE"));
+        eq("מ0.38: העורך מציג בעברית", "העתק \"a /S\" b /עמוק /נסתרים /Y", Commands.hebrew("COPY \"a /S\" b /s /A:H /Y"));
+        eq("מ0.38: RD ← מחק תיקייה", "מחק תיקייה x /עמוק", Commands.hebrew("RD x /S"));
+        eq("מ0.38: ECHO — הטקסט לא נגוע", "הודעה a /S b", Commands.hebrew("ECHO a /S b"));
+        eq("מ0.38: שורת רשימות — כמו שהיא", "COPY ידנית \"א\" קובץ \"x.txt\"", Commands.hebrew("COPY ידנית \"א\" קובץ \"x.txt\""));
+        eq("מ0.38: פועל, הערה, שורה ריקה — כמו שהן", "ודא \"x\" קיים\n:: REM\n\nהעבר a b", Commands.hebrewText("ודא \"x\" קיים\n:: REM\n\nMOVE a b"));
+        Batch.Plan pt = Batch.plan(Commands.hebrewText(en), here, vars);
+        boolean same2 = pt.errors == pe.errors && pt.steps.size() == pe.steps.size();
+        for (int i = 0; same2 && i < pt.steps.size(); i++)
+            same2 = pt.steps.get(i).cmd.equals(pe.steps.get(i).cmd) && pt.steps.get(i).files.equals(pe.steps.get(i).files) && pt.steps.get(i).recursive == pe.steps.get(i).recursive;
+        check("מ0.38: קובץ שהעורך תרגם — מתוכנן בדיוק כמו המקור", same2);
+        check("מ0.38: \"בטל\" ו\"הכפל\" — לרשימות", Commands.canonical("בטל").equals("RD") && Commands.canonical("הכפל").equals("COPY"));
+    }
+
     private static void m037() {
         File root = new File(home, "כונן-037");
         wipe(root);
@@ -47003,9 +47294,9 @@ public final class Tests {
         check("1.23.0: שינוי יעד — מרכאות, ו/Q נשאר", c.text().equals("COPY \"%פנימי%\\א ב\" \"%כרטיס%\\ג ד\" /Q"));
         CmdLine d = CmdLine.parse("COPY a b /תאריך:שבוע");
         d.set(keep, "1");
-        check("1.23.0: מתג חדש — במקומו לפי ההגדרה", d.text().equals("COPY a b /S /תאריך:שבוע"));
+        check("1.23.0: מתג חדש — במקומו לפי ההגדרה", d.text().equals("COPY a b /עמוק /תאריך:שבוע"));
         d.set(journal, "x y.txt");
-        check("1.23.0: ערך עם רווח — במרכאות", d.text().equals("COPY a b /S /יומן:\"x y.txt\" /תאריך:שבוע"));
+        check("1.23.0: ערך עם רווח — במרכאות", d.text().equals("COPY a b /עמוק /יומן:\"x y.txt\" /תאריך:שבוע"));
         check("1.23.0: הערך חוזר כמו שנקבע", CmdLine.parse(d.text()).value(journal).equals("x y.txt"));
         d.set(keep, "");
         check("1.23.0: מתג כבוי — יוצא", d.text().equals("COPY a b /יומן:\"x y.txt\" /תאריך:שבוע"));
@@ -47024,15 +47315,15 @@ public final class Tests {
         check("1.23.0: COMP /רשימה: — המקור לא רלוונטי, היעד ראשון",
                 k.slot(comp.positional().get(0)) < 0 && k.value(comp.positional().get(1)).equals("%כרטיס%\\גיבוי\\נוכחי") && k.missing().isEmpty());
         CmdLine n = CmdLine.of(cp);
-        check("1.23.0: פקודה חדשה — חסרים מקור ויעד", n.missing().size() == 2 && n.text().equals("COPY"));
+        check("1.23.0: פקודה חדשה — חסרים מקור ויעד", n.missing().size() == 2 && n.text().equals("העתק"));
         n.set(dst, "b");
-        check("1.23.0: יעד לפני מקור — מקום ריק למקור", n.text().equals("COPY \"\" b"));
+        check("1.23.0: יעד לפני מקור — מקום ריק למקור", n.text().equals("העתק \"\" b"));
         n.set(src, "a");
-        check("1.23.0: ואז המקור במקומו", n.text().equals("COPY a b") && n.missing().isEmpty());
+        check("1.23.0: ואז המקור במקומו", n.text().equals("העתק a b") && n.missing().isEmpty());
         n.set(limit, "20");
         n.set(date, "שבוע");
         n.set(taken, Batch.TAKEN_STOP);
-        check("1.23.0: כמה מתגים — בסדר ההגדרה", n.text().equals("COPY a b " + Batch.SW_TAKEN + Batch.TAKEN_STOP + " /עד:20% /תאריך:שבוע"));
+        check("1.23.0: כמה מתגים — בסדר ההגדרה", n.text().equals("העתק a b " + Batch.SW_TAKEN + Batch.TAKEN_STOP + " /עד:20% /תאריך:שבוע"));
         Commands.Param txt = Commands.get("ECHO").positional().get(0);
         CmdLine e = CmdLine.parse("ECHO שלום  עולם");
         check("1.23.0: ECHO — הטקסט כמו שהוא", e.value(txt).equals("שלום  עולם"));
@@ -47095,7 +47386,7 @@ public final class Tests {
         check("1.22.5: שם נרדף בטופס", BatchLine.parse("MKDIR \"%פנימי%\\x\"").cmd.equals("MD"));
         for (Commands.Def d : Commands.ALL) {
             check("1.22.5: מה עושה — " + d.name, !d.what.isEmpty());
-            check("1.22.5: שימוש — " + d.name, !d.usage().isEmpty() && (d.family != Commands.Family.FILE || d.usage().startsWith(d.name)));
+            check("1.22.5: שימוש — " + d.name, !d.usage().isEmpty() && (d.family != Commands.Family.FILE || d.usage().startsWith(Commands.word(d))));   // מ0.38: בעברית
             for (Commands.Param p : d.params) {
                 boolean ok = !p.label.isEmpty() && !p.help.isEmpty() && (!p.isSwitch() || Batch.isSwitch(p.key))
                         && (p.type != Commands.Type.CHOICE || !p.options.isEmpty());
@@ -50590,5 +50881,723 @@ public class ScanTest {
         check("רענון אחרי סריקה — 0 השתנו", Scan.refresh(fresh, 4).changed == 0);
         System.out.println("בדיקות: " + ok + " עברו · " + bad + " נכשלו");
         System.exit(bad == 0 ? 0 : 1);
+    }
+}
+
+===== קובץ: src/com/tikiyot/vfm/Lab.java =====
+package com.tikiyot.vfm;
+
+// מ0.38 — המעבדה. המשתמש (11.11.2026): "יש אפשרות להכין כמו פלאגין לתוכנה, שרק שם אתה מכניס תיקונים, במצב ארגז חול כזה,
+// ושם מנסים ומריצים, ורק אחר כך אתה מכניס לקוד — כמו אפיון על רטוב" · "זה לא אישור או פסילה בהכרח, אלא עיבוד" ·
+// "המעבדה זה לא רק למצב הזה, אלא גם לפיתוחים אחרים" · "ולהכין פקודה שמחליפה את הקובץ… ואולי אפשר גם לשמור גרסאות ולהחליף
+// ביניהם. אז הוסף מעבדה".
+// ניסוי = עמוד (html) מחוץ לקוד, שמסך המעבדה פותח (LabScreen). כל ניסוי — תיקייה בתיקיית המעבדה; כל גרסה — קובץ בה;
+// הגרסה הפעילה — בקובץ ".פעילה" שבתיקייה.
+// אחראי: התיקיות, השמות, הגרסאות, הגרסה הפעילה, ושתי הפקודות (הוסף / החלף). אסור לו: לכתוב מחוץ לתיקיית המעבדה.
+
+import java.io.File;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
+final class Lab {
+
+    static final String ADD = "הוסף מעבדה", SWITCH = "החלף מעבדה";   // תחביר
+    /** שם קובץ של ניסוי שהורד: "מעבדה <ניסוי> <גרסה>.html" (בתוך העמוד — meta, והוא קובע). */
+    static final String PREFIX = "מעבדה";   // תחביר
+    static final String DIR = "מעבדה", ACTIVE = ".פעילה", EXT = ".html";   // בכונן
+    static final String META = "vfm-lab", META_VERSION = "vfm-lab-version";
+    static final long MAX = 5L * 1024 * 1024;
+
+    private Lab() { }
+
+    /** תיקיית המעבדה — בתיקייה של התוכנה החדשה (לא של הישנה, שמשנה את שלה). */
+    static File root() {
+        return new File(Paths.dbData(), DIR);
+    }
+
+    // ---------- שמות ----------
+
+    /** שם שמותר בכונן — כמו בעורך: לא משאירים דבר לא תקין, מתקנים לדומה. */
+    static String safe(String s) {
+        String t = s == null ? "" : s.replace('"', '״').replaceAll("[\\\\/:|]", "-").replace('<', '(').replace('>', ')')
+                .replaceAll("[*?\\n\\r\\t]", "").trim();
+        while (t.startsWith(".")) t = t.substring(1).trim();
+        return t;
+    }
+
+    private static String meta(String html, String name) {
+        Matcher m = Pattern.compile("<meta\\s+[^>]*name\\s*=\\s*[\"']" + Pattern.quote(name) + "[\"'][^>]*>", Pattern.CASE_INSENSITIVE).matcher(html);
+        if (!m.find()) return null;
+        Matcher c = Pattern.compile("content\\s*=\\s*[\"']([^\"']*)[\"']", Pattern.CASE_INSENSITIVE).matcher(m.group());
+        return c.find() ? c.group(1).trim() : null;
+    }
+
+    /** {ניסוי, גרסה}: מה שכתוב בעמוד (meta), ואם אין — משם הקובץ ("מעבדה עורך 3.html" ← עורך, 3). */
+    static String[] nameOf(String html, String fileName) {
+        String exp = meta(html, META), ver = meta(html, META_VERSION);
+        String base = fileName == null ? "" : fileName;
+        if (base.toLowerCase(Locale.ROOT).endsWith(EXT)) base = base.substring(0, base.length() - EXT.length());
+        base = base.replaceAll("\\s*\\(\\d+\\)$", "").trim();                       // "(1)" שהדפדפן מוסיף בהורדה חוזרת
+        if (base.startsWith(PREFIX)) base = base.substring(PREFIX.length()).replaceAll("^[\\s_-]+", "");
+        if (exp == null || exp.isEmpty()) {
+            Matcher m = Pattern.compile("^(.*?)[\\s_-]+(\\d+)$").matcher(base);
+            if (m.find()) {
+                exp = m.group(1);
+                if (ver == null || ver.isEmpty()) ver = m.group(2);
+            } else exp = base;
+        }
+        exp = safe(exp);
+        if (exp.isEmpty()) exp = Words.Lab.UNNAMED;
+        ver = safe(ver == null ? "" : ver);
+        if (ver.isEmpty()) ver = new java.text.SimpleDateFormat("yyyy-MM-dd HH-mm", Locale.ROOT).format(new java.util.Date());
+        return new String[]{exp, ver};
+    }
+
+    // ---------- ניסויים וגרסאות ----------
+
+    static List<String> experiments(File root) {
+        List<String> out = new ArrayList<String>();
+        File[] ds = root.listFiles();
+        if (ds != null) for (File d : ds) if (d.isDirectory() && !versions(root, d.getName()).isEmpty()) out.add(d.getName());
+        Collections.sort(out);
+        return out;
+    }
+
+    /** הגרסאות — לפי הסדר שבו נוספו (הישנה קודם). */
+    static List<String> versions(File root, String exp) {
+        File[] fs = new File(root, exp).listFiles();
+        List<File> l = new ArrayList<File>();
+        if (fs != null) for (File f : fs) if (f.isFile() && f.getName().endsWith(EXT)) l.add(f);
+        Collections.sort(l, new Comparator<File>() {
+            @Override public int compare(File a, File b) {
+                int c = Long.compare(a.lastModified(), b.lastModified());
+                return c != 0 ? c : a.getName().compareTo(b.getName());
+            }
+        });
+        List<String> out = new ArrayList<String>();
+        for (File f : l) out.add(f.getName().substring(0, f.getName().length() - EXT.length()));
+        return out;
+    }
+
+    /** הגרסה הפעילה; אם לא נקבעה (או נמחקה) — האחרונה שנוספה. null — אין גרסאות. */
+    static String active(File root, String exp) {
+        List<String> vs = versions(root, exp);
+        if (vs.isEmpty()) return null;
+        try {
+            File a = new File(new File(root, exp), ACTIVE);
+            if (a.isFile()) {
+                String v = Files.readUtf8(a).trim();
+                if (vs.contains(v)) return v;
+            }
+        } catch (Throwable t) {
+            Log.e("Lab.active", t);
+        }
+        return vs.get(vs.size() - 1);
+    }
+
+    static File page(File root, String exp) {
+        String v = active(root, exp);
+        return v == null ? null : new File(new File(root, exp), v + EXT);
+    }
+
+    /** null — הצליח; אחרת השגיאה. */
+    static String setActive(File root, String exp, String ver) {
+        if (!versions(root, exp).contains(ver)) return experiments(root).contains(exp) ? Words.Lab.noVersion(exp, ver) : Words.Lab.noExperiment(exp);
+        try {
+            Files.writeAtomic(new File(new File(root, exp), ACTIVE), ver);
+            return null;
+        } catch (Throwable t) {
+            Log.e("Lab.setActive", t);
+            return Words.Db.failed(String.valueOf(t.getMessage()));
+        }
+    }
+
+    /** מוסיף גרסה (ואותה גרסה שוב — מחליפה), והיא נעשית הפעילה. מחזיר {ניסוי, גרסה}, או זורק עם ההודעה. */
+    static String[] add(File root, File src) throws Exception {
+        if (src == null || !src.isFile()) throw new Exception(Words.Lab.NO_FILE);
+        if (!src.getName().toLowerCase(Locale.ROOT).endsWith(EXT)) throw new Exception(Words.Lab.NOT_HTML);
+        if (src.length() > MAX) throw new Exception(Words.Lab.TOO_BIG);
+        String html = Files.readUtf8(src);
+        String[] nv = nameOf(html, src.getName());
+        File dir = new File(root, nv[0]);
+        if (!dir.isDirectory() && !dir.mkdirs()) throw new Exception(Words.Lab.NO_DIR);
+        File to = new File(dir, nv[1] + EXT);
+        Files.writeAtomic(to, html);
+        to.setLastModified(System.currentTimeMillis());
+        Files.writeAtomic(new File(dir, ACTIVE), nv[1]);
+        return nv;
+    }
+
+    /** "הוסף מעבדה" בלי קובץ: הקובץ החדש ביותר בהורדות ששמו מתחיל ב"מעבדה" ונגמר ב־html. */
+    static File newest(File downloads) {
+        File best = null;
+        File[] fs = downloads == null ? null : downloads.listFiles();
+        if (fs != null)
+            for (File f : fs)
+                if (f.isFile() && f.getName().startsWith(PREFIX) && f.getName().toLowerCase(Locale.ROOT).endsWith(EXT)
+                        && (best == null || f.lastModified() > best.lastModified())) best = f;
+        return best;
+    }
+
+    // ---------- הפקודות ----------
+
+    static boolean isLine(String line) {
+        return line.equals(ADD) || line.startsWith(ADD + " ") || line.equals(SWITCH) || line.startsWith(SWITCH + " ");
+    }
+
+    /** מתכנן שורה של המעבדה: s.describe ו־s.op, או s.error. */
+    static void plan(Batch.Step s, String line, File here, Map<String, String> vars) {
+        final File root = root();
+        if (line.startsWith(ADD)) {
+            List<String> tk = Batch.tokens(line.substring(ADD.length()));
+            if (tk.size() > 1) { s.error = Words.Lab.ADD_USAGE; return; }
+            File src;
+            if (tk.isEmpty()) {
+                String dl = vars.get(Batch.V_DOWNLOADS);
+                src = newest(dl == null ? null : new File(dl));
+                if (src == null) { s.error = Words.Lab.NONE_IN_DOWNLOADS; return; }
+            } else {
+                String[] err = {null};
+                String p = Batch.path(tk.get(0), here, vars, err);
+                if (p == null) { s.error = err[0]; return; }
+                src = new File(p);
+                if (!src.isFile()) { s.error = Words.Lab.NO_FILE + ": " + Bidi.path(p); return; }
+            }
+            final File f = src;
+            s.describe = Words.Lab.addWill(f.getName());
+            s.op = new ListCmd.Op() {
+                @Override public String run(Library lib) {
+                    try {
+                        String[] nv = add(root, f);
+                        return Words.Lab.added(nv[0], nv[1]);
+                    } catch (Throwable t) {
+                        DbListCmd.lastFailed = true;
+                        return String.valueOf(t.getMessage());
+                    }
+                }
+            };
+            return;
+        }
+        List<String> tk = Batch.tokens(line.substring(SWITCH.length()));
+        if (tk.size() != 2) { s.error = Words.Lab.SWITCH_USAGE; return; }
+        final String exp = tk.get(0).trim(), ver = tk.get(1).trim();
+        s.describe = Words.Lab.switchWill(exp, ver);
+        s.op = new ListCmd.Op() {
+            @Override public String run(Library lib) {
+                String err = setActive(root, exp, ver);
+                if (err != null) { DbListCmd.lastFailed = true; return err; }
+                return Words.Lab.switched(exp, ver);
+            }
+        };
+    }
+}
+
+===== קובץ: src/com/tikiyot/vfm/LabScreen.java =====
+package com.tikiyot.vfm;
+
+// מ0.38 — מסך המעבדה (Lab). בלי ניסוי — רשימת הניסויים (נגיעה: פתיחה; "גרסאות": החלפה). עם ניסוי — העמוד שלו, ובראש:
+// השם, הגרסה, "גרסאות". נפתח רק בפקודה: פתח מסך מעבדה ["<ניסוי>"] (בלי שורה בתפריטים).
+// הגשר (vfm) — מה שעמוד מעבדה יכול לעשות בתוכנה; כללי, לכל ניסוי (המשתמש: "המעבדה זה לא רק למצב הזה, אלא גם לפיתוחים
+// אחרים"): לקרוא, לבחור בבורר האמיתי, לכתוב קובצי פקודות, ולהריץ פקודות דרך ההרצה הרגילה (תצוגה מקדימה ואישור).
+// אחראי: התצוגה והגשר. אסור לו: לכתוב או למחוק קבצים אחרים ישירות — כל שינוי אחר עובר דרך הפקודות.
+
+import android.app.Activity;
+import android.content.Context;
+import android.content.DialogInterface;
+import android.content.Intent;
+import android.content.SharedPreferences;
+import android.net.Uri;
+import android.os.Bundle;
+import android.view.Gravity;
+import android.view.View;
+import android.webkit.ConsoleMessage;
+import android.webkit.JavascriptInterface;
+import android.webkit.ValueCallback;
+import android.webkit.WebChromeClient;
+import android.webkit.WebResourceRequest;
+import android.webkit.WebSettings;
+import android.webkit.WebView;
+import android.webkit.WebViewClient;
+import android.widget.Button;
+import android.widget.LinearLayout;
+import android.widget.TextView;
+
+import org.json.JSONArray;
+import org.json.JSONObject;
+
+import java.io.File;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+
+public final class LabScreen extends Activity {
+
+    static final String EXTRA = "exp";
+    private static final String PREFS = "lab";
+
+    private String exp;
+    private WebView web;
+    private Map<String, String> vars;
+
+    static void open(Activity a, String exp) {
+        Intent i = new Intent(a, LabScreen.class);
+        if (exp != null && !exp.trim().isEmpty()) i.putExtra(EXTRA, exp.trim());
+        a.startActivity(i);
+    }
+
+    @Override
+    protected void onCreate(Bundle b) {
+        super.onCreate(b);
+        exp = getIntent().getStringExtra(EXTRA);
+        vars = BatchUi.vars(this, Shortcuts.dir());
+        if (exp == null) showList();
+        else showPage();
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        if (exp == null && web == null) showList();                          // אחרי "הוסף מעבדה" — הרשימה מתעדכנת
+    }
+
+    // ---------- רשימת הניסויים ----------
+
+    private void showList() {
+        final File root = Lab.root();
+        LinearLayout box = Ui.screen(this);
+        box.setPadding(Ui.dp(this, 14), Ui.dp(this, 10), Ui.dp(this, 14), Ui.dp(this, 10));
+        TextView title = Ui.label(this, Words.Lab.TITLE);
+        title.setTextSize(18);
+        box.addView(title);
+        List<String> exps = Lab.experiments(root);
+        if (exps.isEmpty()) {
+            TextView t = Ui.info(this);
+            t.setText(Words.Lab.EMPTY);
+            t.setTextSize(14);
+            box.addView(t);
+        }
+        for (final String e : exps) {
+            LinearLayout row = new LinearLayout(this);
+            row.setLayoutDirection(Ui.DIRECTION);
+            row.setGravity(Gravity.CENTER_VERTICAL);
+            Button open = new Button(this);
+            open.setAllCaps(false);
+            open.setText(Words.Lab.row(e, String.valueOf(Lab.active(root, e)), Lab.versions(root, e).size()));
+            open.setOnClickListener(new View.OnClickListener() {
+                @Override public void onClick(View v) { open(LabScreen.this, e); }
+            });
+            row.addView(open, new LinearLayout.LayoutParams(0, -2, 1f));
+            Button vs = new Button(this);
+            vs.setAllCaps(false);
+            vs.setText(Words.Lab.VERSIONS);
+            vs.setOnClickListener(new View.OnClickListener() {
+                @Override public void onClick(View v) { versions(e, null); }
+            });
+            row.addView(vs);
+            box.addView(row);
+        }
+        setContentView(TopRow.wrap(this, Ui.scroll(this, box)));
+    }
+
+    /** בחירת הגרסה הפעילה; אחריה — then (או רענון הרשימה). */
+    private void versions(final String e, final Runnable then) {
+        final File root = Lab.root();
+        final List<String> vs = Lab.versions(root, e);
+        String act = Lab.active(root, e);
+        final List<String> shown = new ArrayList<String>();
+        for (int i = vs.size() - 1; i >= 0; i--) shown.add(Words.Lab.version(vs.get(i)) + (vs.get(i).equals(act) ? " ✓" : ""));
+        Ui.list(this, e, shown, new DialogInterface.OnClickListener() {
+            @Override
+            public void onClick(DialogInterface d, int which) {
+                String err = Lab.setActive(root, e, vs.get(vs.size() - 1 - which));
+                if (err != null) Ui.toast(LabScreen.this, err);
+                if (then != null) then.run();
+                else showList();
+            }
+        });
+    }
+
+    // ---------- עמוד הניסוי ----------
+
+    private void showPage() {
+        final File root = Lab.root();
+        File page = Lab.page(root, exp);
+        if (page == null) {
+            Ui.toast(this, Words.Lab.NOT_FOUND);
+            exp = null;
+            showList();
+            return;
+        }
+        File run;                                                              // עותק בתיקייה הפרטית — נטען תמיד, בכל אנדרואיד
+        try {
+            File dir = new File(getFilesDir(), "lab-run");
+            dir.mkdirs();
+            run = new File(dir, "page.html");
+            Files.writeAtomic(run, Files.readUtf8(page));
+        } catch (Throwable t) {
+            Log.e("LabScreen.copy", t);
+            Ui.toast(this, Words.Db.failed(String.valueOf(t.getMessage())));
+            finish();
+            return;
+        }
+        LinearLayout root2 = Ui.screen(this);
+        LinearLayout bar = new LinearLayout(this);
+        bar.setLayoutDirection(Ui.DIRECTION);
+        bar.setGravity(Gravity.CENTER_VERTICAL);
+        bar.setPadding(Ui.dp(this, 10), 0, Ui.dp(this, 6), 0);
+        TextView t = Ui.label(this, Words.Lab.TITLE + " · " + exp + " · " + Words.Lab.version(String.valueOf(Lab.active(root, exp))));
+        bar.addView(t, new LinearLayout.LayoutParams(0, -2, 1f));
+        Button vs = new Button(this);
+        vs.setAllCaps(false);
+        vs.setText(Words.Lab.VERSIONS);
+        vs.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                versions(exp, new Runnable() {
+                    @Override public void run() { web = null; showPage(); }
+                });
+            }
+        });
+        bar.addView(vs);
+        root2.addView(bar);
+
+        web = new WebView(this);
+        WebSettings s = web.getSettings();
+        s.setJavaScriptEnabled(true);
+        s.setAllowFileAccess(true);
+        s.setDomStorageEnabled(true);
+        s.setAllowFileAccessFromFileURLs(false);
+        s.setAllowUniversalAccessFromFileURLs(false);
+        s.setAllowContentAccess(false);
+        web.setWebViewClient(new WebViewClient() {
+            @Override
+            public boolean shouldOverrideUrlLoading(WebView v, String url) {
+                return url == null || !url.startsWith("file:");                     // רק העמוד עצמו; שום אתר
+            }
+
+            @Override
+            public boolean shouldOverrideUrlLoading(WebView v, WebResourceRequest r) {
+                return !"file".equals(r.getUrl().getScheme());
+            }
+        });
+        web.setWebChromeClient(new WebChromeClient() {
+            @Override
+            public boolean onConsoleMessage(ConsoleMessage m) {
+                if (m.messageLevel() == ConsoleMessage.MessageLevel.ERROR)   // שגיאה בעמוד — ליומן (נראית בדוח האבחון)
+                    Log.i("מעבדה " + exp + ": " + m.message() + " @" + m.lineNumber());   // בכונן
+                return true;
+            }
+        });
+        web.addJavascriptInterface(new Bridge(), "vfm");
+        root2.addView(web, new LinearLayout.LayoutParams(-1, 0, 1f));
+        setContentView(root2);
+        web.loadUrl(Uri.fromFile(run).toString());
+    }
+
+    @Override
+    public void onBackPressed() {
+        if (web == null) {
+            super.onBackPressed();
+            return;
+        }
+        web.evaluateJavascript("(window.vfmBack&&window.vfmBack())?'1':''", new ValueCallback<String>() {   // העמוד סוגר חלון משלו קודם
+            @Override public void onReceiveValue(String v) { if (!"\"1\"".equals(v)) finish(); }
+        });
+    }
+
+    @Override
+    protected void onDestroy() {
+        if (web != null) web.destroy();
+        super.onDestroy();
+    }
+
+    private void result(final String id, final String value) {
+        runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                if (web == null) return;
+                web.evaluateJavascript("window.vfmResult&&window.vfmResult(" + JSONObject.quote(id) + ","
+                        + (value == null ? "null" : JSONObject.quote(value)) + ")", null);
+            }
+        });
+    }
+
+    private File resolve(String raw) {
+        String[] err = {null};
+        String p = Batch.path(raw == null ? "" : raw, Shortcuts.dir(), vars, err);
+        return p == null ? null : new File(p);
+    }
+
+    // ---------- הגשר ----------
+
+    /** מה שעמוד מעבדה יכול לעשות. כל קריאה — מחזירה טקסט (JSON כשיש מבנה); בחירה — חוזרת ב־window.vfmResult(id, ערך). */
+    final class Bridge {
+
+        @JavascriptInterface
+        public String info() {
+            try {
+                JSONObject o = new JSONObject();
+                o.put("app", getPackageName());
+                o.put("version", getPackageManager().getPackageInfo(getPackageName(), 0).versionName);
+                o.put("mode", String.valueOf(DbListScreen.currentMode));
+                o.put("lab", exp);
+                o.put("labVersion", String.valueOf(Lab.active(Lab.root(), exp)));
+                return o.toString();
+            } catch (Throwable t) {
+                return "{}";
+            }
+        }
+
+        /**
+         * הצבעים של התוכנה (Ui) — שהעמוד ייראה כמו התוכנה, ולא כמו סקיצה. המשתמש: "האם העיצוב יהיה כמו של התוכנה, או כמו
+         * שהיה פה? כי חלק מההערות היו קשורות לעיצוב".
+         */
+        @JavascriptInterface
+        public String theme() {
+            try {
+                JSONObject o = new JSONObject();
+                o.put("text", hex(Ui.TEXT)); o.put("sub", hex(Ui.SUB)); o.put("muted", hex(Ui.MUTED)); o.put("red", hex(Ui.RED));
+                o.put("bg", hex(Ui.BG)); o.put("bgSoft", hex(Ui.BG_SOFT)); o.put("header", hex(Ui.HEADER)); o.put("headerSoft", hex(Ui.HEADER_SOFT));
+                o.put("bar", hex(Ui.BAR)); o.put("selected", hex(Ui.SELECTED)); o.put("accent", hex(Ui.ACCENT)); o.put("accentDark", hex(Ui.ACCENT_DARK));
+                o.put("rule", hex(Ui.RULE)); o.put("onColor", hex(Ui.ON_COLOR));
+                return o.toString();
+            } catch (Throwable t) {
+                return "{}";
+            }
+        }
+
+        /** המקומות המפורסמים: [{name, path}] (הורדות, פנימי, כרטיס…). */
+        @JavascriptInterface
+        public String places() {
+            JSONArray a = new JSONArray();
+            try {
+                String[] keys = {Batch.V_DOWNLOADS, Batch.V_INTERNAL, Batch.V_CARD};
+                for (String k : keys) {
+                    String v = vars.get(k);
+                    if (v == null) continue;
+                    JSONObject o = new JSONObject();
+                    o.put("name", k);
+                    o.put("path", v);
+                    a.put(o);
+                }
+            } catch (Throwable t) {
+                Log.e("Lab.places", t);
+            }
+            return a.toString();
+        }
+
+        /** מסלול מלא ← הצורה שבקובצי הפקודות (%הורדות%\…). */
+        @JavascriptInterface
+        public String toVar(String abs) {
+            return BatchLine.toVar(abs == null ? "" : abs, vars);
+        }
+
+        /** הצורה שבקובצי הפקודות ← מסלול מלא (null — משתנה לא מוכר). */
+        @JavascriptInterface
+        public String expand(String raw) {
+            File f = resolve(raw);
+            return f == null ? null : f.getAbsolutePath();
+        }
+
+        /** קובצי הפקודות שלי: [{name, path, time}]. */
+        @JavascriptInterface
+        public String commandFiles() {
+            JSONArray a = new JSONArray();
+            try {
+                for (File f : Shortcuts.mine()) {
+                    JSONObject o = new JSONObject();
+                    o.put("name", f.getName());
+                    o.put("path", f.getAbsolutePath());
+                    o.put("time", f.lastModified());
+                    a.put(o);
+                }
+            } catch (Throwable t) {
+                Log.e("Lab.commandFiles", t);
+            }
+            return a.toString();
+        }
+
+        /** קריאה בלבד: תוכן קובץ (עד 2MB), או null. */
+        @JavascriptInterface
+        public String readText(String path) {
+            try {
+                File f = resolve(path);
+                if (f == null || !f.isFile() || f.length() > 2L * 1024 * 1024) return null;
+                return Files.readUtf8(f);
+            } catch (Throwable t) {
+                return null;
+            }
+        }
+
+        /** קריאה בלבד: מה בתיקייה — [{name, dir, size, time}], או null. */
+        @JavascriptInterface
+        public String listDir(String path) {
+            try {
+                File d = resolve(path);
+                File[] fs = d == null ? null : d.listFiles();
+                if (fs == null) return null;
+                JSONArray a = new JSONArray();
+                for (File f : fs) {
+                    JSONObject o = new JSONObject();
+                    o.put("name", f.getName());
+                    o.put("dir", f.isDirectory());
+                    o.put("size", f.length());
+                    o.put("time", f.lastModified());
+                    a.put(o);
+                }
+                return a.toString();
+            } catch (Throwable t) {
+                return null;
+            }
+        }
+
+        /** כתיבה — רק קובץ פקודות, בתיקיית הפקודות שלי. "" — נשמר; אחרת השגיאה. */
+        @JavascriptInterface
+        public String writeCommandFile(String name, String text) {
+            try {
+                String n = Lab.safe(new File(name == null ? "" : name).getName());
+                if (n.isEmpty()) return Words.Lab.ONLY_COMMANDS;
+                if (!Batch.isBatch(n)) n = n + "." + Batch.EXT;
+                File dir = Shortcuts.dir();
+                if (!dir.isDirectory()) dir.mkdirs();
+                File f = new File(dir, n);
+                boolean was = f.isFile();
+                Files.writeAtomic(f, text == null ? "" : text);
+                if (!was) Library.get(LabScreen.this).fileAdded(f);
+                return "";
+            } catch (Throwable t) {
+                Log.e("Lab.writeCommandFile", t);
+                return Words.Db.failed(String.valueOf(t.getMessage()));
+            }
+        }
+
+        /** הרצה דרך ההרצה הרגילה — תצוגה מקדימה ואישור, כמו כל קובץ פקודות. */
+        @JavascriptInterface
+        public void runCommands(final String text) {
+            runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    try {
+                        File dir = new File(getCacheDir(), "lab");
+                        dir.mkdirs();
+                        File f = new File(dir, Words.Lab.RUN_FILE + "." + Batch.EXT);
+                        Files.writeAtomic(f, text == null ? "" : text);
+                        BatchUi.run(LabScreen.this, f);
+                    } catch (Throwable t) {
+                        Log.e("Lab.runCommands", t);
+                        Ui.toast(LabScreen.this, Words.Db.failed(String.valueOf(t.getMessage())));
+                    }
+                }
+            });
+        }
+
+        @JavascriptInterface
+        public void pickFolder(final String id, final String title, final boolean canCreate) {
+            runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    FolderPicker.choose(LabScreen.this, title == null ? Words.FolderP.PICK_FOLDER : title, canCreate, new FolderPicker.Picked() {
+                        @Override public void ok(File folder) { result(id, folder.getAbsolutePath()); }
+                    });
+                }
+            });
+        }
+
+        /** קובץ: קודם התיקייה (הבורר הרגיל), ואז הקבצים שבה. */
+        @JavascriptInterface
+        public void pickFile(final String id, final String title) {
+            runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    FolderPicker.choose(LabScreen.this, title == null ? Words.Lab.PICK_FILE : title, false, new FolderPicker.Picked() {
+                        @Override
+                        public void ok(File folder) {
+                            File[] k = folder.listFiles();
+                            final List<File> fs = new ArrayList<File>();
+                            if (k != null) for (File x : k) if (x.isFile()) fs.add(x);
+                            java.util.Collections.sort(fs);
+                            if (fs.isEmpty()) {
+                                Ui.toast(LabScreen.this, Words.Lab.NO_FILES_HERE);
+                                return;
+                            }
+                            List<String> names = new ArrayList<String>();
+                            for (File x : fs) names.add(x.getName());
+                            Ui.list(LabScreen.this, folder.getName(), names, new DialogInterface.OnClickListener() {
+                                @Override public void onClick(DialogInterface d, int w) { result(id, fs.get(w).getAbsolutePath()); }
+                            });
+                        }
+                    });
+                }
+            });
+        }
+
+        /** רשימה מהמסד: {mode, path} — path בשמות, מופרד ב־\. */
+        @JavascriptInterface
+        public void pickList(final String id, final String title) {
+            runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    DbPicker.choose(LabScreen.this, title == null ? Words.NEW_LIST : title, new DbPicker.Picked() {
+                        @Override
+                        public void ok(String mode, long list, List<String> path) {
+                            try {
+                                JSONObject o = new JSONObject();
+                                o.put("mode", mode);
+                                StringBuilder sb = new StringBuilder();
+                                for (String p : path) sb.append(sb.length() > 0 ? "\\" : "").append(p);
+                                o.put("path", sb.toString());
+                                result(id, o.toString());
+                            } catch (Throwable t) {
+                                Log.e("Lab.pickList", t);
+                            }
+                        }
+                    });
+                }
+            });
+        }
+
+        /** זיכרון קטן לכל ניסוי (נשאר בין פתיחות). */
+        @JavascriptInterface
+        public String load(String key) {
+            return prefs().getString(exp + "\u0001" + key, null);
+        }
+
+        @JavascriptInterface
+        public void save(String key, String value) {
+            prefs().edit().putString(exp + "\u0001" + key, value).apply();
+        }
+
+        @JavascriptInterface
+        public void toast(final String s) {
+            runOnUiThread(new Runnable() {
+                @Override public void run() { Ui.toast(LabScreen.this, s); }
+            });
+        }
+
+        @JavascriptInterface
+        public void log(String s) {
+            Log.i("מעבדה " + exp + ": " + s);   // בכונן
+        }
+
+        @JavascriptInterface
+        public void close() {
+            runOnUiThread(new Runnable() {
+                @Override public void run() { finish(); }
+            });
+        }
+    }
+
+    private static String hex(int c) {
+        return String.format(java.util.Locale.ROOT, "#%06X", c & 0xFFFFFF);
+    }
+
+    private SharedPreferences prefs() {
+        return getSharedPreferences(PREFS, Context.MODE_PRIVATE);
     }
 }

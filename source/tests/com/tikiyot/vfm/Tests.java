@@ -54,6 +54,7 @@ public final class Tests {
         run("מ0.30: RD ואחריו MD לאותה תיקייה; ECHO עם משתנה; רשימה שאינה בבית", new Runnable() { public void run() { m030(); } });
         run("מ0.32: RD לתת־תיקייה ואז לתיקייה", new Runnable() { public void run() { m032(); } });
         run("מ0.38: הפקודות והמתגים בעברית", new Runnable() { public void run() { m038(); } });
+        run("מ0.38: המעבדה", new Runnable() { public void run() { m038lab(); } });
         run("מ0.37: הפקודות הקטנות — כתוב, ודא (תיקייה, מכיל, קבצים, שגיאה), דוח, המתן, משתנים, רעיון וכותרת", new Runnable() { public void run() { m037(); } });
         run("קובצי פקודות — השורה כשדות לטופס (117א, שלב 2)", new Runnable() { public void run() { batchForm(); } });
         run("תיקוני הביקורות השישית והשביעית (118–122, 134, 135, 139)", new Runnable() { public void run() { review7(); } });
@@ -1650,6 +1651,71 @@ public final class Tests {
         eq("מ0.27: בלי שגיאות", 0, p.errors);
         check("מ0.27: MD אחרי RD /S — רץ (לא \"כבר קיימת\")", !p.steps.get(1).noop);
         eq("מ0.27: COMP אחרי RD /S — מול תיקייה ריקה: הקובץ רק במקור", 1, p.steps.get(3).files.size());
+    }
+
+    private static void m038lab() {
+        String[] a = Lab.nameOf("<title>x</title><meta name=\"vfm-lab\" content=\"עורך\"><meta content=\"3\" name=\"vfm-lab-version\">", "בלה.html");
+        check("מ0.38: שם וגרסה — מתוך העמוד (meta)", a[0].equals("עורך") && a[1].equals("3"));
+        a = Lab.nameOf("<p>", "מעבדה עורך 2 (1).html");
+        check("מ0.38: בלי meta — משם הקובץ, בלי \"(1)\" של הדפדפן", a[0].equals("עורך") && a[1].equals("2"));
+        a = Lab.nameOf("<p>", "מעבדה.html");
+        check("מ0.38: בלי שם בכלל — \"ניסוי\" וגרסה לפי הזמן", a[0].equals(Words.Lab.UNNAMED) && !a[1].isEmpty());
+        eq("מ0.38: שם לא תקין — מתוקן לדומה", "א-ב (ג) חו״ל", Lab.safe("א/ב <ג> חו\"ל*"));
+        File dl = new File(home, "הורדות-038");
+        wipe(dl);
+        dl.mkdirs();
+        File root = Lab.root();
+        wipe(root);
+        try {
+            File p1 = new File(dl, "מעבדה עורך 1.html");
+            Files.writeAtomic(p1, "<meta name=\"vfm-lab\" content=\"עורך\"><meta name=\"vfm-lab-version\" content=\"1\">אחת");
+            p1.setLastModified(System.currentTimeMillis() - 60000);
+            File p2 = new File(dl, "מעבדה עורך 2.html");
+            Files.writeAtomic(p2, "<meta name=\"vfm-lab\" content=\"עורך\"><meta name=\"vfm-lab-version\" content=\"2\">שתיים");
+            Files.writeAtomic(new File(dl, "אחר.html"), "x");
+            check("מ0.38: \"הוסף מעבדה\" בלי קובץ — החדש ביותר בהורדות שמתחיל ב\"מעבדה\"", Lab.newest(dl).getName().equals(p2.getName()));
+            Lab.add(root, p1);
+            Lab.add(root, p2);
+            eq("מ0.38: שתי גרסאות, לפי הסדר", "[1, 2]", Lab.versions(root, "עורך").toString());
+            eq("מ0.38: האחרונה שנוספה — הפעילה", "2", Lab.active(root, "עורך"));
+            check("מ0.38: החלפת גרסה", Lab.setActive(root, "עורך", "1") == null && "1".equals(Lab.active(root, "עורך"))
+                    && Files.readUtf8(Lab.page(root, "עורך")).endsWith("אחת"));
+            check("מ0.38: גרסה שאין — שגיאה, והפעילה לא זזה", Lab.setActive(root, "עורך", "9") != null && "1".equals(Lab.active(root, "עורך")));
+            check("מ0.38: ניסוי שאין — שגיאה", Lab.setActive(root, "אין", "1") != null);
+            Lab.add(root, p1);
+            eq("מ0.38: אותה גרסה שוב — מחליפה, לא מכפילה", 2, Lab.versions(root, "עורך").size());
+            boolean threw = false;
+            try { Lab.add(root, new File(dl, "אין.html")); } catch (Exception e) { threw = true; }
+            check("מ0.38: קובץ שאין — לא נוסף", threw);
+            eq("מ0.38: רשימת הניסויים", "[עורך]", Lab.experiments(root).toString());
+            java.util.Map<String, String> vars = Batch.vars(dl, home.getAbsolutePath(), null);
+            vars.put(Batch.V_DOWNLOADS, dl.getAbsolutePath());
+            Batch.Plan pl = Batch.plan("הוסף מעבדה\nהוסף מעבדה \"%כאן%\\מעבדה עורך 1.html\"\nהחלף מעבדה \"עורך\" \"2\"\nהחלף מעבדה עורך\nהוסף מעבדה \"%כאן%\\אין.html\"\n", dl, vars);
+            eq("מ0.38: פקודות המעבדה — שתי שורות שגיאה (בלי גרסה; קובץ שאין)", 2, pl.errors);
+            check("מ0.38: \"הוסף מעבדה\" לא נבלע בפועל \"הוסף\"", pl.steps.get(0).cmd.equals(Batch.LAB) && pl.steps.get(0).op != null);
+            String r = pl.steps.get(2).op.run(null);
+            check("מ0.38: \"החלף מעבדה\" רץ", "2".equals(Lab.active(root, "עורך")) && r.contains("2"));
+            eq("מ0.38: הפועל \"פתח מסך מעבדה\" מוכר", null, Verbs.parse("פתח מסך מעבדה \"עורך\"").error);
+            File w = new File(home, "עורך-מעבדה-038");                       // מה שעמוד המעבדה כותב — המנוע קורא בלי שגיאות
+            wipe(w);
+            mk(new File(w, "מקור"), "א.pdf", 5);
+            mk(new File(w, "מקור"), "ב.tmp", 5);
+            mk(new File(w, "יעד"), "x.txt", 5);
+            java.util.Map<String, String> wv = Batch.vars(w, w.getAbsolutePath(), null);
+            Batch.Plan lp = Batch.plan("הערה ניסוי\n"
+                    + "העתק \"%כאן%\\מקור\" \"%כאן%\\יעד\" /עמוק /תפוס:לדלג /תאריך:חודש /נסתרים\n"
+                    + "העבר \"%כאן%\\מקור\\*.pdf\" \"%כאן%\\יעד\" /תפוס:להחליף\n"
+                    + "מחק \"%כאן%\\מקור\\*.tmp\" /נסתרים /תאריך:שבוע\n"
+                    + "צור תיקייה \"%כאן%\\יעד\\חדשה\"\n"
+                    + "שנה \"%כאן%\\יעד\\x.txt\" \"חו״ל- 1.txt\"\n"
+                    + "השווה \"%כאן%\\מקור\" \"%כאן%\\יעד\" /נסתרים\n"
+                    + "ודא \"%כאן%\\יעד\" קיים\n"
+                    + "המתן 1\nרענן עמוק\nהודעה סוף\n"
+                    + "מחק תיקייה \"%כאן%\\יעד\\חדשה\" /עמוק\n", w, wv);
+            eq("מ0.38: שורות שעמוד המעבדה כותב — בלי שגיאות במנוע", 0, lp.errors);
+        } catch (Exception e) {
+            check("מ0.38: המעבדה — " + e, false);
+        }
     }
 
     private static void m038() {

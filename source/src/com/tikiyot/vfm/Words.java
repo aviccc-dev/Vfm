@@ -3116,4 +3116,24 @@ public final class Words {
             return sb.append("SQLite: ").append(info).toString();
         }
     }
+
+    /** מ0.38 — המעבדה (Lab, LabScreen). */
+    public static final class Lab {
+        public static final String UNNAMED = "ניסוי", NO_FILE = "אין קובץ כזה", NOT_HTML = "זה לא עמוד מעבדה (צריך קובץ html)",
+                TOO_BIG = "הקובץ גדול מדי למעבדה (עד 5MB)", NO_DIR = "לא נוצרה תיקיית המעבדה",
+                ADD_USAGE = "הוסף מעבדה — או: הוסף מעבדה \"<קובץ html>\". בלי קובץ: החדש ביותר בהורדות ששמו מתחיל ב\"מעבדה\"",
+                NONE_IN_DOWNLOADS = "אין בהורדות קובץ ששמו מתחיל ב\"מעבדה\" ונגמר ב־html",
+                SWITCH_USAGE = "החלף מעבדה \"<ניסוי>\" \"<גרסה>\"",
+                TITLE = "🧪 מעבדה", EMPTY = "אין עדיין ניסויים. מורידים עמוד מעבדה להורדות, ומריצים את הפקודה: הוסף מעבדה",
+                VERSIONS = "גרסאות", NOT_FOUND = "אין במעבדה ניסוי בשם הזה", ONLY_COMMANDS = "המעבדה כותבת רק קובצי פקודות",
+                NO_FILES_HERE = "אין כאן קבצים", PICK_FILE = "בחירת קובץ", RUN_FILE = "הרצה מהמעבדה";
+        public static String noVersion(String exp, String ver) { return "בניסוי \"" + exp + "\" אין גרסה \"" + ver + "\""; }
+        public static String noExperiment(String exp) { return "אין במעבדה ניסוי \"" + exp + "\""; }
+        public static String addWill(String file) { return "יוסיף למעבדה את " + file; }
+        public static String added(String exp, String ver) { return "נוסף למעבדה: \"" + exp + "\", גרסה " + ver + " — היא הפעילה"; }
+        public static String switchWill(String exp, String ver) { return "יעביר את \"" + exp + "\" לגרסה " + ver; }
+        public static String switched(String exp, String ver) { return "\"" + exp + "\" — עכשיו בגרסה " + ver; }
+        public static String version(String ver) { return "גרסה " + ver; }
+        public static String row(String exp, String ver, int n) { return exp + " · גרסה " + ver + (n > 1 ? " (" + n + " גרסאות)" : ""); }
+    }
 }

@@ -36,8 +36,8 @@ final class Verbs {
     static final String NOTE_WORD = "רעיון", TITLE_WORD = "כותרת";   // תחביר
     static final String S_HOME = "הבית", S_SEARCH = "חיפוש", S_COMMANDS = "פקודות", S_DISK = "קבצים פיזיים",   // תחביר
             S_VIRTUAL = "קבצים וירטואליים", S_SETTINGS = "הגדרות", S_TRASH = "סל", S_EDITOR = "עורך פקודות",   // תחביר
-            S_BACKUPS = "גיבויים", S_DIAG = "אבחון";   // תחביר — מ0.37
-    static final String[] SCREENS = {S_HOME, S_SEARCH, S_COMMANDS, S_DISK, S_VIRTUAL, S_SETTINGS, S_TRASH, S_EDITOR, S_BACKUPS, S_DIAG};
+            S_BACKUPS = "גיבויים", S_DIAG = "אבחון", S_LAB = "מעבדה";   // תחביר — מ0.37; מ0.38: מעבדה
+    static final String[] SCREENS = {S_HOME, S_SEARCH, S_COMMANDS, S_DISK, S_VIRTUAL, S_SETTINGS, S_TRASH, S_EDITOR, S_BACKUPS, S_DIAG, S_LAB};
     static final String A_DRIVE = "מהכונן", A_SEARCH = "מחיפוש";   // תחביר
     static final String SORT = "מיון:";   // תחביר
 
@@ -386,6 +386,7 @@ final class Verbs {
         else if (s.equals(S_EDITOR)) a.startActivity(new Intent(a, BatchEditScreen.class));   // 1.28.0: בלי קובץ — טיוטה
         else if (s.equals(S_BACKUPS)) DbScreen.openBackups(a);                // מ0.37
         else if (s.equals(S_DIAG)) Diag.run(a, DbListScreen.currentMode);     // מ0.37: דוח האבחון כפקודה
+        else if (s.equals(S_LAB)) LabScreen.open(a, c.cond);                    // מ0.38: המעבדה — רק בפקודה
     }
 
     static void openSmart(Activity a, SmartLists.Named n, String sort) {
