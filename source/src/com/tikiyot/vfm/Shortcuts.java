@@ -52,6 +52,7 @@ final class Shortcuts {
             try {
                 if (!line.isEmpty() && Files.readUtf8(f).equals(text)) return f;
             } catch (Throwable ignored) {
+                Log.e("Shortcuts.54", ignored);   // מ0.32: לא בולעים בשקט
             }
             f = new File(dir, base + " (" + i + ")." + Batch.EXT);
         }

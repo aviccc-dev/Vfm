@@ -53,11 +53,56 @@ final class DbFollow {
                 for (String p : paths) {
                     long id = t.findFile(p);
                     if (id == 0) continue;
-                    for (Long l : t.listsOf(id)) if (t.removeMember(l, id)) n[0]++;
+                    StringBuilder was = new StringBuilder();
+                    for (Long l : t.listsOf(id)) if (t.removeMember(l, id)) {
+                        n[0]++;
+                        was.append(was.length() > 0 ? "," : "").append(l);
+                    }
+                    if (was.length() > 0) t.setProp(id, Store.P_WAS_IN, was.toString());   // מ0.32 (מ8): לזכור — לשחזור מהסל
                 }
             }
         }, true);
         return n[0];
+    }
+
+    /**
+     * מ0.32 (מ8): קבצים ששוחזרו מהסל של הכונן חוזרים לרשימות שהיו בהן כשנמחקו (רשימה שכבר איננה — מדולגת).
+     * מחזיר כמה חזרות. בעסקה אחת.
+     */
+    static int back(Store s, final Collection<String> paths) {
+        final int[] n = {0};
+        if (paths == null || paths.isEmpty()) return 0;
+        s.atomic(new Store.Work() {
+            @Override
+            public void run(Store t) {
+                for (String p : paths) {
+                    long id = t.findFile(p);
+                    if (id == 0) continue;
+                    String was = t.prop(id, Store.P_WAS_IN);
+                    if (was == null) continue;
+                    for (String x : was.split(",")) {
+                        long l;
+                        try {
+                            l = Long.parseLong(x.trim());
+                        } catch (NumberFormatException e) {
+                            continue;
+                        }
+                        Store.Item it = t.item(l);
+                        if (it == null || it.type != Store.LIST || t.prop(l, Store.P_TRASHED) != null) continue;
+                        if (!t.listsOf(id).contains(l) && t.addMember(l, id)) n[0]++;
+                    }
+                    t.setProp(id, Store.P_WAS_IN, null);
+                }
+            }
+        }, true);
+        return n[0];
+    }
+
+    static int backEverywhere(final Collection<String> paths) {
+        if (paths == null || paths.isEmpty()) return 0;
+        return each(true, new Each() {
+            @Override public int run(Store s) { return back(s, paths); }
+        });
     }
 
     /** בכמה רשימות הקבצים האלה (כל הופעה נספרת). */

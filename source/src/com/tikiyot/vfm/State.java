@@ -176,6 +176,7 @@ final class State {
                 java.util.Date d = f.parse(v, pos);
                 if (d != null && pos.getIndex() == v.length()) return d.getTime() + (fm.endsWith("ss") ? 999 : 59999);
             } catch (Throwable ignored) {
+                Log.e("State.178", ignored);   // מ0.32: לא בולעים בשקט
             }
         }
         long day = Cond.dateEdge(v);

@@ -2275,6 +2275,8 @@ public final class Words {
                 TEST_CALL_FILE = "בדיקת כלול",  // בכונן
                 TEST_LOAD_FILE = "בדיקת עומס",  // בכונן
                 TEST_ALL_FILE = "בדיקה כללית",  // בכונן
+                TEST_MODES_FILE = "בדיקת שני אופנים",  // בכונן
+                TEST_BIN_FILE = "בדיקת סל",  // בכונן
                 TEST_STRESS_FILE = "בדיקת לחץ",  // בכונן
                 TEST_V23_FILE = "בדיקת מ0.23",  // בכונן
                 TEST_V24_FILE = "בדיקת מ0.24",  // בכונן

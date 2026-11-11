@@ -266,6 +266,11 @@ public final class Physical {
         return DbFollow.movedEverywhere(moved);
     }
 
+    /** מ0.32 (מ8): מה ששוחזר מהסל — חוזר לרשימות שהיה בהן. */
+    static int listsBack(java.util.Collection<String> paths) {
+        return DbFollow.backEverywhere(paths);
+    }
+
     static int listsGone(java.util.Collection<String> gone) {
         return DbFollow.goneEverywhere(gone);
     }
@@ -1241,7 +1246,7 @@ public final class Physical {
                 public void run() {
                     try {
                         if (dlg != null && dlg.isShowing()) dlg.dismiss();
-                    } catch (Throwable ignored) { }
+                    } catch (Throwable t) { Log.e("Physical.1244", t); }   // מ0.32: לא בולעים בשקט
                 }
             });
         }
@@ -1682,6 +1687,7 @@ public final class Physical {
                     outList.add(t < 0 ? new String[]{line, ""} : new String[]{line.substring(0, t), line.substring(t + 1)});
                 }
             } catch (Throwable ignored) {
+                Log.e("Physical.1684", ignored);   // מ0.32: לא בולעים בשקט
             }
             return outList;
         }

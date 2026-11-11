@@ -975,7 +975,7 @@ cd $S; rm -rf out gen bld
 ls -la $OUT
 
 ===== קובץ: build/m-version.txt =====
-44 מ0.31
+45 מ0.32
 
 ===== קובץ: build/test.sh =====
 #!/bin/bash
@@ -3569,6 +3569,18 @@ final class Batch {
          */
         int allowErrors;
 
+        /** מ0.32 (ממצא 38): מאיזו שורה (מקום ברשימת השורות) כל "אופן" בתוקף — כדי לדעת באיזה אופן רצה כל שורה. */
+        final List<Integer> modeFrom = new ArrayList<Integer>();
+        final List<String> modeName = new ArrayList<String>();
+
+        /** האופן שבו רצה השורה: ה"אופן" האחרון שלפניה בקובץ; null — לא נכתב (האופן שעל המסך). */
+        String modeOf(Step s) {
+            int at = steps.indexOf(s);
+            String m = null;
+            for (int i = 0; i < modeFrom.size(); i++) if (modeFrom.get(i) <= at) m = modeName.get(i);
+            return m;
+        }
+
         /** יש יותר שורות שגיאה מהמותר — שום שורה לא רצה. */
         boolean blocked() {
             return errors > allowErrors;
@@ -3919,6 +3931,18 @@ final class Batch {
             return false;
         }
 
+        /** מ0.32 (ממצא 44): יש בתיקייה תת־תיקייה — לפי ההדמיה (מה ששורות קודמות מחקו או יצרו), לא רק לפי הכונן. */
+        boolean hasSubdirs(File d) {
+            String in = d.getAbsolutePath() + "/";
+            for (String x : dirs) if (x.startsWith(in) && x.indexOf('/', in.length()) < 0) return true;
+            File[] k = d.listFiles();
+            if (k != null) for (File x : k) {
+                String p = x.getAbsolutePath();
+                if (x.isDirectory() && !gone.contains(p) && !underWiped(p)) return true;
+            }
+            return false;
+        }
+
         /** RD: התיקייה וכל מה שבתוכה — יוצאים מההדמיה. */
         void wipe(String d) {
             wiped.add(d);
@@ -3940,6 +3964,8 @@ final class Batch {
         Tree tree;
         /** מ0.12: כשעובדים במסד — עותק של המסד בזיכרון (DbListCmd), והקבצים לכל תנאי; null — עוד לא נטען. לא נשמר. */
         Store db;
+        /** מ0.32 (ממצא 38): עותק המסד של כל אופן שכבר טופל בקובץ — חזרה לאופן לא שוכחת מה שהשורות הקודמות עשו בו. */
+        final java.util.Map<String, Store> dbs = new java.util.HashMap<String, Store>();
         /** מ0.15: האופן מ"אופן" בקובץ; null — האופן שפתוח. */
         String mode;
         /** מ0.17.1: "אופן" שנכשל — כל שורות המסד שאחריו נכשלות (לא לרוץ בטעות על אופן אחר). */
@@ -4329,9 +4355,12 @@ final class Batch {
                 else if (!DbScreen.dbModes(DbListScreen.app).contains(m))
                     s.error = sim.modeError = Words.DbCmd.noMode(m, DbScreen.dbModes(DbListScreen.app));
                 else {
+                    sim.dbs.put(sim.mode == null ? "" : sim.mode, sim.db);          // מ0.32: עותק לכל אופן
                     sim.mode = m;
                     sim.modeError = null;
-                    sim.db = null;
+                    sim.db = sim.dbs.get(m);
+                    plan.modeFrom.add(plan.steps.size());
+                    plan.modeName.add(m);
                     s.noop = true;
                     s.describe = Words.DbCmd.modeNow(m);
                 }
@@ -4491,7 +4520,7 @@ final class Batch {
             if (paths.size() != 1) { s.error = Words.Cmd.usage(cmd); return; }
             File d = new File(paths.get(0));
             if (!sim.isDir(d)) { s.error = Words.FOLDER_NOT_FOUND + ": " + args.get(0); return; }
-            if (!s.recursive && (!sim.files(d).isEmpty() || hasSubdirs(d))) {
+            if (!s.recursive && (!sim.files(d).isEmpty() || sim.hasSubdirs(d))) {
                 s.error = Words.Cmd.FOLDER_NOT_EMPTY;
                 return;
             }
@@ -4904,12 +4933,6 @@ final class Batch {
             if (!cmd.equals("COPY") || i != 1) return Words.Cmd.SHARE_ONLY_COPY;
         }
         return null;
-    }
-
-    private static boolean hasSubdirs(File d) {
-        File[] k = d.listFiles();
-        if (k != null) for (File x : k) if (x.isDirectory()) return true;
-        return false;
     }
 
     private static String join(List<String> parts, String sep) {
@@ -5522,7 +5545,7 @@ public class BatchEditScreen extends Activity {
         boolean f0 = false;
         try {
             f0 = getSharedPreferences(PREF, MODE_PRIVATE).getBoolean(PREF_FORM, false);
-        } catch (Throwable ignored) { }
+        } catch (Throwable t) { Log.e("BatchEditScreen.241", t); }   // מ0.32: לא בולעים בשקט
         showForm(f0);
 
         computeRows();
@@ -6450,7 +6473,7 @@ public class BatchEditScreen extends Activity {
         form = on;
         try {
             getSharedPreferences(PREF, MODE_PRIVATE).edit().putBoolean(PREF_FORM, on).apply();
-        } catch (Throwable ignored) { }
+        } catch (Throwable t) { Log.e("BatchEditScreen.1169", t); }   // מ0.32: לא בולעים בשקט
         int v = on ? View.VISIBLE : View.GONE;
         filterView.setVisibility(v);
         menuScroll.setVisibility(v);
@@ -10425,11 +10448,56 @@ final class DbFollow {
                 for (String p : paths) {
                     long id = t.findFile(p);
                     if (id == 0) continue;
-                    for (Long l : t.listsOf(id)) if (t.removeMember(l, id)) n[0]++;
+                    StringBuilder was = new StringBuilder();
+                    for (Long l : t.listsOf(id)) if (t.removeMember(l, id)) {
+                        n[0]++;
+                        was.append(was.length() > 0 ? "," : "").append(l);
+                    }
+                    if (was.length() > 0) t.setProp(id, Store.P_WAS_IN, was.toString());   // מ0.32 (מ8): לזכור — לשחזור מהסל
                 }
             }
         }, true);
         return n[0];
+    }
+
+    /**
+     * מ0.32 (מ8): קבצים ששוחזרו מהסל של הכונן חוזרים לרשימות שהיו בהן כשנמחקו (רשימה שכבר איננה — מדולגת).
+     * מחזיר כמה חזרות. בעסקה אחת.
+     */
+    static int back(Store s, final Collection<String> paths) {
+        final int[] n = {0};
+        if (paths == null || paths.isEmpty()) return 0;
+        s.atomic(new Store.Work() {
+            @Override
+            public void run(Store t) {
+                for (String p : paths) {
+                    long id = t.findFile(p);
+                    if (id == 0) continue;
+                    String was = t.prop(id, Store.P_WAS_IN);
+                    if (was == null) continue;
+                    for (String x : was.split(",")) {
+                        long l;
+                        try {
+                            l = Long.parseLong(x.trim());
+                        } catch (NumberFormatException e) {
+                            continue;
+                        }
+                        Store.Item it = t.item(l);
+                        if (it == null || it.type != Store.LIST || t.prop(l, Store.P_TRASHED) != null) continue;
+                        if (!t.listsOf(id).contains(l) && t.addMember(l, id)) n[0]++;
+                    }
+                    t.setProp(id, Store.P_WAS_IN, null);
+                }
+            }
+        }, true);
+        return n[0];
+    }
+
+    static int backEverywhere(final Collection<String> paths) {
+        if (paths == null || paths.isEmpty()) return 0;
+        return each(true, new Each() {
+            @Override public int run(Store s) { return back(s, paths); }
+        });
     }
 
     /** בכמה רשימות הקבצים האלה (כל הופעה נספרת). */
@@ -14999,8 +15067,10 @@ public class DbScreen extends Activity {
         }
         path.clear();
         damaged = null;
-        refresh();
         Ui.toast(this, Words.Db.RESTORED_DB);
+        // מ0.32 (מ13): אחרי שחזור — הכול נפתח מחדש, כמו כפתור "בית"; מסך שנשאר פתוח היה מציג את המסד הישן, וכתיבה בו נעלמה
+        saveMode(this, mode);
+        startFresh(this);
     }
 
     /** המסד פגום: לא פותחים ולא כותבים; מציעים לשחזר מגיבוי. */
@@ -15254,7 +15324,7 @@ import java.util.List;
 final class DbTestMode {
 
     static final String ASSET = "tests/pkudot-masad.vbat", ASSET_CALL = "tests/pkudot-kalul.vbat", ASSET_LOAD = "tests/omes-masad.vbat",
-            ASSET_ALL = "tests/klali.vbat", ASSET_STRESS = "tests/lachatz.vbat", ASSET_V23 = "tests/gersa-023.vbat",
+            ASSET_ALL = "tests/klali.vbat", ASSET_MODES = "tests/shney-ofanim.vbat", ASSET_BIN = "tests/sal.vbat", ASSET_STRESS = "tests/lachatz.vbat", ASSET_V23 = "tests/gersa-023.vbat",
             ASSET_V24 = "tests/gersa-024.vbat";
 
     /** בקובץ בדיקת העומס: מוחלף בשם האופן עם המסד הגדול ביותר (הנתונים האמיתיים). */
@@ -15316,10 +15386,22 @@ final class DbTestMode {
             final File all = new File(dir, Words.DbCmd.TEST_ALL_FILE + ver + "." + Batch.EXT);
             final File stress = new File(dir, Words.DbCmd.TEST_STRESS_FILE + ver + "." + Batch.EXT);
             final File load = new File(dir, Words.DbCmd.TEST_LOAD_FILE + ver + "." + Batch.EXT);
+            final File modes = new File(dir, Words.DbCmd.TEST_MODES_FILE + ver + "." + Batch.EXT);   // מ0.32
+            final File bin = new File(dir, Words.DbCmd.TEST_BIN_FILE + ver + "." + Batch.EXT);
+            put(a, ASSET_MODES, modes, null);
+            put(a, ASSET_BIN, bin, null);
             put(a, ASSET_ALL, all, null);
             put(a, ASSET_STRESS, stress, null);
             put(a, ASSET_LOAD, load, realMode(a, mode));
-            final List<String> run = java.util.Arrays.asList(all.getAbsolutePath(), stress.getAbsolutePath(), load.getAbsolutePath());
+            final List<String> run = java.util.Arrays.asList(all.getAbsolutePath(), modes.getAbsolutePath(), bin.getAbsolutePath(),
+                    stress.getAbsolutePath(), load.getAbsolutePath());
+            File[] old = dir.listFiles();                                          // מ0.32: קובצי בדיקה של גרסה קודמת — נמחקים מהתיקייה
+            if (old != null) for (File x : old) {
+                if (!x.isFile() || run.contains(x.getAbsolutePath()) || !x.getName().endsWith("." + Batch.EXT)) continue;
+                for (String base : new String[]{Words.DbCmd.TEST_ALL_FILE, Words.DbCmd.TEST_STRESS_FILE, Words.DbCmd.TEST_LOAD_FILE,
+                        Words.DbCmd.TEST_MODES_FILE, Words.DbCmd.TEST_BIN_FILE})
+                    if (x.getName().startsWith(base + " ") || x.getName().equals(base + "." + Batch.EXT)) x.delete();
+            }
             long home = DbVerbs.write(a, mode, new DbVerbs.Job() {
                 @Override
                 public long run(Store s, List<String> p) {
@@ -25124,6 +25206,11 @@ public final class Physical {
         return DbFollow.movedEverywhere(moved);
     }
 
+    /** מ0.32 (מ8): מה ששוחזר מהסל — חוזר לרשימות שהיה בהן. */
+    static int listsBack(java.util.Collection<String> paths) {
+        return DbFollow.backEverywhere(paths);
+    }
+
     static int listsGone(java.util.Collection<String> gone) {
         return DbFollow.goneEverywhere(gone);
     }
@@ -26099,7 +26186,7 @@ public final class Physical {
                 public void run() {
                     try {
                         if (dlg != null && dlg.isShowing()) dlg.dismiss();
-                    } catch (Throwable ignored) { }
+                    } catch (Throwable t) { Log.e("Physical.1244", t); }   // מ0.32: לא בולעים בשקט
                 }
             });
         }
@@ -26540,6 +26627,7 @@ public final class Physical {
                     outList.add(t < 0 ? new String[]{line, ""} : new String[]{line.substring(0, t), line.substring(t + 1)});
                 }
             } catch (Throwable ignored) {
+                Log.e("Physical.1684", ignored);   // מ0.32: לא בולעים בשקט
             }
             return outList;
         }
@@ -27412,6 +27500,7 @@ final class Program {
         try {
             if (f.isFile() && f.length() < MAX) return parse(Files.readUtf8(f));
         } catch (Throwable ignored) {
+            Log.e("Program.68", ignored);   // מ0.32: לא בולעים בשקט
         }
         return new Program();
     }
@@ -28585,7 +28674,7 @@ public class RunScreen extends Activity {
         if (open != null)
             bs.add(btn(Words.Run.open(ListCmd.pathText(open)), new View.OnClickListener() {
                 @Override public void onClick(View v) {
-                    String m = plan.sim == null ? null : plan.sim.mode;                // מ0.18.1: באופן של הקובץ ("אופן")
+                    String m = openMode;                                               // מ0.32: האופן של השורה שיצרה אותה
                     if (DbVerbs.active() && m != null) DbVerbs.openPath(RunScreen.this, m, open);
                     else Verbs.run(RunScreen.this, Verbs.openList(open), file.getParentFile());
                 }
@@ -28638,16 +28727,35 @@ public class RunScreen extends Activity {
     /** 1.27.0: הרשימות שההרצה יצרה (MD שלא היה קיים) — רק העליונות (מה שבתוכן נמחק איתן). */
     private List<List<String>> created() {
         List<List<String>> all = new ArrayList<List<String>>();
+        List<String> modes = new ArrayList<String>();
         for (Batch.Step s : plan.steps)
-            if (s.ran && !s.noop && s.listPath != null && s.cmd.equals("MD")) all.add(s.listPath);
+            if (s.ran && !s.noop && s.listPath != null && s.cmd.equals("MD")) {
+                all.add(s.listPath);
+                modes.add(plan.modeOf(s));
+            }
         List<List<String>> top = new ArrayList<List<String>>();
-        for (List<String> p : all) {
-            boolean inner = false;
-            for (List<String> q : all) if (q != p && q.size() < p.size() && Tree.inside(p, q)) inner = true;
-            if (!inner && !top.contains(p)) top.add(p);
+        createdIn.clear();
+        for (int i = 0; i < all.size(); i++) {
+            List<String> p = all.get(i);
+            boolean inner = false, twice = false;
+            for (int j = 0; j < all.size(); j++) {
+                List<String> q = all.get(j);
+                boolean same = modes.get(i) == null ? modes.get(j) == null : modes.get(i).equals(modes.get(j));
+                if (same && q != p && q.size() < p.size() && Tree.inside(p, q)) inner = true;
+            }
+            for (List<String> t : top) if (t.equals(p) && (createdIn.get(t) == null ? modes.get(i) == null : createdIn.get(t).equals(modes.get(i)))) twice = true;
+            if (!inner && !twice) {
+                List<String> key = new ArrayList<String>(p);                       // עותק — מפתח משלו גם לאותה דרך באופן אחר
+                top.add(key);
+                createdIn.put(key, modes.get(i));
+            }
         }
         return top;
     }
+
+    /** מ0.32 (ממצא 38): באיזה אופן נוצרה כל רשימה שההרצה יצרה (לפי זהות המפתח), ובאיזה אופן הרשימה של כפתור "פתח". */
+    private final java.util.IdentityHashMap<List<String>, String> createdIn = new java.util.IdentityHashMap<List<String>, String>();
+    private String openMode;
 
     private void clean(final List<List<String>> made, final Button b) {
         StringBuilder names = new StringBuilder();
@@ -28656,7 +28764,15 @@ public class RunScreen extends Activity {
             @Override
             public void run() {
                 List<String> gone = new ArrayList<String>();
-                if (DbVerbs.active()) gone = DbListCmd.removeLists(made, plan.sim == null ? null : plan.sim.mode);                // מ0.12: במסד
+                if (DbVerbs.active()) {                                        // מ0.32 (ממצא 38): כל רשימה — באופן שבו נוצרה
+                    java.util.Map<String, List<List<String>>> by = new java.util.LinkedHashMap<String, List<List<String>>>();
+                    for (List<String> p : made) {
+                        String m = createdIn.get(p);
+                        if (!by.containsKey(m)) by.put(m, new ArrayList<List<String>>());
+                        by.get(m).add(p);
+                    }
+                    for (java.util.Map.Entry<String, List<List<String>>> e : by.entrySet()) gone.addAll(DbListCmd.removeLists(e.getValue(), e.getKey()));
+                }
                 Log.i(Words.Run.CLEANED + ": " + gone);
                 bodies[3].addView(warn(Words.Run.CLEANED + ": " + join(gone)));
                 b.setEnabled(false);
@@ -28684,10 +28800,13 @@ public class RunScreen extends Activity {
             if (s.ran && s.op != null && s.target != null && Batch.kind(s) != Batch.K_DELETE) {
                 String t = s.target.replace("\"", "").trim();
                 if (t.equals(Words.ListCmdW.HOME)) continue;
-                String m = plan.sim == null ? null : plan.sim.mode;
+                String m = plan.modeOf(s);                                      // מ0.32: האופן של השורה, לא האחרון בקובץ
                 if (DbVerbs.active()) {                                         // מ0.23: במסד — קיימת במסד (גם "/" וגם "\\")
                     List<String> p = Names.parsePath(t.replace('\\', '/'));
-                    if (!p.isEmpty() && DbVerbs.exists(this, m != null ? m : DbListScreen.currentMode, p)) return p;
+                    if (!p.isEmpty() && DbVerbs.exists(this, m != null ? m : DbListScreen.currentMode, p)) {
+                        openMode = m;
+                        return p;
+                    }
                     continue;
                 }
             }
@@ -31107,6 +31226,7 @@ final class Shortcuts {
             try {
                 if (!line.isEmpty() && Files.readUtf8(f).equals(text)) return f;
             } catch (Throwable ignored) {
+                Log.e("Shortcuts.54", ignored);   // מ0.32: לא בולעים בשקט
             }
             f = new File(dir, base + " (" + i + ")." + Batch.EXT);
         }
@@ -34489,6 +34609,7 @@ final class State {
                 java.util.Date d = f.parse(v, pos);
                 if (d != null && pos.getIndex() == v.length()) return d.getTime() + (fm.endsWith("ss") ? 999 : 59999);
             } catch (Throwable ignored) {
+                Log.e("State.178", ignored);   // מ0.32: לא בולעים בשקט
             }
         }
         long day = Cond.dateEdge(v);
@@ -34525,6 +34646,9 @@ public interface Store {
 
     /** מ0.4, פנימי: פריט בסל המחזור (מתי) ומאיפה הוא יצא ("רשימה:מקום,…"). מנוהלים רק בידי trash/restore. */
     String P_TRASHED = "trashed", P_TRASH_FROM = "trash_from";
+
+    /** מ0.32 (מ8): קובץ שנמחק לסל של הכונן ויצא מהרשימות — באילו רשימות היה ("12,40"), כדי שיחזור אליהן בשחזור. */
+    String P_WAS_IN = "was_in";
 
     /** שגיאת שימוש או אחסון. ההודעה — לאנשי הפיתוח (אנגלית); המסך מציג הודעה משלו. */
     final class Failure extends RuntimeException {
@@ -36667,6 +36791,9 @@ public final class Trash {
         if (it.dir) {
             lib.dirChanged(src.getParent());
             lib.dirChanged(dst.getParent());
+            List<String> orig = new java.util.ArrayList<String>();                 // מ0.32 (מ8): חוזרים לרשימות — לפי המסלול המקורי
+            for (String rel : relFiles(dst)) orig.add(it.original + "/" + rel);
+            Physical.listsBack(orig);
             if (renamed) {                                     // שם תפוס: הפריטים ברשימות עוברים לשם החדש (65)
                 Map<String, String> m = new HashMap<String, String>();
                 for (String rel : relFiles(dst)) m.put(it.original + "/" + rel, dst.getAbsolutePath() + "/" + rel);
@@ -36675,6 +36802,7 @@ public final class Trash {
         } else {
             lib.fileRemoved(src.getAbsolutePath());
             lib.fileAdded(dst);
+            Physical.listsBack(java.util.Collections.singletonList(it.original));   // מ0.32 (מ8): חוזר לרשימות שהיה בהן
             if (renamed) Physical.listsMoved(java.util.Collections.singletonMap(it.original, dst.getAbsolutePath()));   // מ0.23: גם המסד
         }
         forget(src.getParentFile(), java.util.Collections.singletonList(src.getName()));
@@ -37902,6 +38030,7 @@ public final class Ui {
             a.startActivity(edit);
             return;
         } catch (Throwable ignored) {
+            Log.e("Ui.550", ignored);   // מ0.32: לא בולעים בשקט
         }
         Intent view = new Intent(Intent.ACTION_VIEW);
         view.setDataAndType(Provider.uriFor(f), "text/plain");
@@ -41101,6 +41230,8 @@ public final class Words {
                 TEST_CALL_FILE = "בדיקת כלול",  // בכונן
                 TEST_LOAD_FILE = "בדיקת עומס",  // בכונן
                 TEST_ALL_FILE = "בדיקה כללית",  // בכונן
+                TEST_MODES_FILE = "בדיקת שני אופנים",  // בכונן
+                TEST_BIN_FILE = "בדיקת סל",  // בכונן
                 TEST_STRESS_FILE = "בדיקת לחץ",  // בכונן
                 TEST_V23_FILE = "בדיקת מ0.23",  // בכונן
                 TEST_V24_FILE = "בדיקת מ0.24",  // בכונן
@@ -42500,6 +42631,9 @@ final class Diag {
                     long list = s.createList("אבחון-רשימה", home);
                     DbFiles.Added r2 = DbFiles.add(s, list, Arrays.asList(internal + "/אבחון-א.txt", internal + "/אבחון-ב.txt"), null, false);
                     sb.append(ok(r2.added == 2 && s.count(list) == 2)).append("קבצים נכנסים לרשימה\n");
+                    List<String> two = Arrays.asList(internal + "/אבחון-א.txt", internal + "/אבחון-ב.txt");   // מ0.32 (מ8)
+                    int out = DbFollow.gone(s, two), in0 = s.count(list), back = DbFollow.back(s, two);
+                    sb.append(ok(out == 2 && in0 == 0 && back == 2 && s.count(list) == 2)).append("קובץ שנמחק יוצא מהרשימה, ובשחזור חוזר אליה\n");
                 } finally {
                     s.close();
                 }
@@ -44498,6 +44632,7 @@ public final class Tests {
         run("קובצי פקודות בסגנון bat — המנוע (117א)", new Runnable() { public void run() { batch(); } });
         run("מ0.27: RD /S ואחריו MD ו־COMP — ההדמיה שוכחת מה שהיה בתיקייה", new Runnable() { public void run() { m027(); } });
         run("מ0.30: RD ואחריו MD לאותה תיקייה; ECHO עם משתנה; רשימה שאינה בבית", new Runnable() { public void run() { m030(); } });
+        run("מ0.32: RD לתת־תיקייה ואז לתיקייה; קובץ שנמחק ושוחזר חוזר לרשימות", new Runnable() { public void run() { m032(); } });
         run("קובצי פקודות — השורה כשדות לטופס (117א, שלב 2)", new Runnable() { public void run() { batchForm(); } });
         run("תיקוני הביקורות השישית והשביעית (118–122, 134, 135, 139)", new Runnable() { public void run() { review7(); } });
         run("תיקוני באגים 123, 124, 137", new Runnable() { public void run() { review7b(); } });
@@ -46093,6 +46228,32 @@ public final class Tests {
         eq("מ0.27: בלי שגיאות", 0, p.errors);
         check("מ0.27: MD אחרי RD /S — רץ (לא \"כבר קיימת\")", !p.steps.get(1).noop);
         eq("מ0.27: COMP אחרי RD /S — מול תיקייה ריקה: הקובץ רק במקור", 1, p.steps.get(3).files.size());
+    }
+
+    private static void m032() {
+        File root = new File(home, "כונן-032");
+        wipe(root);
+        File here = new File(root, "כאן"), x = new File(root, "X"), sub = new File(x, "sub");
+        here.mkdirs();
+        sub.mkdirs();
+        java.util.Map<String, String> vars = Batch.vars(here, root.getAbsolutePath(), null);
+        Batch.Plan p = Batch.plan("RD \"" + sub + "\"\nRD \"" + x + "\"", here, vars);
+        eq("מ0.32 (44): RD לתת־תיקייה ואחריו RD לתיקייה — בלי \"לא ריקה\"", 0, p.errors);
+        Batch.Plan q = Batch.plan("MD \"" + x + "/חדשה\"\nRD \"" + x + "/sub\"\nRD \"" + x + "\"", here, vars);
+        eq("מ0.32 (44): תת־תיקייה ששורה קודמת יוצרת — התיקייה לא ריקה", 1, q.errors);
+        MemStore s = new MemStore(IdCounter.memory());
+        long h = DbPaths.ensureHome(s), a = s.createList("א", h), b = s.createList("ב", h), c = s.createList("ג", h);
+        String f1 = root + "/קובץ.txt";
+        DbFiles.add(s, a, java.util.Collections.singletonList(f1), null, false);
+        long id = s.findFile(f1);
+        s.addMember(b, id);
+        eq("מ0.32 (מ8): קובץ שנמחק — יצא משתי הרשימות", 2, DbFollow.gone(s, java.util.Collections.singletonList(f1)));
+        check("מ0.32 (מ8): ונזכר איפה היה", s.listsOf(id).isEmpty() && s.prop(id, Store.P_WAS_IN) != null);
+        DbListCmd.deleteWhole(s, b);
+        eq("מ0.32 (מ8): שוחזר — חוזר לרשימה שעוד קיימת (זו שנמחקה — מדולגת)", 1, DbFollow.back(s, java.util.Collections.singletonList(f1)));
+        check("מ0.32 (מ8): חזר ל\"א\" בלבד, והזיכרון נוקה", s.listsOf(id).equals(java.util.Collections.singletonList(a)) && s.prop(id, Store.P_WAS_IN) == null
+                && s.count(c) == 0);
+        eq("מ0.32 (מ8): שחזור שני — כלום", 0, DbFollow.back(s, java.util.Collections.singletonList(f1)));
     }
 
     private static void m030() {

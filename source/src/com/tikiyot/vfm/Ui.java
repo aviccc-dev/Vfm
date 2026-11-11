@@ -548,6 +548,7 @@ public final class Ui {
             a.startActivity(edit);
             return;
         } catch (Throwable ignored) {
+            Log.e("Ui.550", ignored);   // מ0.32: לא בולעים בשקט
         }
         Intent view = new Intent(Intent.ACTION_VIEW);
         view.setDataAndType(Provider.uriFor(f), "text/plain");

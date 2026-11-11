@@ -1376,8 +1376,10 @@ public class DbScreen extends Activity {
         }
         path.clear();
         damaged = null;
-        refresh();
         Ui.toast(this, Words.Db.RESTORED_DB);
+        // מ0.32 (מ13): אחרי שחזור — הכול נפתח מחדש, כמו כפתור "בית"; מסך שנשאר פתוח היה מציג את המסד הישן, וכתיבה בו נעלמה
+        saveMode(this, mode);
+        startFresh(this);
     }
 
     /** המסד פגום: לא פותחים ולא כותבים; מציעים לשחזר מגיבוי. */

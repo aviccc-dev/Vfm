@@ -309,7 +309,7 @@ public class RunScreen extends Activity {
         if (open != null)
             bs.add(btn(Words.Run.open(ListCmd.pathText(open)), new View.OnClickListener() {
                 @Override public void onClick(View v) {
-                    String m = plan.sim == null ? null : plan.sim.mode;                // מ0.18.1: באופן של הקובץ ("אופן")
+                    String m = openMode;                                               // מ0.32: האופן של השורה שיצרה אותה
                     if (DbVerbs.active() && m != null) DbVerbs.openPath(RunScreen.this, m, open);
                     else Verbs.run(RunScreen.this, Verbs.openList(open), file.getParentFile());
                 }
@@ -362,16 +362,35 @@ public class RunScreen extends Activity {
     /** 1.27.0: הרשימות שההרצה יצרה (MD שלא היה קיים) — רק העליונות (מה שבתוכן נמחק איתן). */
     private List<List<String>> created() {
         List<List<String>> all = new ArrayList<List<String>>();
+        List<String> modes = new ArrayList<String>();
         for (Batch.Step s : plan.steps)
-            if (s.ran && !s.noop && s.listPath != null && s.cmd.equals("MD")) all.add(s.listPath);
+            if (s.ran && !s.noop && s.listPath != null && s.cmd.equals("MD")) {
+                all.add(s.listPath);
+                modes.add(plan.modeOf(s));
+            }
         List<List<String>> top = new ArrayList<List<String>>();
-        for (List<String> p : all) {
-            boolean inner = false;
-            for (List<String> q : all) if (q != p && q.size() < p.size() && Tree.inside(p, q)) inner = true;
-            if (!inner && !top.contains(p)) top.add(p);
+        createdIn.clear();
+        for (int i = 0; i < all.size(); i++) {
+            List<String> p = all.get(i);
+            boolean inner = false, twice = false;
+            for (int j = 0; j < all.size(); j++) {
+                List<String> q = all.get(j);
+                boolean same = modes.get(i) == null ? modes.get(j) == null : modes.get(i).equals(modes.get(j));
+                if (same && q != p && q.size() < p.size() && Tree.inside(p, q)) inner = true;
+            }
+            for (List<String> t : top) if (t.equals(p) && (createdIn.get(t) == null ? modes.get(i) == null : createdIn.get(t).equals(modes.get(i)))) twice = true;
+            if (!inner && !twice) {
+                List<String> key = new ArrayList<String>(p);                       // עותק — מפתח משלו גם לאותה דרך באופן אחר
+                top.add(key);
+                createdIn.put(key, modes.get(i));
+            }
         }
         return top;
     }
+
+    /** מ0.32 (ממצא 38): באיזה אופן נוצרה כל רשימה שההרצה יצרה (לפי זהות המפתח), ובאיזה אופן הרשימה של כפתור "פתח". */
+    private final java.util.IdentityHashMap<List<String>, String> createdIn = new java.util.IdentityHashMap<List<String>, String>();
+    private String openMode;
 
     private void clean(final List<List<String>> made, final Button b) {
         StringBuilder names = new StringBuilder();
@@ -380,7 +399,15 @@ public class RunScreen extends Activity {
             @Override
             public void run() {
                 List<String> gone = new ArrayList<String>();
-                if (DbVerbs.active()) gone = DbListCmd.removeLists(made, plan.sim == null ? null : plan.sim.mode);                // מ0.12: במסד
+                if (DbVerbs.active()) {                                        // מ0.32 (ממצא 38): כל רשימה — באופן שבו נוצרה
+                    java.util.Map<String, List<List<String>>> by = new java.util.LinkedHashMap<String, List<List<String>>>();
+                    for (List<String> p : made) {
+                        String m = createdIn.get(p);
+                        if (!by.containsKey(m)) by.put(m, new ArrayList<List<String>>());
+                        by.get(m).add(p);
+                    }
+                    for (java.util.Map.Entry<String, List<List<String>>> e : by.entrySet()) gone.addAll(DbListCmd.removeLists(e.getValue(), e.getKey()));
+                }
                 Log.i(Words.Run.CLEANED + ": " + gone);
                 bodies[3].addView(warn(Words.Run.CLEANED + ": " + join(gone)));
                 b.setEnabled(false);
@@ -408,10 +435,13 @@ public class RunScreen extends Activity {
             if (s.ran && s.op != null && s.target != null && Batch.kind(s) != Batch.K_DELETE) {
                 String t = s.target.replace("\"", "").trim();
                 if (t.equals(Words.ListCmdW.HOME)) continue;
-                String m = plan.sim == null ? null : plan.sim.mode;
+                String m = plan.modeOf(s);                                      // מ0.32: האופן של השורה, לא האחרון בקובץ
                 if (DbVerbs.active()) {                                         // מ0.23: במסד — קיימת במסד (גם "/" וגם "\\")
                     List<String> p = Names.parsePath(t.replace('\\', '/'));
-                    if (!p.isEmpty() && DbVerbs.exists(this, m != null ? m : DbListScreen.currentMode, p)) return p;
+                    if (!p.isEmpty() && DbVerbs.exists(this, m != null ? m : DbListScreen.currentMode, p)) {
+                        openMode = m;
+                        return p;
+                    }
                     continue;
                 }
             }

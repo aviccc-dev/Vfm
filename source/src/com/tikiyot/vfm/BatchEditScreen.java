@@ -238,7 +238,7 @@ public class BatchEditScreen extends Activity {
         boolean f0 = false;
         try {
             f0 = getSharedPreferences(PREF, MODE_PRIVATE).getBoolean(PREF_FORM, false);
-        } catch (Throwable ignored) { }
+        } catch (Throwable t) { Log.e("BatchEditScreen.241", t); }   // מ0.32: לא בולעים בשקט
         showForm(f0);
 
         computeRows();
@@ -1166,7 +1166,7 @@ public class BatchEditScreen extends Activity {
         form = on;
         try {
             getSharedPreferences(PREF, MODE_PRIVATE).edit().putBoolean(PREF_FORM, on).apply();
-        } catch (Throwable ignored) { }
+        } catch (Throwable t) { Log.e("BatchEditScreen.1169", t); }   // מ0.32: לא בולעים בשקט
         int v = on ? View.VISIBLE : View.GONE;
         filterView.setVisibility(v);
         menuScroll.setVisibility(v);

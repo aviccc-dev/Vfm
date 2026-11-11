@@ -26,6 +26,9 @@ public interface Store {
     /** מ0.4, פנימי: פריט בסל המחזור (מתי) ומאיפה הוא יצא ("רשימה:מקום,…"). מנוהלים רק בידי trash/restore. */
     String P_TRASHED = "trashed", P_TRASH_FROM = "trash_from";
 
+    /** מ0.32 (מ8): קובץ שנמחק לסל של הכונן ויצא מהרשימות — באילו רשימות היה ("12,40"), כדי שיחזור אליהן בשחזור. */
+    String P_WAS_IN = "was_in";
+
     /** שגיאת שימוש או אחסון. ההודעה — לאנשי הפיתוח (אנגלית); המסך מציג הודעה משלו. */
     final class Failure extends RuntimeException {
         public Failure(String m) {

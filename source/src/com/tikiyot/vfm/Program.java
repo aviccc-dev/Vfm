@@ -66,6 +66,7 @@ final class Program {
         try {
             if (f.isFile() && f.length() < MAX) return parse(Files.readUtf8(f));
         } catch (Throwable ignored) {
+            Log.e("Program.68", ignored);   // מ0.32: לא בולעים בשקט
         }
         return new Program();
     }

@@ -346,6 +346,9 @@ final class Diag {
                     long list = s.createList("אבחון-רשימה", home);
                     DbFiles.Added r2 = DbFiles.add(s, list, Arrays.asList(internal + "/אבחון-א.txt", internal + "/אבחון-ב.txt"), null, false);
                     sb.append(ok(r2.added == 2 && s.count(list) == 2)).append("קבצים נכנסים לרשימה\n");
+                    List<String> two = Arrays.asList(internal + "/אבחון-א.txt", internal + "/אבחון-ב.txt");   // מ0.32 (מ8)
+                    int out = DbFollow.gone(s, two), in0 = s.count(list), back = DbFollow.back(s, two);
+                    sb.append(ok(out == 2 && in0 == 0 && back == 2 && s.count(list) == 2)).append("קובץ שנמחק יוצא מהרשימה, ובשחזור חוזר אליה\n");
                 } finally {
                     s.close();
                 }

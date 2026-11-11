@@ -91,6 +91,18 @@ final class Batch {
          */
         int allowErrors;
 
+        /** מ0.32 (ממצא 38): מאיזו שורה (מקום ברשימת השורות) כל "אופן" בתוקף — כדי לדעת באיזה אופן רצה כל שורה. */
+        final List<Integer> modeFrom = new ArrayList<Integer>();
+        final List<String> modeName = new ArrayList<String>();
+
+        /** האופן שבו רצה השורה: ה"אופן" האחרון שלפניה בקובץ; null — לא נכתב (האופן שעל המסך). */
+        String modeOf(Step s) {
+            int at = steps.indexOf(s);
+            String m = null;
+            for (int i = 0; i < modeFrom.size(); i++) if (modeFrom.get(i) <= at) m = modeName.get(i);
+            return m;
+        }
+
         /** יש יותר שורות שגיאה מהמותר — שום שורה לא רצה. */
         boolean blocked() {
             return errors > allowErrors;
@@ -441,6 +453,18 @@ final class Batch {
             return false;
         }
 
+        /** מ0.32 (ממצא 44): יש בתיקייה תת־תיקייה — לפי ההדמיה (מה ששורות קודמות מחקו או יצרו), לא רק לפי הכונן. */
+        boolean hasSubdirs(File d) {
+            String in = d.getAbsolutePath() + "/";
+            for (String x : dirs) if (x.startsWith(in) && x.indexOf('/', in.length()) < 0) return true;
+            File[] k = d.listFiles();
+            if (k != null) for (File x : k) {
+                String p = x.getAbsolutePath();
+                if (x.isDirectory() && !gone.contains(p) && !underWiped(p)) return true;
+            }
+            return false;
+        }
+
         /** RD: התיקייה וכל מה שבתוכה — יוצאים מההדמיה. */
         void wipe(String d) {
             wiped.add(d);
@@ -462,6 +486,8 @@ final class Batch {
         Tree tree;
         /** מ0.12: כשעובדים במסד — עותק של המסד בזיכרון (DbListCmd), והקבצים לכל תנאי; null — עוד לא נטען. לא נשמר. */
         Store db;
+        /** מ0.32 (ממצא 38): עותק המסד של כל אופן שכבר טופל בקובץ — חזרה לאופן לא שוכחת מה שהשורות הקודמות עשו בו. */
+        final java.util.Map<String, Store> dbs = new java.util.HashMap<String, Store>();
         /** מ0.15: האופן מ"אופן" בקובץ; null — האופן שפתוח. */
         String mode;
         /** מ0.17.1: "אופן" שנכשל — כל שורות המסד שאחריו נכשלות (לא לרוץ בטעות על אופן אחר). */
@@ -851,9 +877,12 @@ final class Batch {
                 else if (!DbScreen.dbModes(DbListScreen.app).contains(m))
                     s.error = sim.modeError = Words.DbCmd.noMode(m, DbScreen.dbModes(DbListScreen.app));
                 else {
+                    sim.dbs.put(sim.mode == null ? "" : sim.mode, sim.db);          // מ0.32: עותק לכל אופן
                     sim.mode = m;
                     sim.modeError = null;
-                    sim.db = null;
+                    sim.db = sim.dbs.get(m);
+                    plan.modeFrom.add(plan.steps.size());
+                    plan.modeName.add(m);
                     s.noop = true;
                     s.describe = Words.DbCmd.modeNow(m);
                 }
@@ -1013,7 +1042,7 @@ final class Batch {
             if (paths.size() != 1) { s.error = Words.Cmd.usage(cmd); return; }
             File d = new File(paths.get(0));
             if (!sim.isDir(d)) { s.error = Words.FOLDER_NOT_FOUND + ": " + args.get(0); return; }
-            if (!s.recursive && (!sim.files(d).isEmpty() || hasSubdirs(d))) {
+            if (!s.recursive && (!sim.files(d).isEmpty() || sim.hasSubdirs(d))) {
                 s.error = Words.Cmd.FOLDER_NOT_EMPTY;
                 return;
             }
@@ -1426,12 +1455,6 @@ final class Batch {
             if (!cmd.equals("COPY") || i != 1) return Words.Cmd.SHARE_ONLY_COPY;
         }
         return null;
-    }
-
-    private static boolean hasSubdirs(File d) {
-        File[] k = d.listFiles();
-        if (k != null) for (File x : k) if (x.isDirectory()) return true;
-        return false;
     }
 
     private static String join(List<String> parts, String sep) {

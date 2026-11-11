@@ -16,7 +16,7 @@ import java.util.List;
 final class DbTestMode {
 
     static final String ASSET = "tests/pkudot-masad.vbat", ASSET_CALL = "tests/pkudot-kalul.vbat", ASSET_LOAD = "tests/omes-masad.vbat",
-            ASSET_ALL = "tests/klali.vbat", ASSET_STRESS = "tests/lachatz.vbat", ASSET_V23 = "tests/gersa-023.vbat",
+            ASSET_ALL = "tests/klali.vbat", ASSET_MODES = "tests/shney-ofanim.vbat", ASSET_BIN = "tests/sal.vbat", ASSET_STRESS = "tests/lachatz.vbat", ASSET_V23 = "tests/gersa-023.vbat",
             ASSET_V24 = "tests/gersa-024.vbat";
 
     /** בקובץ בדיקת העומס: מוחלף בשם האופן עם המסד הגדול ביותר (הנתונים האמיתיים). */
@@ -78,10 +78,22 @@ final class DbTestMode {
             final File all = new File(dir, Words.DbCmd.TEST_ALL_FILE + ver + "." + Batch.EXT);
             final File stress = new File(dir, Words.DbCmd.TEST_STRESS_FILE + ver + "." + Batch.EXT);
             final File load = new File(dir, Words.DbCmd.TEST_LOAD_FILE + ver + "." + Batch.EXT);
+            final File modes = new File(dir, Words.DbCmd.TEST_MODES_FILE + ver + "." + Batch.EXT);   // מ0.32
+            final File bin = new File(dir, Words.DbCmd.TEST_BIN_FILE + ver + "." + Batch.EXT);
+            put(a, ASSET_MODES, modes, null);
+            put(a, ASSET_BIN, bin, null);
             put(a, ASSET_ALL, all, null);
             put(a, ASSET_STRESS, stress, null);
             put(a, ASSET_LOAD, load, realMode(a, mode));
-            final List<String> run = java.util.Arrays.asList(all.getAbsolutePath(), stress.getAbsolutePath(), load.getAbsolutePath());
+            final List<String> run = java.util.Arrays.asList(all.getAbsolutePath(), modes.getAbsolutePath(), bin.getAbsolutePath(),
+                    stress.getAbsolutePath(), load.getAbsolutePath());
+            File[] old = dir.listFiles();                                          // מ0.32: קובצי בדיקה של גרסה קודמת — נמחקים מהתיקייה
+            if (old != null) for (File x : old) {
+                if (!x.isFile() || run.contains(x.getAbsolutePath()) || !x.getName().endsWith("." + Batch.EXT)) continue;
+                for (String base : new String[]{Words.DbCmd.TEST_ALL_FILE, Words.DbCmd.TEST_STRESS_FILE, Words.DbCmd.TEST_LOAD_FILE,
+                        Words.DbCmd.TEST_MODES_FILE, Words.DbCmd.TEST_BIN_FILE})
+                    if (x.getName().startsWith(base + " ") || x.getName().equals(base + "." + Batch.EXT)) x.delete();
+            }
             long home = DbVerbs.write(a, mode, new DbVerbs.Job() {
                 @Override
                 public long run(Store s, List<String> p) {
