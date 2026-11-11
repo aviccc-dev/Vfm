@@ -387,7 +387,9 @@ public final class LabScreen extends Activity {
                         dir.mkdirs();
                         File f = new File(dir, Words.Lab.RUN_FILE + "." + Batch.EXT);
                         Files.writeAtomic(f, text == null ? "" : text);
-                        BatchUi.run(LabScreen.this, f);
+                        // מ0.39: תמיד במסך ההרצה — תצוגה מקדימה, אישור, ודוח (בהרצה הרגילה, בלי "בדיקה", זה רץ מיד ונראית רק
+                        // הודעה קצרה; המשתמש: "איפה רואים את התוצאה של הפעולה?")
+                        RunScreen.start(LabScreen.this, f);
                     } catch (Throwable t) {
                         Log.e("Lab.runCommands", t);
                         Ui.toast(LabScreen.this, Words.Db.failed(String.valueOf(t.getMessage())));
