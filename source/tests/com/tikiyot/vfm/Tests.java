@@ -52,7 +52,7 @@ public final class Tests {
         run("קובצי פקודות בסגנון bat — המנוע (117א)", new Runnable() { public void run() { batch(); } });
         run("מ0.27: RD /S ואחריו MD ו־COMP — ההדמיה שוכחת מה שהיה בתיקייה", new Runnable() { public void run() { m027(); } });
         run("מ0.30: RD ואחריו MD לאותה תיקייה; ECHO עם משתנה; רשימה שאינה בבית", new Runnable() { public void run() { m030(); } });
-        run("מ0.32: RD לתת־תיקייה ואז לתיקייה; קובץ שנמחק ושוחזר חוזר לרשימות", new Runnable() { public void run() { m032(); } });
+        run("מ0.32: RD לתת־תיקייה ואז לתיקייה", new Runnable() { public void run() { m032(); } });
         run("קובצי פקודות — השורה כשדות לטופס (117א, שלב 2)", new Runnable() { public void run() { batchForm(); } });
         run("תיקוני הביקורות השישית והשביעית (118–122, 134, 135, 139)", new Runnable() { public void run() { review7(); } });
         run("תיקוני באגים 123, 124, 137", new Runnable() { public void run() { review7b(); } });
@@ -1661,19 +1661,6 @@ public final class Tests {
         eq("מ0.32 (44): RD לתת־תיקייה ואחריו RD לתיקייה — בלי \"לא ריקה\"", 0, p.errors);
         Batch.Plan q = Batch.plan("MD \"" + x + "/חדשה\"\nRD \"" + x + "/sub\"\nRD \"" + x + "\"", here, vars);
         eq("מ0.32 (44): תת־תיקייה ששורה קודמת יוצרת — התיקייה לא ריקה", 1, q.errors);
-        MemStore s = new MemStore(IdCounter.memory());
-        long h = DbPaths.ensureHome(s), a = s.createList("א", h), b = s.createList("ב", h), c = s.createList("ג", h);
-        String f1 = root + "/קובץ.txt";
-        DbFiles.add(s, a, java.util.Collections.singletonList(f1), null, false);
-        long id = s.findFile(f1);
-        s.addMember(b, id);
-        eq("מ0.32 (מ8): קובץ שנמחק — יצא משתי הרשימות", 2, DbFollow.gone(s, java.util.Collections.singletonList(f1)));
-        check("מ0.32 (מ8): ונזכר איפה היה", s.listsOf(id).isEmpty() && s.prop(id, Store.P_WAS_IN) != null);
-        DbListCmd.deleteWhole(s, b);
-        eq("מ0.32 (מ8): שוחזר — חוזר לרשימה שעוד קיימת (זו שנמחקה — מדולגת)", 1, DbFollow.back(s, java.util.Collections.singletonList(f1)));
-        check("מ0.32 (מ8): חזר ל\"א\" בלבד, והזיכרון נוקה", s.listsOf(id).equals(java.util.Collections.singletonList(a)) && s.prop(id, Store.P_WAS_IN) == null
-                && s.count(c) == 0);
-        eq("מ0.32 (מ8): שחזור שני — כלום", 0, DbFollow.back(s, java.util.Collections.singletonList(f1)));
     }
 
     private static void m030() {

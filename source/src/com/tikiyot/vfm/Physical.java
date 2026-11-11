@@ -266,11 +266,6 @@ public final class Physical {
         return DbFollow.movedEverywhere(moved);
     }
 
-    /** מ0.32 (מ8): מה ששוחזר מהסל — חוזר לרשימות שהיה בהן. */
-    static int listsBack(java.util.Collection<String> paths) {
-        return DbFollow.backEverywhere(paths);
-    }
-
     static int listsGone(java.util.Collection<String> gone) {
         return DbFollow.goneEverywhere(gone);
     }
@@ -849,7 +844,8 @@ public final class Physical {
         }
     }
 
-    /** שחזור מהסל למקום המקורי. שם תפוס → "(משוחזר)", והרשימות עוקבות (65). לא מחזיר לרשימות (החלטה). */
+    /** שחזור מהסל למקום המקורי. שם תפוס → "(משוחזר)", והרשימות עוקבות (65). לא מחזיר לרשימות — החלטה;
+     * המשתמש (11.11.2026): "כך הסברה הפשוטה. למה שנחזיר לרשימה אם הוא נמחק לגמרי". (במ0.32 נבנתה החזרה בטעות, ובמ0.34 הוסרה.) */
     public static Result restore(Library lib, List<Trash.Item> items) {
         Result r = new Result();
         for (Trash.Item it : items) {

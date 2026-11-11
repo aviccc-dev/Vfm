@@ -211,9 +211,6 @@ public final class Trash {
         if (it.dir) {
             lib.dirChanged(src.getParent());
             lib.dirChanged(dst.getParent());
-            List<String> orig = new java.util.ArrayList<String>();                 // מ0.32 (מ8): חוזרים לרשימות — לפי המסלול המקורי
-            for (String rel : relFiles(dst)) orig.add(it.original + "/" + rel);
-            Physical.listsBack(orig);
             if (renamed) {                                     // שם תפוס: הפריטים ברשימות עוברים לשם החדש (65)
                 Map<String, String> m = new HashMap<String, String>();
                 for (String rel : relFiles(dst)) m.put(it.original + "/" + rel, dst.getAbsolutePath() + "/" + rel);
@@ -222,7 +219,6 @@ public final class Trash {
         } else {
             lib.fileRemoved(src.getAbsolutePath());
             lib.fileAdded(dst);
-            Physical.listsBack(java.util.Collections.singletonList(it.original));   // מ0.32 (מ8): חוזר לרשימות שהיה בהן
             if (renamed) Physical.listsMoved(java.util.Collections.singletonMap(it.original, dst.getAbsolutePath()));   // מ0.23: גם המסד
         }
         forget(src.getParentFile(), java.util.Collections.singletonList(src.getName()));

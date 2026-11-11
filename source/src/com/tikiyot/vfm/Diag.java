@@ -46,7 +46,6 @@ final class Diag {
                 try {
                     report(a, mode, sb);
                     write(out, sb);
-                    bin(a, sb);
                     modes(a, sb);
                     write(out, sb);
                     general(a, busy, sb);                                         // אחרון: אם ייתקע — הדוח שלפניו כבר כתוב
@@ -349,9 +348,6 @@ final class Diag {
                     long list = s.createList("אבחון-רשימה", home);
                     DbFiles.Added r2 = DbFiles.add(s, list, Arrays.asList(internal + "/אבחון-א.txt", internal + "/אבחון-ב.txt"), null, false);
                     sb.append(ok(r2.added == 2 && s.count(list) == 2)).append("קבצים נכנסים לרשימה\n");
-                    List<String> two = Arrays.asList(internal + "/אבחון-א.txt", internal + "/אבחון-ב.txt");   // מ0.32 (מ8)
-                    int out = DbFollow.gone(s, two), in0 = s.count(list), back = DbFollow.back(s, two);
-                    sb.append(ok(out == 2 && in0 == 0 && back == 2 && s.count(list) == 2)).append("קובץ שנמחק יוצא מהרשימה, ובשחזור חוזר אליה\n");
                 } finally {
                     s.close();
                 }
@@ -455,89 +451,9 @@ final class Diag {
         });
     }
 
-    /** מ0.33: מה שיש לקובץ במסד של אופן הבדיקות — באילו רשימות, ומה נזכר. */
-    private static String where(Activity a, String path) {
-        SqlStore s = SqlStore.openReadOnly(DbScreen.dbFile(a, Words.DbCmd.TEST_MODE));
-        try {
-            long id = s.findFile(path);
-            if (id == 0) return "אין פריט למסלול הזה";
-            return "פריט " + id + " · ברשימות " + s.listsOf(id) + " · נזכר: " + s.prop(id, Store.P_WAS_IN);
-        } finally {
-            s.close();
-        }
-    }
-
-    /**
-     * מ0.33 (מ8, אחרי שבמכשיר הרשימה נשארה ריקה): מחיקה לסל ושחזור — מקצה לקצה, על קובץ אמיתי ועל המסד האמיתי של אופן
-     * הבדיקות, בדיוק במסלול של המסך (Physical.delete ← Physical.restore). בסוף — מנקה אחרי עצמו.
-     */
-    private static void bin(final Activity a, StringBuilder sb) {
-        part(sb, "10. סל המחזור מקצה לקצה — קובץ שנמחק ושוחזר חוזר לרשימה (באופן \"בדיקות מערכת\")", new Part() {
-            @Override public void run(StringBuilder sb) throws Throwable {
-                final String mode = Words.DbCmd.TEST_MODE;
-                if (!DbScreen.dbFile(a, mode).isFile()) {
-                    sb.append("לא רץ: האופן \"בדיקות מערכת\" עוד לא קיים\n");
-                    return;
-                }
-                File dir = new File(Environment.getExternalStorageDirectory(), "אבחון סל (אפשר למחוק)");
-                dir.mkdirs();
-                final File f = new File(dir, "אבחון-סל-" + System.currentTimeMillis() + ".txt");
-                Files.writeAtomic(f, "אבחון");
-                final String p = f.getAbsolutePath();
-                Library lib = Library.get(a);
-                if (lib.find(p) == null) {
-                    lib.fileAdded(f);
-                    lib.flush(5000);
-                }
-                final String name = "אבחון-סל";
-                final long[] list = {0};
-                DbVerbs.write(a, mode, new DbVerbs.Job() {
-                    @Override public long run(Store s, List<String> path) {
-                        long h = DbPaths.ensureHome(s);
-                        long old = DbPaths.child(s, h, name);
-                        if (old != 0) DbListCmd.removeFrom(s, h, old);
-                        list[0] = s.createList(name, h);
-                        DbFiles.add(s, list[0], Collections.singletonList(p), null, false);
-                        return list[0];
-                    }
-                }, null);
-                sb.append("הרשימה ").append(list[0]).append(" · לפני: ").append(where(a, p)).append('\n');
-                boolean grey = Acts.deletedStaysGrey();
-                sb.append("ההגדרה \"קובץ שנמחק\": ").append(grey ? "נשאר באפור (אז אין מה לבדוק)" : "יוצא מהרשימות").append('\n');
-                Physical.Result d = Physical.delete(lib, Collections.singletonList(p), new ArrayList<String>(), grey);
-                sb.append("מחיקה: בוצעו ").append(d.done.size()).append(" · נכשלו ").append(d.failed).append(" · יצאו מרשימות ").append(d.lists)
-                        .append(" · בסל: ").append(d.to.get(p)).append('\n');
-                String after = where(a, p);
-                sb.append("אחרי המחיקה: ").append(after).append('\n');
-                Trash.Item it = null;
-                for (Trash.Item x : Trash.list(lib)) if (p.equals(x.original)) it = x;
-                if (it == null) {
-                    sb.append("❌ הקובץ לא נמצא בסל לפי המקום המקורי. בסל:\n");
-                    for (Trash.Item x : Trash.list(lib)) if (x.original != null && x.original.contains("אבחון")) sb.append("   · ").append(x.original).append(" ← ").append(x.path()).append('\n');
-                    return;
-                }
-                sb.append("בסל: ").append(it.path()).append(" · המקום המקורי: ").append(it.original).append('\n');
-                Physical.Result r = Physical.restore(lib, Collections.singletonList(it));
-                sb.append("שחזור: בוצעו ").append(r.done.size()).append(" · נכשלו ").append(r.failed).append(" · אל: ").append(r.to.get(it.path())).append('\n');
-                String back = where(a, p);
-                sb.append("אחרי השחזור: ").append(back).append('\n');
-                sb.append(ok(back.contains("[" + list[0] + "]"))).append("הקובץ חזר לרשימה\n");
-                DbVerbs.write(a, mode, new DbVerbs.Job() {                       // ניקוי
-                    @Override public long run(Store s, List<String> path) {
-                        DbListCmd.removeFrom(s, DbPaths.home(s), list[0]);
-                        return 0;
-                    }
-                }, null);
-                f.delete();
-                lib.fileRemoved(p);
-                dir.delete();
-            }
-        });
-    }
-
     /** מ0.33 (ממצא 38): באיזה אופן ההרצה רושמת כל רשימה שנוצרת בקובץ עם שני "אופן" — מה ש"ניקוי" ישתמש בו. בלי לבצע. */
     private static void modes(final Activity a, StringBuilder sb) {
-        part(sb, "11. קובץ עם שני אופנים — לאיזה אופן שייכת כל רשימה שנוצרת (תכנון בלבד)", new Part() {
+        part(sb, "10. קובץ עם שני אופנים — לאיזה אופן שייכת כל רשימה שנוצרת (תכנון בלבד)", new Part() {
             @Override public void run(StringBuilder sb) throws Throwable {
                 String text = DbExamples.asset(a, DbTestMode.ASSET_MODES);
                 File dir = Modes.dirOf(Words.DbCmd.TEST_MODE);

@@ -975,7 +975,7 @@ cd $S; rm -rf out gen bld
 ls -la $OUT
 
 ===== קובץ: build/m-version.txt =====
-46 מ0.33
+47 מ0.34
 
 ===== קובץ: build/test.sh =====
 #!/bin/bash
@@ -10448,56 +10448,11 @@ final class DbFollow {
                 for (String p : paths) {
                     long id = t.findFile(p);
                     if (id == 0) continue;
-                    StringBuilder was = new StringBuilder();
-                    for (Long l : t.listsOf(id)) if (t.removeMember(l, id)) {
-                        n[0]++;
-                        was.append(was.length() > 0 ? "," : "").append(l);
-                    }
-                    if (was.length() > 0) t.setProp(id, Store.P_WAS_IN, was.toString());   // מ0.32 (מ8): לזכור — לשחזור מהסל
+                    for (Long l : t.listsOf(id)) if (t.removeMember(l, id)) n[0]++;
                 }
             }
         }, true);
         return n[0];
-    }
-
-    /**
-     * מ0.32 (מ8): קבצים ששוחזרו מהסל של הכונן חוזרים לרשימות שהיו בהן כשנמחקו (רשימה שכבר איננה — מדולגת).
-     * מחזיר כמה חזרות. בעסקה אחת.
-     */
-    static int back(Store s, final Collection<String> paths) {
-        final int[] n = {0};
-        if (paths == null || paths.isEmpty()) return 0;
-        s.atomic(new Store.Work() {
-            @Override
-            public void run(Store t) {
-                for (String p : paths) {
-                    long id = t.findFile(p);
-                    if (id == 0) continue;
-                    String was = t.prop(id, Store.P_WAS_IN);
-                    if (was == null) continue;
-                    for (String x : was.split(",")) {
-                        long l;
-                        try {
-                            l = Long.parseLong(x.trim());
-                        } catch (NumberFormatException e) {
-                            continue;
-                        }
-                        Store.Item it = t.item(l);
-                        if (it == null || it.type != Store.LIST || t.prop(l, Store.P_TRASHED) != null) continue;
-                        if (!t.listsOf(id).contains(l) && t.addMember(l, id)) n[0]++;
-                    }
-                    t.setProp(id, Store.P_WAS_IN, null);
-                }
-            }
-        }, true);
-        return n[0];
-    }
-
-    static int backEverywhere(final Collection<String> paths) {
-        if (paths == null || paths.isEmpty()) return 0;
-        return each(true, new Each() {
-            @Override public int run(Store s) { return back(s, paths); }
-        });
     }
 
     /** בכמה רשימות הקבצים האלה (כל הופעה נספרת). */
@@ -25204,11 +25159,6 @@ public final class Physical {
         return DbFollow.movedEverywhere(moved);
     }
 
-    /** מ0.32 (מ8): מה ששוחזר מהסל — חוזר לרשימות שהיה בהן. */
-    static int listsBack(java.util.Collection<String> paths) {
-        return DbFollow.backEverywhere(paths);
-    }
-
     static int listsGone(java.util.Collection<String> gone) {
         return DbFollow.goneEverywhere(gone);
     }
@@ -25787,7 +25737,8 @@ public final class Physical {
         }
     }
 
-    /** שחזור מהסל למקום המקורי. שם תפוס → "(משוחזר)", והרשימות עוקבות (65). לא מחזיר לרשימות (החלטה). */
+    /** שחזור מהסל למקום המקורי. שם תפוס → "(משוחזר)", והרשימות עוקבות (65). לא מחזיר לרשימות — החלטה;
+     * המשתמש (11.11.2026): "כך הסברה הפשוטה. למה שנחזיר לרשימה אם הוא נמחק לגמרי". (במ0.32 נבנתה החזרה בטעות, ובמ0.34 הוסרה.) */
     public static Result restore(Library lib, List<Trash.Item> items) {
         Result r = new Result();
         for (Trash.Item it : items) {
@@ -34645,9 +34596,6 @@ public interface Store {
     /** מ0.4, פנימי: פריט בסל המחזור (מתי) ומאיפה הוא יצא ("רשימה:מקום,…"). מנוהלים רק בידי trash/restore. */
     String P_TRASHED = "trashed", P_TRASH_FROM = "trash_from";
 
-    /** מ0.32 (מ8): קובץ שנמחק לסל של הכונן ויצא מהרשימות — באילו רשימות היה ("12,40"), כדי שיחזור אליהן בשחזור. */
-    String P_WAS_IN = "was_in";
-
     /** שגיאת שימוש או אחסון. ההודעה — לאנשי הפיתוח (אנגלית); המסך מציג הודעה משלו. */
     final class Failure extends RuntimeException {
         public Failure(String m) {
@@ -36789,9 +36737,6 @@ public final class Trash {
         if (it.dir) {
             lib.dirChanged(src.getParent());
             lib.dirChanged(dst.getParent());
-            List<String> orig = new java.util.ArrayList<String>();                 // מ0.32 (מ8): חוזרים לרשימות — לפי המסלול המקורי
-            for (String rel : relFiles(dst)) orig.add(it.original + "/" + rel);
-            Physical.listsBack(orig);
             if (renamed) {                                     // שם תפוס: הפריטים ברשימות עוברים לשם החדש (65)
                 Map<String, String> m = new HashMap<String, String>();
                 for (String rel : relFiles(dst)) m.put(it.original + "/" + rel, dst.getAbsolutePath() + "/" + rel);
@@ -36800,7 +36745,6 @@ public final class Trash {
         } else {
             lib.fileRemoved(src.getAbsolutePath());
             lib.fileAdded(dst);
-            Physical.listsBack(java.util.Collections.singletonList(it.original));   // מ0.32 (מ8): חוזר לרשימות שהיה בהן
             if (renamed) Physical.listsMoved(java.util.Collections.singletonMap(it.original, dst.getAbsolutePath()));   // מ0.23: גם המסד
         }
         forget(src.getParentFile(), java.util.Collections.singletonList(src.getName()));
@@ -42329,7 +42273,6 @@ final class Diag {
                 try {
                     report(a, mode, sb);
                     write(out, sb);
-                    bin(a, sb);
                     modes(a, sb);
                     write(out, sb);
                     general(a, busy, sb);                                         // אחרון: אם ייתקע — הדוח שלפניו כבר כתוב
@@ -42632,9 +42575,6 @@ final class Diag {
                     long list = s.createList("אבחון-רשימה", home);
                     DbFiles.Added r2 = DbFiles.add(s, list, Arrays.asList(internal + "/אבחון-א.txt", internal + "/אבחון-ב.txt"), null, false);
                     sb.append(ok(r2.added == 2 && s.count(list) == 2)).append("קבצים נכנסים לרשימה\n");
-                    List<String> two = Arrays.asList(internal + "/אבחון-א.txt", internal + "/אבחון-ב.txt");   // מ0.32 (מ8)
-                    int out = DbFollow.gone(s, two), in0 = s.count(list), back = DbFollow.back(s, two);
-                    sb.append(ok(out == 2 && in0 == 0 && back == 2 && s.count(list) == 2)).append("קובץ שנמחק יוצא מהרשימה, ובשחזור חוזר אליה\n");
                 } finally {
                     s.close();
                 }
@@ -42738,89 +42678,9 @@ final class Diag {
         });
     }
 
-    /** מ0.33: מה שיש לקובץ במסד של אופן הבדיקות — באילו רשימות, ומה נזכר. */
-    private static String where(Activity a, String path) {
-        SqlStore s = SqlStore.openReadOnly(DbScreen.dbFile(a, Words.DbCmd.TEST_MODE));
-        try {
-            long id = s.findFile(path);
-            if (id == 0) return "אין פריט למסלול הזה";
-            return "פריט " + id + " · ברשימות " + s.listsOf(id) + " · נזכר: " + s.prop(id, Store.P_WAS_IN);
-        } finally {
-            s.close();
-        }
-    }
-
-    /**
-     * מ0.33 (מ8, אחרי שבמכשיר הרשימה נשארה ריקה): מחיקה לסל ושחזור — מקצה לקצה, על קובץ אמיתי ועל המסד האמיתי של אופן
-     * הבדיקות, בדיוק במסלול של המסך (Physical.delete ← Physical.restore). בסוף — מנקה אחרי עצמו.
-     */
-    private static void bin(final Activity a, StringBuilder sb) {
-        part(sb, "10. סל המחזור מקצה לקצה — קובץ שנמחק ושוחזר חוזר לרשימה (באופן \"בדיקות מערכת\")", new Part() {
-            @Override public void run(StringBuilder sb) throws Throwable {
-                final String mode = Words.DbCmd.TEST_MODE;
-                if (!DbScreen.dbFile(a, mode).isFile()) {
-                    sb.append("לא רץ: האופן \"בדיקות מערכת\" עוד לא קיים\n");
-                    return;
-                }
-                File dir = new File(Environment.getExternalStorageDirectory(), "אבחון סל (אפשר למחוק)");
-                dir.mkdirs();
-                final File f = new File(dir, "אבחון-סל-" + System.currentTimeMillis() + ".txt");
-                Files.writeAtomic(f, "אבחון");
-                final String p = f.getAbsolutePath();
-                Library lib = Library.get(a);
-                if (lib.find(p) == null) {
-                    lib.fileAdded(f);
-                    lib.flush(5000);
-                }
-                final String name = "אבחון-סל";
-                final long[] list = {0};
-                DbVerbs.write(a, mode, new DbVerbs.Job() {
-                    @Override public long run(Store s, List<String> path) {
-                        long h = DbPaths.ensureHome(s);
-                        long old = DbPaths.child(s, h, name);
-                        if (old != 0) DbListCmd.removeFrom(s, h, old);
-                        list[0] = s.createList(name, h);
-                        DbFiles.add(s, list[0], Collections.singletonList(p), null, false);
-                        return list[0];
-                    }
-                }, null);
-                sb.append("הרשימה ").append(list[0]).append(" · לפני: ").append(where(a, p)).append('\n');
-                boolean grey = Acts.deletedStaysGrey();
-                sb.append("ההגדרה \"קובץ שנמחק\": ").append(grey ? "נשאר באפור (אז אין מה לבדוק)" : "יוצא מהרשימות").append('\n');
-                Physical.Result d = Physical.delete(lib, Collections.singletonList(p), new ArrayList<String>(), grey);
-                sb.append("מחיקה: בוצעו ").append(d.done.size()).append(" · נכשלו ").append(d.failed).append(" · יצאו מרשימות ").append(d.lists)
-                        .append(" · בסל: ").append(d.to.get(p)).append('\n');
-                String after = where(a, p);
-                sb.append("אחרי המחיקה: ").append(after).append('\n');
-                Trash.Item it = null;
-                for (Trash.Item x : Trash.list(lib)) if (p.equals(x.original)) it = x;
-                if (it == null) {
-                    sb.append("❌ הקובץ לא נמצא בסל לפי המקום המקורי. בסל:\n");
-                    for (Trash.Item x : Trash.list(lib)) if (x.original != null && x.original.contains("אבחון")) sb.append("   · ").append(x.original).append(" ← ").append(x.path()).append('\n');
-                    return;
-                }
-                sb.append("בסל: ").append(it.path()).append(" · המקום המקורי: ").append(it.original).append('\n');
-                Physical.Result r = Physical.restore(lib, Collections.singletonList(it));
-                sb.append("שחזור: בוצעו ").append(r.done.size()).append(" · נכשלו ").append(r.failed).append(" · אל: ").append(r.to.get(it.path())).append('\n');
-                String back = where(a, p);
-                sb.append("אחרי השחזור: ").append(back).append('\n');
-                sb.append(ok(back.contains("[" + list[0] + "]"))).append("הקובץ חזר לרשימה\n");
-                DbVerbs.write(a, mode, new DbVerbs.Job() {                       // ניקוי
-                    @Override public long run(Store s, List<String> path) {
-                        DbListCmd.removeFrom(s, DbPaths.home(s), list[0]);
-                        return 0;
-                    }
-                }, null);
-                f.delete();
-                lib.fileRemoved(p);
-                dir.delete();
-            }
-        });
-    }
-
     /** מ0.33 (ממצא 38): באיזה אופן ההרצה רושמת כל רשימה שנוצרת בקובץ עם שני "אופן" — מה ש"ניקוי" ישתמש בו. בלי לבצע. */
     private static void modes(final Activity a, StringBuilder sb) {
-        part(sb, "11. קובץ עם שני אופנים — לאיזה אופן שייכת כל רשימה שנוצרת (תכנון בלבד)", new Part() {
+        part(sb, "10. קובץ עם שני אופנים — לאיזה אופן שייכת כל רשימה שנוצרת (תכנון בלבד)", new Part() {
             @Override public void run(StringBuilder sb) throws Throwable {
                 String text = DbExamples.asset(a, DbTestMode.ASSET_MODES);
                 File dir = Modes.dirOf(Words.DbCmd.TEST_MODE);
@@ -44734,7 +44594,7 @@ public final class Tests {
         run("קובצי פקודות בסגנון bat — המנוע (117א)", new Runnable() { public void run() { batch(); } });
         run("מ0.27: RD /S ואחריו MD ו־COMP — ההדמיה שוכחת מה שהיה בתיקייה", new Runnable() { public void run() { m027(); } });
         run("מ0.30: RD ואחריו MD לאותה תיקייה; ECHO עם משתנה; רשימה שאינה בבית", new Runnable() { public void run() { m030(); } });
-        run("מ0.32: RD לתת־תיקייה ואז לתיקייה; קובץ שנמחק ושוחזר חוזר לרשימות", new Runnable() { public void run() { m032(); } });
+        run("מ0.32: RD לתת־תיקייה ואז לתיקייה", new Runnable() { public void run() { m032(); } });
         run("קובצי פקודות — השורה כשדות לטופס (117א, שלב 2)", new Runnable() { public void run() { batchForm(); } });
         run("תיקוני הביקורות השישית והשביעית (118–122, 134, 135, 139)", new Runnable() { public void run() { review7(); } });
         run("תיקוני באגים 123, 124, 137", new Runnable() { public void run() { review7b(); } });
@@ -46343,19 +46203,6 @@ public final class Tests {
         eq("מ0.32 (44): RD לתת־תיקייה ואחריו RD לתיקייה — בלי \"לא ריקה\"", 0, p.errors);
         Batch.Plan q = Batch.plan("MD \"" + x + "/חדשה\"\nRD \"" + x + "/sub\"\nRD \"" + x + "\"", here, vars);
         eq("מ0.32 (44): תת־תיקייה ששורה קודמת יוצרת — התיקייה לא ריקה", 1, q.errors);
-        MemStore s = new MemStore(IdCounter.memory());
-        long h = DbPaths.ensureHome(s), a = s.createList("א", h), b = s.createList("ב", h), c = s.createList("ג", h);
-        String f1 = root + "/קובץ.txt";
-        DbFiles.add(s, a, java.util.Collections.singletonList(f1), null, false);
-        long id = s.findFile(f1);
-        s.addMember(b, id);
-        eq("מ0.32 (מ8): קובץ שנמחק — יצא משתי הרשימות", 2, DbFollow.gone(s, java.util.Collections.singletonList(f1)));
-        check("מ0.32 (מ8): ונזכר איפה היה", s.listsOf(id).isEmpty() && s.prop(id, Store.P_WAS_IN) != null);
-        DbListCmd.deleteWhole(s, b);
-        eq("מ0.32 (מ8): שוחזר — חוזר לרשימה שעוד קיימת (זו שנמחקה — מדולגת)", 1, DbFollow.back(s, java.util.Collections.singletonList(f1)));
-        check("מ0.32 (מ8): חזר ל\"א\" בלבד, והזיכרון נוקה", s.listsOf(id).equals(java.util.Collections.singletonList(a)) && s.prop(id, Store.P_WAS_IN) == null
-                && s.count(c) == 0);
-        eq("מ0.32 (מ8): שחזור שני — כלום", 0, DbFollow.back(s, java.util.Collections.singletonList(f1)));
     }
 
     private static void m030() {
