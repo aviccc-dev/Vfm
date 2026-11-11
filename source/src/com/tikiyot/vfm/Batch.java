@@ -614,6 +614,17 @@ final class Batch {
         }
 
         /** מ0.32 (ממצא 44): יש בתיקייה תת־תיקייה — לפי ההדמיה (מה ששורות קודמות מחקו או יצרו), לא רק לפי הכונן. */
+        /** מ0.38: התיקיות שבתוך d — בכונן, ומה ששורות קודמות יצרו; בלי מה שנמחק. לפי השם. */
+        List<File> subdirs(File d) {
+            java.util.TreeMap<String, File> out = new java.util.TreeMap<String, File>();
+            String dp = d.getAbsolutePath();
+            File[] k = underWiped(dp) ? null : d.listFiles();
+            if (k != null) for (File x : k) if (x.isDirectory() && !gone.contains(x.getAbsolutePath())) out.put(x.getName(), x);
+            String in = dp + "/";
+            for (String x : dirs) if (x.startsWith(in) && x.indexOf('/', in.length()) < 0 && !gone.contains(x)) out.put(x.substring(in.length()), new File(x));
+            return new ArrayList<File>(out.values());
+        }
+
         boolean hasSubdirs(File d) {
             String in = d.getAbsolutePath() + "/";
             for (String x : dirs) if (x.startsWith(in) && x.indexOf('/', in.length()) < 0) return true;
@@ -1385,14 +1396,10 @@ final class Batch {
             s.total++;
             if (flt.ok(sim.real(x))) s.files.add(x.getAbsolutePath());
         }
-        File[] kids = dir.listFiles();
-        if (kids != null) {
-            java.util.Arrays.sort(kids);
-            for (File k : kids) {
-                if (!k.isDirectory() || !visible(s, k) || sim.gone.contains(k.getAbsolutePath())) continue;
-                any = true;
-                walk(s, k, mask, flt, sim, empties, false);
-            }
+        for (File k : sim.subdirs(dir)) {                                   // מ0.38 (הבדיקה הכללית): גם תיקייה ששורה קודמת יצרה
+            if (!visible(s, k)) continue;
+            any = true;
+            walk(s, k, mask, flt, sim, empties, false);
         }
         if (!any && !top && empties) s.dirs.add(dir.getAbsolutePath());
         return any;

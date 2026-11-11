@@ -736,7 +736,8 @@ final class DbListCmd {
     static MemStore copyOf(Store src) {
         final MemStore m = new MemStore(IdCounter.memory());
         final Map<Long, Long> id = new HashMap<Long, Long>();
-        for (Store.Item it : src.lists()) id.put(it.id, m.createList(it.name, 0));
+        List<Store.Item> lists = src.lists();                                // מ0.38: פעם אחת — המסד יכול להשתנות בזמן ההעתקה
+        for (Store.Item it : lists) id.put(it.id, m.createList(it.name, 0));
         for (Store.Item it : src.smarts()) id.put(it.id, m.createSmart(it.name, 0));
         for (Map.Entry<Long, Long> e : id.entrySet()) {
             for (String k : ALL_PROPS) {
@@ -746,24 +747,40 @@ final class DbListCmd {
             String o = src.origin(e.getKey());
             if (o != null && !o.isEmpty()) m.setOrigin(e.getValue(), o);
         }
-        for (Store.Item it : src.lists())
-            for (Store.Member mb : src.members(it.id)) {
+        for (Store.Item it : lists) {
+            List<Store.Member> ms;
+            try {
+                ms = src.members(it.id);
+            } catch (Store.Failure f) {                                        // מ0.38 (דוח האבחון): נמחקה תוך כדי — מדלגים
+                continue;
+            }
+            for (Store.Member mb : ms) {
                 long into = id.get(it.id);
                 Store.Item x = mb.item;
                 if (x.type == Store.NOTE) m.addNote(into, x.name);
                 else if (x.type == Store.TITLE) m.addTitle(into, x.name);
                 else {
                     Long to = id.get(x.id);
-                    if (to == null && x.type == Store.FILE) id.put(x.id, to = fileOf(src, m, x.id));
+                    if (to == null && x.type == Store.FILE) {
+                        long fid = fileOf(src, m, x.id);
+                        if (fid != 0) id.put(x.id, to = fid);
+                    }
                     if (to != null) m.addMember(into, to);
                 }
             }
+        }
         for (Store.Item it : src.unassigned()) if (it.type == Store.FILE && !id.containsKey(it.id)) fileOf(src, m, it.id);
         return m;
     }
 
     private static long fileOf(Store src, MemStore m, long item) {
-        Store.FileInfo fi = src.file(item);
+        Store.FileInfo fi;
+        try {
+            fi = src.file(item);
+        } catch (Store.Failure f) {
+            return 0;                                                         // מ0.38: נמחק תוך כדי ההעתקה
+        }
+        if (fi == null) return 0;
         long had = m.findFile(fi.path);
         return had != 0 ? had : m.createFile(fi);
     }
