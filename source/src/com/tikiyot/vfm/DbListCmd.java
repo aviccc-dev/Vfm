@@ -994,7 +994,8 @@ final class DbListCmd {
         final boolean list = c.kind.equals(Verbs.K_LIST) && c.verb.equals(Verbs.CREATE);
         final boolean smartNew = c.kind.equals(Verbs.K_SMART) && c.verb.equals(Verbs.CREATE);
         final boolean smartUpd = c.kind.equals(Verbs.K_SMART) && c.verb.equals(Verbs.UPDATE);
-        if (!list && !smartNew && !smartUpd) return null;
+        final boolean note = c.kind.equals(Verbs.K_NOTE), title = c.kind.equals(Verbs.K_TITLE);   // מ0.37
+        if (!list && !smartNew && !smartUpd && !note && !title) return null;
         if (sim.modeError != null) { s.error = sim.modeError; return null; }
         final String mode = mode(sim);
         final Store db;
@@ -1005,10 +1006,18 @@ final class DbListCmd {
             s.error = Words.Db.failed(String.valueOf(t.getMessage()));
             return null;
         }
-        final List<String> path = list ? Names.parsePath(c.arg) : null;
+        final List<String> path = list ? Names.parsePath(c.arg) : note || title ? Names.parsePath(c.cond) : null;
+        if ((note || title) && path.isEmpty()) { s.error = Words.DbCmd.NOTE_NEEDS_LIST; return null; }
         final Work work = new Work() {
             @Override
             public Res run(Store t, Finder f) {
+                if (note || title) {
+                    long in = DbPaths.find(t, mode, path);
+                    if (in == 0) return Res.err(Words.ListCmdW.noList(Names.label(path)));
+                    if (title) t.addTitle(in, c.arg);
+                    else t.addNote(in, c.arg);
+                    return Res.ok(Words.DbCmd.noteAdded(title, c.arg, Names.label(path)));
+                }
                 if (list) {
                     if (path == null || path.isEmpty()) return Res.err(Words.Verb.NOT_FOUND + c.arg);
                     if (DbPaths.find(t, mode, path) != 0) return Res.same(Words.ListCmdW.exists(Names.label(path)));
@@ -1169,25 +1178,58 @@ final class DbListCmd {
     /** מ0.18: ודא "קובץ" קיים / חסר — בכונן (גם מה שהשורות שלפני ייצרו, לפי ההדמיה של Batch). */
     static void planVerifyFile(final Batch.Step s, final File f, List<String> conds, Batch.Sim sim) {
         Boolean want = null;
-        for (String c : conds) {
-            String t = c.trim();
+        int count = -1;
+        String has = null;
+        for (int i = 0; i < conds.size(); i++) {
+            String t = conds.get(i).trim();
             if (t.equals(Words.DbCmd.WORD_EXISTS) || t.equals(Words.DbCmd.WORD_EXISTS_M)) want = Boolean.TRUE;
             else if (t.equals(Words.DbCmd.WORD_MISSING) || t.equals(Words.DbCmd.WORD_MISSING_M)) want = Boolean.FALSE;
+            else if (t.startsWith(SW_FILES_IN)) {                            // מ0.37: /קבצים:N — כמה קבצים בתיקייה (בלי תתי־תיקיות)
+                try { count = Integer.parseInt(t.substring(SW_FILES_IN.length()).trim()); } catch (NumberFormatException e) { count = -1; }
+                if (count < 0) { s.error = Words.DbCmd.VERIFY_USAGE; return; }
+            } else if (t.equals(W_CONTAINS) && i + 1 < conds.size()) has = conds.get(++i);   // מ0.37: מכיל "טקסט"
             else { s.error = Words.DbCmd.VERIFY_USAGE; return; }
         }
         final boolean exists = want == null || want;
-        final String what = "\"" + f.getName() + "\" " + (exists ? Words.DbCmd.WORD_EXISTS_M : Words.DbCmd.WORD_MISSING_M);
+        final int n = count;
+        final String text = has;
+        final String what = "\"" + f.getName() + "\" " + (n >= 0 ? Words.DbCmd.verifyFilesIn(n) : text != null ? Words.DbCmd.verifyContains(text)
+                : exists ? Words.DbCmd.WORD_EXISTS_M : Words.DbCmd.WORD_MISSING_M);
         s.target = f.getName();
         s.describe = Words.DbCmd.verifyWill(what);
         s.op = new ListCmd.Op() {
             @Override
             public String run(Library lib) {
-                boolean ok = f.isFile() == exists;
+                boolean there = f.isFile() || f.isDirectory();                   // מ0.37: גם תיקייה
+                boolean ok;
+                String got;
+                if (n >= 0) {
+                    int c = 0;
+                    File[] k = f.listFiles();
+                    if (k != null) for (File x : k) if (x.isFile()) c++;
+                    ok = f.isDirectory() && c == n;
+                    got = f.isDirectory() ? Words.DbCmd.verifyFilesIn(c) : Words.DbCmd.WORD_MISSING_M;
+                } else if (text != null) {
+                    String body = null;
+                    try {
+                        if (f.isFile()) body = Files.readUtf8(f);
+                    } catch (Throwable t) {
+                        Log.e("DbListCmd.verifyFile", t);
+                    }
+                    ok = body != null && body.contains(text);
+                    got = body == null ? Words.DbCmd.WORD_MISSING_M : ok ? Words.DbCmd.verifyContains(text) : Words.DbCmd.VERIFY_NOT_CONTAINS;
+                } else {
+                    ok = there == exists;
+                    got = there ? Words.DbCmd.WORD_EXISTS_M : Words.DbCmd.WORD_MISSING_M;
+                }
                 s.verified = ok;
-                return Words.DbCmd.verifyResult(ok, what, f.isFile() ? Words.DbCmd.WORD_EXISTS_M : Words.DbCmd.WORD_MISSING_M);
+                return Words.DbCmd.verifyResult(ok, what, got);
             }
         };
     }
+
+    /** מ0.37: "ודא "<תיקייה>" /קבצים:N" · "ודא "<קובץ>" מכיל "<טקסט>"". */
+    static final String SW_FILES_IN = "/קבצים:", W_CONTAINS = "מכיל";   // תחביר
 
     /** העותק בזיכרון — פעם אחת לכל קובץ פקודות (השורות הבאות רואות מה שהקודמות עשו). */
     private static Store sim(Batch.Sim sim, String mode) {
@@ -1250,6 +1292,24 @@ final class DbListCmd {
     }
 
     /** ההרצה: המסד נפתח לרגע; לפני פעולה שמוציאה — גיבוי "לפני פעולה" (נכשל — לא מבצעים). */
+    /** מ0.37: "גבה" — גיבוי ידני של המסד של האופן (עותק וגם טקסט); גיבוי ידני לא נמחק לבד. */
+    static String backupNow(String mode) {
+        SqlStore s = null;
+        try {
+            s = SqlStore.open(DbScreen.dbFile(DbListScreen.app, mode), new IdCounter(DbScreen.counterFile()));
+            List<Backups.Entry> made = DbScreen.backupsOf(DbListScreen.app, mode).manual(s, System.currentTimeMillis());
+            StringBuilder names = new StringBuilder();
+            for (Backups.Entry e : made) names.append(names.length() > 0 ? ", " : "").append(e.name);
+            return Words.DbCmd.backedUp(mode, names.toString());
+        } catch (Throwable t) {
+            Log.e("DbListCmd.backupNow", t);
+            lastFailed = true;
+            return Words.Db.failed(String.valueOf(t.getMessage()));
+        } finally {
+            if (s != null) s.close();
+        }
+    }
+
     /** מ0.31: הפעולה האחרונה במסד נכשלה — ההרצה סופרת כישלונות ("המשך"). */
     static volatile boolean lastFailed;
 

@@ -32,15 +32,19 @@ final class Verbs {
     static final String MENU = "תפריט", CMD_WORD = "פקודה";   // תחביר
     /** מ0.19: "פתח כלי "<סוג>" /מפתח:ערך…" — כלי (כפולים, פס, אפליקציה…) כפקודה. */
     static final String TOOL = "כלי";   // תחביר
+    /** מ0.37: "צור רעיון "<טקסט>" "<רשימה>"" · "צור כותרת "<טקסט>" "<רשימה>"" — שורה ברשימה שאינה קובץ. */
+    static final String NOTE_WORD = "רעיון", TITLE_WORD = "כותרת";   // תחביר
     static final String S_HOME = "הבית", S_SEARCH = "חיפוש", S_COMMANDS = "פקודות", S_DISK = "קבצים פיזיים",   // תחביר
-            S_VIRTUAL = "קבצים וירטואליים", S_SETTINGS = "הגדרות", S_TRASH = "סל", S_EDITOR = "עורך פקודות";   // תחביר
-    static final String[] SCREENS = {S_HOME, S_SEARCH, S_COMMANDS, S_DISK, S_VIRTUAL, S_SETTINGS, S_TRASH, S_EDITOR};
+            S_VIRTUAL = "קבצים וירטואליים", S_SETTINGS = "הגדרות", S_TRASH = "סל", S_EDITOR = "עורך פקודות",   // תחביר
+            S_BACKUPS = "גיבויים", S_DIAG = "אבחון";   // תחביר — מ0.37
+    static final String[] SCREENS = {S_HOME, S_SEARCH, S_COMMANDS, S_DISK, S_VIRTUAL, S_SETTINGS, S_TRASH, S_EDITOR, S_BACKUPS, S_DIAG};
     static final String A_DRIVE = "מהכונן", A_SEARCH = "מחיפוש";   // תחביר
     static final String SORT = "מיון:";   // תחביר
 
     /** סוגי הפקודה אחרי הפענוח. */
     static final String K_SCREEN = "screen", K_LIST = "list", K_SMART = "smart", K_FOLDER = "folder", K_FIND = "find",
-            K_BACK = "back", K_RUN = "run", K_NEW_LIST = "newlist", K_ADD = "add", K_MENU = "menu", K_NEW_CMD = "newcmd", K_TOOL = "tool";
+            K_BACK = "back", K_RUN = "run", K_NEW_LIST = "newlist", K_ADD = "add", K_MENU = "menu", K_NEW_CMD = "newcmd", K_TOOL = "tool",
+            K_NOTE = "note", K_TITLE = "title";
 
     static final class Cmd {
         String verb = "", kind = "", arg = "", sort = "", cond = "";
@@ -159,6 +163,13 @@ final class Verbs {
                 c.arg = nr[0];
                 c.cond = nr[1];
                 if (c.arg.isEmpty() || c.cond.isEmpty()) c.error = Words.Verb.usage(c.verb);
+            } else if (c.verb.equals(CREATE) && (starts(rest, NOTE_WORD) || starts(rest, TITLE_WORD))) {   // מ0.37
+                boolean title = starts(rest, TITLE_WORD);
+                c.kind = title ? K_TITLE : K_NOTE;
+                String[] nr = nameAndRest(after(rest, title ? TITLE_WORD : NOTE_WORD));
+                c.arg = nr[0];
+                c.cond = unquote(nr[1]);                                         // הרשימה; ריק — הרשימה שעל המסך (לא מקובץ)
+                if (c.arg.isEmpty()) c.error = Words.Verb.usage(c.verb);
             } else if (c.verb.equals(CREATE) && rest.trim().equals(CMD_WORD)) {   // 1.17.0
                 c.kind = K_NEW_CMD;
             } else if (c.verb.equals(CREATE) && starts(rest, LIST)) {
@@ -373,6 +384,8 @@ final class Verbs {
         else if (s.equals(S_SETTINGS)) a.startActivity(new Intent(a, SettingsScreen.class));
         else if (s.equals(S_TRASH)) a.startActivity(new Intent(a, TrashScreen.class));
         else if (s.equals(S_EDITOR)) a.startActivity(new Intent(a, BatchEditScreen.class));   // 1.28.0: בלי קובץ — טיוטה
+        else if (s.equals(S_BACKUPS)) DbScreen.openBackups(a);                // מ0.37
+        else if (s.equals(S_DIAG)) Diag.run(a, DbListScreen.currentMode);     // מ0.37: דוח האבחון כפקודה
     }
 
     static void openSmart(Activity a, SmartLists.Named n, String sort) {

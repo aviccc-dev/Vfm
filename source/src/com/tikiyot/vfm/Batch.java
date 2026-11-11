@@ -37,6 +37,8 @@ final class Batch {
         /** 1.13.0: פקודת פתיחה — השורה, אחרי המשתנים. */
         String open;
         boolean replace, skipTaken, recursive, hidden;
+        /** מ0.37: "ודא שגיאה" — השורה הזו צריכה להיכשל בהרצה (בתכנון היא תקינה). */
+        boolean expectFail;
         /** 1.19.0: COPY/MOVE /S — שמירת מסלול: השורש שממנו נמדד המסלול; files — כל הקבצים, dirs — תיקיות ריקות. */
         String keepRoot;
         /** 1.19.0: /יומן: — קובץ היומן (מסלול מלא), או null. */
@@ -90,6 +92,9 @@ final class Batch {
          * מספר אז המשך תמיד"): כמה שורות שגיאה מותרות — 0 בלי השורה "המשך"; "המשך N" — עד N; "המשך" לבד — בלי גבול.
          */
         int allowErrors;
+
+        /** מ0.37: "דוח "<קובץ>"" — היומן של ההרצה נכתב גם לקובץ הזה (מסלול מלא), או null. */
+        String reportFile;
 
         /** מ0.32 (ממצא 38): מאיזו שורה (מקום ברשימת השורות) כל "אופן" בתוקף — כדי לדעת באיזה אופן רצה כל שורה. */
         final List<Integer> modeFrom = new ArrayList<Integer>();
@@ -152,6 +157,155 @@ final class Batch {
     }
 
     private Batch() { }
+
+    /**
+     * מ0.37 (המשתמש, 11.11.2026: "אם כבר אז תאסוף כמה קטנות, לא רק את אלה של הבדיקות"): כתוב · המתן · גבה · רענן · דוח ·
+     * "ודא שגיאה". מחזיר true אם השורה שלהן (ואז s מוכן: שגיאה, או תיאור ופעולה).
+     */
+    private static boolean small(final Plan plan, final Step s, String cmd, List<String> tk, String line, File here,
+                                 Map<String, String> vars, final Sim sim) {
+        if (cmd.equals(VERIFY) && tk.size() == 2 && tk.get(1).trim().equals(W_ERROR)) {
+            s.cmd = EXPECT;
+            s.noop = true;
+            s.describe = Words.DbCmd.EXPECT_NEXT;
+            return true;
+        }
+        if (cmd.equals(WAIT)) {
+            int sec = -1;
+            if (tk.size() == 2) try { sec = Integer.parseInt(tk.get(1).trim()); } catch (NumberFormatException e) { sec = -1; }
+            if (sec < 0 || sec > 600) { s.error = Words.DbCmd.WAIT_USAGE; return true; }
+            final int n = sec;
+            s.describe = Words.DbCmd.waitFor(n);
+            s.op = new ListCmd.Op() {
+                @Override public String run(Library lib) {
+                    try { Thread.sleep(n * 1000L); } catch (InterruptedException e) { Thread.currentThread().interrupt(); }
+                    return Words.DbCmd.waitFor(n);
+                }
+            };
+            return true;
+        }
+        if (cmd.equals(REPORT)) {
+            String[] err = {null};
+            String p = tk.size() == 2 ? path(tk.get(1), here, vars, err) : null;
+            if (p == null) { s.error = err[0] != null ? err[0] : Words.DbCmd.REPORT_USAGE; return true; }
+            plan.reportFile = p;
+            s.noop = true;
+            s.describe = Words.DbCmd.reportTo(Bidi.path(p));
+            return true;
+        }
+        if (cmd.equals(REFRESH)) {
+            final boolean deep = tk.size() == 2 && tk.get(1).trim().equals(W_DEEP);
+            if (tk.size() > 2 || (tk.size() == 2 && !deep)) { s.error = Words.DbCmd.REFRESH_USAGE; return true; }
+            s.describe = Words.DbCmd.refreshWill(deep);
+            s.op = new ListCmd.Op() {
+                @Override public String run(Library lib) {
+                    if (lib == null) return Words.DbCmd.refreshWill(deep);
+                    return Words.DbCmd.refreshed(deep ? lib.deepRefresh() : lib.refreshAsked());
+                }
+            };
+            return true;
+        }
+        if (cmd.equals(BACKUP)) {
+            if (tk.size() != 1) { s.error = Words.DbCmd.BACKUP_USAGE; return true; }
+            if (!DbVerbs.active()) { s.error = Words.DbCmd.VERIFY_DB_ONLY; return true; }
+            if (sim.modeError != null) { s.error = sim.modeError; return true; }
+            final String mode = sim.mode != null ? sim.mode : DbListScreen.currentMode;
+            s.describe = Words.DbCmd.backupWill(mode);
+            s.op = new ListCmd.Op() {
+                @Override public String run(Library lib) { return DbListCmd.backupNow(mode); }
+            };
+            return true;
+        }
+        if (cmd.equals(WRITE)) {
+            boolean append = false;
+            List<String> a = new ArrayList<String>();
+            for (int i = 1; i < tk.size(); i++) {
+                if (tk.get(i).trim().equals(SW_APPEND)) append = true;
+                else a.add(tk.get(i));
+            }
+            if (a.isEmpty() || a.size() > 2) { s.error = Words.DbCmd.WRITE_USAGE; return true; }
+            String[] err = {null};
+            String p = path(a.get(0), here, vars, err);
+            if (p == null) { s.error = err[0]; return true; }
+            final File f = new File(p);
+            final String text = a.size() == 2 ? Verbs.withVars(a.get(1), vars).replace("\\n", "\n") : "";
+            File dir = f.getParentFile();
+            if (dir == null || !sim.isDir(dir)) { s.error = Words.DbCmd.writeNoFolder(Bidi.path(dir == null ? p : dir.getAbsolutePath())); return true; }
+            if (sim.isDir(f)) { s.error = Words.DbCmd.WRITE_IS_FOLDER; return true; }
+            final boolean add = append;
+            sim.gone.remove(p);
+            if (!sim.isFile(f)) sim.added.put(p, GHOST);
+            s.dest = f;
+            s.describe = Words.DbCmd.writeWill(f.getName(), text.length(), add);
+            s.op = new ListCmd.Op() {
+                @Override public String run(Library lib) {
+                    try {
+                        if (lib != null) {
+                            String why = Physical.forbidden(lib, f.getParentFile());
+                            if (why != null) { DbListCmd.lastFailed = true; return why; }
+                        }
+                        if (f.isDirectory()) { DbListCmd.lastFailed = true; return Words.DbCmd.WRITE_IS_FOLDER; }
+                        boolean was = f.isFile();
+                        Files.writeAtomic(f, add && was ? Files.readUtf8(f) + text : text);
+                        if (lib != null) {
+                            if (was) lib.fileRemoved(f.getAbsolutePath());
+                            lib.fileAdded(f);
+                        }
+                        return Words.DbCmd.written(f.getName(), text.length(), add && was);
+                    } catch (Throwable t) {
+                        Log.e("Batch.write", t);
+                        DbListCmd.lastFailed = true;
+                        return Words.Db.failed(String.valueOf(t.getMessage()));
+                    }
+                }
+            };
+            return true;
+        }
+        return false;
+    }
+
+    /** מ0.37: "דוח "<קובץ>"" — ההודעות (ECHO) והיומן נכתבים לקובץ; כישלון בכתיבה — שורה ביומן, לא עוצר. */
+    private static void writeReport(Plan plan, List<String> report) {
+        if (plan.reportFile == null) return;
+        try {
+            StringBuilder sb = new StringBuilder();
+            for (String e : plan.echoes) sb.append(e).append('\n');
+            if (!plan.echoes.isEmpty()) sb.append('\n');
+            for (String r : report) sb.append(r).append('\n');
+            File f = new File(plan.reportFile);
+            File dir = f.getParentFile();
+            if (dir != null && !dir.isDirectory()) dir.mkdirs();
+            Files.writeAtomic(f, sb.toString());
+            report.add(Words.DbCmd.reportWritten(Bidi.path(plan.reportFile)));
+        } catch (Throwable t) {
+            Log.e("Batch.report", t);
+            report.add(Words.DbCmd.reportFailed(String.valueOf(t.getMessage())));
+        }
+    }
+
+    /** מ0.37: שורת "ודא שגיאה" — סימון בלבד; מה שנבדק היא השורה שאחריה. */
+    static final String EXPECT = "EXPECT";
+
+    /** מ0.37: אחרי התכנון — כל "ודא שגיאה" נצמד לשורה שאחריו: נכשלה כבר בתכנון — עברה (ואינה שגיאה); אחרת — תיבדק בהרצה. */
+    static void expectErrors(Plan plan) {
+        for (int i = 0; i < plan.steps.size(); i++) {
+            Step m = plan.steps.get(i);
+            if (!EXPECT.equals(m.cmd) || m.error != null) continue;
+            Step next = i + 1 < plan.steps.size() ? plan.steps.get(i + 1) : null;
+            if (next == null || EXPECT.equals(next.cmd)) {
+                m.noop = false;
+                m.error = Words.DbCmd.EXPECT_NOTHING;
+                plan.errors++;
+            } else if (next.error != null) {
+                next.describe = Words.DbCmd.expectOk(next.error);
+                next.error = null;
+                next.noop = true;
+                next.op = null;
+                next.verified = Boolean.TRUE;
+                plan.errors--;
+            } else next.expectFail = true;
+        }
+    }
 
     /**
      * מ0.31 (המשתמש, 11.11.2026: "המשך סתם רק פעם אחת, אם יש מספר בתוך סוגריים אז כפי המספר, אם סוגריים ריקות אז ממשיך
@@ -217,6 +371,10 @@ final class Batch {
     static final String VERIFY = "VERIFY";
     /** מ0.15: אופן — מכאן והלאה הפקודות במסד של אופן אחר; CALL — שורות של קובץ אחר במקום השורה. */
     static final String MODE = "MODE", CALL = "CALL", CONT = "CONTINUE";
+    /** מ0.37 — הפקודות הקטנות: כתוב לקובץ · המתן · גבה (המסד) · רענן (האינדקס) · דוח (היומן לקובץ). */
+    static final String WRITE = "WRITE", WAIT = "WAIT", BACKUP = "BACKUP", REFRESH = "REFRESH", REPORT = "REPORT";
+    static final String SW_APPEND = "/הוסף", W_DEEP = "עמוק", W_ERROR = "שגיאה";   // תחביר
+    static final String V_TIME = "שעה", V_UNIQUE = "ייחודי";   // תחביר
     /** מ0.17: קישור — אותה רשימה / אותו פריט גם במקום נוסף (במסד). */
     static final String LINK = "LINK";
     /** מ0.15: עומק מרבי של CALL בתוך CALL. */
@@ -306,7 +464,7 @@ final class Batch {
     private static final Pattern SWITCH = Pattern.compile(
             "^/(-?Y|S|Q|F|A(:.*)?|D(:.*)?|" + SW_DATE + ".*|" + SW_SIZE + ".*|" + SW_TAKEN.substring(1)
                     + ".*|" + SW_KEEP.substring(1) + "|" + SW_JOURNAL.substring(1) + ".*|" + SW_LIMIT.substring(1)
-                    + ".*|" + SW_STATE.substring(1) + ".*|" + SW_LIST.substring(1) + ".*|MAXAGE:.*|MINAGE:.*|MAX:.*|MIN:.*)$",
+                    + ".*|" + SW_STATE.substring(1) + ".*|" + SW_LIST.substring(1) + ".*|" + SW_APPEND.substring(1) + "|MAXAGE:.*|MINAGE:.*|MAX:.*|MIN:.*)$",
             Pattern.CASE_INSENSITIVE);
 
     static boolean isSwitch(String t) {
@@ -322,6 +480,8 @@ final class Batch {
         v.put(V_HERE, here.getAbsolutePath());
         if (card != null) v.put(V_CARD_ID, new File(card).getName());       // 1.19.0
         v.put(V_NOW, new java.text.SimpleDateFormat(NOW_FORMAT, Locale.ROOT).format(new java.util.Date()));   // 1.19.0
+        v.put(V_TIME, new java.text.SimpleDateFormat("HH-mm-ss", Locale.ROOT).format(new java.util.Date()));   // מ0.37
+        v.put(V_UNIQUE, Long.toString(System.currentTimeMillis(), 36));        // מ0.37: שם שלא חוזר בין הרצות
         v.put(V_ONLY_A, ONLY_A_MARK);                                         // 1.20.0
         v.put(V_ONLY_B, ONLY_B_MARK);
         v.put(V_SHARE, SHARE_MARK);                                           // 203
@@ -825,7 +985,7 @@ final class Batch {
                 if (s.error == null && doneIn == null && sim.mode != null && Verbs.OPEN.equals(vc.verb) && vc.arg != null && !vc.arg.trim().isEmpty()
                         && (Verbs.K_LIST.equals(vc.kind) || Verbs.K_SMART.equals(vc.kind))) doneIn = sim.mode;
                 if (s.error != null) plan.errors++;
-                else {
+                else if (!Verbs.K_NOTE.equals(vc.kind) && !Verbs.K_TITLE.equals(vc.kind)) {   // מ0.37: רעיון / כותרת — רק כותבים, אין מה לפתוח
                     plan.open = s.open;
                     plan.opens.add(new String[]{s.open, doneIn});
                 }
@@ -867,6 +1027,11 @@ final class Batch {
                     s.describe = allow == Integer.MAX_VALUE ? Words.DbCmd.CONT_ALWAYS : Words.DbCmd.contUpTo(allow);
 
                 }
+                plan.steps.add(s);
+                continue;
+            }
+            if (small(plan, s, cmd, tk, line, here, vars, sim)) {                // מ0.37: הפקודות הקטנות
+                if (s.error != null) plan.errors++;
                 plan.steps.add(s);
                 continue;
             }
@@ -947,6 +1112,7 @@ final class Batch {
             if (cmd.equals("START") && s.error == null) plan.start = s.dest;
             plan.steps.add(s);
         }
+        expectErrors(plan);                                                    // מ0.37: "ודא שגיאה"
         return plan;
     }
 
@@ -1540,10 +1706,13 @@ final class Batch {
     static List<String> run(Plan plan, Library lib, Physical.Asker asker, Physical.Progress progress, boolean grey, Listener listen) {
         List<String> report = new ArrayList<String>(plan.inputs);              // 1.27.0: הקלט — בראש
         int fails = 0;                                                           // מ0.31: כישלונות בהרצה — מול המותר ("המשך")
+        Step pending = null;                                                     // מ0.37: "ודא שגיאה"
+        int pendingFails = 0;
         if (plan.blocked()) {                                                    // מ0.30: שגיאה בקובץ — שום שורה לא רצה
             plan.trouble = true;
             report.add(Words.DbCmd.notRun(plan.errors));
             report.add(plan.errorText());
+            writeReport(plan, report);
             return report;
         }
         Clock clock = new Clock();                                               // 1.25.0: לולאה — עצירה לפי זמן
@@ -1560,6 +1729,13 @@ final class Batch {
             mark = report.size();
             t0 = System.nanoTime();
             prev = null;
+            if (pending != null) {                                              // מ0.37: "ודא שגיאה" — השורה הקודמת הייתה צריכה להיכשל
+                boolean failed = fails > pendingFails;
+                pending.verified = failed;
+                if (failed) fails = pendingFails;                                // כישלון צפוי אינו נספר
+                report.add(Words.Cmd.line(pending.label(), failed ? Words.DbCmd.EXPECT_OK_RUN : Words.DbCmd.EXPECT_BAD));
+                pending = null;
+            }
             if (si == plan.steps.size()) break;
             if (fails > plan.allowErrors) {                                      // מ0.31: יותר כישלונות מהמותר — עוצרים כאן
                 plan.trouble = true;
@@ -1580,6 +1756,10 @@ final class Batch {
                 continue;
             }
             prev = s;
+            if (s.expectFail) {
+                pending = s;
+                pendingFails = fails;
+            }
             s.ran = s.error == null;
             if (listen != null) listen.before(si, plan.steps.size(), s);
             if (s.error != null) {
@@ -1661,6 +1841,7 @@ final class Batch {
         int ok = 0, bad = 0;                                                     // מ0.14: ודא — כמה עברו וכמה נכשלו
         for (Step s : plan.steps) if (s.verified != null) { if (s.verified) ok++; else bad++; }
         if (ok + bad > 0) report.add(Words.DbCmd.verifySummary(ok, bad));
+        writeReport(plan, report);
         return report;
     }
 

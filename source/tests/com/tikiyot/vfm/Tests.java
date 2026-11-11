@@ -53,6 +53,7 @@ public final class Tests {
         run("מ0.27: RD /S ואחריו MD ו־COMP — ההדמיה שוכחת מה שהיה בתיקייה", new Runnable() { public void run() { m027(); } });
         run("מ0.30: RD ואחריו MD לאותה תיקייה; ECHO עם משתנה; רשימה שאינה בבית", new Runnable() { public void run() { m030(); } });
         run("מ0.32: RD לתת־תיקייה ואז לתיקייה", new Runnable() { public void run() { m032(); } });
+        run("מ0.37: הפקודות הקטנות — כתוב, ודא (תיקייה, מכיל, קבצים, שגיאה), דוח, המתן, משתנים, רעיון וכותרת", new Runnable() { public void run() { m037(); } });
         run("קובצי פקודות — השורה כשדות לטופס (117א, שלב 2)", new Runnable() { public void run() { batchForm(); } });
         run("תיקוני הביקורות השישית והשביעית (118–122, 134, 135, 139)", new Runnable() { public void run() { review7(); } });
         run("תיקוני באגים 123, 124, 137", new Runnable() { public void run() { review7b(); } });
@@ -1650,6 +1651,59 @@ public final class Tests {
         eq("מ0.27: COMP אחרי RD /S — מול תיקייה ריקה: הקובץ רק במקור", 1, p.steps.get(3).files.size());
     }
 
+    private static void m037() {
+        File root = new File(home, "כונן-037");
+        wipe(root);
+        File here = new File(root, "כאן"), work = new File(root, "עבודה");
+        here.mkdirs();
+        work.mkdirs();
+        java.util.Map<String, String> vars = Batch.vars(here, root.getAbsolutePath(), null);
+        check("מ0.37: המשתנים %שעה% ו־%ייחודי% קיימים", vars.get(Batch.V_TIME) != null && vars.get(Batch.V_UNIQUE) != null);
+        String w = work.getAbsolutePath();
+        String text = "המשך ()\n"
+                + "דוח \"" + w + "/יומן.txt\"\n"
+                + "כתוב \"" + w + "/א.txt\" \"שלום עולם\"\n"
+                + "כתוב \"" + w + "/א.txt\" \" ועוד\" /הוסף\n"
+                + "כתוב \"" + w + "/ריק.txt\"\n"
+                + "ודא \"" + w + "/א.txt\" מכיל \"עולם ועוד\"\n"
+                + "ודא \"" + w + "\" קיים\n"
+                + "ודא \"" + w + "\" /קבצים:2\n"
+                + "ודא \"" + w + "/אין\" חסר\n"
+                + "ודא שגיאה\n"
+                + "COPY \"" + w + "/אין-כזה.txt\" \"" + w + "\"\n"
+                + "ודא שגיאה\n"
+                + "כתוב \"" + w + "\" \"x\"\n"
+                + "המתן 0\n";
+        eq("מ0.37: קובץ ש\"כתוב\" ייצור נראה לשורות הבאות (COPY ממנו — בלי שגיאה)", 0,
+                Batch.plan(text + "COPY \"" + w + "/א.txt\" \"" + here.getAbsolutePath() + "\"\n", here, vars).errors);
+        wipe(work);
+        work.mkdirs();
+        Batch.Plan p = Batch.plan(text, here, vars);
+        eq("מ0.37: \"ודא שגיאה\" — שורה שנכשלת בתכנון אינה שגיאה", 0, p.errors);
+        String rep = Batch.run(p, null, null, null).toString();
+        int ok = 0, bad = 0;
+        for (Batch.Step s : p.steps) if (s.verified != null) { if (s.verified) ok++; else bad++; }
+        eq("מ0.37: כל ה\"ודא\" עברו (4 רגילים + 2 \"שגיאה\")", 6, ok);
+        eq("מ0.37: ואף אחד לא נכשל", 0, bad);
+        String body = "";
+        try { body = Files.readUtf8(new File(work, "א.txt")); } catch (Exception e) { body = String.valueOf(e); }
+        eq("מ0.37: כתוב ואחריו /הוסף", "שלום עולם ועוד", body);
+        check("מ0.37: קובץ ריק נוצר", new File(work, "ריק.txt").isFile() && new File(work, "ריק.txt").length() == 0);
+        String log = "";
+        try { log = Files.readUtf8(new File(work, "יומן.txt")); } catch (Exception e) { log = ""; }
+        check("מ0.37: \"דוח\" — היומן נכתב לקובץ, עם סיכום ה\"ודא\"", log.contains("6 עברו") && rep.contains("יומן.txt"));
+        Batch.Plan q = Batch.plan("ודא שגיאה\nהמתן 0\n", here, vars);
+        Batch.run(q, null, null, null);
+        check("מ0.37: \"ודא שגיאה\" על שורה שהצליחה — נכשל", q.steps.get(1).verified != null && !q.steps.get(1).verified);
+        eq("מ0.37: \"ודא שגיאה\" בלי שורה אחריה — שגיאה", 1, Batch.plan("ודא שגיאה\n", here, vars).errors);
+        eq("מ0.37: המתן בלי מספר — שגיאה", 1, Batch.plan("המתן הרבה\n", here, vars).errors);
+        Verbs.Cmd n = Verbs.parse("צור רעיון \"לקנות חלב\" \"פנקס/קניות\""), ti = Verbs.parse("צור כותרת \"פרק א\"");
+        check("מ0.37: צור רעיון — הטקסט והרשימה", n.error == null && n.kind.equals(Verbs.K_NOTE) && n.arg.equals("לקנות חלב") && n.cond.equals("פנקס/קניות"));
+        check("מ0.37: צור כותרת — בלי רשימה (הרשימה שעל המסך)", ti.error == null && ti.kind.equals(Verbs.K_TITLE) && ti.arg.equals("פרק א") && ti.cond.isEmpty());
+        Verbs.Cmd sc = Verbs.parse("פתח מסך אבחון"), sb = Verbs.parse("פתח מסך גיבויים");
+        check("מ0.37: פתח מסך אבחון / גיבויים", sc.error == null && sc.arg.equals(Verbs.S_DIAG) && sb.error == null && sb.arg.equals(Verbs.S_BACKUPS));
+    }
+
     private static void m032() {
         File root = new File(home, "כונן-032");
         wipe(root);
@@ -2672,7 +2726,7 @@ public final class Tests {
     /** 1.22.5: ההגדרה האחת — שלמה, תואמת למנוע, וכל פרמטר עם שם והסבר. */
     private static void v1225() {
         check("1.22.5: פקודות הקבצים — אותן ובאותו סדר (מ0.14: ודא)",
-                java.util.Arrays.equals(BatchLine.COMMANDS, new String[]{"COPY", "MOVE", "DEL", "REN", "MD", "RD", "COMP", "LINK", "VERIFY", "MODE", "CONTINUE", "CALL", "START", "ECHO", "REM"}));
+                java.util.Arrays.equals(BatchLine.COMMANDS, new String[]{"COPY", "MOVE", "DEL", "REN", "MD", "RD", "COMP", "LINK", "VERIFY", "MODE", "CONTINUE", "WRITE", "WAIT", "BACKUP", "REFRESH", "REPORT", "CALL", "START", "ECHO", "REM"}));
         check("1.22.5: שמות נרדפים", Commands.canonical("MKDIR").equals("MD") && Commands.canonical("rmdir").equals("RD")
                 && Commands.canonical("ERASE").equals("DEL") && Commands.canonical("RENAME").equals("REN")
                 && Commands.canonical("copy").equals("COPY") && Commands.canonical("FORMAT").equals("FORMAT")

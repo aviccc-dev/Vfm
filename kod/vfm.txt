@@ -805,6 +805,26 @@ RD "%פנימי%\בדיקת מנהל קבצים (אפשר למחוק)"
 כלול "בדיקת מ0.23.vbat"
 :: "העתקה" — תמיד עותק; העברה; MD עמוק בכונן (מ0.24)
 כלול "בדיקת מ0.24.vbat"
+:: הפקודות הקטנות (מ0.37) — כתוב, ודא (מכיל, קבצים, תיקייה, שגיאה), רענן, רעיון וכותרת, גבה
+MD "%פנימי%\בדיקת מ0.37 (אפשר למחוק)"
+כתוב "%פנימי%\בדיקת מ0.37 (אפשר למחוק)\א.txt" "שלום"
+כתוב "%פנימי%\בדיקת מ0.37 (אפשר למחוק)\א.txt" " עולם" /הוסף
+ודא "%פנימי%\בדיקת מ0.37 (אפשר למחוק)\א.txt" מכיל "שלום עולם"
+ודא "%פנימי%\בדיקת מ0.37 (אפשר למחוק)" קיים
+ודא "%פנימי%\בדיקת מ0.37 (אפשר למחוק)" /קבצים:1
+ודא שגיאה
+כתוב "%פנימי%\אין-תיקייה-כזו-037\א.txt" "x"
+רענן
+RD ידנית "בדיקת מ0.37"
+MD ידנית "בדיקת מ0.37"
+צור רעיון "רעיון לבדיקה" "בדיקת מ0.37"
+צור כותרת "כותרת לבדיקה" "בדיקת מ0.37"
+COPY ידנית "בדיקת מ0.37" קובץ "%פנימי%\בדיקת מ0.37 (אפשר למחוק)\יצוא.txt"
+ודא "%פנימי%\בדיקת מ0.37 (אפשר למחוק)\יצוא.txt" מכיל "רעיון לבדיקה"
+ודא "%פנימי%\בדיקת מ0.37 (אפשר למחוק)\יצוא.txt" מכיל "כותרת לבדיקה"
+גבה
+RD "%פנימי%\בדיקת מ0.37 (אפשר למחוק)" /S
+ודא "%פנימי%\בדיקת מ0.37 (אפשר למחוק)" חסר
 ECHO סוף הבדיקה הכללית. "בדיקת פקודות" נשארת לראות; קובצי היצוא — בתיקיית אופן הבדיקות; התיקייה בכונן — הוסרה, והקובץ שהועתק אליה — בסל.
 
 ===== קובץ: assets/tests/lachatz.vbat =====
@@ -3515,6 +3535,8 @@ final class Batch {
         /** 1.13.0: פקודת פתיחה — השורה, אחרי המשתנים. */
         String open;
         boolean replace, skipTaken, recursive, hidden;
+        /** מ0.37: "ודא שגיאה" — השורה הזו צריכה להיכשל בהרצה (בתכנון היא תקינה). */
+        boolean expectFail;
         /** 1.19.0: COPY/MOVE /S — שמירת מסלול: השורש שממנו נמדד המסלול; files — כל הקבצים, dirs — תיקיות ריקות. */
         String keepRoot;
         /** 1.19.0: /יומן: — קובץ היומן (מסלול מלא), או null. */
@@ -3568,6 +3590,9 @@ final class Batch {
          * מספר אז המשך תמיד"): כמה שורות שגיאה מותרות — 0 בלי השורה "המשך"; "המשך N" — עד N; "המשך" לבד — בלי גבול.
          */
         int allowErrors;
+
+        /** מ0.37: "דוח "<קובץ>"" — היומן של ההרצה נכתב גם לקובץ הזה (מסלול מלא), או null. */
+        String reportFile;
 
         /** מ0.32 (ממצא 38): מאיזו שורה (מקום ברשימת השורות) כל "אופן" בתוקף — כדי לדעת באיזה אופן רצה כל שורה. */
         final List<Integer> modeFrom = new ArrayList<Integer>();
@@ -3630,6 +3655,155 @@ final class Batch {
     }
 
     private Batch() { }
+
+    /**
+     * מ0.37 (המשתמש, 11.11.2026: "אם כבר אז תאסוף כמה קטנות, לא רק את אלה של הבדיקות"): כתוב · המתן · גבה · רענן · דוח ·
+     * "ודא שגיאה". מחזיר true אם השורה שלהן (ואז s מוכן: שגיאה, או תיאור ופעולה).
+     */
+    private static boolean small(final Plan plan, final Step s, String cmd, List<String> tk, String line, File here,
+                                 Map<String, String> vars, final Sim sim) {
+        if (cmd.equals(VERIFY) && tk.size() == 2 && tk.get(1).trim().equals(W_ERROR)) {
+            s.cmd = EXPECT;
+            s.noop = true;
+            s.describe = Words.DbCmd.EXPECT_NEXT;
+            return true;
+        }
+        if (cmd.equals(WAIT)) {
+            int sec = -1;
+            if (tk.size() == 2) try { sec = Integer.parseInt(tk.get(1).trim()); } catch (NumberFormatException e) { sec = -1; }
+            if (sec < 0 || sec > 600) { s.error = Words.DbCmd.WAIT_USAGE; return true; }
+            final int n = sec;
+            s.describe = Words.DbCmd.waitFor(n);
+            s.op = new ListCmd.Op() {
+                @Override public String run(Library lib) {
+                    try { Thread.sleep(n * 1000L); } catch (InterruptedException e) { Thread.currentThread().interrupt(); }
+                    return Words.DbCmd.waitFor(n);
+                }
+            };
+            return true;
+        }
+        if (cmd.equals(REPORT)) {
+            String[] err = {null};
+            String p = tk.size() == 2 ? path(tk.get(1), here, vars, err) : null;
+            if (p == null) { s.error = err[0] != null ? err[0] : Words.DbCmd.REPORT_USAGE; return true; }
+            plan.reportFile = p;
+            s.noop = true;
+            s.describe = Words.DbCmd.reportTo(Bidi.path(p));
+            return true;
+        }
+        if (cmd.equals(REFRESH)) {
+            final boolean deep = tk.size() == 2 && tk.get(1).trim().equals(W_DEEP);
+            if (tk.size() > 2 || (tk.size() == 2 && !deep)) { s.error = Words.DbCmd.REFRESH_USAGE; return true; }
+            s.describe = Words.DbCmd.refreshWill(deep);
+            s.op = new ListCmd.Op() {
+                @Override public String run(Library lib) {
+                    if (lib == null) return Words.DbCmd.refreshWill(deep);
+                    return Words.DbCmd.refreshed(deep ? lib.deepRefresh() : lib.refreshAsked());
+                }
+            };
+            return true;
+        }
+        if (cmd.equals(BACKUP)) {
+            if (tk.size() != 1) { s.error = Words.DbCmd.BACKUP_USAGE; return true; }
+            if (!DbVerbs.active()) { s.error = Words.DbCmd.VERIFY_DB_ONLY; return true; }
+            if (sim.modeError != null) { s.error = sim.modeError; return true; }
+            final String mode = sim.mode != null ? sim.mode : DbListScreen.currentMode;
+            s.describe = Words.DbCmd.backupWill(mode);
+            s.op = new ListCmd.Op() {
+                @Override public String run(Library lib) { return DbListCmd.backupNow(mode); }
+            };
+            return true;
+        }
+        if (cmd.equals(WRITE)) {
+            boolean append = false;
+            List<String> a = new ArrayList<String>();
+            for (int i = 1; i < tk.size(); i++) {
+                if (tk.get(i).trim().equals(SW_APPEND)) append = true;
+                else a.add(tk.get(i));
+            }
+            if (a.isEmpty() || a.size() > 2) { s.error = Words.DbCmd.WRITE_USAGE; return true; }
+            String[] err = {null};
+            String p = path(a.get(0), here, vars, err);
+            if (p == null) { s.error = err[0]; return true; }
+            final File f = new File(p);
+            final String text = a.size() == 2 ? Verbs.withVars(a.get(1), vars).replace("\\n", "\n") : "";
+            File dir = f.getParentFile();
+            if (dir == null || !sim.isDir(dir)) { s.error = Words.DbCmd.writeNoFolder(Bidi.path(dir == null ? p : dir.getAbsolutePath())); return true; }
+            if (sim.isDir(f)) { s.error = Words.DbCmd.WRITE_IS_FOLDER; return true; }
+            final boolean add = append;
+            sim.gone.remove(p);
+            if (!sim.isFile(f)) sim.added.put(p, GHOST);
+            s.dest = f;
+            s.describe = Words.DbCmd.writeWill(f.getName(), text.length(), add);
+            s.op = new ListCmd.Op() {
+                @Override public String run(Library lib) {
+                    try {
+                        if (lib != null) {
+                            String why = Physical.forbidden(lib, f.getParentFile());
+                            if (why != null) { DbListCmd.lastFailed = true; return why; }
+                        }
+                        if (f.isDirectory()) { DbListCmd.lastFailed = true; return Words.DbCmd.WRITE_IS_FOLDER; }
+                        boolean was = f.isFile();
+                        Files.writeAtomic(f, add && was ? Files.readUtf8(f) + text : text);
+                        if (lib != null) {
+                            if (was) lib.fileRemoved(f.getAbsolutePath());
+                            lib.fileAdded(f);
+                        }
+                        return Words.DbCmd.written(f.getName(), text.length(), add && was);
+                    } catch (Throwable t) {
+                        Log.e("Batch.write", t);
+                        DbListCmd.lastFailed = true;
+                        return Words.Db.failed(String.valueOf(t.getMessage()));
+                    }
+                }
+            };
+            return true;
+        }
+        return false;
+    }
+
+    /** מ0.37: "דוח "<קובץ>"" — ההודעות (ECHO) והיומן נכתבים לקובץ; כישלון בכתיבה — שורה ביומן, לא עוצר. */
+    private static void writeReport(Plan plan, List<String> report) {
+        if (plan.reportFile == null) return;
+        try {
+            StringBuilder sb = new StringBuilder();
+            for (String e : plan.echoes) sb.append(e).append('\n');
+            if (!plan.echoes.isEmpty()) sb.append('\n');
+            for (String r : report) sb.append(r).append('\n');
+            File f = new File(plan.reportFile);
+            File dir = f.getParentFile();
+            if (dir != null && !dir.isDirectory()) dir.mkdirs();
+            Files.writeAtomic(f, sb.toString());
+            report.add(Words.DbCmd.reportWritten(Bidi.path(plan.reportFile)));
+        } catch (Throwable t) {
+            Log.e("Batch.report", t);
+            report.add(Words.DbCmd.reportFailed(String.valueOf(t.getMessage())));
+        }
+    }
+
+    /** מ0.37: שורת "ודא שגיאה" — סימון בלבד; מה שנבדק היא השורה שאחריה. */
+    static final String EXPECT = "EXPECT";
+
+    /** מ0.37: אחרי התכנון — כל "ודא שגיאה" נצמד לשורה שאחריו: נכשלה כבר בתכנון — עברה (ואינה שגיאה); אחרת — תיבדק בהרצה. */
+    static void expectErrors(Plan plan) {
+        for (int i = 0; i < plan.steps.size(); i++) {
+            Step m = plan.steps.get(i);
+            if (!EXPECT.equals(m.cmd) || m.error != null) continue;
+            Step next = i + 1 < plan.steps.size() ? plan.steps.get(i + 1) : null;
+            if (next == null || EXPECT.equals(next.cmd)) {
+                m.noop = false;
+                m.error = Words.DbCmd.EXPECT_NOTHING;
+                plan.errors++;
+            } else if (next.error != null) {
+                next.describe = Words.DbCmd.expectOk(next.error);
+                next.error = null;
+                next.noop = true;
+                next.op = null;
+                next.verified = Boolean.TRUE;
+                plan.errors--;
+            } else next.expectFail = true;
+        }
+    }
 
     /**
      * מ0.31 (המשתמש, 11.11.2026: "המשך סתם רק פעם אחת, אם יש מספר בתוך סוגריים אז כפי המספר, אם סוגריים ריקות אז ממשיך
@@ -3695,6 +3869,10 @@ final class Batch {
     static final String VERIFY = "VERIFY";
     /** מ0.15: אופן — מכאן והלאה הפקודות במסד של אופן אחר; CALL — שורות של קובץ אחר במקום השורה. */
     static final String MODE = "MODE", CALL = "CALL", CONT = "CONTINUE";
+    /** מ0.37 — הפקודות הקטנות: כתוב לקובץ · המתן · גבה (המסד) · רענן (האינדקס) · דוח (היומן לקובץ). */
+    static final String WRITE = "WRITE", WAIT = "WAIT", BACKUP = "BACKUP", REFRESH = "REFRESH", REPORT = "REPORT";
+    static final String SW_APPEND = "/הוסף", W_DEEP = "עמוק", W_ERROR = "שגיאה";   // תחביר
+    static final String V_TIME = "שעה", V_UNIQUE = "ייחודי";   // תחביר
     /** מ0.17: קישור — אותה רשימה / אותו פריט גם במקום נוסף (במסד). */
     static final String LINK = "LINK";
     /** מ0.15: עומק מרבי של CALL בתוך CALL. */
@@ -3784,7 +3962,7 @@ final class Batch {
     private static final Pattern SWITCH = Pattern.compile(
             "^/(-?Y|S|Q|F|A(:.*)?|D(:.*)?|" + SW_DATE + ".*|" + SW_SIZE + ".*|" + SW_TAKEN.substring(1)
                     + ".*|" + SW_KEEP.substring(1) + "|" + SW_JOURNAL.substring(1) + ".*|" + SW_LIMIT.substring(1)
-                    + ".*|" + SW_STATE.substring(1) + ".*|" + SW_LIST.substring(1) + ".*|MAXAGE:.*|MINAGE:.*|MAX:.*|MIN:.*)$",
+                    + ".*|" + SW_STATE.substring(1) + ".*|" + SW_LIST.substring(1) + ".*|" + SW_APPEND.substring(1) + "|MAXAGE:.*|MINAGE:.*|MAX:.*|MIN:.*)$",
             Pattern.CASE_INSENSITIVE);
 
     static boolean isSwitch(String t) {
@@ -3800,6 +3978,8 @@ final class Batch {
         v.put(V_HERE, here.getAbsolutePath());
         if (card != null) v.put(V_CARD_ID, new File(card).getName());       // 1.19.0
         v.put(V_NOW, new java.text.SimpleDateFormat(NOW_FORMAT, Locale.ROOT).format(new java.util.Date()));   // 1.19.0
+        v.put(V_TIME, new java.text.SimpleDateFormat("HH-mm-ss", Locale.ROOT).format(new java.util.Date()));   // מ0.37
+        v.put(V_UNIQUE, Long.toString(System.currentTimeMillis(), 36));        // מ0.37: שם שלא חוזר בין הרצות
         v.put(V_ONLY_A, ONLY_A_MARK);                                         // 1.20.0
         v.put(V_ONLY_B, ONLY_B_MARK);
         v.put(V_SHARE, SHARE_MARK);                                           // 203
@@ -4303,7 +4483,7 @@ final class Batch {
                 if (s.error == null && doneIn == null && sim.mode != null && Verbs.OPEN.equals(vc.verb) && vc.arg != null && !vc.arg.trim().isEmpty()
                         && (Verbs.K_LIST.equals(vc.kind) || Verbs.K_SMART.equals(vc.kind))) doneIn = sim.mode;
                 if (s.error != null) plan.errors++;
-                else {
+                else if (!Verbs.K_NOTE.equals(vc.kind) && !Verbs.K_TITLE.equals(vc.kind)) {   // מ0.37: רעיון / כותרת — רק כותבים, אין מה לפתוח
                     plan.open = s.open;
                     plan.opens.add(new String[]{s.open, doneIn});
                 }
@@ -4345,6 +4525,11 @@ final class Batch {
                     s.describe = allow == Integer.MAX_VALUE ? Words.DbCmd.CONT_ALWAYS : Words.DbCmd.contUpTo(allow);
 
                 }
+                plan.steps.add(s);
+                continue;
+            }
+            if (small(plan, s, cmd, tk, line, here, vars, sim)) {                // מ0.37: הפקודות הקטנות
+                if (s.error != null) plan.errors++;
                 plan.steps.add(s);
                 continue;
             }
@@ -4425,6 +4610,7 @@ final class Batch {
             if (cmd.equals("START") && s.error == null) plan.start = s.dest;
             plan.steps.add(s);
         }
+        expectErrors(plan);                                                    // מ0.37: "ודא שגיאה"
         return plan;
     }
 
@@ -5018,10 +5204,13 @@ final class Batch {
     static List<String> run(Plan plan, Library lib, Physical.Asker asker, Physical.Progress progress, boolean grey, Listener listen) {
         List<String> report = new ArrayList<String>(plan.inputs);              // 1.27.0: הקלט — בראש
         int fails = 0;                                                           // מ0.31: כישלונות בהרצה — מול המותר ("המשך")
+        Step pending = null;                                                     // מ0.37: "ודא שגיאה"
+        int pendingFails = 0;
         if (plan.blocked()) {                                                    // מ0.30: שגיאה בקובץ — שום שורה לא רצה
             plan.trouble = true;
             report.add(Words.DbCmd.notRun(plan.errors));
             report.add(plan.errorText());
+            writeReport(plan, report);
             return report;
         }
         Clock clock = new Clock();                                               // 1.25.0: לולאה — עצירה לפי זמן
@@ -5038,6 +5227,13 @@ final class Batch {
             mark = report.size();
             t0 = System.nanoTime();
             prev = null;
+            if (pending != null) {                                              // מ0.37: "ודא שגיאה" — השורה הקודמת הייתה צריכה להיכשל
+                boolean failed = fails > pendingFails;
+                pending.verified = failed;
+                if (failed) fails = pendingFails;                                // כישלון צפוי אינו נספר
+                report.add(Words.Cmd.line(pending.label(), failed ? Words.DbCmd.EXPECT_OK_RUN : Words.DbCmd.EXPECT_BAD));
+                pending = null;
+            }
             if (si == plan.steps.size()) break;
             if (fails > plan.allowErrors) {                                      // מ0.31: יותר כישלונות מהמותר — עוצרים כאן
                 plan.trouble = true;
@@ -5058,6 +5254,10 @@ final class Batch {
                 continue;
             }
             prev = s;
+            if (s.expectFail) {
+                pending = s;
+                pendingFails = fails;
+            }
             s.ran = s.error == null;
             if (listen != null) listen.before(si, plan.steps.size(), s);
             if (s.error != null) {
@@ -5139,6 +5339,7 @@ final class Batch {
         int ok = 0, bad = 0;                                                     // מ0.14: ודא — כמה עברו וכמה נכשלו
         for (Step s : plan.steps) if (s.verified != null) { if (s.verified) ok++; else bad++; }
         if (ok + bad > 0) report.add(Words.DbCmd.verifySummary(ok, bad));
+        writeReport(plan, report);
         return report;
     }
 
@@ -8333,6 +8534,17 @@ final class Commands {
                     list(pos(Type.NAME, Words.DbCmd.N_MODE, Words.DbCmd.H_MODE)), null),
             new Def(Batch.CONT, Words.DbCmd.N_CONT, new String[]{Words.DbCmd.N_CONT}, Family.FILE, Words.DbCmd.W_CONT,
                     list(pos(Type.TEXT, Words.DbCmd.P_CONT, Words.DbCmd.H_CONT)), null),
+            new Def(Batch.WRITE, Words.DbCmd.N_WRITE, new String[]{Words.DbCmd.N_WRITE}, Family.FILE, Words.DbCmd.W_WRITE, list(
+                    pos(Type.PATH, Words.Def.P_FILE, Words.DbCmd.H_WRITE_FILE),
+                    pos(Type.TEXT, Words.DbCmd.P_TEXT_IN, Words.DbCmd.H_WRITE_TEXT),
+                    sw(Batch.SW_APPEND, null, Type.FLAG, Words.DbCmd.P_APPEND, Words.DbCmd.H_APPEND)), null),
+            new Def(Batch.WAIT, Words.DbCmd.N_WAIT, new String[]{Words.DbCmd.N_WAIT}, Family.FILE, Words.DbCmd.W_WAIT,
+                    list(pos(Type.TEXT, Words.DbCmd.P_SECONDS, Words.DbCmd.H_SECONDS)), null),
+            new Def(Batch.BACKUP, Words.DbCmd.N_BACKUP, new String[]{Words.DbCmd.N_BACKUP}, Family.FILE, Words.DbCmd.W_BACKUP, new Param[0], null),
+            new Def(Batch.REFRESH, Words.DbCmd.N_REFRESH, new String[]{Words.DbCmd.N_REFRESH}, Family.FILE, Words.DbCmd.W_REFRESH,
+                    list(pos(Type.TEXT, Words.DbCmd.P_DEEP, Words.DbCmd.H_DEEP)), null),
+            new Def(Batch.REPORT, Words.DbCmd.N_REPORT, new String[]{Words.DbCmd.N_REPORT}, Family.FILE, Words.DbCmd.W_REPORT,
+                    list(pos(Type.PATH, Words.Def.P_FILE, Words.DbCmd.H_REPORT)), null),
             new Def(Batch.CALL, Words.DbCmd.N_CALL, new String[]{Words.DbCmd.N_CALL}, Family.FILE, Words.DbCmd.W_CALL,
                     list(pos(Type.PATH, Words.Def.P_FILE, Words.DbCmd.H_CALL)), null),
             new Def("START", Words.Def.N_START, null, Family.FILE, Words.Def.W_START,
@@ -11541,7 +11753,8 @@ final class DbListCmd {
         final boolean list = c.kind.equals(Verbs.K_LIST) && c.verb.equals(Verbs.CREATE);
         final boolean smartNew = c.kind.equals(Verbs.K_SMART) && c.verb.equals(Verbs.CREATE);
         final boolean smartUpd = c.kind.equals(Verbs.K_SMART) && c.verb.equals(Verbs.UPDATE);
-        if (!list && !smartNew && !smartUpd) return null;
+        final boolean note = c.kind.equals(Verbs.K_NOTE), title = c.kind.equals(Verbs.K_TITLE);   // מ0.37
+        if (!list && !smartNew && !smartUpd && !note && !title) return null;
         if (sim.modeError != null) { s.error = sim.modeError; return null; }
         final String mode = mode(sim);
         final Store db;
@@ -11552,10 +11765,18 @@ final class DbListCmd {
             s.error = Words.Db.failed(String.valueOf(t.getMessage()));
             return null;
         }
-        final List<String> path = list ? Names.parsePath(c.arg) : null;
+        final List<String> path = list ? Names.parsePath(c.arg) : note || title ? Names.parsePath(c.cond) : null;
+        if ((note || title) && path.isEmpty()) { s.error = Words.DbCmd.NOTE_NEEDS_LIST; return null; }
         final Work work = new Work() {
             @Override
             public Res run(Store t, Finder f) {
+                if (note || title) {
+                    long in = DbPaths.find(t, mode, path);
+                    if (in == 0) return Res.err(Words.ListCmdW.noList(Names.label(path)));
+                    if (title) t.addTitle(in, c.arg);
+                    else t.addNote(in, c.arg);
+                    return Res.ok(Words.DbCmd.noteAdded(title, c.arg, Names.label(path)));
+                }
                 if (list) {
                     if (path == null || path.isEmpty()) return Res.err(Words.Verb.NOT_FOUND + c.arg);
                     if (DbPaths.find(t, mode, path) != 0) return Res.same(Words.ListCmdW.exists(Names.label(path)));
@@ -11716,25 +11937,58 @@ final class DbListCmd {
     /** מ0.18: ודא "קובץ" קיים / חסר — בכונן (גם מה שהשורות שלפני ייצרו, לפי ההדמיה של Batch). */
     static void planVerifyFile(final Batch.Step s, final File f, List<String> conds, Batch.Sim sim) {
         Boolean want = null;
-        for (String c : conds) {
-            String t = c.trim();
+        int count = -1;
+        String has = null;
+        for (int i = 0; i < conds.size(); i++) {
+            String t = conds.get(i).trim();
             if (t.equals(Words.DbCmd.WORD_EXISTS) || t.equals(Words.DbCmd.WORD_EXISTS_M)) want = Boolean.TRUE;
             else if (t.equals(Words.DbCmd.WORD_MISSING) || t.equals(Words.DbCmd.WORD_MISSING_M)) want = Boolean.FALSE;
+            else if (t.startsWith(SW_FILES_IN)) {                            // מ0.37: /קבצים:N — כמה קבצים בתיקייה (בלי תתי־תיקיות)
+                try { count = Integer.parseInt(t.substring(SW_FILES_IN.length()).trim()); } catch (NumberFormatException e) { count = -1; }
+                if (count < 0) { s.error = Words.DbCmd.VERIFY_USAGE; return; }
+            } else if (t.equals(W_CONTAINS) && i + 1 < conds.size()) has = conds.get(++i);   // מ0.37: מכיל "טקסט"
             else { s.error = Words.DbCmd.VERIFY_USAGE; return; }
         }
         final boolean exists = want == null || want;
-        final String what = "\"" + f.getName() + "\" " + (exists ? Words.DbCmd.WORD_EXISTS_M : Words.DbCmd.WORD_MISSING_M);
+        final int n = count;
+        final String text = has;
+        final String what = "\"" + f.getName() + "\" " + (n >= 0 ? Words.DbCmd.verifyFilesIn(n) : text != null ? Words.DbCmd.verifyContains(text)
+                : exists ? Words.DbCmd.WORD_EXISTS_M : Words.DbCmd.WORD_MISSING_M);
         s.target = f.getName();
         s.describe = Words.DbCmd.verifyWill(what);
         s.op = new ListCmd.Op() {
             @Override
             public String run(Library lib) {
-                boolean ok = f.isFile() == exists;
+                boolean there = f.isFile() || f.isDirectory();                   // מ0.37: גם תיקייה
+                boolean ok;
+                String got;
+                if (n >= 0) {
+                    int c = 0;
+                    File[] k = f.listFiles();
+                    if (k != null) for (File x : k) if (x.isFile()) c++;
+                    ok = f.isDirectory() && c == n;
+                    got = f.isDirectory() ? Words.DbCmd.verifyFilesIn(c) : Words.DbCmd.WORD_MISSING_M;
+                } else if (text != null) {
+                    String body = null;
+                    try {
+                        if (f.isFile()) body = Files.readUtf8(f);
+                    } catch (Throwable t) {
+                        Log.e("DbListCmd.verifyFile", t);
+                    }
+                    ok = body != null && body.contains(text);
+                    got = body == null ? Words.DbCmd.WORD_MISSING_M : ok ? Words.DbCmd.verifyContains(text) : Words.DbCmd.VERIFY_NOT_CONTAINS;
+                } else {
+                    ok = there == exists;
+                    got = there ? Words.DbCmd.WORD_EXISTS_M : Words.DbCmd.WORD_MISSING_M;
+                }
                 s.verified = ok;
-                return Words.DbCmd.verifyResult(ok, what, f.isFile() ? Words.DbCmd.WORD_EXISTS_M : Words.DbCmd.WORD_MISSING_M);
+                return Words.DbCmd.verifyResult(ok, what, got);
             }
         };
     }
+
+    /** מ0.37: "ודא "<תיקייה>" /קבצים:N" · "ודא "<קובץ>" מכיל "<טקסט>"". */
+    static final String SW_FILES_IN = "/קבצים:", W_CONTAINS = "מכיל";   // תחביר
 
     /** העותק בזיכרון — פעם אחת לכל קובץ פקודות (השורות הבאות רואות מה שהקודמות עשו). */
     private static Store sim(Batch.Sim sim, String mode) {
@@ -11797,6 +12051,24 @@ final class DbListCmd {
     }
 
     /** ההרצה: המסד נפתח לרגע; לפני פעולה שמוציאה — גיבוי "לפני פעולה" (נכשל — לא מבצעים). */
+    /** מ0.37: "גבה" — גיבוי ידני של המסד של האופן (עותק וגם טקסט); גיבוי ידני לא נמחק לבד. */
+    static String backupNow(String mode) {
+        SqlStore s = null;
+        try {
+            s = SqlStore.open(DbScreen.dbFile(DbListScreen.app, mode), new IdCounter(DbScreen.counterFile()));
+            List<Backups.Entry> made = DbScreen.backupsOf(DbListScreen.app, mode).manual(s, System.currentTimeMillis());
+            StringBuilder names = new StringBuilder();
+            for (Backups.Entry e : made) names.append(names.length() > 0 ? ", " : "").append(e.name);
+            return Words.DbCmd.backedUp(mode, names.toString());
+        } catch (Throwable t) {
+            Log.e("DbListCmd.backupNow", t);
+            lastFailed = true;
+            return Words.Db.failed(String.valueOf(t.getMessage()));
+        } finally {
+            if (s != null) s.close();
+        }
+    }
+
     /** מ0.31: הפעולה האחרונה במסד נכשלה — ההרצה סופרת כישלונות ("המשך"). */
     static volatile boolean lastFailed;
 
@@ -12562,10 +12834,6 @@ public class DbListScreen extends ListScreen<Store.Member> {
         });
     }
 
-    /** כל הפעולות — במסך המסד, באותה רשימה. */
-    private void actions() {
-        startActivity(new Intent(this, DbScreen.class).putExtra(DbScreen.EXTRA_MODE, mode).putExtra(DbScreen.EXTRA_AT, listId));
-    }
 
     /** מ0.11.1: התפריט — כמו בבית הישן (פקודות, הגדרות, עיצוב), ועוד: מסך המסד, והצד הישן. */
     @Override
@@ -12574,7 +12842,7 @@ public class DbListScreen extends ListScreen<Store.Member> {
         menu.add(0, MENU_SETTINGS, 0, Words.Main.SETTINGS);
         menu.add(0, MENU_DESIGN, 0, Words.DesignW.MENU);
         // מ0.35 (המשתמש, 11.11.2026, על הגיבויים: "בינתיים שתעבור להגדרות. היא לא צריכה להיות במקום כזה מרכזי") — הכניסה בהגדרות
-        menu.add(0, MENU_DB, 0, Words.Db.MENU_ACTIONS);
+        // מ0.37: "⚙ מסד" ירדה מהתפריט — במסך המסד נשארו רק הגיבויים, והכניסה אליהם מההגדרות
         menu.add(0, MENU_TESTS, 0, Words.DbCmd.MENU_TESTS);
         menu.add(0, MENU_DIAG, 0, Words.DbCmd.MENU_DIAG);                     // מ0.30
         // מ0.25: "↩ הצד הישן" יצא — מחיקת המנוע הישן, שלב 1: אין עוד דרך אליו מבניית מ.
@@ -12582,8 +12850,7 @@ public class DbListScreen extends ListScreen<Store.Member> {
 
     @Override
     protected boolean item(int id) {
-        if (id == MENU_DB) actions();
-        else if (id == MENU_CMDS) CmdMenu.show(this, null);
+        if (id == MENU_CMDS) CmdMenu.show(this, null);
         else if (id == MENU_SETTINGS) startActivity(new Intent(this, SettingsScreen.class));
         else if (id == MENU_DESIGN) design();
         else if (id == MENU_TESTS) DbTestMode.open(this);
@@ -13903,6 +14170,8 @@ public class DbScreen extends Activity {
         if (pendingDo != null && store != null && current() > 0) {            // מ0.10
             String d = pendingDo;
             pendingDo = null;
+            addingFiles = !DO_BACKUPS.equals(d);
+            if (addingFiles) show();
             if (DO_FOLDER.equals(d)) fromFolder(current());
             else if (DO_BACKUPS.equals(d)) backupMenu();
             else fromSearch(current());
@@ -14003,6 +14272,9 @@ public class DbScreen extends Activity {
         }
     }
 
+    /** מ0.37: המסך נפתח רק כדי להוסיף קבצים לרשימה (מתיקייה או מחיפוש) — מ־➕ שבמסך הרשימות. */
+    private boolean addingFiles;
+
     /** מ0.9: הבית במראה המוכר (אם יש בית במסד). */
     private void openFamiliar() {
         long h = store == null ? 0 : DbPaths.home(store);
@@ -14063,79 +14335,22 @@ public class DbScreen extends Activity {
                 c.append(Words.Db.CRUMB_SEP).append(it.type == Store.SMART ? "⚡ " + it.name : label(it));
             }
             crumb.setText(c.toString());
-            final long cur = current();
-            Store.Item curItem = cur > 0 ? store.item(cur) : null;
-            final boolean inSmart = curItem != null && curItem.type == Store.SMART;
+            // מ0.37 (המשתמש, 11.11.2026: "רעיון כותרת חבורה — תרשום להוסיף לפקודות בפעם הבאה. תוריד משם כל מה שמיותר"):
+            // המסך מציג רק את מצב המסד, את הגיבויים, ודרך חזרה לבית. רעיון, כותרת וחבורה יחזרו כפקודות
+            // (claude/pkudot-muamadot.md). כשהמסך נפתח רק כדי להוסיף קבצים לרשימה (➕ במסך הרשימות) — רק דרך חזרה.
             buttons.removeAllViews();
-            if (path.isEmpty()) {
+            rows.removeAllViews();
+            if (addingFiles) {
+                buttons.addView(button(Words.Db.BACK_TO_LIST, new Runnable() {
+                    @Override public void run() { finish(); }
+                }));
+                hint.setText(Words.Db.ADDING_FILES);
+            } else {
                 buttons.addView(button(Words.Db.FAMILIAR, new Runnable() {
                     @Override public void run() { openFamiliar(); }
                 }));
-                buttons.addView(button(Words.Db.NEW_LIST, new Runnable() {
-                    @Override public void run() { newList(0); }
-                }));
-                buttons.addView(button(Words.Db.NEW_SMART, new Runnable() {
-                    @Override public void run() { newSmart(0); }
-                }));
-            } else if (inSmart) {
-                final Store.Item sm = curItem;
-                buttons.addView(button(Words.Db.EDIT_COND, new Runnable() {
-                    @Override public void run() { act(sm, -1, 5); }
-                }));
-                buttons.addView(button(Words.Db.RENAME, new Runnable() {
-                    @Override public void run() { act(sm, -1, 0); }
-                }));
-                buttons.addView(button(Words.Db.DELETE_YES, new Runnable() {
-                    @Override public void run() { act(sm, -1, 4); }
-                }));
-            } else if (cur > 0) {
-                buttons.addView(button(Words.Db.ADD_MENU, new Runnable() {
-                    @Override public void run() { addMenu(); }
-                }));
-            }
-            hint.setText(cur == UNASSIGNED_ID ? Words.Db.UNASSIGNED_HINT : cur == TRASH_ID ? Words.Db.TRASH_HINT : Words.Db.HINT);
-            rows.removeAllViews();
-            if (path.isEmpty()) {
-                rows.addView(specialRow(Words.Db.UNASSIGNED, Words.Db.UNASSIGNED_SUB, store.unassigned().size(), UNASSIGNED_ID));
-                rows.addView(specialRow(Words.Db.TRASH, Words.Db.TRASH_SUB, store.trashed().size(), TRASH_ID));
+                hint.setText("");
                 rows.addView(backupsRow());
-                List<Store.Item> smarts = store.smarts();
-                if (all.isEmpty() && smarts.isEmpty()) {
-                    TextView t = Ui.info(this);
-                    t.setText(Words.Db.EMPTY);
-                    rows.addView(t);
-                }
-                long home = DbPaths.home(store);                             // מ0.6: הבית — ראשון
-                for (Store.Item it : all) if (it.id == home) rows.addView(row(it, store.count(it.id), -1, 0));
-                for (Store.Item it : all) if (it.id != home) rows.addView(row(it, store.count(it.id), -1, 0));
-                for (Store.Item it : smarts) rows.addView(row(it, -1, -1, 0));
-            } else if (cur == UNASSIGNED_ID) {
-                List<Store.Item> un = store.unassigned();
-                if (un.isEmpty()) {
-                    TextView t = Ui.info(this);
-                    t.setText(Words.Db.UNASSIGNED_EMPTY);
-                    rows.addView(t);
-                }
-                for (Store.Item it : un) rows.addView(row(it, -1, -1, 0));
-            } else if (cur == TRASH_ID) {
-                List<Store.Item> tr = store.trashed();
-                if (tr.isEmpty()) {
-                    TextView t = Ui.info(this);
-                    t.setText(Words.Db.TRASH_EMPTY);
-                    rows.addView(t);
-                }
-                for (Store.Item it : tr) rows.addView(row(it, -1, -1, 0));
-            } else if (inSmart) {
-                showSmart(curItem);
-            } else {
-                List<Store.Member> ms = store.members(current());
-                if (ms.isEmpty()) {
-                    TextView t = Ui.info(this);
-                    t.setText(Words.Db.EMPTY_LIST);
-                    rows.addView(t);
-                }
-                for (Store.Member m : ms)
-                    rows.addView(row(m.item, m.item.type == Store.LIST ? store.count(m.item.id) : -1, m.position, ms.size()));
             }
         } catch (Throwable t) {
             Log.e("DbScreen.show", t);
@@ -14178,148 +14393,6 @@ public class DbScreen extends Activity {
         return r;
     }
 
-    /** רשימה חכמה פתוחה: התוצאות מחושבות עכשיו מהאינדקס (ברקע), לקריאה בלבד. */
-    private void showSmart(final Store.Item sm) {
-        final String cond = store.prop(sm.id, Store.P_COND) == null ? "" : store.prop(sm.id, Store.P_COND);
-        final String sort = store.prop(sm.id, Store.P_SORT) == null ? "" : store.prop(sm.id, Store.P_SORT);
-        final TextView head = Ui.info(this);
-        rows.addView(head);
-        if (cond.isEmpty()) {
-            head.setText(Words.Db.smartInfo(cond, 0, 0) + "\n" + Words.Db.SMART_NO_COND);
-            return;
-        }
-        final Library lib = Library.get(this);
-        lib.start(null);
-        final int mine = token;
-        head.setText(Words.Db.smartInfo(cond, 0, 0));
-        new Thread(new Runnable() {
-            @Override
-            public void run() {
-                Smarts.Result r;
-                try {
-                    r = Smarts.over(lib).find(cond, sort, SMART_ROWS);
-                } catch (Throwable t) {
-                    Log.e("DbScreen.smart", t);
-                    r = Smarts.Result.notReady();
-                }
-                final Smarts.Result res = r;
-                runOnUiThread(new Runnable() {
-                    @Override
-                    public void run() {
-                        if (isFinishing() || mine != token) return;
-                        if (!res.ready) {
-                            head.setText(Words.Db.smartInfo(cond, 0, 0) + "\n" + Words.Db.INDEX_NOT_READY);
-                            ui.postDelayed(new Runnable() {
-                                @Override public void run() { if (!isFinishing() && mine == token) show(); }
-                            }, 1500);
-                            return;
-                        }
-                        head.setText(Words.Db.smartInfo(cond, res.count, res.size)
-                                + (res.note.isEmpty() ? "" : "\n" + Words.Db.smartNote(res.note)));
-                        if (res.count == 0) {
-                            TextView t = Ui.info(DbScreen.this);
-                            t.setText(Words.Db.SMART_EMPTY);
-                            rows.addView(t);
-                            return;
-                        }
-                        for (Smarts.Row w : res.rows) rows.addView(resultRow(w));
-                        TextView more = Ui.info(DbScreen.this);
-                        more.setText(res.count > res.rows.size() ? Words.Db.smartMore(res.rows.size(), res.count) : Words.Db.SMART_READONLY);
-                        rows.addView(more);
-                    }
-                });
-            }
-        }).start();
-    }
-
-    private View resultRow(Smarts.Row w) {
-        LinearLayout r = new LinearLayout(this);
-        r.setOrientation(LinearLayout.VERTICAL);
-        r.setPadding(Ui.dp(this, 12), Ui.dp(this, 8), Ui.dp(this, 12), Ui.dp(this, 8));
-        TextView name = new TextView(this);
-        name.setText((w.dir ? "📁 " : "") + w.name);
-        name.setTextSize(15);
-        name.setTextColor(Ui.TEXT);
-        TextView sub = new TextView(this);
-        sub.setTextSize(12);
-        sub.setTextColor(Ui.SUB);
-        sub.setText(w.folder + (w.size > 0 ? " · " + Files.size(w.size) : ""));
-        r.addView(name);
-        r.addView(sub);
-        r.setBackgroundColor(Ui.BG);
-        final Smarts.Row row = w;
-        r.setOnClickListener(new View.OnClickListener() {                      // מ0.8: נגיעה — פתיחה; תיקייה — בכונן
-            @Override
-            public void onClick(View v) {
-                if (row.dir) DiskScreen.open(DbScreen.this, row.path);
-                else Ui.open(DbScreen.this, new File(row.path));
-            }
-        });
-        if (!w.dir) r.setOnLongClickListener(new View.OnLongClickListener() {   // ארוכה — הוספה לרשימה
-            @Override
-            public boolean onLongClick(View v) {
-                pickListThen(new ListPicked() {
-                    @Override
-                    public void ok(long list) {
-                        addFiles(list, java.util.Collections.singletonList(row.path), java.util.Collections.singletonList(row.size));
-                    }
-                });
-                return true;
-            }
-        });
-        return r;
-    }
-
-    /** שורה: שם, ומתחתיו סוג, מספר זיהוי וכמה פריטים (ברשימה). */
-    private View row(final Store.Item it, int count, final int position, final int size) {
-        LinearLayout r = new LinearLayout(this);
-        r.setOrientation(LinearLayout.VERTICAL);
-        r.setPadding(Ui.dp(this, 12), Ui.dp(this, 10), Ui.dp(this, 12), Ui.dp(this, 10));
-        TextView name = new TextView(this);
-        name.setText(it.name);
-        name.setTextSize(16);
-        name.setTextColor(Ui.TEXT);
-        TextView sub = new TextView(this);
-        sub.setTextSize(12);
-        sub.setTextColor(Ui.SUB);
-        if (it.type == Store.SMART) {
-            String cond = store.prop(it.id, Store.P_COND) == null ? "" : store.prop(it.id, Store.P_COND);
-            sub.setText(Words.Db.smartLine(it.id, cond.length() > 70 ? cond.substring(0, 70) + "…" : cond));
-            name.setText("⚡ " + it.name);
-        } else {
-            boolean group = isGroup(it);
-            boolean shared = it.type == Store.LIST && store.listsOf(it.id).size() > 1;
-            String kind = group ? Words.Db.KIND_GROUP : shared ? Words.Db.KIND_REF : it.type == Store.LIST ? Words.Db.KIND_LIST
-                    : it.type == Store.FILE ? Words.Db.KIND_FILE : it.type == Store.TITLE ? Words.Db.KIND_TITLE : Words.Db.KIND_NOTE;
-            sub.setText(Words.Db.kindLine(kind, it.id, count >= 0 && !group ? Words.items(count) : ""));
-            name.setText((shared ? "↪ " : "") + label(it));
-            if (it.type == Store.TITLE) name.setTypeface(Typeface.DEFAULT_BOLD);
-        }
-        r.addView(name);
-        r.addView(sub);
-        r.setBackgroundColor(Ui.BG);
-        r.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                if (it.type == Store.LIST || it.type == Store.SMART) {
-                    path.add(it.id);
-                    show();
-                } else if (it.type == Store.FILE) {
-                    Store.FileInfo fi = store.file(it.id);                    // מ0.8: פתיחה (פקודה — הרצה)
-                    if (fi != null) Ui.open(DbScreen.this, new File(fi.path));
-                }
-            }
-        });
-        r.setOnLongClickListener(new View.OnLongClickListener() {
-            @Override
-            public boolean onLongClick(View v) {
-                more(it, position, size);
-                return true;
-            }
-        });
-        return r;
-    }
-
     private boolean isGroup(Store.Item it) {
         return it.type == Store.LIST && "1".equals(store.prop(it.id, Store.P_GROUP));
     }
@@ -14338,124 +14411,6 @@ public class DbScreen extends Activity {
 
     // ---------- פעולות ----------
 
-    /** "➕ הוספה…" בתוך רשימה: כל מה שאפשר להוסיף, בתפריט אחד. */
-    private void addMenu() {
-        final String[] labels = {Words.Db.NEW_SUBLIST, Words.Db.NEW_SMART, Words.Db.NEW_REF, Words.Db.NEW_NOTE, Words.Db.NEW_TITLE, Words.Db.NEW_GROUP,
-                Words.Db.ADD_FROM_FOLDER, Words.Db.ADD_FROM_SEARCH};
-        Ui.list(this, Words.Db.ADD_MENU, java.util.Arrays.asList(labels), new DialogInterface.OnClickListener() {
-            @Override
-            public void onClick(DialogInterface d, int which) {
-                switch (which) {
-                    case 0: newList(current()); break;
-                    case 1: newSmart(current()); break;
-                    case 2: newRef(); break;
-                    case 3: newNote(); break;
-                    case 4: newTitle(); break;
-                    case 5: newGroup(); break;
-                    case 6: fromFolder(current()); break;
-                    default: fromSearch(current()); break;
-                }
-            }
-        });
-    }
-
-    /** הפניה: רשימה קיימת נכנסת גם לכאן (אותה רשימה, לא עותק). מעגל — נחסם עם הסבר. */
-    private void newRef() {
-        final long into = current();
-        final List<Store.Item> lists = new ArrayList<Store.Item>();
-        for (Store.Item l : store.lists()) if (l.id != into) lists.add(l);
-        if (lists.isEmpty()) {
-            Ui.toast(this, Words.Db.NO_LISTS);
-            return;
-        }
-        List<String> labels = new ArrayList<String>();
-        for (Store.Item l : lists) labels.add(l.name + " · " + l.id);
-        Ui.list(this, Words.Db.REF_PICK, labels, new DialogInterface.OnClickListener() {
-            @Override
-            public void onClick(DialogInterface d, int which) {
-                addInto(into, lists.get(which));
-            }
-        });
-    }
-
-    /** מוסיף פריט לרשימה, עם ההודעות: כבר שם, מעגל. */
-    private void addInto(long list, Store.Item it) {
-        try {
-            if (store.makesCycle(list, it.id)) Ui.toast(this, Words.Db.cycleBlocked(it.name, store.item(list).name));
-            else if (!store.addMember(list, it.id)) Ui.toast(this, Words.Db.ALREADY_THERE);
-        } catch (Store.Failure f) {
-            Ui.toast(this, Words.Db.failed(f.getMessage()));
-        }
-        show();
-    }
-
-    private void newTitle() {
-        Ui.askText(this, Words.Db.NEW_TITLE_TITLE, "", Words.Db.TITLE_TEXT, new Ui.Text1() {
-            @Override
-            public void ok(String value) {
-                try {
-                    store.addTitle(current(), value);
-                } catch (Store.Failure f) {
-                    Ui.toast(DbScreen.this, Words.Db.failed(f.getMessage()));
-                }
-                show();
-            }
-        });
-    }
-
-    /** חבורה: רשימה מוטמעת בתוך הרשימה הפתוחה — נפתחת מיד כדי להכניס לה פריטים. */
-    private void newGroup() {
-        try {
-            final long into = current();
-            final long[] id = new long[1];
-            store.atomic(new Store.Work() {                                     // רשימה וסימון — יחד או לא בכלל
-                @Override
-                public void run(Store s) {
-                    id[0] = s.createList(Words.Db.GROUP_NAME, into);
-                    s.setProp(id[0], Store.P_GROUP, "1");
-                }
-            }, true);
-            path.add(id[0]);
-        } catch (Store.Failure f) {
-            Ui.toast(this, Words.Db.failed(f.getMessage()));
-        }
-        show();
-    }
-
-    private void newList(final long parent) {
-        Ui.askText(this, Words.Db.NEW_LIST_TITLE, "", Words.Db.LIST_NAME, new Ui.Text1() {
-            @Override
-            public void ok(String value) {
-                try {
-                    for (Store.Item l : store.lists())
-                        if (l.name.equals(value.trim())) {
-                            Ui.toast(DbScreen.this, Words.Db.sameName(value.trim()));
-                            break;
-                        }
-                    store.createList(value, parent != 0 ? parent : DbPaths.home(store));   // מ0.10.1: בראש — בבית
-                } catch (Store.Failure f) {
-                    Ui.toast(DbScreen.this, Words.Db.failed(f.getMessage()));
-                }
-                show();
-            }
-        });
-    }
-
-    /** מ0.10.1: בטופס המוכר (DbSmartForm); בראש — בתוך הבית, אם יש. */
-    private void newSmart(final long parent) {
-        DbSmartForm.show(this, store, 0, new DbSmartForm.Done() {
-            @Override
-            public void ok(DbSmartForm.Result r) {
-                try {
-                    DbSmartForm.save(store, 0, parent != 0 ? parent : DbPaths.home(store), r);
-                } catch (Store.Failure f) {
-                    Ui.toast(DbScreen.this, Words.Db.failed(f.getMessage()));
-                }
-                show();
-            }
-        });
-    }
-
     /** מוסיף פריט (קובץ, רעיון, רשימה חכמה) לרשימה ידנית שבוחרים. */
     // ---------- מ0.8: קבצים מהכונן ----------
 
@@ -14463,28 +14418,15 @@ public class DbScreen extends Activity {
         void ok(long list);
     }
 
-    /** בחירת רשימה ידנית (בלי חכמות — אין להן חברים). */
-    private void pickListThen(final ListPicked cb) {
-        final List<Store.Item> lists = store.lists();
-        if (lists.isEmpty()) {
-            Ui.toast(this, Words.Db.NO_LISTS);
-            return;
-        }
-        List<String> labels = new ArrayList<String>();
-        for (Store.Item l : lists) labels.add(label(l) + " · " + l.id);
-        Ui.list(this, Words.Db.ADD_TO_LIST_TITLE, labels, new DialogInterface.OnClickListener() {
-            @Override
-            public void onClick(DialogInterface d, int which) {
-                cb.ok(lists.get(which).id);
-            }
-        });
-    }
-
     /** הוספה בעסקה אחת, והודעה כמה נוספו וכמה כבר היו. */
     private void addFiles(long list, List<String> paths, List<Long> sizes) {
         try {
             DbFiles.Added a = DbFiles.add(store, list, paths, sizes, true);
             Ui.toast(this, Words.Db.filesAdded(a.added, a.already));
+            if (addingFiles) {                                                  // מ0.37: נוספו — חוזרים לרשימה
+                finish();
+                return;
+            }
         } catch (Throwable t) {
             Log.e("DbScreen.addFiles", t);
             Ui.toast(this, Words.Db.failed(String.valueOf(t.getMessage())));
@@ -14603,175 +14545,6 @@ public class DbScreen extends Activity {
         d.show();
     }
 
-    private void addToList(final Store.Item it) {
-        final List<Store.Item> lists = store.lists();
-        if (lists.isEmpty()) {
-            Ui.toast(this, Words.Db.NO_LISTS);
-            return;
-        }
-        List<String> labels = new ArrayList<String>();
-        for (Store.Item l : lists) labels.add(l.name + " · " + l.id);
-        Ui.list(this, Words.Db.ADD_TO_LIST_TITLE, labels, new DialogInterface.OnClickListener() {
-            @Override
-            public void onClick(DialogInterface d, int which) {
-                addInto(lists.get(which).id, it);
-            }
-        });
-    }
-
-    private void newNote() {
-        Ui.askText(this, Words.Db.NEW_NOTE_TITLE, "", Words.Db.NOTE_TEXT, new Ui.Text1() {
-            @Override
-            public void ok(String value) {
-                try {
-                    store.addNote(current(), value);
-                } catch (Store.Failure f) {
-                    Ui.toast(DbScreen.this, Words.Db.failed(f.getMessage()));
-                }
-                show();
-            }
-        });
-    }
-
-    private void more(final Store.Item it, final int position, final int size) {
-        final List<String> labels = new ArrayList<String>();
-        final List<Integer> codes = new ArrayList<Integer>();
-        if (current() == TRASH_ID) {                                 // בסל: רק שחזור או מחיקה לצמיתות
-            labels.add(Words.Db.RESTORE);
-            codes.add(9);
-            labels.add(Words.Db.PURGE);
-            codes.add(10);
-            Ui.list(this, it.name, labels, new DialogInterface.OnClickListener() {
-                @Override public void onClick(DialogInterface d, int which) { act(it, position, codes.get(which)); }
-            });
-            return;
-        }
-        if (it.type != Store.FILE) {                                 // שם הקובץ הוא שמו בכונן — לא משנים אותו כאן
-            labels.add(Words.Db.RENAME);
-            codes.add(0);
-        }
-        if (position >= 0) {                                         // בתוך רשימה: הזזה והסרה
-            if (position > 0) { labels.add(Words.Db.MOVE_UP); codes.add(1); }
-            if (position < size - 1) { labels.add(Words.Db.MOVE_DOWN); codes.add(2); }
-            labels.add(Words.Db.REMOVE);
-            codes.add(3);
-        }
-        if (it.type == Store.SMART) { labels.add(Words.Db.EDIT_COND); codes.add(5); }
-        labels.add(Words.Db.ADD_TO_LIST);
-        codes.add(6);
-        if (it.type == Store.LIST) { labels.add(isGroup(it) ? Words.Db.TO_LIST : Words.Db.TO_GROUP); codes.add(7); }
-        if (it.type == Store.NOTE || it.type == Store.TITLE) { labels.add(Words.Db.TO_TRASH); codes.add(8); }
-        if (it.type == Store.LIST || it.type == Store.SMART) { labels.add(Words.Db.DELETE_LIST); codes.add(4); }
-        Ui.list(this, it.name, labels, new DialogInterface.OnClickListener() {
-            @Override
-            public void onClick(DialogInterface d, int which) {
-                act(it, position, codes.get(which));
-            }
-        });
-    }
-
-    private void act(final Store.Item it, int position, int code) {
-        try {
-            if (code == 0) {
-                Ui.askText(this, Words.Db.RENAME, it.name, Words.Db.LIST_NAME, new Ui.Text1() {
-                    @Override
-                    public void ok(String value) {
-                        try {
-                            store.rename(it.id, value);
-                        } catch (Store.Failure f) {
-                            Ui.toast(DbScreen.this, Words.Db.failed(f.getMessage()));
-                        }
-                        show();
-                    }
-                });
-                return;
-            }
-            if (code == 1) store.move(current(), it.id, position - 1);
-            else if (code == 2) store.move(current(), it.id, position + 1);
-            else if (code == 3) {
-                if ((it.type == Store.NOTE || it.type == Store.TITLE) && store.listsOf(it.id).size() == 1) {
-                    final long from = current();
-                    new AlertDialog.Builder(this).setMessage(Words.Db.lastListQuestion(it.name))
-                            .setPositiveButton(Words.Db.LAST_LIST_KEEP, new DialogInterface.OnClickListener() {
-                                @Override public void onClick(DialogInterface d, int w) { store.removeMember(from, it.id); show(); }
-                            })
-                            .setNeutralButton(Words.Db.LAST_LIST_TRASH, new DialogInterface.OnClickListener() {
-                                @Override public void onClick(DialogInterface d, int w) { store.trash(it.id); show(); }
-                            })
-                            .setNegativeButton(Words.CANCEL, null).show();
-                    return;
-                }
-                store.removeMember(current(), it.id);
-            } else if (code == 7) {
-                store.setProp(it.id, Store.P_GROUP, isGroup(it) ? null : "1");
-            } else if (code == 8) {
-                store.trash(it.id);
-            } else if (code == 9) {
-                store.restore(it.id);
-                Ui.toast(this, Words.Db.RESTORED);
-            } else if (code == 10) {
-                Ui.confirm(this, Words.Db.PURGE, it.name + "\n" + Words.Db.PURGE_DETAIL, Words.Db.PURGE, new Runnable() {
-                    @Override
-                    public void run() {
-                        guarded(Backups.OP_PURGE, new Runnable() {
-                            @Override
-                            public void run() {
-                                try {
-                                    store.purge(it.id);
-                                } catch (Store.Failure f) {
-                                    Ui.toast(DbScreen.this, Words.Db.failed(f.getMessage()));
-                                }
-                                show();
-                            }
-                        });
-                    }
-                });
-                return;
-            }
-            else if (code == 5) {                                             // מ0.10.1: עריכה בטופס המוכר
-                DbSmartForm.show(this, store, it.id, new DbSmartForm.Done() {
-                    @Override
-                    public void ok(DbSmartForm.Result r) {
-                        try {
-                            DbSmartForm.save(store, it.id, 0, r);
-                        } catch (Store.Failure f) {
-                            Ui.toast(DbScreen.this, Words.Db.failed(f.getMessage()));
-                        }
-                        show();
-                    }
-                });
-                return;
-            } else if (code == 6) {
-                addToList(it);
-                return;
-            } else if (code == 4) {
-                Ui.confirm(this, Words.Db.DELETE_LIST, Words.Db.deleteQuestion(it.name, it.id) + "\n"
-                                + (it.type == Store.SMART ? Words.Db.DELETE_SMART_DETAIL : Words.Db.DELETE_DETAIL),
-                        Words.Db.DELETE_YES, new Runnable() {
-                            @Override
-                            public void run() {
-                                guarded(Backups.OP_DELETE, new Runnable() {
-                                    @Override
-                                    public void run() {
-                                        try {
-                                            DbListCmd.deleteWhole(store, it.id);   // מ0.30 (מ20): כמו בכל מקום — עם מה שהיה רק שלה
-                                            path.remove(Long.valueOf(it.id));
-                                        } catch (Store.Failure f) {
-                                            Ui.toast(DbScreen.this, Words.Db.failed(f.getMessage()));
-                                        }
-                                        show();
-                                    }
-                                });
-                            }
-                        });
-                return;
-            }
-        } catch (Store.Failure f) {
-            Ui.toast(this, Words.Db.failed(f.getMessage()));
-        }
-        show();
-    }
-
     // ---------- מ0.5: גיבוי ושחזור ----------
 
     /** הגיבוי לפני ההעתקה נכשל — לא מעתיקים. */
@@ -14858,22 +14631,6 @@ public class DbScreen extends Activity {
                 });
             }
         }).start();
-    }
-
-    /** לפני פעולה מוחקת: עותק (אם השתנה משהו מאז הגיבוי האחרון). אם הגיבוי נכשל — שואלים אם להמשיך בלי. */
-    private void guarded(String op, final Runnable work) {
-        try {
-            backups(mode).before(store, op, System.currentTimeMillis());
-        } catch (Throwable t) {
-            Log.e("DbScreen.before", t);
-            new AlertDialog.Builder(this).setMessage(Words.Db.backupBeforeFailed(String.valueOf(t.getMessage())))
-                    .setPositiveButton(Words.Db.GO_ON_WITHOUT_BACKUP, new DialogInterface.OnClickListener() {
-                        @Override public void onClick(DialogInterface d, int w) { work.run(); }
-                    })
-                    .setNegativeButton(Words.CANCEL, null).show();
-            return;
-        }
-        work.run();
     }
 
     private View backupsRow() {
@@ -15404,6 +15161,26 @@ final class DbVerbs {
             else id = readSmart(a, mode, name);
             if (id == 0) Ui.toast(a, Words.Verb.NOT_FOUND + c.arg);
             else openSmart(a, mode, id, sort);
+            return true;
+        }
+        if (c.kind.equals(Verbs.K_NOTE) || c.kind.equals(Verbs.K_TITLE)) {      // מ0.37: מכפתור — בלי רשימה = הרשימה שעל המסך
+            final boolean title = c.kind.equals(Verbs.K_TITLE);
+            final String text = c.arg;
+            final List<String> path = Names.parsePath(c.cond);
+            final long here = a instanceof DbListScreen ? ((DbListScreen) a).listId() : 0;
+            if (path.isEmpty() && here == 0) {
+                Ui.toast(a, Words.DbCmd.NOTE_NEEDS_LIST);
+                return true;
+            }
+            long id = write(a, mode, new Job() {
+                @Override public long run(Store s, List<String> p) {
+                    long in = path.isEmpty() ? here : DbPaths.find(s, mode, path);
+                    if (in == 0) return 0;
+                    return title ? s.addTitle(in, text) : s.addNote(in, text);
+                }
+            }, null);
+            if (id == 0) Ui.toast(a, Words.Verb.NOT_FOUND + c.cond);
+            else if (a instanceof DbListScreen) ((DbListScreen) a).reload();
             return true;
         }
         if (c.kind.equals(Verbs.K_NEW_LIST)) {
@@ -38297,15 +38074,19 @@ final class Verbs {
     static final String MENU = "תפריט", CMD_WORD = "פקודה";   // תחביר
     /** מ0.19: "פתח כלי "<סוג>" /מפתח:ערך…" — כלי (כפולים, פס, אפליקציה…) כפקודה. */
     static final String TOOL = "כלי";   // תחביר
+    /** מ0.37: "צור רעיון "<טקסט>" "<רשימה>"" · "צור כותרת "<טקסט>" "<רשימה>"" — שורה ברשימה שאינה קובץ. */
+    static final String NOTE_WORD = "רעיון", TITLE_WORD = "כותרת";   // תחביר
     static final String S_HOME = "הבית", S_SEARCH = "חיפוש", S_COMMANDS = "פקודות", S_DISK = "קבצים פיזיים",   // תחביר
-            S_VIRTUAL = "קבצים וירטואליים", S_SETTINGS = "הגדרות", S_TRASH = "סל", S_EDITOR = "עורך פקודות";   // תחביר
-    static final String[] SCREENS = {S_HOME, S_SEARCH, S_COMMANDS, S_DISK, S_VIRTUAL, S_SETTINGS, S_TRASH, S_EDITOR};
+            S_VIRTUAL = "קבצים וירטואליים", S_SETTINGS = "הגדרות", S_TRASH = "סל", S_EDITOR = "עורך פקודות",   // תחביר
+            S_BACKUPS = "גיבויים", S_DIAG = "אבחון";   // תחביר — מ0.37
+    static final String[] SCREENS = {S_HOME, S_SEARCH, S_COMMANDS, S_DISK, S_VIRTUAL, S_SETTINGS, S_TRASH, S_EDITOR, S_BACKUPS, S_DIAG};
     static final String A_DRIVE = "מהכונן", A_SEARCH = "מחיפוש";   // תחביר
     static final String SORT = "מיון:";   // תחביר
 
     /** סוגי הפקודה אחרי הפענוח. */
     static final String K_SCREEN = "screen", K_LIST = "list", K_SMART = "smart", K_FOLDER = "folder", K_FIND = "find",
-            K_BACK = "back", K_RUN = "run", K_NEW_LIST = "newlist", K_ADD = "add", K_MENU = "menu", K_NEW_CMD = "newcmd", K_TOOL = "tool";
+            K_BACK = "back", K_RUN = "run", K_NEW_LIST = "newlist", K_ADD = "add", K_MENU = "menu", K_NEW_CMD = "newcmd", K_TOOL = "tool",
+            K_NOTE = "note", K_TITLE = "title";
 
     static final class Cmd {
         String verb = "", kind = "", arg = "", sort = "", cond = "";
@@ -38424,6 +38205,13 @@ final class Verbs {
                 c.arg = nr[0];
                 c.cond = nr[1];
                 if (c.arg.isEmpty() || c.cond.isEmpty()) c.error = Words.Verb.usage(c.verb);
+            } else if (c.verb.equals(CREATE) && (starts(rest, NOTE_WORD) || starts(rest, TITLE_WORD))) {   // מ0.37
+                boolean title = starts(rest, TITLE_WORD);
+                c.kind = title ? K_TITLE : K_NOTE;
+                String[] nr = nameAndRest(after(rest, title ? TITLE_WORD : NOTE_WORD));
+                c.arg = nr[0];
+                c.cond = unquote(nr[1]);                                         // הרשימה; ריק — הרשימה שעל המסך (לא מקובץ)
+                if (c.arg.isEmpty()) c.error = Words.Verb.usage(c.verb);
             } else if (c.verb.equals(CREATE) && rest.trim().equals(CMD_WORD)) {   // 1.17.0
                 c.kind = K_NEW_CMD;
             } else if (c.verb.equals(CREATE) && starts(rest, LIST)) {
@@ -38638,6 +38426,8 @@ final class Verbs {
         else if (s.equals(S_SETTINGS)) a.startActivity(new Intent(a, SettingsScreen.class));
         else if (s.equals(S_TRASH)) a.startActivity(new Intent(a, TrashScreen.class));
         else if (s.equals(S_EDITOR)) a.startActivity(new Intent(a, BatchEditScreen.class));   // 1.28.0: בלי קובץ — טיוטה
+        else if (s.equals(S_BACKUPS)) DbScreen.openBackups(a);                // מ0.37
+        else if (s.equals(S_DIAG)) Diag.run(a, DbListScreen.currentMode);     // מ0.37: דוח האבחון כפקודה
     }
 
     static void openSmart(Activity a, SmartLists.Named n, String sort) {
@@ -41228,6 +41018,41 @@ public final class Words {
         }
 
         public static final String N_CONT = "המשך";  // תחביר
+        public static final String N_WRITE = "כתוב", N_WAIT = "המתן", N_BACKUP = "גבה", N_REFRESH = "רענן", N_REPORT = "דוח";  // תחביר
+        public static final String W_WRITE = "כותב טקסט לקובץ (יוצר אותו, או מחליף את מה שהיה בו). בלי טקסט — קובץ ריק. /הוסף — מוסיף בסוף",
+                W_WAIT = "מחכה כמה שניות לפני השורה הבאה", W_BACKUP = "גיבוי ידני של המסד של האופן (לא נמחק לבד)",
+                W_REFRESH = "מרענן את האינדקס, כדי שקבצים חדשים יימצאו. \"רענן עמוק\" — בדיקה מלאה",
+                W_REPORT = "היומן של ההרצה נכתב גם לקובץ הזה",
+                P_SECONDS = "שניות", H_SECONDS = "כמה שניות לחכות (עד 600)", H_WRITE_FILE = "הקובץ שייכתב", P_TEXT_IN = "טקסט",
+                H_WRITE_TEXT = "מה לכתוב; \\n — שורה חדשה", P_APPEND = "להוסיף בסוף", H_APPEND = "בלי זה — הטקסט מחליף את מה שבקובץ",
+                P_DEEP = "עמוק", H_DEEP = "ריק — רענון מהיר; עמוק — בדיקה מלאה", H_REPORT = "הקובץ שאליו נכתב היומן",
+                WAIT_USAGE = "צורה: המתן <שניות> (עד 600)", REPORT_USAGE = "צורה: דוח \"<קובץ>\"", REFRESH_USAGE = "צורה: רענן · רענן עמוק",
+                BACKUP_USAGE = "צורה: גבה (בלי פרמטרים; אחרי \"אופן\" — של אותו אופן)", WRITE_USAGE = "צורה: כתוב \"<קובץ>\" \"<טקסט>\" [/הוסף]",
+                WRITE_IS_FOLDER = "זו תיקייה — אי אפשר לכתוב לתוכה כקובץ",
+                EXPECT_NEXT = "השורה הבאה צריכה להיכשל", EXPECT_NOTHING = "\"ודא שגיאה\" — אין אחריה שורה לבדוק",
+                EXPECT_OK_RUN = "✅ נכשלה, כצפוי", EXPECT_BAD = "❌ הייתה צריכה להיכשל — והצליחה",
+                NOTE_NEEDS_LIST = "צריך לכתוב לאיזו רשימה: צור רעיון \"<טקסט>\" \"<רשימה>\"", VERIFY_NOT_CONTAINS = "אינו מכיל";
+        public static String waitFor(int n) { return "המתנה של " + n + " שניות"; }
+        public static String reportTo(String p) { return "היומן ייכתב גם לקובץ: " + p; }
+        public static String reportWritten(String p) { return "היומן נכתב לקובץ: " + p; }
+        public static String reportFailed(String why) { return "⚠ היומן לא נכתב לקובץ: " + why; }
+        public static String refreshWill(boolean deep) { return deep ? "רענון עמוק של האינדקס" : "רענון של האינדקס"; }
+        public static String refreshed(int n) { return "האינדקס רוענן · " + n + " שינויים"; }
+        public static String backupWill(String mode) { return "גיבוי ידני של המסד של האופן \"" + mode + "\""; }
+        public static String backedUp(String mode, String names) { return "נעשה גיבוי של האופן \"" + mode + "\": " + names; }
+        public static String writeNoFolder(String p) { return "אין תיקייה: " + p; }
+        public static String writeWill(String name, int chars, boolean add) {
+            return (add ? "יתווספו ל\"" : "ייכתב הקובץ \"") + name + "\" · " + chars + " תווים";
+        }
+        public static String written(String name, int chars, boolean added) {
+            return (added ? "נוספו ל\"" : "נכתב הקובץ \"") + name + "\" · " + chars + " תווים";
+        }
+        public static String expectOk(String why) { return "✅ נכשלה, כצפוי — " + why; }
+        public static String noteAdded(boolean title, String text, String list) {
+            return (title ? "כותרת" : "רעיון") + " \"" + text + "\" — נכנס ל\"" + list + "\"";
+        }
+        public static String verifyFilesIn(int n) { return "קבצים בתיקייה: " + n; }
+        public static String verifyContains(String t) { return "מכיל \"" + t + "\""; }
         public static final String W_CONT = "כמה כישלונות מותרים לפני שהקובץ נעצר. בלי השורה הזו — הכישלון הראשון עוצר. המשך — אחד; המשך (5) — חמישה; המשך () — בלי עצירה",
                 H_CONT = "(מספר) — כמה כישלונות; () — בלי עצירה; ריק — אחד", P_CONT = "כמה", CONT_USAGE = "צורה: המשך · המשך (5) · המשך ()",
                 CONT_ALWAYS = "הקובץ לא ייעצר בגלל כישלונות", NOT_RUN_TITLE = "הקובץ לא רץ — יש בו שגיאה";
@@ -41622,6 +41447,7 @@ public final class Words {
                     + ". לשחזר ממנו? לפני ההחלפה יוצג מה יש בו.";
         }
         public static final String FULL_CHECK_TITLE = "בדיקה מלאה";
+        public static final String BACK_TO_LIST = "↩ חזרה לרשימה", ADDING_FILES = "הוספת קבצים לרשימה. אחרי הבחירה — חוזרים אליה.";
         public static final String FULL_CHECK_RUNNING = "מריץ בדיקה מלאה — בודק את המסד, ומעתיק כל אופן למסד זמני ומשווה למקור. כמה שניות…";
         public static final String COPY_REPORT = "📋 העתקה";
         public static final String REPORT_COPIED = "הדוח הועתק. הדביקו אותו לי בשיחה.";
@@ -44570,6 +44396,7 @@ public final class Tests {
         run("מ0.27: RD /S ואחריו MD ו־COMP — ההדמיה שוכחת מה שהיה בתיקייה", new Runnable() { public void run() { m027(); } });
         run("מ0.30: RD ואחריו MD לאותה תיקייה; ECHO עם משתנה; רשימה שאינה בבית", new Runnable() { public void run() { m030(); } });
         run("מ0.32: RD לתת־תיקייה ואז לתיקייה", new Runnable() { public void run() { m032(); } });
+        run("מ0.37: הפקודות הקטנות — כתוב, ודא (תיקייה, מכיל, קבצים, שגיאה), דוח, המתן, משתנים, רעיון וכותרת", new Runnable() { public void run() { m037(); } });
         run("קובצי פקודות — השורה כשדות לטופס (117א, שלב 2)", new Runnable() { public void run() { batchForm(); } });
         run("תיקוני הביקורות השישית והשביעית (118–122, 134, 135, 139)", new Runnable() { public void run() { review7(); } });
         run("תיקוני באגים 123, 124, 137", new Runnable() { public void run() { review7b(); } });
@@ -46167,6 +45994,59 @@ public final class Tests {
         eq("מ0.27: COMP אחרי RD /S — מול תיקייה ריקה: הקובץ רק במקור", 1, p.steps.get(3).files.size());
     }
 
+    private static void m037() {
+        File root = new File(home, "כונן-037");
+        wipe(root);
+        File here = new File(root, "כאן"), work = new File(root, "עבודה");
+        here.mkdirs();
+        work.mkdirs();
+        java.util.Map<String, String> vars = Batch.vars(here, root.getAbsolutePath(), null);
+        check("מ0.37: המשתנים %שעה% ו־%ייחודי% קיימים", vars.get(Batch.V_TIME) != null && vars.get(Batch.V_UNIQUE) != null);
+        String w = work.getAbsolutePath();
+        String text = "המשך ()\n"
+                + "דוח \"" + w + "/יומן.txt\"\n"
+                + "כתוב \"" + w + "/א.txt\" \"שלום עולם\"\n"
+                + "כתוב \"" + w + "/א.txt\" \" ועוד\" /הוסף\n"
+                + "כתוב \"" + w + "/ריק.txt\"\n"
+                + "ודא \"" + w + "/א.txt\" מכיל \"עולם ועוד\"\n"
+                + "ודא \"" + w + "\" קיים\n"
+                + "ודא \"" + w + "\" /קבצים:2\n"
+                + "ודא \"" + w + "/אין\" חסר\n"
+                + "ודא שגיאה\n"
+                + "COPY \"" + w + "/אין-כזה.txt\" \"" + w + "\"\n"
+                + "ודא שגיאה\n"
+                + "כתוב \"" + w + "\" \"x\"\n"
+                + "המתן 0\n";
+        eq("מ0.37: קובץ ש\"כתוב\" ייצור נראה לשורות הבאות (COPY ממנו — בלי שגיאה)", 0,
+                Batch.plan(text + "COPY \"" + w + "/א.txt\" \"" + here.getAbsolutePath() + "\"\n", here, vars).errors);
+        wipe(work);
+        work.mkdirs();
+        Batch.Plan p = Batch.plan(text, here, vars);
+        eq("מ0.37: \"ודא שגיאה\" — שורה שנכשלת בתכנון אינה שגיאה", 0, p.errors);
+        String rep = Batch.run(p, null, null, null).toString();
+        int ok = 0, bad = 0;
+        for (Batch.Step s : p.steps) if (s.verified != null) { if (s.verified) ok++; else bad++; }
+        eq("מ0.37: כל ה\"ודא\" עברו (4 רגילים + 2 \"שגיאה\")", 6, ok);
+        eq("מ0.37: ואף אחד לא נכשל", 0, bad);
+        String body = "";
+        try { body = Files.readUtf8(new File(work, "א.txt")); } catch (Exception e) { body = String.valueOf(e); }
+        eq("מ0.37: כתוב ואחריו /הוסף", "שלום עולם ועוד", body);
+        check("מ0.37: קובץ ריק נוצר", new File(work, "ריק.txt").isFile() && new File(work, "ריק.txt").length() == 0);
+        String log = "";
+        try { log = Files.readUtf8(new File(work, "יומן.txt")); } catch (Exception e) { log = ""; }
+        check("מ0.37: \"דוח\" — היומן נכתב לקובץ, עם סיכום ה\"ודא\"", log.contains("6 עברו") && rep.contains("יומן.txt"));
+        Batch.Plan q = Batch.plan("ודא שגיאה\nהמתן 0\n", here, vars);
+        Batch.run(q, null, null, null);
+        check("מ0.37: \"ודא שגיאה\" על שורה שהצליחה — נכשל", q.steps.get(1).verified != null && !q.steps.get(1).verified);
+        eq("מ0.37: \"ודא שגיאה\" בלי שורה אחריה — שגיאה", 1, Batch.plan("ודא שגיאה\n", here, vars).errors);
+        eq("מ0.37: המתן בלי מספר — שגיאה", 1, Batch.plan("המתן הרבה\n", here, vars).errors);
+        Verbs.Cmd n = Verbs.parse("צור רעיון \"לקנות חלב\" \"פנקס/קניות\""), ti = Verbs.parse("צור כותרת \"פרק א\"");
+        check("מ0.37: צור רעיון — הטקסט והרשימה", n.error == null && n.kind.equals(Verbs.K_NOTE) && n.arg.equals("לקנות חלב") && n.cond.equals("פנקס/קניות"));
+        check("מ0.37: צור כותרת — בלי רשימה (הרשימה שעל המסך)", ti.error == null && ti.kind.equals(Verbs.K_TITLE) && ti.arg.equals("פרק א") && ti.cond.isEmpty());
+        Verbs.Cmd sc = Verbs.parse("פתח מסך אבחון"), sb = Verbs.parse("פתח מסך גיבויים");
+        check("מ0.37: פתח מסך אבחון / גיבויים", sc.error == null && sc.arg.equals(Verbs.S_DIAG) && sb.error == null && sb.arg.equals(Verbs.S_BACKUPS));
+    }
+
     private static void m032() {
         File root = new File(home, "כונן-032");
         wipe(root);
@@ -47189,7 +47069,7 @@ public final class Tests {
     /** 1.22.5: ההגדרה האחת — שלמה, תואמת למנוע, וכל פרמטר עם שם והסבר. */
     private static void v1225() {
         check("1.22.5: פקודות הקבצים — אותן ובאותו סדר (מ0.14: ודא)",
-                java.util.Arrays.equals(BatchLine.COMMANDS, new String[]{"COPY", "MOVE", "DEL", "REN", "MD", "RD", "COMP", "LINK", "VERIFY", "MODE", "CONTINUE", "CALL", "START", "ECHO", "REM"}));
+                java.util.Arrays.equals(BatchLine.COMMANDS, new String[]{"COPY", "MOVE", "DEL", "REN", "MD", "RD", "COMP", "LINK", "VERIFY", "MODE", "CONTINUE", "WRITE", "WAIT", "BACKUP", "REFRESH", "REPORT", "CALL", "START", "ECHO", "REM"}));
         check("1.22.5: שמות נרדפים", Commands.canonical("MKDIR").equals("MD") && Commands.canonical("rmdir").equals("RD")
                 && Commands.canonical("ERASE").equals("DEL") && Commands.canonical("RENAME").equals("REN")
                 && Commands.canonical("copy").equals("COPY") && Commands.canonical("FORMAT").equals("FORMAT")

@@ -55,6 +55,26 @@ final class DbVerbs {
             else openSmart(a, mode, id, sort);
             return true;
         }
+        if (c.kind.equals(Verbs.K_NOTE) || c.kind.equals(Verbs.K_TITLE)) {      // מ0.37: מכפתור — בלי רשימה = הרשימה שעל המסך
+            final boolean title = c.kind.equals(Verbs.K_TITLE);
+            final String text = c.arg;
+            final List<String> path = Names.parsePath(c.cond);
+            final long here = a instanceof DbListScreen ? ((DbListScreen) a).listId() : 0;
+            if (path.isEmpty() && here == 0) {
+                Ui.toast(a, Words.DbCmd.NOTE_NEEDS_LIST);
+                return true;
+            }
+            long id = write(a, mode, new Job() {
+                @Override public long run(Store s, List<String> p) {
+                    long in = path.isEmpty() ? here : DbPaths.find(s, mode, path);
+                    if (in == 0) return 0;
+                    return title ? s.addTitle(in, text) : s.addNote(in, text);
+                }
+            }, null);
+            if (id == 0) Ui.toast(a, Words.Verb.NOT_FOUND + c.cond);
+            else if (a instanceof DbListScreen) ((DbListScreen) a).reload();
+            return true;
+        }
         if (c.kind.equals(Verbs.K_NEW_LIST)) {
             newList(a, mode, a instanceof DbListScreen ? ((DbListScreen) a).listId() : 0);
             return true;
