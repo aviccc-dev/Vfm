@@ -104,7 +104,11 @@ final class Bidi {
                     int logical = strip(cur.substring(0, Math.min(sel, cur.length()))).length();
                     String want = mark(cur);
                     if (want.equals(ed.toString())) return;
-                    ed.replace(0, ed.length(), want);
+                    String have = ed.toString();                              // מ0.38: מחליפים רק את מה שהשתנה — המקלדת לא "קופצת"
+                    int p = 0, hs = have.length(), ws = want.length();
+                    while (p < hs && p < ws && have.charAt(p) == want.charAt(p)) p++;
+                    while (hs > p && ws > p && have.charAt(hs - 1) == want.charAt(ws - 1)) { hs--; ws--; }
+                    ed.replace(p, hs, want, p, ws);
                     int pos = 0, n = 0;
                     while (pos < want.length() && n < logical) {
                         if (want.charAt(pos) != LRM) n++;

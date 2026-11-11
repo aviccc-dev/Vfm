@@ -62,7 +62,7 @@ final class HoleForm {
             final int kind = CmdTemplates.holeKind(lines, h);
             box.addView(Ui.label(a, h + Words.Ed.holeKind(kind)));
             final EditText e = Ui.field(a, "", "");
-            e.setTextDirection(kind == CmdTemplates.HOLE_PATH ? View.TEXT_DIRECTION_LTR : View.TEXT_DIRECTION_FIRST_STRONG);
+            e.setTextDirection(View.TEXT_DIRECTION_FIRST_STRONG);   // מ0.38
             if (kind == CmdTemplates.HOLE_NUMBER) e.setInputType(InputType.TYPE_CLASS_NUMBER);
             if (kind == CmdTemplates.HOLE_MANY) {
                 e.setSingleLine(false);

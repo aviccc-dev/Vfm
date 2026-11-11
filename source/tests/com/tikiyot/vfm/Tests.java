@@ -1692,6 +1692,16 @@ public final class Tests {
         check("מ0.38: העורך מזהה \"צור תיקייה\" כ־MD", c.def != null && c.def.name.equals("MD") && c.text().startsWith("צור תיקייה"));
         check("מ0.38: פקודה חדשה מהתפריט נכתבת בעברית", CmdLine.of(Commands.get("COPY")).text().equals("העתק")
                 && CmdLine.of(Commands.get("RD")).text().equals("מחק תיקייה") && Commands.get("העבר").name.equals("MOVE"));
+        eq("מ0.38: העורך מציג בעברית", "העתק \"a /S\" b /עמוק /נסתרים /Y", Commands.hebrew("COPY \"a /S\" b /s /A:H /Y"));
+        eq("מ0.38: RD ← מחק תיקייה", "מחק תיקייה x /עמוק", Commands.hebrew("RD x /S"));
+        eq("מ0.38: ECHO — הטקסט לא נגוע", "הודעה a /S b", Commands.hebrew("ECHO a /S b"));
+        eq("מ0.38: שורת רשימות — כמו שהיא", "COPY ידנית \"א\" קובץ \"x.txt\"", Commands.hebrew("COPY ידנית \"א\" קובץ \"x.txt\""));
+        eq("מ0.38: פועל, הערה, שורה ריקה — כמו שהן", "ודא \"x\" קיים\n:: REM\n\nהעבר a b", Commands.hebrewText("ודא \"x\" קיים\n:: REM\n\nMOVE a b"));
+        Batch.Plan pt = Batch.plan(Commands.hebrewText(en), here, vars);
+        boolean same2 = pt.errors == pe.errors && pt.steps.size() == pe.steps.size();
+        for (int i = 0; same2 && i < pt.steps.size(); i++)
+            same2 = pt.steps.get(i).cmd.equals(pe.steps.get(i).cmd) && pt.steps.get(i).files.equals(pe.steps.get(i).files) && pt.steps.get(i).recursive == pe.steps.get(i).recursive;
+        check("מ0.38: קובץ שהעורך תרגם — מתוכנן בדיוק כמו המקור", same2);
         check("מ0.38: \"בטל\" ו\"הכפל\" — לרשימות", Commands.canonical("בטל").equals("RD") && Commands.canonical("הכפל").equals("COPY"));
     }
 

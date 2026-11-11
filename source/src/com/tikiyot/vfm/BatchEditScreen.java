@@ -54,6 +54,8 @@ public class BatchEditScreen extends Activity {
     private LinearLayout menu, panel;
     private Button modeBtn;
     private String saved = "";
+    /** מ0.38: הקובץ כמו שנפתח — הפקודות בעברית. לא נחשב שינוי עד שנוגעים בו. */
+    private String opened = "";
     private boolean templates, advOpen, selfEdit, panelStale;
     /** השורה שנבחרה בתפריט (מספר בין השורות שאינן ריקות), או -1. */
     private int sel = -1;
@@ -88,11 +90,16 @@ public class BatchEditScreen extends Activity {
     static boolean anyUnsaved() {
         for (BatchEditScreen e : OPEN)
             try {
-                if (e != null && !e.isFinishing() && !e.plain().equals(e.saved)) return true;
+                if (e != null && !e.isFinishing() && e.dirty()) return true;
             } catch (Throwable t) {
                 Log.e("BatchEditScreen.anyUnsaved", t);
             }
         return false;
+    }
+
+    private boolean dirty() {
+        String now = plain();
+        return !now.equals(saved) && !now.equals(opened);
     }
 
     @Override
@@ -183,7 +190,8 @@ public class BatchEditScreen extends Activity {
             saved = "";
         }
         Bidi.watch(text);                                                      // 204
-        text.setText(Bidi.mark(saved));
+        opened = Commands.hebrewText(saved);
+        text.setText(Bidi.mark(opened));
         text.setOnFocusChangeListener(new View.OnFocusChangeListener() {
             @Override
             public void onFocusChange(View v, boolean has) {
@@ -736,7 +744,7 @@ public class BatchEditScreen extends Activity {
         }
         final EditText e = Ui.field(this, "", p.type == Commands.Type.PERCENT ? "20" : "");
         boolean path = p.type == Commands.Type.PATH || p.type == Commands.Type.FILES;
-        e.setTextDirection(path ? View.TEXT_DIRECTION_LTR : View.TEXT_DIRECTION_FIRST_STRONG);
+        e.setTextDirection(View.TEXT_DIRECTION_FIRST_STRONG);   // מ0.38: גם מסלול — לפי האות הראשונה (עברית מתחילה מימין)
         if (p.type == Commands.Type.PERCENT) e.setInputType(InputType.TYPE_CLASS_NUMBER);
         Bidi.watch(e);
         e.setText(v);
@@ -919,7 +927,7 @@ public class BatchEditScreen extends Activity {
         int at = anchor >= 0 && anchor < rows.size() ? rows.get(anchor).end : e.length();
         StringBuilder sb = new StringBuilder();
         boolean empty = Bidi.strip(e.toString()).trim().isEmpty();
-        for (String l : ls) sb.append(sb.length() > 0 || !empty ? "\n" : "").append(Bidi.mark(l));
+        for (String l : ls) sb.append(sb.length() > 0 || !empty ? "\n" : "").append(Bidi.mark(Commands.hebrew(l)));
         if (empty) {
             selfEdit = true;
             e.replace(0, e.length(), sb.toString());
@@ -1222,7 +1230,7 @@ public class BatchEditScreen extends Activity {
 
     @Override
     public void onBackPressed() {
-        if (!plain().equals(saved)) {
+        if (dirty()) {
             Ui.ask(this, Words.Cmd.ASK_SAVE, Words.Cmd.fileNamed(name()), null, null, Words.SAVE, new Runnable() {
                 @Override
                 public void run() {
