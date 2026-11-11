@@ -1730,6 +1730,8 @@ public final class Tests {
             yv.put(Batch.V_DOWNLOADS, dd.getAbsolutePath());
             Batch.Plan yp = Batch.plan("בדיקה\nהעבר \"%כרטיס%\\YMusic\" \"%הורדות%\" /עמוק /תאריך:יום /תפוס:לשאול\n", w, yv);
             check("מ0.39: קובץ ההחזרה להורדות — בלי שגיאה, וקובץ אחד", yp.errors == 0 && yp.steps.get(yp.steps.size() - 1).files.size() == 1);
+            Batch.Plan yp2 = Batch.plan("בדיקה\nהעבר \"%כרטיס%\\YMusic\" \"%הורדות%\" /עמוק /תאריך:\"3 ימים\" /תפוס:לשאול\n", w, yv);
+            check("מ0.39: קובץ ההחזרה — חלון של 3 ימים", yp2.errors == 0 && yp2.steps.get(yp2.steps.size() - 1).files.size() == 1);
             Batch.Plan kp = Batch.plan("צור תיקייה \"%כאן%\\ק\\תת\"\nכתוב \"%כאן%\\ק\\תת\\ב.txt\" \"x\"\nכתוב \"%כאן%\\ק\\א.txt\" \"y\"\n"
                     + "העתק \"%כאן%\\ק\" \"%כאן%\\ע\" /עמוק\n", w, wv);
             Batch.Step ks = kp.steps.get(kp.steps.size() - 1);
