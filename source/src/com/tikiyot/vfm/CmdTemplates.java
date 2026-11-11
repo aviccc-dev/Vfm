@@ -144,7 +144,7 @@ final class CmdTemplates {
 
     /** ממלא את המקומות הפתוחים. מקום שלא מולא — נשאר כמו שהוא. */
     /** 1.25.2: סוג המקום הפתוח — לפי המילה שלפניו בשורה: מסלול (ברירת מחדל), רשימה ידנית, רשימה חכמה, מספר. */
-    static final int HOLE_PATH = 0, HOLE_MANUAL = 1, HOLE_SMART = 2, HOLE_NUMBER = 3, HOLE_MANY = 4;
+    static final int HOLE_PATH = 0, HOLE_MANUAL = 1, HOLE_SMART = 2, HOLE_NUMBER = 3, HOLE_MANY = 4, HOLE_FILE = 5;
     /** 1.26.0: מקום ששמו מתחיל כך, אחרי "ידנית" — כמה רשימות. */
     static final String MANY_PREFIX = "רשימות";   // תחביר
 
@@ -160,6 +160,7 @@ final class CmdTemplates {
                     String w = tk.get(i - 1).text;
                     if (w.equals(ListCmd.MANUAL)) return hole.startsWith(MANY_PREFIX) ? HOLE_MANY : HOLE_MANUAL;
                     if (w.equals(ListCmd.SMART)) return HOLE_SMART;
+                    if (w.equals(ListCmd.FILE_WORD)) return HOLE_FILE;         // מ0.31: קובץ יצוא — בורר קבצים, לא תיקייה
                 }
             }
         }

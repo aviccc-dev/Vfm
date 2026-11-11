@@ -1663,9 +1663,14 @@ public final class Tests {
         Batch.Plan bad = Batch.plan("MD \"" + work + "/חדשה\"\nCOPY \"" + root + "/אין-כזה.txt\" \"" + work + "\"", here, vars);
         check("מ0.30 (47): שגיאה בקובץ — חסום, ושום שורה לא רצה", bad.errors == 1 && bad.blocked()
                 && Batch.run(bad, null, null, null).size() == 2 && !new File(work, "חדשה").exists());
-        Batch.Plan cont = Batch.plan("המשך\nCOPY \"" + root + "/אין-כזה.txt\" \"" + work + "\"", here, vars);
-        Batch.Plan cont1 = Batch.plan("המשך 1\nCOPY \"" + root + "/אין-כזה.txt\" \"" + work + "\"\nCOPY \"" + root + "/אין2.txt\" \"" + work + "\"", here, vars);
-        check("מ0.30 (47): \"המשך\" — לא חסום; \"המשך 1\" עם שתי שגיאות — חסום", cont.errors == 1 && !cont.blocked() && cont1.errors == 2 && cont1.blocked());
+        String miss = "COPY \"" + root + "/אין-כזה.txt\" \"" + work + "\"\n";
+        Batch.Plan cont = Batch.plan("המשך\n" + miss, here, vars), cont2 = Batch.plan("המשך\n" + miss + miss, here, vars);
+        Batch.Plan cont3 = Batch.plan("המשך (3)\n" + miss + miss + miss, here, vars), contAll = Batch.plan("המשך ()\n" + miss + miss + miss + miss, here, vars);
+        check("מ0.31: \"המשך\" — כישלון אחד מותר, שניים — חסום", !cont.blocked() && cont2.blocked());
+        check("מ0.31: \"המשך (3)\" — שלושה; \"המשך ()\" — בלי גבול", !cont3.blocked() && cont3.allowErrors == 3 && !contAll.blocked());
+        eq("מ0.31: צורה לא מובנת", -1, Batch.allowOf("המשך הרבה"));
+        Batch.Plan stop = Batch.plan("המשך\n" + miss + "ECHO סוף\n", here, vars);
+        check("מ0.31: כישלון אחד עם \"המשך\" — ההרצה לא נעצרת", !Batch.run(stop, null, null, null).toString().contains("⛔"));
         check("מ0.30 (46): ECHO מחליף משתנים", p.echoes.size() == 1 && p.echoes.get(0).contains(here.getAbsolutePath()));
         MemStore s = new MemStore(IdCounter.memory());
         long h = DbPaths.ensureHome(s), a = s.createList("א", h), b = s.createList("ב", h), in = s.createList("פנימית", a);

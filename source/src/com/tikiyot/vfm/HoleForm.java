@@ -95,6 +95,22 @@ final class HoleForm {
                         Ui.options(a, h, names.toArray(new String[0]), new DialogInterface.OnClickListener() {
                             @Override public void onClick(DialogInterface d, int which) { e.setText(names.get(which)); }
                         });
+                    } else if (kind == CmdTemplates.HOLE_FILE) {               // מ0.31: הקבצים שבתיקיית היצוא, החדש קודם
+                        File[] k = DbListCmd.exportDir().listFiles();
+                        final List<File> fs = new ArrayList<File>();
+                        if (k != null) for (File x : k) if (x.isFile()) fs.add(x);
+                        java.util.Collections.sort(fs, new java.util.Comparator<File>() {
+                            @Override public int compare(File x, File y) { return Long.compare(y.lastModified(), x.lastModified()); }
+                        });
+                        if (fs.isEmpty()) {
+                            Ui.toast(a, Words.DbCmd.NO_EXPORT_FILES);
+                            return;
+                        }
+                        String[] names = new String[fs.size()];
+                        for (int i = 0; i < names.length; i++) names[i] = fs.get(i).getName();
+                        Ui.options(a, h, names, new DialogInterface.OnClickListener() {
+                            @Override public void onClick(DialogInterface d, int which) { e.setText(fs.get(which).getName()); }
+                        });
                     } else {
                         FolderPicker.choose(a, h, true, new FolderPicker.Picked() {
                             @Override public void ok(File folder) { e.setText(BatchLine.toVar(folder.getAbsolutePath(), vars)); }

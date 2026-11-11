@@ -1250,8 +1250,12 @@ final class DbListCmd {
     }
 
     /** ההרצה: המסד נפתח לרגע; לפני פעולה שמוציאה — גיבוי "לפני פעולה" (נכשל — לא מבצעים). */
+    /** מ0.31: הפעולה האחרונה במסד נכשלה — ההרצה סופרת כישלונות ("המשך"). */
+    static volatile boolean lastFailed;
+
     private static String real(String mode, Work w, boolean before, Library lib) {
         Res r = realRes(mode, w, before, lib);
+        if (r.error != null) lastFailed = true;
         return r.error != null ? r.error : Words.DbCmd.inDb(r.text);
     }
 

@@ -702,7 +702,7 @@ MOVE הורדות\*.epub לשלוח
 
 ===== קובץ: assets/tests/gersa-023.vbat =====
 בדיקה
-המשך
+המשך ()
 ECHO בדיקת מ0.23 — המסד עוקב אחרי הכונן: קובץ שנמצא ברשימה, וזז או ששמו שונה בכונן (גם בפקודה), נשאר ברשימה במקום החדש. כל "ודא" — ✅ או ❌.
 אופן "בדיקות מערכת"
 :: מה שנשאר מהפעם הקודמת
@@ -734,7 +734,7 @@ ECHO סוף בדיקת מ0.23. "בדיקת מעקב" נשארת לראות. אח
 
 ===== קובץ: assets/tests/gersa-024.vbat =====
 בדיקה
-המשך
+המשך ()
 ECHO בדיקת מ0.24 — "העתקה" היא תמיד עותק עצמאי, גם של רשימה שנמצאת בשני מקומות; העברה; MD עמוק בכונן. הלוח שבמסך עובר דרך אותן פעולות (העתקה, העברה). כל "ודא" — ✅ או ❌.
 אופן "בדיקות מערכת"
 :: מה שנשאר מהפעם הקודמת
@@ -767,7 +767,7 @@ ECHO סוף בדיקת מ0.24. "בדיקת מ0.24" נשארת לראות. את �
 
 ===== קובץ: assets/tests/klali.vbat =====
 בדיקה
-המשך
+המשך ()
 ECHO בדיקה כללית — שכל הפונקציות עובדות (לא עומס). כל "ודא" מסמן ✅ או ❌, ובסוף — כמה עברו. בכל גרסה נוספות כאן הבדיקות של מה שחדש.
 אופן "בדיקות מערכת"
 :: רשימות במסד — יצירה, מחיקה, העתקה, השוואה, קישור, העברה, כלול (מ0.12–מ0.17)
@@ -780,9 +780,9 @@ COPY קבצי ידנית "בדיקת פקודות" קובץ "%כאן%\יצוא-�
 :: ייבוא מקובץ טקסט — מה שיוצא נכנס בחזרה (מ0.22)
 MD ידנית "בדיקת פקודות/מיובא"
 COPY קובץ "%כאן%\יצוא-בדיקה.txt" ידנית "בדיקת פקודות/מיובא"
-ודא ידנית "בדיקת פקודות/מיובא" /רשימות:6 /פריטים:1
+ודא ידנית "בדיקת פקודות/מיובא" /רשימות:7 /פריטים:1
 COPY קובץ "%כאן%\יצוא-בדיקה-קבצים.txt" ידנית "בדיקת פקודות/מיובא"
-ודא ידנית "בדיקת פקודות/מיובא" /רשימות:6 /פריטים:2
+ודא ידנית "בדיקת פקודות/מיובא" /רשימות:7 /פריטים:2
 :: העתקה עם "אופן:" (מ0.22) — כאן מאותו אופן, ולכן כמו העתקה רגילה
 MD ידנית "בדיקת פקודות/מאופן"
 COPY ידנית "אופן:בדיקות מערכת/בדיקת פקודות/א" ידנית "בדיקת פקודות/מאופן"
@@ -809,7 +809,7 @@ ECHO סוף הבדיקה הכללית. "בדיקת פקודות" נשארת לר
 
 ===== קובץ: assets/tests/lachatz.vbat =====
 בדיקה
-המשך
+המשך ()
 ECHO בדיקת לחץ — מנסה לסבך את המערכת: שמות זהים ברמות שונות, שרשרת (העתקה → שינוי שם → העברה), קישור ומחיקה, ניסיונות מעגל, שמות קשים, עומק, שם תפוס. כל "ודא" ✅/❌. שורות שמסומנות "צפוי: דולגה" — אמורות להיחסם.
 אופן "בדיקות מערכת"
 RD ידנית "בדיקת לחץ"
@@ -863,7 +863,7 @@ ECHO סוף בדיקת הלחץ. "בדיקת לחץ" נשארת לראות; של
 
 ===== קובץ: assets/tests/omes-masad.vbat =====
 בדיקה
-המשך
+המשך ()
 :: בדיקת עומס במסד — כמו בדיקת העומס שבזמנו הראתה שהמנוע הישן איטי, והביאה אותנו למסד.
 :: רצה על האופן שבשורת "אופן" (בהתקנה — האופן עם המסד הגדול ביותר, כלומר הנתונים האמיתיים), כולה בתוך רשימה חדשה "בדיקת עומס".
 :: מעתיקה בלבד: המקור לא נוגע. בהרצה הבאה — נמחקת ונבנית מחדש (לפני מחיקה — גיבוי של המסד).
@@ -890,7 +890,7 @@ MD ידנית "בדיקת פקודות/מכלול"
 
 ===== קובץ: assets/tests/pkudot-masad.vbat =====
 בדיקה
-המשך
+המשך ()
 אופן "בדיקות מערכת"
 ECHO בדיקת פקודות הרשימות במסד. הכול נעשה בתוך הרשימה "בדיקת פקודות". בהתחלה — מה שנשאר מהפעם הקודמת נמחק. כל "ודא" מסמן ✅ או ❌, ובסוף — כמה עברו.
 RD ידנית "בדיקת פקודות"
@@ -975,7 +975,7 @@ cd $S; rm -rf out gen bld
 ls -la $OUT
 
 ===== קובץ: build/m-version.txt =====
-43 מ0.30
+44 מ0.31
 
 ===== קובץ: build/test.sh =====
 #!/bin/bash
@@ -3619,6 +3619,26 @@ final class Batch {
 
     private Batch() { }
 
+    /**
+     * מ0.31 (המשתמש, 11.11.2026: "המשך סתם רק פעם אחת, אם יש מספר בתוך סוגריים אז כפי המספר, אם סוגריים ריקות אז ממשיך
+     * בלי עצירה בכלל"): כמה כישלונות מותרים לפי שורת "המשך". ‎-1 — הצורה לא מובנת.
+     */
+    static int allowOf(String line) {
+        String rest = line.trim();
+        int sp = 0;
+        while (sp < rest.length() && !Character.isWhitespace(rest.charAt(sp)) && rest.charAt(sp) != '(') sp++;
+        rest = rest.substring(sp).trim();
+        if (rest.isEmpty()) return 1;
+        if (rest.startsWith("(") && rest.endsWith(")")) rest = rest.substring(1, rest.length() - 1).trim();
+        if (rest.isEmpty()) return Integer.MAX_VALUE;
+        try {
+            int n = Integer.parseInt(rest);
+            return n < 0 ? -1 : n;
+        } catch (NumberFormatException e) {
+            return -1;
+        }
+    }
+
     // ---------- קריאה ----------
 
     /** מפצל שורה לחלקים כמו cmd: רווחים מפרידים, ומרכאות שומרות רווחים (המרכאות עצמן יורדות). */
@@ -4289,10 +4309,7 @@ final class Batch {
                 continue;
             }
             if (cmd.equals(CONT)) {                                             // מ0.30: המשך [N] — הקובץ רץ גם כשיש שורות שגיאה
-                int allow = -1;
-                if (tk.size() == 1) allow = Integer.MAX_VALUE;
-                else if (tk.size() == 2)
-                    try { allow = Integer.parseInt(tk.get(1).trim()); } catch (NumberFormatException e) { allow = -1; }
+                int allow = allowOf(line);
                 if (allow < 0) {
                     s.error = Words.DbCmd.CONT_USAGE;
                     plan.errors++;
@@ -4300,6 +4317,7 @@ final class Batch {
                     plan.allowErrors = allow;
                     s.noop = true;
                     s.describe = allow == Integer.MAX_VALUE ? Words.DbCmd.CONT_ALWAYS : Words.DbCmd.contUpTo(allow);
+
                 }
                 plan.steps.add(s);
                 continue;
@@ -4976,6 +4994,7 @@ final class Batch {
 
     static List<String> run(Plan plan, Library lib, Physical.Asker asker, Physical.Progress progress, boolean grey, Listener listen) {
         List<String> report = new ArrayList<String>(plan.inputs);              // 1.27.0: הקלט — בראש
+        int fails = 0;                                                           // מ0.31: כישלונות בהרצה — מול המותר ("המשך")
         if (plan.blocked()) {                                                    // מ0.30: שגיאה בקובץ — שום שורה לא רצה
             plan.trouble = true;
             report.add(Words.DbCmd.notRun(plan.errors));
@@ -4997,6 +5016,11 @@ final class Batch {
             t0 = System.nanoTime();
             prev = null;
             if (si == plan.steps.size()) break;
+            if (fails > plan.allowErrors) {                                      // מ0.31: יותר כישלונות מהמותר — עוצרים כאן
+                plan.trouble = true;
+                report.add(Words.DbCmd.stoppedAt(plan.steps.get(si).label(), fails, plan.allowErrors));
+                break;
+            }
             Step s = plan.steps.get(si);
             if (progress != null && progress.stopped()) {
                 report.add(Words.Cmd.stoppedBefore(s.line));
@@ -5016,6 +5040,7 @@ final class Batch {
             if (s.error != null) {
                 report.add(Words.Cmd.line(s.label(), Words.Cmd.skipped(s.error)));
                 plan.trouble = true;
+                fails++;
                 continue;
             }
             String out;
@@ -5025,7 +5050,12 @@ final class Batch {
             }
             if (s.cmd.equals("ECHO") || s.cmd.equals("START") || (s.cmd.equals(OPEN) && s.op == null)) continue;
             if (s.op != null) {                                                // 1.24.0: רשימות
+                DbListCmd.lastFailed = false;
                 report.add(Words.Cmd.line(s.label(), s.op.run(lib)));
+                if (DbListCmd.lastFailed) {
+                    plan.trouble = true;
+                    fails++;
+                }
                 continue;
             }
             if (s.cmd.equals("COMP")) {                                       // 1.20.0: חושב בתכנון — רק בדוח
@@ -5035,14 +5065,14 @@ final class Batch {
             if (s.cmd.equals("MD")) {
                 String why = Physical.makeFolder(lib, s.dest.getParentFile(), s.dest.getName());
                 out = why == null ? Words.Cmd.created(s.dest.getName()) : why;
-                if (why != null) plan.trouble = true;
+                if (why != null) { plan.trouble = true; fails++; }
             } else if (s.cmd.equals("RD") || s.cmd.equals("DEL")) {
                 if (s.files.isEmpty() && s.dirs.isEmpty()) out = Words.Cmd.NO_FILES;
                 else {
                     known(lib, s.files);
                     Physical.Result r = Physical.delete(lib, s.files, s.dirs, grey);
                     out = result(r, Words.Cmd.TRASHED);
-                    if (r.failed > 0) plan.trouble = true;
+                    if (r.failed > 0) { plan.trouble = true; fails += r.failed; }
                 }
             } else if (s.share) {                                          // 203
                 if (s.files.isEmpty() && s.dirs.isEmpty()) out = Words.Cmd.NO_FILES;
@@ -5066,17 +5096,19 @@ final class Batch {
                         if (j.failed()) {
                             out += Words.Cmd.JOURNAL_FAILED;
                             plan.trouble = true;
+                            fails++;
                         }
                     }
-                    if (r.failed > 0) plan.trouble = true;
+                    if (r.failed > 0) { plan.trouble = true; fails += r.failed; }
                 }
             } else if (s.cmd.equals("REN")) {
                 Physical.Result r = Physical.rename(lib, s.files.get(0), s.newName);
                 out = result(r, Words.Cmd.RENAMED);
-                if (r.failed > 0) plan.trouble = true;
+                if (r.failed > 0) { plan.trouble = true; fails += r.failed; }
             } else {
                 out = Words.Cmd.NOT_DONE;
                 plan.trouble = true;
+                fails++;
             }
             report.add(Words.Cmd.line(s.label(), out));
         }
@@ -7978,7 +8010,7 @@ final class CmdTemplates {
 
     /** ממלא את המקומות הפתוחים. מקום שלא מולא — נשאר כמו שהוא. */
     /** 1.25.2: סוג המקום הפתוח — לפי המילה שלפניו בשורה: מסלול (ברירת מחדל), רשימה ידנית, רשימה חכמה, מספר. */
-    static final int HOLE_PATH = 0, HOLE_MANUAL = 1, HOLE_SMART = 2, HOLE_NUMBER = 3, HOLE_MANY = 4;
+    static final int HOLE_PATH = 0, HOLE_MANUAL = 1, HOLE_SMART = 2, HOLE_NUMBER = 3, HOLE_MANY = 4, HOLE_FILE = 5;
     /** 1.26.0: מקום ששמו מתחיל כך, אחרי "ידנית" — כמה רשימות. */
     static final String MANY_PREFIX = "רשימות";   // תחביר
 
@@ -7994,6 +8026,7 @@ final class CmdTemplates {
                     String w = tk.get(i - 1).text;
                     if (w.equals(ListCmd.MANUAL)) return hole.startsWith(MANY_PREFIX) ? HOLE_MANY : HOLE_MANUAL;
                     if (w.equals(ListCmd.SMART)) return HOLE_SMART;
+                    if (w.equals(ListCmd.FILE_WORD)) return HOLE_FILE;         // מ0.31: קובץ יצוא — בורר קבצים, לא תיקייה
                 }
             }
         }
@@ -11741,8 +11774,12 @@ final class DbListCmd {
     }
 
     /** ההרצה: המסד נפתח לרגע; לפני פעולה שמוציאה — גיבוי "לפני פעולה" (נכשל — לא מבצעים). */
+    /** מ0.31: הפעולה האחרונה במסד נכשלה — ההרצה סופרת כישלונות ("המשך"). */
+    static volatile boolean lastFailed;
+
     private static String real(String mode, Work w, boolean before, Library lib) {
         Res r = realRes(mode, w, before, lib);
+        if (r.error != null) lastFailed = true;
         return r.error != null ? r.error : Words.DbCmd.inDb(r.text);
     }
 
@@ -15240,6 +15277,23 @@ final class DbTestMode {
         return best;
     }
 
+    /** קובץ בדיקה מההתקנה אל התיקייה; real — שם האופן האמיתי במקום הסימן (בדיקת העומס), או null. */
+    static void put(Activity a, String asset, File to, String real) throws Exception {
+        String text = DbExamples.asset(a, asset);
+        if (real != null) text = text.replace(REAL, real);
+        FileOutputStream out = new FileOutputStream(to);
+        try {
+            out.write(text.getBytes("UTF-8"));
+        } finally {
+            out.close();
+        }
+    }
+
+    /** מ0.31: הבדיקה הכללית של הגרסה הזו — הקובץ שבתיקיית אופן הבדיקות (לדוח האבחון). */
+    static File generalFile(Activity a) throws Exception {
+        return new File(Modes.dirOf(Words.DbCmd.TEST_MODE), Words.DbCmd.TEST_ALL_FILE + " " + a.getPackageManager().getPackageInfo(a.getPackageName(), 0).versionName + "." + Batch.EXT);
+    }
+
     static void open(final Activity a) {
         final String mode = Words.DbCmd.TEST_MODE;
         try {
@@ -15250,54 +15304,22 @@ final class DbTestMode {
                     return;
                 }
             }
-            final File f = new File(Modes.dirOf(mode), Words.DbCmd.TEST_FILE + "." + Batch.EXT);
-            FileOutputStream out = new FileOutputStream(f);
-            try {
-                out.write(DbExamples.asset(a, ASSET).getBytes("UTF-8"));
-            } finally {
-                out.close();
-            }
-            FileOutputStream out2 = new FileOutputStream(new File(Modes.dirOf(mode), Words.DbCmd.TEST_CALL_FILE + "." + Batch.EXT));
-            try {
-                out2.write(DbExamples.asset(a, ASSET_CALL).getBytes("UTF-8"));   // מ0.15: הקובץ שהבדיקה כוללת
-            } finally {
-                out2.close();
-            }
-            final File load = new File(Modes.dirOf(mode), Words.DbCmd.TEST_LOAD_FILE + "." + Batch.EXT);
-            FileOutputStream out3 = new FileOutputStream(load);
-            try {
-                out3.write(DbExamples.asset(a, ASSET_LOAD).replace(REAL, realMode(a, mode)).getBytes("UTF-8"));   // מ0.17: על הנתונים האמיתיים
-            } finally {
-                out3.close();
-            }
-            final File all = new File(Modes.dirOf(mode), Words.DbCmd.TEST_ALL_FILE + "." + Batch.EXT);
-            FileOutputStream out4 = new FileOutputStream(all);
-            try {
-                out4.write(DbExamples.asset(a, ASSET_ALL).getBytes("UTF-8"));   // מ0.18: הבדיקה הכללית — מתעדכנת בכל גרסה
-            } finally {
-                out4.close();
-            }
-            final File stress = new File(Modes.dirOf(mode), Words.DbCmd.TEST_STRESS_FILE + "." + Batch.EXT);
-            FileOutputStream out5 = new FileOutputStream(stress);
-            try {
-                out5.write(DbExamples.asset(a, ASSET_STRESS).getBytes("UTF-8"));   // מ0.21: בדיקת הלחץ — מנסה לסבך
-            } finally {
-                out5.close();
-            }
-            final File v23 = new File(Modes.dirOf(mode), Words.DbCmd.TEST_V23_FILE + "." + Batch.EXT);
-            FileOutputStream out6 = new FileOutputStream(v23);
-            try {
-                out6.write(DbExamples.asset(a, ASSET_V23).getBytes("UTF-8"));   // מ0.23: בדיקת הגרסה (נכללת גם בכללית)
-            } finally {
-                out6.close();
-            }
-            final File v24 = new File(Modes.dirOf(mode), Words.DbCmd.TEST_V24_FILE + "." + Batch.EXT);
-            FileOutputStream out7 = new FileOutputStream(v24);
-            try {
-                out7.write(DbExamples.asset(a, ASSET_V24).getBytes("UTF-8"));   // מ0.24: בדיקת הגרסה (נכללת גם בכללית)
-            } finally {
-                out7.close();
-            }
+            // מ0.31 (המשתמש: "עדיף לתת לפקודות מספר כמספר הגרסא וכך לא אצטרך לנחש איזה קובץ להריץ. אם יש כמה אז שם ומספר
+            // הגרסה"): בבית של אופן הבדיקות — רק הקבצים שמריצים, כל אחד בשם ובמספר הגרסה. החלקים שהכללית כוללת (פקודות,
+            // כלול, מ0.23, מ0.24) נכתבים לתיקייה בשמם הקבוע (הקבצים מפנים אליהם בשם), ואינם ברשימה.
+            final File dir = Modes.dirOf(mode);
+            final String ver = " " + a.getPackageManager().getPackageInfo(a.getPackageName(), 0).versionName;
+            put(a, ASSET, new File(dir, Words.DbCmd.TEST_FILE + "." + Batch.EXT), null);
+            put(a, ASSET_CALL, new File(dir, Words.DbCmd.TEST_CALL_FILE + "." + Batch.EXT), null);
+            put(a, ASSET_V23, new File(dir, Words.DbCmd.TEST_V23_FILE + "." + Batch.EXT), null);
+            put(a, ASSET_V24, new File(dir, Words.DbCmd.TEST_V24_FILE + "." + Batch.EXT), null);
+            final File all = new File(dir, Words.DbCmd.TEST_ALL_FILE + ver + "." + Batch.EXT);
+            final File stress = new File(dir, Words.DbCmd.TEST_STRESS_FILE + ver + "." + Batch.EXT);
+            final File load = new File(dir, Words.DbCmd.TEST_LOAD_FILE + ver + "." + Batch.EXT);
+            put(a, ASSET_ALL, all, null);
+            put(a, ASSET_STRESS, stress, null);
+            put(a, ASSET_LOAD, load, realMode(a, mode));
+            final List<String> run = java.util.Arrays.asList(all.getAbsolutePath(), stress.getAbsolutePath(), load.getAbsolutePath());
             long home = DbVerbs.write(a, mode, new DbVerbs.Job() {
                 @Override
                 public long run(Store s, List<String> p) {
@@ -15308,9 +15330,15 @@ final class DbTestMode {
                                 h[0] = t.createList(Words.Db.HOME_NAME, 0);
                                 t.setProp(h[0], Store.P_HOME, "1");
                             }
+                            String prefix = dir.getAbsolutePath() + "/";                 // קובצי בדיקה של גרסה קודמת — יוצאים מהבית
+                            for (Store.Member m : t.members(h[0])) {
+                                if (m.item.type != Store.FILE) continue;
+                                Store.FileInfo fi = t.file(m.item.id);
+                                if (fi != null && fi.path.startsWith(prefix) && !run.contains(fi.path)) t.removeMember(h[0], m.item.id);
+                            }
                         }
                     }, true);
-                    DbFiles.add(s, h[0], java.util.Arrays.asList(all.getAbsolutePath(), v24.getAbsolutePath(), v23.getAbsolutePath(), f.getAbsolutePath(), stress.getAbsolutePath(), load.getAbsolutePath()), null, true);
+                    DbFiles.add(s, h[0], run, null, false);
                     return h[0];
                 }
             }, null);
@@ -19281,6 +19309,22 @@ final class HoleForm {
                         }
                         Ui.options(a, h, names.toArray(new String[0]), new DialogInterface.OnClickListener() {
                             @Override public void onClick(DialogInterface d, int which) { e.setText(names.get(which)); }
+                        });
+                    } else if (kind == CmdTemplates.HOLE_FILE) {               // מ0.31: הקבצים שבתיקיית היצוא, החדש קודם
+                        File[] k = DbListCmd.exportDir().listFiles();
+                        final List<File> fs = new ArrayList<File>();
+                        if (k != null) for (File x : k) if (x.isFile()) fs.add(x);
+                        java.util.Collections.sort(fs, new java.util.Comparator<File>() {
+                            @Override public int compare(File x, File y) { return Long.compare(y.lastModified(), x.lastModified()); }
+                        });
+                        if (fs.isEmpty()) {
+                            Ui.toast(a, Words.DbCmd.NO_EXPORT_FILES);
+                            return;
+                        }
+                        String[] names = new String[fs.size()];
+                        for (int i = 0; i < names.length; i++) names[i] = fs.get(i).getName();
+                        Ui.options(a, h, names, new DialogInterface.OnClickListener() {
+                            @Override public void onClick(DialogInterface d, int which) { e.setText(fs.get(which).getName()); }
                         });
                     } else {
                         FolderPicker.choose(a, h, true, new FolderPicker.Picked() {
@@ -39234,7 +39278,7 @@ public final class Words {
                 UNDO = "מחיקה — מסל המחזור; העברה והעתקה — הרשימות עוקבות";
 
         public static String errorLines(int n) {
-            return n + " שורות עם שגיאה — ידלגו עליהן (יש בקובץ \"המשך\") · ";
+            return n + " שורות עם שגיאה — ידלגו עליהן (לפי \"המשך\" שבקובץ) · ";
         }
 
         public static String preview(String file) {
@@ -40788,6 +40832,7 @@ public final class Words {
                 case 2: return " — רשימה חכמה";
                 case 3: return " — מספר";
                 case 4: return " — כמה רשימות (שורה לכל אחת)";
+                case 5: return " — קובץ מתיקיית \"יצוא\" (או מסלול מלא)";
                 default: return " — תיקייה";
             }
         }
@@ -41109,7 +41154,7 @@ public final class Words {
         }
 
         public static String cantRead(String name) {
-            return "לא נקרא: " + name;
+            return "לא נמצא קובץ לייבוא בשם \"" + name + "\" (צריך שם של קובץ מתיקיית \"יצוא\", או מסלול מלא)";
         }
 
         public static String needFullWay(String name) { return "\"" + name + "\" נמצאת בכמה רשימות — צריך לכתוב את הדרך המלאה אליה"; }
@@ -41147,13 +41192,17 @@ public final class Words {
         }
 
         public static final String N_CONT = "המשך";  // תחביר
-        public static final String W_CONT = "הקובץ רץ גם כשיש בו שורות שגיאה (בלי השורה הזו — שגיאה אחת עוצרת את כולו לפני שמשהו רץ)",
-                H_CONT = "כמה שורות שגיאה מותרות; ריק — תמיד", P_CONT = "מספר", CONT_USAGE = "צורה: המשך, או המשך ומספר (כמה שורות שגיאה מותרות)",
-                CONT_ALWAYS = "הקובץ ירוץ גם אם יש בו שורות שגיאה", NOT_RUN_TITLE = "הקובץ לא רץ — יש בו שגיאה";
+        public static final String W_CONT = "כמה כישלונות מותרים לפני שהקובץ נעצר. בלי השורה הזו — הכישלון הראשון עוצר. המשך — אחד; המשך (5) — חמישה; המשך () — בלי עצירה",
+                H_CONT = "(מספר) — כמה כישלונות; () — בלי עצירה; ריק — אחד", P_CONT = "כמה", CONT_USAGE = "צורה: המשך · המשך (5) · המשך ()",
+                CONT_ALWAYS = "הקובץ לא ייעצר בגלל כישלונות", NOT_RUN_TITLE = "הקובץ לא רץ — יש בו שגיאה";
         public static String diagDone(String path) { return "הדוח נכתב לקובץ:\n" + path + "\n\nהבדיקות נעשו על עותקים — המסדים שלך לא השתנו (חוץ מהאופן \"בדיקות מערכת\", שבו רצה הבדיקה הכללית)."; }
-        public static String contUpTo(int n) { return "הקובץ ירוץ אם יש בו עד " + n + " שורות שגיאה"; }
+        public static String contUpTo(int n) { return n == 1 ? "הקובץ ימשיך אחרי כישלון אחד, וייעצר בשני" : "הקובץ ימשיך אחרי " + n + " כישלונות, וייעצר בבא אחריהם"; }
         public static String notRun(int n) {
-            return "שום שורה לא רצה: יש " + n + " שורות שגיאה. לתקן אותן, או להוסיף בראש הקובץ את השורה: המשך";
+            return "שום שורה לא רצה: יש " + n + " שורות שגיאה — יותר מהמותר. לתקן אותן, או להוסיף בראש הקובץ שורת \"המשך\" (המשך — כישלון אחד; המשך (5) — חמישה; המשך () — בלי עצירה)";
+        }
+        public static final String NO_EXPORT_FILES = "אין קבצים בתיקיית \"יצוא\"";
+        public static String stoppedAt(String line, int fails, int allow) {
+            return "⛔ נעצר לפני שורה " + line + ": " + fails + " כישלונות, מותר " + allow + ". מה שכבר בוצע — נשאר; השורות מכאן והלאה לא רצו";
         }
 
         public static final String N_MODE = "אופן", N_CALL = "כלול",  // תחביר
@@ -42129,7 +42178,7 @@ import java.util.Locale;
 
 final class Diag {
 
-    static final String FILE = "דוח אבחון.txt";
+    static final String FILE = "דוח אבחון";
 
     private Diag() { }
 
@@ -42139,7 +42188,13 @@ final class Diag {
         new Thread(new Runnable() {
             @Override
             public void run() {
-                final File out = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), FILE);
+                String ver = "";
+                try {
+                    ver = " " + a.getPackageManager().getPackageInfo(a.getPackageName(), 0).versionName;
+                } catch (Throwable ignored) {
+                    // בלי מספר גרסה בשם
+                }
+                final File out = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), FILE + ver + ".txt");
                 StringBuilder sb = new StringBuilder();
                 String err = null;
                 try {
@@ -42552,12 +42607,17 @@ final class Diag {
     private static void general(final Activity a, final Physical.Progress progress, StringBuilder sb) {
         part(sb, "9. הבדיקה הכללית", new Part() {
             @Override public void run(StringBuilder sb) throws Throwable {
-                File f = new File(Modes.dirOf(Words.DbCmd.TEST_MODE), Words.DbCmd.TEST_ALL_FILE + "." + Batch.EXT);
-                if (!f.isFile() || !DbScreen.dbFile(a, Words.DbCmd.TEST_MODE).isFile()) {
-                    sb.append("לא רצה: קודם לפתוח פעם אחת ⋮ ← בדיקות (שם נוצרים קובצי הבדיקה), ואז להריץ שוב את הדוח\n");
+                File f = DbTestMode.generalFile(a);
+                File dir = f.getParentFile();
+                if (!dir.isDirectory() || !DbScreen.dbFile(a, Words.DbCmd.TEST_MODE).isFile()) {
+                    sb.append("לא רצה: האופן \"בדיקות מערכת\" עוד לא קיים. לפתוח פעם אחת ⋮ ← בדיקות, ואז להריץ שוב את הדוח\n");
                     return;
                 }
-                Files.writeAtomic(f, DbExamples.asset(a, DbTestMode.ASSET_ALL));     // הנוסח של הגרסה הזו
+                DbTestMode.put(a, DbTestMode.ASSET, new File(dir, Words.DbCmd.TEST_FILE + "." + Batch.EXT), null);   // הנוסח של הגרסה הזו
+                DbTestMode.put(a, DbTestMode.ASSET_CALL, new File(dir, Words.DbCmd.TEST_CALL_FILE + "." + Batch.EXT), null);
+                DbTestMode.put(a, DbTestMode.ASSET_V23, new File(dir, Words.DbCmd.TEST_V23_FILE + "." + Batch.EXT), null);
+                DbTestMode.put(a, DbTestMode.ASSET_V24, new File(dir, Words.DbCmd.TEST_V24_FILE + "." + Batch.EXT), null);
+                DbTestMode.put(a, DbTestMode.ASSET_ALL, f, null);
                 Library lib = Library.get(a);
                 Batch.Plan p = Batch.plan(Files.readUtf8(f), f.getParentFile(), BatchUi.vars(a, f.getParentFile()), lib, null);
                 sb.append("שורות ").append(p.steps.size()).append(" · שגיאות בתכנון ").append(p.errors).append('\n');
@@ -43698,7 +43758,7 @@ final class ImportTests {
                 DbCmdMenu.dbTools().get(0)[2].startsWith("COPY ידנית \"<") && DbCmdMenu.dbTools().get(0)[2].endsWith("קובץ \"*\"")
                         && CmdTemplates.holeKind(Arrays.asList(DbCmdMenu.dbTools().get(0)[2]), Words.DbCmd.HOLE_EXPORT) == CmdTemplates.HOLE_MANUAL
                         && CmdTemplates.holeKind(Arrays.asList(DbCmdMenu.dbTools().get(1)[2]), Words.DbCmd.HOLE_INTO) == CmdTemplates.HOLE_MANUAL
-                        && CmdTemplates.holeKind(Arrays.asList(DbCmdMenu.dbTools().get(1)[2]), Words.DbCmd.HOLE_FILE) == CmdTemplates.HOLE_PATH);
+                        && CmdTemplates.holeKind(Arrays.asList(DbCmdMenu.dbTools().get(1)[2]), Words.DbCmd.HOLE_FILE) == CmdTemplates.HOLE_FILE);   // מ0.31: בורר קבצים
         ck("כלים: אין רשימת פקודות — כלום", DbCmdMenu.ensureTools(new MemStore(IdCounter.memory()), M, Arrays.asList(t1)).isEmpty());
     }
 
@@ -46049,9 +46109,14 @@ public final class Tests {
         Batch.Plan bad = Batch.plan("MD \"" + work + "/חדשה\"\nCOPY \"" + root + "/אין-כזה.txt\" \"" + work + "\"", here, vars);
         check("מ0.30 (47): שגיאה בקובץ — חסום, ושום שורה לא רצה", bad.errors == 1 && bad.blocked()
                 && Batch.run(bad, null, null, null).size() == 2 && !new File(work, "חדשה").exists());
-        Batch.Plan cont = Batch.plan("המשך\nCOPY \"" + root + "/אין-כזה.txt\" \"" + work + "\"", here, vars);
-        Batch.Plan cont1 = Batch.plan("המשך 1\nCOPY \"" + root + "/אין-כזה.txt\" \"" + work + "\"\nCOPY \"" + root + "/אין2.txt\" \"" + work + "\"", here, vars);
-        check("מ0.30 (47): \"המשך\" — לא חסום; \"המשך 1\" עם שתי שגיאות — חסום", cont.errors == 1 && !cont.blocked() && cont1.errors == 2 && cont1.blocked());
+        String miss = "COPY \"" + root + "/אין-כזה.txt\" \"" + work + "\"\n";
+        Batch.Plan cont = Batch.plan("המשך\n" + miss, here, vars), cont2 = Batch.plan("המשך\n" + miss + miss, here, vars);
+        Batch.Plan cont3 = Batch.plan("המשך (3)\n" + miss + miss + miss, here, vars), contAll = Batch.plan("המשך ()\n" + miss + miss + miss + miss, here, vars);
+        check("מ0.31: \"המשך\" — כישלון אחד מותר, שניים — חסום", !cont.blocked() && cont2.blocked());
+        check("מ0.31: \"המשך (3)\" — שלושה; \"המשך ()\" — בלי גבול", !cont3.blocked() && cont3.allowErrors == 3 && !contAll.blocked());
+        eq("מ0.31: צורה לא מובנת", -1, Batch.allowOf("המשך הרבה"));
+        Batch.Plan stop = Batch.plan("המשך\n" + miss + "ECHO סוף\n", here, vars);
+        check("מ0.31: כישלון אחד עם \"המשך\" — ההרצה לא נעצרת", !Batch.run(stop, null, null, null).toString().contains("⛔"));
         check("מ0.30 (46): ECHO מחליף משתנים", p.echoes.size() == 1 && p.echoes.get(0).contains(here.getAbsolutePath()));
         MemStore s = new MemStore(IdCounter.memory());
         long h = DbPaths.ensureHome(s), a = s.createList("א", h), b = s.createList("ב", h), in = s.createList("פנימית", a);

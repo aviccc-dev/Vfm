@@ -452,7 +452,7 @@ public final class Words {
                 UNDO = "מחיקה — מסל המחזור; העברה והעתקה — הרשימות עוקבות";
 
         public static String errorLines(int n) {
-            return n + " שורות עם שגיאה — ידלגו עליהן (יש בקובץ \"המשך\") · ";
+            return n + " שורות עם שגיאה — ידלגו עליהן (לפי \"המשך\" שבקובץ) · ";
         }
 
         public static String preview(String file) {
@@ -2006,6 +2006,7 @@ public final class Words {
                 case 2: return " — רשימה חכמה";
                 case 3: return " — מספר";
                 case 4: return " — כמה רשימות (שורה לכל אחת)";
+                case 5: return " — קובץ מתיקיית \"יצוא\" (או מסלול מלא)";
                 default: return " — תיקייה";
             }
         }
@@ -2327,7 +2328,7 @@ public final class Words {
         }
 
         public static String cantRead(String name) {
-            return "לא נקרא: " + name;
+            return "לא נמצא קובץ לייבוא בשם \"" + name + "\" (צריך שם של קובץ מתיקיית \"יצוא\", או מסלול מלא)";
         }
 
         public static String needFullWay(String name) { return "\"" + name + "\" נמצאת בכמה רשימות — צריך לכתוב את הדרך המלאה אליה"; }
@@ -2365,13 +2366,17 @@ public final class Words {
         }
 
         public static final String N_CONT = "המשך";  // תחביר
-        public static final String W_CONT = "הקובץ רץ גם כשיש בו שורות שגיאה (בלי השורה הזו — שגיאה אחת עוצרת את כולו לפני שמשהו רץ)",
-                H_CONT = "כמה שורות שגיאה מותרות; ריק — תמיד", P_CONT = "מספר", CONT_USAGE = "צורה: המשך, או המשך ומספר (כמה שורות שגיאה מותרות)",
-                CONT_ALWAYS = "הקובץ ירוץ גם אם יש בו שורות שגיאה", NOT_RUN_TITLE = "הקובץ לא רץ — יש בו שגיאה";
+        public static final String W_CONT = "כמה כישלונות מותרים לפני שהקובץ נעצר. בלי השורה הזו — הכישלון הראשון עוצר. המשך — אחד; המשך (5) — חמישה; המשך () — בלי עצירה",
+                H_CONT = "(מספר) — כמה כישלונות; () — בלי עצירה; ריק — אחד", P_CONT = "כמה", CONT_USAGE = "צורה: המשך · המשך (5) · המשך ()",
+                CONT_ALWAYS = "הקובץ לא ייעצר בגלל כישלונות", NOT_RUN_TITLE = "הקובץ לא רץ — יש בו שגיאה";
         public static String diagDone(String path) { return "הדוח נכתב לקובץ:\n" + path + "\n\nהבדיקות נעשו על עותקים — המסדים שלך לא השתנו (חוץ מהאופן \"בדיקות מערכת\", שבו רצה הבדיקה הכללית)."; }
-        public static String contUpTo(int n) { return "הקובץ ירוץ אם יש בו עד " + n + " שורות שגיאה"; }
+        public static String contUpTo(int n) { return n == 1 ? "הקובץ ימשיך אחרי כישלון אחד, וייעצר בשני" : "הקובץ ימשיך אחרי " + n + " כישלונות, וייעצר בבא אחריהם"; }
         public static String notRun(int n) {
-            return "שום שורה לא רצה: יש " + n + " שורות שגיאה. לתקן אותן, או להוסיף בראש הקובץ את השורה: המשך";
+            return "שום שורה לא רצה: יש " + n + " שורות שגיאה — יותר מהמותר. לתקן אותן, או להוסיף בראש הקובץ שורת \"המשך\" (המשך — כישלון אחד; המשך (5) — חמישה; המשך () — בלי עצירה)";
+        }
+        public static final String NO_EXPORT_FILES = "אין קבצים בתיקיית \"יצוא\"";
+        public static String stoppedAt(String line, int fails, int allow) {
+            return "⛔ נעצר לפני שורה " + line + ": " + fails + " כישלונות, מותר " + allow + ". מה שכבר בוצע — נשאר; השורות מכאן והלאה לא רצו";
         }
 
         public static final String N_MODE = "אופן", N_CALL = "כלול",  // תחביר

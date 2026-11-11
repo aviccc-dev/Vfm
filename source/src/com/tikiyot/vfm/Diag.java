@@ -24,7 +24,7 @@ import java.util.Locale;
 
 final class Diag {
 
-    static final String FILE = "דוח אבחון.txt";
+    static final String FILE = "דוח אבחון";
 
     private Diag() { }
 
@@ -34,7 +34,13 @@ final class Diag {
         new Thread(new Runnable() {
             @Override
             public void run() {
-                final File out = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), FILE);
+                String ver = "";
+                try {
+                    ver = " " + a.getPackageManager().getPackageInfo(a.getPackageName(), 0).versionName;
+                } catch (Throwable ignored) {
+                    // בלי מספר גרסה בשם
+                }
+                final File out = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), FILE + ver + ".txt");
                 StringBuilder sb = new StringBuilder();
                 String err = null;
                 try {
@@ -447,12 +453,17 @@ final class Diag {
     private static void general(final Activity a, final Physical.Progress progress, StringBuilder sb) {
         part(sb, "9. הבדיקה הכללית", new Part() {
             @Override public void run(StringBuilder sb) throws Throwable {
-                File f = new File(Modes.dirOf(Words.DbCmd.TEST_MODE), Words.DbCmd.TEST_ALL_FILE + "." + Batch.EXT);
-                if (!f.isFile() || !DbScreen.dbFile(a, Words.DbCmd.TEST_MODE).isFile()) {
-                    sb.append("לא רצה: קודם לפתוח פעם אחת ⋮ ← בדיקות (שם נוצרים קובצי הבדיקה), ואז להריץ שוב את הדוח\n");
+                File f = DbTestMode.generalFile(a);
+                File dir = f.getParentFile();
+                if (!dir.isDirectory() || !DbScreen.dbFile(a, Words.DbCmd.TEST_MODE).isFile()) {
+                    sb.append("לא רצה: האופן \"בדיקות מערכת\" עוד לא קיים. לפתוח פעם אחת ⋮ ← בדיקות, ואז להריץ שוב את הדוח\n");
                     return;
                 }
-                Files.writeAtomic(f, DbExamples.asset(a, DbTestMode.ASSET_ALL));     // הנוסח של הגרסה הזו
+                DbTestMode.put(a, DbTestMode.ASSET, new File(dir, Words.DbCmd.TEST_FILE + "." + Batch.EXT), null);   // הנוסח של הגרסה הזו
+                DbTestMode.put(a, DbTestMode.ASSET_CALL, new File(dir, Words.DbCmd.TEST_CALL_FILE + "." + Batch.EXT), null);
+                DbTestMode.put(a, DbTestMode.ASSET_V23, new File(dir, Words.DbCmd.TEST_V23_FILE + "." + Batch.EXT), null);
+                DbTestMode.put(a, DbTestMode.ASSET_V24, new File(dir, Words.DbCmd.TEST_V24_FILE + "." + Batch.EXT), null);
+                DbTestMode.put(a, DbTestMode.ASSET_ALL, f, null);
                 Library lib = Library.get(a);
                 Batch.Plan p = Batch.plan(Files.readUtf8(f), f.getParentFile(), BatchUi.vars(a, f.getParentFile()), lib, null);
                 sb.append("שורות ").append(p.steps.size()).append(" · שגיאות בתכנון ").append(p.errors).append('\n');

@@ -141,6 +141,26 @@ final class Batch {
 
     private Batch() { }
 
+    /**
+     * מ0.31 (המשתמש, 11.11.2026: "המשך סתם רק פעם אחת, אם יש מספר בתוך סוגריים אז כפי המספר, אם סוגריים ריקות אז ממשיך
+     * בלי עצירה בכלל"): כמה כישלונות מותרים לפי שורת "המשך". ‎-1 — הצורה לא מובנת.
+     */
+    static int allowOf(String line) {
+        String rest = line.trim();
+        int sp = 0;
+        while (sp < rest.length() && !Character.isWhitespace(rest.charAt(sp)) && rest.charAt(sp) != '(') sp++;
+        rest = rest.substring(sp).trim();
+        if (rest.isEmpty()) return 1;
+        if (rest.startsWith("(") && rest.endsWith(")")) rest = rest.substring(1, rest.length() - 1).trim();
+        if (rest.isEmpty()) return Integer.MAX_VALUE;
+        try {
+            int n = Integer.parseInt(rest);
+            return n < 0 ? -1 : n;
+        } catch (NumberFormatException e) {
+            return -1;
+        }
+    }
+
     // ---------- קריאה ----------
 
     /** מפצל שורה לחלקים כמו cmd: רווחים מפרידים, ומרכאות שומרות רווחים (המרכאות עצמן יורדות). */
@@ -811,10 +831,7 @@ final class Batch {
                 continue;
             }
             if (cmd.equals(CONT)) {                                             // מ0.30: המשך [N] — הקובץ רץ גם כשיש שורות שגיאה
-                int allow = -1;
-                if (tk.size() == 1) allow = Integer.MAX_VALUE;
-                else if (tk.size() == 2)
-                    try { allow = Integer.parseInt(tk.get(1).trim()); } catch (NumberFormatException e) { allow = -1; }
+                int allow = allowOf(line);
                 if (allow < 0) {
                     s.error = Words.DbCmd.CONT_USAGE;
                     plan.errors++;
@@ -822,6 +839,7 @@ final class Batch {
                     plan.allowErrors = allow;
                     s.noop = true;
                     s.describe = allow == Integer.MAX_VALUE ? Words.DbCmd.CONT_ALWAYS : Words.DbCmd.contUpTo(allow);
+
                 }
                 plan.steps.add(s);
                 continue;
@@ -1498,6 +1516,7 @@ final class Batch {
 
     static List<String> run(Plan plan, Library lib, Physical.Asker asker, Physical.Progress progress, boolean grey, Listener listen) {
         List<String> report = new ArrayList<String>(plan.inputs);              // 1.27.0: הקלט — בראש
+        int fails = 0;                                                           // מ0.31: כישלונות בהרצה — מול המותר ("המשך")
         if (plan.blocked()) {                                                    // מ0.30: שגיאה בקובץ — שום שורה לא רצה
             plan.trouble = true;
             report.add(Words.DbCmd.notRun(plan.errors));
@@ -1519,6 +1538,11 @@ final class Batch {
             t0 = System.nanoTime();
             prev = null;
             if (si == plan.steps.size()) break;
+            if (fails > plan.allowErrors) {                                      // מ0.31: יותר כישלונות מהמותר — עוצרים כאן
+                plan.trouble = true;
+                report.add(Words.DbCmd.stoppedAt(plan.steps.get(si).label(), fails, plan.allowErrors));
+                break;
+            }
             Step s = plan.steps.get(si);
             if (progress != null && progress.stopped()) {
                 report.add(Words.Cmd.stoppedBefore(s.line));
@@ -1538,6 +1562,7 @@ final class Batch {
             if (s.error != null) {
                 report.add(Words.Cmd.line(s.label(), Words.Cmd.skipped(s.error)));
                 plan.trouble = true;
+                fails++;
                 continue;
             }
             String out;
@@ -1547,7 +1572,12 @@ final class Batch {
             }
             if (s.cmd.equals("ECHO") || s.cmd.equals("START") || (s.cmd.equals(OPEN) && s.op == null)) continue;
             if (s.op != null) {                                                // 1.24.0: רשימות
+                DbListCmd.lastFailed = false;
                 report.add(Words.Cmd.line(s.label(), s.op.run(lib)));
+                if (DbListCmd.lastFailed) {
+                    plan.trouble = true;
+                    fails++;
+                }
                 continue;
             }
             if (s.cmd.equals("COMP")) {                                       // 1.20.0: חושב בתכנון — רק בדוח
@@ -1557,14 +1587,14 @@ final class Batch {
             if (s.cmd.equals("MD")) {
                 String why = Physical.makeFolder(lib, s.dest.getParentFile(), s.dest.getName());
                 out = why == null ? Words.Cmd.created(s.dest.getName()) : why;
-                if (why != null) plan.trouble = true;
+                if (why != null) { plan.trouble = true; fails++; }
             } else if (s.cmd.equals("RD") || s.cmd.equals("DEL")) {
                 if (s.files.isEmpty() && s.dirs.isEmpty()) out = Words.Cmd.NO_FILES;
                 else {
                     known(lib, s.files);
                     Physical.Result r = Physical.delete(lib, s.files, s.dirs, grey);
                     out = result(r, Words.Cmd.TRASHED);
-                    if (r.failed > 0) plan.trouble = true;
+                    if (r.failed > 0) { plan.trouble = true; fails += r.failed; }
                 }
             } else if (s.share) {                                          // 203
                 if (s.files.isEmpty() && s.dirs.isEmpty()) out = Words.Cmd.NO_FILES;
@@ -1588,17 +1618,19 @@ final class Batch {
                         if (j.failed()) {
                             out += Words.Cmd.JOURNAL_FAILED;
                             plan.trouble = true;
+                            fails++;
                         }
                     }
-                    if (r.failed > 0) plan.trouble = true;
+                    if (r.failed > 0) { plan.trouble = true; fails += r.failed; }
                 }
             } else if (s.cmd.equals("REN")) {
                 Physical.Result r = Physical.rename(lib, s.files.get(0), s.newName);
                 out = result(r, Words.Cmd.RENAMED);
-                if (r.failed > 0) plan.trouble = true;
+                if (r.failed > 0) { plan.trouble = true; fails += r.failed; }
             } else {
                 out = Words.Cmd.NOT_DONE;
                 plan.trouble = true;
+                fails++;
             }
             report.add(Words.Cmd.line(s.label(), out));
         }

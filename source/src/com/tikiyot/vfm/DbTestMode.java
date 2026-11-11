@@ -39,6 +39,23 @@ final class DbTestMode {
         return best;
     }
 
+    /** קובץ בדיקה מההתקנה אל התיקייה; real — שם האופן האמיתי במקום הסימן (בדיקת העומס), או null. */
+    static void put(Activity a, String asset, File to, String real) throws Exception {
+        String text = DbExamples.asset(a, asset);
+        if (real != null) text = text.replace(REAL, real);
+        FileOutputStream out = new FileOutputStream(to);
+        try {
+            out.write(text.getBytes("UTF-8"));
+        } finally {
+            out.close();
+        }
+    }
+
+    /** מ0.31: הבדיקה הכללית של הגרסה הזו — הקובץ שבתיקיית אופן הבדיקות (לדוח האבחון). */
+    static File generalFile(Activity a) throws Exception {
+        return new File(Modes.dirOf(Words.DbCmd.TEST_MODE), Words.DbCmd.TEST_ALL_FILE + " " + a.getPackageManager().getPackageInfo(a.getPackageName(), 0).versionName + "." + Batch.EXT);
+    }
+
     static void open(final Activity a) {
         final String mode = Words.DbCmd.TEST_MODE;
         try {
@@ -49,54 +66,22 @@ final class DbTestMode {
                     return;
                 }
             }
-            final File f = new File(Modes.dirOf(mode), Words.DbCmd.TEST_FILE + "." + Batch.EXT);
-            FileOutputStream out = new FileOutputStream(f);
-            try {
-                out.write(DbExamples.asset(a, ASSET).getBytes("UTF-8"));
-            } finally {
-                out.close();
-            }
-            FileOutputStream out2 = new FileOutputStream(new File(Modes.dirOf(mode), Words.DbCmd.TEST_CALL_FILE + "." + Batch.EXT));
-            try {
-                out2.write(DbExamples.asset(a, ASSET_CALL).getBytes("UTF-8"));   // מ0.15: הקובץ שהבדיקה כוללת
-            } finally {
-                out2.close();
-            }
-            final File load = new File(Modes.dirOf(mode), Words.DbCmd.TEST_LOAD_FILE + "." + Batch.EXT);
-            FileOutputStream out3 = new FileOutputStream(load);
-            try {
-                out3.write(DbExamples.asset(a, ASSET_LOAD).replace(REAL, realMode(a, mode)).getBytes("UTF-8"));   // מ0.17: על הנתונים האמיתיים
-            } finally {
-                out3.close();
-            }
-            final File all = new File(Modes.dirOf(mode), Words.DbCmd.TEST_ALL_FILE + "." + Batch.EXT);
-            FileOutputStream out4 = new FileOutputStream(all);
-            try {
-                out4.write(DbExamples.asset(a, ASSET_ALL).getBytes("UTF-8"));   // מ0.18: הבדיקה הכללית — מתעדכנת בכל גרסה
-            } finally {
-                out4.close();
-            }
-            final File stress = new File(Modes.dirOf(mode), Words.DbCmd.TEST_STRESS_FILE + "." + Batch.EXT);
-            FileOutputStream out5 = new FileOutputStream(stress);
-            try {
-                out5.write(DbExamples.asset(a, ASSET_STRESS).getBytes("UTF-8"));   // מ0.21: בדיקת הלחץ — מנסה לסבך
-            } finally {
-                out5.close();
-            }
-            final File v23 = new File(Modes.dirOf(mode), Words.DbCmd.TEST_V23_FILE + "." + Batch.EXT);
-            FileOutputStream out6 = new FileOutputStream(v23);
-            try {
-                out6.write(DbExamples.asset(a, ASSET_V23).getBytes("UTF-8"));   // מ0.23: בדיקת הגרסה (נכללת גם בכללית)
-            } finally {
-                out6.close();
-            }
-            final File v24 = new File(Modes.dirOf(mode), Words.DbCmd.TEST_V24_FILE + "." + Batch.EXT);
-            FileOutputStream out7 = new FileOutputStream(v24);
-            try {
-                out7.write(DbExamples.asset(a, ASSET_V24).getBytes("UTF-8"));   // מ0.24: בדיקת הגרסה (נכללת גם בכללית)
-            } finally {
-                out7.close();
-            }
+            // מ0.31 (המשתמש: "עדיף לתת לפקודות מספר כמספר הגרסא וכך לא אצטרך לנחש איזה קובץ להריץ. אם יש כמה אז שם ומספר
+            // הגרסה"): בבית של אופן הבדיקות — רק הקבצים שמריצים, כל אחד בשם ובמספר הגרסה. החלקים שהכללית כוללת (פקודות,
+            // כלול, מ0.23, מ0.24) נכתבים לתיקייה בשמם הקבוע (הקבצים מפנים אליהם בשם), ואינם ברשימה.
+            final File dir = Modes.dirOf(mode);
+            final String ver = " " + a.getPackageManager().getPackageInfo(a.getPackageName(), 0).versionName;
+            put(a, ASSET, new File(dir, Words.DbCmd.TEST_FILE + "." + Batch.EXT), null);
+            put(a, ASSET_CALL, new File(dir, Words.DbCmd.TEST_CALL_FILE + "." + Batch.EXT), null);
+            put(a, ASSET_V23, new File(dir, Words.DbCmd.TEST_V23_FILE + "." + Batch.EXT), null);
+            put(a, ASSET_V24, new File(dir, Words.DbCmd.TEST_V24_FILE + "." + Batch.EXT), null);
+            final File all = new File(dir, Words.DbCmd.TEST_ALL_FILE + ver + "." + Batch.EXT);
+            final File stress = new File(dir, Words.DbCmd.TEST_STRESS_FILE + ver + "." + Batch.EXT);
+            final File load = new File(dir, Words.DbCmd.TEST_LOAD_FILE + ver + "." + Batch.EXT);
+            put(a, ASSET_ALL, all, null);
+            put(a, ASSET_STRESS, stress, null);
+            put(a, ASSET_LOAD, load, realMode(a, mode));
+            final List<String> run = java.util.Arrays.asList(all.getAbsolutePath(), stress.getAbsolutePath(), load.getAbsolutePath());
             long home = DbVerbs.write(a, mode, new DbVerbs.Job() {
                 @Override
                 public long run(Store s, List<String> p) {
@@ -107,9 +92,15 @@ final class DbTestMode {
                                 h[0] = t.createList(Words.Db.HOME_NAME, 0);
                                 t.setProp(h[0], Store.P_HOME, "1");
                             }
+                            String prefix = dir.getAbsolutePath() + "/";                 // קובצי בדיקה של גרסה קודמת — יוצאים מהבית
+                            for (Store.Member m : t.members(h[0])) {
+                                if (m.item.type != Store.FILE) continue;
+                                Store.FileInfo fi = t.file(m.item.id);
+                                if (fi != null && fi.path.startsWith(prefix) && !run.contains(fi.path)) t.removeMember(h[0], m.item.id);
+                            }
                         }
                     }, true);
-                    DbFiles.add(s, h[0], java.util.Arrays.asList(all.getAbsolutePath(), v24.getAbsolutePath(), v23.getAbsolutePath(), f.getAbsolutePath(), stress.getAbsolutePath(), load.getAbsolutePath()), null, true);
+                    DbFiles.add(s, h[0], run, null, false);
                     return h[0];
                 }
             }, null);
