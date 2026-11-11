@@ -175,7 +175,7 @@ public final class Words {
     public static final class Find {
         private Find() { }
 
-        public static final String SETTINGS = "⚙ הגדרות", SAVE = "💾 שמירה", SAVE_AS = Named.SAVE_AS,
+        public static final String SETTINGS = "⚙ הגדרות", SAVE = "💾 שמירה", SAVE_AS = "💾 שמירה בשם — רשימה חכמה בבית…", SAVE_AS_TITLE = "שמירה בשם — רשימה חכמה בבית",
                 ALL_DRIVES = "אין מקורות = כל הכוננים", HINT = "חיפוש…";
 
         public static String saved(String name) {
@@ -452,7 +452,7 @@ public final class Words {
                 UNDO = "מחיקה — מסל המחזור; העברה והעתקה — הרשימות עוקבות";
 
         public static String errorLines(int n) {
-            return n + " שורות עם שגיאה — ידלגו עליהן · ";
+            return n + " שורות עם שגיאה — ידלגו עליהן (יש בקובץ \"המשך\") · ";
         }
 
         public static String preview(String file) {
@@ -2267,7 +2267,8 @@ public final class Words {
 
         public static final String NO_HOME = "אין בית במסד הזה", SAME_NAME = "כבר יש שם רשימה בשם הזה",
                 ALREADY = "כבר בה",
-                MENU_TESTS = "🧪 בדיקת הפקודות (אופן \"בדיקות מערכת\")",
+                MENU_TESTS = "🧪 בדיקת הפקודות (אופן \"בדיקות מערכת\")", MENU_DIAG = "🩺 דוח אבחון", DIAG_RUNNING = "מכין דוח אבחון…",
+                DIAG_SEND = "שליחה",
                 TEST_MODE = "בדיקות מערכת",  // בכונן
                 TEST_FILE = "בדיקת פקודות",  // בכונן
                 TEST_CALL_FILE = "בדיקת כלול",  // בכונן
@@ -2329,6 +2330,8 @@ public final class Words {
             return "לא נקרא: " + name;
         }
 
+        public static String needFullWay(String name) { return "\"" + name + "\" נמצאת בכמה רשימות — צריך לכתוב את הדרך המלאה אליה"; }
+
         public static String imported(String file, String to, int lists, int files, int bad) {
             return "ייבוא: " + file + " ← לתוך " + to + " · " + lists + " רשימות, " + files + " קבצים" + (bad > 0 ? " · שורות שלא הובנו: " + bad : "");
         }
@@ -2359,6 +2362,16 @@ public final class Words {
 
         public static String moved(String what, String to) {
             return what + " ← הועבר ל" + to;
+        }
+
+        public static final String N_CONT = "המשך";  // תחביר
+        public static final String W_CONT = "הקובץ רץ גם כשיש בו שורות שגיאה (בלי השורה הזו — שגיאה אחת עוצרת את כולו לפני שמשהו רץ)",
+                H_CONT = "כמה שורות שגיאה מותרות; ריק — תמיד", P_CONT = "מספר", CONT_USAGE = "צורה: המשך, או המשך ומספר (כמה שורות שגיאה מותרות)",
+                CONT_ALWAYS = "הקובץ ירוץ גם אם יש בו שורות שגיאה", NOT_RUN_TITLE = "הקובץ לא רץ — יש בו שגיאה";
+        public static String diagDone(String path) { return "הדוח נכתב לקובץ:\n" + path + "\n\nהבדיקות נעשו על עותקים — המסדים שלך לא השתנו (חוץ מהאופן \"בדיקות מערכת\", שבו רצה הבדיקה הכללית)."; }
+        public static String contUpTo(int n) { return "הקובץ ירוץ אם יש בו עד " + n + " שורות שגיאה"; }
+        public static String notRun(int n) {
+            return "שום שורה לא רצה: יש " + n + " שורות שגיאה. לתקן אותן, או להוסיף בראש הקובץ את השורה: המשך";
         }
 
         public static final String N_MODE = "אופן", N_CALL = "כלול",  // תחביר
@@ -2528,7 +2541,7 @@ public final class Words {
         /** מ0.9: המראה המוכר. */
         public static final String LIST_GONE = "הרשימה הזו כבר לא קיימת במסד", MENU_ACTIONS = "⚙ מסד: גיבוי, העתקה, בדיקה ופעולות",
                 MENU_OLD = "↩ הצד הישן (לפני המסד)",
-                FAMILIAR = "🏠 בית", ADD_IN_LIST = "הוספת קבצים — מתוך רשימה", NO_HOME = "אין עדיין בית במסד הזה — מעתיקים מהישן (\"העתקה מהישן\") והבית נוצר";
+                FAMILIAR = "🏠 בית", ADD_IN_LIST = "הוספת קבצים — מתוך רשימה", NO_HOME = "אין בית במסד הזה";
 
         public static String homeInfo(String mode, int n) {
             return "אופן עבודה: " + mode + " · " + Words.items(n);

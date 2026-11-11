@@ -233,6 +233,8 @@ final class Commands {
                     pos(Type.TEXT, Words.DbCmd.P_VERIFY, Words.DbCmd.H_VERIFY_WHAT)), null),
             new Def(Batch.MODE, Words.DbCmd.N_MODE, new String[]{Words.DbCmd.N_MODE}, Family.FILE, Words.DbCmd.W_MODE,
                     list(pos(Type.NAME, Words.DbCmd.N_MODE, Words.DbCmd.H_MODE)), null),
+            new Def(Batch.CONT, Words.DbCmd.N_CONT, new String[]{Words.DbCmd.N_CONT}, Family.FILE, Words.DbCmd.W_CONT,
+                    list(pos(Type.TEXT, Words.DbCmd.P_CONT, Words.DbCmd.H_CONT)), null),
             new Def(Batch.CALL, Words.DbCmd.N_CALL, new String[]{Words.DbCmd.N_CALL}, Family.FILE, Words.DbCmd.W_CALL,
                     list(pos(Type.PATH, Words.Def.P_FILE, Words.DbCmd.H_CALL)), null),
             new Def("START", Words.Def.N_START, null, Family.FILE, Words.Def.W_START,

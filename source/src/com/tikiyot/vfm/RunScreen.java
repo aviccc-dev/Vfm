@@ -194,6 +194,12 @@ public class RunScreen extends Activity {
             buttons(btn(Words.CLOSE, close()));
             return;
         }
+        if (plan.blocked()) {                                                  // מ0.30: שגיאה בקובץ — אין "הרץ"
+            bodies[1].addView(warn(Words.DbCmd.notRun(plan.errors)));
+            bodies[1].addView(info(plan.errorText()));
+            buttons(btn(Words.CLOSE, close()));
+            return;
+        }
         buttons(btn(Words.Run.RUN, new View.OnClickListener() {
             @Override public void onClick(View v) { run(); }
         }), btn(Words.CANCEL, close()));

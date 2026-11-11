@@ -51,6 +51,7 @@ public final class Tests {
         run("שליחה למכשיר — רק תוכנות העברה (117)", new Runnable() { public void run() { transferApps(); } });
         run("קובצי פקודות בסגנון bat — המנוע (117א)", new Runnable() { public void run() { batch(); } });
         run("מ0.27: RD /S ואחריו MD ו־COMP — ההדמיה שוכחת מה שהיה בתיקייה", new Runnable() { public void run() { m027(); } });
+        run("מ0.30: RD ואחריו MD לאותה תיקייה; ECHO עם משתנה; רשימה שאינה בבית", new Runnable() { public void run() { m030(); } });
         run("קובצי פקודות — השורה כשדות לטופס (117א, שלב 2)", new Runnable() { public void run() { batchForm(); } });
         run("תיקוני הביקורות השישית והשביעית (118–122, 134, 135, 139)", new Runnable() { public void run() { review7(); } });
         run("תיקוני באגים 123, 124, 137", new Runnable() { public void run() { review7b(); } });
@@ -1648,6 +1649,37 @@ public final class Tests {
         eq("מ0.27: COMP אחרי RD /S — מול תיקייה ריקה: הקובץ רק במקור", 1, p.steps.get(3).files.size());
     }
 
+    private static void m030() {
+        File root = new File(home, "כונן-030");
+        wipe(root);
+        File here = new File(root, "כאן");
+        here.mkdirs();
+        File src = new File(root, "מקור"), work = new File(root, "עבודה");
+        mk(src, "א.txt", 10);
+        mk(work, "ישן.txt", 10);
+        java.util.Map<String, String> vars = Batch.vars(here, root.getAbsolutePath(), null);
+        Batch.Plan p = Batch.plan("RD \"" + work + "\" /S\nMD \"" + work + "\"\nCOPY \"" + src + "/א.txt\" \"" + work + "\"\nECHO כאן: %כאן%", here, vars);
+        eq("מ0.30 (35): RD /S ואחריו MD לאותה תיקייה ו־COPY אליה — בלי שגיאות", 0, p.errors);
+        Batch.Plan bad = Batch.plan("MD \"" + work + "/חדשה\"\nCOPY \"" + root + "/אין-כזה.txt\" \"" + work + "\"", here, vars);
+        check("מ0.30 (47): שגיאה בקובץ — חסום, ושום שורה לא רצה", bad.errors == 1 && bad.blocked()
+                && Batch.run(bad, null, null, null).size() == 2 && !new File(work, "חדשה").exists());
+        Batch.Plan cont = Batch.plan("המשך\nCOPY \"" + root + "/אין-כזה.txt\" \"" + work + "\"", here, vars);
+        Batch.Plan cont1 = Batch.plan("המשך 1\nCOPY \"" + root + "/אין-כזה.txt\" \"" + work + "\"\nCOPY \"" + root + "/אין2.txt\" \"" + work + "\"", here, vars);
+        check("מ0.30 (47): \"המשך\" — לא חסום; \"המשך 1\" עם שתי שגיאות — חסום", cont.errors == 1 && !cont.blocked() && cont1.errors == 2 && cont1.blocked());
+        check("מ0.30 (46): ECHO מחליף משתנים", p.echoes.size() == 1 && p.echoes.get(0).contains(here.getAbsolutePath()));
+        MemStore s = new MemStore(IdCounter.memory());
+        long h = DbPaths.ensureHome(s), a = s.createList("א", h), b = s.createList("ב", h), in = s.createList("פנימית", a);
+        ListCmd.Side side = new ListCmd.Side();
+        side.path = java.util.Collections.singletonList("פנימית");
+        eq("מ0.30 (40): רשימה שאינה בבית — יוצאת מהרשימה שהיא בה", a, DbListCmd.parentOf(s, "x", side, in));
+        s.addMember(b, in);
+        eq("מ0.30 (40): בכמה רשימות ובלי דרך — צריך דרך מלאה", -1L, DbListCmd.parentOf(s, "x", side, in));
+        s.addMember(h, in);
+        eq("מ0.30 (40): גם בבית — מהבית", h, DbListCmd.parentOf(s, "x", side, in));
+        DbListCmd.deleteWhole(s, a);
+        check("מ0.30 (מ20): מחיקת רשימה מכל מקום — נמחקה, ומה שנשאר במקום אחר נשאר", s.item(a) == null && s.item(in) != null);
+    }
+
     private static void batchRun() throws Exception {
         // קריאת שורה, כמו cmd
         eq("117א: מרכאות שומרות רווחים", "[MOVE, %הורדות%\\ספר חדש.pdf, יעד, /Y]",
@@ -2202,7 +2234,7 @@ public final class Tests {
         File dir = new File(src, "src/com/tikiyot/vfm");
         // הקבצים שעברו (131; 1.7.78 — הפעולות בכונן; 1.7.79 — המסכים): כל הודעה מהמילון. מותר רק תחביר ושמות בכונן (מסומנים), ויומן.
         // 185 (1.7.82): כל הקבצים, חוץ מהמילון עצמו. תחביר ושמות בכונן — מסומנים בשורה ("// תחביר", "// בכונן")
-        java.util.Set<String> notYet = new java.util.HashSet<String>(Arrays.asList("Words"));
+        java.util.Set<String> notYet = new java.util.HashSet<String>(Arrays.asList("Words", "Diag"));   // מ0.30: Diag — טקסט של דוח בדיקה (יומן), לא הודעות למסך
         File[] srcs = dir.listFiles();
         List<String> names = new ArrayList<String>();
         if (srcs != null) for (File x : srcs)
@@ -2621,7 +2653,7 @@ public final class Tests {
     /** 1.22.5: ההגדרה האחת — שלמה, תואמת למנוע, וכל פרמטר עם שם והסבר. */
     private static void v1225() {
         check("1.22.5: פקודות הקבצים — אותן ובאותו סדר (מ0.14: ודא)",
-                java.util.Arrays.equals(BatchLine.COMMANDS, new String[]{"COPY", "MOVE", "DEL", "REN", "MD", "RD", "COMP", "LINK", "VERIFY", "MODE", "CALL", "START", "ECHO", "REM"}));
+                java.util.Arrays.equals(BatchLine.COMMANDS, new String[]{"COPY", "MOVE", "DEL", "REN", "MD", "RD", "COMP", "LINK", "VERIFY", "MODE", "CONTINUE", "CALL", "START", "ECHO", "REM"}));
         check("1.22.5: שמות נרדפים", Commands.canonical("MKDIR").equals("MD") && Commands.canonical("rmdir").equals("RD")
                 && Commands.canonical("ERASE").equals("DEL") && Commands.canonical("RENAME").equals("REN")
                 && Commands.canonical("copy").equals("COPY") && Commands.canonical("FORMAT").equals("FORMAT")

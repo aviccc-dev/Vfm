@@ -443,9 +443,14 @@ public class SearchScreen extends Activity implements Clip.Holder {
      */
     private void save(boolean as) {
         final String q = query(), s = srt.by, w = view;
-        SmartForm.askSaveAs(this, input.getText().toString().trim(), new SmartForm.SaveAs() {
+        Ui.askText(this, Words.Find.SAVE_AS_TITLE, input.getText().toString().trim(), Words.Short.NAME_HINT, new Ui.Text1() {   // מ0.30: שם משלו — לא "תבנית"
             @Override
-            public void store(String n, boolean fresh) {
+            public void ok(String value) {
+                final String n = value.trim();
+                if (n.isEmpty()) {
+                    Ui.toast(SearchScreen.this, Words.NEED_NAME);
+                    return;
+                }
                 final DbSmartForm.Result r = new DbSmartForm.Result();
                 r.name = n;
                 r.cond = q;

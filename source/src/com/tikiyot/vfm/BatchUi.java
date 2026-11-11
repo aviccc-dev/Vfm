@@ -187,6 +187,10 @@ final class BatchUi {
                 }).start();
             }
         };
+        if (plan.blocked()) {                                                  // מ0.30: שגיאה בקובץ — לא מריצים דבר
+            show(a, Words.DbCmd.NOT_RUN_TITLE, Words.DbCmd.notRun(plan.errors) + "\n\n" + plan.errorText(), null);
+            return;
+        }
         // 216: רק "פתיחה" (START) בלי שינוי בכונן ובלי שגיאות — ישר, בלי אישור
         if (plan.changes() == 0 && plan.errors == 0 && plan.echoes.isEmpty()) {
             go.run();

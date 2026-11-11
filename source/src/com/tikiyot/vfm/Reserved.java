@@ -83,7 +83,10 @@ final class Reserved {
             SqlStore s = null;
             try {
                 s = SqlStore.open(DbScreen.dbFile(c, m), new IdCounter(DbScreen.counterFile()));
-                long mine = DbPaths.find(s, m, MINE_PATH);
+                // מ0.30: אותה "הפקודות שלי" שהתפריט מציג — זו שבתוך "פקודות" שהתפריט פותח (לא רשימה אחרת באותו מקור)
+                long cmds = DbPaths.find(s, m, CMDS_PATH);
+                long mine = cmds == 0 ? 0 : DbPaths.child(s, cmds, MINE);
+                if (mine == 0) mine = DbPaths.find(s, m, MINE_PATH);
                 if (mine == 0) continue;
                 DbFiles.add(s, mine, Collections.singletonList(f.getAbsolutePath()), null, false);
                 return;

@@ -1094,7 +1094,7 @@ public class DbScreen extends Activity {
                                     @Override
                                     public void run() {
                                         try {
-                                            store.deleteList(it.id);
+                                            DbListCmd.deleteWhole(store, it.id);   // מ0.30 (מ20): כמו בכל מקום — עם מה שהיה רק שלה
                                             path.remove(Long.valueOf(it.id));
                                         } catch (Store.Failure f) {
                                             Ui.toast(DbScreen.this, Words.Db.failed(f.getMessage()));

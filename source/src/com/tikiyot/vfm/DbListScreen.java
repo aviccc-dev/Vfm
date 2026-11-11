@@ -23,7 +23,7 @@ public class DbListScreen extends ListScreen<Store.Member> {
     static final String EXTRA_MODE = "mode", EXTRA_LIST = "list", EXTRA_SORT = "sort";
     /** מ0.22: מיון מהפקודה ("פתח רשימה … מיין:…"); ריק — הסדר של הרשימה. */
     private String sortBy = "";
-    private static final int MENU_DB = 1, MENU_DESIGN = 2, MENU_SETTINGS = 3, MENU_OLD = 4, MENU_CMDS = 5, MENU_TESTS = 6, MENU_BACKUPS = 7;
+    private static final int MENU_DB = 1, MENU_DESIGN = 2, MENU_SETTINGS = 3, MENU_OLD = 4, MENU_CMDS = 5, MENU_TESTS = 6, MENU_BACKUPS = 7, MENU_DIAG = 8;
 
     private String mode;
     private long listId;
@@ -722,6 +722,7 @@ public class DbListScreen extends ListScreen<Store.Member> {
         menu.add(0, MENU_BACKUPS, 0, Words.Db.BACKUPS);                     // מ0.23: ישר, לא דרך מסך המסד
         menu.add(0, MENU_DB, 0, Words.Db.MENU_ACTIONS);
         menu.add(0, MENU_TESTS, 0, Words.DbCmd.MENU_TESTS);
+        menu.add(0, MENU_DIAG, 0, Words.DbCmd.MENU_DIAG);                     // מ0.30
         // מ0.25: "↩ הצד הישן" יצא — מחיקת המנוע הישן, שלב 1: אין עוד דרך אליו מבניית מ.
     }
 
@@ -732,6 +733,7 @@ public class DbListScreen extends ListScreen<Store.Member> {
         else if (id == MENU_SETTINGS) startActivity(new Intent(this, SettingsScreen.class));
         else if (id == MENU_DESIGN) design();
         else if (id == MENU_TESTS) DbTestMode.open(this);
+        else if (id == MENU_DIAG) Diag.run(this, mode);
         else if (id == MENU_BACKUPS) startActivity(new Intent(this, DbScreen.class).putExtra(DbScreen.EXTRA_MODE, mode)
                 .putExtra(DbScreen.EXTRA_AT, listId).putExtra(DbScreen.EXTRA_DO, DbScreen.DO_BACKUPS));
         else return false;

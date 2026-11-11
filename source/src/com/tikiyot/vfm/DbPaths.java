@@ -111,7 +111,7 @@ final class DbPaths {
         return any;
     }
 
-    private static long child(Store s, long list, String name) {
+    static long child(Store s, long list, String name) {
         String n = name.trim();
         for (Store.Member m : s.members(list)) if (m.item.type == Store.LIST && m.item.name.equals(n)) return m.item.id;
         return 0;

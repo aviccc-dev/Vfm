@@ -82,6 +82,7 @@
             android:exported="false" android:grantUriPermissions="true" />
     </application>
 </manifest>
+
 ===== קובץ: assets/commands/templates.txt =====
 === גיבוי: מראה והיסטוריה (תיקייה)
 MD "<יעד>\נוכחי"
@@ -121,6 +122,7 @@ COMP ידנית "<רשימה-חדשה>\1" ידנית "<רשימה-חדשה>"
 === הקפאת רשימה חכמה לרשימה ידנית
 MD ידנית "<ידנית>"
 COPY קבצי חכמה "<חכמה>" ידנית "<ידנית>"
+
 ===== קובץ: assets/examples/demo.txt =====
 ; תיקיית ההדמיה של דוגמאות הפקודות — נוצרת עם אופן הדוגמאות, ונבנית מחדש ב"חזרה לברירת מחדל".
 ; כל קובץ מתחיל בשורה "=== <מסלול>" (יחסי לתיקיית ההדמיה). "@ישן" בסוף — תאריך השינוי לפני שנתיים.
@@ -226,6 +228,7 @@ MOVE הורדות\*.epub לשלוח
 שם קבצים פיזיים
 למה ישר מהכונן, כמו כל מנהל קבצים; כל פעולה נשמרת אחר כך באינדקס
 פתח מסך קבצים פיזיים
+
 ===== קובץ: assets/examples/dugmaot.txt =====
 @תיאור יצוא מהמסד · פורמט 2 · 01.01.1970 00:00 · דוגמאות · 64 רשימות, 26 קבצים
 @תת-רשימה א. ארגון לפי הבחנות
@@ -696,8 +699,10 @@ MOVE הורדות\*.epub לשלוח
 
 #2 שמור לתוכנה / גיבוי
 @צלמית 💾
+
 ===== קובץ: assets/tests/gersa-023.vbat =====
 בדיקה
+המשך
 ECHO בדיקת מ0.23 — המסד עוקב אחרי הכונן: קובץ שנמצא ברשימה, וזז או ששמו שונה בכונן (גם בפקודה), נשאר ברשימה במקום החדש. כל "ודא" — ✅ או ❌.
 אופן "בדיקות מערכת"
 :: מה שנשאר מהפעם הקודמת
@@ -726,8 +731,10 @@ RD "%פנימי%\בדיקת מעקב (אפשר למחוק)\יעד"
 RD "%פנימי%\בדיקת מעקב (אפשר למחוק)\מקור"
 RD "%פנימי%\בדיקת מעקב (אפשר למחוק)"
 ECHO סוף בדיקת מ0.23. "בדיקת מעקב" נשארת לראות. אחרי המחיקה בסוף, הקובץ בה אפור או שירד ממנה, לפי ההגדרה "קובץ שנמחק".
+
 ===== קובץ: assets/tests/gersa-024.vbat =====
 בדיקה
+המשך
 ECHO בדיקת מ0.24 — "העתקה" היא תמיד עותק עצמאי, גם של רשימה שנמצאת בשני מקומות; העברה; MD עמוק בכונן. הלוח שבמסך עובר דרך אותן פעולות (העתקה, העברה). כל "ודא" — ✅ או ❌.
 אופן "בדיקות מערכת"
 :: מה שנשאר מהפעם הקודמת
@@ -757,8 +764,10 @@ RD "%פנימי%\בדיקת מ0.24 (אפשר למחוק)\א\ב"
 RD "%פנימי%\בדיקת מ0.24 (אפשר למחוק)\א"
 RD "%פנימי%\בדיקת מ0.24 (אפשר למחוק)"
 ECHO סוף בדיקת מ0.24. "בדיקת מ0.24" נשארת לראות. את הלוח עצמו (העתקה / העברה, ניווט, "הדבקה כאן", צירוף, הוצאה מהלוח) — בודקים במסך.
+
 ===== קובץ: assets/tests/klali.vbat =====
 בדיקה
+המשך
 ECHO בדיקה כללית — שכל הפונקציות עובדות (לא עומס). כל "ודא" מסמן ✅ או ❌, ובסוף — כמה עברו. בכל גרסה נוספות כאן הבדיקות של מה שחדש.
 אופן "בדיקות מערכת"
 :: רשימות במסד — יצירה, מחיקה, העתקה, השוואה, קישור, העברה, כלול (מ0.12–מ0.17)
@@ -797,8 +806,10 @@ RD "%פנימי%\בדיקת מנהל קבצים (אפשר למחוק)"
 :: "העתקה" — תמיד עותק; העברה; MD עמוק בכונן (מ0.24)
 כלול "בדיקת מ0.24.vbat"
 ECHO סוף הבדיקה הכללית. "בדיקת פקודות" נשארת לראות; קובצי היצוא — בתיקיית אופן הבדיקות; התיקייה בכונן — הוסרה, והקובץ שהועתק אליה — בסל.
+
 ===== קובץ: assets/tests/lachatz.vbat =====
 בדיקה
+המשך
 ECHO בדיקת לחץ — מנסה לסבך את המערכת: שמות זהים ברמות שונות, שרשרת (העתקה → שינוי שם → העברה), קישור ומחיקה, ניסיונות מעגל, שמות קשים, עומק, שם תפוס. כל "ודא" ✅/❌. שורות שמסומנות "צפוי: דולגה" — אמורות להיחסם.
 אופן "בדיקות מערכת"
 RD ידנית "בדיקת לחץ"
@@ -849,8 +860,10 @@ MD ידנית "בדיקת לחץ/ד"
 REN ידנית "בדיקת לחץ/ד" "ג"
 ודא ידנית "בדיקת לחץ/ד" קיימת
 ECHO סוף בדיקת הלחץ. "בדיקת לחץ" נשארת לראות; שלוש שורות "דולגה" (שני ניסיונות מעגל ושם תפוס) — הן הצפויות.
+
 ===== קובץ: assets/tests/omes-masad.vbat =====
 בדיקה
+המשך
 :: בדיקת עומס במסד — כמו בדיקת העומס שבזמנו הראתה שהמנוע הישן איטי, והביאה אותנו למסד.
 :: רצה על האופן שבשורת "אופן" (בהתקנה — האופן עם המסד הגדול ביותר, כלומר הנתונים האמיתיים), כולה בתוך רשימה חדשה "בדיקת עומס".
 :: מעתיקה בלבד: המקור לא נוגע. בהרצה הבאה — נמחקת ונבנית מחדש (לפני מחיקה — גיבוי של המסד).
@@ -870,11 +883,14 @@ COPY תוכן ידנית "בדיקת עומס" ידנית "בדיקת עומס\%
 ודא ידנית "בדיקת עומס\3" קיימת
 COMP ידנית "בדיקת עומס\1" ידנית "בדיקת עומס"
 ECHO סוף. הרשימה "בדיקת עומס" נשארת לראות — בבית של האופן שבשורת "אופן". "ניקוי" — מוחק אותה עכשיו; בהרצה הבאה — נמחקת ונבנית מחדש.
+
 ===== קובץ: assets/tests/pkudot-kalul.vbat =====
 ECHO זה הקובץ הנכלל ("כלול"): השורות שלו רצות במקום השורה שכללה אותו.
 MD ידנית "בדיקת פקודות/מכלול"
+
 ===== קובץ: assets/tests/pkudot-masad.vbat =====
 בדיקה
+המשך
 אופן "בדיקות מערכת"
 ECHO בדיקת פקודות הרשימות במסד. הכול נעשה בתוך הרשימה "בדיקת פקודות". בהתחלה — מה שנשאר מהפעם הקודמת נמחק. כל "ודא" מסמן ✅ או ❌, ובסוף — כמה עברו.
 RD ידנית "בדיקת פקודות"
@@ -906,6 +922,7 @@ MOVE ידנית "בדיקת פקודות/ג/פנימית" ידנית "בדיקת
 ודא ידנית "בדיקת פקודות/ג" /רשימות:0 /פריטים:0
 ודא ידנית "בדיקת פקודות/ב" /רשימות:1 /פריטים:1
 ECHO סוף. הרשימה "בדיקת פקודות" נשארת לראות (בבית): א, ובתוכה פנימית עם קובץ הבדיקה; אותה פנימית גם ב־ב (קישור והעברה); ג — ריקה; מכלול. בהרצה הבאה — נמחקת ונבנית מחדש. "ניקוי" — מוחק אותה עכשיו.
+
 ===== קובץ: build/build.sh =====
 #!/bin/bash
 # שימוש: build.sh <תיקיית המקור המלאה> <קובץ יעד> [m]
@@ -956,8 +973,10 @@ cp final.apk $OUT
 cd $S; rm -rf out gen bld
 [ "$S" != "$DIR" ] && rm -rf $S
 ls -la $OUT
+
 ===== קובץ: build/m-version.txt =====
-42 מ0.29
+43 מ0.30
+
 ===== קובץ: build/test.sh =====
 #!/bin/bash
 # בדיקות על המחשב (80). יוצא בכישלון אם בדיקה אחת נכשלה — ואז build.sh לא בונה.
@@ -976,6 +995,7 @@ java -Dsun.jnu.encoding=UTF-8 -Dfile.encoding=UTF-8 -Dvfm.home=$W/home \
 R=$?
 rm -rf $W
 exit $R
+
 ===== קובץ: res/drawable/ic_add.xml =====
 <?xml version="1.0" encoding="utf-8"?>
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
@@ -983,6 +1003,7 @@ exit $R
     android:viewportWidth="24" android:viewportHeight="24">
     <path android:fillColor="#FF000000" android:pathData="M19,13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/>
 </vector>
+
 ===== קובץ: res/drawable/ic_close.xml =====
 <?xml version="1.0" encoding="utf-8"?>
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
@@ -990,6 +1011,7 @@ exit $R
     android:viewportWidth="24" android:viewportHeight="24">
     <path android:fillColor="#FF000000" android:pathData="M19,6.41L17.59,5 12,10.59 6.41,5 5,6.41 10.59,12 5,17.59 6.41,19 12,13.41 17.59,19 19,17.59 13.41,12z"/>
 </vector>
+
 ===== קובץ: res/drawable/ic_copy.xml =====
 <?xml version="1.0" encoding="utf-8"?>
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
@@ -997,6 +1019,7 @@ exit $R
     android:viewportWidth="24" android:viewportHeight="24">
     <path android:fillColor="#FF000000" android:pathData="M16,1H4c-1.1,0 -2,0.9 -2,2v14h2V3h12V1zM19,5H8c-1.1,0 -2,0.9 -2,2v14c0,1.1 0.9,2 2,2h11c1.1,0 2,-0.9 2,-2V7c0,-1.1 -0.9,-2 -2,-2zM19,21H8V7h11v14z"/>
 </vector>
+
 ===== קובץ: res/drawable/ic_delete.xml =====
 <?xml version="1.0" encoding="utf-8"?>
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
@@ -1004,6 +1027,7 @@ exit $R
     android:viewportWidth="24" android:viewportHeight="24">
     <path android:fillColor="#FF000000" android:pathData="M6,19c0,1.1 0.9,2 2,2h8c1.1,0 2,-0.9 2,-2V7H6v12zM19,4h-3.5l-1,-1h-5l-1,1H5v2h14V4z"/>
 </vector>
+
 ===== קובץ: res/drawable/ic_edit.xml =====
 <?xml version="1.0" encoding="utf-8"?>
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
@@ -1011,6 +1035,7 @@ exit $R
     android:viewportWidth="24" android:viewportHeight="24">
     <path android:fillColor="#FF000000" android:pathData="M3,17.25V21h3.75L17.81,9.94l-3.75,-3.75L3,17.25zM20.71,7.04c0.39,-0.39 0.39,-1.02 0,-1.41l-2.34,-2.34c-0.39,-0.39 -1.02,-0.39 -1.41,0l-1.83,1.83 3.75,3.75 1.83,-1.83z"/>
 </vector>
+
 ===== קובץ: res/drawable/ic_folder.xml =====
 <?xml version="1.0" encoding="utf-8"?>
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
@@ -1018,6 +1043,7 @@ exit $R
     android:viewportWidth="24" android:viewportHeight="24">
     <path android:fillColor="#FF000000" android:pathData="M10,4H4c-1.1,0 -1.99,0.9 -1.99,2L2,18c0,1.1 0.9,2 2,2h16c1.1,0 2,-0.9 2,-2V8c0,-1.1 -0.9,-2 -2,-2h-8l-2,-2z"/>
 </vector>
+
 ===== קובץ: res/drawable/ic_link.xml =====
 <?xml version="1.0" encoding="utf-8"?>
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
@@ -1025,6 +1051,7 @@ exit $R
     android:viewportWidth="24" android:viewportHeight="24">
     <path android:fillColor="#FF000000" android:pathData="M3.9,12c0,-1.71 1.39,-3.1 3.1,-3.1h4V7H7c-2.76,0 -5,2.24 -5,5s2.24,5 5,5h4v-1.9H7c-1.71,0 -3.1,-1.39 -3.1,-3.1zM8,13h8v-2H8v2zM17,7h-4v1.9h4c1.71,0 3.1,1.39 3.1,3.1s-1.39,3.1 -3.1,3.1h-4V17h4c2.76,0 5,-2.24 5,-5s-2.24,-5 -5,-5z"/>
 </vector>
+
 ===== קובץ: res/drawable/ic_list_add.xml =====
 <?xml version="1.0" encoding="utf-8"?>
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
@@ -1032,6 +1059,7 @@ exit $R
     android:viewportWidth="24" android:viewportHeight="24">
     <path android:fillColor="#FF000000" android:pathData="M14,10H2v2h12v-2zM14,6H2v2h12V6zM18,14v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zM2,16h8v-2H2v2z"/>
 </vector>
+
 ===== קובץ: res/drawable/ic_list_remove.xml =====
 <?xml version="1.0" encoding="utf-8"?>
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
@@ -1039,6 +1067,7 @@ exit $R
     android:viewportWidth="24" android:viewportHeight="24">
     <path android:fillColor="#FF000000" android:pathData="M14,10H2v2h12v-2zM14,6H2v2h12V6zM2,16h8v-2H2v2zM12,14h10v2H12z"/>
 </vector>
+
 ===== קובץ: res/drawable/ic_more.xml =====
 <?xml version="1.0" encoding="utf-8"?>
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
@@ -1046,6 +1075,7 @@ exit $R
     android:viewportWidth="24" android:viewportHeight="24">
     <path android:fillColor="#FF000000" android:pathData="M6,10c-1.1,0 -2,0.9 -2,2s0.9,2 2,2 2,-0.9 2,-2 -0.9,-2 -2,-2zM18,10c-1.1,0 -2,0.9 -2,2s0.9,2 2,2 2,-0.9 2,-2 -0.9,-2 -2,-2zM12,10c-1.1,0 -2,0.9 -2,2s0.9,2 2,2 2,-0.9 2,-2 -0.9,-2 -2,-2z"/>
 </vector>
+
 ===== קובץ: res/drawable/ic_open.xml =====
 <?xml version="1.0" encoding="utf-8"?>
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
@@ -1053,6 +1083,7 @@ exit $R
     android:viewportWidth="24" android:viewportHeight="24">
     <path android:fillColor="#FF000000" android:pathData="M19,19H5V5h7V3H5c-1.11,0 -2,0.9 -2,2v14c0,1.1 0.89,2 2,2h14c1.1,0 2,-0.9 2,-2v-7h-2v7zM14,3v2h3.59l-9.83,9.83 1.41,1.41L19,6.41V10h2V3h-7z"/>
 </vector>
+
 ===== קובץ: res/drawable/ic_remove.xml =====
 <?xml version="1.0" encoding="utf-8"?>
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
@@ -1060,6 +1091,7 @@ exit $R
     android:viewportWidth="24" android:viewportHeight="24">
     <path android:fillColor="#FF000000" android:pathData="M19,13H5v-2h14v2z"/>
 </vector>
+
 ===== קובץ: res/drawable/ic_restore.xml =====
 <?xml version="1.0" encoding="utf-8"?>
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
@@ -1067,6 +1099,7 @@ exit $R
     android:viewportWidth="24" android:viewportHeight="24">
     <path android:fillColor="#FF000000" android:pathData="M12.5,8c-2.65,0 -5.05,0.99 -6.9,2.6L2,7v9h9l-3.62,-3.62c1.39,-1.16 3.16,-1.88 5.12,-1.88 3.54,0 6.55,2.31 7.6,5.5l2.37,-0.78C21.08,11.03 17.15,8 12.5,8z"/>
 </vector>
+
 ===== קובץ: res/drawable/ic_share.xml =====
 <?xml version="1.0" encoding="utf-8"?>
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
@@ -1074,6 +1107,7 @@ exit $R
     android:viewportWidth="24" android:viewportHeight="24">
     <path android:fillColor="#FF000000" android:pathData="M18,16.08c-0.76,0 -1.44,0.3 -1.96,0.77L8.91,12.7c0.05,-0.23 0.09,-0.46 0.09,-0.7s-0.04,-0.47 -0.09,-0.7l7.05,-4.11c0.54,0.5 1.25,0.81 2.04,0.81 1.66,0 3,-1.34 3,-3s-1.34,-3 -3,-3 -3,1.34 -3,3c0,0.24 0.04,0.47 0.09,0.7L8.04,9.81C7.5,9.31 6.79,9 6,9c-1.66,0 -3,1.34 -3,3s1.34,3 3,3c0.79,0 1.5,-0.31 2.04,-0.81l7.12,4.16c-0.05,0.21 -0.08,0.43 -0.08,0.65 0,1.61 1.31,2.92 2.92,2.92 1.61,0 2.92,-1.31 2.92,-2.92s-1.31,-2.92 -2.92,-2.92z"/>
 </vector>
+
 ===== קובץ: res/drawable/ic_swap.xml =====
 <?xml version="1.0" encoding="utf-8"?>
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
@@ -1081,9 +1115,11 @@ exit $R
     android:viewportWidth="24" android:viewportHeight="24">
     <path android:fillColor="#FF000000" android:pathData="M6.99,11L3,15l3.99,4v-3H14v-2H6.99v-3zM21,9l-3.99,-4v3H10v2h7.01v3L21,9z"/>
 </vector>
+
 ===== קובץ: res/values/strings.xml =====
 <?xml version="1.0" encoding="utf-8"?>
 <resources><string name="app_name">מנהל קבצים וירטואלי</string></resources>
+
 ===== קובץ: src/com/tikiyot/vfm/Actions.java =====
 package com.tikiyot.vfm;
 
@@ -1455,6 +1491,7 @@ public final class Actions {
         return null;
     }
 }
+
 ===== קובץ: src/com/tikiyot/vfm/Acts.java =====
 package com.tikiyot.vfm;
 
@@ -1654,6 +1691,7 @@ public final class Acts {
     }
 
 }
+
 ===== קובץ: src/com/tikiyot/vfm/Adder.java =====
 package com.tikiyot.vfm;
 
@@ -1757,6 +1795,7 @@ public final class Adder {
         });
     }
 }
+
 ===== קובץ: src/com/tikiyot/vfm/AsIfScreen.java =====
 package com.tikiyot.vfm;
 
@@ -1844,6 +1883,7 @@ public class AsIfScreen extends ListScreen<Batch.AsIfRow> {
         super.onDestroy();
     }
 }
+
 ===== קובץ: src/com/tikiyot/vfm/BackupContract.java =====
 package com.tikiyot.vfm;
 
@@ -2367,6 +2407,7 @@ public final class BackupContract {
         }
     }
 }
+
 ===== קובץ: src/com/tikiyot/vfm/Backups.java =====
 package com.tikiyot.vfm;
 
@@ -3014,6 +3055,7 @@ final class Backups {
         }
     }
 }
+
 ===== קובץ: src/com/tikiyot/vfm/BarService.java =====
 package com.tikiyot.vfm;
 
@@ -3432,6 +3474,7 @@ public class BarService extends Service {
         wake();
     }
 }
+
 ===== קובץ: src/com/tikiyot/vfm/Batch.java =====
 package com.tikiyot.vfm;
 
@@ -3520,6 +3563,23 @@ final class Batch {
         final List<String> echoes = new ArrayList<String>();
         File start;
         int errors;
+        /**
+         * מ0.30 (ממצא 47; המשתמש: "צריך לעצור לפני שהוא מריץ משהו, אלא אם כן תהיה פקודה מיוחדת" · "המשך עם מספר. אם אין
+         * מספר אז המשך תמיד"): כמה שורות שגיאה מותרות — 0 בלי השורה "המשך"; "המשך N" — עד N; "המשך" לבד — בלי גבול.
+         */
+        int allowErrors;
+
+        /** יש יותר שורות שגיאה מהמותר — שום שורה לא רצה. */
+        boolean blocked() {
+            return errors > allowErrors;
+        }
+
+        /** שורות השגיאה, לחלון שמסביר למה הקובץ לא רץ. */
+        String errorText() {
+            StringBuilder sb = new StringBuilder();
+            for (Step s : steps) if (s.error != null) sb.append(s.label()).append(". ⚠ ").append(s.error).append("\n     ").append(s.text).append("\n");
+            return sb.toString();
+        }
         /** 203: מה שהוכן לשליחה (עותקים ואריזות בתיקיית השליחה) — נשלח פעם אחת, בסוף. */
         final List<File> shared = new ArrayList<File>();
         File stage;
@@ -3602,7 +3662,7 @@ final class Batch {
     /** מ0.14: ודא — בדיקה בתוך קובץ פקודות (✅ / ❌), לא עוצרת. */
     static final String VERIFY = "VERIFY";
     /** מ0.15: אופן — מכאן והלאה הפקודות במסד של אופן אחר; CALL — שורות של קובץ אחר במקום השורה. */
-    static final String MODE = "MODE", CALL = "CALL";
+    static final String MODE = "MODE", CALL = "CALL", CONT = "CONTINUE";
     /** מ0.17: קישור — אותה רשימה / אותו פריט גם במקום נוסף (במסד). */
     static final String LINK = "LINK";
     /** מ0.15: עומק מרבי של CALL בתוך CALL. */
@@ -4193,6 +4253,9 @@ final class Batch {
                 s.describe = Verbs.describe(vc);
                 String doneIn = null;
                 if (s.error == null && DbVerbs.active()) doneIn = DbListCmd.planVerb(s, vc, sim);   // מ0.25: החלק הכותב — בסדר השורות
+                // מ0.30 (ממצא 39): "פתח רשימה / רשימה חכמה" אחרי "אופן X" — נפתחת באופן של הקובץ, לא באופן שפתוח במסך
+                if (s.error == null && doneIn == null && sim.mode != null && Verbs.OPEN.equals(vc.verb) && vc.arg != null && !vc.arg.trim().isEmpty()
+                        && (Verbs.K_LIST.equals(vc.kind) || Verbs.K_SMART.equals(vc.kind))) doneIn = sim.mode;
                 if (s.error != null) plan.errors++;
                 else {
                     plan.open = s.open;
@@ -4213,6 +4276,7 @@ final class Batch {
             if (cmd.equals("ECHO")) {
                 String rest = line.length() > 4 ? line.substring(4).trim() : "";
                 if (rest.equalsIgnoreCase("OFF") || rest.equalsIgnoreCase("ON")) continue;
+                rest = Verbs.withVars(rest, vars);                               // מ0.30 (ממצא 46): גם ב־ECHO המשתנים מוחלפים
                 plan.echoes.add(rest.startsWith(".") ? rest.substring(1) : rest);
                 s.describe = Words.Cmd.echo(rest);
                 plan.steps.add(s);
@@ -4221,6 +4285,22 @@ final class Batch {
             if (cmd.equals(CALL)) {                                             // מ0.15: לא נכלל (לא נמצא / מעגל / עומק)
                 s.error = Words.DbCmd.CALL_FAILED;
                 plan.errors++;
+                plan.steps.add(s);
+                continue;
+            }
+            if (cmd.equals(CONT)) {                                             // מ0.30: המשך [N] — הקובץ רץ גם כשיש שורות שגיאה
+                int allow = -1;
+                if (tk.size() == 1) allow = Integer.MAX_VALUE;
+                else if (tk.size() == 2)
+                    try { allow = Integer.parseInt(tk.get(1).trim()); } catch (NumberFormatException e) { allow = -1; }
+                if (allow < 0) {
+                    s.error = Words.DbCmd.CONT_USAGE;
+                    plan.errors++;
+                } else {
+                    plan.allowErrors = allow;
+                    s.noop = true;
+                    s.describe = allow == Integer.MAX_VALUE ? Words.DbCmd.CONT_ALWAYS : Words.DbCmd.contUpTo(allow);
+                }
                 plan.steps.add(s);
                 continue;
             }
@@ -4384,6 +4464,7 @@ final class Batch {
             s.dest = d;
             s.describe = Words.Cmd.newFolder(Bidi.path(d.getAbsolutePath()));
             sim.dirs.add(d.getAbsolutePath());
+            sim.gone.remove(d.getAbsolutePath());                                // מ0.30 (ממצא 35): RD ואחריו MD לאותה תיקייה — היא קיימת
             for (File up = d.getParentFile(); up != null && !sim.isDir(up); up = up.getParentFile()) {   // מ0.24: כמו mkdirs —
                 sim.dirs.add(up.getAbsolutePath());                                                    // גם התיקיות שמעל
                 sim.gone.remove(up.getAbsolutePath());
@@ -4895,6 +4976,12 @@ final class Batch {
 
     static List<String> run(Plan plan, Library lib, Physical.Asker asker, Physical.Progress progress, boolean grey, Listener listen) {
         List<String> report = new ArrayList<String>(plan.inputs);              // 1.27.0: הקלט — בראש
+        if (plan.blocked()) {                                                    // מ0.30: שגיאה בקובץ — שום שורה לא רצה
+            plan.trouble = true;
+            report.add(Words.DbCmd.notRun(plan.errors));
+            report.add(plan.errorText());
+            return report;
+        }
         Clock clock = new Clock();                                               // 1.25.0: לולאה — עצירה לפי זמן
         long all0 = System.nanoTime();
         Step prev = null;
@@ -5161,6 +5248,7 @@ final class Batch {
                 "MOVE \"" + var(V_DOWNLOADS) + "\\*.pdf\" \"" + var(V_INTERNAL) + "\\ספרים\" /" + SW_DATE + "שבוע");   // תחביר
     }
 }
+
 ===== קובץ: src/com/tikiyot/vfm/BatchEditScreen.java =====
 package com.tikiyot.vfm;
 
@@ -6401,6 +6489,7 @@ public class BatchEditScreen extends Activity {
         super.onBackPressed();
     }
 }
+
 ===== קובץ: src/com/tikiyot/vfm/BatchLine.java =====
 package com.tikiyot.vfm;
 
@@ -6562,6 +6651,7 @@ final class BatchLine {
         return out.isEmpty() ? abs : out;
     }
 }
+
 ===== קובץ: src/com/tikiyot/vfm/BatchUi.java =====
 package com.tikiyot.vfm;
 
@@ -6752,6 +6842,10 @@ final class BatchUi {
                 }).start();
             }
         };
+        if (plan.blocked()) {                                                  // מ0.30: שגיאה בקובץ — לא מריצים דבר
+            show(a, Words.DbCmd.NOT_RUN_TITLE, Words.DbCmd.notRun(plan.errors) + "\n\n" + plan.errorText(), null);
+            return;
+        }
         // 216: רק "פתיחה" (START) בלי שינוי בכונן ובלי שגיאות — ישר, בלי אישור
         if (plan.changes() == 0 && plan.errors == 0 && plan.echoes.isEmpty()) {
             go.run();
@@ -6805,6 +6899,7 @@ final class BatchUi {
         b.show();
     }
 }
+
 ===== קובץ: src/com/tikiyot/vfm/Bidi.java =====
 package com.tikiyot.vfm;
 
@@ -6927,6 +7022,7 @@ final class Bidi {
         });
     }
 }
+
 ===== קובץ: src/com/tikiyot/vfm/Buttons.java =====
 package com.tikiyot.vfm;
 
@@ -7237,6 +7333,7 @@ final class Buttons {
         return true;
     }
 }
+
 ===== קובץ: src/com/tikiyot/vfm/Clip.java =====
 package com.tikiyot.vfm;
 
@@ -7335,6 +7432,7 @@ final class Clip {
         return first == null ? null : new File(first).getParentFile();
     }
 }
+
 ===== קובץ: src/com/tikiyot/vfm/CmdLine.java =====
 package com.tikiyot.vfm;
 
@@ -7532,6 +7630,7 @@ final class CmdLine {
         return n.equals("DEL") || n.equals("MOVE") || (n.equals("RD") && value(def.switches().get(0)).length() > 0);
     }
 }
+
 ===== קובץ: src/com/tikiyot/vfm/CmdMenu.java =====
 package com.tikiyot.vfm;
 
@@ -7731,6 +7830,7 @@ final class CmdMenu {
         BatchUi.edit(a, f);
     }
 }
+
 ===== קובץ: src/com/tikiyot/vfm/CmdTemplates.java =====
 package com.tikiyot.vfm;
 
@@ -7938,6 +8038,7 @@ final class CmdTemplates {
         return m;
     }
 }
+
 ===== קובץ: src/com/tikiyot/vfm/Commands.java =====
 package com.tikiyot.vfm;
 
@@ -8174,6 +8275,8 @@ final class Commands {
                     pos(Type.TEXT, Words.DbCmd.P_VERIFY, Words.DbCmd.H_VERIFY_WHAT)), null),
             new Def(Batch.MODE, Words.DbCmd.N_MODE, new String[]{Words.DbCmd.N_MODE}, Family.FILE, Words.DbCmd.W_MODE,
                     list(pos(Type.NAME, Words.DbCmd.N_MODE, Words.DbCmd.H_MODE)), null),
+            new Def(Batch.CONT, Words.DbCmd.N_CONT, new String[]{Words.DbCmd.N_CONT}, Family.FILE, Words.DbCmd.W_CONT,
+                    list(pos(Type.TEXT, Words.DbCmd.P_CONT, Words.DbCmd.H_CONT)), null),
             new Def(Batch.CALL, Words.DbCmd.N_CALL, new String[]{Words.DbCmd.N_CALL}, Family.FILE, Words.DbCmd.W_CALL,
                     list(pos(Type.PATH, Words.Def.P_FILE, Words.DbCmd.H_CALL)), null),
             new Def("START", Words.Def.N_START, null, Family.FILE, Words.Def.W_START,
@@ -8248,6 +8351,7 @@ final class Commands {
         return sb.toString();
     }
 }
+
 ===== קובץ: src/com/tikiyot/vfm/Compare.java =====
 package com.tikiyot.vfm;
 
@@ -8492,6 +8596,7 @@ final class Compare {
         }
     }
 }
+
 ===== קובץ: src/com/tikiyot/vfm/Cond.java =====
 package com.tikiyot.vfm;
 
@@ -8916,6 +9021,7 @@ public final class Cond {
         return c.getTimeInMillis();
     }
 }
+
 ===== קובץ: src/com/tikiyot/vfm/Conf.java =====
 package com.tikiyot.vfm;
 
@@ -9024,6 +9130,7 @@ public final class Conf {
         set(section, key, v ? "כן" : "לא");  // תחביר
     }
 }
+
 ===== קובץ: src/com/tikiyot/vfm/DateSize.java =====
 package com.tikiyot.vfm;
 
@@ -9141,6 +9248,7 @@ final class DateSize {
         return (d + (d.isEmpty() || s.isEmpty() ? "" : " ") + s).trim();
     }
 }
+
 ===== קובץ: src/com/tikiyot/vfm/DbClip.java =====
 package com.tikiyot.vfm;
 
@@ -9270,6 +9378,7 @@ final class DbClip {
         return !Clip.isEmpty() && Clip.isCopy();
     }
 }
+
 ===== קובץ: src/com/tikiyot/vfm/DbCmdMenu.java =====
 package com.tikiyot.vfm;
 
@@ -9483,6 +9592,7 @@ final class DbCmdMenu {
         }).start();
     }
 }
+
 ===== קובץ: src/com/tikiyot/vfm/DbCount.java =====
 package com.tikiyot.vfm;
 
@@ -9562,6 +9672,7 @@ final class DbCount {
         }
     }
 }
+
 ===== קובץ: src/com/tikiyot/vfm/DbDump.java =====
 package com.tikiyot.vfm;
 
@@ -9856,6 +9967,7 @@ final class DbDump {
         }
     }
 }
+
 ===== קובץ: src/com/tikiyot/vfm/DbExamples.java =====
 package com.tikiyot.vfm;
 
@@ -9994,6 +10106,7 @@ final class DbExamples {
         if (lib != null) lib.dirChanged(dir.getParent());
     }
 }
+
 ===== קובץ: src/com/tikiyot/vfm/DbExport.java =====
 package com.tikiyot.vfm;
 
@@ -10144,6 +10257,7 @@ final class DbExport {
         return f;
     }
 }
+
 ===== קובץ: src/com/tikiyot/vfm/DbFiles.java =====
 package com.tikiyot.vfm;
 
@@ -10221,6 +10335,7 @@ final class DbFiles {
         return r;
     }
 }
+
 ===== קובץ: src/com/tikiyot/vfm/DbFollow.java =====
 package com.tikiyot.vfm;
 
@@ -10372,6 +10487,7 @@ final class DbFollow {
         });
     }
 }
+
 ===== קובץ: src/com/tikiyot/vfm/DbListCmd.java =====
 package com.tikiyot.vfm;
 
@@ -10578,10 +10694,23 @@ final class DbListCmd {
             String what = a.content ? Words.ListCmdW.contentOf(n[0], a.label()) : Words.files(n[0]);
             return Res.ok(Words.DbCmd.removed(what));
         }
-        List<String> up = new ArrayList<String>(a.path.subList(0, a.path.size() - 1));
-        long parent = up.isEmpty() ? DbPaths.home(s) : DbPaths.find(s, mode, up);
+        long parent = parentOf(s, mode, a, id);
+        if (parent == -1) return Res.err(Words.DbCmd.needFullWay(a.label()));
         removeFrom(s, parent, id);
         return Res.ok(Words.DbCmd.removed(Words.ListCmdW.list(a.label())));
+    }
+
+    /**
+     * מ0.30 (ממצא 40): הרשימה שממנה מוציאים את id. נכתבה הדרך — לפיה. שם לבד: הבית, אם היא בו; אחרת הרשימה היחידה
+     * שהיא בתוכה; עומדת לעצמה — 0; בכמה רשימות — ‎-1 (צריך לכתוב את הדרך המלאה).
+     */
+    static long parentOf(Store s, String mode, ListCmd.Side a, long id) {
+        List<String> up = new ArrayList<String>(a.path.subList(0, a.path.size() - 1));
+        if (!up.isEmpty()) return DbPaths.find(s, mode, up);
+        long home = DbPaths.home(s);
+        List<Long> in = s.listsOf(id);
+        if (in.contains(home)) return home;
+        return in.isEmpty() ? 0 : in.size() == 1 ? in.get(0) : -1;
     }
 
     /** רשימה (או חכמה) שלא נשארה באף רשימה — נמחקת, ואיתה מה שהיה רק שלה (רשימות; רעיונות וכותרות — לסל). */
@@ -10730,6 +10859,18 @@ final class DbListCmd {
             }
         }, true);
         return c;
+    }
+
+    /** מ0.30 (מ20): מחיקת רשימה מכל מקום (מסך המסד) — ואיתה מה שהיה רק שלה, כמו בהסרה; בעסקה אחת. */
+    static void deleteWhole(Store s, final long id) {
+        s.atomic(new Store.Work() {
+            @Override public void run(Store t) {
+                Store.Item it = t.item(id);
+                if (it == null) return;
+                for (Long p : new ArrayList<Long>(t.listsOf(id))) t.removeMember(p, id);
+                dropIfAlone(t, id);
+            }
+        }, true);
     }
 
     /** הסרה מרשימה — בעסקה אחת: יוצא מ-parent; רשימה שלא נשארה באף מקום — נמחקת עם מה שרק שלה; רעיון שהיה רק כאן — לסל. */
@@ -10958,8 +11099,8 @@ final class DbListCmd {
                         : Words.ListCmdW.contentOf(ids.size(), a.label());
             } else {
                 if (src == dest || s.contains(src, dest)) return Res.err(Words.ListCmdW.INTO_ITSELF);
-                List<String> up = new ArrayList<String>(a.path.subList(0, a.path.size() - 1));
-                from = up.isEmpty() ? DbPaths.home(s) : DbPaths.find(s, mode, up);
+                from = parentOf(s, mode, a, src);
+                if (from == -1) return Res.err(Words.DbCmd.needFullWay(a.label()));
                 ids.add(src);
                 label = Words.ListCmdW.list(a.label());
             }
@@ -11649,6 +11790,7 @@ final class DbListCmd {
         return rel.isEmpty() ? dest : new File(dest, rel);
     }
 }
+
 ===== קובץ: src/com/tikiyot/vfm/DbListScreen.java =====
 package com.tikiyot.vfm;
 
@@ -11675,7 +11817,7 @@ public class DbListScreen extends ListScreen<Store.Member> {
     static final String EXTRA_MODE = "mode", EXTRA_LIST = "list", EXTRA_SORT = "sort";
     /** מ0.22: מיון מהפקודה ("פתח רשימה … מיין:…"); ריק — הסדר של הרשימה. */
     private String sortBy = "";
-    private static final int MENU_DB = 1, MENU_DESIGN = 2, MENU_SETTINGS = 3, MENU_OLD = 4, MENU_CMDS = 5, MENU_TESTS = 6, MENU_BACKUPS = 7;
+    private static final int MENU_DB = 1, MENU_DESIGN = 2, MENU_SETTINGS = 3, MENU_OLD = 4, MENU_CMDS = 5, MENU_TESTS = 6, MENU_BACKUPS = 7, MENU_DIAG = 8;
 
     private String mode;
     private long listId;
@@ -12374,6 +12516,7 @@ public class DbListScreen extends ListScreen<Store.Member> {
         menu.add(0, MENU_BACKUPS, 0, Words.Db.BACKUPS);                     // מ0.23: ישר, לא דרך מסך המסד
         menu.add(0, MENU_DB, 0, Words.Db.MENU_ACTIONS);
         menu.add(0, MENU_TESTS, 0, Words.DbCmd.MENU_TESTS);
+        menu.add(0, MENU_DIAG, 0, Words.DbCmd.MENU_DIAG);                     // מ0.30
         // מ0.25: "↩ הצד הישן" יצא — מחיקת המנוע הישן, שלב 1: אין עוד דרך אליו מבניית מ.
     }
 
@@ -12384,6 +12527,7 @@ public class DbListScreen extends ListScreen<Store.Member> {
         else if (id == MENU_SETTINGS) startActivity(new Intent(this, SettingsScreen.class));
         else if (id == MENU_DESIGN) design();
         else if (id == MENU_TESTS) DbTestMode.open(this);
+        else if (id == MENU_DIAG) Diag.run(this, mode);
         else if (id == MENU_BACKUPS) startActivity(new Intent(this, DbScreen.class).putExtra(DbScreen.EXTRA_MODE, mode)
                 .putExtra(DbScreen.EXTRA_AT, listId).putExtra(DbScreen.EXTRA_DO, DbScreen.DO_BACKUPS));
         else return false;
@@ -12424,6 +12568,7 @@ public class DbListScreen extends ListScreen<Store.Member> {
         return rows;
     }
 }
+
 ===== קובץ: src/com/tikiyot/vfm/DbMore.java =====
 package com.tikiyot.vfm;
 
@@ -12773,6 +12918,7 @@ final class DbMore {
         return DbFiles.add(s, list, ps, sz, sign).added;
     }
 }
+
 ===== קובץ: src/com/tikiyot/vfm/DbPasteBar.java =====
 package com.tikiyot.vfm;
 
@@ -12913,6 +13059,7 @@ final class DbPasteBar {
         return type == Store.LIST ? "📁 " : type == Store.SMART ? "✨ " : type == Store.FILE ? "📄 " : "💡 ";
     }
 }
+
 ===== קובץ: src/com/tikiyot/vfm/DbPaths.java =====
 package com.tikiyot.vfm;
 
@@ -13027,7 +13174,7 @@ final class DbPaths {
         return any;
     }
 
-    private static long child(Store s, long list, String name) {
+    static long child(Store s, long list, String name) {
         String n = name.trim();
         for (Store.Member m : s.members(list)) if (m.item.type == Store.LIST && m.item.name.equals(n)) return m.item.id;
         return 0;
@@ -13078,6 +13225,7 @@ final class DbPaths {
         return "tree:" + mode + ":L:" + listPath;  // תחביר
     }
 }
+
 ===== קובץ: src/com/tikiyot/vfm/DbPicker.java =====
 package com.tikiyot.vfm;
 
@@ -13434,6 +13582,7 @@ final class DbPicker {
         }
     }
 }
+
 ===== קובץ: src/com/tikiyot/vfm/DbScreen.java =====
 package com.tikiyot.vfm;
 
@@ -14531,7 +14680,7 @@ public class DbScreen extends Activity {
                                     @Override
                                     public void run() {
                                         try {
-                                            store.deleteList(it.id);
+                                            DbListCmd.deleteWhole(store, it.id);   // מ0.30 (מ20): כמו בכל מקום — עם מה שהיה רק שלה
                                             path.remove(Long.valueOf(it.id));
                                         } catch (Store.Failure f) {
                                             Ui.toast(DbScreen.this, Words.Db.failed(f.getMessage()));
@@ -14942,6 +15091,7 @@ public class DbScreen extends Activity {
         f.delete();
     }
 }
+
 ===== קובץ: src/com/tikiyot/vfm/DbSmartForm.java =====
 package com.tikiyot.vfm;
 
@@ -15047,6 +15197,7 @@ final class DbSmartForm {
         return x == null ? "" : x;
     }
 }
+
 ===== קובץ: src/com/tikiyot/vfm/DbTestMode.java =====
 package com.tikiyot.vfm;
 
@@ -15173,6 +15324,7 @@ final class DbTestMode {
         }
     }
 }
+
 ===== קובץ: src/com/tikiyot/vfm/DbVerbs.java =====
 package com.tikiyot.vfm;
 
@@ -15434,6 +15586,7 @@ final class DbVerbs {
         }
     }
 }
+
 ===== קובץ: src/com/tikiyot/vfm/Design.java =====
 package com.tikiyot.vfm;
 
@@ -16047,6 +16200,7 @@ final class Design {
         sb.append(key).append(" = ").append(value).append('\n');
     }
 }
+
 ===== קובץ: src/com/tikiyot/vfm/DesignUi.java =====
 package com.tikiyot.vfm;
 
@@ -16425,6 +16579,7 @@ final class DesignUi {
         });
     }
 }
+
 ===== קובץ: src/com/tikiyot/vfm/DiskList.java =====
 package com.tikiyot.vfm;
 
@@ -16526,6 +16681,7 @@ final class DiskList {
         return l;
     }
 }
+
 ===== קובץ: src/com/tikiyot/vfm/DiskScreen.java =====
 package com.tikiyot.vfm;
 
@@ -16870,6 +17026,7 @@ public class DiskScreen extends ListScreen<File> implements Clip.Holder, TopRow.
         });
     }
 }
+
 ===== קובץ: src/com/tikiyot/vfm/Drive.java =====
 package com.tikiyot.vfm;
 
@@ -16912,6 +17069,7 @@ public final class Drive {
         return label(INTERNAL.equals(ix.key), ix.label);
     }
 }
+
 ===== קובץ: src/com/tikiyot/vfm/DupMode.java =====
 package com.tikiyot.vfm;
 
@@ -16954,6 +17112,7 @@ final class DupMode {
         return new DupMode(NAME_SAME, true, false);
     }
 }
+
 ===== קובץ: src/com/tikiyot/vfm/DupScreen.java =====
 package com.tikiyot.vfm;
 
@@ -17755,6 +17914,7 @@ public class DupScreen extends Activity {
         return super.onOptionsItemSelected(item);
     }
 }
+
 ===== קובץ: src/com/tikiyot/vfm/FileItem.java =====
 package com.tikiyot.vfm;
 
@@ -17873,6 +18033,7 @@ public final class FileItem {
         return State.MISSING;
     }
 }
+
 ===== קובץ: src/com/tikiyot/vfm/Files.java =====
 package com.tikiyot.vfm;
 
@@ -18079,6 +18240,7 @@ public final class Files {
         return !root.exists() || !root.canRead();
     }
 }
+
 ===== קובץ: src/com/tikiyot/vfm/FilterForm.java =====
 package com.tikiyot.vfm;
 
@@ -18194,6 +18356,7 @@ final class FilterForm {
         return box;
     }
 }
+
 ===== קובץ: src/com/tikiyot/vfm/Flow.java =====
 package com.tikiyot.vfm;
 
@@ -18270,6 +18433,7 @@ final class Flow extends ViewGroup {
         }
     }
 }
+
 ===== קובץ: src/com/tikiyot/vfm/FnApp.java =====
 package com.tikiyot.vfm;
 
@@ -18330,6 +18494,7 @@ public final class FnApp extends Func {
         });
     }
 }
+
 ===== קובץ: src/com/tikiyot/vfm/FnBar.java =====
 package com.tikiyot.vfm;
 
@@ -18402,6 +18567,7 @@ public final class FnBar extends Func {
         });
     }
 }
+
 ===== קובץ: src/com/tikiyot/vfm/FnCommand.java =====
 package com.tikiyot.vfm;
 
@@ -18459,6 +18625,7 @@ public final class FnCommand extends Func {
         });
     }
 }
+
 ===== קובץ: src/com/tikiyot/vfm/FnDup.java =====
 package com.tikiyot.vfm;
 
@@ -18600,6 +18767,7 @@ public final class FnDup extends Func {
         return (a + " " + b).trim();
     }
 }
+
 ===== קובץ: src/com/tikiyot/vfm/FnSettings.java =====
 package com.tikiyot.vfm;
 
@@ -18633,6 +18801,7 @@ public final class FnSettings extends Func {
         });
     }
 }
+
 ===== קובץ: src/com/tikiyot/vfm/FnSmart.java =====
 package com.tikiyot.vfm;
 
@@ -18670,6 +18839,7 @@ public final class FnSmart extends Func {
         SmartForm.show(a, name, t, done);
     }
 }
+
 ===== קובץ: src/com/tikiyot/vfm/FnTrash.java =====
 package com.tikiyot.vfm;
 
@@ -18705,6 +18875,7 @@ public final class FnTrash extends Func {
         });
     }
 }
+
 ===== קובץ: src/com/tikiyot/vfm/FolderPicker.java =====
 package com.tikiyot.vfm;
 
@@ -18784,6 +18955,7 @@ public final class FolderPicker {
         else PickDialog.show(a, title, m, PickDialog.FOLDERS, creator, chosen, null);
     }
 }
+
 ===== קובץ: src/com/tikiyot/vfm/FolderView.java =====
 package com.tikiyot.vfm;
 
@@ -18951,6 +19123,7 @@ final class FolderView {
         return out;
     }
 }
+
 ===== קובץ: src/com/tikiyot/vfm/Func.java =====
 package com.tikiyot.vfm;
 
@@ -19010,6 +19183,7 @@ public abstract class Func {
         return f != null ? f.icon : "📄";
     }
 }
+
 ===== קובץ: src/com/tikiyot/vfm/HoleForm.java =====
 package com.tikiyot.vfm;
 
@@ -19179,6 +19353,7 @@ final class HoleForm {
         });
     }
 }
+
 ===== קובץ: src/com/tikiyot/vfm/Home.java =====
 package com.tikiyot.vfm;
 
@@ -19212,6 +19387,7 @@ public class Home extends Activity {
         finish();
     }
 }
+
 ===== קובץ: src/com/tikiyot/vfm/IdCounter.java =====
 package com.tikiyot.vfm;
 
@@ -19314,6 +19490,7 @@ public final class IdCounter {
         }
     }
 }
+
 ===== קובץ: src/com/tikiyot/vfm/Index.java =====
 package com.tikiyot.vfm;
 
@@ -20459,6 +20636,7 @@ public final class Index {
         }
     }
 }
+
 ===== קובץ: src/com/tikiyot/vfm/IndexSource.java =====
 package com.tikiyot.vfm;
 
@@ -20638,6 +20816,7 @@ final class IndexSource extends PickSource {
         return sb.toString();
     }
 }
+
 ===== קובץ: src/com/tikiyot/vfm/Ini.java =====
 package com.tikiyot.vfm;
 
@@ -20847,6 +21026,7 @@ public final class Ini {
         }
     }
 }
+
 ===== קובץ: src/com/tikiyot/vfm/IniEditScreen.java =====
 package com.tikiyot.vfm;
 
@@ -21087,6 +21267,7 @@ public class IniEditScreen extends Activity {
         return super.onOptionsItemSelected(item);
     }
 }
+
 ===== קובץ: src/com/tikiyot/vfm/IniListScreen.java =====
 package com.tikiyot.vfm;
 
@@ -21173,6 +21354,7 @@ public class IniListScreen extends Activity {
         return false;
     }
 }
+
 ===== קובץ: src/com/tikiyot/vfm/Library.java =====
 package com.tikiyot.vfm;
 
@@ -22675,6 +22857,7 @@ public final class Library {
         return false;
     }
 }
+
 ===== קובץ: src/com/tikiyot/vfm/ListCmd.java =====
 package com.tikiyot.vfm;
 
@@ -22865,6 +23048,7 @@ final class ListCmd {
     }
 
 }
+
 ===== קובץ: src/com/tikiyot/vfm/ListCount.java =====
 package com.tikiyot.vfm;
 
@@ -22934,6 +23118,7 @@ final class ListCount {
         }
     }
 }
+
 ===== קובץ: src/com/tikiyot/vfm/ListScreen.java =====
 package com.tikiyot.vfm;
 
@@ -23240,6 +23425,7 @@ abstract class ListScreen<T> extends Activity {
         if (!sel.back()) super.onBackPressed();
     }
 }
+
 ===== קובץ: src/com/tikiyot/vfm/Log.java =====
 package com.tikiyot.vfm;
 
@@ -23356,6 +23542,7 @@ public final class Log {
         });
     }
 }
+
 ===== קובץ: src/com/tikiyot/vfm/Looks.java =====
 package com.tikiyot.vfm;
 
@@ -23800,6 +23987,7 @@ final class Looks {
         return t;
     }
 }
+
 ===== קובץ: src/com/tikiyot/vfm/Media.java =====
 package com.tikiyot.vfm;
 
@@ -24009,6 +24197,7 @@ final class Media {
         };
     }
 }
+
 ===== קובץ: src/com/tikiyot/vfm/MemStore.java =====
 package com.tikiyot.vfm;
 
@@ -24400,6 +24589,7 @@ public final class MemStore implements Store {
     @Override
     public void close() { }
 }
+
 ===== קובץ: src/com/tikiyot/vfm/Modes.java =====
 package com.tikiyot.vfm;
 
@@ -24490,6 +24680,7 @@ public final class Modes {
         return dir.mkdirs() ? null : Words.CANT_CREATE_FOLDER;                // מ0.29: רק אופן ריק (העתקת אופן — של המנוע הישן)
     }
 }
+
 ===== קובץ: src/com/tikiyot/vfm/Names.java =====
 package com.tikiyot.vfm;
 
@@ -24539,6 +24730,7 @@ final class Names {
         return path == null || path.isEmpty() ? Words.ROOT : path.get(path.size() - 1);
     }
 }
+
 ===== קובץ: src/com/tikiyot/vfm/Paths.java =====
 package com.tikiyot.vfm;
 
@@ -24618,6 +24810,7 @@ public final class Paths {
         return p.startsWith(base) ? p.substring(base.length()) : p;
     }
 }
+
 ===== קובץ: src/com/tikiyot/vfm/Physical.java =====
 package com.tikiyot.vfm;
 
@@ -26308,6 +26501,7 @@ public final class Physical {
         }
     }
 }
+
 ===== קובץ: src/com/tikiyot/vfm/PickDialog.java =====
 package com.tikiyot.vfm;
 
@@ -26763,6 +26957,7 @@ final class PickDialog {
         }
     }
 }
+
 ===== קובץ: src/com/tikiyot/vfm/PickSource.java =====
 package com.tikiyot.vfm;
 
@@ -26818,6 +27013,7 @@ abstract class PickSource {
         return null;
     }
 }
+
 ===== קובץ: src/com/tikiyot/vfm/PickerModel.java =====
 package com.tikiyot.vfm;
 
@@ -27102,6 +27298,7 @@ final class PickerModel {
         return out;
     }
 }
+
 ===== קובץ: src/com/tikiyot/vfm/Program.java =====
 package com.tikiyot.vfm;
 
@@ -27224,6 +27421,7 @@ final class Program {
         return n < 0 ? null : Words.files(n);
     }
 }
+
 ===== קובץ: src/com/tikiyot/vfm/Provider.java =====
 package com.tikiyot.vfm;
 
@@ -27296,6 +27494,7 @@ public class Provider extends ContentProvider {
     @Override public int delete(Uri uri, String s, String[] a) { return 0; }
     @Override public int update(Uri uri, ContentValues v, String s, String[] a) { return 0; }
 }
+
 ===== קובץ: src/com/tikiyot/vfm/Quick.java =====
 package com.tikiyot.vfm;
 
@@ -27417,6 +27616,7 @@ final class Quick {
         return isNot(part) ? part.substring(1) : Cond.NOT + part;
     }
 }
+
 ===== קובץ: src/com/tikiyot/vfm/QuickBar.java =====
 package com.tikiyot.vfm;
 
@@ -27797,6 +27997,7 @@ final class QuickBar {
         });
     }
 }
+
 ===== קובץ: src/com/tikiyot/vfm/Reserved.java =====
 package com.tikiyot.vfm;
 
@@ -27883,7 +28084,10 @@ final class Reserved {
             SqlStore s = null;
             try {
                 s = SqlStore.open(DbScreen.dbFile(c, m), new IdCounter(DbScreen.counterFile()));
-                long mine = DbPaths.find(s, m, MINE_PATH);
+                // מ0.30: אותה "הפקודות שלי" שהתפריט מציג — זו שבתוך "פקודות" שהתפריט פותח (לא רשימה אחרת באותו מקור)
+                long cmds = DbPaths.find(s, m, CMDS_PATH);
+                long mine = cmds == 0 ? 0 : DbPaths.child(s, cmds, MINE);
+                if (mine == 0) mine = DbPaths.find(s, m, MINE_PATH);
                 if (mine == 0) continue;
                 DbFiles.add(s, mine, Collections.singletonList(f.getAbsolutePath()), null, false);
                 return;
@@ -27896,6 +28100,7 @@ final class Reserved {
         }
     }
 }
+
 ===== קובץ: src/com/tikiyot/vfm/Resolver.java =====
 package com.tikiyot.vfm;
 
@@ -28023,6 +28228,7 @@ public final class Resolver {
         return null;
     }
 }
+
 ===== קובץ: src/com/tikiyot/vfm/RunScreen.java =====
 package com.tikiyot.vfm;
 
@@ -28217,6 +28423,12 @@ public class RunScreen extends Activity {
         }
         if (plan.changes() == 0 && plan.start == null && plan.open == null) {
             bodies[1].addView(info(Words.Cmd.NO_CHANGE));
+            buttons(btn(Words.CLOSE, close()));
+            return;
+        }
+        if (plan.blocked()) {                                                  // מ0.30: שגיאה בקובץ — אין "הרץ"
+            bodies[1].addView(warn(Words.DbCmd.notRun(plan.errors)));
+            bodies[1].addView(info(plan.errorText()));
             buttons(btn(Words.CLOSE, close()));
             return;
         }
@@ -28635,6 +28847,7 @@ public class RunScreen extends Activity {
         super.onBackPressed();
     }
 }
+
 ===== קובץ: src/com/tikiyot/vfm/SearchScreen.java =====
 package com.tikiyot.vfm;
 
@@ -29081,9 +29294,14 @@ public class SearchScreen extends Activity implements Clip.Holder {
      */
     private void save(boolean as) {
         final String q = query(), s = srt.by, w = view;
-        SmartForm.askSaveAs(this, input.getText().toString().trim(), new SmartForm.SaveAs() {
+        Ui.askText(this, Words.Find.SAVE_AS_TITLE, input.getText().toString().trim(), Words.Short.NAME_HINT, new Ui.Text1() {   // מ0.30: שם משלו — לא "תבנית"
             @Override
-            public void store(String n, boolean fresh) {
+            public void ok(String value) {
+                final String n = value.trim();
+                if (n.isEmpty()) {
+                    Ui.toast(SearchScreen.this, Words.NEED_NAME);
+                    return;
+                }
                 final DbSmartForm.Result r = new DbSmartForm.Result();
                 r.name = n;
                 r.cond = q;
@@ -29675,6 +29893,7 @@ public class SearchScreen extends Activity implements Clip.Holder {
         super.onBackPressed();
     }
 }
+
 ===== קובץ: src/com/tikiyot/vfm/SearchTabs.java =====
 package com.tikiyot.vfm;
 
@@ -29753,6 +29972,7 @@ final class SearchTabs {
         }
     }
 }
+
 ===== קובץ: src/com/tikiyot/vfm/Select.java =====
 package com.tikiyot.vfm;
 
@@ -29916,6 +30136,7 @@ public final class Select {
         }, own);
     }
 }
+
 ===== קובץ: src/com/tikiyot/vfm/SelectBar.java =====
 package com.tikiyot.vfm;
 
@@ -30164,6 +30385,7 @@ public final class SelectBar {
         }
     }
 }
+
 ===== קובץ: src/com/tikiyot/vfm/SettingsScreen.java =====
 package com.tikiyot.vfm;
 
@@ -30600,6 +30822,7 @@ public class SettingsScreen extends Activity {
                 .show();
     }
 }
+
 ===== קובץ: src/com/tikiyot/vfm/ShareScreen.java =====
 package com.tikiyot.vfm;
 
@@ -30784,6 +31007,7 @@ public class ShareScreen extends Activity {
     }
 
 }
+
 ===== קובץ: src/com/tikiyot/vfm/Shortcuts.java =====
 package com.tikiyot.vfm;
 
@@ -30879,6 +31103,7 @@ final class Shortcuts {
         return n;
     }
 }
+
 ===== קובץ: src/com/tikiyot/vfm/Sig.java =====
 package com.tikiyot.vfm;
 
@@ -31402,6 +31627,7 @@ final class Sig {
         return n;
     }
 }
+
 ===== קובץ: src/com/tikiyot/vfm/SigJob.java =====
 package com.tikiyot.vfm;
 
@@ -31467,6 +31693,7 @@ public final class SigJob extends JobService {
         return false;
     }
 }
+
 ===== קובץ: src/com/tikiyot/vfm/SigUi.java =====
 package com.tikiyot.vfm;
 
@@ -31638,6 +31865,7 @@ final class SigUi {
         if (after != null) after.run();
     }
 }
+
 ===== קובץ: src/com/tikiyot/vfm/SmartForm.java =====
 package com.tikiyot.vfm;
 
@@ -32367,6 +32595,7 @@ public final class SmartForm {
         });
     }
 }
+
 ===== קובץ: src/com/tikiyot/vfm/SmartLists.java =====
 package com.tikiyot.vfm;
 
@@ -32518,6 +32747,7 @@ final class SmartLists {
         return !link.isEmpty() && byId(link) == null;
     }
 }
+
 ===== קובץ: src/com/tikiyot/vfm/Smarts.java =====
 package com.tikiyot.vfm;
 
@@ -32616,6 +32846,7 @@ final class Smarts {
         }
     }
 }
+
 ===== קובץ: src/com/tikiyot/vfm/Sort.java =====
 package com.tikiyot.vfm;
 
@@ -32865,6 +33096,7 @@ public final class Sort {
         };
     }
 }
+
 ===== קובץ: src/com/tikiyot/vfm/Sources.java =====
 package com.tikiyot.vfm;
 
@@ -33083,6 +33315,7 @@ public final class Sources {
         return sb.toString();
     }
 }
+
 ===== קובץ: src/com/tikiyot/vfm/SqlStore.java =====
 package com.tikiyot.vfm;
 
@@ -34032,6 +34265,7 @@ public final class SqlStore implements Store {
         db.close();
     }
 }
+
 ===== קובץ: src/com/tikiyot/vfm/State.java =====
 package com.tikiyot.vfm;
 
@@ -34218,6 +34452,7 @@ final class State {
         return day + 24L * 3600 * 1000 - 1;                              // תאריך בלבד — סוף היום
     }
 }
+
 ===== קובץ: src/com/tikiyot/vfm/Store.java =====
 package com.tikiyot.vfm;
 
@@ -34427,6 +34662,7 @@ public interface Store {
 
     void close();
 }
+
 ===== קובץ: src/com/tikiyot/vfm/StoreContract.java =====
 package com.tikiyot.vfm;
 
@@ -35080,6 +35316,7 @@ public final class StoreContract {
         }
     }
 }
+
 ===== קובץ: src/com/tikiyot/vfm/Stores.java =====
 package com.tikiyot.vfm;
 
@@ -35156,6 +35393,7 @@ final class Stores {
         return sb.toString();
     }
 }
+
 ===== קובץ: src/com/tikiyot/vfm/Target.java =====
 package com.tikiyot.vfm;
 
@@ -35199,6 +35437,7 @@ public final class Target {
         return "כן".equals(params.get(key));  // תחביר
     }
 }
+
 ===== קובץ: src/com/tikiyot/vfm/Text.java =====
 package com.tikiyot.vfm;
 
@@ -35497,6 +35736,7 @@ public final class Text {
                 || before == '(' || before == '[') ? 1 : 2;
     }
 }
+
 ===== קובץ: src/com/tikiyot/vfm/TopRow.java =====
 package com.tikiyot.vfm;
 
@@ -36020,6 +36260,7 @@ final class TopRow {
         }
     }
 }
+
 ===== קובץ: src/com/tikiyot/vfm/Transfer.java =====
 package com.tikiyot.vfm;
 
@@ -36167,6 +36408,7 @@ final class Transfer {
         }
     }
 }
+
 ===== קובץ: src/com/tikiyot/vfm/Trash.java =====
 package com.tikiyot.vfm;
 
@@ -36425,6 +36667,7 @@ public final class Trash {
         return n;
     }
 }
+
 ===== קובץ: src/com/tikiyot/vfm/TrashScreen.java =====
 package com.tikiyot.vfm;
 
@@ -36568,6 +36811,7 @@ public class TrashScreen extends ListScreen<Trash.Item> {
         return true;
     }
 }
+
 ===== קובץ: src/com/tikiyot/vfm/Tree.java =====
 package com.tikiyot.vfm;
 
@@ -36732,6 +36976,7 @@ public final class Tree {
         }
     }
 }
+
 ===== קובץ: src/com/tikiyot/vfm/Trial.java =====
 package com.tikiyot.vfm;
 
@@ -36824,6 +37069,7 @@ final class Trial {
         return sb.toString();
     }
 }
+
 ===== קובץ: src/com/tikiyot/vfm/TypePicker.java =====
 package com.tikiyot.vfm;
 
@@ -36921,6 +37167,7 @@ final class TypePicker {
                 .show();
     }
 }
+
 ===== קובץ: src/com/tikiyot/vfm/Types.java =====
 package com.tikiyot.vfm;
 
@@ -37059,6 +37306,7 @@ final class Types {
         }
     }
 }
+
 ===== קובץ: src/com/tikiyot/vfm/Ui.java =====
 package com.tikiyot.vfm;
 
@@ -37935,6 +38183,7 @@ public final class Ui {
         });
     }
 }
+
 ===== קובץ: src/com/tikiyot/vfm/Verbs.java =====
 package com.tikiyot.vfm;
 
@@ -38349,6 +38598,7 @@ final class Verbs {
     }
 
 }
+
 ===== קובץ: src/com/tikiyot/vfm/Vols.java =====
 package com.tikiyot.vfm;
 
@@ -38458,6 +38708,7 @@ public final class Vols {
         return p.endsWith("/Android/data") || p.endsWith("/Android/obb");
     }
 }
+
 ===== קובץ: src/com/tikiyot/vfm/Why.java =====
 package com.tikiyot.vfm;
 
@@ -38527,6 +38778,7 @@ final class Why {
         return key == null ? "" : key.replace('=', '-').replace('\n', ' ').replace('[', '(').replace(']', ')');
     }
 }
+
 ===== קובץ: src/com/tikiyot/vfm/Words.java =====
 package com.tikiyot.vfm;
 
@@ -38705,7 +38957,7 @@ public final class Words {
     public static final class Find {
         private Find() { }
 
-        public static final String SETTINGS = "⚙ הגדרות", SAVE = "💾 שמירה", SAVE_AS = Named.SAVE_AS,
+        public static final String SETTINGS = "⚙ הגדרות", SAVE = "💾 שמירה", SAVE_AS = "💾 שמירה בשם — רשימה חכמה בבית…", SAVE_AS_TITLE = "שמירה בשם — רשימה חכמה בבית",
                 ALL_DRIVES = "אין מקורות = כל הכוננים", HINT = "חיפוש…";
 
         public static String saved(String name) {
@@ -38982,7 +39234,7 @@ public final class Words {
                 UNDO = "מחיקה — מסל המחזור; העברה והעתקה — הרשימות עוקבות";
 
         public static String errorLines(int n) {
-            return n + " שורות עם שגיאה — ידלגו עליהן · ";
+            return n + " שורות עם שגיאה — ידלגו עליהן (יש בקובץ \"המשך\") · ";
         }
 
         public static String preview(String file) {
@@ -40797,7 +41049,8 @@ public final class Words {
 
         public static final String NO_HOME = "אין בית במסד הזה", SAME_NAME = "כבר יש שם רשימה בשם הזה",
                 ALREADY = "כבר בה",
-                MENU_TESTS = "🧪 בדיקת הפקודות (אופן \"בדיקות מערכת\")",
+                MENU_TESTS = "🧪 בדיקת הפקודות (אופן \"בדיקות מערכת\")", MENU_DIAG = "🩺 דוח אבחון", DIAG_RUNNING = "מכין דוח אבחון…",
+                DIAG_SEND = "שליחה",
                 TEST_MODE = "בדיקות מערכת",  // בכונן
                 TEST_FILE = "בדיקת פקודות",  // בכונן
                 TEST_CALL_FILE = "בדיקת כלול",  // בכונן
@@ -40859,6 +41112,8 @@ public final class Words {
             return "לא נקרא: " + name;
         }
 
+        public static String needFullWay(String name) { return "\"" + name + "\" נמצאת בכמה רשימות — צריך לכתוב את הדרך המלאה אליה"; }
+
         public static String imported(String file, String to, int lists, int files, int bad) {
             return "ייבוא: " + file + " ← לתוך " + to + " · " + lists + " רשימות, " + files + " קבצים" + (bad > 0 ? " · שורות שלא הובנו: " + bad : "");
         }
@@ -40889,6 +41144,16 @@ public final class Words {
 
         public static String moved(String what, String to) {
             return what + " ← הועבר ל" + to;
+        }
+
+        public static final String N_CONT = "המשך";  // תחביר
+        public static final String W_CONT = "הקובץ רץ גם כשיש בו שורות שגיאה (בלי השורה הזו — שגיאה אחת עוצרת את כולו לפני שמשהו רץ)",
+                H_CONT = "כמה שורות שגיאה מותרות; ריק — תמיד", P_CONT = "מספר", CONT_USAGE = "צורה: המשך, או המשך ומספר (כמה שורות שגיאה מותרות)",
+                CONT_ALWAYS = "הקובץ ירוץ גם אם יש בו שורות שגיאה", NOT_RUN_TITLE = "הקובץ לא רץ — יש בו שגיאה";
+        public static String diagDone(String path) { return "הדוח נכתב לקובץ:\n" + path + "\n\nהבדיקות נעשו על עותקים — המסדים שלך לא השתנו (חוץ מהאופן \"בדיקות מערכת\", שבו רצה הבדיקה הכללית)."; }
+        public static String contUpTo(int n) { return "הקובץ ירוץ אם יש בו עד " + n + " שורות שגיאה"; }
+        public static String notRun(int n) {
+            return "שום שורה לא רצה: יש " + n + " שורות שגיאה. לתקן אותן, או להוסיף בראש הקובץ את השורה: המשך";
         }
 
         public static final String N_MODE = "אופן", N_CALL = "כלול",  // תחביר
@@ -41058,7 +41323,7 @@ public final class Words {
         /** מ0.9: המראה המוכר. */
         public static final String LIST_GONE = "הרשימה הזו כבר לא קיימת במסד", MENU_ACTIONS = "⚙ מסד: גיבוי, העתקה, בדיקה ופעולות",
                 MENU_OLD = "↩ הצד הישן (לפני המסד)",
-                FAMILIAR = "🏠 בית", ADD_IN_LIST = "הוספת קבצים — מתוך רשימה", NO_HOME = "אין עדיין בית במסד הזה — מעתיקים מהישן (\"העתקה מהישן\") והבית נוצר";
+                FAMILIAR = "🏠 בית", ADD_IN_LIST = "הוספת קבצים — מתוך רשימה", NO_HOME = "אין בית במסד הזה";
 
         public static String homeInfo(String mode, int n) {
             return "אופן עבודה: " + mode + " · " + Words.items(n);
@@ -41591,6 +41856,7 @@ public final class Words {
         }
     }
 }
+
 ===== קובץ: src/com/tikiyot/vfm/Zip.java =====
 package com.tikiyot.vfm;
 
@@ -41835,6 +42101,474 @@ final class Zip {
         return top.equals(base) || top.equals(destName) ? top + "/" : null;
     }
 }
+
+===== קובץ: src/com/tikiyot/vfm/Diag.java =====
+package com.tikiyot.vfm;
+
+// מ0.30: דוח אבחון — פעולה אחת שבודקת במכשיר את מה שעד עכשיו נבדק ביד, וכותבת קובץ אחד לתיקיית ההורדות.
+// המשתמש (11.11.2026), על רשימת בדיקות ידניות: "אין דרך שתכניס בפקודות את כל זה? זה מאד מייגע."
+// אחראי: לקרוא, למדוד ולדווח. כל ניסוי שכותב — על עותק של המסד (בתיקיית המטמון), עם מונה מספרים בזיכרון.
+// אסור לו: לכתוב במסד אמיתי, בקובץ המונה או בתיקיית הגיבויים. (היוצא מן הכלל: "הבדיקה הכללית", שרצה כמו מהתפריט.)
+// הטקסט של הדוח הוא יומן לבדיקה, לא הודעות למסך — ולכן אינו במילון (כמו שורות Log).
+
+import android.app.Activity;
+import android.content.Intent;
+import android.os.Build;
+import android.os.Environment;
+
+import java.io.File;
+import java.io.PrintWriter;
+import java.io.StringWriter;
+import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.Date;
+import java.util.List;
+import java.util.Locale;
+
+final class Diag {
+
+    static final String FILE = "דוח אבחון.txt";
+
+    private Diag() { }
+
+    /** מהתפריט: רץ ברקע, כותב את הקובץ, ומציע לשלוח אותו. */
+    static void run(final Activity a, final String mode) {
+        final Physical.Busy busy = new Physical.Busy(a, Words.DbCmd.DIAG_RUNNING);
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                final File out = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), FILE);
+                StringBuilder sb = new StringBuilder();
+                String err = null;
+                try {
+                    report(a, mode, sb);
+                    write(out, sb);
+                    general(a, busy, sb);                                         // אחרון: אם ייתקע — הדוח שלפניו כבר כתוב
+                    write(out, sb);
+                } catch (Throwable t) {
+                    Log.e("Diag", t);
+                    err = String.valueOf(t);
+                    try {
+                        sb.append("\n!!! הדוח נקטע: ").append(stack(t));
+                        write(out, sb);
+                    } catch (Throwable ignored) {
+                        // אין לאן לכתוב
+                    }
+                }
+                busy.close();
+                final String e = err;
+                a.runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        if (!out.isFile()) {
+                            Ui.toast(a, Words.Db.failed(String.valueOf(e)));
+                            return;
+                        }
+                        Ui.ask(a, Words.DbCmd.MENU_DIAG, Words.DbCmd.diagDone(Bidi.path(out.getAbsolutePath())), null, null, Words.DbCmd.DIAG_SEND,
+                                new Runnable() {
+                                    @Override public void run() { Acts.sendReady(a, Collections.singletonList(out)); }
+                                });
+                    }
+                });
+            }
+        }).start();
+    }
+
+    private static void write(File out, StringBuilder sb) throws Exception {
+        File dir = out.getParentFile();
+        if (dir != null && !dir.isDirectory()) dir.mkdirs();
+        Files.writeAtomic(out, sb.toString());
+    }
+
+    private static String stack(Throwable t) {
+        StringWriter w = new StringWriter();
+        t.printStackTrace(new PrintWriter(w));
+        return w.toString();
+    }
+
+    private interface Part {
+        void run(StringBuilder sb) throws Throwable;
+    }
+
+    /** חלק אחד של הדוח: כותרת, זמן, ותקלה — נכתבת ולא עוצרת את השאר. */
+    private static void part(StringBuilder sb, String title, Part p) {
+        sb.append("\n=== ").append(title).append(" ===\n");
+        long t0 = System.nanoTime();
+        try {
+            p.run(sb);
+        } catch (Throwable t) {
+            sb.append("!!! תקלה: ").append(stack(t)).append('\n');
+        }
+        sb.append("(").append((System.nanoTime() - t0) / 1000000).append(" מ\"ש)\n");
+    }
+
+    private static String ok(boolean b) {
+        return b ? "✅ " : "❌ ";
+    }
+
+    /** עותק של המסד של האופן, פתוח לכתיבה, עם מונה בזיכרון. null — אין מסד. */
+    private static SqlStore copy(Activity a, String mode, String name) throws Exception {
+        File src = DbScreen.dbFile(a, mode);
+        if (!src.isFile()) return null;
+        File dir = new File(a.getCacheDir(), "diag");
+        dir.mkdirs();
+        File to = new File(dir, name + ".db");
+        wipe(to);
+        try {
+            SqlStore live = SqlStore.openReadOnly(src);
+            try {
+                live.copyTo(to);
+            } finally {
+                live.close();
+            }
+        } catch (Throwable t) {                                               // חיבור לקריאה בלבד שלא מעתיק — העתקת הקבצים עצמם
+            Log.e("Diag.copy", t);
+            wipe(to);
+            raw(src, to);
+            File wal = new File(src.getPath() + "-wal");
+            if (wal.isFile()) raw(wal, new File(to.getPath() + "-wal"));
+        }
+        return SqlStore.open(to, IdCounter.memory());
+    }
+
+    private static void raw(File from, File to) throws Exception {
+        java.io.FileInputStream in = new java.io.FileInputStream(from);
+        try {
+            java.io.FileOutputStream out = new java.io.FileOutputStream(to);
+            try {
+                byte[] b = new byte[65536];
+                for (int n; (n = in.read(b)) > 0; ) out.write(b, 0, n);
+            } finally {
+                out.close();
+            }
+        } finally {
+            in.close();
+        }
+    }
+
+    private static SqlStore fresh(Activity a, String name) {
+        File dir = new File(a.getCacheDir(), "diag");
+        dir.mkdirs();
+        File to = new File(dir, name + ".db");
+        wipe(to);
+        return SqlStore.open(to, IdCounter.memory());
+    }
+
+    private static void wipe(File db) {
+        for (String x : new String[]{"", "-wal", "-shm", "-journal"}) new File(db.getPath() + x).delete();
+    }
+
+    private static List<String> names(Store s, long list) {
+        List<String> out = new ArrayList<String>();
+        for (Store.Member m : s.members(list))
+            out.add((m.item.type == Store.LIST ? "📁" : m.item.type == Store.SMART ? "🔎" : m.item.type == Store.FILE ? "📄" : "·") + m.item.name);
+        return out;
+    }
+
+    private static List<Long> homes(Store s) {
+        List<Long> out = new ArrayList<Long>();
+        for (Store.Item it : s.lists()) if ("1".equals(s.prop(it.id, Store.P_HOME))) out.add(it.id);
+        return out;
+    }
+
+    private static void report(final Activity a, final String mode, StringBuilder sb) {
+        final String internal = Environment.getExternalStorageDirectory().getAbsolutePath();
+        sb.append("דוח אבחון · ").append(new SimpleDateFormat("dd.MM.yyyy HH:mm:ss", Locale.US).format(new Date())).append('\n');
+
+        part(sb, "1. המכשיר והתוכנה", new Part() {
+            @Override public void run(StringBuilder sb) throws Throwable {
+                android.content.pm.PackageInfo pi = a.getPackageManager().getPackageInfo(a.getPackageName(), 0);
+                sb.append("גרסה: ").append(pi.versionName).append(" (").append(pi.versionCode).append(") · ").append(a.getPackageName()).append('\n');
+                sb.append("אנדרואיד: ").append(Build.VERSION.RELEASE).append(" (API ").append(Build.VERSION.SDK_INT).append(") · ").append(Build.MANUFACTURER).append(' ').append(Build.MODEL).append('\n');
+                if (Build.VERSION.SDK_INT >= 30) sb.append(ok(Environment.isExternalStorageManager())).append("הרשאת גישה לכל הקבצים\n");
+                sb.append("מקום פנוי: ").append(new File(internal).getUsableSpace() / (1024 * 1024)).append("MB\n");
+                sb.append("תיקיית התוכנה: ").append(Paths.data()).append('\n');
+                sb.append("תיקיית המסדים: ").append(DbScreen.dbFile(a, "x").getParent()).append('\n');
+                sb.append("האופן שעל המסך: ").append(mode).append(" · האופן של הפקודות: ").append(DbListScreen.currentMode)
+                        .append(" · האופן השמור: ").append(DbScreen.savedMode(a)).append('\n');
+                Intent send = new Intent(Intent.ACTION_SEND).setType("*/*").setPackage(a.getPackageName());
+                int n = a.getPackageManager().queryIntentActivities(send, 0).size();
+                sb.append(ok(n > 0)).append("התוכנה רשומה כיעד ל\"שיתוף\" מאפליקציות אחרות (").append(n).append(")\n");
+            }
+        });
+
+        part(sb, "2. המסדים — לכל אופן", new Part() {
+            @Override public void run(StringBuilder sb) throws Throwable {
+                for (String m : DbScreen.dbModes(a)) {
+                    File f = DbScreen.dbFile(a, m);
+                    sb.append("\n— אופן \"").append(m).append("\" · ").append(f.length() / 1024).append("KB\n");
+                    long t0 = System.nanoTime();
+                    SqlStore s = null;
+                    try {
+                        s = SqlStore.openReadOnly(f);
+                        long tOpen = (System.nanoTime() - t0) / 1000000;
+                        String chk = s.check();
+                        sb.append(ok(chk == null)).append("תקינות: ").append(chk == null ? "תקין" : chk).append('\n');
+                        List<Long> hs = homes(s);
+                        t0 = System.nanoTime();
+                        long home = DbPaths.home(s);
+                        long tHome = (System.nanoTime() - t0) / 1000000;
+                        t0 = System.nanoTime();
+                        int inHome = home == 0 ? 0 : s.members(home).size();
+                        long tMembers = (System.nanoTime() - t0) / 1000000;
+                        sb.append(ok(hs.size() == 1)).append("רשימות בית: ").append(hs).append(" · בבית: ").append(inHome).append(" פריטים\n");
+                        sb.append("רשימות ").append(s.lists().size()).append(" · חכמות ").append(s.smarts().size())
+                                .append(" · לא משויכים ").append(s.unassigned().size()).append('\n');
+                        sb.append("זמנים: פתיחה ").append(tOpen).append(" · מציאת הבית ").append(tHome).append(" · קריאת הבית ").append(tMembers).append(" מ\"ש\n");
+                        long root = DbPaths.find(s, m, Reserved.ROOT_PATH), cmds = DbPaths.find(s, m, Reserved.CMDS_PATH), mine = DbPaths.find(s, m, Reserved.MINE_PATH);
+                        long mineIn = cmds == 0 ? 0 : DbPaths.child(s, cmds, Reserved.MINE);
+                        sb.append("\"שמור לתוכנה\": ").append(root).append(root != 0 ? " (בתוך: " + s.listsOf(root) + ")" : "")
+                                .append(" · \"פקודות\": ").append(cmds).append(" · \"הפקודות שלי\" לפי הדרך: ").append(mine)
+                                .append(" · בתוך \"פקודות\": ").append(mineIn).append('\n');
+                        if (mine != mineIn) sb.append("❌ שתי רשימות שונות של \"הפקודות שלי\" — זו הסיבה לסעיף 7\n");
+                        int same = 0;
+                        for (Store.Item it : s.lists()) if (it.name.equals(Reserved.MINE) || it.name.equals(Reserved.ROOT)) {
+                            same++;
+                            sb.append("   · ").append(it.name).append(" #").append(it.id).append(" בתוך ").append(s.listsOf(it.id)).append(" · ")
+                                    .append(s.count(it.id)).append(" פריטים\n");
+                        }
+                        if (mineIn != 0) sb.append("ב\"הפקודות שלי\" שהתפריט מציג: ").append(names(s, mineIn)).append('\n');
+                        if (mine != 0 && mine != mineIn) sb.append("ב\"הפקודות שלי\" האחרת: ").append(names(s, mine)).append('\n');
+                    } catch (Throwable t) {
+                        sb.append("❌ לא נפתח: ").append(t).append('\n');
+                    } finally {
+                        if (s != null) s.close();
+                    }
+                    List<Backups.Entry> bk = DbScreen.backupsOf(a, m).list();
+                    java.util.Map<String, Integer> kinds = new java.util.TreeMap<String, Integer>();
+                    for (Backups.Entry e : bk) {
+                        String k = e.kind + (e.op == null ? "" : " " + e.op);
+                        kinds.put(k, kinds.containsKey(k) ? kinds.get(k) + 1 : 1);
+                    }
+                    sb.append("גיבויים: ").append(bk.size()).append(' ').append(kinds);
+                    if (!bk.isEmpty()) sb.append(" · האחרון: ").append(bk.get(0).name).append(" · הישן: ").append(bk.get(bk.size() - 1).name);
+                    sb.append('\n');
+                }
+                sb.append("\nתפריט ⭐ באופן שעל המסך נלקח מ: ");
+                SqlStore s = SqlStore.openReadOnly(DbScreen.dbFile(a, mode));
+                try {
+                    sb.append(DbPaths.find(s, mode, Reserved.CMDS_PATH) != 0 ? "האופן עצמו" : "אופן אחר — " + DbCmdMenu.otherMode(a, mode, Reserved.CMDS_PATH)).append('\n');
+                } finally {
+                    s.close();
+                }
+                File sc = Shortcuts.dir();
+                String[] k = sc.list();
+                sb.append("תיקיית הפקודות של המשתמש: ").append(sc).append(" · ").append(k == null ? "אין" : Arrays.asList(k).toString()).append('\n');
+            }
+        });
+
+        part(sb, "3. שחזור הדוגמאות — על עותק (סעיף 5)", new Part() {
+            @Override public void run(StringBuilder sb) throws Throwable {
+                String text = DbExamples.asset(a, DbExamples.ASSET);
+                List<String> tops = DbExamples.tops(text);
+                sb.append("בקובץ הדוגמאות, בבית: ").append(tops).append('\n');
+                SqlStore s = copy(a, DbExamples.MODE, "restore");
+                if (s == null) {
+                    sb.append("אין מסד לאופן \"").append(DbExamples.MODE).append("\"\n");
+                    return;
+                }
+                try {
+                    long home = DbPaths.home(s);
+                    sb.append("בית: ").append(home).append(" · לפני: ").append(names(s, home)).append('\n');
+                    long first = 0;
+                    List<String> missing = new ArrayList<String>();
+                    for (String name : tops) {
+                        long id = 0;
+                        for (Store.Member m : s.members(home)) if (m.item.type == Store.LIST && m.item.name.equals(name)) id = m.item.id;
+                        if (id == 0) missing.add(name);
+                        else {
+                            if (first == 0 && !name.equals(DbExamples.MINE) && !name.equals(Reserved.ROOT)) first = id;
+                            if (s.listsOf(id).size() > 1) sb.append("   · \"").append(name).append("\" נמצאת גם ב: ").append(s.listsOf(id)).append('\n');
+                        }
+                    }
+                    sb.append(ok(missing.isEmpty())).append("רשימות מהקובץ שאינן בבית בשם הזה: ").append(missing).append('\n');
+                    long mineHome = s.createList("אבחון-בבית", home);
+                    long inner = first == 0 ? 0 : s.createList("אבחון-בפנים", first);
+                    int lists0 = s.lists().size();
+                    int n = DbExamples.restore(s, text, internal);
+                    sb.append("הוחלפו: ").append(n).append(" · רשימות לפני ").append(lists0).append(" · אחרי ").append(s.lists().size()).append('\n');
+                    sb.append(ok(s.item(mineHome) != null && s.listsOf(mineHome).contains(home))).append("רשימה שנוספה לבית — נשארה\n");
+                    boolean gone = inner != 0 && (s.item(inner) == null || s.listsOf(inner).isEmpty());
+                    sb.append(ok(gone)).append("רשימה שנוספה בתוך רשימת דוגמאות — יצאה");
+                    if (!gone && inner != 0) sb.append(" (עדיין בתוך ").append(s.listsOf(inner)).append(")");
+                    sb.append('\n');
+                    sb.append("אחרי: ").append(names(s, DbPaths.home(s))).append('\n');
+                    String chk = s.check();
+                    sb.append(ok(chk == null)).append("תקינות אחרי השחזור: ").append(chk == null ? "תקין" : chk).append('\n');
+                } finally {
+                    s.close();
+                }
+            }
+        });
+
+        part(sb, "4. אופן חדש — מסד חדש (סעיף 6)", new Part() {
+            @Override public void run(StringBuilder sb) throws Throwable {
+                SqlStore s = fresh(a, "newmode");
+                try {
+                    long home = DbPaths.ensureHome(s);
+                    sb.append(ok(home != 0 && s.members(home).isEmpty())).append("בית ריק נוצר\n");
+                    DbExamples.install(s, DbExamples.reservedPart(DbExamples.asset(a, DbExamples.ASSET)), internal);
+                    long cmds = DbPaths.find(s, "x", Reserved.CMDS_PATH);
+                    sb.append(ok(cmds != 0)).append("\"שמור לתוכנה\" נכנסת מקובץ הדוגמאות: ").append(names(s, home))
+                            .append(" · בפקודות: ").append(cmds == 0 ? 0 : s.count(cmds)).append('\n');
+                } finally {
+                    s.close();
+                }
+            }
+        });
+
+        part(sb, "5. פקודה חדשה ל\"הפקודות שלי\", שמירה בשם, הוספת קובץ — על עותק (סעיפים 7, 8, 9)", new Part() {
+            @Override public void run(StringBuilder sb) throws Throwable {
+                SqlStore s = copy(a, mode, "work");
+                if (s == null) return;
+                try {
+                    long home = DbPaths.home(s);
+                    long cmds = DbPaths.find(s, mode, Reserved.CMDS_PATH);
+                    long mine = cmds == 0 ? 0 : DbPaths.child(s, cmds, Reserved.MINE);
+                    if (mine == 0) sb.append("באופן הזה אין \"הפקודות שלי\" (התפריט מאופן אחר)\n");
+                    else {
+                        DbFiles.Added r = DbFiles.add(s, mine, Collections.singletonList(internal + "/אבחון-פקודה.vbat"), null, false);
+                        boolean in = false;
+                        for (Store.Member m : s.members(mine)) if (m.item.name.contains("אבחון-פקודה")) in = true;
+                        sb.append(ok(r.added == 1 && in)).append("פקודה חדשה נכנסת ל\"הפקודות שלי\" שבתפריט\n");
+                    }
+                    DbSmartForm.Result res = new DbSmartForm.Result();
+                    res.name = "אבחון-חכמה";
+                    res.cond = "סוג:מסמכים";
+                    res.sort = "";
+                    res.view = "";
+                    long sm = DbSmartForm.save(s, 0, home, res);
+                    sb.append(ok(sm != 0 && s.listsOf(sm).contains(home) && "סוג:מסמכים".equals(s.prop(sm, Store.P_COND))))
+                            .append("\"שמירה בשם\" של חיפוש — רשימה חכמה בבית, עם התנאי\n");
+                    long list = s.createList("אבחון-רשימה", home);
+                    DbFiles.Added r2 = DbFiles.add(s, list, Arrays.asList(internal + "/אבחון-א.txt", internal + "/אבחון-ב.txt"), null, false);
+                    sb.append(ok(r2.added == 2 && s.count(list) == 2)).append("קבצים נכנסים לרשימה\n");
+                } finally {
+                    s.close();
+                }
+            }
+        });
+
+        part(sb, "6. יצוא וייבוא — על עותק (סעיף 10)", new Part() {
+            @Override public void run(StringBuilder sb) throws Throwable {
+                SqlStore s = copy(a, mode, "export");
+                if (s == null) return;
+                try {
+                    long home = DbPaths.home(s);
+                    long src = s.createList("אבחון-מקור", home), sub = s.createList("תת", src);
+                    DbFiles.add(s, src, Collections.singletonList(internal + "/אבחון-א.txt"), null, false);
+                    DbFiles.add(s, sub, Collections.singletonList(internal + "/אבחון-ב.txt"), null, false);
+                    DbSmartForm.Result res = new DbSmartForm.Result();
+                    res.name = "חכמה";
+                    res.cond = "סוג:מסמכים";
+                    res.sort = "";
+                    res.view = "";
+                    DbSmartForm.save(s, 0, src, res);
+                    DbExport.Out o = DbExport.list(s, src, false, "אבחון", System.currentTimeMillis());
+                    File f = new File(new File(a.getCacheDir(), "diag"), "export.txt");
+                    Files.writeAtomic(f, o.text);
+                    String back = Files.readUtf8(f);
+                    sb.append(ok(back.equals(o.text))).append("הקובץ נכתב ונקרא זהה (").append(o.lists).append(" רשימות, ").append(o.files).append(" קבצים)\n");
+                    long dest = s.createList("אבחון-יעד", home);
+                    DbMore.Imported im = DbMore.importText(s, dest, back);
+                    long got = DbPaths.child(s, dest, "אבחון-מקור");
+                    boolean smart = false;
+                    if (got != 0) for (Store.Member m : s.members(got)) if (m.item.type == Store.SMART && "סוג:מסמכים".equals(s.prop(m.item.id, Store.P_COND))) smart = true;
+                    sb.append(ok(got != 0 && smart && DbPaths.child(s, got, "תת") != 0 && im.bad == 0)).append("ייבוא לרשימה ריקה: רשימות ")
+                            .append(im.lists).append(" · חכמות ").append(im.smarts).append(" · קבצים ").append(im.files).append(" · לא הובנו ").append(im.bad)
+                            .append(" · ביעד: ").append(names(s, dest)).append('\n');
+                } finally {
+                    s.close();
+                }
+                // מה שהמשתמש ייצא באמת: הקבצים בתיקיית היצוא, והראש של החדש ביותר
+                File dir = DbListCmd.exportDir();
+                File[] k = dir.listFiles();
+                sb.append("תיקיית היצוא: ").append(dir).append(" · ").append(k == null ? 0 : k.length).append(" קבצים\n");
+                File newest = null;
+                if (k != null) for (File x : k) {
+                    sb.append("   · ").append(x.getName()).append(" · ").append(x.length()).append(" בתים\n");
+                    if (x.isFile() && (newest == null || x.lastModified() > newest.lastModified())) newest = x;
+                }
+                if (newest != null) {
+                    String t = Files.readUtf8(newest);
+                    String[] lines = t.split("\n");
+                    sb.append("החדש ביותר — \"").append(newest.getName()).append("\", ").append(lines.length).append(" שורות. 25 הראשונות:\n");
+                    for (int i = 0; i < Math.min(25, lines.length); i++) sb.append("   | ").append(lines[i]).append('\n');
+                    SqlStore c = copy(a, mode, "import");
+                    if (c != null)
+                        try {
+                            long dest = c.createList("אבחון-יעד-אמיתי", DbPaths.home(c));
+                            DbMore.Imported im = DbMore.importText(c, dest, t);
+                            sb.append("ייבוא שלו לרשימה ריקה (בעותק): רשימות ").append(im.lists).append(" · חכמות ").append(im.smarts).append(" · קבצים ")
+                                    .append(im.files).append(" · לא הובנו ").append(im.bad).append(" · ביעד: ").append(names(c, dest)).append('\n');
+                        } finally {
+                            c.close();
+                        }
+                    // השורה של הכלי, כמו שהיא מתוכננת (בלי לבצע)
+                    String target = "אבחון";
+                    SqlStore live = SqlStore.openReadOnly(DbScreen.dbFile(a, mode));
+                    try {
+                        for (Store.Member m : live.members(DbPaths.home(live))) if (m.item.type == Store.LIST) { target = m.item.name; break; }
+                    } finally {
+                        live.close();
+                    }
+                    String line = "COPY " + ListCmd.FILE_WORD + " \"" + newest.getAbsolutePath() + "\" " + ListCmd.MANUAL + " \"" + target + "\"";
+                    Batch.Plan p = Batch.plan(line, dir, BatchUi.vars(a, dir), Library.get(a), null);
+                    for (Batch.Step st : p.steps) sb.append("תכנון השורה: ").append(line).append("\n   ← ").append(st.error != null ? "⚠ " + st.error : st.describe).append('\n');
+                }
+            }
+        });
+
+        part(sb, "7. המבנה של האופן \"דוגמאות\" (יצוא לקריאה)", new Part() {
+            @Override public void run(StringBuilder sb) throws Throwable {
+                File f = DbScreen.dbFile(a, DbExamples.MODE);
+                if (!f.isFile()) return;
+                SqlStore s = SqlStore.openReadOnly(f);
+                try {
+                    long home = DbPaths.home(s);
+                    if (home == 0) {
+                        sb.append("אין בית\n");
+                        return;
+                    }
+                    for (String line : DbExport.list(s, home, true, DbExamples.MODE, System.currentTimeMillis()).text.split("\n"))
+                        if (line.startsWith("#") || line.startsWith("@תת-רשימה") || line.startsWith("@קישור") || line.startsWith("@חכמה")) sb.append(line).append('\n');
+                } finally {
+                    s.close();
+                }
+            }
+        });
+
+        part(sb, "8. יומן השגיאות (הסוף)", new Part() {
+            @Override public void run(StringBuilder sb) {
+                String log = Log.read();
+                sb.append(log.length() > 12000 ? log.substring(log.length() - 12000) : log).append('\n');
+            }
+        });
+    }
+
+    /** "הבדיקה הכללית" — כמו מהתפריט (באופן "בדיקות מערכת"), והיומן שלה. */
+    private static void general(final Activity a, final Physical.Progress progress, StringBuilder sb) {
+        part(sb, "9. הבדיקה הכללית", new Part() {
+            @Override public void run(StringBuilder sb) throws Throwable {
+                File f = new File(Modes.dirOf(Words.DbCmd.TEST_MODE), Words.DbCmd.TEST_ALL_FILE + "." + Batch.EXT);
+                if (!f.isFile() || !DbScreen.dbFile(a, Words.DbCmd.TEST_MODE).isFile()) {
+                    sb.append("לא רצה: קודם לפתוח פעם אחת ⋮ ← בדיקות (שם נוצרים קובצי הבדיקה), ואז להריץ שוב את הדוח\n");
+                    return;
+                }
+                Files.writeAtomic(f, DbExamples.asset(a, DbTestMode.ASSET_ALL));     // הנוסח של הגרסה הזו
+                Library lib = Library.get(a);
+                Batch.Plan p = Batch.plan(Files.readUtf8(f), f.getParentFile(), BatchUi.vars(a, f.getParentFile()), lib, null);
+                sb.append("שורות ").append(p.steps.size()).append(" · שגיאות בתכנון ").append(p.errors).append('\n');
+                for (Batch.Step s : p.steps) if (s.error != null) sb.append("   ⚠ ").append(s.label()).append(". ").append(s.error).append(" | ").append(s.text).append('\n');
+                List<String> rep = Batch.run(p, lib, new Physical.DialogAsker(a), progress, Acts.deletedStaysGrey());
+                for (String line : rep) if (!line.startsWith("✅ \"")) sb.append("   ").append(line).append('\n');   // בלי השורות שעברו; הסיכום — נשאר
+            }
+        });
+    }
+}
+
 ===== קובץ: tests/bikoret/Probe.java =====
 package com.tikiyot.vfm;
 
@@ -42176,6 +42910,7 @@ public final class Probe {
         say("13. כפולים לפי גודל: 5 קבצים ריקים בשמות שונים נכנסים לקבוצה אחת (" + bySize.get(0L) + " עותקים של 0B)");
     }
 }
+
 ===== קובץ: tests/bikoret/Probe2.java =====
 package com.tikiyot.vfm;
 
@@ -42208,6 +42943,7 @@ public final class Probe2 {
                 + " · הקובץ הגדול ביותר בין המוצגים=" + has + " · הערה: \"" + res.note + "\"");
     }
 }
+
 ===== קובץ: tests/bikoret/Probe5.java =====
 package com.tikiyot.vfm;
 
@@ -42391,6 +43127,7 @@ public final class Probe5 {
         }
     }
 }
+
 ===== קובץ: tests/bikoret/Probe6.java =====
 package com.tikiyot.vfm;
 
@@ -42497,6 +43234,7 @@ public final class Probe6 {
         say("   MOVE של סל המחזור: " + r2 + " · הסל במקומו=" + new File(root, Index.TRASH).isDirectory());
     }
 }
+
 ===== קובץ: tests/bridge/sqlite_bridge.py =====
 # גשר בדיקה: מריץ פקודות SQL מול SQLite אמיתי של המחשב, בשביל תחליף SQLiteDatabase בבדיקות (tests/stubs).
 # פרוטוקול: שורה לכל בקשה, שדות מופרדים בטאב; סוג בתחילת כל ארגומנט: I=מספר, S=טקסט, N=ריק.
@@ -42588,6 +43326,7 @@ def main():
 
 
 main()
+
 ===== קובץ: tests/com/tikiyot/vfm/ImportTests.java =====
 package com.tikiyot.vfm;
 
@@ -43409,6 +44148,7 @@ final class ImportTests {
     }
 
 }
+
 ===== קובץ: tests/com/tikiyot/vfm/StoreTests.java =====
 package com.tikiyot.vfm;
 
@@ -43642,6 +44382,7 @@ final class StoreTests {
     }
 
 }
+
 ===== קובץ: tests/com/tikiyot/vfm/Tests.java =====
 package com.tikiyot.vfm;
 
@@ -43696,6 +44437,7 @@ public final class Tests {
         run("שליחה למכשיר — רק תוכנות העברה (117)", new Runnable() { public void run() { transferApps(); } });
         run("קובצי פקודות בסגנון bat — המנוע (117א)", new Runnable() { public void run() { batch(); } });
         run("מ0.27: RD /S ואחריו MD ו־COMP — ההדמיה שוכחת מה שהיה בתיקייה", new Runnable() { public void run() { m027(); } });
+        run("מ0.30: RD ואחריו MD לאותה תיקייה; ECHO עם משתנה; רשימה שאינה בבית", new Runnable() { public void run() { m030(); } });
         run("קובצי פקודות — השורה כשדות לטופס (117א, שלב 2)", new Runnable() { public void run() { batchForm(); } });
         run("תיקוני הביקורות השישית והשביעית (118–122, 134, 135, 139)", new Runnable() { public void run() { review7(); } });
         run("תיקוני באגים 123, 124, 137", new Runnable() { public void run() { review7b(); } });
@@ -45293,6 +46035,37 @@ public final class Tests {
         eq("מ0.27: COMP אחרי RD /S — מול תיקייה ריקה: הקובץ רק במקור", 1, p.steps.get(3).files.size());
     }
 
+    private static void m030() {
+        File root = new File(home, "כונן-030");
+        wipe(root);
+        File here = new File(root, "כאן");
+        here.mkdirs();
+        File src = new File(root, "מקור"), work = new File(root, "עבודה");
+        mk(src, "א.txt", 10);
+        mk(work, "ישן.txt", 10);
+        java.util.Map<String, String> vars = Batch.vars(here, root.getAbsolutePath(), null);
+        Batch.Plan p = Batch.plan("RD \"" + work + "\" /S\nMD \"" + work + "\"\nCOPY \"" + src + "/א.txt\" \"" + work + "\"\nECHO כאן: %כאן%", here, vars);
+        eq("מ0.30 (35): RD /S ואחריו MD לאותה תיקייה ו־COPY אליה — בלי שגיאות", 0, p.errors);
+        Batch.Plan bad = Batch.plan("MD \"" + work + "/חדשה\"\nCOPY \"" + root + "/אין-כזה.txt\" \"" + work + "\"", here, vars);
+        check("מ0.30 (47): שגיאה בקובץ — חסום, ושום שורה לא רצה", bad.errors == 1 && bad.blocked()
+                && Batch.run(bad, null, null, null).size() == 2 && !new File(work, "חדשה").exists());
+        Batch.Plan cont = Batch.plan("המשך\nCOPY \"" + root + "/אין-כזה.txt\" \"" + work + "\"", here, vars);
+        Batch.Plan cont1 = Batch.plan("המשך 1\nCOPY \"" + root + "/אין-כזה.txt\" \"" + work + "\"\nCOPY \"" + root + "/אין2.txt\" \"" + work + "\"", here, vars);
+        check("מ0.30 (47): \"המשך\" — לא חסום; \"המשך 1\" עם שתי שגיאות — חסום", cont.errors == 1 && !cont.blocked() && cont1.errors == 2 && cont1.blocked());
+        check("מ0.30 (46): ECHO מחליף משתנים", p.echoes.size() == 1 && p.echoes.get(0).contains(here.getAbsolutePath()));
+        MemStore s = new MemStore(IdCounter.memory());
+        long h = DbPaths.ensureHome(s), a = s.createList("א", h), b = s.createList("ב", h), in = s.createList("פנימית", a);
+        ListCmd.Side side = new ListCmd.Side();
+        side.path = java.util.Collections.singletonList("פנימית");
+        eq("מ0.30 (40): רשימה שאינה בבית — יוצאת מהרשימה שהיא בה", a, DbListCmd.parentOf(s, "x", side, in));
+        s.addMember(b, in);
+        eq("מ0.30 (40): בכמה רשימות ובלי דרך — צריך דרך מלאה", -1L, DbListCmd.parentOf(s, "x", side, in));
+        s.addMember(h, in);
+        eq("מ0.30 (40): גם בבית — מהבית", h, DbListCmd.parentOf(s, "x", side, in));
+        DbListCmd.deleteWhole(s, a);
+        check("מ0.30 (מ20): מחיקת רשימה מכל מקום — נמחקה, ומה שנשאר במקום אחר נשאר", s.item(a) == null && s.item(in) != null);
+    }
+
     private static void batchRun() throws Exception {
         // קריאת שורה, כמו cmd
         eq("117א: מרכאות שומרות רווחים", "[MOVE, %הורדות%\\ספר חדש.pdf, יעד, /Y]",
@@ -45847,7 +46620,7 @@ public final class Tests {
         File dir = new File(src, "src/com/tikiyot/vfm");
         // הקבצים שעברו (131; 1.7.78 — הפעולות בכונן; 1.7.79 — המסכים): כל הודעה מהמילון. מותר רק תחביר ושמות בכונן (מסומנים), ויומן.
         // 185 (1.7.82): כל הקבצים, חוץ מהמילון עצמו. תחביר ושמות בכונן — מסומנים בשורה ("// תחביר", "// בכונן")
-        java.util.Set<String> notYet = new java.util.HashSet<String>(Arrays.asList("Words"));
+        java.util.Set<String> notYet = new java.util.HashSet<String>(Arrays.asList("Words", "Diag"));   // מ0.30: Diag — טקסט של דוח בדיקה (יומן), לא הודעות למסך
         File[] srcs = dir.listFiles();
         List<String> names = new ArrayList<String>();
         if (srcs != null) for (File x : srcs)
@@ -46266,7 +47039,7 @@ public final class Tests {
     /** 1.22.5: ההגדרה האחת — שלמה, תואמת למנוע, וכל פרמטר עם שם והסבר. */
     private static void v1225() {
         check("1.22.5: פקודות הקבצים — אותן ובאותו סדר (מ0.14: ודא)",
-                java.util.Arrays.equals(BatchLine.COMMANDS, new String[]{"COPY", "MOVE", "DEL", "REN", "MD", "RD", "COMP", "LINK", "VERIFY", "MODE", "CALL", "START", "ECHO", "REM"}));
+                java.util.Arrays.equals(BatchLine.COMMANDS, new String[]{"COPY", "MOVE", "DEL", "REN", "MD", "RD", "COMP", "LINK", "VERIFY", "MODE", "CONTINUE", "CALL", "START", "ECHO", "REM"}));
         check("1.22.5: שמות נרדפים", Commands.canonical("MKDIR").equals("MD") && Commands.canonical("rmdir").equals("RD")
                 && Commands.canonical("ERASE").equals("DEL") && Commands.canonical("RENAME").equals("REN")
                 && Commands.canonical("copy").equals("COPY") && Commands.canonical("FORMAT").equals("FORMAT")
@@ -47758,6 +48531,7 @@ public final class Tests {
         return out;
     }
 }
+
 ===== קובץ: tests/stubs/android/database/Cursor.java =====
 package android.database;
 
@@ -47777,6 +48551,7 @@ public interface Cursor {
 
     void close();
 }
+
 ===== קובץ: tests/stubs/android/database/DatabaseErrorHandler.java =====
 package android.database;
 
@@ -47786,6 +48561,7 @@ import android.database.sqlite.SQLiteDatabase;
 public interface DatabaseErrorHandler {
     void onCorruption(SQLiteDatabase dbObj);
 }
+
 ===== קובץ: tests/stubs/android/database/sqlite/SQLiteDatabase.java =====
 package android.database.sqlite;
 
@@ -47998,6 +48774,7 @@ public class SQLiteDatabase {
         @Override public void close() { }
     }
 }
+
 ===== קובץ: tests/stubs/android/database/sqlite/SQLiteDatabaseCorruptException.java =====
 package android.database.sqlite;
 
@@ -48006,6 +48783,7 @@ public class SQLiteDatabaseCorruptException extends SQLiteException {
         super(m);
     }
 }
+
 ===== קובץ: tests/stubs/android/database/sqlite/SQLiteException.java =====
 package android.database.sqlite;
 
@@ -48014,6 +48792,7 @@ public class SQLiteException extends RuntimeException {
         super(m);
     }
 }
+
 ===== קובץ: tests/stubs/android/os/Build.java =====
 package android.os;
 
@@ -48026,6 +48805,7 @@ public class Build {
         public static final int SDK_INT = 30;
     }
 }
+
 ===== קובץ: tests/stubs/android/os/Environment.java =====
 package android.os;
 
@@ -48035,6 +48815,7 @@ public class Environment {
         return new java.io.File(System.getProperty("vfm.home"));
     }
 }
+
 ===== קובץ: lab/AndroidManifest.xml =====
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
@@ -48057,6 +48838,7 @@ public class Environment {
         </activity>
     </application>
 </manifest>
+
 ===== קובץ: lab/build/build.sh =====
 #!/bin/bash
 set -e
@@ -48079,6 +48861,7 @@ aapt dump badging final.apk | grep -E "^package:|application-label:|sdkVersion"
 cp final.apk $OUT
 cd $DIR; rm -rf out gen bld
 ls -la $OUT
+
 ===== קובץ: lab/build/test.sh =====
 #!/bin/bash
 # בדיקות על המחשב: המנוע (Scan) — בלי אנדרואיד. יוצא בכישלון אם בדיקה נכשלה.
@@ -48093,11 +48876,13 @@ java -Dsun.jnu.encoding=UTF-8 -Dfile.encoding=UTF-8 -cp $W DbPlanTest
 R=$?
 rm -rf $W
 exit $R
+
 ===== קובץ: lab/res/values/strings.xml =====
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">מעבדת זירוזים</string>
 </resources>
+
 ===== קובץ: lab/src/com/tikiyot/lab/DbBench.java =====
 package com.tikiyot.lab;
 
@@ -48241,6 +49026,7 @@ final class DbBench {
         }
     }
 }
+
 ===== קובץ: lab/src/com/tikiyot/lab/DbPlan.java =====
 package com.tikiyot.lab;
 
@@ -48313,6 +49099,7 @@ public final class DbPlan {
         return String.format(Locale.US, "×%.1f", (double) ns / base);
     }
 }
+
 ===== קובץ: lab/src/com/tikiyot/lab/Fast.java =====
 package com.tikiyot.lab;
 
@@ -48345,6 +49132,7 @@ final class Fast {
         };
     }
 }
+
 ===== קובץ: lab/src/com/tikiyot/lab/Lab.java =====
 package com.tikiyot.lab;
 
@@ -48983,6 +49771,7 @@ public class Lab extends Activity {
         return (int) (v * getResources().getDisplayMetrics().density);
     }
 }
+
 ===== קובץ: lab/src/com/tikiyot/lab/Scan.java =====
 package com.tikiyot.lab;
 
@@ -49270,6 +50059,7 @@ public final class Scan {
         return String.format(Locale.US, "%.2f", ms / 1000.0);
     }
 }
+
 ===== קובץ: lab/src/com/tikiyot/lab/Store.java =====
 package com.tikiyot.lab;
 
@@ -49387,6 +50177,7 @@ final class Store {
         return r;
     }
 }
+
 ===== קובץ: lab/src/com/tikiyot/lab/Text.java =====
 package com.tikiyot.lab;
 
@@ -49648,6 +50439,7 @@ public final class Text {
                 || before == '(' || before == '[') ? 1 : 2;
     }
 }
+
 ===== קובץ: lab/tests/DbPlanTest.java =====
 import com.tikiyot.lab.DbPlan;
 import java.util.HashSet;
@@ -49687,6 +50479,7 @@ public class DbPlanTest {
         System.exit(bad == 0 ? 0 : 1);
     }
 }
+
 ===== קובץ: lab/tests/ScanTest.java =====
 import com.tikiyot.lab.Scan;
 import java.io.File;

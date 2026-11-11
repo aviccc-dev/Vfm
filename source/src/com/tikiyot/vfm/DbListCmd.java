@@ -203,10 +203,23 @@ final class DbListCmd {
             String what = a.content ? Words.ListCmdW.contentOf(n[0], a.label()) : Words.files(n[0]);
             return Res.ok(Words.DbCmd.removed(what));
         }
-        List<String> up = new ArrayList<String>(a.path.subList(0, a.path.size() - 1));
-        long parent = up.isEmpty() ? DbPaths.home(s) : DbPaths.find(s, mode, up);
+        long parent = parentOf(s, mode, a, id);
+        if (parent == -1) return Res.err(Words.DbCmd.needFullWay(a.label()));
         removeFrom(s, parent, id);
         return Res.ok(Words.DbCmd.removed(Words.ListCmdW.list(a.label())));
+    }
+
+    /**
+     * מ0.30 (ממצא 40): הרשימה שממנה מוציאים את id. נכתבה הדרך — לפיה. שם לבד: הבית, אם היא בו; אחרת הרשימה היחידה
+     * שהיא בתוכה; עומדת לעצמה — 0; בכמה רשימות — ‎-1 (צריך לכתוב את הדרך המלאה).
+     */
+    static long parentOf(Store s, String mode, ListCmd.Side a, long id) {
+        List<String> up = new ArrayList<String>(a.path.subList(0, a.path.size() - 1));
+        if (!up.isEmpty()) return DbPaths.find(s, mode, up);
+        long home = DbPaths.home(s);
+        List<Long> in = s.listsOf(id);
+        if (in.contains(home)) return home;
+        return in.isEmpty() ? 0 : in.size() == 1 ? in.get(0) : -1;
     }
 
     /** רשימה (או חכמה) שלא נשארה באף רשימה — נמחקת, ואיתה מה שהיה רק שלה (רשימות; רעיונות וכותרות — לסל). */
@@ -355,6 +368,18 @@ final class DbListCmd {
             }
         }, true);
         return c;
+    }
+
+    /** מ0.30 (מ20): מחיקת רשימה מכל מקום (מסך המסד) — ואיתה מה שהיה רק שלה, כמו בהסרה; בעסקה אחת. */
+    static void deleteWhole(Store s, final long id) {
+        s.atomic(new Store.Work() {
+            @Override public void run(Store t) {
+                Store.Item it = t.item(id);
+                if (it == null) return;
+                for (Long p : new ArrayList<Long>(t.listsOf(id))) t.removeMember(p, id);
+                dropIfAlone(t, id);
+            }
+        }, true);
     }
 
     /** הסרה מרשימה — בעסקה אחת: יוצא מ-parent; רשימה שלא נשארה באף מקום — נמחקת עם מה שרק שלה; רעיון שהיה רק כאן — לסל. */
@@ -583,8 +608,8 @@ final class DbListCmd {
                         : Words.ListCmdW.contentOf(ids.size(), a.label());
             } else {
                 if (src == dest || s.contains(src, dest)) return Res.err(Words.ListCmdW.INTO_ITSELF);
-                List<String> up = new ArrayList<String>(a.path.subList(0, a.path.size() - 1));
-                from = up.isEmpty() ? DbPaths.home(s) : DbPaths.find(s, mode, up);
+                from = parentOf(s, mode, a, src);
+                if (from == -1) return Res.err(Words.DbCmd.needFullWay(a.label()));
                 ids.add(src);
                 label = Words.ListCmdW.list(a.label());
             }

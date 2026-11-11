@@ -85,6 +85,23 @@ final class Batch {
         final List<String> echoes = new ArrayList<String>();
         File start;
         int errors;
+        /**
+         * מ0.30 (ממצא 47; המשתמש: "צריך לעצור לפני שהוא מריץ משהו, אלא אם כן תהיה פקודה מיוחדת" · "המשך עם מספר. אם אין
+         * מספר אז המשך תמיד"): כמה שורות שגיאה מותרות — 0 בלי השורה "המשך"; "המשך N" — עד N; "המשך" לבד — בלי גבול.
+         */
+        int allowErrors;
+
+        /** יש יותר שורות שגיאה מהמותר — שום שורה לא רצה. */
+        boolean blocked() {
+            return errors > allowErrors;
+        }
+
+        /** שורות השגיאה, לחלון שמסביר למה הקובץ לא רץ. */
+        String errorText() {
+            StringBuilder sb = new StringBuilder();
+            for (Step s : steps) if (s.error != null) sb.append(s.label()).append(". ⚠ ").append(s.error).append("\n     ").append(s.text).append("\n");
+            return sb.toString();
+        }
         /** 203: מה שהוכן לשליחה (עותקים ואריזות בתיקיית השליחה) — נשלח פעם אחת, בסוף. */
         final List<File> shared = new ArrayList<File>();
         File stage;
@@ -167,7 +184,7 @@ final class Batch {
     /** מ0.14: ודא — בדיקה בתוך קובץ פקודות (✅ / ❌), לא עוצרת. */
     static final String VERIFY = "VERIFY";
     /** מ0.15: אופן — מכאן והלאה הפקודות במסד של אופן אחר; CALL — שורות של קובץ אחר במקום השורה. */
-    static final String MODE = "MODE", CALL = "CALL";
+    static final String MODE = "MODE", CALL = "CALL", CONT = "CONTINUE";
     /** מ0.17: קישור — אותה רשימה / אותו פריט גם במקום נוסף (במסד). */
     static final String LINK = "LINK";
     /** מ0.15: עומק מרבי של CALL בתוך CALL. */
@@ -758,6 +775,9 @@ final class Batch {
                 s.describe = Verbs.describe(vc);
                 String doneIn = null;
                 if (s.error == null && DbVerbs.active()) doneIn = DbListCmd.planVerb(s, vc, sim);   // מ0.25: החלק הכותב — בסדר השורות
+                // מ0.30 (ממצא 39): "פתח רשימה / רשימה חכמה" אחרי "אופן X" — נפתחת באופן של הקובץ, לא באופן שפתוח במסך
+                if (s.error == null && doneIn == null && sim.mode != null && Verbs.OPEN.equals(vc.verb) && vc.arg != null && !vc.arg.trim().isEmpty()
+                        && (Verbs.K_LIST.equals(vc.kind) || Verbs.K_SMART.equals(vc.kind))) doneIn = sim.mode;
                 if (s.error != null) plan.errors++;
                 else {
                     plan.open = s.open;
@@ -778,6 +798,7 @@ final class Batch {
             if (cmd.equals("ECHO")) {
                 String rest = line.length() > 4 ? line.substring(4).trim() : "";
                 if (rest.equalsIgnoreCase("OFF") || rest.equalsIgnoreCase("ON")) continue;
+                rest = Verbs.withVars(rest, vars);                               // מ0.30 (ממצא 46): גם ב־ECHO המשתנים מוחלפים
                 plan.echoes.add(rest.startsWith(".") ? rest.substring(1) : rest);
                 s.describe = Words.Cmd.echo(rest);
                 plan.steps.add(s);
@@ -786,6 +807,22 @@ final class Batch {
             if (cmd.equals(CALL)) {                                             // מ0.15: לא נכלל (לא נמצא / מעגל / עומק)
                 s.error = Words.DbCmd.CALL_FAILED;
                 plan.errors++;
+                plan.steps.add(s);
+                continue;
+            }
+            if (cmd.equals(CONT)) {                                             // מ0.30: המשך [N] — הקובץ רץ גם כשיש שורות שגיאה
+                int allow = -1;
+                if (tk.size() == 1) allow = Integer.MAX_VALUE;
+                else if (tk.size() == 2)
+                    try { allow = Integer.parseInt(tk.get(1).trim()); } catch (NumberFormatException e) { allow = -1; }
+                if (allow < 0) {
+                    s.error = Words.DbCmd.CONT_USAGE;
+                    plan.errors++;
+                } else {
+                    plan.allowErrors = allow;
+                    s.noop = true;
+                    s.describe = allow == Integer.MAX_VALUE ? Words.DbCmd.CONT_ALWAYS : Words.DbCmd.contUpTo(allow);
+                }
                 plan.steps.add(s);
                 continue;
             }
@@ -949,6 +986,7 @@ final class Batch {
             s.dest = d;
             s.describe = Words.Cmd.newFolder(Bidi.path(d.getAbsolutePath()));
             sim.dirs.add(d.getAbsolutePath());
+            sim.gone.remove(d.getAbsolutePath());                                // מ0.30 (ממצא 35): RD ואחריו MD לאותה תיקייה — היא קיימת
             for (File up = d.getParentFile(); up != null && !sim.isDir(up); up = up.getParentFile()) {   // מ0.24: כמו mkdirs —
                 sim.dirs.add(up.getAbsolutePath());                                                    // גם התיקיות שמעל
                 sim.gone.remove(up.getAbsolutePath());
@@ -1460,6 +1498,12 @@ final class Batch {
 
     static List<String> run(Plan plan, Library lib, Physical.Asker asker, Physical.Progress progress, boolean grey, Listener listen) {
         List<String> report = new ArrayList<String>(plan.inputs);              // 1.27.0: הקלט — בראש
+        if (plan.blocked()) {                                                    // מ0.30: שגיאה בקובץ — שום שורה לא רצה
+            plan.trouble = true;
+            report.add(Words.DbCmd.notRun(plan.errors));
+            report.add(plan.errorText());
+            return report;
+        }
         Clock clock = new Clock();                                               // 1.25.0: לולאה — עצירה לפי זמן
         long all0 = System.nanoTime();
         Step prev = null;
