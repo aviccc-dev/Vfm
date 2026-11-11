@@ -449,9 +449,6 @@ public class DbScreen extends Activity {
                     @Override public void run() { addMenu(); }
                 }));
             }
-            buttons.addView(button(Words.Db.FULL_CHECK, new Runnable() {
-                @Override public void run() { fullCheck(); }
-            }));
             hint.setText(cur == UNASSIGNED_ID ? Words.Db.UNASSIGNED_HINT : cur == TRASH_ID ? Words.Db.TRASH_HINT : Words.Db.HINT);
             rows.removeAllViews();
             if (path.isEmpty()) {
@@ -1411,9 +1408,6 @@ public class DbScreen extends Activity {
         buttons.addView(button(Words.Db.RESTORE_FROM_BACKUP, new Runnable() {
             @Override public void run() { backupMenu(); }
         }));
-        buttons.addView(button(Words.Db.FULL_CHECK, new Runnable() {
-            @Override public void run() { fullCheck(); }
-        }));
         rows.removeAllViews();
         rows.addView(backupsRow());
     }
@@ -1421,69 +1415,18 @@ public class DbScreen extends Activity {
     // ---------- בדיקה מלאה (מ0.2.2) ----------
 
     /** כל הבדיקות במקום אחד: דוח טקסט אחד, שמועתק ללוח ואפשר לשלוח. */
-    private void fullCheck() {
-        final AlertDialog wait = new AlertDialog.Builder(this).setTitle(Words.Db.FULL_CHECK_TITLE)
-                .setMessage(Words.Db.FULL_CHECK_RUNNING).setCancelable(false).show();
-        new Thread(new Runnable() {
-            @Override
-            public void run() {
-                String text;
-                try {
-                    text = selfTestText(new boolean[1]);                          // מ0.29: הבדיקה העצמית של המסד (ההשוואה לישן — נמחקה איתו)
-                } catch (Throwable t) {
-                    Log.e("DbScreen.fullCheck", t);
-                    text = Words.Db.failed(String.valueOf(t));
-                }
-                deleteAll(new File(getCacheDir(), "mfull"));
-                final String report = text;
-                runOnUiThread(new Runnable() {
-                    @Override
-                    public void run() {
-                        wait.dismiss();
-                        if (!isFinishing()) showReport(report);
-                    }
-                });
-            }
-        }).start();
-    }
-
-    private void showReport(final String report) {
-        copy(report);
-        TextView t = new TextView(this);
-        t.setText(report);
-        t.setTextSize(13);
-        t.setTextColor(Ui.TEXT);
-        t.setTextIsSelectable(true);
-        t.setPadding(Ui.dp(this, 16), Ui.dp(this, 8), Ui.dp(this, 16), Ui.dp(this, 8));
-        ScrollView sc = new ScrollView(this);
-        sc.addView(t);
-        final AlertDialog d = new AlertDialog.Builder(this).setTitle(Words.Db.FULL_CHECK_TITLE).setView(sc)
-                .setPositiveButton(Words.Db.COPY_REPORT, null).setNegativeButton(Words.CLOSE, null).show();
-        d.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(new View.OnClickListener() {
-            @Override public void onClick(View v) { copy(report); }
-        });
-        if (store != null) show();
-        else if (damaged != null) showDamaged();
-    }
-
-    private void copy(String text) {
-        try {
-            android.content.ClipboardManager cm = (android.content.ClipboardManager) getSystemService(CLIPBOARD_SERVICE);
-            cm.setPrimaryClip(android.content.ClipData.newPlainText(Words.Db.FULL_CHECK_TITLE, text));
-            Ui.toast(this, Words.Db.REPORT_COPIED);
-        } catch (Throwable t) {
-            Log.e("DbScreen.copy", t);
-        }
-    }
-
     /** מתי נעשה גיבוי — לתצוגה. */
     static String when(Backups.Entry e) {
         return new java.text.SimpleDateFormat("dd.MM.yyyy HH:mm", java.util.Locale.US).format(new java.util.Date(e.made > 0 ? e.made : e.when));
     }
 
     /** אותן בדיקות שרצות במחשב (StoreContract), על SQLite האמיתי של המכשיר, במסד זמני נפרד. ok[0] — האם עברו. */
-    private String selfTestText(boolean[] ok) {
-        final File dir = new File(getCacheDir(), "mselftest");
+    /**
+     * בדיקת המנוע של המסד מול ה־SQLite של המכשיר — על מסדים זמניים בצד. מ0.36: רצה מדוח האבחון (המשתמש, 11.11.2026, על
+     * הכפתור "בדיקה מלאה": "כך נפטרנו מעוד כפתור שלא משמש בשוטף").
+     */
+    static String selfTestText(android.content.Context c, boolean[] ok) {
+        final File dir = new File(c.getCacheDir(), "mselftest");
         deleteAll(dir);
         dir.mkdirs();
         long t0 = System.currentTimeMillis();

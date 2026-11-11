@@ -47,6 +47,7 @@ final class Diag {
                     report(a, mode, sb);
                     write(out, sb);
                     modes(a, sb);
+                    engine(a, sb);
                     write(out, sb);
                     general(a, busy, sb);                                         // אחרון: אם ייתקע — הדוח שלפניו כבר כתוב
                     write(out, sb);
@@ -468,6 +469,17 @@ final class Diag {
                     }
                 sb.append(ok(Words.DbCmd.TEST_MODE.equals(first) && DbExamples.MODE.equals(second))).append("הראשונה באופן הבדיקות, השנייה ב\"דוגמאות\" — \"ניקוי\" ימחק כל אחת מהאופן שלה\n");
                 sb.append("שגיאות בתכנון: ").append(p.errors).append('\n');
+            }
+        });
+    }
+
+    /** מ0.36: בדיקת המנוע של המסד מול ה־SQLite של המכשיר (מה שהיה הכפתור "בדיקה מלאה" במסך המסד). על מסדים זמניים. */
+    private static void engine(final Activity a, StringBuilder sb) {
+        part(sb, "11. המנוע של המסד מול ה־SQLite של המכשיר (מה שהיה \"בדיקה מלאה\")", new Part() {
+            @Override public void run(StringBuilder sb) {
+                boolean[] ok = {false};
+                String text = DbScreen.selfTestText(a, ok);
+                sb.append(ok(ok[0])).append(text).append('\n');
             }
         });
     }
