@@ -975,7 +975,7 @@ cd $S; rm -rf out gen bld
 ls -la $OUT
 
 ===== קובץ: build/m-version.txt =====
-45 מ0.32
+46 מ0.33
 
 ===== קובץ: build/test.sh =====
 #!/bin/bash
@@ -15324,7 +15324,7 @@ import java.util.List;
 final class DbTestMode {
 
     static final String ASSET = "tests/pkudot-masad.vbat", ASSET_CALL = "tests/pkudot-kalul.vbat", ASSET_LOAD = "tests/omes-masad.vbat",
-            ASSET_ALL = "tests/klali.vbat", ASSET_MODES = "tests/shney-ofanim.vbat", ASSET_BIN = "tests/sal.vbat", ASSET_STRESS = "tests/lachatz.vbat", ASSET_V23 = "tests/gersa-023.vbat",
+            ASSET_ALL = "tests/klali.vbat", ASSET_MODES = "tests/shney-ofanim.vbat", ASSET_STRESS = "tests/lachatz.vbat", ASSET_V23 = "tests/gersa-023.vbat",
             ASSET_V24 = "tests/gersa-024.vbat";
 
     /** בקובץ בדיקת העומס: מוחלף בשם האופן עם המסד הגדול ביותר (הנתונים האמיתיים). */
@@ -15387,13 +15387,11 @@ final class DbTestMode {
             final File stress = new File(dir, Words.DbCmd.TEST_STRESS_FILE + ver + "." + Batch.EXT);
             final File load = new File(dir, Words.DbCmd.TEST_LOAD_FILE + ver + "." + Batch.EXT);
             final File modes = new File(dir, Words.DbCmd.TEST_MODES_FILE + ver + "." + Batch.EXT);   // מ0.32
-            final File bin = new File(dir, Words.DbCmd.TEST_BIN_FILE + ver + "." + Batch.EXT);
             put(a, ASSET_MODES, modes, null);
-            put(a, ASSET_BIN, bin, null);
             put(a, ASSET_ALL, all, null);
             put(a, ASSET_STRESS, stress, null);
             put(a, ASSET_LOAD, load, realMode(a, mode));
-            final List<String> run = java.util.Arrays.asList(all.getAbsolutePath(), modes.getAbsolutePath(), bin.getAbsolutePath(),
+            final List<String> run = java.util.Arrays.asList(all.getAbsolutePath(), modes.getAbsolutePath(),   // מ0.33: בדיקת הסל עברה לדוח האבחון (מקצה לקצה, בלי יד)
                     stress.getAbsolutePath(), load.getAbsolutePath());
             File[] old = dir.listFiles();                                          // מ0.32: קובצי בדיקה של גרסה קודמת — נמחקים מהתיקייה
             if (old != null) for (File x : old) {
@@ -42331,6 +42329,9 @@ final class Diag {
                 try {
                     report(a, mode, sb);
                     write(out, sb);
+                    bin(a, sb);
+                    modes(a, sb);
+                    write(out, sb);
                     general(a, busy, sb);                                         // אחרון: אם ייתקע — הדוח שלפניו כבר כתוב
                     write(out, sb);
                 } catch (Throwable t) {
@@ -42733,6 +42734,107 @@ final class Diag {
             @Override public void run(StringBuilder sb) {
                 String log = Log.read();
                 sb.append(log.length() > 12000 ? log.substring(log.length() - 12000) : log).append('\n');
+            }
+        });
+    }
+
+    /** מ0.33: מה שיש לקובץ במסד של אופן הבדיקות — באילו רשימות, ומה נזכר. */
+    private static String where(Activity a, String path) {
+        SqlStore s = SqlStore.openReadOnly(DbScreen.dbFile(a, Words.DbCmd.TEST_MODE));
+        try {
+            long id = s.findFile(path);
+            if (id == 0) return "אין פריט למסלול הזה";
+            return "פריט " + id + " · ברשימות " + s.listsOf(id) + " · נזכר: " + s.prop(id, Store.P_WAS_IN);
+        } finally {
+            s.close();
+        }
+    }
+
+    /**
+     * מ0.33 (מ8, אחרי שבמכשיר הרשימה נשארה ריקה): מחיקה לסל ושחזור — מקצה לקצה, על קובץ אמיתי ועל המסד האמיתי של אופן
+     * הבדיקות, בדיוק במסלול של המסך (Physical.delete ← Physical.restore). בסוף — מנקה אחרי עצמו.
+     */
+    private static void bin(final Activity a, StringBuilder sb) {
+        part(sb, "10. סל המחזור מקצה לקצה — קובץ שנמחק ושוחזר חוזר לרשימה (באופן \"בדיקות מערכת\")", new Part() {
+            @Override public void run(StringBuilder sb) throws Throwable {
+                final String mode = Words.DbCmd.TEST_MODE;
+                if (!DbScreen.dbFile(a, mode).isFile()) {
+                    sb.append("לא רץ: האופן \"בדיקות מערכת\" עוד לא קיים\n");
+                    return;
+                }
+                File dir = new File(Environment.getExternalStorageDirectory(), "אבחון סל (אפשר למחוק)");
+                dir.mkdirs();
+                final File f = new File(dir, "אבחון-סל-" + System.currentTimeMillis() + ".txt");
+                Files.writeAtomic(f, "אבחון");
+                final String p = f.getAbsolutePath();
+                Library lib = Library.get(a);
+                if (lib.find(p) == null) {
+                    lib.fileAdded(f);
+                    lib.flush(5000);
+                }
+                final String name = "אבחון-סל";
+                final long[] list = {0};
+                DbVerbs.write(a, mode, new DbVerbs.Job() {
+                    @Override public long run(Store s, List<String> path) {
+                        long h = DbPaths.ensureHome(s);
+                        long old = DbPaths.child(s, h, name);
+                        if (old != 0) DbListCmd.removeFrom(s, h, old);
+                        list[0] = s.createList(name, h);
+                        DbFiles.add(s, list[0], Collections.singletonList(p), null, false);
+                        return list[0];
+                    }
+                }, null);
+                sb.append("הרשימה ").append(list[0]).append(" · לפני: ").append(where(a, p)).append('\n');
+                boolean grey = Acts.deletedStaysGrey();
+                sb.append("ההגדרה \"קובץ שנמחק\": ").append(grey ? "נשאר באפור (אז אין מה לבדוק)" : "יוצא מהרשימות").append('\n');
+                Physical.Result d = Physical.delete(lib, Collections.singletonList(p), new ArrayList<String>(), grey);
+                sb.append("מחיקה: בוצעו ").append(d.done.size()).append(" · נכשלו ").append(d.failed).append(" · יצאו מרשימות ").append(d.lists)
+                        .append(" · בסל: ").append(d.to.get(p)).append('\n');
+                String after = where(a, p);
+                sb.append("אחרי המחיקה: ").append(after).append('\n');
+                Trash.Item it = null;
+                for (Trash.Item x : Trash.list(lib)) if (p.equals(x.original)) it = x;
+                if (it == null) {
+                    sb.append("❌ הקובץ לא נמצא בסל לפי המקום המקורי. בסל:\n");
+                    for (Trash.Item x : Trash.list(lib)) if (x.original != null && x.original.contains("אבחון")) sb.append("   · ").append(x.original).append(" ← ").append(x.path()).append('\n');
+                    return;
+                }
+                sb.append("בסל: ").append(it.path()).append(" · המקום המקורי: ").append(it.original).append('\n');
+                Physical.Result r = Physical.restore(lib, Collections.singletonList(it));
+                sb.append("שחזור: בוצעו ").append(r.done.size()).append(" · נכשלו ").append(r.failed).append(" · אל: ").append(r.to.get(it.path())).append('\n');
+                String back = where(a, p);
+                sb.append("אחרי השחזור: ").append(back).append('\n');
+                sb.append(ok(back.contains("[" + list[0] + "]"))).append("הקובץ חזר לרשימה\n");
+                DbVerbs.write(a, mode, new DbVerbs.Job() {                       // ניקוי
+                    @Override public long run(Store s, List<String> path) {
+                        DbListCmd.removeFrom(s, DbPaths.home(s), list[0]);
+                        return 0;
+                    }
+                }, null);
+                f.delete();
+                lib.fileRemoved(p);
+                dir.delete();
+            }
+        });
+    }
+
+    /** מ0.33 (ממצא 38): באיזה אופן ההרצה רושמת כל רשימה שנוצרת בקובץ עם שני "אופן" — מה ש"ניקוי" ישתמש בו. בלי לבצע. */
+    private static void modes(final Activity a, StringBuilder sb) {
+        part(sb, "11. קובץ עם שני אופנים — לאיזה אופן שייכת כל רשימה שנוצרת (תכנון בלבד)", new Part() {
+            @Override public void run(StringBuilder sb) throws Throwable {
+                String text = DbExamples.asset(a, DbTestMode.ASSET_MODES);
+                File dir = Modes.dirOf(Words.DbCmd.TEST_MODE);
+                Batch.Plan p = Batch.plan(text, dir, BatchUi.vars(a, dir), Library.get(a), null);
+                String first = null, second = null;
+                for (Batch.Step s : p.steps)
+                    if (s.listPath != null && "MD".equals(s.cmd)) {
+                        String m = p.modeOf(s);
+                        sb.append("   ").append(s.listPath).append(" ← אופן \"").append(m).append("\"").append(s.error != null ? " ⚠ " + s.error : "").append('\n');
+                        if (first == null) first = m;
+                        else second = m;
+                    }
+                sb.append(ok(Words.DbCmd.TEST_MODE.equals(first) && DbExamples.MODE.equals(second))).append("הראשונה באופן הבדיקות, השנייה ב\"דוגמאות\" — \"ניקוי\" ימחק כל אחת מהאופן שלה\n");
+                sb.append("שגיאות בתכנון: ").append(p.errors).append('\n');
             }
         });
     }
