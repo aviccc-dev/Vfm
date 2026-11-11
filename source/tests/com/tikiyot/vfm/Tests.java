@@ -1674,6 +1674,16 @@ public final class Tests {
             Files.writeAtomic(p2, "<meta name=\"vfm-lab\" content=\"עורך\"><meta name=\"vfm-lab-version\" content=\"2\">שתיים");
             Files.writeAtomic(new File(dl, "אחר.html"), "x");
             check("מ0.38: \"הוסף מעבדה\" בלי קובץ — החדש ביותר בהורדות שמתחיל ב\"מעבדה\"", Lab.newest(dl).getName().equals(p2.getName()));
+            File sub = new File(dl, "Claude");
+            sub.mkdirs();
+            File p3 = new File(sub, "lab-page (3).html");                         // מ0.39: שם אחר, בתיקייה פנימה — לפי ה־meta
+            Files.writeAtomic(p3, "<meta name=\"vfm-lab\" content=\"עורך\"><meta name=\"vfm-lab-version\" content=\"3\">");
+            p3.setLastModified(System.currentTimeMillis() + 60000);
+            File junk = new File(dl, "אחר2.html");
+            Files.writeAtomic(junk, "<p>");
+            junk.setLastModified(System.currentTimeMillis() + 120000);
+            check("מ0.39: בלי קובץ — עמוד המעבדה החדש ביותר לפי ה־meta, גם בשם אחר ובתיקייה פנימה; html אחר — לא", Lab.newest(dl).equals(p3));
+            p3.delete();
             Lab.add(root, p1);
             Lab.add(root, p2);
             eq("מ0.38: שתי גרסאות, לפי הסדר", "[1, 2]", Lab.versions(root, "עורך").toString());

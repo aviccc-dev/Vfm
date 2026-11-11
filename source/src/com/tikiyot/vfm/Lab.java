@@ -56,6 +56,7 @@ final class Lab {
         String exp = meta(html, META), ver = meta(html, META_VERSION);
         String base = fileName == null ? "" : fileName;
         if (base.toLowerCase(Locale.ROOT).endsWith(EXT)) base = base.substring(0, base.length() - EXT.length());
+        else if (base.toLowerCase(Locale.ROOT).endsWith(".htm")) base = base.substring(0, base.length() - 4);
         base = base.replaceAll("\\s*\\(\\d+\\)$", "").trim();                       // "(1)" שהדפדפן מוסיף בהורדה חוזרת
         if (base.startsWith(PREFIX)) base = base.substring(PREFIX.length()).replaceAll("^[\\s_-]+", "");
         if (exp == null || exp.isEmpty()) {
@@ -134,7 +135,7 @@ final class Lab {
     /** מוסיף גרסה (ואותה גרסה שוב — מחליפה), והיא נעשית הפעילה. מחזיר {ניסוי, גרסה}, או זורק עם ההודעה. */
     static String[] add(File root, File src) throws Exception {
         if (src == null || !src.isFile()) throw new Exception(Words.Lab.NO_FILE);
-        if (!src.getName().toLowerCase(Locale.ROOT).endsWith(EXT)) throw new Exception(Words.Lab.NOT_HTML);
+        if (!isHtml(src.getName())) throw new Exception(Words.Lab.NOT_HTML);
         if (src.length() > MAX) throw new Exception(Words.Lab.TOO_BIG);
         String html = Files.readUtf8(src);
         String[] nv = nameOf(html, src.getName());
@@ -147,15 +148,47 @@ final class Lab {
         return nv;
     }
 
-    /** "הוסף מעבדה" בלי קובץ: הקובץ החדש ביותר בהורדות ששמו מתחיל ב"מעבדה" ונגמר ב־html. */
+    /**
+     * "הוסף מעבדה" בלי קובץ: עמוד המעבדה החדש ביותר בהורדות (וגם בתיקייה אחת פנימה) — לפי מה שכתוב בו (meta), לא לפי השם:
+     * מ0.39 — המשתמש: "תראה איזה באג… אין בהורדות קובץ ששמו מתחיל ב'מעבדה'" (השם שההורדה נתנה לקובץ — לא בידינו).
+     */
     static File newest(File downloads) {
+        List<File> all = new ArrayList<File>();
+        collect(downloads, 0, all);
         File best = null;
-        File[] fs = downloads == null ? null : downloads.listFiles();
-        if (fs != null)
-            for (File f : fs)
-                if (f.isFile() && f.getName().startsWith(PREFIX) && f.getName().toLowerCase(Locale.ROOT).endsWith(EXT)
-                        && (best == null || f.lastModified() > best.lastModified())) best = f;
+        for (File f : all)
+            if ((best == null || f.lastModified() > best.lastModified()) && (f.getName().startsWith(PREFIX) || isPage(f))) best = f;
         return best;
+    }
+
+    private static void collect(File d, int depth, List<File> out) {
+        File[] fs = d == null ? null : d.listFiles();
+        if (fs == null) return;
+        for (File f : fs) {
+            if (f.isDirectory()) { if (depth < 1 && !f.getName().startsWith(".")) collect(f, depth + 1, out); }
+            else if (isHtml(f.getName())) out.add(f);
+        }
+    }
+
+    static boolean isHtml(String name) {
+        String n = name.toLowerCase(Locale.ROOT);
+        return n.endsWith(EXT) || n.endsWith(".htm");
+    }
+
+    /** עמוד מעבדה — יש בו meta name="vfm-lab" (בתחילת הקובץ). */
+    static boolean isPage(File f) {
+        if (f.length() > MAX) return false;
+        java.io.InputStream in = null;
+        try {
+            in = new java.io.FileInputStream(f);
+            byte[] b = new byte[8192];
+            int n = in.read(b);
+            return n > 0 && new String(b, 0, n, "UTF-8").contains(META + "\"");
+        } catch (Throwable t) {
+            return false;
+        } finally {
+            if (in != null) try { in.close(); } catch (Throwable ignored) { }
+        }
     }
 
     // ---------- הפקודות ----------
