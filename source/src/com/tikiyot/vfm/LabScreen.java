@@ -38,6 +38,8 @@ import java.util.Map;
 public final class LabScreen extends Activity {
 
     static final String EXTRA = "exp";
+    /** תשובת saveCommandFile כשיש כבר קובץ — העמוד שואל: להחליף או שם אחר. */
+    static final String EXISTS = "exists";
     private static final String PREFS = "lab";
 
     private String exp;
@@ -356,24 +358,74 @@ public final class LabScreen extends Activity {
             }
         }
 
-        /** כתיבה — רק קובץ פקודות, בתיקיית הפקודות שלי. "" — נשמר; אחרת השגיאה. */
+        /**
+         * מ0.40: קובצי הפקודות כמו ב"הפקודות שלי" שבתפריט (מהמסד — גם מאופן אחר, כמו התפריט), ועוד מה שבתיקיית
+         * הקיצורים: [{name, path, time}]. (commandFiles — רק התיקייה; ככה עמוד המעבדה לא ראה את הפקודות של המשתמש.)
+         */
         @JavascriptInterface
-        public String writeCommandFile(String name, String text) {
+        public String myCommands() {
+            JSONArray a = new JSONArray();
+            java.util.Set<String> seen = new java.util.HashSet<String>();
             try {
-                String n = Lab.safe(new File(name == null ? "" : name).getName());
-                if (n.isEmpty()) return Words.Lab.ONLY_COMMANDS;
-                if (!Batch.isBatch(n)) n = n + "." + Batch.EXT;
-                File dir = Shortcuts.dir();
-                if (!dir.isDirectory()) dir.mkdirs();
-                File f = new File(dir, n);
+                String mode = DbListScreen.currentMode;
+                for (int pass = 0; pass < 2; pass++) {
+                    String m = pass == 0 ? mode : DbCmdMenu.otherMode(LabScreen.this, mode, Reserved.MINE_PATH);
+                    if (m == null || !DbScreen.dbFile(LabScreen.this, m).isFile()) continue;
+                    SqlStore s = SqlStore.openReadOnly(DbScreen.dbFile(LabScreen.this, m));
+                    try {
+                        long id = DbPaths.find(s, m, Reserved.MINE_PATH);
+                        if (id == 0) continue;
+                        for (DbMore.Entry en : DbMore.menu(s, id))
+                            if (en.kind == DbMore.E_FILE && new File(en.path).isFile() && seen.add(en.path)) a.put(entry(new File(en.path)));
+                        break;
+                    } finally {
+                        s.close();
+                    }
+                }
+                for (File f : Shortcuts.mine()) if (seen.add(f.getAbsolutePath())) a.put(entry(f));
+            } catch (Throwable t) {
+                Log.e("Lab.myCommands", t);
+            }
+            return a.toString();
+        }
+
+        /**
+         * מ0.40 — שמירת קובץ פקודות. path — הקובץ שנפתח (גם מחוץ לתיקיית הקיצורים), או שם — קובץ חדש בתיקיית הקיצורים
+         * (ונכנס ל"הפקודות שלי"). קובץ שכבר קיים — רק עם replace; בלי — חוזר "קיים", והעמוד שואל. המשתמש: "שתודיע שיש קובץ
+         * בשם הזה, ואני אחליט אם למחוק או לשנות שם." "" — נשמר; אחרת השגיאה.
+         */
+        @JavascriptInterface
+        public String saveCommandFile(String pathOrName, String text, boolean replace) {
+            try {
+                String raw = pathOrName == null ? "" : pathOrName.trim();
+                File f;
+                if (raw.startsWith("/")) f = new File(raw);
+                else {
+                    String n = Lab.safe(new File(raw).getName());
+                    if (n.isEmpty()) return Words.Lab.ONLY_COMMANDS;
+                    if (!Batch.isBatch(n)) n = n + "." + Batch.EXT;
+                    f = new File(Shortcuts.dir(), n);
+                }
+                if (!Batch.isBatch(f.getName())) return Words.Lab.ONLY_COMMANDS;
                 boolean was = f.isFile();
+                if (was && !replace) return EXISTS;
                 Files.writeAtomic(f, text == null ? "" : text);
-                if (!was) Library.get(LabScreen.this).fileAdded(f);
+                if (!was) {
+                    Library.get(LabScreen.this).fileAdded(f);
+                    Reserved.addToMine(f);
+                }
                 return "";
             } catch (Throwable t) {
-                Log.e("Lab.writeCommandFile", t);
+                Log.e("Lab.saveCommandFile", t);
                 return Words.Db.failed(String.valueOf(t.getMessage()));
             }
+        }
+
+        /** הישנה (עמודים עד "עורך 3"): בלי להחליף קובץ קיים — כמו saveCommandFile בלי replace. */
+        @JavascriptInterface
+        public String writeCommandFile(String name, String text) {
+            String r = saveCommandFile(name, text, false);
+            return EXISTS.equals(r) ? Words.Lab.EXISTS_OLD : r;
         }
 
         /** הרצה דרך ההרצה הרגילה — תצוגה מקדימה ואישור, כמו כל קובץ פקודות. */
@@ -494,6 +546,14 @@ public final class LabScreen extends Activity {
                 @Override public void run() { finish(); }
             });
         }
+    }
+
+    private static JSONObject entry(File f) throws org.json.JSONException {
+        JSONObject o = new JSONObject();
+        o.put("name", f.getName());
+        o.put("path", f.getAbsolutePath());
+        o.put("time", f.lastModified());
+        return o;
     }
 
     private static String hex(int c) {

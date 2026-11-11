@@ -3126,7 +3126,7 @@ public final class Words {
                 SWITCH_USAGE = "החלף מעבדה \"<ניסוי>\" \"<גרסה>\"",
                 TITLE = "🧪 מעבדה", EMPTY = "אין עדיין ניסויים. מורידים עמוד מעבדה להורדות, ומריצים את הפקודה: הוסף מעבדה",
                 VERSIONS = "גרסאות", NOT_FOUND = "אין במעבדה ניסוי בשם הזה", ONLY_COMMANDS = "המעבדה כותבת רק קובצי פקודות",
-                NO_FILES_HERE = "אין כאן קבצים", PICK_FILE = "בחירת קובץ", RUN_FILE = "הרצה מהמעבדה";
+                NO_FILES_HERE = "אין כאן קבצים", EXISTS_OLD = "יש כבר קובץ בשם הזה — לא נשמר. בגרסה הבאה של העמוד: להחליף, או שם אחר", PICK_FILE = "בחירת קובץ", RUN_FILE = "הרצה מהמעבדה";
         public static String noVersion(String exp, String ver) { return "בניסוי \"" + exp + "\" אין גרסה \"" + ver + "\""; }
         public static String noExperiment(String exp) { return "אין במעבדה ניסוי \"" + exp + "\""; }
         public static String addWill(String file) { return "יוסיף למעבדה את " + file; }
