@@ -386,7 +386,9 @@ public final class LabScreen extends Activity {
                         File dir = new File(getCacheDir(), "lab");
                         dir.mkdirs();
                         File f = new File(dir, Words.Lab.RUN_FILE + "." + Batch.EXT);
-                        Files.writeAtomic(f, text == null ? "" : text);
+                        // מ0.40 — המשתמש: "למה ההעברה בוצעה בפועל? הרי זה אמור לעבוד רק בכאילו." מהמעבדה — תמיד הדמיה:
+                        // שורת "הדמיה" בראש, ומסך ההרצה מראה מה היה קורה, בלי כפתור הרצה. שום דבר בכונן או במסד לא משתנה.
+                        Files.writeAtomic(f, Batch.AS_IF2 + "\n" + (text == null ? "" : text));
                         // מ0.39: תמיד במסך ההרצה — תצוגה מקדימה, אישור, ודוח (בהרצה הרגילה, בלי "בדיקה", זה רץ מיד ונראית רק
                         // הודעה קצרה; המשתמש: "איפה רואים את התוצאה של הפעולה?")
                         RunScreen.start(LabScreen.this, f);
