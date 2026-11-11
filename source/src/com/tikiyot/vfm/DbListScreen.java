@@ -708,10 +708,6 @@ public class DbListScreen extends ListScreen<Store.Member> {
         });
     }
 
-    /** כל הפעולות — במסך המסד, באותה רשימה. */
-    private void actions() {
-        startActivity(new Intent(this, DbScreen.class).putExtra(DbScreen.EXTRA_MODE, mode).putExtra(DbScreen.EXTRA_AT, listId));
-    }
 
     /** מ0.11.1: התפריט — כמו בבית הישן (פקודות, הגדרות, עיצוב), ועוד: מסך המסד, והצד הישן. */
     @Override
@@ -720,7 +716,7 @@ public class DbListScreen extends ListScreen<Store.Member> {
         menu.add(0, MENU_SETTINGS, 0, Words.Main.SETTINGS);
         menu.add(0, MENU_DESIGN, 0, Words.DesignW.MENU);
         // מ0.35 (המשתמש, 11.11.2026, על הגיבויים: "בינתיים שתעבור להגדרות. היא לא צריכה להיות במקום כזה מרכזי") — הכניסה בהגדרות
-        menu.add(0, MENU_DB, 0, Words.Db.MENU_ACTIONS);
+        // מ0.37: "⚙ מסד" ירדה מהתפריט — במסך המסד נשארו רק הגיבויים, והכניסה אליהם מההגדרות
         menu.add(0, MENU_TESTS, 0, Words.DbCmd.MENU_TESTS);
         menu.add(0, MENU_DIAG, 0, Words.DbCmd.MENU_DIAG);                     // מ0.30
         // מ0.25: "↩ הצד הישן" יצא — מחיקת המנוע הישן, שלב 1: אין עוד דרך אליו מבניית מ.
@@ -728,8 +724,7 @@ public class DbListScreen extends ListScreen<Store.Member> {
 
     @Override
     protected boolean item(int id) {
-        if (id == MENU_DB) actions();
-        else if (id == MENU_CMDS) CmdMenu.show(this, null);
+        if (id == MENU_CMDS) CmdMenu.show(this, null);
         else if (id == MENU_SETTINGS) startActivity(new Intent(this, SettingsScreen.class));
         else if (id == MENU_DESIGN) design();
         else if (id == MENU_TESTS) DbTestMode.open(this);

@@ -2762,6 +2762,7 @@ public final class Words {
                     + ". לשחזר ממנו? לפני ההחלפה יוצג מה יש בו.";
         }
         public static final String FULL_CHECK_TITLE = "בדיקה מלאה";
+        public static final String BACK_TO_LIST = "↩ חזרה לרשימה", ADDING_FILES = "הוספת קבצים לרשימה. אחרי הבחירה — חוזרים אליה.";
         public static final String FULL_CHECK_RUNNING = "מריץ בדיקה מלאה — בודק את המסד, ומעתיק כל אופן למסד זמני ומשווה למקור. כמה שניות…";
         public static final String COPY_REPORT = "📋 העתקה";
         public static final String REPORT_COPIED = "הדוח הועתק. הדביקו אותו לי בשיחה.";
