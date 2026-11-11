@@ -825,7 +825,7 @@ COPY ידנית "בדיקת מ0.37" קובץ "%פנימי%\בדיקת מ0.37 (א
 ודא "%פנימי%\בדיקת מ0.37 (אפשר למחוק)\יצוא.txt" מכיל "כותרת לבדיקה"
 RD "%פנימי%\בדיקת מ0.37 (אפשר למחוק)" /S
 ודא "%פנימי%\בדיקת מ0.37 (אפשר למחוק)" חסר
-:: הפקודות בעברית (מ0.38) — צור תיקייה, העתק, שנה, העבר, השווה, מחק, מחק תיקייה, /עמוק
+:: הפקודות בעברית (מ0.38) — צור תיקייה, העתק (/עמוק — גם תת־תיקייה שנוצרה בקובץ), שנה, העבר, מחק, מחק תיקייה
 צור תיקייה "%פנימי%\בדיקת מ0.38 (אפשר למחוק)\מקור\תת"
 צור תיקייה "%פנימי%\בדיקת מ0.38 (אפשר למחוק)\יעד"
 כתוב "%פנימי%\בדיקת מ0.38 (אפשר למחוק)\מקור\א.txt" "אחת"
@@ -835,7 +835,6 @@ RD "%פנימי%\בדיקת מ0.37 (אפשר למחוק)" /S
 שנה "%פנימי%\בדיקת מ0.38 (אפשר למחוק)\יעד\א.txt" "חדש.txt"
 העבר "%פנימי%\בדיקת מ0.38 (אפשר למחוק)\יעד\חדש.txt" "%פנימי%\בדיקת מ0.38 (אפשר למחוק)\מקור"
 ודא "%פנימי%\בדיקת מ0.38 (אפשר למחוק)\מקור\חדש.txt" קיים
-השווה "%פנימי%\בדיקת מ0.38 (אפשר למחוק)\מקור" "%פנימי%\בדיקת מ0.38 (אפשר למחוק)\יעד"
 מחק "%פנימי%\בדיקת מ0.38 (אפשר למחוק)\מקור\חדש.txt"
 ודא "%פנימי%\בדיקת מ0.38 (אפשר למחוק)\מקור\חדש.txt" חסר
 מחק תיקייה "%פנימי%\בדיקת מ0.38 (אפשר למחוק)" /עמוק
@@ -1029,7 +1028,7 @@ cd $S; rm -rf out gen bld
 ls -la $OUT
 
 ===== קובץ: build/m-version.txt =====
-51 מ0.38
+52 מ0.39
 
 ===== קובץ: build/test.sh =====
 #!/bin/bash
@@ -4146,6 +4145,17 @@ final class Batch {
         }
 
         /** מ0.32 (ממצא 44): יש בתיקייה תת־תיקייה — לפי ההדמיה (מה ששורות קודמות מחקו או יצרו), לא רק לפי הכונן. */
+        /** מ0.38: התיקיות שבתוך d — בכונן, ומה ששורות קודמות יצרו; בלי מה שנמחק. לפי השם. */
+        List<File> subdirs(File d) {
+            java.util.TreeMap<String, File> out = new java.util.TreeMap<String, File>();
+            String dp = d.getAbsolutePath();
+            File[] k = underWiped(dp) ? null : d.listFiles();
+            if (k != null) for (File x : k) if (x.isDirectory() && !gone.contains(x.getAbsolutePath())) out.put(x.getName(), x);
+            String in = dp + "/";
+            for (String x : dirs) if (x.startsWith(in) && x.indexOf('/', in.length()) < 0 && !gone.contains(x)) out.put(x.substring(in.length()), new File(x));
+            return new ArrayList<File>(out.values());
+        }
+
         boolean hasSubdirs(File d) {
             String in = d.getAbsolutePath() + "/";
             for (String x : dirs) if (x.startsWith(in) && x.indexOf('/', in.length()) < 0) return true;
@@ -4917,14 +4927,10 @@ final class Batch {
             s.total++;
             if (flt.ok(sim.real(x))) s.files.add(x.getAbsolutePath());
         }
-        File[] kids = dir.listFiles();
-        if (kids != null) {
-            java.util.Arrays.sort(kids);
-            for (File k : kids) {
-                if (!k.isDirectory() || !visible(s, k) || sim.gone.contains(k.getAbsolutePath())) continue;
-                any = true;
-                walk(s, k, mask, flt, sim, empties, false);
-            }
+        for (File k : sim.subdirs(dir)) {                                   // מ0.38 (הבדיקה הכללית): גם תיקייה ששורה קודמת יצרה
+            if (!visible(s, k)) continue;
+            any = true;
+            walk(s, k, mask, flt, sim, empties, false);
         }
         if (!any && !top && empties) s.dirs.add(dir.getAbsolutePath());
         return any;
@@ -11663,7 +11669,8 @@ final class DbListCmd {
     static MemStore copyOf(Store src) {
         final MemStore m = new MemStore(IdCounter.memory());
         final Map<Long, Long> id = new HashMap<Long, Long>();
-        for (Store.Item it : src.lists()) id.put(it.id, m.createList(it.name, 0));
+        List<Store.Item> lists = src.lists();                                // מ0.38: פעם אחת — המסד יכול להשתנות בזמן ההעתקה
+        for (Store.Item it : lists) id.put(it.id, m.createList(it.name, 0));
         for (Store.Item it : src.smarts()) id.put(it.id, m.createSmart(it.name, 0));
         for (Map.Entry<Long, Long> e : id.entrySet()) {
             for (String k : ALL_PROPS) {
@@ -11673,24 +11680,40 @@ final class DbListCmd {
             String o = src.origin(e.getKey());
             if (o != null && !o.isEmpty()) m.setOrigin(e.getValue(), o);
         }
-        for (Store.Item it : src.lists())
-            for (Store.Member mb : src.members(it.id)) {
+        for (Store.Item it : lists) {
+            List<Store.Member> ms;
+            try {
+                ms = src.members(it.id);
+            } catch (Store.Failure f) {                                        // מ0.38 (דוח האבחון): נמחקה תוך כדי — מדלגים
+                continue;
+            }
+            for (Store.Member mb : ms) {
                 long into = id.get(it.id);
                 Store.Item x = mb.item;
                 if (x.type == Store.NOTE) m.addNote(into, x.name);
                 else if (x.type == Store.TITLE) m.addTitle(into, x.name);
                 else {
                     Long to = id.get(x.id);
-                    if (to == null && x.type == Store.FILE) id.put(x.id, to = fileOf(src, m, x.id));
+                    if (to == null && x.type == Store.FILE) {
+                        long fid = fileOf(src, m, x.id);
+                        if (fid != 0) id.put(x.id, to = fid);
+                    }
                     if (to != null) m.addMember(into, to);
                 }
             }
+        }
         for (Store.Item it : src.unassigned()) if (it.type == Store.FILE && !id.containsKey(it.id)) fileOf(src, m, it.id);
         return m;
     }
 
     private static long fileOf(Store src, MemStore m, long item) {
-        Store.FileInfo fi = src.file(item);
+        Store.FileInfo fi;
+        try {
+            fi = src.file(item);
+        } catch (Store.Failure f) {
+            return 0;                                                         // מ0.38: נמחק תוך כדי ההעתקה
+        }
+        if (fi == null) return 0;
         long had = m.findFile(fi.path);
         return had != 0 ? had : m.createFile(fi);
     }
@@ -41940,8 +41963,8 @@ public final class Words {
     public static final class Lab {
         public static final String UNNAMED = "ניסוי", NO_FILE = "אין קובץ כזה", NOT_HTML = "זה לא עמוד מעבדה (צריך קובץ html)",
                 TOO_BIG = "הקובץ גדול מדי למעבדה (עד 5MB)", NO_DIR = "לא נוצרה תיקיית המעבדה",
-                ADD_USAGE = "הוסף מעבדה — או: הוסף מעבדה \"<קובץ html>\". בלי קובץ: החדש ביותר בהורדות ששמו מתחיל ב\"מעבדה\"",
-                NONE_IN_DOWNLOADS = "אין בהורדות קובץ ששמו מתחיל ב\"מעבדה\" ונגמר ב־html",
+                ADD_USAGE = "הוסף מעבדה — או: הוסף מעבדה \"<קובץ html>\". בלי קובץ: עמוד המעבדה החדש ביותר בהורדות",
+                NONE_IN_DOWNLOADS = "אין בהורדות עמוד מעבדה (קובץ html שהוכן למעבדה). אפשר גם: הוסף מעבדה \"<הקובץ>\"",
                 SWITCH_USAGE = "החלף מעבדה \"<ניסוי>\" \"<גרסה>\"",
                 TITLE = "🧪 מעבדה", EMPTY = "אין עדיין ניסויים. מורידים עמוד מעבדה להורדות, ומריצים את הפקודה: הוסף מעבדה",
                 VERSIONS = "גרסאות", NOT_FOUND = "אין במעבדה ניסוי בשם הזה", ONLY_COMMANDS = "המעבדה כותבת רק קובצי פקודות",
@@ -46206,6 +46229,16 @@ public final class Tests {
             Files.writeAtomic(p2, "<meta name=\"vfm-lab\" content=\"עורך\"><meta name=\"vfm-lab-version\" content=\"2\">שתיים");
             Files.writeAtomic(new File(dl, "אחר.html"), "x");
             check("מ0.38: \"הוסף מעבדה\" בלי קובץ — החדש ביותר בהורדות שמתחיל ב\"מעבדה\"", Lab.newest(dl).getName().equals(p2.getName()));
+            File sub = new File(dl, "Claude");
+            sub.mkdirs();
+            File p3 = new File(sub, "lab-page (3).html");                         // מ0.39: שם אחר, בתיקייה פנימה — לפי ה־meta
+            Files.writeAtomic(p3, "<meta name=\"vfm-lab\" content=\"עורך\"><meta name=\"vfm-lab-version\" content=\"3\">");
+            p3.setLastModified(System.currentTimeMillis() + 60000);
+            File junk = new File(dl, "אחר2.html");
+            Files.writeAtomic(junk, "<p>");
+            junk.setLastModified(System.currentTimeMillis() + 120000);
+            check("מ0.39: בלי קובץ — עמוד המעבדה החדש ביותר לפי ה־meta, גם בשם אחר ובתיקייה פנימה; html אחר — לא", Lab.newest(dl).equals(p3));
+            p3.delete();
             Lab.add(root, p1);
             Lab.add(root, p2);
             eq("מ0.38: שתי גרסאות, לפי הסדר", "[1, 2]", Lab.versions(root, "עורך").toString());
@@ -46245,6 +46278,17 @@ public final class Tests {
                     + "המתן 1\nרענן עמוק\nהודעה סוף\n"
                     + "מחק תיקייה \"%כאן%\\יעד\\חדשה\" /עמוק\n", w, wv);
             eq("מ0.38: שורות שעמוד המעבדה כותב — בלי שגיאות במנוע", 0, lp.errors);
+            File yd = new File(w, "כרטיס-י"), dd = new File(w, "הורדות-י");      // קובץ ההחזרה שנשלח למשתמש (12.11.2026) — מתוכנן בלי שגיאה
+            mk(new File(yd, "YMusic"), "מעבדה עורך 1.html", 5);
+            dd.mkdirs();
+            java.util.Map<String, String> yv = Batch.vars(w, w.getAbsolutePath(), yd.getAbsolutePath());
+            yv.put(Batch.V_DOWNLOADS, dd.getAbsolutePath());
+            Batch.Plan yp = Batch.plan("בדיקה\nהעבר \"%כרטיס%\\YMusic\" \"%הורדות%\" /עמוק /תאריך:יום /תפוס:לשאול\n", w, yv);
+            check("מ0.39: קובץ ההחזרה להורדות — בלי שגיאה, וקובץ אחד", yp.errors == 0 && yp.steps.get(yp.steps.size() - 1).files.size() == 1);
+            Batch.Plan kp = Batch.plan("צור תיקייה \"%כאן%\\ק\\תת\"\nכתוב \"%כאן%\\ק\\תת\\ב.txt\" \"x\"\nכתוב \"%כאן%\\ק\\א.txt\" \"y\"\n"
+                    + "העתק \"%כאן%\\ק\" \"%כאן%\\ע\" /עמוק\n", w, wv);
+            Batch.Step ks = kp.steps.get(kp.steps.size() - 1);
+            check("מ0.38 (הבדיקה הכללית במכשיר): /עמוק רואה גם תת־תיקייה ששורה קודמת יצרה", kp.errors == 0 && ks.files.size() == 2);
         } catch (Exception e) {
             check("מ0.38: המעבדה — " + e, false);
         }
@@ -50943,6 +50987,7 @@ final class Lab {
         String exp = meta(html, META), ver = meta(html, META_VERSION);
         String base = fileName == null ? "" : fileName;
         if (base.toLowerCase(Locale.ROOT).endsWith(EXT)) base = base.substring(0, base.length() - EXT.length());
+        else if (base.toLowerCase(Locale.ROOT).endsWith(".htm")) base = base.substring(0, base.length() - 4);
         base = base.replaceAll("\\s*\\(\\d+\\)$", "").trim();                       // "(1)" שהדפדפן מוסיף בהורדה חוזרת
         if (base.startsWith(PREFIX)) base = base.substring(PREFIX.length()).replaceAll("^[\\s_-]+", "");
         if (exp == null || exp.isEmpty()) {
@@ -51021,7 +51066,7 @@ final class Lab {
     /** מוסיף גרסה (ואותה גרסה שוב — מחליפה), והיא נעשית הפעילה. מחזיר {ניסוי, גרסה}, או זורק עם ההודעה. */
     static String[] add(File root, File src) throws Exception {
         if (src == null || !src.isFile()) throw new Exception(Words.Lab.NO_FILE);
-        if (!src.getName().toLowerCase(Locale.ROOT).endsWith(EXT)) throw new Exception(Words.Lab.NOT_HTML);
+        if (!isHtml(src.getName())) throw new Exception(Words.Lab.NOT_HTML);
         if (src.length() > MAX) throw new Exception(Words.Lab.TOO_BIG);
         String html = Files.readUtf8(src);
         String[] nv = nameOf(html, src.getName());
@@ -51034,15 +51079,47 @@ final class Lab {
         return nv;
     }
 
-    /** "הוסף מעבדה" בלי קובץ: הקובץ החדש ביותר בהורדות ששמו מתחיל ב"מעבדה" ונגמר ב־html. */
+    /**
+     * "הוסף מעבדה" בלי קובץ: עמוד המעבדה החדש ביותר בהורדות (וגם בתיקייה אחת פנימה) — לפי מה שכתוב בו (meta), לא לפי השם:
+     * מ0.39 — המשתמש: "תראה איזה באג… אין בהורדות קובץ ששמו מתחיל ב'מעבדה'" (השם שההורדה נתנה לקובץ — לא בידינו).
+     */
     static File newest(File downloads) {
+        List<File> all = new ArrayList<File>();
+        collect(downloads, 0, all);
         File best = null;
-        File[] fs = downloads == null ? null : downloads.listFiles();
-        if (fs != null)
-            for (File f : fs)
-                if (f.isFile() && f.getName().startsWith(PREFIX) && f.getName().toLowerCase(Locale.ROOT).endsWith(EXT)
-                        && (best == null || f.lastModified() > best.lastModified())) best = f;
+        for (File f : all)
+            if ((best == null || f.lastModified() > best.lastModified()) && (f.getName().startsWith(PREFIX) || isPage(f))) best = f;
         return best;
+    }
+
+    private static void collect(File d, int depth, List<File> out) {
+        File[] fs = d == null ? null : d.listFiles();
+        if (fs == null) return;
+        for (File f : fs) {
+            if (f.isDirectory()) { if (depth < 1 && !f.getName().startsWith(".")) collect(f, depth + 1, out); }
+            else if (isHtml(f.getName())) out.add(f);
+        }
+    }
+
+    static boolean isHtml(String name) {
+        String n = name.toLowerCase(Locale.ROOT);
+        return n.endsWith(EXT) || n.endsWith(".htm");
+    }
+
+    /** עמוד מעבדה — יש בו meta name="vfm-lab" (בתחילת הקובץ). */
+    static boolean isPage(File f) {
+        if (f.length() > MAX) return false;
+        java.io.InputStream in = null;
+        try {
+            in = new java.io.FileInputStream(f);
+            byte[] b = new byte[8192];
+            int n = in.read(b);
+            return n > 0 && new String(b, 0, n, "UTF-8").contains(META + "\"");
+        } catch (Throwable t) {
+            return false;
+        } finally {
+            if (in != null) try { in.close(); } catch (Throwable ignored) { }
+        }
     }
 
     // ---------- הפקודות ----------
@@ -51075,6 +51152,9 @@ final class Lab {
                 @Override public String run(Library lib) {
                     try {
                         String[] nv = add(root, f);
+                        // מ0.39 — המשתמש: "הקובץ נעלם, בדקתי בקבצים פיזית" (מההורדות, אחרי ההוספה). המעבדה רק קוראת אותו;
+                        // ביומן — שהמקור עוד שם אחרי ההוספה, כדי שדוח האבחון יראה אם משהו אחר מחק אותו.
+                        Log.i("הוסף מעבדה: " + f.getAbsolutePath() + " · המקור אחרי ההוספה: " + (f.isFile() ? "קיים" : "חסר"));   // בכונן
                         return Words.Lab.added(nv[0], nv[1]);
                     } catch (Throwable t) {
                         DbListCmd.lastFailed = true;
@@ -51488,7 +51568,9 @@ public final class LabScreen extends Activity {
                         dir.mkdirs();
                         File f = new File(dir, Words.Lab.RUN_FILE + "." + Batch.EXT);
                         Files.writeAtomic(f, text == null ? "" : text);
-                        BatchUi.run(LabScreen.this, f);
+                        // מ0.39: תמיד במסך ההרצה — תצוגה מקדימה, אישור, ודוח (בהרצה הרגילה, בלי "בדיקה", זה רץ מיד ונראית רק
+                        // הודעה קצרה; המשתמש: "איפה רואים את התוצאה של הפעולה?")
+                        RunScreen.start(LabScreen.this, f);
                     } catch (Throwable t) {
                         Log.e("Lab.runCommands", t);
                         Ui.toast(LabScreen.this, Words.Db.failed(String.valueOf(t.getMessage())));
