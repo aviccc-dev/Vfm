@@ -112,7 +112,7 @@ final class Commands {
         /** "COPY <מקור> <יעד> [/S] [/תפוס:…] …" — לפקודות הקבצים נבנה מהפרמטרים; לפעלים — מהמילון. */
         String usage() {
             if (family == Family.VERB) return Words.Verb.usage(name);
-            StringBuilder sb = new StringBuilder(name);
+            StringBuilder sb = new StringBuilder(word(this));                     // מ0.38: בעברית
             for (Param p : params) if (!p.compat) sb.append(' ').append(p.usage());
             if (alternative != null) sb.append("  ·  ").append(alternative);
             return sb.toString();
@@ -195,7 +195,8 @@ final class Commands {
                 sw(Batch.SW_LIMIT, null, Type.PERCENT, Words.Def.P_LIMIT, Words.Def.H_LIMIT)));
         if (state) ps.add(sw(Batch.SW_STATE, null, Type.TIME, Words.Def.P_STATE, Words.Def.H_STATE));
         ps.addAll(filters());
-        return new Def(name, name.equals("COPY") ? Words.Def.N_COPY : Words.Def.N_MOVE, null, Family.FILE,
+        return new Def(name, name.equals("COPY") ? Words.Def.N_COPY : Words.Def.N_MOVE,
+                name.equals("COPY") ? new String[]{HE_COPY, HE_DUP} : new String[]{HE_MOVE}, Family.FILE,
                 name.equals("COPY") ? Words.Def.W_COPY : Words.Def.W_MOVE,
                 ps.toArray(new Param[0]), null);
     }
@@ -205,21 +206,78 @@ final class Commands {
                 new Param[]{pos(Type.TEXT, Words.Def.P_ARG, Words.Verb.usage(name))}, null);
     }
 
+    /**
+     * מ0.38 (המשתמש, 11.11.2026: "לכל הפקודות יהיו תואם עברי, כולל הפרמטרים" · על טבלת השמות: "עזוב, תריץ כך. אחר כך זה לא
+     * סיפור לעדכן"): השם העברי של כל פקודת קבצים. האנגלי ממשיך לעבוד; העורך כותב את העברי.
+     */
+    static final String HE_COPY = "העתק", HE_DUP = "הכפל", HE_MOVE = "העבר", HE_DEL = "מחק", HE_REN = "שנה", HE_UNLIST = "בטל",   // תחביר
+            HE_COMP = "השווה", HE_START = "הפעל", HE_ECHO = "הודעה", HE_REM = "הערה",   // תחביר
+            HE_MD = "צור תיקייה", HE_RD = "מחק תיקייה", HE_DEEP = "/עמוק", HE_HIDDEN = "/נסתרים";   // תחביר
+    private static final String[][] TWO_WORDS = {{HE_MD, "MD"}, {HE_RD, "RD"}};
+    private static final String[][] HE_SWITCHES = {{HE_DEEP, "/S"}, {HE_HIDDEN, "/A:H"}};
+
+    /** השורה בצורה שהמנוע קורא: "צור תיקייה" ← MD, "מחק תיקייה" ← RD, והמתגים העבריים ← האנגליים (מחוץ למרכאות). */
+    static String normal(String line) {
+        String l = line == null ? "" : line.trim();
+        for (String[] m : TWO_WORDS)
+            if (l.equals(m[0]) || l.startsWith(m[0] + " ")) {
+                l = m[1] + l.substring(m[0].length());
+                break;
+            }
+        if (l.indexOf('/') < 0) return l;
+        StringBuilder out = new StringBuilder();
+        boolean q = false;
+        int i = 0;
+        while (i < l.length()) {
+            char c = l.charAt(i);
+            if (c == '"') q = !q;
+            boolean start = !q && c == '/' && (i == 0 || Character.isWhitespace(l.charAt(i - 1)));
+            String hit = null, to = null;
+            if (start) for (String[] m : HE_SWITCHES) {
+                int e = i + m[0].length();
+                if (l.startsWith(m[0], i) && (e == l.length() || Character.isWhitespace(l.charAt(e)))) { hit = m[0]; to = m[1]; }
+            }
+            if (hit != null) {
+                out.append(to);
+                i += hit.length();
+            } else {
+                out.append(c);
+                i++;
+            }
+        }
+        return out.toString();
+    }
+
+    /** המילה שהעורך כותב לפקודה: העברית (אם יש), אחרת השם. */
+    static String word(Def d) {
+        if (d.family != Family.FILE) return d.name;
+        if (d.name.equals("MD")) return HE_MD;
+        if (d.name.equals("RD")) return HE_RD;
+        for (String a : d.aliases) if (!a.isEmpty() && a.charAt(0) >= 0x5D0 && a.charAt(0) <= 0x5EA) return a;
+        return d.name;
+    }
+
+    /** המתג כמו שהעורך כותב אותו: העברי (אם יש). */
+    static String switchWord(String key) {
+        for (String[] m : HE_SWITCHES) if (m[1].equalsIgnoreCase(key)) return m[0];
+        return key;
+    }
+
     /** כל הפקודות — בסדר שבו הן מוצגות. */
     static final List<Def> ALL = Collections.unmodifiableList(Arrays.asList(
             transfer("COPY", Words.Def.H_COPY_SRC, true),
             transfer("MOVE", Words.Def.H_MOVE_SRC, false),
-            new Def("DEL", Words.Def.N_DEL, new String[]{"ERASE"}, Family.FILE, Words.Def.W_DEL,
+            new Def("DEL", Words.Def.N_DEL, new String[]{"ERASE", HE_DEL}, Family.FILE, Words.Def.W_DEL,
                     list(pos(Type.FILES, Words.Def.P_FILES, Words.Def.H_DEL_SRC), filters()), null),
-            new Def("REN", Words.Def.N_REN, new String[]{"RENAME"}, Family.FILE, Words.Def.W_REN, list(
+            new Def("REN", Words.Def.N_REN, new String[]{"RENAME", HE_REN}, Family.FILE, Words.Def.W_REN, list(
                     pos(Type.PATH, Words.Def.P_FILE, Words.Def.H_REN_SRC),
                     pos(Type.NAME, Words.Def.P_NEW_NAME, Words.Def.H_NEW_NAME)), null),
             new Def("MD", Words.Def.N_MD, new String[]{"MKDIR"}, Family.FILE, Words.Def.W_MD,
                     list(pos(Type.PATH, Words.Def.P_FOLDER, Words.Def.H_MD)), null),
-            new Def("RD", Words.Def.N_RD, new String[]{"RMDIR"}, Family.FILE, Words.Def.W_RD, list(
+            new Def("RD", Words.Def.N_RD, new String[]{"RMDIR", HE_UNLIST}, Family.FILE, Words.Def.W_RD, list(
                     pos(Type.PATH, Words.Def.P_FOLDER, Words.Def.H_RD),
                     sw("/S", null, Type.FLAG, Words.Def.P_NOT_EMPTY, Words.Def.H_NOT_EMPTY)), null),
-            new Def("COMP", Words.Def.N_COMP, null, Family.FILE, Words.Def.W_COMP, list(
+            new Def("COMP", Words.Def.N_COMP, new String[]{HE_COMP}, Family.FILE, Words.Def.W_COMP, list(
                     pos(Type.PATH, Words.Def.P_SOURCE, Words.Def.H_COMP_SRC),
                     pos(Type.PATH, Words.Def.P_DEST, Words.Def.H_COMP_DEST),
                     hidden(),
@@ -248,10 +306,10 @@ final class Commands {
                     list(pos(Type.PATH, Words.Def.P_FILE, Words.DbCmd.H_REPORT)), null),
             new Def(Batch.CALL, Words.DbCmd.N_CALL, new String[]{Words.DbCmd.N_CALL}, Family.FILE, Words.DbCmd.W_CALL,
                     list(pos(Type.PATH, Words.Def.P_FILE, Words.DbCmd.H_CALL)), null),
-            new Def("START", Words.Def.N_START, null, Family.FILE, Words.Def.W_START,
+            new Def("START", Words.Def.N_START, new String[]{HE_START}, Family.FILE, Words.Def.W_START,
                     list(pos(Type.PATH, Words.Def.P_WHAT_OPEN, Words.Def.H_START, Words.Def.U_START)), null),
-            new Def("ECHO", Words.Def.N_ECHO, null, Family.FILE, Words.Def.W_ECHO, list(pos(Type.TEXT, Words.Def.P_TEXT, Words.Def.H_TEXT)), null),
-            new Def("REM", Words.Def.N_REM, null, Family.FILE, Words.Def.W_REM, list(pos(Type.TEXT, Words.Def.P_TEXT, Words.Def.H_TEXT)), null),
+            new Def("ECHO", Words.Def.N_ECHO, new String[]{HE_ECHO}, Family.FILE, Words.Def.W_ECHO, list(pos(Type.TEXT, Words.Def.P_TEXT, Words.Def.H_TEXT)), null),
+            new Def("REM", Words.Def.N_REM, new String[]{HE_REM}, Family.FILE, Words.Def.W_REM, list(pos(Type.TEXT, Words.Def.P_TEXT, Words.Def.H_TEXT)), null),
             verb(Verbs.OPEN, Words.Def.W_OPEN),
             verb(Verbs.CREATE, Words.Def.W_CREATE),
             verb(Verbs.UPDATE, Words.Def.W_UPDATE),

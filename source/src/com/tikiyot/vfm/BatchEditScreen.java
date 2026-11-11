@@ -307,7 +307,8 @@ public class BatchEditScreen extends Activity {
     }
 
     /** ההגדרה של שורה: פקודת קבצים, פועל, או כותרת; null — לא מוכרת. */
-    private static Commands.Def defOf(String line) {
+    private static Commands.Def defOf(String typed) {
+        String line = Commands.normal(typed);                                  // מ0.38: "צור תיקייה" היא MD, לא הפועל "צור"
         if (line.startsWith("::")) return Commands.get("REM");                // 1.25.4: הערה — כמו REM
         if (Batch.isLoopStart(line)) return Commands.Defs.LOOP;               // 1.25.0
         if (Batch.isLoopEnd(line)) return Commands.Defs.END;

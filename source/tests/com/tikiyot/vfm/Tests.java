@@ -53,6 +53,7 @@ public final class Tests {
         run("מ0.27: RD /S ואחריו MD ו־COMP — ההדמיה שוכחת מה שהיה בתיקייה", new Runnable() { public void run() { m027(); } });
         run("מ0.30: RD ואחריו MD לאותה תיקייה; ECHO עם משתנה; רשימה שאינה בבית", new Runnable() { public void run() { m030(); } });
         run("מ0.32: RD לתת־תיקייה ואז לתיקייה", new Runnable() { public void run() { m032(); } });
+        run("מ0.38: הפקודות והמתגים בעברית", new Runnable() { public void run() { m038(); } });
         run("מ0.37: הפקודות הקטנות — כתוב, ודא (תיקייה, מכיל, קבצים, שגיאה), דוח, המתן, משתנים, רעיון וכותרת", new Runnable() { public void run() { m037(); } });
         run("קובצי פקודות — השורה כשדות לטופס (117א, שלב 2)", new Runnable() { public void run() { batchForm(); } });
         run("תיקוני הביקורות השישית והשביעית (118–122, 134, 135, 139)", new Runnable() { public void run() { review7(); } });
@@ -1651,6 +1652,49 @@ public final class Tests {
         eq("מ0.27: COMP אחרי RD /S — מול תיקייה ריקה: הקובץ רק במקור", 1, p.steps.get(3).files.size());
     }
 
+    private static void m038() {
+        File root = new File(home, "כונן-038");
+        wipe(root);
+        File here = new File(root, "כאן"), src = new File(root, "מקור");
+        here.mkdirs();
+        mk(src, "א.txt", 10);
+        mk(new File(src, "תת"), "ב.txt", 10);
+        mk(src, ".נסתר", 5);
+        java.util.Map<String, String> vars = Batch.vars(here, root.getAbsolutePath(), null);
+        String r = root.getAbsolutePath();
+        String he = "הערה זו שורת הערה\n"
+                + "הודעה שלום מהבדיקה\n"
+                + "צור תיקייה \"" + r + "/יעד\"\n"
+                + "העתק \"" + r + "/מקור\" \"" + r + "/יעד\" /עמוק /נסתרים\n"
+                + "שנה \"" + r + "/מקור/א.txt\" \"חדש.txt\"\n"
+                + "העבר \"" + r + "/מקור/חדש.txt\" \"" + r + "/יעד\" /תפוס:להחליף\n"
+                + "השווה \"" + r + "/מקור\" \"" + r + "/יעד\"\n"
+                + "מחק \"" + r + "/יעד/חדש.txt\"\n"
+                + "מחק תיקייה \"" + r + "/יעד\" /עמוק\n";
+        String en = "REM x\nECHO שלום מהבדיקה\nMD \"" + r + "/יעד\"\nCOPY \"" + r + "/מקור\" \"" + r + "/יעד\" /S /A:H\n"
+                + "REN \"" + r + "/מקור/א.txt\" \"חדש.txt\"\nMOVE \"" + r + "/מקור/חדש.txt\" \"" + r + "/יעד\" /תפוס:להחליף\n"
+                + "COMP \"" + r + "/מקור\" \"" + r + "/יעד\"\nDEL \"" + r + "/יעד/חדש.txt\"\nRD \"" + r + "/יעד\" /S\n";
+        Batch.Plan ph = Batch.plan(he, here, vars), pe = Batch.plan(en, here, vars);
+        eq("מ0.38: קובץ שכולו בעברית — בלי שגיאות", 0, ph.errors);
+        eq("מ0.38: אותו מספר שורות כמו באנגלית", pe.steps.size(), ph.steps.size());
+        boolean same = ph.steps.size() == pe.steps.size();
+        for (int i = 0; same && i < ph.steps.size(); i++) {
+            Batch.Step a = ph.steps.get(i), b2 = pe.steps.get(i);
+            same = a.cmd.equals(b2.cmd) && a.files.equals(b2.files) && a.dirs.equals(b2.dirs) && a.recursive == b2.recursive && a.hidden == b2.hidden
+                    && String.valueOf(a.describe).equals(String.valueOf(b2.describe));
+        }
+        check("מ0.38: כל שורה בעברית מתוכננת בדיוק כמו המקבילה באנגלית (פקודה, קבצים, /עמוק, /נסתרים)", same);
+        check("מ0.38: ההודעה — בלי המילה \"הודעה\"", ph.echoes.size() == 1 && ph.echoes.get(0).equals("שלום מהבדיקה"));
+        check("מ0.38: בדוח נשארת השורה כמו שנכתבה, בעברית", ph.steps.get(1).text.startsWith("צור תיקייה"));
+        eq("מ0.38: מתג עברי בתוך מרכאות — לא נוגעים", "MD \"x /עמוק\"", Commands.normal("צור תיקייה \"x /עמוק\""));
+        eq("מ0.38: \"צור רשימה\" נשארת פועל", "צור רשימה א", Commands.normal("צור רשימה א"));
+        CmdLine c = CmdLine.parse("צור תיקייה \"" + r + "/חדשה\"");
+        check("מ0.38: העורך מזהה \"צור תיקייה\" כ־MD", c.def != null && c.def.name.equals("MD") && c.text().startsWith("צור תיקייה"));
+        check("מ0.38: פקודה חדשה מהתפריט נכתבת בעברית", CmdLine.of(Commands.get("COPY")).text().equals("העתק")
+                && CmdLine.of(Commands.get("RD")).text().equals("מחק תיקייה") && Commands.get("העבר").name.equals("MOVE"));
+        check("מ0.38: \"בטל\" ו\"הכפל\" — לרשימות", Commands.canonical("בטל").equals("RD") && Commands.canonical("הכפל").equals("COPY"));
+    }
+
     private static void m037() {
         File root = new File(home, "כונן-037");
         wipe(root);
@@ -2642,9 +2686,9 @@ public final class Tests {
         check("1.23.0: שינוי יעד — מרכאות, ו/Q נשאר", c.text().equals("COPY \"%פנימי%\\א ב\" \"%כרטיס%\\ג ד\" /Q"));
         CmdLine d = CmdLine.parse("COPY a b /תאריך:שבוע");
         d.set(keep, "1");
-        check("1.23.0: מתג חדש — במקומו לפי ההגדרה", d.text().equals("COPY a b /S /תאריך:שבוע"));
+        check("1.23.0: מתג חדש — במקומו לפי ההגדרה", d.text().equals("COPY a b /עמוק /תאריך:שבוע"));
         d.set(journal, "x y.txt");
-        check("1.23.0: ערך עם רווח — במרכאות", d.text().equals("COPY a b /S /יומן:\"x y.txt\" /תאריך:שבוע"));
+        check("1.23.0: ערך עם רווח — במרכאות", d.text().equals("COPY a b /עמוק /יומן:\"x y.txt\" /תאריך:שבוע"));
         check("1.23.0: הערך חוזר כמו שנקבע", CmdLine.parse(d.text()).value(journal).equals("x y.txt"));
         d.set(keep, "");
         check("1.23.0: מתג כבוי — יוצא", d.text().equals("COPY a b /יומן:\"x y.txt\" /תאריך:שבוע"));
@@ -2663,15 +2707,15 @@ public final class Tests {
         check("1.23.0: COMP /רשימה: — המקור לא רלוונטי, היעד ראשון",
                 k.slot(comp.positional().get(0)) < 0 && k.value(comp.positional().get(1)).equals("%כרטיס%\\גיבוי\\נוכחי") && k.missing().isEmpty());
         CmdLine n = CmdLine.of(cp);
-        check("1.23.0: פקודה חדשה — חסרים מקור ויעד", n.missing().size() == 2 && n.text().equals("COPY"));
+        check("1.23.0: פקודה חדשה — חסרים מקור ויעד", n.missing().size() == 2 && n.text().equals("העתק"));
         n.set(dst, "b");
-        check("1.23.0: יעד לפני מקור — מקום ריק למקור", n.text().equals("COPY \"\" b"));
+        check("1.23.0: יעד לפני מקור — מקום ריק למקור", n.text().equals("העתק \"\" b"));
         n.set(src, "a");
-        check("1.23.0: ואז המקור במקומו", n.text().equals("COPY a b") && n.missing().isEmpty());
+        check("1.23.0: ואז המקור במקומו", n.text().equals("העתק a b") && n.missing().isEmpty());
         n.set(limit, "20");
         n.set(date, "שבוע");
         n.set(taken, Batch.TAKEN_STOP);
-        check("1.23.0: כמה מתגים — בסדר ההגדרה", n.text().equals("COPY a b " + Batch.SW_TAKEN + Batch.TAKEN_STOP + " /עד:20% /תאריך:שבוע"));
+        check("1.23.0: כמה מתגים — בסדר ההגדרה", n.text().equals("העתק a b " + Batch.SW_TAKEN + Batch.TAKEN_STOP + " /עד:20% /תאריך:שבוע"));
         Commands.Param txt = Commands.get("ECHO").positional().get(0);
         CmdLine e = CmdLine.parse("ECHO שלום  עולם");
         check("1.23.0: ECHO — הטקסט כמו שהוא", e.value(txt).equals("שלום  עולם"));
@@ -2734,7 +2778,7 @@ public final class Tests {
         check("1.22.5: שם נרדף בטופס", BatchLine.parse("MKDIR \"%פנימי%\\x\"").cmd.equals("MD"));
         for (Commands.Def d : Commands.ALL) {
             check("1.22.5: מה עושה — " + d.name, !d.what.isEmpty());
-            check("1.22.5: שימוש — " + d.name, !d.usage().isEmpty() && (d.family != Commands.Family.FILE || d.usage().startsWith(d.name)));
+            check("1.22.5: שימוש — " + d.name, !d.usage().isEmpty() && (d.family != Commands.Family.FILE || d.usage().startsWith(Commands.word(d))));   // מ0.38: בעברית
             for (Commands.Param p : d.params) {
                 boolean ok = !p.label.isEmpty() && !p.help.isEmpty() && (!p.isSwitch() || Batch.isSwitch(p.key))
                         && (p.type != Commands.Type.CHOICE || !p.options.isEmpty());

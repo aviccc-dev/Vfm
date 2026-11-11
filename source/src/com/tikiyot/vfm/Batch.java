@@ -943,11 +943,12 @@ final class Batch {
             prev = ln;
             if (clock.skip(plan, ln.loops, ln.rounds)) continue;               // לולאה שעברה את הגבול — גם בתכנון
             int n = ln.num - 1;
-            String line = clean(ln.text);
+            final String shown = clean(ln.text);                                 // מ0.38: מה שנכתב (לדוח) — גם כשהוא בעברית
+            String line = Commands.normal(shown);
             if (ln.error != null) {
                 Step s = new Step();
                 s.line = ln.num;
-                s.text = line;
+                s.text = shown;
                 s.cmd = LOOP;
                 s.error = ln.error;
                 plan.errors++;
@@ -973,7 +974,7 @@ final class Batch {
             if (Verbs.isVerb(line)) {                                         // 1.13.0: פקודות הפתיחה בעברית — נפתחות בסוף
                 Step s = new Step();
                 s.line = n + 1;
-                s.text = line;
+                s.text = shown;
                 s.cmd = OPEN;
                 s.open = Verbs.withVars(line, vars);
                 Verbs.Cmd vc = Verbs.parse(s.open);
@@ -998,11 +999,14 @@ final class Batch {
             if (cmd.equals("REM")) continue;
             Step s = new Step();
             s.line = n + 1;
-            s.text = line;
+            s.text = shown;
             if (cmd.equals("ECHO.")) cmd = "ECHO";                   // 139: שורה ריקה, כמו ב-bat
             s.cmd = cmd;
             if (cmd.equals("ECHO")) {
-                String rest = line.length() > 4 ? line.substring(4).trim() : "";
+                int w0 = 0;                                                      // מ0.38: אחרי המילה הראשונה (ECHO או "הודעה")
+                while (w0 < line.length() && !Character.isWhitespace(line.charAt(w0))) w0++;
+                String rest = cmd.equals("ECHO") && tk.get(0).toUpperCase(Locale.ROOT).startsWith("ECHO.") ? line.substring(4).trim()
+                        : line.substring(w0).trim();
                 if (rest.equalsIgnoreCase("OFF") || rest.equalsIgnoreCase("ON")) continue;
                 rest = Verbs.withVars(rest, vars);                               // מ0.30 (ממצא 46): גם ב־ECHO המשתנים מוחלפים
                 plan.echoes.add(rest.startsWith(".") ? rest.substring(1) : rest);
@@ -1873,7 +1877,7 @@ final class Batch {
     /** 1.26.0: רק פתיחת מסכים ורשימות (פקודות התפריט ⭐) — הרצה מהירה, בלי מסך ההרצה. */
     static boolean onlyOpens(String text) {
         for (String raw : Bidi.strip(text).replace("\r", "").split("\n")) {
-            String line = clean(raw);
+            String line = Commands.normal(clean(raw));
             if (line.isEmpty() || line.startsWith("::") || Program.isHeader(line)) continue;
             if (isLoopStart(line) || isLoopEnd(line) || line.startsWith(MEASURE) || line.equals(AS_IF) || line.equals(AS_IF2)) return false;
             if (Verbs.isVerb(line)) continue;

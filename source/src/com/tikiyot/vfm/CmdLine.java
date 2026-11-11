@@ -29,12 +29,14 @@ final class CmdLine {
     }
 
     static CmdLine parse(String line) {
-        String l = Bidi.strip(line == null ? "" : line).trim();
+        String typed = Bidi.strip(line == null ? "" : line).trim();
+        String l = Commands.normal(typed);                                     // מ0.38: "צור תיקייה", "/עמוק" — כמו שהמנוע קורא
         List<String> tk = Batch.tokens(l);
         String w = tk.isEmpty() ? "" : tk.get(0);
         Commands.Def d = Commands.get(w);
         if (d != null && d.family != Commands.Family.FILE) d = null;
-        CmdLine c = new CmdLine(w, d, l);
+        if (d != null && !typed.startsWith(w)) w = Commands.word(d);            // נכתב בשתי מילים — כך גם נשאר
+        CmdLine c = new CmdLine(w, d, typed);
         if (isText(d)) c.rest = l.length() > w.length() ? l.substring(w.length()).trim() : "";
         else for (int i = 1; i < tk.size(); i++) c.tokens.add(tk.get(i));
         return c;
@@ -42,7 +44,7 @@ final class CmdLine {
 
     /** פקודה חדשה, בלי ערכים. */
     static CmdLine of(Commands.Def d) {
-        CmdLine c = new CmdLine(d.name, d, d.name);
+        CmdLine c = new CmdLine(Commands.word(d), d, Commands.word(d));       // מ0.38: פקודה חדשה — בעברית
         c.changed = true;
         return c;
     }
@@ -56,7 +58,7 @@ final class CmdLine {
         if (!changed) return raw;
         if (isText(def)) return rest.isEmpty() ? word : word + " " + rest;
         StringBuilder sb = new StringBuilder(word);
-        for (String t : tokens) sb.append(' ').append(quote(t));
+        for (String t : tokens) sb.append(' ').append(quote(Batch.isSwitch(t) ? Commands.switchWord(t) : t));   // מ0.38
         return sb.toString();
     }
 
