@@ -221,6 +221,9 @@ final class Lab {
                 @Override public String run(Library lib) {
                     try {
                         String[] nv = add(root, f);
+                        // מ0.39 — המשתמש: "הקובץ נעלם, בדקתי בקבצים פיזית" (מההורדות, אחרי ההוספה). המעבדה רק קוראת אותו;
+                        // ביומן — שהמקור עוד שם אחרי ההוספה, כדי שדוח האבחון יראה אם משהו אחר מחק אותו.
+                        Log.i("הוסף מעבדה: " + f.getAbsolutePath() + " · המקור אחרי ההוספה: " + (f.isFile() ? "קיים" : "חסר"));   // בכונן
                         return Words.Lab.added(nv[0], nv[1]);
                     } catch (Throwable t) {
                         DbListCmd.lastFailed = true;
