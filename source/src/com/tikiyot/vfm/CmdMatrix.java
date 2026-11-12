@@ -154,7 +154,10 @@ final class CmdMatrix {
             if (key != null) out.add("כתוב \"" + d("להסרה " + k + "\\א.txt") + "\" \"x\"");
             out.add(Commands.word(def) + " \"" + d("להסרה " + k) + "\"" + sw);
         } else if (name.equals("COMP")) {                                        // ההשוואה מחושבת בהכנה — מול מה שכבר בכונן
-            if (Batch.SW_LIST.equals(key)) out.add(Commands.word(def) + " " + Batch.SW_LIST + "\"" + LIST + "/א\" \"" + HERE + "\"");
+            if (Batch.SW_LIST.equals(key)) {                                     // רשימה ריקה — ההשוואה נעצרת (מ0.45, במכשיר): קובץ בה קודם
+                out.add("העתק \"" + HERE + "\\" + FIXTURE + "\\" + State.CURRENT + "\\א.txt\" ידנית \"" + LIST + "/א\"");
+                out.add(Commands.word(def) + " " + Batch.SW_LIST + "\"" + LIST + "/א\" \"" + HERE + "\"");
+            }
             else out.add(Commands.word(def) + " \"" + HERE + "\" \"" + d("העתק\\1") + "\"" + sw);
         } else if (name.equals(Batch.LINK)) {
             if (!db) return false;
