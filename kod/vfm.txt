@@ -730,7 +730,7 @@ MOVE הורדות\*.epub לשלוח
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="vfm-plugin" content="אבחון">
-<meta name="vfm-plugin-version" content="2">
+<meta name="vfm-plugin-version" content="4">
 <title>אבחון</title>
 <style>
 /* תוסף "אבחון" (מ0.42): הבדיקות, הדוחות והתקלות — מה שהיה ב־⋮ ובהגדרות (claude/tosaf-bdikot.md).
@@ -777,7 +777,26 @@ input[type=text]{width:100%;direction:ltr;text-align:left}
 .log .t{font-family:var(--mono);font-size:.78rem;white-space:pre-wrap;word-break:break-word}
 .log .e.err .t{color:var(--err)}
 .note{font-size:.84rem;color:var(--muted);margin:6px 2px 12px}
-.banner{position:fixed;inset-inline:12px;bottom:calc(14px + env(safe-area-inset-bottom,0px));background:var(--fg);color:var(--bg);border-radius:10px;padding:10px 14px;font-size:.9rem;z-index:20;display:none}
+.sect{font-size:.8rem;font-weight:600;color:var(--muted);margin:14px 2px 6px}
+.sect small{font-weight:400}
+.tools{display:flex;gap:6px;justify-content:flex-start;margin:4px 0}
+.btn.sm{font-size:.8rem;padding:3px 9px}
+.trow{display:flex;gap:8px;align-items:flex-start;border:1px solid var(--rule);border-radius:10px;padding:8px 10px;margin:0 0 6px;background:var(--bg)}
+.trow.open{border-color:var(--accent);border-bottom-left-radius:0;border-bottom-right-radius:0;margin-bottom:0}
+.trow .ck{padding-top:2px}
+.trow input[type=checkbox]{width:20px;height:20px;accent-color:var(--accent)}
+.tm{flex:1;min-width:0;cursor:pointer}
+.tn{display:flex;gap:8px;align-items:center;justify-content:space-between}
+.ts{color:var(--muted);font-size:.8rem}
+.badge{font-size:.76rem;border-radius:10px;padding:1px 8px;white-space:nowrap;background:var(--soft);color:var(--muted)}
+.badge.ok{color:var(--ok)} .badge.bad{color:var(--err)} .badge.wait{color:var(--warn)}
+.det{border:1px solid var(--accent);border-top:0;border-radius:0 0 10px 10px;padding:4px 12px 10px;margin:0 0 6px}
+.det p{margin:4px 0;color:var(--muted);font-size:.84rem}
+.last{border-radius:10px;padding:8px 12px;margin:0 0 8px;font-size:.86rem;background:var(--soft)}
+.last.ok{border-inline-start:4px solid var(--ok)} .last.bad{border-inline-start:4px solid var(--err)}
+.runbar{position:sticky;bottom:calc(8px + env(safe-area-inset-bottom,0px));display:flex;justify-content:center;margin-top:10px}
+.runbar .btn{font-size:1rem;padding:10px 18px;box-shadow:0 2px 6px rgba(0,0,0,.18)}
+.banner{position:fixed;inset-inline:12px;bottom:calc(70px + env(safe-area-inset-bottom,0px));background:var(--fg);color:var(--bg);border-radius:10px;padding:10px 14px;font-size:.9rem;z-index:20;display:none}
 .banner.err{background:var(--err);color:var(--on)}
 #shade{position:fixed;inset:0;background:var(--shade);display:none;z-index:30}
 #sheet{position:fixed;inset-inline:0;bottom:0;max-height:88vh;background:var(--bg);border-radius:14px 14px 0 0;display:none;z-index:31;flex-direction:column}
@@ -790,7 +809,7 @@ input[type=text]{width:100%;direction:ltr;text-align:left}
 <div class="top">
   <div class="head"><h1>🔬 אבחון</h1><div class="sub" id="sub"></div></div>
   <div class="tabs" id="tabs">
-    <button data-t="tests">🧪 בדיקות</button><button data-t="db">🗄 מסדים</button><button data-t="report">📄 דוח</button><button data-t="log">⚠ יומן תקלות</button><button data-t="index">🗂 אינדקס</button>
+    <button data-t="tests">🧪 בדיקות</button><button data-t="state">📊 מצב</button><button data-t="report">📄 דוח</button><button data-t="log">⚠ יומן</button>
   </div>
 </div>
 <main id="main"></main>
@@ -830,45 +849,56 @@ const FILES={'בדיקת פקודות.vbat':'pkudot-masad','בדיקת כלול.
   'בדיקה כללית.vbat':'klali','בדיקת לחץ.vbat':'lachatz','בדיקת שני אופנים.vbat':'shney-ofanim','בדיקת עומס.vbat':'omes-masad'};
 // הקבוצות. clean — הרשימות שהקבוצה יוצרת, לפי אופן: מבוטלות בסוף ההרצה (המשתמש: "סתם מצטבר שם שאריות")
 const GROUPS=[
-  {k:'general',n:'כללית',d:'כל הפונקציות: רשימות במסד, קבצים בכונן, חכמות, יצוא וייבוא, תפריטים — וגם מה שחדש בגרסה. כשתי דקות.',
+  {k:'general',s:'רשימות, קבצים, חכמות, יצוא וייבוא, תפריטים — וכל מה שחדש',n:'כללית',d:'כל הפונקציות: רשימות במסד, קבצים בכונן, חכמות, יצוא וייבוא, תפריטים — וגם מה שחדש בגרסה. כשתי דקות.',
     inc:['בדיקה כללית.vbat'],clean:[[TEST_MODE,['בדיקת פקודות','בדיקת מעקב','בדיקת מ0.24','בדיקת מ0.37','בדיקת מ0.40','בדיקת מ0.41']]]},
-  {k:'stress',n:'לחץ',d:'מנסה לסבך: שמות זהים ברמות שונות, שרשרת העתקה ← שינוי שם ← העברה, קישור ומחיקה.',
+  {k:'stress',s:'שמות זהים, שרשראות, מעגלים, שמות קשים',n:'לחץ',d:'מנסה לסבך: שמות זהים ברמות שונות, שרשרת העתקה ← שינוי שם ← העברה, קישור ומחיקה.',
     inc:['בדיקת לחץ.vbat'],clean:[[TEST_MODE,['בדיקת לחץ']]]},
-  {k:'modes',n:'שני אופנים',d:'קובץ אחד שעובד בשני אופנים ("בדיקות מערכת" ו"דוגמאות"), וכל רשימה נרשמת באופן שלה.',
+  {k:'modes',s:'קובץ אחד שעובד בשני אופנים',n:'שני אופנים',d:'קובץ אחד שעובד בשני אופנים ("בדיקות מערכת" ו"דוגמאות"), וכל רשימה נרשמת באופן שלה.',
     inc:['בדיקת שני אופנים.vbat'],clean:[[TEST_MODE,['בדיקת-אופן-א']],[EXAMPLES,['בדיקת-אופן-ב']]]},
-  {k:'db',n:'המסד',d:'המנוע של המסד מול ה־SQLite של המכשיר (על מסדים זמניים), ותקינות המסד של כל אופן. לא משנה דבר.',
+  {k:'db',s:'המנוע מול ה־SQLite, ותקינות כל מסד',n:'המסד',d:'המנוע של המסד מול ה־SQLite של המכשיר (על מסדים זמניים), ותקינות המסד של כל אופן. לא משנה דבר.',
     lines:['ודא מסד'],clean:[]},
-  {k:'index',n:'אינדקס',d:'רענון מהיר ורענון עמוק, עם זמן לכל שורה; קובץ חדש — האינדקס מכיר אותו.',
+  {k:'index',s:'רענון מהיר ועמוק, וקובץ חדש באינדקס',n:'אינדקס',d:'רענון מהיר ורענון עמוק, עם זמן לכל שורה; קובץ חדש — האינדקס מכיר אותו.',
     lines:['רענן','רענן עמוק','צור תיקייה "%פנימי%\\בדיקת אינדקס (אפשר למחוק)"','כתוב "%פנימי%\\בדיקת אינדקס (אפשר למחוק)\\א.txt" "אינדקס"',
       'ודא "%פנימי%\\בדיקת אינדקס (אפשר למחוק)\\א.txt" באינדקס','מחק תיקייה "%פנימי%\\בדיקת אינדקס (אפשר למחוק)" /עמוק',
       'ודא "%פנימי%\\בדיקת אינדקס (אפשר למחוק)" חסר'],clean:[]},
-  {k:'rebuild',n:'בניית האינדקס מחדש',heavy:true,d:'בונה את האינדקס מההתחלה, בכל הכוננים, עם מדידת זמן (מה שהיה הכפתור בהגדרות). קובץ שנכתב לפני — נמצא אחרי. בזמן הבנייה החיפוש איטי.',
+  {k:'rebuild',s:'בנייה מההתחלה, בכל הכוננים, עם זמנים',n:'בניית האינדקס מחדש',heavy:true,d:'בונה את האינדקס מההתחלה, בכל הכוננים, עם מדידת זמן (מה שהיה הכפתור בהגדרות). קובץ שנכתב לפני — נמצא אחרי. בזמן הבנייה החיפוש איטי.',
     lines:['צור תיקייה "%פנימי%\\בדיקת בנייה (אפשר למחוק)"','כתוב "%פנימי%\\בדיקת בנייה (אפשר למחוק)\\א.txt" "בנייה"','רענן מלא',
       'ודא "%פנימי%\\בדיקת בנייה (אפשר למחוק)\\א.txt" באינדקס','מחק תיקייה "%פנימי%\\בדיקת בנייה (אפשר למחוק)" /עמוק'],clean:[]},
-  {k:'load',n:'עומס',heavy:true,d:'על הנתונים האמיתיים של האופן שנבחר: מעתיק את כל מה שבבית לרשימה "בדיקת עומס" ומכפיל אותה 3 סבבים, עם מדידת זמן. המקור לא נוגע; בסוף הרשימה מבוטלת.',
+  {k:'load',s:'העתקה ו־3 סבבים על האופן שבוחרים (המקור לא נוגע)',n:'עומס',heavy:true,d:'על הנתונים האמיתיים של האופן שנבחר: מעתיק את כל מה שבבית לרשימה "בדיקת עומס" ומכפיל אותה 3 סבבים, עם מדידת זמן. המקור לא נוגע; בסוף הרשימה מבוטלת.',
     inc:['בדיקת עומס.vbat'],clean:[[REAL,['בדיקת עומס']]]}
 ];
 let results=J(pref('results',null),{});
 function saveResults(){setPref('results',JSON.stringify(results));}
 
 // ---------- הרצה ----------
+// גרסה 4 (המשתמש: "לסדר את כל הבדיקות האפשריות ולאפשר לסמן אותם באיקס ואז להריץ"): רשימה אחת עם סימון, והרצה אחת של המסומנות.
+// בתוכנה מ0.44 ומעלה — שורת "קטע" לפני כל בדיקה, וכך לכל אחת ✅/❌ משלה; לפני כן — רק בהרצה של אחת.
+const SECTIONS=(info.versionCode||0)>=57;
 function modesList(){return J(can('modes')?V.modes():null,[]);}
 function realModes(){return modesList().filter(m=>m!==TEST_MODE&&m!==MENUS_MODE);}
 function realMode(){const ms=realModes(),p=pref('real',''),s=info.savedMode||'';
   return ms.indexOf(p)>=0?p:ms.indexOf(s)>=0?s:ms.length?ms[0]:TEST_MODE;}
 function dataDir(){return V.dataDir();}
-function resultPath(key){return dataDir()+'/תוצאות/'+key+'.txt';}
+function resultPath(id){return dataDir()+'/תוצאות/'+id+'.txt';}
+const CLEAN='ניקוי';
+let sel=J(pref('sel',null),null);
+if(!Array.isArray(sel))sel=GROUPS.filter(g=>!g.heavy).map(g=>g.k);
+function saveSel(){setPref('sel',JSON.stringify(sel));}
+let open=null;   // השורה שהפרטים שלה פתוחים
 
-function runner(id,label,gs,real){
-  const L=['בדיקה','המשך ()','מדידה','דוח "'+resultPath(gs.length===1?gs[0].k:'all')+'"',
-    'ECHO '+MARK+id+' · '+label+' · גרסה '+(info.version||'?')+' · '+when(Date.now()),
+function runner(id,gs,real){
+  const L=['בדיקה','המשך ()','מדידה','דוח "'+resultPath(id)+'"',
+    'ECHO '+MARK+id+' · '+gs.map(g=>g.n).join(', ')+' · גרסה '+(info.version||'?')+' · '+when(Date.now()),
     ':: אופן הבדיקות — נוצר אם אין (מ0.42: "צור אופן")','צור אופן "'+TEST_MODE+'"'];
-  gs.forEach(g=>{L.push(':: '+g.n);(g.inc||[]).forEach(f=>L.push('כלול "'+f+'"'));(g.lines||[]).forEach(x=>L.push(x));});
+  gs.forEach(g=>{L.push(SECTIONS?'קטע "'+g.n+'"':':: '+g.n);(g.inc||[]).forEach(f=>L.push('כלול "'+f+'"'));(g.lines||[]).forEach(x=>L.push(x));});
   const by={},order=[];
   gs.forEach(g=>g.clean.forEach(c=>{const m=c[0]===REAL?real:c[0];if(!by[m]){by[m]=[];order.push(m);}c[1].forEach(x=>{if(by[m].indexOf(x)<0)by[m].push(x);});}));
-  if(order.length)L.push(':: ניקוי — הרשימות שהבדיקה יצרה, כל אחת מהאופן שלה; ואז רישומי הקבצים שנשארו בלי רשימה באופן הבדיקות');
-  order.forEach(m=>{L.push('אופן "'+m+'"');by[m].forEach(x=>{L.push('בטל ידנית "'+x+'"');L.push('ודא ידנית "'+x+'" חסרה');});});
-  if(by[TEST_MODE]){if(order[order.length-1]!==TEST_MODE)L.push('אופן "'+TEST_MODE+'"');L.push('בטל לא-משויכים','ודא לא-משויכים /פריטים:0');}
+  if(order.length){
+    L.push(SECTIONS?'קטע "'+CLEAN+'"':':: '+CLEAN);
+    L.push(':: הרשימות שהבדיקות יצרו, כל אחת מהאופן שלה; ואז רישומי הקבצים שנשארו בלי רשימה באופן הבדיקות');
+    order.forEach(m=>{L.push('אופן "'+m+'"');by[m].forEach(x=>{L.push('בטל ידנית "'+x+'"');L.push('ודא ידנית "'+x+'" חסרה');});});
+    if(by[TEST_MODE]){if(order[order.length-1]!==TEST_MODE)L.push('אופן "'+TEST_MODE+'"');L.push('בטל לא-משויכים','ודא לא-משויכים /פריטים:0');}
+  }
   return L.join('\n')+'\n';
 }
 
@@ -881,25 +911,40 @@ function writeFiles(real){
   }
 }
 
-function run(gs,label){
+function run(){
   if(!ready){say('התוסף צריך את מ0.42 של התוכנה ומעלה',true);return;}
+  const gs=GROUPS.filter(g=>sel.indexOf(g.k)>=0);
+  if(!gs.length){say('לא סומנה אף בדיקה');return;}
   try{
     const real=realMode(),id=Date.now().toString(36);
     writeFiles(real);
-    const key=gs.length===1?gs[0].k:'all';
-    const text=runner(id,label,gs,real);
-    setPref('pending',JSON.stringify({id:id,key:key,label:label,groups:gs.map(g=>g.k),path:resultPath(key),at:Date.now()}));
-    V.runFile(text,dataDir()+'/אבחון — '+label+'.vbat',true);
+    const label=gs.length===GROUPS.length?'הכול':gs.map(g=>g.n).join(', ');
+    setPref('pending',JSON.stringify({id:id,label:label,groups:gs.map(g=>g.k),path:resultPath(id),at:Date.now()}));
+    V.runFile(runner(id,gs,real),dataDir()+'/אבחון — '+(gs.length===1?gs[0].n:gs.length+' בדיקות')+'.vbat',true);
     render();
   }catch(e){fail('הרצה',e);}
 }
 
-function parse(t){
-  const lines=t.split('\n'),bad=[],warn=[];let sum=null;
-  lines.forEach(l=>{const m=l.match(/ודא: (\d+) עברו · (\d+) נכשלו/);if(m){sum=[+m[1],+m[2]];return;}
-    if(l.indexOf('❌')>=0)bad.push(l);else if(/⚠|שום שורה לא רצה/.test(l))warn.push(l);});
-  const blocked=t.indexOf('שום שורה לא רצה')>=0;
-  return {ok:sum?sum[0]:0,bad:sum?sum[1]:bad.length,badLines:bad.slice(0,80),warn:warn.slice(0,40),blocked:blocked};
+/** הדוח ← לכל בדיקה: ✅ כמה, ❌ ושורותיהן, ⚠. לפי שורות "▸ <שם>" (קטע); בלי — הכול לבדיקה אחת. */
+function parse(t,keys){
+  const lines=t.split('\n'),byName={},out={};
+  GROUPS.forEach(g=>byName[g.n]=g.k);byName[CLEAN]=CLEAN;
+  const one=()=>({ok:0,bad:0,badLines:[],warn:[]});
+  let cur=SECTIONS?null:(keys.length===1?keys[0]:'_together');
+  if(cur)out[cur]=one();
+  let sum=null,ms=null;
+  lines.forEach(l=>{
+    const m=l.match(/^שורה [^:]+: ▸ (.+?)(?: · ⏱.*)?$/);
+    if(m&&byName[m[1].trim()]){cur=byName[m[1].trim()];if(!out[cur])out[cur]=one();return;}
+    const sm=l.match(/ודא: (\d+) עברו · (\d+) נכשלו/);if(sm){sum=[+sm[1],+sm[2]];return;}
+    const tm=l.match(/^זמן: (.+)$/);if(tm){ms=tm[1];return;}
+    if(!cur)return;
+    const r=out[cur];
+    if(/^שורה [^:]+: ✅/.test(l))r.ok++;
+    else if(/^שורה [^:]+: ❌/.test(l)){r.bad++;r.badLines.push(l);}
+    else if(/^שורה [^:]+: .*⚠|^שום שורה לא רצה/.test(l))r.warn.push(l);
+  });
+  return {groups:out,sum:sum,time:ms,blocked:t.indexOf('שום שורה לא רצה')>=0};
 }
 
 /** חזרה לעמוד (ממסך ההרצה): הקובץ של ה"דוח" — עם המזהה של ההרצה הזו, רק אם היא הסתיימה. */
@@ -907,46 +952,79 @@ function collect(){
   const p=J(pref('pending',null),null);if(!p)return;
   const t=V.readText(p.path);
   if(t==null||t.indexOf(MARK+p.id)<0)return;              // בוטלה, או עוד לא הסתיימה
-  const r=parse(t);r.at=Date.now();r.version=info.version;r.label=p.label;r.path=p.path;r.groups=p.groups;
-  results[p.key]=r;
-  if(p.key==='all'&&!r.blocked&&r.bad===0)p.groups.forEach(k=>{results[k]={ok:0,bad:0,badLines:[],warn:[],at:r.at,version:r.version,label:r.label,path:r.path,inAll:true};});
+  const r=parse(t,p.groups),at=Date.now();
+  p.groups.forEach(k=>{
+    const g=r.groups[k]||r.groups._together||{ok:0,bad:0,badLines:[],warn:[]};
+    results[k]={ok:g.ok,bad:g.bad,badLines:g.badLines.slice(0,60),warn:g.warn.slice(0,30),blocked:r.blocked,together:!!r.groups._together&&p.groups.length>1,
+      at:at,version:info.version,path:p.path,label:p.label};
+  });
+  const c=r.groups[CLEAN];
+  results._last={label:p.label,groups:p.groups,at:at,version:info.version,path:p.path,sum:r.sum,time:r.time,blocked:r.blocked,
+    clean:c?{ok:c.ok,bad:c.bad,badLines:c.badLines.slice(0,20)}:null};
   saveResults();setPref('pending','');
-  say(r.blocked?'⚠ הקובץ לא רץ — שגיאות בקובץ (פרטים בכרטיס)':r.bad?'❌ '+r.bad+' נכשלו · '+r.ok+' עברו':'✅ '+r.ok+' עברו, בלי כישלון',!!(r.blocked||r.bad));
+  const bad=r.sum?r.sum[1]:0;
+  say(r.blocked?'⚠ הקובץ לא רץ — שגיאות בקובץ':bad?'❌ '+bad+' נכשלו · '+(r.sum?r.sum[0]:0)+' עברו':'✅ '+(r.sum?r.sum[0]:0)+' עברו, בלי כישלון',!!(r.blocked||bad));
 }
 window.vfmResume=function(){try{loadInfo();collect();render();}catch(e){fail('חזרה',e);}};
 
 // ---------- המסכים ----------
 let tab=pref('tab','tests');
+if(tab==='db'||tab==='index')tab='state';
 function setTab(t){tab=t;setPref('tab',t);render();window.scrollTo(0,0);}
 $('tabs').addEventListener('click',e=>{const b=e.target.closest('button');if(b)setTab(b.dataset.t);});
 
-function status(k){
-  const p=J(pref('pending',null),null),r=results[k];
-  if(p&&p.groups&&p.groups.indexOf(k)>=0&&(p.key===k||p.key==='all'))return '<div class="st wait">⏳ ממתין לתוצאה של ההרצה מ־'+when(p.at)+' — אם היא בוטלה, אפשר להריץ שוב</div>';
-  if(!r)return '<div class="st none">עוד לא הורץ</div>';
-  const old=r.version!==info.version?' · <b>בגרסה '+esc(r.version)+' — לא בגרסה הזו</b>':'';
-  if(r.inAll)return '<div class="st ok">✅ עבר בהרצת "הכול" · '+when(r.at)+old+'</div>';
-  if(r.blocked)return '<div class="st bad">⚠ לא רץ — שגיאות בקובץ · '+when(r.at)+old+'</div>'+lines(r.warn);
-  const cls=r.bad?'bad':'ok';
-  return '<div class="st '+cls+'">'+(r.bad?'❌ '+r.bad+' נכשלו · ':'✅ ')+r.ok+' עברו · '+when(r.at)+old+'</div>'+lines(r.badLines.concat(r.warn));
+function pendingFor(k){const p=J(pref('pending',null),null);return p&&p.groups&&p.groups.indexOf(k)>=0?p:null;}
+function badge(k){
+  const r=results[k];
+  if(pendingFor(k))return '<span class="badge wait">⏳ ממתין</span>';
+  if(!r)return '<span class="badge none">לא הורץ</span>';
+  const old=r.version!==info.version;
+  if(r.blocked)return '<span class="badge bad">⚠ לא רץ</span>';
+  if(r.together)return '<span class="badge '+(r.bad?'bad':'ok')+'">'+(r.bad?'❌':'✅')+' יחד'+(old?' · ישן':'')+'</span>';
+  return '<span class="badge '+(old?'none':r.bad?'bad':'ok')+'">'+(r.bad?'❌ '+r.bad:'✅ '+r.ok)+(old?' · '+esc(r.version):'')+'</span>';
 }
-function fullBtn(k){const r=results[k];return r&&r.path?'<button class="btn" data-a="show" data-p="'+esc(r.path)+'" data-n="'+esc(r.label||'')+'">הדוח המלא</button>':'';}
+function details(g){
+  const r=results[g.k],p=pendingFor(g.k);
+  let h='<div class="det"><p>'+esc(g.d)+'</p>';
+  if(g.k==='load')h+='<div class="row">על האופן: <select id="realSel">'+realModes().map(m=>'<option'+(m===realMode()?' selected':'')+'>'+esc(m)+'</option>').join('')+'</select></div>';
+  if(p)h+='<div class="st wait">⏳ ממתין לתוצאה של ההרצה מ־'+when(p.at)+' — אם היא בוטלה, אפשר להריץ שוב</div>';
+  else if(!r)h+='<div class="st none">עוד לא הורץ</div>';
+  else{
+    const old=r.version!==info.version?' · <b>בגרסה '+esc(r.version)+' — לא בגרסה הזו</b>':'';
+    if(r.blocked)h+='<div class="st bad">⚠ לא רץ — שגיאות בקובץ · '+when(r.at)+old+'</div>';
+    else if(r.together)h+='<div class="st '+(r.bad?'bad':'ok')+'">הורצה עם אחרות (בגרסה הזו של התוכנה אין חלוקה לבדיקות) · '+(r.bad?'❌ '+r.bad+' נכשלו · ':'✅ ')+r.ok+' עברו · '+when(r.at)+old+'</div>';
+    else h+='<div class="st '+(r.bad?'bad':'ok')+'">'+(r.bad?'❌ '+r.bad+' נכשלו · ':'✅ ')+r.ok+' עברו · '+when(r.at)+old+'</div>';
+    h+=lines((r.badLines||[]).concat(r.warn||[]));
+    if(r.path)h+='<div class="row"><button class="btn" data-a="show" data-p="'+esc(r.path)+'" data-n="'+esc(r.label||'')+'">הדוח המלא</button></div>';
+  }
+  return h+'</div>';
+}
 function lines(a){return a&&a.length?'<div class="lines">'+esc(a.join('\n'))+'</div>':'';}
+function trow(g){
+  const on=sel.indexOf(g.k)>=0;
+  return '<div class="trow'+(open===g.k?' open':'')+'"><label class="ck"><input type="checkbox" data-k="'+g.k+'"'+(on?' checked':'')+'></label>'
+    +'<div class="tm" data-a="open" data-k="'+g.k+'"><div class="tn"><b>'+esc(g.n)+'</b>'+badge(g.k)+'</div><div class="ts">'+esc(g.s)+'</div></div></div>'
+    +(open===g.k?details(g):'');
+}
+function lastRun(){
+  const l=results._last;if(!l)return '';
+  const bad=l.sum?l.sum[1]:0,okn=l.sum?l.sum[0]:0;
+  return '<div class="last '+(l.blocked||bad?'bad':'ok')+'"><b>ההרצה האחרונה</b> · '+when(l.at)+' · '+esc(l.label)+'<br>'
+    +(l.blocked?'⚠ לא רצה — שגיאות בקובץ':(bad?'❌ '+bad+' נכשלו · ':'✅ ')+okn+' עברו')+(l.time?' · '+esc(l.time):'')
+    +(l.clean&&l.clean.bad?' · הניקוי: ❌ '+l.clean.bad:'')
+    +(l.path?' <button class="btn sm" data-a="show" data-p="'+esc(l.path)+'" data-n="'+esc(l.label)+'">הדוח המלא</button>':'')+'</div>';
+}
 
 function renderTests(){
-  const ms=realModes(),rm=realMode();
   let h='';
-  if(!ready)h+='<div class="card"><h2>⚠ גרסה ישנה של התוכנה</h2><p>התוסף צריך את מ0.42 ומעלה (היא מכירה "צור אופן", "ודא מסד" ומחזירה את התוצאה לעמוד). בגרסה הזו — ⋮ ← "בדיקת הפקודות" ו"דוח אבחון".</p></div>';
-  h+='<p class="note">כל הרצה — במסך ההרצה: מה יקרה, אישור, ובסוף חוזרים לכאן והתוצאה נקראת. הבדיקות רצות באופן "'+TEST_MODE+'" (נוצר בהרצה הראשונה), והרשימות שהן יוצרות מבוטלות בסוף.</p>';
-  h+='<div class="card"><h2><span class="grow">▶ הכול</span></h2><p>כל הקבוצות בהרצה אחת, עם ניקוי בסוף. "בלי הכבדות" — בלי העומס ובלי בניית האינדקס מחדש. העומס — על האופן שנבחר בכרטיס שלו.</p>'
-    +status('all')+'<div class="row"><button class="btn main" data-a="run" data-k="all"'+(ready?'':' disabled')+'>▶ הרץ הכול</button>'
-    +'<button class="btn" data-a="run" data-k="light"'+(ready?'':' disabled')+'>▶ הכול בלי הכבדות</button>'+fullBtn('all')+'</div></div>';
-  GROUPS.forEach(g=>{
-    h+='<div class="card"><h2><span class="grow">'+esc(g.n)+'</span></h2><p>'+esc(g.d)+'</p>'+status(g.k);
-    if(g.k==='load')h+='<div class="row">על האופן: <select id="realSel">'+ms.map(m=>'<option'+(m===rm?' selected':'')+'>'+esc(m)+'</option>').join('')+'</select></div>';
-    h+='<div class="row"><button class="btn'+(g.heavy?' warn':'')+'" data-a="run" data-k="'+g.k+'"'+(ready?'':' disabled')+'>▶ הרץ</button>'+fullBtn(g.k)+'</div></div>';
-  });
-  h+='<p class="note">בדיקות חדשות מגיעות עם גרסה חדשה של התוסף — בלי התקנה של התוכנה. התוצאות נשמרות בתיקייה "נתוני תוספים/אבחון/תוצאות".</p>';
+  if(!ready)h+='<div class="card"><h2>⚠ גרסה ישנה של התוכנה</h2><p>התוסף צריך את מ0.42 ומעלה.</p></div>';
+  h+=lastRun();
+  h+='<div class="tools"><button class="btn sm" data-a="pick" data-w="light">הרגילות</button><button class="btn sm" data-a="pick" data-w="all">הכול</button><button class="btn sm" data-a="pick" data-w="none">נקה</button></div>';
+  h+='<div class="sect">בדיקות רגילות</div>'+GROUPS.filter(g=>!g.heavy).map(trow).join('');
+  h+='<div class="sect">בדיקות כבדות <small>— לוקחות זמן; העומס — על הנתונים האמיתיים (רק מעתיק)</small></div>'+GROUPS.filter(g=>g.heavy).map(trow).join('');
+  h+='<p class="note">כל הרצה עוברת במסך ההרצה (מה יקרה, אישור), ובסוף חוזרים לכאן. הבדיקות רצות באופן "'+TEST_MODE+'", והרשימות שהן יוצרות מבוטלות בסוף. נגיעה בשם — הפרטים.</p>';
+  const n=sel.length;
+  h+='<div class="runbar"><button class="btn main" data-a="run"'+(ready&&n?'':' disabled')+'>▶ הרץ את המסומנות ('+n+')</button></div>';
   return h;
 }
 
@@ -976,17 +1054,21 @@ function fullReport(){
   let out='דוח אבחון (תוסף אבחון '+(info.labVersion||'')+') · '+when(Date.now())+'\n'+header();
   out+='\n=== הבדיקות ===\n';
   let latest=null;
-  [{k:'all',n:'הכול'}].concat(GROUPS).forEach(g=>{const r=results[g.k];
+  const l=results._last;
+  if(l){latest=l;out+='ההרצה האחרונה: '+when(l.at)+' · '+l.label+' · '+(l.blocked?'⚠ לא רצה':(l.sum?(l.sum[1]?'❌ '+l.sum[1]+' נכשלו · ':'✅ ')+l.sum[0]+' עברו':''))+(l.time?' · '+l.time:'')+'\n';}
+  GROUPS.forEach(g=>{const r=results[g.k];
     if(!r){out+=g.n+': עוד לא הורץ\n';return;}
-    if(!latest||r.at>latest.at)latest=r;
-    out+=g.n+': '+(r.inAll?'✅ עבר בהרצת "הכול"':r.blocked?'⚠ לא רץ — שגיאות בקובץ':(r.bad?'❌ '+r.bad+' נכשלו · ':'✅ ')+r.ok+' עברו')+' · '+when(r.at)+' · גרסה '+r.version+'\n';
-    (r.badLines||[]).concat(r.warn||[]).forEach(l=>out+='   '+l+'\n');});
+    out+=g.n+': '+(r.blocked?'⚠ לא רץ — שגיאות בקובץ':(r.bad?'❌ '+r.bad+' נכשלו · ':'✅ ')+r.ok+' עברו'+(r.together?' (יחד עם אחרות)':''))+' · '+when(r.at)+' · גרסה '+r.version+'\n';
+    (r.badLines||[]).concat(r.warn||[]).forEach(x=>out+='   '+x+'\n');});
   if(latest&&latest.path){const t=V.readText(latest.path);if(t)out+='\n=== הדוח המלא של ההרצה האחרונה ('+latest.label+') ===\n'+t+'\n';}
   out+='\n=== המסדים ===\n'+dbs().map(dbLine).join('\n')+'\n';
   out+='\n=== האינדקס ===\n'+indexText();
   out+='\n=== תקופת הניסיון של האינדקס ===\n'+trialText();
   const log=info.log?V.readText(info.log):null;
-  out+='\n=== יומן התקלות (הסוף) ===\n'+(log?log.slice(-12000):'ריק')+'\n';
+  const es=log?logEntries(log):[],errs=es.filter(isErr);
+  out+='\n=== יומן התקלות — התקלות האחרונות ('+errs.length+' מתוך '+es.length+' רשומות) ===\n'
+    +(errs.length?errs.slice(-30).map(e=>e.d+'  '+(e.t.length>1500?e.t.slice(0,1500)+'…':e.t)).join('\n'):'אין תקלות')+'\n';
+  out+='\n=== היומן — 25 הרשומות האחרונות ===\n'+(es.length?es.slice(-25).map(e=>e.d+'  '+(e.t.length>400?e.t.slice(0,400)+'…':e.t)).join('\n'):'ריק')+'\n';
   return out;
 }
 
@@ -1003,7 +1085,7 @@ function dbLine(d){return d.mode+': '+(d.ok===false?'✗ פגום ('+(d.error||'
 function renderDb(){
   if(!can('dbStats'))return '<p class="note">התוכנה בגרסה הזו לא מוסרת את מצב המסדים (צריך מ0.43).</p>';
   const ds=dbs();
-  let h='<p class="note">המסד של כל אופן: תקינות, כמה רשימות וחכמות, וכמה קבצים רשומים בו בלי להיות באף רשימה ("לא־משויכים" — הקבצים בכונן לא נוגעים בהם). לקריאה בלבד; ביטול — דרך מסך ההרצה.</p>';
+  let h='<div class="sect">המסדים</div><p class="note">המסד של כל אופן: תקינות, כמה רשימות וחכמות, וכמה קבצים רשומים בו בלי להיות באף רשימה ("לא־משויכים" — הקבצים בכונן לא נוגעים בהם). לקריאה בלבד; ביטול — דרך מסך ההרצה.</p>';
   ds.forEach(d=>{
     h+='<div class="card"><h2><span class="grow">'+esc(d.mode)+'</span><small>'+d.kb+'KB</small></h2>';
     if(d.ok===false)h+='<div class="st bad">✗ פגום: '+esc(d.error||'')+' — לשחזר מגיבוי (הגדרות ← גיבויים)</div>';
@@ -1032,10 +1114,10 @@ function logEntries(t){
     if(m){cur={d:m[1],t:m[2]};out.push(cur);}else if(cur&&l.trim())cur.t+='\n'+l;});
   return out;
 }
+function isErr(e){return /^(שגיאה ב|קריסה)/.test(e.t);}
 function renderLog(){
   const t=info.log?V.readText(info.log):null;
   const es=t?logEntries(t):[];
-  const isErr=e=>/^(שגיאה ב|קריסה)/.test(e.t);
   const shown=(logMode==='err'?es.filter(isErr):es).slice(-200).reverse();
   let h='<div class="card"><h2><span class="grow">⚠ יומן התקלות</span><span class="seg"><button data-a="logm" data-m="err" class="'+(logMode==='err'?'on':'')+'">תקלות</button><button data-a="logm" data-m="all" class="'+(logMode==='all'?'on':'')+'">הכול</button></span></h2>'
     +'<p>'+es.length+' רשומות · '+es.filter(isErr).length+' תקלות. היומן מקצר את עצמו (נשאר הסוף).</p>'
@@ -1047,10 +1129,10 @@ function renderLog(){
 
 let lastPath=pref('path','');
 function renderIndex(){
-  return '<div class="card"><h2>האינדקס</h2><div class="lines">'+esc(indexText())+'</div><p>בדיקה עם זמנים — בלשונית "בדיקות": "אינדקס", ו"בניית האינדקס מחדש".</p></div>'
+  return '<div class="sect">האינדקס</div><div class="card"><h2>האינדקס</h2><div class="lines">'+esc(indexText())+'</div><p>בדיקה עם זמנים — בלשונית "בדיקות": "אינדקס" ו"בניית האינדקס מחדש".</p></div>'
     +'<div class="card"><h2>בדיקת מסלול</h2><p>האם הקובץ בכונן, והאם האינדקס מכיר אותו. בקובץ פקודות: ודא "&lt;קובץ&gt;" באינדקס.</p>'
     +'<input type="text" id="pathIn" placeholder="/storage/emulated/0/Download/..." value="'+esc(lastPath)+'">'
-    +'<div class="row"><button class="btn main" data-a="path">בדיקה</button>'+(can('pickFile')?'<button class="btn" data-a="pick">בחירת קובץ…</button>':'')+'</div><div id="pathOut"></div></div>'
+    +'<div class="row"><button class="btn main" data-a="path">בדיקה</button>'+(can('pickFile')?'<button class="btn" data-a="pickf">בחירת קובץ…</button>':'')+'</div><div id="pathOut"></div></div>'
     +'<div class="card"><h2>תקופת הניסיון</h2><p>מה שהבדיקה היומית, הבנייה השבועית ו"מה השתנה מאז" מצאו מעבר לבדיקה השוטפת.</p><div class="lines">'+esc(trialText())+'</div></div>';
 }
 
@@ -1065,7 +1147,7 @@ function checkPath(){
 function render(){
   document.querySelectorAll('#tabs button').forEach(b=>b.classList.toggle('on',b.dataset.t===tab));
   $('sub').textContent=(info.version?'גרסה '+info.version+' · ':'')+(info.model||'')+(info.access===false?' · ✗ אין הרשאה לכל הקבצים':'');
-  try{$('main').innerHTML=tab==='report'?renderReport():tab==='log'?renderLog():tab==='index'?renderIndex():tab==='db'?renderDb():renderTests();}
+  try{$('main').innerHTML=tab==='report'?renderReport():tab==='log'?renderLog():tab==='state'?renderDb()+renderIndex():renderTests();}
   catch(e){$('main').innerHTML='';fail('הצגה',e);}
 }
 
@@ -1073,10 +1155,9 @@ $('main').addEventListener('click',e=>{
   const b=e.target.closest('[data-a]');if(!b)return;
   const a=b.dataset.a;
   try{
-    if(a==='run'){const k=b.dataset.k;
-      const sel=$('realSel');if(sel)setPref('real',sel.value);
-      if(k==='all')run(GROUPS,'הכול');else if(k==='light')run(GROUPS.filter(g=>!g.heavy),'הכול בלי הכבדות');
-      else{const g=GROUPS.find(x=>x.k===k);run([g],g.n);}}
+    if(a==='run'){const rs=$('realSel');if(rs)setPref('real',rs.value);run();}
+    else if(a==='open'){open=open===b.dataset.k?null:b.dataset.k;render();}
+    else if(a==='pick'&&b.dataset.w){const w=b.dataset.w;sel=w==='all'?GROUPS.map(g=>g.k):w==='light'?GROUPS.filter(g=>!g.heavy).map(g=>g.k):[];saveSel();render();}
     else if(a==='show'){const t=V.readText(b.dataset.p);openSheet('הדוח — '+b.dataset.n,t==null?'הקובץ לא נמצא: '+b.dataset.p:t,b.dataset.p);}
     else if(a==='report'){const p=V.saveText('דוח תוסף אבחון '+(info.version||'')+'.txt',fullReport(),true);
       if(!p){say('⚠ הדוח לא נשמר (הפרטים ביומן)',true);return;}say('נשמר בהורדות: '+p.split('/').pop());V.send(p);}
@@ -1085,10 +1166,14 @@ $('main').addEventListener('click',e=>{
     else if(a==='sendlog')V.send(info.log);
     else if(a==='loose')cleanLoose(b.dataset.m);
     else if(a==='path')checkPath();
-    else if(a==='pick')ask('pickFile',['בחירת קובץ לבדיקה'],v=>{if(v){$('pathIn').value=v;checkPath();}});
+    else if(a==='pickf')ask('pickFile',['בחירת קובץ לבדיקה'],v=>{if(v){$('pathIn').value=v;checkPath();}});
   }catch(err){fail(a,err);}
 });
-$('main').addEventListener('change',e=>{if(e.target.id==='realSel')setPref('real',e.target.value);});
+$('main').addEventListener('change',e=>{
+  if(e.target.id==='realSel')setPref('real',e.target.value);
+  const k=e.target.dataset&&e.target.dataset.k;
+  if(k&&e.target.type==='checkbox'){sel=sel.filter(x=>x!==k);if(e.target.checked)sel.push(k);sel=GROUPS.map(g=>g.k).filter(x=>sel.indexOf(x)>=0);saveSel();render();}
+});
 $('main').addEventListener('keydown',e=>{if(e.target.id==='pathIn'&&e.key==='Enter')checkPath();});
 
 // ---------- חלון לטקסט ארוך ----------
@@ -1112,11 +1197,14 @@ function demoBridge(){
   const later=(id,v)=>setTimeout(()=>window.vfmResult(id,v),30);
   files['/d/log.txt']='2026-11-12 10:00:01  בניית אינדקס (בבקשה): פנימי 1.2 שנ\'\n2026-11-12 10:05:12  שגיאה ב-Lab.copy: java.io.IOException: x\n\tat a.b(c)\n2026-11-12 11:00:00  תוסף אבחון: נפתח\n';
   files['/d/trial.txt']='2026-11-10 09:12 | יומית | 0.31 שנ\' | נבדקו 4157 | נמצאו 2\n2026-11-11 09:12 | יומית | 0.30 שנ\' | נבדקו 4160 | נמצאו 0\n';
-  return {info:()=>JSON.stringify({version:'מ0.42',versionCode:55,device:'גרסה מ0.42 · Samsung SM-X200 · אנדרואיד 14 (API 34)',access:true,freeMb:20480,log:'/d/log.txt',trial:'/d/trial.txt',savedMode:'עבודה',indexReady:true,lastFullBuild:Date.now()-86400000,lastDaily:Date.now()-3600000,pointsSupported:true,labVersion:'2',indexes:[{label:'פנימי',files:41230},{label:'כרטיס',files:8120}],totalFiles:49350,totalDirs:3120,lastBuilt:Date.now()-7200000,indexStatus:''}),
+  return {info:()=>JSON.stringify({version:'מ0.42',versionCode:57,device:'גרסה מ0.42 · Samsung SM-X200 · אנדרואיד 14 (API 34)',access:true,freeMb:20480,log:'/d/log.txt',trial:'/d/trial.txt',savedMode:'עבודה',indexReady:true,lastFullBuild:Date.now()-86400000,lastDaily:Date.now()-3600000,pointsSupported:true,labVersion:'2',indexes:[{label:'פנימי',files:41230},{label:'כרטיס',files:8120}],totalFiles:49350,totalDirs:3120,lastBuilt:Date.now()-7200000,indexStatus:''}),
     theme:()=>null,load:k=>store[k]!=null?store[k]:null,save:(k,v)=>{store[k]=v;},modes:()=>JSON.stringify(['בדיקות מערכת','דוגמאות','עבודה','שמור לתוכנה']),
     dataDir:()=>'/d/אבחון',saveText:(n,t,dl)=>{const p=(dl?'/dl/':'/d/אבחון/')+n;files[p]=t;return p;},readText:p=>files[p]==null?null:files[p],
     runFile:(t,w,r)=>{window.__ran={text:t,where:w,real:r};const id=(t.match(/הרצת אבחון (\S+)/)||[])[1],rp=(t.match(/^דוח "(.*)"$/m)||[])[1];
-      files[rp]='ECHO\nהרצת אבחון '+id+' · ניסוי\nשורה 3: ✅ "בדיקת פקודות" קיימת\nשורה 9: ❌ "בדיקת לחץ" — בפועל: חסרה\n✅ ודא: 51 עברו · 1 נכשלו\n';},
+      let rep='ECHO כל "ודא" מסמן ✅ או ❌\nהרצת אבחון '+id+' · ניסוי\n',n=1,ok=0,bad=0;
+      t.split('\n').forEach(l=>{const m=l.match(/^קטע "(.*)"$/);if(!m)return;rep+='שורה '+(n++)+': ▸ '+m[1]+' · ⏱ 0 אלפיות\n';
+        rep+='שורה '+(n++)+': ✅ "א" קיימת · ⏱ 2 אלפיות\n';ok++;if(m[1]==='לחץ'){rep+='שורה '+(n++)+': ❌ "בדיקת לחץ" — בפועל: חסרה · ⏱ 1 אלפיות\n';bad++;}});
+      files[rp]=rep+(bad?'❌':'✅')+' ודא: '+ok+' עברו · '+bad+' נכשלו\nזמן: 12.8 שניות\n';},
     pathInfo:p=>JSON.stringify({path:p,disk:true,dir:false,size:1234,index:p.indexOf('Download')>=0}),send:p=>{window.__sent=p;},
     dbStats:()=>JSON.stringify([{mode:'עבודה',kb:240,ok:true,lists:31,smarts:4,loose:2,home:9,backups:5,lastBackup:'אוטומטי 12.11.2026 18-01-02.db'},{mode:'בדיקות מערכת',kb:96,ok:true,lists:1,smarts:0,loose:0,home:0,backups:12,lastBackup:''}]),
     pickFile:(id)=>later(id,'/storage/emulated/0/Download/דוח.pdf'),toast:()=>{},log:()=>{}};
@@ -2413,7 +2501,7 @@ cd $S; rm -rf out gen bld
 ls -la $OUT
 
 ===== קובץ: build/m-version.txt =====
-56 מ0.43
+57 מ0.44
 
 ===== קובץ: build/test.sh =====
 #!/bin/bash
@@ -6784,6 +6872,12 @@ final class Batch {
      */
     private static boolean small(final Plan plan, final Step s, String cmd, List<String> tk, File here,
                                  Map<String, String> vars, final Sim sim) {
+        if (cmd.equals(SECTION)) {                                              // מ0.44: קטע
+            if (tk.size() != 2 || tk.get(1).trim().isEmpty()) { s.error = Words.DbCmd.SECTION_USAGE; return true; }
+            s.noop = true;
+            s.describe = Words.DbCmd.section(Verbs.withVars(tk.get(1).trim(), vars));
+            return true;
+        }
         if (cmd.equals(VERIFY) && tk.size() == 2 && tk.get(1).trim().equals(W_DB)) {   // מ0.42: ודא מסד
             DbListCmd.planVerifyDb(s);
             return true;
@@ -6904,6 +6998,26 @@ final class Batch {
         return false;
     }
 
+    /**
+     * מ0.43: דוח של הרצה — ליומן התקלות בקיצור: כמה שורות, הסיכום של "ודא", וכל שורה עם ❌ או ⚠ (עד 30). עד כאן — כל הדוח, ובדיקה
+     * אחת (300 שורות) דחקה את התקלות מהיומן. הדוח המלא — בשורה "דוח" ובמסך ההרצה.
+     */
+    static String logLine(List<String> report) {
+        if (report.isEmpty()) return Words.Cmd.NO_CHANGE;
+        if (report.size() <= 12) return report.toString();
+        StringBuilder sb = new StringBuilder(Words.DbCmd.logLines(report.size()));
+        int shown = 0;
+        for (String r : report) {
+            boolean bad = r.contains("❌") || r.contains("⚠");
+            boolean sum = r.contains(Words.DbCmd.VERIFY_SUM_MARK);
+            if ((bad && shown < 30) || sum) {
+                sb.append(" · ").append(r);
+                if (bad) shown++;
+            }
+        }
+        return sb.toString();
+    }
+
     /** מ0.37: "דוח "<קובץ>"" — ההודעות (ECHO) והיומן נכתבים לקובץ; כישלון בכתיבה — שורה ביומן, לא עוצר. */
     private static void writeReport(Plan plan, List<String> report) {
         if (plan.reportFile == null) return;
@@ -7013,6 +7127,11 @@ final class Batch {
     static final String MODE = "MODE", CALL = "CALL", CONT = "CONTINUE";
     /** מ0.37 — הפקודות הקטנות: כתוב לקובץ · המתן · גבה (המסד) · רענן (האינדקס) · דוח (היומן לקובץ). */
     static final String WRITE = "WRITE", WAIT = "WAIT", BACKUP = "BACKUP", REFRESH = "REFRESH", REPORT = "REPORT", LAB = "LAB";
+    /**
+     * מ0.44: "קטע "<שם>"" — שורה בדוח, במקום שלה בהרצה ("▸ <שם>"). ההודעות (ECHO) עולות לראש הדוח; הקטע מחלק את הדוח לפי הסדר —
+     * תוסף האבחון יודע כך איזו בדיקה עברה ואיזו נכשלה, כשמריצים כמה ביחד. לא משנה דבר.
+     */
+    static final String SECTION = "SECTION";
     static final String SW_APPEND = "/הוסף", W_DEEP = "עמוק", W_ERROR = "שגיאה", W_FULL = "מלא";   // תחביר
     /** מ0.42: "ודא מסד" — המנוע של המסד מול ה־SQLite של המכשיר, ותקינות המסד של כל אופן. */
     static final String W_DB = "מסד";   // תחביר
@@ -10307,7 +10426,7 @@ final class BatchUi {
                         }
                         final List<String> report = rep;
                         busy.close();
-                        Log.i("קובץ פקודות: " + f + " · " + (report.isEmpty() ? Words.Cmd.NO_CHANGE : report.toString())     // 187
+                        Log.i("קובץ פקודות: " + f + " · " + Batch.logLine(report)     // 187; מ0.43: בקיצור
                                 + (plan.start != null ? " · " + (Batch.isHome(plan.start) ? Words.Cmd.HOME_AT_END : Words.Cmd.openAtEnd(plan.start.getName())) : ""));
                         Ui.afterIndex(a, new Runnable() {
                             @Override
@@ -11746,6 +11865,8 @@ final class Commands {
                     list(pos(Type.PATH, Words.Def.P_WHAT_OPEN, Words.Def.H_START, Words.Def.U_START), hidden()), null),   // מ0.40: /נסתרים — עם תבנית
             new Def("ECHO", Words.Def.N_ECHO, new String[]{HE_ECHO}, Family.FILE, Words.Def.W_ECHO, list(pos(Type.TEXT, Words.Def.P_TEXT, Words.Def.H_TEXT)), null),
             new Def("REM", Words.Def.N_REM, new String[]{HE_REM}, Family.FILE, Words.Def.W_REM, list(pos(Type.TEXT, Words.Def.P_TEXT, Words.Def.H_TEXT)), null),
+            new Def(Batch.SECTION, Words.DbCmd.N_SECTION, new String[]{Words.DbCmd.N_SECTION}, Family.FILE, Words.DbCmd.W_SECTION,   // מ0.44
+                    list(pos(Type.TEXT, Words.Def.P_TEXT, Words.DbCmd.H_SECTION)), null),
             verb(Verbs.OPEN, Words.Def.W_OPEN),
             verb(Verbs.CREATE, Words.Def.W_CREATE),
             verb(Verbs.UPDATE, Words.Def.W_UPDATE),
@@ -13903,10 +14024,16 @@ final class DbFollow {
             Log.e("DbFollow.modes", t);
             return 0;
         }
+        long t0 = System.currentTimeMillis();
+        StringBuilder times = new StringBuilder();
         for (String m : modes) {
             SqlStore s = null;
+            long m0 = System.currentTimeMillis();
             try {
-                if (write && paths != null && !has(DbScreen.dbFile(c, m), paths)) continue;
+                if (write && paths != null && !has(DbScreen.dbFile(c, m), paths)) {
+                    times.append(times.length() > 0 ? " · " : "").append(m).append(' ').append(System.currentTimeMillis() - m0);
+                    continue;
+                }
                 s = write ? SqlStore.open(DbScreen.dbFile(c, m), new IdCounter(DbScreen.counterFile()))
                         : SqlStore.openReadOnly(DbScreen.dbFile(c, m));
                 sum += e.run(s);
@@ -13915,9 +14042,15 @@ final class DbFollow {
             } finally {
                 if (s != null) s.close();
             }
+            if (s != null) times.append(times.length() > 0 ? " · " : "").append(m).append(" ✎").append(System.currentTimeMillis() - m0);
         }
+        long all = System.currentTimeMillis() - t0;
+        // מ0.43 (בדיקת המכשיר: העברת קובץ מרשימה לתיקייה — עדיין 1.5 שניות): איטי — ליומן, לכל אופן כמה זמן (✎ — נפתח לכתיבה)
+        if (all >= SLOW) Log.i("עדכון הרשימות אחרי הכונן: " + all + " מ\"ש — " + times);   // בכונן
         return sum;
     }
+
+    static final long SLOW = 300;
 
     private static boolean has(java.io.File db, Collection<String> paths) {
         SqlStore r = SqlStore.openReadOnly(db);
@@ -32971,7 +33104,7 @@ public class RunScreen extends Activity {
                 report = rep;
                 took = System.currentTimeMillis() - started;
                 running = false;
-                Log.i("קובץ פקודות: " + file + " · " + (report.isEmpty() ? Words.Cmd.NO_CHANGE : report.toString()));
+                Log.i("קובץ פקודות: " + file + " · " + Batch.logLine(report));   // מ0.43: בקיצור
                 Ui.afterIndex(RunScreen.this, new Runnable() {
                     @Override public void run() { summary(); }
                 });
@@ -45047,6 +45180,13 @@ public final class Words {
             return "▸ כלול: " + name + " (" + lines + " שורות)";
         }
 
+        /** מ0.43: מה שמזהה את שורת הסיכום של "ודא" (Batch.logLine). */
+        public static final String VERIFY_SUM_MARK = " ודא: ";
+
+        public static String logLines(int n) {
+            return n + " שורות בדוח";
+        }
+
         public static String verifySummary(int ok, int bad) {
             return (bad == 0 ? "✅" : "❌") + " ודא: " + ok + " עברו · " + bad + " נכשלו";
         }
@@ -45057,6 +45197,15 @@ public final class Words {
 
         public static String verifyResult(boolean ok, String what, String found) {
             return (ok ? "✅ " : "❌ ") + what + (ok ? "" : " — בפועל: " + found);
+        }
+
+        // מ0.44 — קטע
+        public static final String N_SECTION = "קטע",  // תחביר
+                W_SECTION = "כותרת בדוח של ההרצה, במקום שלה (\"▸ שם\") — מחלקת דוח ארוך לחלקים. לא משנה דבר",
+                H_SECTION = "השם שיופיע בדוח", SECTION_USAGE = "צורה: קטע \"<שם>\"";
+
+        public static String section(String name) {
+            return "▸ " + name;
         }
 
         // מ0.42 — ב8: רשימה ששינתה שם — קובצי הפקודות שפונים אליה
@@ -47616,6 +47765,7 @@ public final class Tests {
         run("מ0.42: פקודות לבדיקות — ודא מסד, צור אופן, ודא … באינדקס", new Runnable() { public void run() { m042cmds(); } });
         run("מ0.42: תוסף האבחון בא עם התוכנה, עם קובצי הבדיקה של הגרסה", new Runnable() { public void run() { m042plugin(); } });
         run("מ0.42: רשימה ששינתה שם — קובצי הפקודות שפונים אליה מתעדכנים (ב8)", new Runnable() { public void run() { m042renamed(); } });
+        run("מ0.44: קטע — שורה בדוח במקום שלה", new Runnable() { public void run() { m044section(); } });
         run("מ0.41: בטל לא-משויכים, קובץ של פקודת פתיחה אחת, שמות המסכים", new Runnable() { public void run() { m041(); } });
         run("מ0.41: העורך האינטראקטיבי בא עם התוכנה", new Runnable() { public void run() { m041bundled(); } });
         run("מ0.41: קובץ הדוגמה של רשימת \"בחירה\"", new Runnable() { public void run() { m041example(); } });
@@ -49659,6 +49809,28 @@ public final class Tests {
         }
     }
 
+    /** מ0.44: "קטע" — שורה בדוח במקום שלה (לא בראש, כמו ECHO), ובלי שינוי. */
+    private static void m044section() {
+        File r = new File(home, "כונן-044");
+        wipe(r);
+        r.mkdirs();
+        java.util.Map<String, String> v = Batch.vars(r, r.getAbsolutePath(), null);
+        Batch.Plan p = Batch.plan("קטע \"א\"\nכתוב \"%כאן%\\א.txt\" \"x\"\nודא \"%כאן%\\א.txt\" קיים\nקטע \"ב\"\nודא \"%כאן%\\ב.txt\" חסר\n", r, v);
+        eq("מ0.44: קטע — בלי שגיאות, ולא נחשב שינוי", 0, p.errors);
+        List<String> rep = Batch.run(p, null, null, null);
+        String all = rep.toString();
+        int a = -1, b = -1, okA = -1, okB = -1;
+        for (int i = 0; i < rep.size(); i++) {
+            if (rep.get(i).endsWith(": ▸ א")) a = i;
+            if (rep.get(i).endsWith(": ▸ ב")) b = i;
+            if (rep.get(i).contains("✅ \"א.txt\" קיים")) okA = i;
+            if (rep.get(i).contains("✅ \"ב.txt\" חסר")) okB = i;
+        }
+        check("מ0.44: הקטעים בדוח — לפי הסדר, כל אחד לפני השורות שלו (" + all + ")", a >= 0 && a < okA && okA < b && b < okB);
+        eq("מ0.44: קטע בלי שם — שגיאה", 1, Batch.plan("קטע\n", r, v).errors);
+        eq("מ0.44: \"קטע\" — השם בעברית של SECTION", Batch.SECTION, Commands.canonical("קטע"));
+    }
+
     private static void m042renamed() {
         MemStore s = new MemStore(IdCounter.memory());
         long h = DbPaths.ensureHome(s);
@@ -49701,6 +49873,13 @@ public final class Tests {
             check("מ0.42: אותו שם — כלום", Shortcuts.listRenamed(s, m, b, "פעילים 2027", "פעילים 2027").isEmpty());
             eq("מ0.42: ההודעה — קובץ אחד", " · עודכן קובץ פקודות אחד שפונה לרשימה: פותח", Words.DbCmd.followed(java.util.Arrays.asList("פותח")));
             eq("מ0.42: ההודעה — כמה", " · עודכנו 2 קובצי פקודות שפונים לרשימה: א, ב", Words.DbCmd.followed(java.util.Arrays.asList("א", "ב")));
+            List<String> rep = new ArrayList<String>();
+            for (int i = 1; i <= 20; i++) rep.add("שורה " + i + ": " + (i == 7 ? "❌ \"א\" — בפועל: חסרה" : "✅ \"ב\" קיימת"));
+            rep.add(Words.DbCmd.verifySummary(19, 1));
+            String ll = Batch.logLine(rep);
+            check("מ0.43: דוח ארוך ביומן — בקיצור: כמה שורות, ה־❌, והסיכום (" + ll + ")", ll.startsWith("21 שורות בדוח") && ll.contains("שורה 7: ❌")
+                    && !ll.contains("שורה 8:") && ll.contains("ודא: 19 עברו · 1 נכשלו"));
+            eq("מ0.43: דוח קצר — כמו שהוא", "[שורה 1: נוצרה א]", Batch.logLine(java.util.Collections.singletonList("שורה 1: נוצרה א")));
             DbListCmd.Res res = DbListCmd.Res.ok("x").renamed(b, "א", "א");
             check("מ0.42: Res — שם שלא השתנה אינו שינוי שם", res.renamed == 0);
         } catch (Exception e) {
@@ -50898,7 +51077,7 @@ public final class Tests {
     /** 1.22.5: ההגדרה האחת — שלמה, תואמת למנוע, וכל פרמטר עם שם והסבר. */
     private static void v1225() {
         check("1.22.5: פקודות הקבצים — אותן ובאותו סדר (מ0.14: ודא)",
-                java.util.Arrays.equals(Commands.fileNames(), new String[]{"COPY", "MOVE", "DEL", "REN", "MD", "RD", "COMP", "LINK", "VERIFY", "MODE", "CONTINUE", "WRITE", "WAIT", "BACKUP", "REFRESH", "REPORT", "CALL", "START", "ECHO", "REM"}));
+                java.util.Arrays.equals(Commands.fileNames(), new String[]{"COPY", "MOVE", "DEL", "REN", "MD", "RD", "COMP", "LINK", "VERIFY", "MODE", "CONTINUE", "WRITE", "WAIT", "BACKUP", "REFRESH", "REPORT", "CALL", "START", "ECHO", "REM", "SECTION"}));   // מ0.44: קטע
         check("1.22.5: שמות נרדפים", Commands.canonical("MKDIR").equals("MD") && Commands.canonical("rmdir").equals("RD")
                 && Commands.canonical("ERASE").equals("DEL") && Commands.canonical("RENAME").equals("REN")
                 && Commands.canonical("copy").equals("COPY") && Commands.canonical("FORMAT").equals("FORMAT")
