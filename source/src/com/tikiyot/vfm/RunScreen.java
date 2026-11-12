@@ -29,8 +29,12 @@ import java.util.Set;
 public class RunScreen extends Activity {
 
     static final String EXTRA_FILE = "file";
+    /** מ0.40: התיקייה של %כאן% (ושל כלול) — כשהקובץ שרץ הוא עותק (מתוסף), התיקייה של הקובץ המקורי. */
+    static final String EXTRA_HERE = "here";
 
     private File file;
+    /** מ0.40: התיקייה של %כאן% (EXTRA_HERE, או של הקובץ). */
+    private File here;
     private String text;
     private Map<String, String> vars;
     private Library lib;
@@ -51,7 +55,14 @@ public class RunScreen extends Activity {
     private LinearLayout bottom;
 
     static void start(Activity a, File f) {
-        a.startActivity(new Intent(a, RunScreen.class).putExtra(EXTRA_FILE, f.getAbsolutePath()));
+        start(a, f, null);
+    }
+
+    /** here — התיקייה של %כאן%; null — של הקובץ. */
+    static void start(Activity a, File f, File here) {
+        Intent i = new Intent(a, RunScreen.class).putExtra(EXTRA_FILE, f.getAbsolutePath());
+        if (here != null) i.putExtra(EXTRA_HERE, here.getAbsolutePath());
+        a.startActivity(i);
     }
 
     @Override
@@ -63,6 +74,8 @@ public class RunScreen extends Activity {
             return;
         }
         file = new File(p);
+        String h = getIntent().getStringExtra(EXTRA_HERE);
+        here = h != null && new File(h).isDirectory() ? new File(h) : file.getParentFile();
         try {
             text = Files.readUtf8(file);
         } catch (Throwable t) {
@@ -70,7 +83,7 @@ public class RunScreen extends Activity {
             finish();
             return;
         }
-        vars = BatchUi.vars(this, file.getParentFile());
+        vars = BatchUi.vars(this, here);
         lib = Library.get(this);
         lines = Arrays.asList(text.replace("\r", "").split("\n"));
         setTitle(Words.Run.TITLE + Text.stem(file.getName()));
@@ -141,7 +154,7 @@ public class RunScreen extends Activity {
                 Batch.Plan p = null;
                 Throwable err = null;
                 try {
-                    p = Batch.plan(body, file.getParentFile(), vars, lib, progress(pr, true));
+                    p = Batch.plan(body, here, vars, lib, progress(pr, true));
                 } catch (Throwable t) {
                     err = t;
                     Log.e("הכנת קובץ פקודות: " + file, t);
@@ -311,13 +324,13 @@ public class RunScreen extends Activity {
                 @Override public void onClick(View v) {
                     String m = openMode;                                               // מ0.32: האופן של השורה שיצרה אותה
                     if (DbVerbs.active() && m != null) DbVerbs.openPath(RunScreen.this, m, open);
-                    else Verbs.run(RunScreen.this, Verbs.openList(open), file.getParentFile());
+                    else Verbs.run(RunScreen.this, Verbs.openList(open), here);
                 }
             }));
         if (plan.open != null && !plan.trouble)                                    // מ0.25: כל פקודות הפתיחה, בסדר
             bs.add(btn("▶ " + Verbs.label(Verbs.parse(plan.open)) + (plan.opens.size() > 1 ? " (+" + (plan.opens.size() - 1) + ")" : ""),
                     new View.OnClickListener() {
-                @Override public void onClick(View v) { DbVerbs.runOpens(RunScreen.this, plan.opens, file.getParentFile()); }
+                @Override public void onClick(View v) { DbVerbs.runOpens(RunScreen.this, plan.opens, here); }
             }));
         if (plan.start != null)
             bs.add(btn("▶ " + (Batch.isHome(plan.start) ? Words.Cmd.HOME_AT_END : plan.start.getName()), new View.OnClickListener() {

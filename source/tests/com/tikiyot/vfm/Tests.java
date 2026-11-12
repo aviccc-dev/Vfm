@@ -55,6 +55,7 @@ public final class Tests {
         run("מ0.32: RD לתת־תיקייה ואז לתיקייה", new Runnable() { public void run() { m032(); } });
         run("מ0.38: הפקודות והמתגים בעברית", new Runnable() { public void run() { m038(); } });
         run("מ0.38: המעבדה", new Runnable() { public void run() { m038lab(); } });
+        run("מ0.40: התוספים, והשורות שהעורך האינטראקטיבי כותב", new Runnable() { public void run() { m040(); } });
         run("מ0.37: הפקודות הקטנות — כתוב, ודא (תיקייה, מכיל, קבצים, שגיאה), דוח, המתן, משתנים, רעיון וכותרת", new Runnable() { public void run() { m037(); } });
         run("קובצי פקודות — השורה כשדות לטופס (117א, שלב 2)", new Runnable() { public void run() { batchForm(); } });
         run("תיקוני הביקורות השישית והשביעית (118–122, 134, 135, 139)", new Runnable() { public void run() { review7(); } });
@@ -1792,6 +1793,127 @@ public final class Tests {
             same2 = pt.steps.get(i).cmd.equals(pe.steps.get(i).cmd) && pt.steps.get(i).files.equals(pe.steps.get(i).files) && pt.steps.get(i).recursive == pe.steps.get(i).recursive;
         check("מ0.38: קובץ שהעורך תרגם — מתוכנן בדיוק כמו המקור", same2);
         check("מ0.38: \"בטל\" ו\"הכפל\" — לרשימות", Commands.canonical("בטל").equals("RD") && Commands.canonical("הכפל").equals("COPY"));
+    }
+
+    /** מ0.40: המעבדה ← התוספים (התיקייה עוברת, השמות הישנים עובדים); וכל שורה שהעורך האינטראקטיבי (גרסה 4) כותב — במנוע. */
+    private static void m040() {
+        String[] a = Lab.nameOf("<meta name=\"vfm-plugin\" content=\"עורך אינטראקטיבי\"><meta name=\"vfm-plugin-version\" content=\"4\">", "x.html");
+        check("מ0.40: שם וגרסה של תוסף — מתוך העמוד (vfm-plugin)", a[0].equals("עורך אינטראקטיבי") && a[1].equals("4"));
+        a = Lab.nameOf("<p>", "תוסף עורך 2.html");
+        check("מ0.40: בלי meta — משם הקובץ שמתחיל ב\"תוסף\"", a[0].equals("עורך") && a[1].equals("2"));
+        check("מ0.40: הפקודות — החדשות והישנות", Lab.isLine("הוסף תוסף") && Lab.isLine("החלף תוסף \"א\" \"1\"") && Lab.isLine("הוסף מעבדה")
+                && !Lab.isLine("הוסף מהכונן") && Lab.current("החלף מעבדה \"א\" \"1\"").equals("החלף תוסף \"א\" \"1\""));
+        Verbs.Cmd pc = Verbs.parse("פתח תוסף \"עורך אינטראקטיבי\""), pe = Verbs.parse("פתח תוסף"), ps = Verbs.parse("פתח מסך תוספים");
+        check("מ0.40: פתח תוסף \"<שם>\" · פתח תוסף · פתח מסך תוספים", pc.error == null && Verbs.K_SCREEN.equals(pc.kind) && Verbs.S_PLUGINS.equals(pc.arg)
+                && pc.cond.equals("עורך אינטראקטיבי") && pe.error == null && pe.cond.isEmpty() && ps.error == null && Verbs.S_PLUGINS.equals(ps.arg));
+        File root = Lab.root(), old = new File(Paths.dbData(), Lab.OLD_DIR);
+        wipe(root);
+        wipe(old);
+        try {
+            File oe = new File(old, "עורך");
+            oe.mkdirs();
+            Files.writeAtomic(new File(oe, "3.html"), "<p>");
+            File r = Lab.root();
+            check("מ0.40: התיקייה \"מעבדה\" עוברת ל\"תוספים\" (פעם אחת)", r.getName().equals(Lab.DIR) && new File(r, "עורך/3.html").isFile() && !old.exists());
+            check("מ0.40: אחרי המעבר — אותו ניסוי, עכשיו תוסף", "[עורך]".equals(Lab.experiments(r).toString()) && "3".equals(Lab.active(r, "עורך")));
+        } catch (Exception e) {
+            check("מ0.40: מעבר התיקייה — " + e, false);
+        }
+        File w = new File(home, "עורך-040");
+        wipe(w);
+        mk(new File(w, "מקור"), "a.pdf", 5);
+        mk(new File(w, "מקור"), "b.tmp", 5);
+        mk(new File(w, "יעד"), "x.txt", 5);
+        try {
+            Files.writeAtomic(new File(w, "ק.vbat"), "הודעה מתוך כלול\n");
+            Files.writeAtomic(new File(w, "תוסף עורך אינטראקטיבי 4.html"), "<meta name=\"vfm-lab\" content=\"עורך אינטראקטיבי\"><meta name=\"vfm-plugin\" content=\"עורך אינטראקטיבי\"><meta name=\"vfm-lab-version\" content=\"4\">");
+        } catch (Exception e) {
+            check("מ0.40: הכנה — " + e, false);
+        }
+        java.util.Map<String, String> wv = Batch.vars(w, w.getAbsolutePath(), null);
+        // השורות כמו שהעורך כותב אותן (מודל העמוד, lab-pages/מעבדה עורך 4.html — אותו מבנה בעברית ובאנגלית)
+        String he = "הערה ניסוי\n"
+                + "העתק \"%כאן%\\מקור\" \"%כאן%\\יעד\" /עמוק /תפוס:לדלג /תאריך:חודש /נסתרים\n"
+                + "העתק \"%כאן%\\מקור\\a.pdf\" \"%כאן%\\יעד\" /תפוס:להחליף /יומן:%כאן%\\j.txt\n"
+                + "העבר \"%כאן%\\מקור\\*.pdf\" \"%כאן%\\יעד\" /תפוס:להחליף\n"
+                + "מחק \"%כאן%\\מקור\\*.tmp\" /נסתרים /תאריך:\"3 ימים\" /גודל:>1\n"
+                + "צור תיקייה \"%כאן%\\יעד\\חדשה\"\n"
+                + "שנה \"%כאן%\\יעד\\x.txt\" \"חו״ל- 1.txt\"\n"
+                + "השווה \"%כאן%\\מקור\" \"%כאן%\\יעד\" /נסתרים\n"
+                + "ודא \"%כאן%\\יעד\" קיים\n"
+                + "ודא \"%כאן%\\אין\" חסר\n"
+                + "כתוב \"%כאן%\\ב.txt\" \"שלום\"\n"
+                + "כתוב \"%כאן%\\ב.txt\" \" עולם\" /הוסף\n"
+                + "כתוב \"%כאן%\\ריק.txt\"\n"
+                + "ודא \"%כאן%\\ב.txt\" מכיל \"שלום\"\n"
+                + "ודא \"%כאן%\\מקור\" /קבצים:1\n"
+                + "דוח \"%כאן%\\יומן.txt\"\n"
+                + "המתן 0\nרענן עמוק\nרענן\nהודעה סוף\n"
+                + "המשך (5)\n"
+                + "כלול \"%כאן%\\ק.vbat\"\n"
+                + "חזור 2 /עד:30שניות\nהודעה סבב %סבב%\nסוף\n"
+                + "ודא שגיאה\nהעתק \"%כאן%\\אין-כזה\" \"%כאן%\\יעד\"\n"
+                + "הפעל \"%כאן%\\יעד\"\n"
+                + "מחק תיקייה \"%כאן%\\יעד\\חדשה\" /עמוק\n"
+                + "הוסף תוסף \"%כאן%\\תוסף עורך אינטראקטיבי 4.html\"\n"
+                + "החלף תוסף \"עורך אינטראקטיבי\" \"4\"\n"
+                + "פתח מסך הבית\nפתח מסך קבצים פיזיים \"%כאן%\"\nפתח תוסף \"עורך אינטראקטיבי\"\n"
+                + "פתח רשימה \"א/ב\" מיון:שם\nפתח רשימה חכמה \"חדשים\"\nפתח תיקייה \"%כאן%\"\nפתח תפריט \"שמור לתוכנה\"\n"
+                + "מצא סוג:ספרים תאריך:שבוע\nחזור\nהרץ \"%כאן%\\ק.vbat\"\nהוסף מהכונן\nצור פקודה\n"
+                + "צור רשימה \"א/ב\"\nצור רשימה\nצור רשימה חכמה \"חדשים\" סוג:ספרים מיון:שם\nעדכן רשימה חכמה \"חדשים\" סוג:ספרים\n"
+                + "צור רעיון \"לקנות חלב\" \"פנקס/קניות\"\nצור כותרת \"פרק א\"\n"
+                + "צלמית 🧪\nשם בדיקה\nלמה כי\nמדידה /יומן:%כאן%\\m.txt\nבדיקה\n";
+        String en = "REM ניסוי\n"
+                + "COPY \"%כאן%\\מקור\" \"%כאן%\\יעד\" /S /תפוס:לדלג /תאריך:חודש /A:H\n"
+                + "COPY \"%כאן%\\מקור\\a.pdf\" \"%כאן%\\יעד\" /Y /יומן:%כאן%\\j.txt\n"
+                + "MOVE \"%כאן%\\מקור\\*.pdf\" \"%כאן%\\יעד\" /Y\n"
+                + "DEL \"%כאן%\\מקור\\*.tmp\" /A:H /תאריך:\"3 ימים\" /גודל:>1\n"
+                + "MD \"%כאן%\\יעד\\חדשה\"\n"
+                + "REN \"%כאן%\\יעד\\x.txt\" \"חו״ל- 1.txt\"\n"
+                + "COMP \"%כאן%\\מקור\" \"%כאן%\\יעד\" /A:H\n"
+                + "VERIFY \"%כאן%\\יעד\" קיים\n"
+                + "WRITE \"%כאן%\\ב.txt\" \"שלום\"\nWRITE \"%כאן%\\ב.txt\" \" עולם\" /הוסף\n"
+                + "VERIFY \"%כאן%\\ב.txt\" מכיל \"שלום\"\n"
+                + "REPORT \"%כאן%\\יומן.txt\"\nWAIT 0\nREFRESH עמוק\nECHO סוף\nCONTINUE (5)\nCALL \"%כאן%\\ק.vbat\"\n"
+                + "VERIFY שגיאה\nCOPY \"%כאן%\\אין-כזה\" \"%כאן%\\יעד\"\n"
+                + "START \"%כאן%\\יעד\"\n"
+                + "RD \"%כאן%\\יעד\\חדשה\" /S\n";
+        Batch.Plan ph = Batch.plan(he, w, wv), pn = Batch.plan(en, w, wv);
+        StringBuilder bad = new StringBuilder();
+        for (Batch.Step x : ph.steps) if (x.error != null) bad.append(" | ").append(x.text).append(" ← ").append(x.error);
+        for (Batch.Step x : pn.steps) if (x.error != null) bad.append(" | ").append(x.text).append(" ← ").append(x.error);
+        eq("מ0.40: השורות שהעורך כותב בעברית — בלי שגיאות במנוע" + bad, 0, ph.errors);
+        eq("מ0.40: ובאנגלית — בלי שגיאות במנוע", 0, pn.errors);
+        check("מ0.40: בעברית ובאנגלית — אותו מספר צעדים לחלק המשותף", pn.steps.size() > 15);
+        // שורות עם רשימות: במחשב אין מסד — התחביר (מילות הסוג) והפקודה
+        String[] lists = {"העתק קבצי ידנית \"בדיקה\" \"%כאן%\\יעד\" /עמוק /תפוס:לשאול", "הכפל ידנית \"א\" ידנית \"ב\"", "COPY ידנית \"א\" ידנית \"ב\"",
+                "העתק ידנית \"א\" קובץ \"%כאן%\\r.txt\"", "העתק קובץ \"%כאן%\\r.txt\" ידנית \"ב\"", "העתק \"%כאן%\\מקור\" ידנית \"ב\"",
+                "העתק קבצי חכמה \"חדשים\" ידנית \"ב\"", "העתק תוכן ידנית \"א\" ידנית \"ב\"", "העבר ידנית \"א\" ידנית \"ב\"", "MOVE ידנית \"א\" ידנית \"ב\"",
+                "מחק קבצי ידנית \"א\"", "DEL קבצי חכמה \"חדשים\"", "בטל ידנית \"א/ב\"", "RD ידנית \"א/ב\"", "בטל חכמה \"חדשים\"", "בטל תוכן ידנית \"א\"",
+                "קשר ידנית \"א\" ידנית \"ב\"", "LINK חכמה \"ח\" ידנית \"ב\"", "שנה ידנית \"א\" \"ב\"", "REN חכמה \"א\" \"ב\"",
+                "השווה ידנית \"א\" ידנית \"ב\"", "השווה חכמה \"א\" חכמה \"ב\" /תנאים", "ודא ידנית \"א\" קיימת /פריטים:1", "VERIFY חכמה \"א\" חסרה /רשימות:0"};
+        for (String l : lists) {
+            String n = Commands.normal(l);
+            java.util.List<String> sw = new java.util.ArrayList<String>();
+            ListCmd.Parsed lp = ListCmd.parse(n, sw);
+            String c = Commands.canonical(Batch.tokens(n).get(0));
+            boolean known = java.util.Arrays.asList("COPY", "MOVE", "DEL", "RD", "REN", "COMP", Batch.LINK, Batch.VERIFY).contains(c);
+            check("מ0.40: שורת רשימות שהעורך כותב — " + l, lp != null && lp.error == null && lp.anyList() && known);
+        }
+        try {                                                                   // קובץ ההתקנה שנשלח עם העמוד — בלי שגיאה
+            File dl = new File(w, "הורדות");
+            dl.mkdirs();
+            Files.writeAtomic(new File(dl, "תוסף עורך אינטראקטיבי 4.html"), "<meta name=\"vfm-lab\" content=\"עורך אינטראקטיבי\">");
+            java.util.Map<String, String> iv = Batch.vars(w, w.getAbsolutePath(), null);
+            iv.put(Batch.V_DOWNLOADS, dl.getAbsolutePath());
+            String inst = Files.readUtf8(new File(System.getProperty("vfm.src"), "../lab-pages/התקנת עורך אינטראקטיבי 4.vbat"));
+            Batch.Plan ip = Batch.plan(inst, w, iv);
+            eq("מ0.40: \"התקנת עורך אינטראקטיבי 4\" — בלי שגיאות", 0, ip.errors);
+        } catch (Exception e) {
+            check("מ0.40: קובץ ההתקנה — " + e, false);
+        }
+        Batch.Plan cm = Batch.plan("השווה /רשימה:\"א/ב\" \"%כאן%\\יעד\"\nאופן \"בדיקות מערכת\"\nMODE \"בדיקות מערכת\"\n", w, wv);
+        check("מ0.40: השווה רשימה מול תיקייה (/רשימה:), ואופן — מזוהים", cm.steps.size() == 3 && Batch.MODE.equals(cm.steps.get(1).cmd) && Batch.MODE.equals(cm.steps.get(2).cmd));
     }
 
     private static void m037() {

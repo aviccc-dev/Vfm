@@ -1,7 +1,8 @@
 package com.tikiyot.vfm;
 
-// מ0.38 — מסך המעבדה (Lab). בלי ניסוי — רשימת הניסויים (נגיעה: פתיחה; "גרסאות": החלפה). עם ניסוי — העמוד שלו, ובראש:
-// השם, הגרסה, "גרסאות". נפתח רק בפקודה: פתח מסך מעבדה ["<ניסוי>"] (בלי שורה בתפריטים).
+// מ0.38 — מסך המעבדה (Lab); מ0.40 — מסך התוספים (המשתמש: "הוא כבר לא אמור להיקרא מעבדה, אלא תוסף עורך אינטראקטיבי").
+// בלי תוסף — רשימת התוספים (נגיעה: פתיחה; "גרסאות": החלפה). עם תוסף — העמוד שלו, ובראש: השם, הגרסה, "גרסאות".
+// נפתח בפקודה: פתח תוסף ["<תוסף>"] (וגם: פתח מסך תוספים / מעבדה).
 // הגשר (vfm) — מה שעמוד מעבדה יכול לעשות בתוכנה; כללי, לכל ניסוי (המשתמש: "המעבדה זה לא רק למצב הזה, אלא גם לפיתוחים
 // אחרים"): לקרוא, לבחור בבורר האמיתי, לכתוב קובצי פקודות, ולהריץ פקודות דרך ההרצה הרגילה (תצוגה מקדימה ואישור).
 // אחראי: התצוגה והגשר. אסור לו: לכתוב או למחוק קבצים אחרים ישירות — כל שינוי אחר עובר דרך הפקודות.
@@ -64,7 +65,7 @@ public final class LabScreen extends Activity {
     @Override
     protected void onResume() {
         super.onResume();
-        if (exp == null && web == null) showList();                          // אחרי "הוסף מעבדה" — הרשימה מתעדכנת
+        if (exp == null && web == null) showList();                          // אחרי "הוסף תוסף" — הרשימה מתעדכנת
     }
 
     // ---------- רשימת הניסויים ----------
@@ -191,7 +192,7 @@ public final class LabScreen extends Activity {
             @Override
             public boolean onConsoleMessage(ConsoleMessage m) {
                 if (m.messageLevel() == ConsoleMessage.MessageLevel.ERROR)   // שגיאה בעמוד — ליומן (נראית בדוח האבחון)
-                    Log.i("מעבדה " + exp + ": " + m.message() + " @" + m.lineNumber());   // בכונן
+                    Log.i("תוסף " + exp + ": " + m.message() + " @" + m.lineNumber());   // בכונן
                 return true;
             }
         });
@@ -452,6 +453,61 @@ public final class LabScreen extends Activity {
             });
         }
 
+        /**
+         * מ0.40 — הרצה מהעורך. המשתמש: "ריצה אמיתית או בכאילו" (מתג בעמוד). בכאילו — שורת "הדמיה" בראש; אמיתית — כמו כל קובץ
+         * פקודות: תצוגה מקדימה, ורק באישור (כלל ההקפדה: שינוי בכונן — תצוגה מקדימה ואישור). where — הקובץ שבעורך: שמו בכותרת
+         * מסך ההרצה (המשתמש: "הכותרת 'הרצה מהמעבדה' — לשים את שם הקובץ"), והתיקייה שלו היא %כאן% (ושל כלול).
+         */
+        @JavascriptInterface
+        public void runFile(final String text, final String where, final boolean real) {
+            runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    try {
+                        File dir = new File(getCacheDir(), "lab");
+                        dir.mkdirs();
+                        String w = where == null ? "" : where.trim();
+                        String name = Lab.safe(new File(w).getName());
+                        if (name.isEmpty()) name = Words.Lab.RUN_FILE + "." + Batch.EXT;
+                        if (!Batch.isBatch(name)) name = name + "." + Batch.EXT;
+                        File f = new File(dir, name);
+                        Files.writeAtomic(f, (real ? "" : Batch.AS_IF2 + "\n") + (text == null ? "" : text));
+                        File here = w.startsWith("/") ? new File(w).getParentFile() : Shortcuts.dir();
+                        RunScreen.start(LabScreen.this, f, here);
+                    } catch (Throwable t) {
+                        Log.e("Lab.runFile", t);
+                        Ui.toast(LabScreen.this, Words.Db.failed(String.valueOf(t.getMessage())));
+                    }
+                }
+            });
+        }
+
+        /** מ0.40: שמות הרשימות החכמות של האופן (לבורר שבעורך): ["חדשים", "ספרים\\פדף"…]. */
+        @JavascriptInterface
+        public String smartLists() {
+            JSONArray a = new JSONArray();
+            try {
+                Map<String, List<String>> n = DbPicker.names(LabScreen.this);
+                List<String> sm = n.get("smart");
+                if (sm != null) for (String x : sm) a.put(x);
+            } catch (Throwable t) {
+                Log.e("Lab.smartLists", t);
+            }
+            return a.toString();
+        }
+
+        /** מ0.40: אופני העבודה שיש להם מסד (לפקודה "אופן"). */
+        @JavascriptInterface
+        public String modes() {
+            JSONArray a = new JSONArray();
+            try {
+                for (String m : DbScreen.dbModes(LabScreen.this)) a.put(m);
+            } catch (Throwable t) {
+                Log.e("Lab.modes", t);
+            }
+            return a.toString();
+        }
+
         @JavascriptInterface
         public void pickFolder(final String id, final String title, final boolean canCreate) {
             runOnUiThread(new Runnable() {
@@ -537,7 +593,7 @@ public final class LabScreen extends Activity {
 
         @JavascriptInterface
         public void log(String s) {
-            Log.i("מעבדה " + exp + ": " + s);   // בכונן
+            Log.i("תוסף " + exp + ": " + s);   // בכונן
         }
 
         @JavascriptInterface

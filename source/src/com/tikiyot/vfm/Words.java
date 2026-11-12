@@ -1900,7 +1900,7 @@ public final class Words {
         }
 
         public static String unknownScreen(String s) {
-            return "מסך לא מוכר: \"" + s + "\" (הבית, חיפוש, פקודות, קבצים פיזיים, קבצים וירטואליים, הגדרות, סל)";
+            return "מסך לא מוכר: \"" + s + "\" (הבית, חיפוש, פקודות, קבצים פיזיים, קבצים וירטואליים, הגדרות, סל, עורך פקודות, גיבויים, אבחון, תוספים)";
         }
 
         public static String usage(String verb) {
@@ -3119,20 +3119,21 @@ public final class Words {
 
     /** מ0.38 — המעבדה (Lab, LabScreen). */
     public static final class Lab {
-        public static final String UNNAMED = "ניסוי", NO_FILE = "אין קובץ כזה", NOT_HTML = "זה לא עמוד מעבדה (צריך קובץ html)",
-                TOO_BIG = "הקובץ גדול מדי למעבדה (עד 5MB)", NO_DIR = "לא נוצרה תיקיית המעבדה",
-                ADD_USAGE = "הוסף מעבדה — או: הוסף מעבדה \"<קובץ html>\". בלי קובץ: עמוד המעבדה החדש ביותר בהורדות",
-                NONE_IN_DOWNLOADS = "אין בהורדות עמוד מעבדה (קובץ html שהוכן למעבדה). אפשר גם: הוסף מעבדה \"<הקובץ>\"",
-                SWITCH_USAGE = "החלף מעבדה \"<ניסוי>\" \"<גרסה>\"",
-                TITLE = "🧪 מעבדה", EMPTY = "אין עדיין ניסויים. מורידים עמוד מעבדה להורדות, ומריצים את הפקודה: הוסף מעבדה",
-                VERSIONS = "גרסאות", NOT_FOUND = "אין במעבדה ניסוי בשם הזה", ONLY_COMMANDS = "המעבדה כותבת רק קובצי פקודות",
-                NO_FILES_HERE = "אין כאן קבצים", EXISTS_OLD = "יש כבר קובץ בשם הזה — לא נשמר. בגרסה הבאה של העמוד: להחליף, או שם אחר", PICK_FILE = "בחירת קובץ", RUN_FILE = "הרצה מהמעבדה";
-        public static String noVersion(String exp, String ver) { return "בניסוי \"" + exp + "\" אין גרסה \"" + ver + "\""; }
-        public static String noExperiment(String exp) { return "אין במעבדה ניסוי \"" + exp + "\""; }
-        public static String addWill(String file) { return "יוסיף למעבדה את " + file; }
-        public static String added(String exp, String ver) { return "נוסף למעבדה: \"" + exp + "\", גרסה " + ver + " — היא הפעילה"; }
-        public static String switchWill(String exp, String ver) { return "יעביר את \"" + exp + "\" לגרסה " + ver; }
-        public static String switched(String exp, String ver) { return "\"" + exp + "\" — עכשיו בגרסה " + ver; }
+        // מ0.40: "מעבדה" ← "תוספים" (המשתמש: "הוא כבר לא אמור להיקרא מעבדה, אלא תוסף עורך אינטראקטיבי")
+        public static final String UNNAMED = "תוסף", NO_FILE = "אין קובץ כזה", NOT_HTML = "זה לא עמוד של תוסף (צריך קובץ html)",
+                TOO_BIG = "הקובץ גדול מדי לתוסף (עד 5MB)", NO_DIR = "לא נוצרה תיקיית התוספים",
+                ADD_USAGE = "הוסף תוסף — או: הוסף תוסף \"<קובץ html>\". בלי קובץ: עמוד התוסף החדש ביותר בהורדות",
+                NONE_IN_DOWNLOADS = "אין בהורדות עמוד של תוסף (קובץ html שהוכן לתוכנה). אפשר גם: הוסף תוסף \"<הקובץ>\"",
+                SWITCH_USAGE = "החלף תוסף \"<תוסף>\" \"<גרסה>\"",
+                TITLE = "🧩 תוספים", EMPTY = "אין עדיין תוספים. מורידים עמוד של תוסף להורדות, ומריצים את הפקודה: הוסף תוסף",
+                VERSIONS = "גרסאות", NOT_FOUND = "אין תוסף בשם הזה", ONLY_COMMANDS = "תוסף כותב רק קובצי פקודות",
+                NO_FILES_HERE = "אין כאן קבצים", EXISTS_OLD = "יש כבר קובץ בשם הזה — לא נשמר. בגרסה הבאה של העמוד: להחליף, או שם אחר", PICK_FILE = "בחירת קובץ", RUN_FILE = "הרצה מתוסף";
+        public static String noVersion(String exp, String ver) { return "בתוסף \"" + exp + "\" אין גרסה \"" + ver + "\""; }
+        public static String noExperiment(String exp) { return "אין תוסף \"" + exp + "\""; }
+        public static String addWill(String file) { return "יוסיף לתוספים את " + file; }
+        public static String added(String exp, String ver) { return "נוסף תוסף: \"" + exp + "\", גרסה " + ver + " — היא הפעילה"; }
+        public static String switchWill(String exp, String ver) { return "יעביר את התוסף \"" + exp + "\" לגרסה " + ver; }
+        public static String switched(String exp, String ver) { return "התוסף \"" + exp + "\" — עכשיו בגרסה " + ver; }
         public static String version(String ver) { return "גרסה " + ver; }
         public static String row(String exp, String ver, int n) { return exp + " · גרסה " + ver + (n > 1 ? " (" + n + " גרסאות)" : ""); }
     }

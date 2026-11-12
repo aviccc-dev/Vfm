@@ -6,7 +6,10 @@ package com.tikiyot.vfm;
 // ביניהם. אז הוסף מעבדה".
 // ניסוי = עמוד (html) מחוץ לקוד, שמסך המעבדה פותח (LabScreen). כל ניסוי — תיקייה בתיקיית המעבדה; כל גרסה — קובץ בה;
 // הגרסה הפעילה — בקובץ ".פעילה" שבתיקייה.
-// אחראי: התיקיות, השמות, הגרסאות, הגרסה הפעילה, ושתי הפקודות (הוסף / החלף). אסור לו: לכתוב מחוץ לתיקיית המעבדה.
+// מ0.40 — התוספים. המשתמש (12.11.2026): "הוא כבר לא אמור להיקרא מעבדה, אלא תוסף עורך אינטראקטיבי" · "ומקומו בתוך ספריית
+// התוכנה, בתיקיית תוספים". אותו מנגנון: תוסף = עמוד; תיקייה לכל תוסף, קובץ לכל גרסה. התיקייה "מעבדה" עוברת ל"תוספים" (פעם
+// אחת), והפקודות הישנות (הוסף מעבדה, החלף מעבדה) ממשיכות לעבוד.
+// אחראי: התיקיות, השמות, הגרסאות, הגרסה הפעילה, ושתי הפקודות (הוסף / החלף). אסור לו: לכתוב מחוץ לתיקיית התוספים.
 
 import java.io.File;
 import java.util.ArrayList;
@@ -20,18 +23,25 @@ import java.util.regex.Pattern;
 
 final class Lab {
 
-    static final String ADD = "הוסף מעבדה", SWITCH = "החלף מעבדה";   // תחביר
-    /** שם קובץ של ניסוי שהורד: "מעבדה <ניסוי> <גרסה>.html" (בתוך העמוד — meta, והוא קובע). */
-    static final String PREFIX = "מעבדה";   // תחביר
-    static final String DIR = "מעבדה", ACTIVE = ".פעילה", EXT = ".html";   // בכונן
-    static final String META = "vfm-lab", META_VERSION = "vfm-lab-version";
+    static final String ADD = "הוסף תוסף", SWITCH = "החלף תוסף";   // תחביר — מ0.40
+    /** עד מ0.39 — ממשיכות לעבוד. */
+    static final String OLD_ADD = "הוסף מעבדה", OLD_SWITCH = "החלף מעבדה";   // תחביר
+    /** שם קובץ של תוסף שהורד: "תוסף <שם> <גרסה>.html" (או "מעבדה …"; בתוך העמוד — meta, והוא קובע). */
+    static final String PREFIX = "תוסף", OLD_PREFIX = "מעבדה";   // תחביר
+    static final String DIR = "תוספים", OLD_DIR = "מעבדה", ACTIVE = ".פעילה", EXT = ".html";   // בכונן
+    static final String META = "vfm-plugin", META_VERSION = "vfm-plugin-version", OLD_META = "vfm-lab", OLD_META_VERSION = "vfm-lab-version";
     static final long MAX = 5L * 1024 * 1024;
 
     private Lab() { }
 
-    /** תיקיית המעבדה — בתיקייה של התוכנה החדשה (לא של הישנה, שמשנה את שלה). */
+    /** תיקיית התוספים — בתיקייה של התוכנה החדשה. מ0.40: תיקיית "מעבדה" שעוד נשארה — עוברת לכאן (פעם אחת). */
     static File root() {
-        return new File(Paths.dbData(), DIR);
+        File r = new File(Paths.dbData(), DIR);
+        if (!r.exists()) {
+            File old = new File(Paths.dbData(), OLD_DIR);
+            if (old.isDirectory() && !old.renameTo(r)) Log.i("Lab.root: התיקייה \"" + OLD_DIR + "\" לא עברה ל\"" + DIR + "\"");   // בכונן
+        }
+        return r;
     }
 
     // ---------- שמות ----------
@@ -54,11 +64,17 @@ final class Lab {
     /** {ניסוי, גרסה}: מה שכתוב בעמוד (meta), ואם אין — משם הקובץ ("מעבדה עורך 3.html" ← עורך, 3). */
     static String[] nameOf(String html, String fileName) {
         String exp = meta(html, META), ver = meta(html, META_VERSION);
+        if (exp == null || exp.isEmpty()) exp = meta(html, OLD_META);
+        if (ver == null || ver.isEmpty()) ver = meta(html, OLD_META_VERSION);
         String base = fileName == null ? "" : fileName;
         if (base.toLowerCase(Locale.ROOT).endsWith(EXT)) base = base.substring(0, base.length() - EXT.length());
         else if (base.toLowerCase(Locale.ROOT).endsWith(".htm")) base = base.substring(0, base.length() - 4);
         base = base.replaceAll("\\s*\\(\\d+\\)$", "").trim();                       // "(1)" שהדפדפן מוסיף בהורדה חוזרת
-        if (base.startsWith(PREFIX)) base = base.substring(PREFIX.length()).replaceAll("^[\\s_-]+", "");
+        for (String pre : new String[]{PREFIX, OLD_PREFIX})
+            if (base.startsWith(pre)) {
+                base = base.substring(pre.length()).replaceAll("^[\\s_-]+", "");
+                break;
+            }
         if (exp == null || exp.isEmpty()) {
             Matcher m = Pattern.compile("^(.*?)[\\s_-]+(\\d+)$").matcher(base);
             if (m.find()) {
@@ -157,7 +173,8 @@ final class Lab {
         collect(downloads, 0, all);
         File best = null;
         for (File f : all)
-            if ((best == null || f.lastModified() > best.lastModified()) && (f.getName().startsWith(PREFIX) || isPage(f))) best = f;
+            if ((best == null || f.lastModified() > best.lastModified())
+                    && (f.getName().startsWith(PREFIX) || f.getName().startsWith(OLD_PREFIX) || isPage(f))) best = f;
         return best;
     }
 
@@ -175,7 +192,7 @@ final class Lab {
         return n.endsWith(EXT) || n.endsWith(".htm");
     }
 
-    /** עמוד מעבדה — יש בו meta name="vfm-lab" (בתחילת הקובץ). */
+    /** עמוד של תוסף — יש בו meta name="vfm-plugin" (או "vfm-lab", עד מ0.39) בתחילת הקובץ. */
     static boolean isPage(File f) {
         if (f.length() > MAX) return false;
         java.io.InputStream in = null;
@@ -183,7 +200,8 @@ final class Lab {
             in = new java.io.FileInputStream(f);
             byte[] b = new byte[8192];
             int n = in.read(b);
-            return n > 0 && new String(b, 0, n, "UTF-8").contains(META + "\"");
+            String head = n > 0 ? new String(b, 0, n, "UTF-8") : "";
+            return head.contains(META + "\"") || head.contains(OLD_META + "\"");
         } catch (Throwable t) {
             return false;
         } finally {
@@ -194,12 +212,21 @@ final class Lab {
     // ---------- הפקודות ----------
 
     static boolean isLine(String line) {
-        return line.equals(ADD) || line.startsWith(ADD + " ") || line.equals(SWITCH) || line.startsWith(SWITCH + " ");
+        for (String w : new String[]{ADD, SWITCH, OLD_ADD, OLD_SWITCH}) if (line.equals(w) || line.startsWith(w + " ")) return true;
+        return false;
+    }
+
+    /** "הוסף מעבדה …" ← "הוסף תוסף …" (וכך גם החלף). */
+    static String current(String line) {
+        if (line.startsWith(OLD_ADD)) return ADD + line.substring(OLD_ADD.length());
+        if (line.startsWith(OLD_SWITCH)) return SWITCH + line.substring(OLD_SWITCH.length());
+        return line;
     }
 
     /** מתכנן שורה של המעבדה: s.describe ו־s.op, או s.error. */
     static void plan(Batch.Step s, String line, File here, Map<String, String> vars) {
         final File root = root();
+        line = current(line);
         if (line.startsWith(ADD)) {
             List<String> tk = Batch.tokens(line.substring(ADD.length()));
             if (tk.size() > 1) { s.error = Words.Lab.ADD_USAGE; return; }
@@ -223,7 +250,7 @@ final class Lab {
                         String[] nv = add(root, f);
                         // מ0.39 — המשתמש: "הקובץ נעלם, בדקתי בקבצים פיזית" (מההורדות, אחרי ההוספה). המעבדה רק קוראת אותו;
                         // ביומן — שהמקור עוד שם אחרי ההוספה, כדי שדוח האבחון יראה אם משהו אחר מחק אותו.
-                        Log.i("הוסף מעבדה: " + f.getAbsolutePath() + " · המקור אחרי ההוספה: " + (f.isFile() ? "קיים" : "חסר"));   // בכונן
+                        Log.i("הוסף תוסף: " + f.getAbsolutePath() + " · המקור אחרי ההוספה: " + (f.isFile() ? "קיים" : "חסר"));   // בכונן
                         return Words.Lab.added(nv[0], nv[1]);
                     } catch (Throwable t) {
                         DbListCmd.lastFailed = true;
