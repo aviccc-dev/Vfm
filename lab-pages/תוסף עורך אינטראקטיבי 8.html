@@ -718,6 +718,9 @@ function renderFlow(box){
         commit();if(firstEmpty()!==was)redrawKeep(f);
       },kind);
       f.disabled=blocked;u.append(f);
+      // המשתמש (12.11.2026): "בפקודה צור רשימה חכמה אין טופס לאפשרויות. הטופס הקיים היום ליצירת רשימה חכמה מהתוכנה מתאים לשם"
+      if(kind==='cond'&&!blocked&&can('smartForm')&&(def.form==='smart'||def.form==='find'))
+        u.append(B('chip btn2','טופס…',()=>smartForm(k),{'aria-label':'הטופס של רשימה חכמה — ממלא את התנאי והמיון'}));
     }else if(filled){const s=Mo.shown(v);u.append(B('chip val',s.kl?[E('span','kl',s.kl),document.createTextNode(s.t)]:s.t,()=>openPick(k)));}
     else if(blocked)u.append(E('span','chip dim',label||'בורר'));
     else u.append(B('chip btn2',kind==='word'||kind==='mode'?label:'בורר'+(sl.opt?' (לא חובה)':''),()=>openPick(k)));
@@ -729,6 +732,20 @@ function renderFlow(box){
     if(ok.length)du.append(B('chip btn2','פרטים',()=>openSheet({kind:'det'})));
     box.append(du);
   }
+}
+// הטופס המוכר של רשימה חכמה (של התוכנה, מ0.41) — נפתח עם מה שכתוב בשורה, ומחזיר שם, תנאי ומיון. תצוגה, צלמית ותיאור
+// שבטופס — לא נכתבים (אין להם מקום בפקודה).
+function smartForm(k){
+  const cur=M.vals[k]&&M.vals[k].raw||'',n0=CMDS[M.cmd].form==='smart'&&M.vals[0]&&M.vals[0].raw||'';
+  const s0=(M.dets.find(d=>d.d==='מיון')||{}).v||'';
+  ask('smartForm',[n0,cur,s0],r=>{
+    const o=J(r,null);if(!o)return;
+    M.vals[k]={kind:'cond',raw:String(o.cond||'')};
+    if(M.cmd==='צור רשימה חכמה'&&o.name)M.vals[0]={kind:'name',raw:fixName(String(o.name))};
+    M.dets=M.dets.filter(d=>d.d!=='מיון');
+    if(o.sort)M.dets.push({d:'מיון',v:String(o.sort)});
+    commit();draw();
+  });
 }
 // גרסה 8 — המשתמש: "כדאי להוסיף סימן לסיום כל פקודה… בפרט בלולאות ותנאים ושאר מבנים מורכבים"; בחר בדוגמה ד: כרטיס לכל פקודה,
 // קו אנכי מ"חזור" עד "סוף", וצבע לפי הקבוצה בתפריט הפקודות
@@ -1192,6 +1209,7 @@ function demoBridge(){
     pickFile:(id)=>later(id,'/storage/emulated/0/Download/דוח.pdf'),
     pickList:(id)=>later(id,JSON.stringify({mode:'עבודה',path:'לקוחות\\פעילים'})),
     smartLists:()=>JSON.stringify(['חדשים','ספרים\\פדף']),modes:()=>JSON.stringify(['עבודה','בדיקות מערכת']),
+    smartForm:(id,n,c,so)=>later(id,JSON.stringify({name:n||'מהטופס',cond:(c?c+' ':'')+'סוג:ספרים',sort:'תאריך',view:''})),
     runFile:(t,p,r)=>{window.__ran={text:t,path:p,real:r};},runCommands:t=>{window.__ran=t;},close:()=>{},toast:()=>{},log:()=>{}
   };
 }

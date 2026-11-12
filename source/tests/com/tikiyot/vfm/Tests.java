@@ -59,6 +59,7 @@ public final class Tests {
         run("מ0.40: העבר — כבר במקום, /תפוס:לשנות-שם, /מכיל:", new Runnable() { public void run() { m040move(); } });
         run("מ0.40: החלק החדש של הבדיקה הכללית — בהרצה אמיתית", new Runnable() { public void run() { m040general(); } });
         run("מ0.41: בטל לא-משויכים, קובץ של פקודת פתיחה אחת, שמות המסכים", new Runnable() { public void run() { m041(); } });
+        run("מ0.41: העורך האינטראקטיבי בא עם התוכנה", new Runnable() { public void run() { m041bundled(); } });
         run("מ0.41: רשימת \"בחירה\" — %נבחרים%, כמה קבצים הפקודה מקבלת, והתכנון שקובע", new Runnable() { public void run() { m041select(); } });
         run("מ0.37: הפקודות הקטנות — כתוב, ודא (תיקייה, מכיל, קבצים, שגיאה), דוח, המתן, משתנים, רעיון וכותרת", new Runnable() { public void run() { m037(); } });
         run("קובצי פקודות — השורה כשדות לטופס (117א, שלב 2)", new Runnable() { public void run() { batchForm(); } });
@@ -2151,6 +2152,38 @@ public final class Tests {
         p = Batch.plan(Menus.expand("העתק %נבחרים% \"" + new File(r, "יעד").getAbsolutePath() + "\"\n", two), d, v, lib);
         Batch.run(p, lib, null, null);
         check("מ0.41: פקודת בחירה שרצה — שני הקבצים הועתקו", p.errors == 0 && new File(r, "יעד/א.txt").isFile() && new File(r, "יעד/ב.txt").isFile());
+    }
+
+    /** מ0.41: העורך האינטראקטיבי בא עם התוכנה — העמוד שבהתקנה הוא הגרסה האחרונה שב־lab-pages, והכפתור פותח אותו. */
+    private static void m041bundled() {
+        try {
+            File src = new File(System.getProperty("vfm.src")), pages = new File(src.getParentFile(), "lab-pages");
+            File asset = new File(src, "assets/" + Lab.BUNDLED + "/orech-interaktivi.html");
+            String html = Files.readUtf8(asset);
+            String[] nv = Lab.nameOf(html, asset.getName());
+            eq("מ0.41: העמוד שבהתקנה — התוסף שהכפתור פותח", Words.DbCmd.TOOL_EDITOR, nv[0]);
+            int best = 0;
+            File newest = null;
+            File[] k = pages.listFiles();
+            if (k != null) for (File f : k) {
+                if (!Lab.isHtml(f.getName())) continue;
+                String[] x = Lab.nameOf(Files.readUtf8(f), f.getName());
+                if (!x[0].equals(nv[0])) continue;
+                int v = 0;
+                try { v = Integer.parseInt(x[1]); } catch (NumberFormatException e) { v = 0; }
+                if (v > best) { best = v; newest = f; }
+            }
+            check("מ0.41: ...והוא זהה לגרסה האחרונה שב־lab-pages (" + best + ")", newest != null && Files.readUtf8(newest).equals(html) && String.valueOf(best).equals(nv[1]));
+            File root = new File(home, "תוספים-041");
+            wipe(root);
+            File first = Lab.addBundled(root, html, asset.getName());
+            check("מ0.41: תוסף מההתקנה נכנס לתיקיית התוספים, בשם של תוסף וגרסה", first != null && first.isFile()
+                    && first.getName().equals("תוסף " + nv[0] + " " + nv[1] + ".html") && Lab.newest(root, nv[0]) != null && Lab.newest(root, nv[0]).ver.equals(nv[1]));
+            check("מ0.41: ...פעם שנייה — כבר יש אותה גרסה, לא נכתב שוב", Lab.addBundled(root, html, asset.getName()) == null && root.listFiles().length == 1);
+            check("מ0.41: העמוד מכיר את הטופס של רשימה חכמה (smartForm), ורק כשהתוכנה מכירה", html.contains("can('smartForm')") && html.contains("ask('smartForm'"));
+        } catch (Exception e) {
+            check("מ0.41: התוסף שבהתקנה — " + e, false);
+        }
     }
 
     private static String toolLine(String name) {

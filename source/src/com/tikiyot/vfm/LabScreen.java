@@ -67,6 +67,7 @@ public final class LabScreen extends Activity {
         super.onCreate(b);
         exp = getIntent().getStringExtra(EXTRA);
         vars = BatchUi.vars(this, Shortcuts.dir());
+        bundled();
         if (exp == null) { showList(); return; }
         File root = Lab.root();
         String ver = getIntent().getStringExtra(EXTRA_VER), file = getIntent().getStringExtra(EXTRA_FILE);
@@ -77,6 +78,24 @@ public final class LabScreen extends Activity {
         }
         if (page == null && ver == null) page = Lab.newest(root, exp);
         showPage();
+    }
+
+    /** מ0.41: התוספים שבאים עם התוכנה — לתיקיית התוספים, פעם אחת לכל גרסה של התוכנה (מי שמחק — לא חוזר עד הגרסה הבאה). */
+    private void bundled() {
+        try {
+            SharedPreferences p = prefs();
+            int vc = getPackageManager().getPackageInfo(getPackageName(), 0).versionCode;
+            if (p.getInt("bundled", 0) == vc || !Ui.hasFiles(this)) return;
+            String[] names = getAssets().list(Lab.BUNDLED);
+            if (names != null) for (String n : names)
+                if (Lab.isHtml(n)) {
+                    File f = Lab.addBundled(Lab.root(), DbExamples.asset(this, Lab.BUNDLED + "/" + n), n);
+                    if (f != null) Log.i("תוסף מההתקנה: " + f.getName());   // בכונן
+                }
+            p.edit().putInt("bundled", vc).apply();
+        } catch (Throwable t) {
+            Log.e("LabScreen.bundled", t);
+        }
     }
 
     @Override
@@ -505,6 +524,39 @@ public final class LabScreen extends Activity {
                 Log.e("Lab.smartLists", t);
             }
             return a.toString();
+        }
+
+        /**
+         * מ0.41: הטופס המוכר של רשימה חכמה — עם מה שכתוב בשורה שבעורך; חוזר ב־vfmResult: {name, cond, sort, view}.
+         * (העורך כותב לשורה שם, תנאי ומיון — מה שהפקודה נושאת.)
+         */
+        @JavascriptInterface
+        public void smartForm(final String id, final String name, final String cond, final String sort) {
+            runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    try {
+                        DbSmartForm.ask(LabScreen.this, name, cond, sort, new DbSmartForm.Done() {
+                            @Override
+                            public void ok(DbSmartForm.Result r) {
+                                try {
+                                    JSONObject o = new JSONObject();
+                                    o.put("name", r.name);
+                                    o.put("cond", r.cond);
+                                    o.put("sort", r.sort);
+                                    o.put("view", r.view);
+                                    result(id, o.toString());
+                                } catch (Throwable t) {
+                                    Log.e("Lab.smartForm.result", t);
+                                }
+                            }
+                        });
+                    } catch (Throwable t) {
+                        Log.e("Lab.smartForm", t);
+                        Ui.toast(LabScreen.this, Words.Db.failed(String.valueOf(t.getMessage())));
+                    }
+                }
+            });
         }
 
         /** מ0.40: אופני העבודה שיש להם מסד (לפקודה "אופן"). */

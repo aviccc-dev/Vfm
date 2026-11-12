@@ -91,6 +91,30 @@ final class Lab {
     // ---------- שמות ----------
 
     /** שם שמותר בכונן — כמו בעורך: לא משאירים דבר לא תקין, מתקנים לדומה. */
+    /** התוספים שבאים עם התוכנה (בקובץ ההתקנה). */
+    static final String BUNDLED = "plugins";
+
+    /**
+     * מ0.41 (המשתמש: "להוסיף כפתור שמריץ אותו. וכך הוא הופך להיות חלק אינטגרלי מהתוכנה"): תוסף שבא עם התוכנה נכנס לתיקיית
+     * התוספים — קובץ רגיל שם, כמו כל גרסה אחרת — אם אין שם כבר אותו תוסף באותה גרסה. html — תוכן העמוד; fileName — שמו
+     * בהתקנה (לשם ולגרסה, אם אינם כתובים בעמוד). מחזיר את הקובץ שנכתב, או null — כבר יש, או נכשל.
+     */
+    static File addBundled(File root, String html, String fileName) {
+        String[] nv = nameOf(html, fileName);
+        if (version(root, nv[0], nv[1]) != null) return null;
+        String n = safe(PREFIX + " " + nv[0] + " " + nv[1]) + EXT;
+        File to = new File(root, n);
+        if (to.exists()) to = new File(root, Physical.freeName(root, n, false));
+        try {
+            if (!root.isDirectory() && !root.mkdirs()) return null;
+            Files.writeAtomic(to, html);
+            return to;
+        } catch (Throwable t) {
+            Log.e("Lab.addBundled", t);
+            return null;
+        }
+    }
+
     static String safe(String s) {
         String t = s == null ? "" : s.replace('"', '״').replaceAll("[\\\\/:|]", "-").replace('<', '(').replace('>', ')')
                 .replaceAll("[*?\\n\\r\\t]", "").trim();

@@ -52,6 +52,20 @@ final class DbSmartForm {
         });
     }
 
+    /**
+     * מ0.41 (המשתמש, 12.11.2026, על העורך האינטראקטיבי: "בפקודה צור רשימה חכמה אין טופס לאפשרויות. הטופס הקיים היום
+     * ליצירת רשימה חכמה מהתוכנה מתאים לשם"): הטופס המוכר לתנאי שכתוב בפקודה — בלי מסד, רק מחזיר מה שנבחר.
+     */
+    static void ask(Activity a, String name, String cond, String sort, final Done done) {
+        Target t = Target.of(FnSmart.KIND, SmartLists.COND, cond == null ? "" : cond.trim(), SmartLists.SORT, sort == null ? "" : sort.trim());
+        SmartForm.show(a, name == null || name.trim().isEmpty() ? null : name.trim(), t, new Func.Done() {
+            @Override
+            public void ok(String n, Target out) {
+                done.ok(result(n, out));
+            }
+        });
+    }
+
     private static Result result(String n, Target out) {
         {
             {
