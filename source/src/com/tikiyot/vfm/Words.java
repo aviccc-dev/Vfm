@@ -2134,6 +2134,15 @@ public final class Words {
             return (ok ? "✅ " : "❌ ") + what + (ok ? "" : " — בפועל: " + found);
         }
 
+        // מ0.44 — קטע
+        public static final String N_SECTION = "קטע",  // תחביר
+                W_SECTION = "כותרת בדוח של ההרצה, במקום שלה (\"▸ שם\") — מחלקת דוח ארוך לחלקים. לא משנה דבר",
+                H_SECTION = "השם שיופיע בדוח", SECTION_USAGE = "צורה: קטע \"<שם>\"";
+
+        public static String section(String name) {
+            return "▸ " + name;
+        }
+
         // מ0.42 — ב8: רשימה ששינתה שם — קובצי הפקודות שפונים אליה
         public static final String FOLLOW_FAILED = " · ⚠ קובצי הפקודות שפונים לרשימה לא עודכנו (הפרטים ביומן)";
 

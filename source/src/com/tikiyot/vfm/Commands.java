@@ -358,6 +358,8 @@ final class Commands {
                     list(pos(Type.PATH, Words.Def.P_WHAT_OPEN, Words.Def.H_START, Words.Def.U_START), hidden()), null),   // מ0.40: /נסתרים — עם תבנית
             new Def("ECHO", Words.Def.N_ECHO, new String[]{HE_ECHO}, Family.FILE, Words.Def.W_ECHO, list(pos(Type.TEXT, Words.Def.P_TEXT, Words.Def.H_TEXT)), null),
             new Def("REM", Words.Def.N_REM, new String[]{HE_REM}, Family.FILE, Words.Def.W_REM, list(pos(Type.TEXT, Words.Def.P_TEXT, Words.Def.H_TEXT)), null),
+            new Def(Batch.SECTION, Words.DbCmd.N_SECTION, new String[]{Words.DbCmd.N_SECTION}, Family.FILE, Words.DbCmd.W_SECTION,   // מ0.44
+                    list(pos(Type.TEXT, Words.Def.P_TEXT, Words.DbCmd.H_SECTION)), null),
             verb(Verbs.OPEN, Words.Def.W_OPEN),
             verb(Verbs.CREATE, Words.Def.W_CREATE),
             verb(Verbs.UPDATE, Words.Def.W_UPDATE),

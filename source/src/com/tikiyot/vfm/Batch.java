@@ -184,6 +184,12 @@ final class Batch {
      */
     private static boolean small(final Plan plan, final Step s, String cmd, List<String> tk, File here,
                                  Map<String, String> vars, final Sim sim) {
+        if (cmd.equals(SECTION)) {                                              // מ0.44: קטע
+            if (tk.size() != 2 || tk.get(1).trim().isEmpty()) { s.error = Words.DbCmd.SECTION_USAGE; return true; }
+            s.noop = true;
+            s.describe = Words.DbCmd.section(Verbs.withVars(tk.get(1).trim(), vars));
+            return true;
+        }
         if (cmd.equals(VERIFY) && tk.size() == 2 && tk.get(1).trim().equals(W_DB)) {   // מ0.42: ודא מסד
             DbListCmd.planVerifyDb(s);
             return true;
@@ -433,6 +439,11 @@ final class Batch {
     static final String MODE = "MODE", CALL = "CALL", CONT = "CONTINUE";
     /** מ0.37 — הפקודות הקטנות: כתוב לקובץ · המתן · גבה (המסד) · רענן (האינדקס) · דוח (היומן לקובץ). */
     static final String WRITE = "WRITE", WAIT = "WAIT", BACKUP = "BACKUP", REFRESH = "REFRESH", REPORT = "REPORT", LAB = "LAB";
+    /**
+     * מ0.44: "קטע "<שם>"" — שורה בדוח, במקום שלה בהרצה ("▸ <שם>"). ההודעות (ECHO) עולות לראש הדוח; הקטע מחלק את הדוח לפי הסדר —
+     * תוסף האבחון יודע כך איזו בדיקה עברה ואיזו נכשלה, כשמריצים כמה ביחד. לא משנה דבר.
+     */
+    static final String SECTION = "SECTION";
     static final String SW_APPEND = "/הוסף", W_DEEP = "עמוק", W_ERROR = "שגיאה", W_FULL = "מלא";   // תחביר
     /** מ0.42: "ודא מסד" — המנוע של המסד מול ה־SQLite של המכשיר, ותקינות המסד של כל אופן. */
     static final String W_DB = "מסד";   // תחביר

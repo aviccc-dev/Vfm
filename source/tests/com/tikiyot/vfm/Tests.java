@@ -61,6 +61,7 @@ public final class Tests {
         run("מ0.42: פקודות לבדיקות — ודא מסד, צור אופן, ודא … באינדקס", new Runnable() { public void run() { m042cmds(); } });
         run("מ0.42: תוסף האבחון בא עם התוכנה, עם קובצי הבדיקה של הגרסה", new Runnable() { public void run() { m042plugin(); } });
         run("מ0.42: רשימה ששינתה שם — קובצי הפקודות שפונים אליה מתעדכנים (ב8)", new Runnable() { public void run() { m042renamed(); } });
+        run("מ0.44: קטע — שורה בדוח במקום שלה", new Runnable() { public void run() { m044section(); } });
         run("מ0.41: בטל לא-משויכים, קובץ של פקודת פתיחה אחת, שמות המסכים", new Runnable() { public void run() { m041(); } });
         run("מ0.41: העורך האינטראקטיבי בא עם התוכנה", new Runnable() { public void run() { m041bundled(); } });
         run("מ0.41: קובץ הדוגמה של רשימת \"בחירה\"", new Runnable() { public void run() { m041example(); } });
@@ -2104,6 +2105,28 @@ public final class Tests {
         }
     }
 
+    /** מ0.44: "קטע" — שורה בדוח במקום שלה (לא בראש, כמו ECHO), ובלי שינוי. */
+    private static void m044section() {
+        File r = new File(home, "כונן-044");
+        wipe(r);
+        r.mkdirs();
+        java.util.Map<String, String> v = Batch.vars(r, r.getAbsolutePath(), null);
+        Batch.Plan p = Batch.plan("קטע \"א\"\nכתוב \"%כאן%\\א.txt\" \"x\"\nודא \"%כאן%\\א.txt\" קיים\nקטע \"ב\"\nודא \"%כאן%\\ב.txt\" חסר\n", r, v);
+        eq("מ0.44: קטע — בלי שגיאות, ולא נחשב שינוי", 0, p.errors);
+        List<String> rep = Batch.run(p, null, null, null);
+        String all = rep.toString();
+        int a = -1, b = -1, okA = -1, okB = -1;
+        for (int i = 0; i < rep.size(); i++) {
+            if (rep.get(i).endsWith(": ▸ א")) a = i;
+            if (rep.get(i).endsWith(": ▸ ב")) b = i;
+            if (rep.get(i).contains("✅ \"א.txt\" קיים")) okA = i;
+            if (rep.get(i).contains("✅ \"ב.txt\" חסר")) okB = i;
+        }
+        check("מ0.44: הקטעים בדוח — לפי הסדר, כל אחד לפני השורות שלו (" + all + ")", a >= 0 && a < okA && okA < b && b < okB);
+        eq("מ0.44: קטע בלי שם — שגיאה", 1, Batch.plan("קטע\n", r, v).errors);
+        eq("מ0.44: \"קטע\" — השם בעברית של SECTION", Batch.SECTION, Commands.canonical("קטע"));
+    }
+
     private static void m042renamed() {
         MemStore s = new MemStore(IdCounter.memory());
         long h = DbPaths.ensureHome(s);
@@ -3350,7 +3373,7 @@ public final class Tests {
     /** 1.22.5: ההגדרה האחת — שלמה, תואמת למנוע, וכל פרמטר עם שם והסבר. */
     private static void v1225() {
         check("1.22.5: פקודות הקבצים — אותן ובאותו סדר (מ0.14: ודא)",
-                java.util.Arrays.equals(Commands.fileNames(), new String[]{"COPY", "MOVE", "DEL", "REN", "MD", "RD", "COMP", "LINK", "VERIFY", "MODE", "CONTINUE", "WRITE", "WAIT", "BACKUP", "REFRESH", "REPORT", "CALL", "START", "ECHO", "REM"}));
+                java.util.Arrays.equals(Commands.fileNames(), new String[]{"COPY", "MOVE", "DEL", "REN", "MD", "RD", "COMP", "LINK", "VERIFY", "MODE", "CONTINUE", "WRITE", "WAIT", "BACKUP", "REFRESH", "REPORT", "CALL", "START", "ECHO", "REM", "SECTION"}));   // מ0.44: קטע
         check("1.22.5: שמות נרדפים", Commands.canonical("MKDIR").equals("MD") && Commands.canonical("rmdir").equals("RD")
                 && Commands.canonical("ERASE").equals("DEL") && Commands.canonical("RENAME").equals("REN")
                 && Commands.canonical("copy").equals("COPY") && Commands.canonical("FORMAT").equals("FORMAT")
