@@ -209,6 +209,25 @@ final class Lab {
         }
     }
 
+    /**
+     * {תוסף, גרסה} אם העמוד כבר בתוספים, באותה גרסה, והיא הפעילה — ובדיוק אותו תוכן; אחרת null.
+     * המשפך: קודם הגודל (חינם), ורק אם שווה — התוכן.
+     */
+    static String[] sameAsActive(File root, File src) {
+        try {
+            if (src.length() > MAX) return null;
+            String html = Files.readUtf8(src);
+            String[] nv = nameOf(html, src.getName());
+            if (!nv[1].equals(active(root, nv[0]))) return null;
+            File cur = new File(new File(root, nv[0]), nv[1] + EXT);
+            if (!cur.isFile() || cur.length() != src.length()) return null;
+            return Files.readUtf8(cur).equals(html) ? nv : null;
+        } catch (Throwable t) {
+            Log.e("Lab.sameAsActive", t);
+            return null;
+        }
+    }
+
     // ---------- הפקודות ----------
 
     static boolean isLine(String line) {
@@ -234,7 +253,11 @@ final class Lab {
             if (tk.isEmpty()) {
                 String dl = vars.get(Batch.V_DOWNLOADS);
                 src = newest(dl == null ? null : new File(dl));
-                if (src == null) { s.error = Words.Lab.NONE_IN_DOWNLOADS; return; }
+                // מ0.40 — המשתמש: "אותו קובץ שמעביר אותו יכול גם להריץ אותו, אחרי שיבדוק שהוא במקום". בלי קובץ — "אם יש":
+                // אין בהורדות עמוד, או שהוא כבר הגרסה הפעילה — אין מה לעשות, וזו לא שגיאה; כך שורה אחת גם מעדכנת וגם לא מפריעה.
+                if (src == null) { s.noop = true; s.describe = Words.Lab.NOTHING_NEW; return; }
+                String[] same = sameAsActive(root, src);
+                if (same != null) { s.noop = true; s.describe = Words.Lab.already(same[0], same[1]); return; }
             } else {
                 String[] err = {null};
                 String p = Batch.path(tk.get(0), here, vars, err);

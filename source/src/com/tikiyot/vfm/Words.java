@@ -3123,7 +3123,6 @@ public final class Words {
         public static final String UNNAMED = "תוסף", NO_FILE = "אין קובץ כזה", NOT_HTML = "זה לא עמוד של תוסף (צריך קובץ html)",
                 TOO_BIG = "הקובץ גדול מדי לתוסף (עד 5MB)", NO_DIR = "לא נוצרה תיקיית התוספים",
                 ADD_USAGE = "הוסף תוסף — או: הוסף תוסף \"<קובץ html>\". בלי קובץ: עמוד התוסף החדש ביותר בהורדות",
-                NONE_IN_DOWNLOADS = "אין בהורדות עמוד של תוסף (קובץ html שהוכן לתוכנה). אפשר גם: הוסף תוסף \"<הקובץ>\"",
                 SWITCH_USAGE = "החלף תוסף \"<תוסף>\" \"<גרסה>\"",
                 TITLE = "🧩 תוספים", EMPTY = "אין עדיין תוספים. מורידים עמוד של תוסף להורדות, ומריצים את הפקודה: הוסף תוסף",
                 VERSIONS = "גרסאות", NOT_FOUND = "אין תוסף בשם הזה", ONLY_COMMANDS = "תוסף כותב רק קובצי פקודות",
@@ -3135,6 +3134,8 @@ public final class Words {
         public static String switchWill(String exp, String ver) { return "יעביר את התוסף \"" + exp + "\" לגרסה " + ver; }
         public static String switched(String exp, String ver) { return "התוסף \"" + exp + "\" — עכשיו בגרסה " + ver; }
         public static String version(String ver) { return "גרסה " + ver; }
+        public static final String NOTHING_NEW = "אין בהורדות עמוד של תוסף — אין מה להוסיף";   // מ0.40
+        public static String already(String exp, String ver) { return "התוסף \"" + exp + "\" כבר בגרסה " + ver + " — אין מה להוסיף"; }
         public static String row(String exp, String ver, int n) { return exp + " · גרסה " + ver + (n > 1 ? " (" + n + " גרסאות)" : ""); }
     }
 }

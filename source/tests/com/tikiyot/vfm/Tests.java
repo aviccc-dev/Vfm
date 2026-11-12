@@ -1906,9 +1906,22 @@ public final class Tests {
             Files.writeAtomic(new File(dl, "תוסף עורך אינטראקטיבי 4.html"), "<meta name=\"vfm-lab\" content=\"עורך אינטראקטיבי\">");
             java.util.Map<String, String> iv = Batch.vars(w, w.getAbsolutePath(), null);
             iv.put(Batch.V_DOWNLOADS, dl.getAbsolutePath());
-            String inst = Files.readUtf8(new File(System.getProperty("vfm.src"), "../lab-pages/התקנת עורך אינטראקטיבי 4.vbat"));
+            String inst = Files.readUtf8(new File(System.getProperty("vfm.src"), "../lab-pages/עורך אינטראקטיבי.vbat"));
             Batch.Plan ip = Batch.plan(inst, w, iv);
-            eq("מ0.40: \"התקנת עורך אינטראקטיבי 4\" — בלי שגיאות", 0, ip.errors);
+            eq("מ0.40: \"עורך אינטראקטיבי.vbat\" (מעדכן ופותח) — בלי שגיאות", 0, ip.errors);
+            check("מ0.40: ופותח את העורך בסוף", ip.opens.size() == 1 && ip.opens.get(0)[0].contains("עורך אינטראקטיבי"));
+            // המשתמש: "אותו קובץ שמעביר אותו יכול גם להריץ אותו, אחרי שיבדוק שהוא במקום"
+            root = Lab.root();
+            wipe(new File(root, "עורך אינטראקטיבי"));
+            ip.steps.get(0).op.run(null);
+            Batch.Plan again = Batch.plan(inst, w, iv);
+            check("מ0.40: אותו עמוד, כבר הגרסה הפעילה — \"הוסף\" לא עושה כלום, ופותח", again.errors == 0 && again.steps.get(0).noop
+                    && again.steps.get(0).op == null && again.opens.size() == 1);
+            wipe(dl);
+            dl.mkdirs();
+            Batch.Plan none = Batch.plan(inst, w, iv);
+            check("מ0.40: אין בהורדות עמוד — לא שגיאה; פותח את מה שיש", none.errors == 0 && none.steps.get(0).noop && none.opens.size() == 1);
+            eq("מ0.40: קובץ מפורש שאין — עדיין שגיאה", 1, Batch.plan("הוסף תוסף \"%כאן%\\אין.html\"\n", w, iv).errors);
         } catch (Exception e) {
             check("מ0.40: קובץ ההתקנה — " + e, false);
         }
