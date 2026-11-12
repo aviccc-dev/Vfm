@@ -6,10 +6,12 @@
 <meta name="vfm-plugin" content="עורך אינטראקטיבי">
 <meta name="vfm-plugin-version" content="10">
 <meta name="vfm-lab" content="עורך אינטראקטיבי">
-<meta name="vfm-lab-version" content="8">
+<meta name="vfm-lab-version" content="10">
 <title>עורך אינטראקטיבי</title>
 <style>
-/* תוסף "עורך אינטראקטיבי": העורך החדש על קובצי הפקודות האמיתיים. הצבעים — מהתוכנה (vfm.theme), כאן רק ברירת מחדל.
+/* גרסה 10 — גרסת בדיקה לעיצוב (claude/orech-itzuvim.md): הראש בשורה אחת (☰ הקובץ · ביטול/חזרה · הרצה), תפריט קובץ אחד,
+   פס פעולות בשורה הפתוחה (הזזה, שכפול, הוספה, מחיקה), * ? % צמודים לתחתית, ופתיחה לפי תיקיות.
+   תוסף "עורך אינטראקטיבי": העורך החדש על קובצי הפקודות האמיתיים. הצבעים — מהתוכנה (vfm.theme), כאן רק ברירת מחדל.
    vfm-lab — כדי שגם הגרסה המותקנת (מ0.39, "הוסף מעבדה") תכיר את העמוד; מ0.40 — vfm-plugin, בתיקיית "תוספים" */
 :root{
   --bg:#FFFFFF; --soft:#F4F5F6; --fg:#202124; --muted:#5F6368; --ghost:#9AA0A6; --chip:#E8F0FE; --chip-fg:#174EA6;
@@ -96,19 +98,37 @@ body{padding-bottom:calc(24px + env(safe-area-inset-bottom,0px))}
 .pre{white-space:pre-wrap;word-break:break-word;background:var(--soft);border-radius:8px;padding:8px 10px;font-size:.92rem}
 .toast{position:fixed;left:16px;right:16px;bottom:calc(16px + env(safe-area-inset-bottom,0px));background:var(--fg);color:var(--bg);padding:10px 14px;border-radius:10px;z-index:30;text-align:center}
 button:focus-visible,.fi:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.bar{padding:8px 10px}
+.bar .name{display:flex;align-items:center;gap:6px;min-height:40px}
+.bar .name .nm{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.bar .name .hb{flex:none;color:var(--muted);font-weight:400}
+.bar .name .dot{flex:none;color:var(--err);font-size:.75rem}
+.pair{display:inline-flex;flex:none}
+.pair .btn{border-radius:0;min-width:40px;min-height:40px;padding:6px 9px;display:inline-flex;align-items:center;justify-content:center}
+.pair .btn:first-child{border-start-start-radius:8px;border-end-start-radius:8px}
+.pair .btn:last-child{border-start-end-radius:8px;border-end-end-radius:8px}
+.pair .btn+.btn{border-inline-start-width:0}
+.pair .btn.main+.btn.main{border-inline-start:1px solid rgba(255,255,255,.4);padding:6px 7px;min-width:30px}
+.pair svg{width:20px;height:20px}
+.lnact{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px;padding-top:8px;border-top:1px solid var(--rule)}
+.la{font:inherit;font-size:.85rem;min-width:40px;min-height:38px;padding:4px 9px;border-radius:8px;border:1px solid var(--rule);background:var(--bg);color:var(--fg);cursor:pointer}
+.la.danger{color:var(--err);margin-inline-start:auto}
+.keys{position:sticky;bottom:0;z-index:4;background:var(--soft);border-top:1px solid var(--rule);padding:8px 12px calc(8px + env(safe-area-inset-bottom,0px))}
+.key{min-height:40px}
+.it .sub{display:block;color:var(--muted);font-size:.78rem;font-weight:400}
+.status{font-size:.82rem;color:var(--muted)}
+.mrow{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:10px 12px;border-bottom:1px solid var(--rule)}
+.mrow:last-child{border-bottom:0}
+.mrow .seg button{min-height:34px;font-size:.88rem}
+.toast{bottom:calc(72px + env(safe-area-inset-bottom,0px))}
 </style>
 </head>
 <body>
 <div class="top">
   <div class="bar">
-    <button class="name" id="fname" type="button"></button>
-    <button class="btn" id="save" type="button" disabled>שמירה</button>
-    <button class="btn main" id="run" type="button">▶ הרצה</button>
-  </div>
-  <div class="bar2">
-    <span class="seg run" id="segRun" role="group" aria-label="הרצה"><button type="button" data-v="asif">בכאילו</button><button type="button" data-v="real">אמיתית</button></span>
-    <span class="seg" id="segLang" role="group" aria-label="שפת הקובץ"><button type="button" data-v="he">עברית</button><button type="button" data-v="en">English</button></span>
-    <span class="seg" id="segView" role="group" aria-label="הצגה"><button type="button" data-v="inter">אינטראקטיבית</button><button type="button" data-v="plain">רגילה</button></span>
+    <button class="name" id="fname" type="button" aria-label="תפריט הקובץ"></button>
+    <span class="pair"><button class="btn" id="undo" type="button" aria-label="ביטול פעולה"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 14l4-4-4-4"/><path d="M19 10H8a4 4 0 1 0 0 8h1"/></svg></button><button class="btn" id="redo" type="button" aria-label="חזרה על פעולה"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 14l-4-4 4-4"/><path d="M5 10h11a4 4 0 1 1 0 8h-1"/></svg></button></span>
+    <span class="pair"><button class="btn main" id="run" type="button">▶ בכאילו</button><button class="btn main" id="runMode" type="button" aria-label="הרצה אמיתית או בכאילו">▾</button></span>
   </div>
 </div>
 <div id="ed"></div>
@@ -118,7 +138,7 @@ button:focus-visible,.fi:focus-visible{outline:2px solid var(--accent);outline-o
   <button class="key" type="button" data-k="?">? <small>תו אחד</small></button>
   <button class="key" type="button" data-k="%">% <small>משתנה</small></button>
 </div>
-<div class="addrow" id="addrow" hidden><button class="ghostbtn" id="add" type="button">+ שורה חדשה</button></div>
+<div class="addrow" id="addrow" hidden><button class="ghostbtn" id="add" type="button">+ שורה בסוף</button></div>
 <div class="shade" id="shade" hidden></div>
 <div class="sheet" id="sheet" role="dialog" aria-modal="true" hidden><div class="in" id="sheetIn"></div></div>
 
@@ -167,7 +187,6 @@ const DETS={
   'עמוק':{txt:'בדיקה מלאה של הכונן',word:true,write:()=>'עמוק',read:t=>t==='עמוק'?'':undefined},
   'קיים':{g:'ex',word:true,write:(v,l,c)=>c&&c.fem?'קיימת':'קיים',read:t=>t==='קיים'||t==='קיימת'?'':undefined},
   'חסר':{g:'ex',word:true,write:(v,l,c)=>c&&c.fem?'חסרה':'חסר',read:t=>t==='חסר'||t==='חסרה'?'':undefined},
-  'באינדקס':{g:'ex',word:true,txt:'האינדקס מכיר את הקובץ (מ0.42)',write:()=>'באינדקס',read:t=>t==='באינדקס'?'':undefined},
   'מכיל':{val:'text',ph:'טקסט',txt:'הקובץ מכיל את הטקסט',write:v=>'מכיל '+q(v)},
   'קבצים':valsw('/קבצים:','num','מספר',null,'כמה קבצים בתיקייה (בלי תתי־תיקיות)'),
   'רשימות':valsw('/רשימות:','num','מספר',null,'כמה רשימות יש בה'),
@@ -260,8 +279,8 @@ const CMDS={
   'פתח רשימה חכמה':{w:'פתח רשימה חכמה',form:'open',what:'בסוף ההרצה פותח רשימה חכמה',slots:[{link:'',kind:'pick',pk:['smart']}],det:['מיון']},
   'פתח תיקייה':{w:'פתח תיקייה',form:'open',what:'בסוף ההרצה פותח תיקייה בתוכנה',slots:[{link:'',kind:'pick',pk:['folder']}],det:[]},
   'פתח תפריט':{w:'פתח תפריט',form:'open',what:'בסוף ההרצה פותח רשימה כתפריט',slots:[{link:'',kind:'pick',pk:['list']}],det:[]},
-  'פתח תוסף':{w:()=>compat.plugins?'פתח תוסף':'פתח מסך מעבדה',read:['פתח מסך מעבדה','פתח מסך תוספים'],form:'plugin',what:'בסוף ההרצה פותח תוסף (בלי שם — רשימת התוספים; בלי גרסה — החדשה)',
-    slots:[{link:'',kind:'text',label:'שם התוסף',opt:true},{link:'גרסה',kind:'text',label:'גרסה',opt:true}],det:[]},   // גרסה 10: גם הגרסה
+  'פתח תוסף':{w:()=>compat.plugins?'פתח תוסף':'פתח מסך מעבדה',read:['פתח מסך מעבדה','פתח מסך תוספים'],form:'plugin',what:'בסוף ההרצה פותח תוסף (בלי שם — רשימת התוספים)',
+    slots:[{link:'',kind:'text',label:'שם התוסף',opt:true}],det:[]},
   'פתח כלי':{w:'פתח כלי',form:'tool',what:'בסוף ההרצה פותח כלי (כפולים, סל, פס…)',
     slots:[{link:'',kind:'word',choose:'tool',label:'בחירת כלי'},{link:'',kind:'text',label:'פרטים, למשל /מפתח:ערך',opt:true,bare:true}],det:[]},
   'מצא':{w:'מצא',form:'find',what:'בסוף ההרצה פותח חיפוש עם תנאי',slots:[{link:'',kind:'cond',label:'תנאי'}],det:['מיון']},
@@ -277,12 +296,8 @@ const CMDS={
   'דוח':{w:'דוח',en:'REPORT',read:['REPORT'],what:'היומן של ההרצה נכתב גם לקובץ',slots:[{link:'ל',kind:'pick',pk:['outfile']}],det:[]},
 
   'ודא':{w:'ודא',en:'VERIFY',read:['VERIFY'],what:'בודק בתוך הקובץ: ✅ או ❌, ולא עוצר',
-    slots:[{link:'ש',kind:'pick',pk:['file','folder','list','smart']}],det:['קיים','חסר','באינדקס','מכיל','קבצים','רשימות','פריטים']},
+    slots:[{link:'ש',kind:'pick',pk:['file','folder','list','smart']}],det:['קיים','חסר','מכיל','קבצים','רשימות','פריטים']},
   'ודא שגיאה':{w:'ודא שגיאה',en:'VERIFY שגיאה',form:'fixed',what:'השורה הבאה אמורה להיכשל',slots:[],det:[]},
-  // גרסה 10 (מ0.42): ודא מסד · צור אופן · בטל לא-משויכים
-  'ודא מסד':{w:'ודא מסד',en:'VERIFY מסד',form:'fixed',what:'בודק את המסד: המנוע מול ה־SQLite של המכשיר, ותקינות המסד של כל אופן. לא משנה דבר',slots:[],det:[]},
-  'צור אופן':{w:'צור אופן',form:'name1',what:'יוצר אופן חדש (מסד עם בית); קיים — בלי שינוי. אחריו — "אופן" עובר אליו',slots:[{link:'',kind:'text',label:'שם האופן'}],det:[]},
-  'בטל לא-משויכים':{w:'בטל לא-משויכים',en:'RD לא-משויכים',form:'fixed',what:'מוחק מהמסד רישומי קבצים שאינם באף רשימה (בכונן — לא נוגע)',slots:[],det:[]},
   'המתן':{w:'המתן',en:'WAIT',read:['WAIT'],what:'מחכה לפני השורה הבאה',slots:[{link:'',kind:'num',label:'שניות'}],det:[]},
   'המשך':{w:'המשך',en:'CONTINUE',read:['CONTINUE'],form:'cont',what:'כמה כישלונות מותרים לפני שהקובץ נעצר. ריק — אחד',
     slots:[{link:'',kind:'num',label:'כמה',opt:true}],det:['בלי עצירה']},
@@ -305,12 +320,12 @@ const CMDS={
 Object.keys(CMDS).forEach(k=>{const d=CMDS[k];d.id=k;if(!d.read)d.read=[];if(!d.slots)d.slots=[];if(!d.det)d.det=[];});
 const MENU=[
   ['קבצים ותיקיות',['העתק','העבר','מחק','שנה','צור תיקייה','מחק תיקייה','השווה','הפעל']],
-  ['רשימות',['צור רשימה','צור רשימה חכמה','עדכן רשימה חכמה','העתק','העבר','שנה','בטל','בטל לא-משויכים','קשר','צור רעיון','צור כותרת']],
+  ['רשימות',['צור רשימה','צור רשימה חכמה','עדכן רשימה חכמה','העתק','העבר','שנה','בטל','קשר','צור רעיון','צור כותרת']],
   ['פתיחה בסוף ההרצה',['פתח מסך','פתח רשימה','פתח רשימה חכמה','פתח תיקייה','פתח תפריט','פתח כלי','פתח תוסף','מצא','חזרה','הרץ','הוסף','צור פקודה']],
   ['הודעות וכתיבה',['הודעה','הערה','כתוב','דוח']],
-  ['בדיקות וזרימה',['ודא','ודא שגיאה','ודא מסד','המתן','המשך','כלול','לולאה','הדמיה','בדיקה','מדידה']],
+  ['בדיקות וזרימה',['ודא','ודא שגיאה','המתן','המשך','כלול','לולאה','הדמיה','בדיקה','מדידה']],
   ['כותרת הקובץ',['צלמית','שם','למה']],
-  ['המסד והתוספים',['אופן','צור אופן','גבה','רענן','הוסף תוסף','החלף תוסף']]   // גרסה 9: "אופן" — כאן (המשתמש לא מצא אותה ב"רשימות")
+  ['המסד והתוספים',['אופן','גבה','רענן','הוסף תוסף','החלף תוסף']]   // גרסה 9: "אופן" — כאן (המשתמש לא מצא אותה ב"רשימות")
 ];
 // מ0.40: "הוסף תוסף" ו"החלף תוסף" ירדו (העמודים עוברים ב"העבר"); בגרסה הקודמת — עדיין בתפריט
 function menu(){return MENU.map(([g,ks])=>[g,compat.plugins?ks.filter(k=>k!=='הוסף תוסף'&&k!=='החלף תוסף'):ks]);}
@@ -391,9 +406,7 @@ function fromLine(s){
     case 'screen':{const sc=ALL_SCREENS.slice().sort((a,b)=>b.length-a.length).find(x=>rest===x||rest.startsWith(x+' '));if(!sc)return null;
       if(sc==='מעבדה'||sc==='תוספים'){const a=unq(rest.slice(sc.length));const p=blank('פתח תוסף');p.vals[0]=a?{kind:'text',raw:a}:null;return p;}
       m.vals[0]={kind:'word',raw:sc};const a=unq(rest.slice(sc.length));m.vals[1]=a?{kind:'place',raw:a}:null;return m;}
-    case 'plugin':{const r=rest.trim();const nv=r[0]==='"'||r[0]==='«'?nameAndRest(r):[r,''];   // כמו המנוע: בלי מרכאות — כל השאר הוא השם
-      const a=unq(nv[0]),g=unq(nv[1]);m.vals[0]=a?{kind:'text',raw:a}:null;m.vals[1]=a&&g?{kind:'text',raw:g}:null;return m;}
-    case 'name1':{const a=unq(rest);if(!a)return null;m.vals[0]={kind:'text',raw:a};return m;}
+    case 'plugin':{const a=unq(rest);m.vals[0]=a?{kind:'text',raw:a}:null;return m;}
     case 'tool':{const nr=nameAndRest(rest);if(TOOLS.indexOf(nr[0])<0)return null;m.vals[0]={kind:'word',raw:nr[0]};m.vals[1]=nr[1]?{kind:'text',raw:nr[1]}:null;return m;}
     case 'run':{const r=unq(rest);if(!r)return null;m.vals[0]={kind:'place',raw:r};return m;}
     case 'add':{if(ADDS.indexOf(rest)<0)return null;m.vals[0]={kind:'word',raw:rest};return m;}
@@ -508,8 +521,7 @@ function toLine(m,lang){
     case 'find':if(has(v[0]))parts.push(v[0].raw);return parts.concat(detsOut(m,lang)).join(' ');
     case 'open':if(has(v[0]))parts.push(q(v[0].kind==='place'?v[0].raw:listPath(v[0].raw)));return parts.concat(detsOut(m,lang)).join(' ');
     case 'screen':if(has(v[0]))parts.push(v[0].raw);if(has(v[0])&&has(v[1]))parts.push(q(v[1].raw));return parts.join(' ');
-    case 'plugin':if(has(v[0]))parts.push(q(v[0].raw));if(has(v[0])&&has(v[1]))parts.push(q(v[1].raw));return parts.join(' ');
-    case 'name1':if(has(v[0]))parts.push(q(v[0].raw));return parts.join(' ');
+    case 'plugin':if(has(v[0]))parts.push(q(v[0].raw));return parts.join(' ');
     case 'tool':if(has(v[0]))parts.push(v[0].raw);if(has(v[0])&&has(v[1]))parts.push(v[1].raw);return parts.join(' ');
     case 'run':case 'add':if(has(v[0]))parts.push(v[0].kind==='word'?v[0].raw:q(v[0].raw));return parts.join(' ');
     case 'comp':
@@ -636,20 +648,22 @@ function myFiles(){return J(can('myCommands')?V.myCommands():V.commandFiles(),[]
 
 // ---------- המצב ----------
 let file=null, lines=[], models=[], saved='', act=-1, M=null, sh=null, lastInput=null, snap=null;
+let hist=[{t:'',l:''}], hpos=0, histT=null;   // גרסה 10: ביטול וחזרה — הטקסט והשפה
 let lang=pref('lang','he')==='en'?'en':'he', view=pref('view','inter')==='plain'?'plain':'inter', real=false;
 const $=id=>document.getElementById(id);
 const ed=$('ed'),plain=$('plain'),keys=$('keys'),addrow=$('addrow'),sheet=$('sheet'),sheetIn=$('sheetIn'),shade=$('shade');
-const fname=$('fname'),saveBtn=$('save'),runBtn=$('run');
+const fname=$('fname'),runBtn=$('run'),runMode=$('runMode'),undoBtn=$('undo'),redoBtn=$('redo');
 
 function text(){if(view==='plain'&&file)return plain.value.replace(/\r/g,'')+(plain.value&&!plain.value.endsWith('\n')?'\n':'');return lines.join('\n')+(lines.length?'\n':'');}
 function dirty(){return file&&text()!==saved;}
 function commit(){if(act>=0&&M&&JSON.stringify(M)!==snap){lines[act]=Mo.toLine(M,lang);models[act]=JSON.parse(JSON.stringify(M));}upd();}   // שורה שרק נפתחה — נשארת כמו שנכתבה
 function upd(){
-  saveBtn.disabled=!dirty();fname.innerHTML='';
-  if(file){fname.append(document.createTextNode(file.name.replace(/\.vbat$/,'')));if(dirty())fname.append(E('small',null,'  · לא נשמר'));}
-  else fname.textContent='בחירת קובץ פקודות';
-  runBtn.textContent=real?'▶ הרצה אמיתית':'▶ הרצה בכאילו';runBtn.classList.toggle('real',real);
-  seg('segRun',real?'real':'asif');seg('segLang',lang);seg('segView',view);
+  // גרסה 10 — המשתמש: "צריך במקום מרוכז וברור פתיחת קובץ, סגירה, שמירה בשם"; השמירה — "מספיק בתפריט". קובץ שלא נשמר — נקודה ליד השם
+  fname.textContent='';
+  fname.append(E('span','hb','☰'),E('span','nm',file?file.name.replace(/\.vbat$/,''):'בחירת קובץ פקודות'));
+  if(dirty()){const d=E('span','dot','●');d.setAttribute('aria-label','לא נשמר');fname.append(d);}
+  runBtn.textContent=real?'▶ אמיתית':'▶ בכאילו';runBtn.classList.toggle('real',real);runMode.classList.toggle('real',real);
+  histLater();updUndo();
 }
 function seg(id,v){[...$(id).querySelectorAll('button')].forEach(b=>{const on=b.dataset.v===v;b.classList.toggle('on',on);b.setAttribute('aria-pressed',String(on));});}
 function parseAll(content){
@@ -664,9 +678,27 @@ function load(f,content){
   const fixed=parseAll(saved);
   setPref('file',f.path||f.name);
   if(view==='plain')plain.value=text();
-  draw();
+  draw();histReset();
   if(fixed.length)openSheet({kind:'fixed',list:fixed});
 }
+
+// ---------- ביטול וחזרה (גרסה 10) ----------
+// המשתמש: "חזור לביטול צריכים להיות סמוכים ולא בשני מקומות". הקובץ כולו נשמר כטקסט אחרי כל שינוי (הקלדה — אחרי הפסקה קצרה).
+function histReset(){clearTimeout(histT);histT=null;hist=[{t:file?text():'',l:lang}];hpos=0;updUndo();}
+function same(e){return e&&e.t===text()&&e.l===lang;}
+function histRecord(){clearTimeout(histT);histT=null;if(!file)return;if(same(hist[hpos]))return;
+  hist=hist.slice(0,hpos+1);hist.push({t:text(),l:lang});if(hist.length>200)hist.shift();hpos=hist.length-1;updUndo();}
+function histLater(){clearTimeout(histT);histT=setTimeout(histRecord,700);}
+function updUndo(){const pend=!!file&&!same(hist[hpos]);undoBtn.disabled=!file||!(hpos>0||pend);redoBtn.disabled=!file||pend||hpos>=hist.length-1;}
+function restoreText(e){
+  const t=e.t;act=-1;M=null;
+  if(e.l&&e.l!==lang){lang=e.l;setPref('lang',lang);}   // ביטול של מעבר שפה מחזיר גם את השפה
+  if(view==='plain'&&file)plain.value=t;
+  else{lines=t.split('\n');if(lines.length&&lines[lines.length-1]==='')lines.pop();models=lines.map(Mo.fromLine);}
+  draw();clearTimeout(histT);histT=null;updUndo();
+}
+function undo(){commit();histRecord();if(hpos<=0){toast('אין מה לבטל');return;}hpos--;restoreText(hist[hpos]);}
+function redo(){commit();histRecord();if(hpos>=hist.length-1){toast('אין מה להחזיר');return;}hpos++;restoreText(hist[hpos]);}
 
 // ---------- תצוגה ----------
 function E(tag,cls,t){const e=document.createElement(tag);if(cls)e.className=cls;if(t!=null)e.textContent=t;return e;}
@@ -784,7 +816,7 @@ function draw(focus){
   ed.textContent='';
   const pl=view==='plain'&&!!file;
   plain.hidden=!pl;ed.hidden=pl;
-  if(!file){const d=E('div','empty','בחר קובץ פקודות, או צור חדש');d.append(E('br'),B('primary','קובצי הפקודות',()=>openSheet({kind:'files'})));ed.appendChild(d);keys.hidden=true;addrow.hidden=true;upd();return;}
+  if(!file){const d=E('div','empty','בחר קובץ פקודות, או צור חדש');d.append(E('br'),B('primary','פתיחה',()=>openSheet({kind:'open'})),document.createTextNode(' '),B('secondary','קובץ חדש',()=>openSheet({kind:'newfile'})));ed.appendChild(d);keys.hidden=true;addrow.hidden=true;upd();return;}
   if(pl){keys.hidden=true;addrow.hidden=true;upd();return;}
   lines.forEach((s,i)=>{
     const row=E('div','row'+(i===act?' on':''));row.dataset.i=i;
@@ -792,7 +824,7 @@ function draw(focus){
     if(dp){rw.style.paddingInlineStart=(dp*18)+'px';for(let l=1;l<=dp;l++){const g=E('span','gl');g.style.insetInlineStart=((l-1)*18+11)+'px';g.style.background=LOOP_COLOR;rw.appendChild(g);}}
     const bar=E('div','gbar');bar.style.background=colorOf(i===act?M:models[i]);row.appendChild(bar);
     const body=E('div','body');
-    if(i===act){const box=E('div','flow');renderFlow(box);body.appendChild(box);body.appendChild(E('div','what',M.cmd?CMDS[M.cmd].what:'כתוב פקודה, או בחר מהרשימה'));}
+    if(i===act){const box=E('div','flow');renderFlow(box);body.appendChild(box);body.appendChild(E('div','what',M.cmd?CMDS[M.cmd].what:'כתוב פקודה, או בחר מהרשימה'));body.appendChild(lineActions());}
     else renderStatic(body,i);
     row.append(E('div','num',String(i+1)),body);rw.appendChild(row);ed.appendChild(rw);
   });
@@ -808,6 +840,42 @@ function activate(i){
 }
 function deactivate(){if(act<0)return;commit();act=-1;M=null;draw();}
 function newLineAfter(){commit();const at=act>=0?act+1:lines.length;lines.splice(at,0,'');models.splice(at,0,{cmd:null,vals:[],dets:[],typing:''});act=-1;M=null;activate(at);}
+// ---------- פס הפעולות של השורה הפתוחה (גרסה 10) ----------
+// עד גרסה 9 לא הייתה הזזה ולא שכפול, ולכן לא היה אפשר להכניס שורות קיימות לתוך לולאה. מחיקה — רק כאן (לא גם בתפריט הפקודה).
+function lineActions(){
+  const r=E('div','lnact');
+  r.append(B('la','↑',()=>moveLine(-1),{'aria-label':'הזזה למעלה'}),B('la','↓',()=>moveLine(1),{'aria-label':'הזזה למטה'}),
+    B('la','שכפל',dupLine),B('la','+ מעל',()=>insertLine(false)),B('la','+ מתחת',()=>insertLine(true)),
+    B('la danger',M&&M.cmd==='לולאה'?'מחק לולאה':'מחק',delLine,{'aria-label':M&&M.cmd==='לולאה'?'מחיקת הלולאה — חזור וסוף; מה שבפנים נשאר':'מחיקת השורה'}));
+  return r;
+}
+function showAct(){const r=ed.querySelector('.row.on');if(r&&r.scrollIntoView)r.scrollIntoView({block:'nearest'});}
+function moveLine(d){
+  commit();const i=act,j=i+d;
+  if(j<0||j>=lines.length){toast(d<0?'כבר בראש הקובץ':'כבר בסוף הקובץ');return;}
+  const isLoop=models[i]&&models[i].cmd==='לולאה';
+  if(isLoop&&d>0&&pairOf(i)===j){toast('"חזור" לא יורד מתחת ל"סוף" שלו');return;}
+  const d0=depthOf(i);
+  [lines[i],lines[j]]=[lines[j],lines[i]];[models[i],models[j]]=[models[j],models[i]];
+  act=j;snap=JSON.stringify(M);draw();showAct();histRecord();
+  if(isLoop)toast(d<0?'שורה נכנסה ללולאה':'שורה יצאה מהלולאה');
+  else{const d1=depthOf(j);if(d1>d0)toast('נכנסה ללולאה');else if(d1<d0)toast('יצאה מהלולאה');}
+}
+function dupLine(){
+  commit();const i=act,m=models[i];let b=i;
+  if(m&&m.cmd==='לולאה'){const p=pairOf(i);if(p>i)b=p;}
+  const L=lines.slice(i,b+1),Ms=models.slice(i,b+1).map(x=>x==null?null:JSON.parse(JSON.stringify(x)));
+  lines.splice(b+1,0,...L);models.splice(b+1,0,...Ms);
+  act=-1;M=null;activate(b+1);showAct();histRecord();
+  toast(b>i?'הלולאה שוכפלה, עם מה שבתוכה':'השורה שוכפלה');
+}
+function insertLine(below){
+  commit();const at=act+(below?1:0);
+  lines.splice(at,0,'');models.splice(at,0,{cmd:null,vals:[],dets:[],typing:''});
+  act=-1;M=null;activate(at);showAct();
+}
+function delLine(){const i=act;act=-1;M=null;removeLine(i);histRecord();}
+function addAtEnd(){commit();act=-1;M=null;lines.push('');models.push({cmd:null,vals:[],dets:[],typing:''});activate(lines.length-1);showAct();}
 /** לולאה: "חזור" ו"סוף" — זוג. מחזיר את מספר השורה של בן הזוג, או -1 */
 function pairOf(i){
   const m=models[i];if(!m)return -1;
@@ -834,7 +902,7 @@ function setCmd(k){
 
 ed.addEventListener('click',e=>{const row=e.target.closest('.row');if(!row)return;const i=+row.dataset.i;if(i===act)return;activate(i);});
 document.addEventListener('pointerdown',e=>{if(sh)return;if(!e.target.closest('#ed')&&!e.target.closest('#addrow')&&!e.target.closest('#keys')&&!e.target.closest('.top'))deactivate();});
-$('add').addEventListener('click',newLineAfter);
+$('add').addEventListener('click',addAtEnd);
 keys.addEventListener('pointerdown',e=>{if(e.target.closest('.key'))e.preventDefault();});
 keys.addEventListener('click',e=>{
   const k=e.target.closest('.key');if(!k)return;
@@ -849,12 +917,10 @@ function insertAt(f,s){
   f.dispatchEvent(new Event('input'));
 }
 plain.addEventListener('input',upd);
-saveBtn.addEventListener('click',()=>save());
 runBtn.addEventListener('click',run);
-fname.addEventListener('click',()=>{commit();openSheet({kind:'files'});});
-$('segRun').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;real=b.dataset.v==='real';upd();if(real)toast('הרצה אמיתית: קודם תצוגה מקדימה, ורק באישור שלך');});
-$('segLang').addEventListener('click',e=>{const b=e.target.closest('button');if(!b||b.dataset.v===lang)return;setLang(b.dataset.v);});
-$('segView').addEventListener('click',e=>{const b=e.target.closest('button');if(!b||b.dataset.v===view)return;setView(b.dataset.v);});
+runMode.addEventListener('click',()=>{commit();openSheet({kind:'runmode'});});
+fname.addEventListener('click',()=>{commit();openSheet({kind:'menu'});});
+undoBtn.addEventListener('click',undo);redoBtn.addEventListener('click',redo);
 function setLang(l){
   commit();
   if(view==='plain'&&file){const fx=parseAll(plain.value.replace(/\r/g,''));if(fx.length)toast('ירדו פרטים שלא מתאימים: '+fx.join(' · '));}
@@ -872,7 +938,7 @@ function setView(v){
   if(v==='plain'&&file)plain.focus();
 }
 function run(){
-  commit();if(!file){openSheet({kind:'files'});return;}
+  commit();if(!file){openSheet({kind:'open'});return;}
   const t=text(),where=file.path||file.name;
   if(can('runFile')){V.runFile(t,where,real);return;}            // מ0.40: הגשר יודע אמיתי / בכאילו, ואת שם הקובץ
   V.runCommands(real?t:'הדמיה\n'+t);                              // מ0.39: הרצה רגילה עם תצוגה מקדימה ואישור; בכאילו — שורת "הדמיה" בראש
@@ -921,7 +987,7 @@ window.vfmBack=function(){if(sh){closeSheet();return true;}if(act>=0){deactivate
 function top(title){const t=E('div','sh-top');t.append(E('div','sh-title',title),B('x','בטל',closeSheet));sheetIn.appendChild(t);}
 function drawSheet(){
   sheetIn.textContent='';
-  ({fixed:drawFixed,pick:drawPick,det:drawDet,cmd:drawCmds,cmdmenu:drawCmdMenu,files:drawFiles,newfile:drawNewFile,raw:drawRaw,leave:drawLeave,
+  ({fixed:drawFixed,pick:drawPick,det:drawDet,cmd:drawCmds,cmdmenu:drawCmdMenu,files:drawOpen,open:drawOpen,menu:drawMenu,runmode:drawRunMode,newfile:drawNewFile,raw:drawRaw,leave:drawLeave,
     exists:drawExists,oldsave:drawOldSave,choose:drawChoose,name:drawName,vars:drawVars,cmdfile:drawCmdFile})[sh.kind]();
 }
 function openPick(k){
@@ -1080,7 +1146,7 @@ function drawCmdMenu(){
   top(g?g+' › '+M.cmd:'הפקודה "'+M.cmd+'"');
   sheetIn.appendChild(E('div','grp','להחליף בפקודה אחרת. מה שמתאים נשאר'));
   cmdTree(replaceCmd,M.cmd);
-  sheetIn.appendChild(B('it danger',M.cmd==='לולאה'?'מחיקת הלולאה (חזור וסוף; מה שבפנים נשאר)':'מחיקת השורה',()=>{const i=act;act=-1;M=null;hideSheet();removeLine(i);}));
+  sheetIn.appendChild(E('div','grp','מחיקת השורה — בפס שמתחת לשורה'));
 }
 function replaceCmd(k){
   const old=M,def=CMDS[k],m=Mo.blank(k),dropped=[];
@@ -1099,6 +1165,120 @@ function replaceCmd(k){
   if(k==='לולאה'&&pairOf(act)<0){lines.splice(act+1,0,'סוף');models.splice(act+1,0,Mo.blank('סוף'));}
   closeSheet();
   const all=dropped.concat(g);if(all.length)toast('ירד, לא מתאים ל"'+k+'": '+all.join(', '));
+}
+// ---------- תפריט הקובץ (גרסה 10) ----------
+function drawMenu(){
+  top(file?file.name.replace(/\.vbat$/,''):'קובץ');
+  sheetIn.appendChild(E('div','grp','קובץ'));
+  const box=E('div','items');
+  const it=(label,k,fn)=>box.appendChild(B('it',[E('span',null,label),E('span','k',k||'')],fn));
+  it('קובץ חדש','',()=>{sh={kind:'newfile'};drawSheet();});
+  it('פתיחה','›',()=>{sh={kind:'open'};drawSheet();});
+  if(file){
+    it('שמירה',dirty()?'לא נשמר':'נשמר',()=>{hideSheet();save();draw();});
+    it('שמירה בשם','',()=>{sh={kind:'newfile',saveAs:true};drawSheet();});
+    it('סגירה','',()=>{hideSheet();closeFile();});
+  }
+  sheetIn.appendChild(box);
+  sheetIn.appendChild(E('div','grp','הצגה'));
+  const v=E('div','items');
+  v.appendChild(segRow('שפה',[['he','עברית'],['en','English']],lang,x=>{hideSheet();setLang(x);}));
+  v.appendChild(segRow('תצוגה',[['inter','אינטראקטיבית'],['plain','רגילה']],view,x=>{hideSheet();setView(x);}));
+  sheetIn.appendChild(v);
+}
+function segRow(label,opts,cur,fn){
+  const r=E('div','mrow'),s=E('span','seg');s.setAttribute('role','group');s.setAttribute('aria-label',label);
+  opts.forEach(([v,t])=>s.appendChild(B(v===cur?'on':'',t,()=>{if(v!==cur)fn(v);},{'aria-pressed':String(v===cur)})));
+  r.append(E('span',null,label),s);return r;
+}
+function drawRunMode(){
+  top('הרצה');
+  const box=E('div','items');
+  [[false,'בכאילו','בלי לשנות דבר'],[true,'אמיתית','קודם תצוגה מקדימה, ורק באישור שלך']].forEach(([v,t,k])=>box.appendChild(
+    B('it'+(real===v?' on':''),[E('span',null,(real===v?'✓ ':'')+t),E('span','k',k)],()=>{real=v;hideSheet();upd();if(real)toast('הרצה אמיתית: קודם תצוגה מקדימה, ורק באישור שלך');})));
+  sheetIn.appendChild(box);
+}
+function closeFile(){
+  const go=()=>{file=null;lines=[];models=[];saved='';act=-1;M=null;setPref('file','');if(view==='plain')plain.value='';hist=[{t:'',l:lang}];hpos=0;draw();};
+  if(dirty()){openSheet({kind:'leave',then:go});return;}
+  go();
+}
+
+// ---------- פתיחה לפי תיקיות (גרסה 10) ----------
+// המשתמש: "בפתיחת קובץ היה עדיף שיביא את כל התיקיות שיש בהם קבצי פקודות, ומתוכם יבחר ויפתח" · "הפקודות שלי" בראש ·
+// "כאשר בוחרים פתיחת קובץ נעשה רענון מהיר". כל התיקיות במכשיר — מהאינדקס, דרך findFiles בגשר (גרסת התוכנה הבאה):
+// מחזירה מיד את מה שבאינדקס, ואחרי הרענון המהיר — שוב, ב־vfmResult. עד אז — התיקיות שהעורך מכיר.
+function when(t){
+  if(!t)return '';const d=new Date(+t),n=new Date(),p=x=>String(x).padStart(2,'0');
+  const day=x=>new Date(x.getFullYear(),x.getMonth(),x.getDate()).getTime(),diff=Math.round((day(n)-day(d))/864e5);
+  if(diff===0)return 'היום '+p(d.getHours())+':'+p(d.getMinutes());
+  if(diff===1)return 'אתמול';
+  return d.getDate()+'.'+(d.getMonth()+1)+(d.getFullYear()!==n.getFullYear()?'.'+d.getFullYear():'');
+}
+function niceDir(p){let v=p;try{v=V.toVar(p)||p;}catch(e){}return String(v).replace(/%([^%\\/]+)%/g,'$1').replace(/^[\\/]+|[\\/]+$/g,'').replace(/[\\/]/g,' \\ ');}
+function groupDirs(list){
+  const by={};
+  list.forEach(f=>{const p=String(f.path||'');const k=p.slice(0,p.lastIndexOf('/'));if(!k||!VBAT.test(p))return;(by[k]=by[k]||{})[p]={name:f.name||p.split('/').pop(),path:p,time:+f.time||0};});
+  return Object.keys(by).map(k=>{const fs=Object.keys(by[k]).map(x=>by[k][x]),w=niceDir(k);
+    return {name:w.split(' \\ ').pop()||k,where:w,files:fs,time:Math.max.apply(null,fs.map(f=>f.time))};}).sort((a,b)=>b.time-a.time);
+}
+function savedDirs(){return J(pref('dirs',null),[]);}
+function rememberDir(p){const a=[p].concat(savedDirs().filter(x=>x!==p)).slice(0,12);setPref('dirs',JSON.stringify(a));}
+function knownFiles(){
+  const all=myFiles().concat(J(V.commandFiles(),[]));
+  const dirs={};const addDir=p=>{if(p)dirs[String(p).replace(/\/$/,'')]=1;};
+  all.forEach(f=>{const p=String(f.path||'');addDir(p.slice(0,p.lastIndexOf('/')));});
+  J(V.places&&V.places(),[]).forEach(o=>{if(o.name==='הורדות')addDir(o.path);});
+  savedDirs().forEach(addDir);
+  if(file&&file.path)addDir(file.path.slice(0,file.path.lastIndexOf('/')));
+  Object.keys(dirs).forEach(d=>{const fs=J(V.listDir(d),null);if(fs)fs.forEach(f=>{if(!f.dir&&VBAT.test(f.name))all.push({name:f.name,path:d+'/'+f.name,time:f.time});});});
+  return all;
+}
+function countIn(g){return (g||[]).reduce((n,d)=>n+d.files.length,0);}
+function gatherDirs(){
+  if(can('findFiles')){
+    const id='r'+(++seq);
+    pending[id]=r=>{if(!sh||sh.kind!=='open')return;const was=countIn(sh.groups);sh.groups=groupDirs(J(r,[]));
+      const n=countIn(sh.groups)-was;sh.status=n>0?'נוסף: '+n:'מעודכן';if(!sh.dir)drawSheet();};
+    sh.status='מרענן…';
+    return groupDirs(J(V.findFiles(id,'סוג:vbat',true),[]));
+  }
+  sh.status='התיקיות שהעורך מכיר. כל התיקיות במכשיר — עם גרסת התוכנה הבאה.';
+  return groupDirs(knownFiles());
+}
+function drawOpen(){
+  if(sh.dir){drawOpenDir();return;}
+  if(!sh.groups)sh.groups=gatherDirs();
+  top('פתיחה');
+  if(sh.status)sheetIn.appendChild(E('div','status',sh.status));
+  const box=E('div','items'),mine=myFiles();
+  box.appendChild(B('it',[E('span',null,'★ הפקודות שלי'),E('span','k',mine.length+' ›')],()=>{sh.dir={name:'הפקודות שלי',where:'',files:mine};drawSheet();}));
+  sh.groups.forEach(d=>{const t=E('span',null,d.name);if(d.where&&d.where!==d.name)t.appendChild(E('span','sub',d.where));
+    box.appendChild(B('it',[t,E('span','k',d.files.length+' · '+when(d.time)+' ›')],()=>{sh.dir=d;drawSheet();}));});
+  box.appendChild(B('it',[E('span',null,'📂 תיקייה אחרת…'),E('span','k','')],otherDir));
+  sheetIn.appendChild(box);
+}
+function drawOpenDir(){
+  const d=sh.dir;top(d.name);
+  if(d.where&&d.where!==d.name)sheetIn.appendChild(E('div','crumb',d.where));
+  const box=E('div','items');
+  box.appendChild(B('it',[E('span',null,'חזרה'),E('span','k','‹')],()=>{sh.dir=null;drawSheet();}));
+  d.files.slice().sort((a,b)=>b.time-a.time).forEach(f=>box.appendChild(B('it',[E('span',null,f.name.replace(/\.vbat$/i,'')),
+    E('span','k',(file&&f.path===file.path?'✓ ':'')+when(f.time))],()=>openFile(f))));
+  if(!d.files.length)box.appendChild(E('div','it','אין קובצי פקודות'));
+  sheetIn.appendChild(box);
+}
+function otherDir(){
+  hideSheet();
+  ask('pickFolder',['פתיחה — תיקייה',false],p=>{
+    if(!p){draw();return;}
+    const fs=J(V.listDir(p),null);
+    if(fs==null){toast('התיקייה לא נקראה');draw();return;}
+    const dir=String(p).replace(/\/$/,''),hits=fs.filter(f=>!f.dir&&VBAT.test(f.name)).map(f=>({name:f.name,path:dir+'/'+f.name,time:f.time}));
+    if(!hits.length){toast('אין בתיקייה הזו קובצי פקודות');draw();return;}
+    rememberDir(dir);const w=niceDir(dir);
+    openSheet({kind:'open',dir:{name:w.split(' \\ ').pop(),where:w,files:hits}});
+  });
 }
 function drawFiles(){
   top('קובצי הפקודות');
@@ -1133,7 +1313,7 @@ function drawNewFile(){
     const n=f.value.trim();if(!n){toast('צריך שם');return;}
     if(asSave){hideSheet();commit();saveAs(n,then);draw();return;}
     if(myFiles().concat(J(V.commandFiles(),[])).some(x=>x.name===n+'.vbat')){toast('יש כבר קובץ בשם הזה');return;}
-    const go=()=>{hideSheet();load({name:n+'.vbat',path:null},'');saved='\u0000';lines=[''];models=[{cmd:null,vals:[],dets:[],typing:''}];if(view==='plain'){plain.value='';draw();upd();}else activate(0);};
+    const go=()=>{hideSheet();load({name:n+'.vbat',path:null},'');saved='\u0000';lines=[''];models=[{cmd:null,vals:[],dets:[],typing:''}];histReset();if(view==='plain'){plain.value='';draw();upd();}else activate(0);};
     if(dirty()){sh={kind:'leave',then:go};drawSheet();return;}go();
   }));
   setTimeout(()=>f.focus(),50);
@@ -1159,7 +1339,7 @@ function drawOldSave(){
 function drawRaw(){
   top('שורה '+(sh.line+1));
   sheetIn.appendChild(E('div','pre',lines[sh.line]));
-  sheetIn.appendChild(E('div','grp','את השורה הזו העורך האינטראקטיבי עוד לא מכיר. היא נשמרת כמו שהיא. לעריכה — "רגילה" בראש העמוד.'));
+  sheetIn.appendChild(E('div','grp','את השורה הזו העורך האינטראקטיבי עוד לא מכיר. היא נשמרת כמו שהיא. לעריכה — תצוגה "רגילה" בתפריט ☰.'));
   const i=sh.line;
   sheetIn.appendChild(B('it danger','מחיקת השורה',()=>{hideSheet();lines.splice(i,1);models.splice(i,1);upd();draw();}));
 }
@@ -1179,7 +1359,7 @@ function drawLeave(){
 }
 const VARS=[['הורדות','תיקיית ההורדות'],['פנימי','הזיכרון הפנימי'],['כרטיס','כרטיס הזיכרון'],['כאן','התיקייה של הקובץ'],['תאריך','התאריך והשעה עכשיו'],
   ['שעה','השעה עכשיו'],['ייחודי','מספר שלא חוזר'],['סבב','מספר הסבב בלולאה'],['רק-במקור','אחרי השווה: רק במקור'],['רק-ביעד','אחרי השווה: רק ביעד'],
-  ['שיתוף','מה ששותף לתוכנה'],['נבחרים','הקבצים שנבחרו — רק בפקודה שברשימת "בחירה"'],['בית','הבית של התוכנה (בהפעל)'],['מזהה-כרטיס','המזהה של כרטיס הזיכרון']];
+  ['שיתוף','מה ששותף לתוכנה'],['בית','הבית של התוכנה (בהפעל)'],['מזהה-כרטיס','המזהה של כרטיס הזיכרון']];
 function drawVars(){
   top('משתנה');
   const f=sh.target,box=E('div','items');
