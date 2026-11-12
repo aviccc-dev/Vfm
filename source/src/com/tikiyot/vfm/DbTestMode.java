@@ -17,7 +17,7 @@ final class DbTestMode {
 
     static final String ASSET = "tests/pkudot-masad.vbat", ASSET_CALL = "tests/pkudot-kalul.vbat", ASSET_LOAD = "tests/omes-masad.vbat",
             ASSET_ALL = "tests/klali.vbat", ASSET_MODES = "tests/shney-ofanim.vbat", ASSET_STRESS = "tests/lachatz.vbat", ASSET_V23 = "tests/gersa-023.vbat",
-            ASSET_V24 = "tests/gersa-024.vbat";
+            ASSET_V24 = "tests/gersa-024.vbat", ASSET_SYSTEM = "tests/maarechet.vbat";
 
     /** בקובץ בדיקת העומס: מוחלף בשם האופן עם המסד הגדול ביותר (הנתונים האמיתיים). */
     static final String REAL = "%האופן-האמיתי%";  // תחביר
@@ -51,9 +51,9 @@ final class DbTestMode {
         }
     }
 
-    /** מ0.31: הבדיקה הכללית של הגרסה הזו — הקובץ שבתיקיית אופן הבדיקות (לדוח האבחון). */
+    /** מ0.31: הבדיקה הכללית — הקובץ שבתיקיית אופן הבדיקות (לדוח האבחון). מ0.40: חלק של "בדיקת מערכת", בשם קבוע. */
     static File generalFile(Activity a) throws Exception {
-        return new File(Modes.dirOf(Words.DbCmd.TEST_MODE), Words.DbCmd.TEST_ALL_FILE + " " + a.getPackageManager().getPackageInfo(a.getPackageName(), 0).versionName + "." + Batch.EXT);
+        return new File(Modes.dirOf(Words.DbCmd.TEST_MODE), Words.DbCmd.TEST_ALL_FILE + "." + Batch.EXT);
     }
 
     static void open(final Activity a) {
@@ -75,21 +75,27 @@ final class DbTestMode {
             put(a, ASSET_CALL, new File(dir, Words.DbCmd.TEST_CALL_FILE + "." + Batch.EXT), null);
             put(a, ASSET_V23, new File(dir, Words.DbCmd.TEST_V23_FILE + "." + Batch.EXT), null);
             put(a, ASSET_V24, new File(dir, Words.DbCmd.TEST_V24_FILE + "." + Batch.EXT), null);
-            final File all = new File(dir, Words.DbCmd.TEST_ALL_FILE + ver + "." + Batch.EXT);
-            final File stress = new File(dir, Words.DbCmd.TEST_STRESS_FILE + ver + "." + Batch.EXT);
-            final File load = new File(dir, Words.DbCmd.TEST_LOAD_FILE + ver + "." + Batch.EXT);
-            final File modes = new File(dir, Words.DbCmd.TEST_MODES_FILE + ver + "." + Batch.EXT);   // מ0.32
+            // מ0.40 (המשתמש: "שאר הבדיקות — הלחץ והשאר — מעניינות. עדיף כבר לרכז אותם לקובץ אחד"): בבית — קובץ אחד, "בדיקת
+            // מערכת <גרסה>", שכולל את כל החלקים; החלקים בתיקייה בשמם הקבוע. דוח האבחון מריץ רק את הכללית (העומס רץ על
+            // הנתונים האמיתיים — רק כשהמשתמש מריץ).
+            final File all = new File(dir, Words.DbCmd.TEST_ALL_FILE + "." + Batch.EXT);
+            final File stress = new File(dir, Words.DbCmd.TEST_STRESS_FILE + "." + Batch.EXT);
+            final File load = new File(dir, Words.DbCmd.TEST_LOAD_FILE + "." + Batch.EXT);
+            final File modes = new File(dir, Words.DbCmd.TEST_MODES_FILE + "." + Batch.EXT);   // מ0.32
+            final File system = new File(dir, Words.DbCmd.TEST_SYSTEM_FILE + ver + "." + Batch.EXT);
             put(a, ASSET_MODES, modes, null);
             put(a, ASSET_ALL, all, null);
             put(a, ASSET_STRESS, stress, null);
             put(a, ASSET_LOAD, load, realMode(a, mode));
-            final List<String> run = java.util.Arrays.asList(all.getAbsolutePath(), modes.getAbsolutePath(),   // מ0.33: בדיקת הסל עברה לדוח האבחון (מקצה לקצה, בלי יד)
-                    stress.getAbsolutePath(), load.getAbsolutePath());
+            put(a, ASSET_SYSTEM, system, null);
+            final List<String> run = Collections.singletonList(system.getAbsolutePath());
+            final List<String> keep = java.util.Arrays.asList(system.getAbsolutePath(), all.getAbsolutePath(), stress.getAbsolutePath(),
+                    load.getAbsolutePath(), modes.getAbsolutePath());
             File[] old = dir.listFiles();                                          // מ0.32: קובצי בדיקה של גרסה קודמת — נמחקים מהתיקייה
             if (old != null) for (File x : old) {
-                if (!x.isFile() || run.contains(x.getAbsolutePath()) || !x.getName().endsWith("." + Batch.EXT)) continue;
+                if (!x.isFile() || keep.contains(x.getAbsolutePath()) || !x.getName().endsWith("." + Batch.EXT)) continue;
                 for (String base : new String[]{Words.DbCmd.TEST_ALL_FILE, Words.DbCmd.TEST_STRESS_FILE, Words.DbCmd.TEST_LOAD_FILE,
-                        Words.DbCmd.TEST_MODES_FILE, Words.DbCmd.TEST_BIN_FILE})
+                        Words.DbCmd.TEST_MODES_FILE, Words.DbCmd.TEST_BIN_FILE, Words.DbCmd.TEST_SYSTEM_FILE})
                     if (x.getName().startsWith(base + " ") || x.getName().equals(base + "." + Batch.EXT)) x.delete();
             }
             long home = DbVerbs.write(a, mode, new DbVerbs.Job() {

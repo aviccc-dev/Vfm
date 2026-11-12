@@ -57,6 +57,7 @@ public final class Tests {
         run("מ0.38: המעבדה", new Runnable() { public void run() { m038lab(); } });
         run("מ0.40: התוספים, והשורות שהעורך האינטראקטיבי כותב", new Runnable() { public void run() { m040(); } });
         run("מ0.40: העבר — כבר במקום, /תפוס:לשנות-שם, /מכיל:", new Runnable() { public void run() { m040move(); } });
+        run("מ0.40: החלק החדש של הבדיקה הכללית — בהרצה אמיתית", new Runnable() { public void run() { m040general(); } });
         run("מ0.37: הפקודות הקטנות — כתוב, ודא (תיקייה, מכיל, קבצים, שגיאה), דוח, המתן, משתנים, רעיון וכותרת", new Runnable() { public void run() { m037(); } });
         run("קובצי פקודות — השורה כשדות לטופס (117א, שלב 2)", new Runnable() { public void run() { batchForm(); } });
         run("תיקוני הביקורות השישית והשביעית (118–122, 134, 135, 139)", new Runnable() { public void run() { review7(); } });
@@ -2008,6 +2009,29 @@ public final class Tests {
             check("מ0.40: חיפוש בקובץ — גם מעבר לגבול של קטע קריאה, ולא מוצא מה שאין", Files.contains(big, word) && !Files.contains(big, "אין".getBytes("UTF-8")));
         } catch (Exception e) {
             check("מ0.40: העבר — " + e, false);
+        }
+    }
+
+    /** מ0.40: החלק החדש של הבדיקה הכללית (assets/tests/klali.vbat) — השורות בכונן, בתכנון ובהרצה אמיתית. */
+    private static void m040general() {
+        File r = new File(home, "כונן-040ג");
+        wipe(r);
+        r.mkdirs();
+        try {
+            String all = Files.readUtf8(new File(System.getProperty("vfm.src"), "assets/tests/klali.vbat"));
+            int a = all.indexOf(":: מ0.40"), b = all.indexOf(":: מ0.40 — הקבצים שברשימה");
+            String part = all.substring(a, b) + "מחק תיקייה \"%פנימי%\\בדיקת מ0.40 (אפשר למחוק)\" /עמוק\n";
+            java.util.Map<String, String> v = Batch.vars(r, r.getAbsolutePath(), null);
+            Index ix = new Index("040ג", "040ג", r.getAbsolutePath());
+            ix.scan(null);
+            Library lib = Library.forTests(new ArrayList<Index>(java.util.Collections.singletonList(ix)));
+            Batch.Plan p = Batch.plan(part, r, v, lib);
+            eq("מ0.40: החלק החדש של הבדיקה הכללית — בלי שגיאות בתכנון", 0, p.errors);
+            String rep = Batch.run(p, lib, null, null).toString();
+            check("מ0.40: ...ובהרצה — כל ה\"ודא\" עוברים (" + rep + ")", rep.contains("ודא: 7 עברו · 0 נכשלו") && !p.trouble);
+            check("מ0.40: ...והתיקייה הוסרה", !new File(r, "בדיקת מ0.40 (אפשר למחוק)").exists());
+        } catch (Exception e) {
+            check("מ0.40: הבדיקה הכללית — " + e, false);
         }
     }
 

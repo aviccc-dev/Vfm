@@ -2286,6 +2286,7 @@ public final class Words {
                 TEST_MODES_FILE = "בדיקת שני אופנים",  // בכונן
                 TEST_BIN_FILE = "בדיקת סל",  // בכונן
                 TEST_STRESS_FILE = "בדיקת לחץ",  // בכונן
+                TEST_SYSTEM_FILE = "בדיקת מערכת",  // בכונן — מ0.40: כל הבדיקות בקובץ אחד
                 TEST_V23_FILE = "בדיקת מ0.23",  // בכונן
                 TEST_V24_FILE = "בדיקת מ0.24",  // בכונן
                 TOOLS_DIR = "כלים",  // בכונן

@@ -54,6 +54,8 @@ final class Batch {
         /** מ0.40: /תפוס:לשנות-שם; same — כמה נשארו במקומם כי יש ביעד קובץ זהה להם; inPlace — העברה אל התיקייה שהם כבר בה. */
         boolean renameTaken;
         int same, inPlace;
+        /** מ0.40: /מכיל: — נבדק שוב בהרצה (קובץ ששורה קודמת יוצרת — בתכנון עוד אין לו תוכן; ומחיקה — רק במה שבאמת מכיל). */
+        List<byte[]> contains;
 
         /**
          * מ0.40: לפני ההרצה — האם הקובץ src (שיגיע ל־to) יוצא מהשורה לפי /תפוס: (ונספר). מקום אחד לכל סוגי השורות.
@@ -607,7 +609,7 @@ final class Batch {
                 r.mtime = f.lastModified();
                 for (Cond.Test t : tests) if (!t.ok(null, r)) return false;
             }
-            for (byte[] w : contains) if (!Files.contains(f, w)) return false;
+            for (byte[] w : contains) if (f.exists() && !Files.contains(f, w)) return false;   // עוד אין (שורה קודמת יוצרת) — נבדק בהרצה
             return true;
         }
     }
@@ -1288,6 +1290,7 @@ final class Batch {
             s.error = flt.error;
             return;
         }
+        if (!flt.contains.isEmpty()) s.contains = flt.contains;               // מ0.40
         for (String x : sw) {
             String u = x.toUpperCase(Locale.ROOT);
             if (u.equals("/Y") || x.equals(SW_TAKEN + TAKEN_REPLACE)) s.replace = true;
@@ -1807,6 +1810,55 @@ final class Batch {
         return f + notes(s);
     }
 
+    /**
+     * מ0.40: /תפוס:לשנות-שם בהרצה — קובץ שיש בתיקיית היעד שלו קובץ זהה (בכונן עכשיו, או שהגיע בשורה הזו לפניו) יוצא מהשורה.
+     * בתכנון זה נבדק מול ההדמיה; אבל לקובץ ששורה קודמת באותו קובץ יוצרת עוד אין תוכן בתכנון, וגם בין התצוגה המקדימה
+     * להרצה הכונן יכול להשתנות. המשפך — כמו בתכנון: הגודל קודם, חתימה רק לשווי גודל.
+     */
+    private static void sameAtRun(Step s) {
+        Map<String, List<File>> arriving = new java.util.HashMap<String, List<File>>();
+        for (int k = 0; k < s.files.size(); k++) {
+            File f = new File(s.files.get(k));
+            File dir = !s.targets.isEmpty() ? new File(s.targets.get(k))
+                    : s.keepRoot != null ? new File(s.dest, Physical.rel(s.keepRoot, f.getAbsolutePath())).getParentFile() : s.dest;
+            List<File> came = arriving.get(dir.getAbsolutePath());
+            if (came == null) arriving.put(dir.getAbsolutePath(), came = new ArrayList<File>());
+            if (sameOnDisk(f, dir, came)) {
+                s.files.remove(k);
+                if (!s.targets.isEmpty()) s.targets.remove(k);
+                k--;
+                s.same++;
+            } else came.add(f);
+        }
+    }
+
+    /** מ0.40: /מכיל: בהרצה — קובץ שלא כתוב בו הטקסט יוצא מהשורה (בתכנון עבר כ"עוד לא ידוע", או שהשתנה מאז). */
+    private static void containsAtRun(Step s) {
+        for (int k = 0; k < s.files.size(); k++) {
+            File f = new File(s.files.get(k));
+            boolean ok = true;
+            for (byte[] w : s.contains) if (!Files.contains(f, w)) ok = false;
+            if (ok) continue;
+            s.files.remove(k);
+            if (!s.targets.isEmpty()) s.targets.remove(k);
+            k--;
+        }
+    }
+
+    private static boolean sameOnDisk(File src, File dir, List<File> came) {
+        long n = src.length();
+        String sig = null;
+        List<File> all = new ArrayList<File>(came);
+        File[] in = dir.listFiles();
+        if (in != null) all.addAll(Arrays.asList(in));
+        for (File g : all) {
+            if (!g.isFile() || g.length() != n) continue;
+            if (sig == null && (sig = Sig.of(src)) == null) return false;
+            if (sig.equals(Sig.of(g))) return true;
+        }
+        return false;
+    }
+
     /** מה יצא מהשורה אחרי הסינון, ולמה: שם תפוס (לדלג) · זהה כבר ביעד (לשנות-שם) · כבר במקום (העברה). מתחיל ב־" · ". */
     static String notes(Step s) {
         return (s.skipped > 0 ? Words.Cmd.skippedTaken(s.skipped) : "") + (s.same > 0 ? Words.Cmd.sameAtDest(s.same) : "")
@@ -1908,6 +1960,7 @@ final class Batch {
                 fails++;
                 continue;
             }
+            if (s.contains != null) containsAtRun(s);                          // מ0.40: /מכיל: — מול התוכן של עכשיו
             String out;
             if (s.noop) {                                                       // 1.27.0: גם מה שלא השתנה — נאמר
                 report.add(Words.Cmd.line(s.label(), s.describe));
@@ -1943,6 +1996,7 @@ final class Batch {
                 if (s.files.isEmpty() && s.dirs.isEmpty()) out = Words.Cmd.NO_FILES;
                 else out = stage(plan, s, progress);
             } else if (s.cmd.equals("COPY") || s.cmd.equals("MOVE")) {
+                if (s.renameTaken) sameAtRun(s);                                // מ0.40: "יש כבר זהה" — שוב, מול הכונן של עכשיו
                 if (s.files.isEmpty() && s.dirs.isEmpty()) out = notes(s).isEmpty() ? Words.Cmd.NO_FILES : notes(s).substring(3);
                 else {
                     boolean copy = s.cmd.equals("COPY");
