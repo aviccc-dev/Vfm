@@ -364,7 +364,7 @@ final class Menus {
             }
         }
         trees.put(mode, t);
-        stamps.put(mode, stamp(c, mode));
+        stamps.put(mode, st);                                                 // החותמת שלפני הקריאה: שינוי תוך כדי — ייקרא שוב
         return t;
     }
 

@@ -29,7 +29,7 @@ final class DbTestMode {
         String best = test;
         long size = -1;
         for (String m : DbScreen.dbModes(a)) {
-            if (m.equals(test)) continue;
+            if (m.equals(test) || m.equals(Menus.MODE)) continue;                 // מ0.41: גם לא אופן התפריטים
             long n = DbScreen.dbFile(a, m).length();
             if (n > size) {
                 size = n;
