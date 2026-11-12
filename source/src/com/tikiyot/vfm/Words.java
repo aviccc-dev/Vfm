@@ -66,7 +66,7 @@ public final class Words {
 
     // ---------- כפתורים ----------
     public static final String CANCEL = "ביטול", CLOSE = "סגירה", OK = "אישור", STOP = "עצור",
-            SAVE = "שמירה", SAVED = "נשמר", PASTE_HERE = "הדבקה כאן";
+            SAVE = "שמירה", PASTE_HERE = "הדבקה כאן";
 
     // ---------- הודעות חוזרות (131) ----------
     public static final String NOTHING_SELECTED = "לא נבחר דבר";
@@ -191,10 +191,6 @@ public final class Words {
     // ---------- קובצי פקודות (117א) ----------
     public static final class Cmd {
         private Cmd() { }
-        /** 1.13.0 */
-        public static final String OPEN_BTN = "פתח…", PROGRAM_BTN = "צלמית";
-        public static final String ALREADY_PROGRAM = "יש כבר כותרת (צלמית) בקובץ";
-        public static final String HEADER_HELP = "כותרת: צלמית — כאריח בבית הקובץ נראה כתוכנה (צלמית, שם ו\"למה\"; במקום אחר — קובץ טקסט) · הדמיה — הכול רץ בכאילו, בלי לשנות דבר";
 
 
         /** איך כותבים אותה — נבנה מההגדרה האחת (1.22.5: עם המתגים עצמם, במקום "[מתגים]"). */
@@ -440,9 +436,7 @@ public final class Words {
         }
 
         // העורך (1.23.0: הטופס הישן יצא — הטקסטים של הממשק החדש ב-Words.Ed)
-        public static final String SAVE_BTN = "💾 שמירה", PREVIEW_AND_RUN = "▶ תצוגה מקדימה והרצה", PICK = "📁 בחירה",
-                SHARE_BTN = "📤 שיתוף", ASK_SAVE = "לשמור את השינויים?",   // 203
-                DONT_SAVE = "בלי לשמור";
+        public static final String PICK = "📁 בחירה";
 
         /** ההסבר בראש קובץ פקודות חדש. התחביר (פקודות, משתנים, מתגים, דוגמה) — מ-Batch. */
         public static String template(String commands, String vars, String filters, String ask, String skip, String example) {
@@ -464,10 +458,6 @@ public final class Words {
                     + "\n"
                     + "REM דוגמה:\n"
                     + "REM " + example + "\n";
-        }
-
-        public static String fileNamed(String name) {
-            return "הקובץ " + name;
         }
     }
 
@@ -1474,9 +1464,7 @@ public final class Words {
 
         public static final String HOME = "בית", BACK = "חזרה", SEARCH = "חיפוש", COMMANDS = "פקודות",
                 FILES = "קבצים פיזיים", SETTINGS = "הגדרות", ADD = "כפתור";
-        public static final String WHAT = "מה הכפתור יעשה?";
-        public static final String T_LINE = "⌨ שורת פקודה בכתב", T_MENU = "☰ תפריט — רשימה מ\"שמור לתוכנה\"";
-        public static final String NO_SMART = "אין רשימות חכמות שמורות";
+        public static final String T_LINE = "⌨ שורת פקודה בכתב";
         public static final String NO_BATCH = "אין קובצי פקודות";
         public static final String LINE_HINT = "למשל: פתח רשימה חכמה אחרונים · מצא סוג:ספרים תאריך:שבוע · MOVE …";
         /** 1.13.0 */
@@ -1667,29 +1655,8 @@ public final class Words {
     public static final class Ed {
         private Ed() { }
 
-        public static final String FILTER_HINT = "חיפוש פקודה: העתק או COPY", IN_FILE = "בקובץ", MORE = "עוד פקודות",
-                TEMPLATES = "★ נפוצות", COMMANDS = "☰ פקודות", TPL_SYS = "של התוכנה", TPL_MINE = "שלי",
-                ADVANCED = "מתקדם", SIMULATE = "▶ הדמיה", SIMULATING = "מחשב…", REMOVE = "הסרה", UP = "▲", DOWN = "▼",
-                SAVE_TPL = "★ שמור כנפוצה", TPL_NAME = "שם לפקודה הנפוצה", TPL_SAVED = "נשמרה בנפוצות",
-                MINE_SUFFIX = " (שלי)", TPL_EDIT = "✎ ערוך", TPL_EDIT_COPY = "✎ ערוך — עותק אצל \"שלי\" (המקור נשאר)",
-                TPL_RENAME = "שנה שם", TPL_DELETE = "מחק", TPL_DELETE_FAILED = "לא נמחקה",
-                TPL_SYS_NO_DELETE = "מחיקה — רק בנפוצות שלי (☆, למטה)",
-                TPL_SYS_NO_DELETE_WHY = "הנפוצות של התוכנה מגיעות עם ההתקנה ומתעדכנות בכל גרסה. את העותקים שלך — מוחקים ב\"שלי\"", TPL_NAME_BAD = "השם לא תקין או תפוס",
-                TPL_HINT = "נגיעה — שימוש · נגיעה ארוכה — עריכה", TPL_THIS_LINE = "השורה שנבחרה", TPL_WHOLE_FILE = "כל הקובץ",
-                NEW = "חדשה — עוד לא בקובץ", THE_LINE = "השורה בקובץ (אפשר גם לערוך כאן)", THE_FILE = "הקובץ הפתוח",
-                NEED_COMPARE = "⚠ %רק-במקור% / %רק-ביעד% צריכים שורת COMP לפניהם",
-                NOT_UNDERSTOOD = "שורה שהממשק לא מכיר — נשמרת כמו שהיא. אפשר לערוך אותה בקובץ הפתוח",
-                ONE_OPEN = "⚠ רק פקודת פתיחה אחת נפתחת בסוף — האחרונה", NO_STEP = "השורה לא מבוצעת (הערה או כותרת)",
-                TAG_HEADER = "כותרת", TAG_UNKNOWN = "?", NONE = "—", ON = "פעיל", PICK = "בחירה…", FILL = "השלמת התבנית", EMPTY_FILE = "הקובץ ריק — בחר פקודה מהרשימה, והיא תיכנס לכאן",
-                ALREADY_AS_IF = "יש כבר הדמיה בראש הקובץ", ALREADY_MEASURE = "השורה הזו כבר בראש הקובץ",
-                NO_SMART = "אין רשימות חכמות", WHOLE_HOME = "★ כל מה שבבית",
-                DRAFT = "פקודה חדשה (עוד לא נשמרה)", DRAFT_NAME = "שם לקובץ הפקודות (נשמר ב\"שלי\")",
-                FORM_ON = "☰ טופס", FORM_OFF = "✕ טופס", PICK_FIRST = "בחר שורה בתפריט קודם";
-
-        /** 1.25.7: פקודת מערכת שנערכה — נשמרת כשלי. */
-        public static String savedAsMine(String name) {
-            return "פקודות המערכת לא משתנות — נשמר כ\"" + name + "\" ב\"שלי\", וממשיכים איתה";
-        }
+        public static final String MINE_SUFFIX = " (שלי)", NONE = "—", FILL = "השלמת התבנית",
+                NO_SMART = "אין רשימות חכמות", WHOLE_HOME = "★ כל מה שבבית";
 
         /** 1.25.2: מה מבקשים במקום הפתוח. */
         public static String holeKind(int kind) {
@@ -1703,24 +1670,8 @@ public final class Words {
             }
         }
 
-        public static String lineN(int n) {
-            return "שורה " + n + " בקובץ";
-        }
-
-        public static String insertAfter(int n) {
-            return n <= 0 ? "＋ הכנס לקובץ" : "＋ הכנס לקובץ אחרי שורה " + n;
-        }
-
         public static String fillFirst(String what) {
             return "מלא קודם: " + what;
-        }
-
-        public static String advanced(int n) {
-            return "▾ " + ADVANCED + " (" + n + ")";
-        }
-
-        public static String lines(int n) {
-            return n == 1 ? "שורה אחת" : n + " שורות";
         }
     }
 
@@ -2337,7 +2288,6 @@ public final class Words {
                 EXAMPLES_RESTORE_WHAT = "רשימות הדוגמאות באופן \"דוגמאות\" חוזרות למצב ההתחלתי. מה שהוספת להן — יוצא מהן. \"הדוגמאות שלי\", \"שמור לתוכנה\" ורשימות אחרות שהוספת לאופן — נשארות.",
                 EXAMPLES_RESTORE_BACK = "לפני השחזור נשמר גיבוי של המסד (הגדרות ← גיבויים)";
         public static String examplesRestored(int n) { return "הדוגמאות שוחזרו · הוחלפו " + n + " רשימות"; }
-        public static final String HOME_UNSAVED = "יש קובץ פקודות פתוח עם שינויים שלא נשמרו — לשמור או לסגור אותו, ואז בית";
         private Db() { }
 
         // מ0.23: בורר הרשימות של המסד

@@ -447,8 +447,7 @@ public final class Ui {
                 return;
             }
             if (c instanceof Activity) BatchUi.run((Activity) c, f);           // 1.16.1: נגיעה — הרצה (ארוכה — עריכה)
-            else c.startActivity(new Intent(c, BatchEditScreen.class)            // 125: מהפס הצף — לעורך, ומשם הרצה
-                    .putExtra(BatchEditScreen.EXTRA_FILE, f.getAbsolutePath()).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
+            else LabScreen.edit(c, f);                                          // 125: מהפס הצף — לעורך, ומשם הרצה
             return;
         }
         if (c instanceof Activity && Text.ext(f.getName()).equals("zip")             // 138: ZIP — גם פריסה

@@ -54,7 +54,6 @@
         <activity android:name=".DbListScreen" android:exported="false" />
         <activity android:name=".IniListScreen" android:exported="false" />
         <activity android:name=".IniEditScreen" android:exported="false" />
-        <activity android:name=".BatchEditScreen" android:exported="false" android:windowSoftInputMode="adjustResize" />
         <activity android:name=".LabScreen" android:exported="false" android:windowSoftInputMode="adjustResize" android:configChanges="orientation|screenSize|keyboardHidden" />
 
         <activity android:name=".ShareScreen" android:exported="true"

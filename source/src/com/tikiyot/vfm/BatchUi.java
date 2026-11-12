@@ -7,7 +7,6 @@ package com.tikiyot.vfm;
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.content.DialogInterface;
-import android.content.Intent;
 import android.widget.ScrollView;
 import android.widget.TextView;
 
@@ -21,7 +20,7 @@ final class BatchUi {
     private BatchUi() { }
 
     static void edit(Activity a, File f) {
-        a.startActivity(new Intent(a, BatchEditScreen.class).putExtra(BatchEditScreen.EXTRA_FILE, f.getAbsolutePath()));
+        LabScreen.edit(a, f);                                                    // מ0.45+: העורך האינטראקטיבי (הישן נמחק)
     }
 
     static Map<String, String> vars(Activity a, File here) {

@@ -101,7 +101,7 @@ public final class Tests {
         run("גרסה 1.21.0 — מצב בתאריך: תנאי חיפוש ושחזור (COPY /מצב:)", new Runnable() { public void run() { v1210(); } });
         run("גרסה 1.22.0 — COMP /רשימה: — רשימה (עם חכמות, תיקיות מתעדכנות ותתי־רשימות) כמקור, מכמה כוננים", new Runnable() { public void run() { v1220(); } });
         run("גרסה 1.22.5 — ההגדרה האחת של שפת הפקודות (Commands)", new Runnable() { public void run() { v1225(); } });
-        run("גרסה 1.23.0 — ממשק הפקודות: שורה לפי ההגדרה (CmdLine), פקודות נפוצות, קובץ הבדיקה", new Runnable() { public void run() { v1230(); } });
+        run("גרסה 1.23.0 — הפקודות הנפוצות", new Runnable() { public void run() { v1230(); } });
         run("מ0.1 — מונה המזהים, שתי הבניות, שכבת האחסון (MemStore, SqlStore)", new Runnable() { public void run() { storeM01(); } });
         run("מ0.3 — הערכת רשימה חכמה מעל האינדקס (Smarts)", new Runnable() { public void run() { smartsM03(); } });
 
@@ -1712,10 +1712,8 @@ public final class Tests {
         check("מ0.38: בדוח נשארת השורה כמו שנכתבה, בעברית", ph.steps.get(1).text.startsWith("צור תיקייה"));
         eq("מ0.38: מתג עברי בתוך מרכאות — לא נוגעים", "MD \"x /עמוק\"", Commands.normal("צור תיקייה \"x /עמוק\""));
         eq("מ0.38: \"צור רשימה\" נשארת פועל", "צור רשימה א", Commands.normal("צור רשימה א"));
-        CmdLine c = CmdLine.parse("צור תיקייה \"" + r + "/חדשה\"");
-        check("מ0.38: העורך מזהה \"צור תיקייה\" כ־MD", c.def != null && c.def.name.equals("MD") && c.text().startsWith("צור תיקייה"));
-        check("מ0.38: פקודה חדשה מהתפריט נכתבת בעברית", CmdLine.of(Commands.get("COPY")).text().equals("העתק")
-                && CmdLine.of(Commands.get("RD")).text().equals("מחק תיקייה") && Commands.get("העבר").name.equals("MOVE"));
+        check("מ0.38: \"צור תיקייה\" — MD; שם עברי לכל פקודה", Commands.normal("צור תיקייה \"x\"").startsWith("MD ")
+                && Commands.word(Commands.get("COPY")).equals("העתק") && Commands.word(Commands.get("RD")).equals("מחק תיקייה") && Commands.get("העבר").name.equals("MOVE"));
         eq("מ0.38: העורך מציג בעברית", "העתק \"a /S\" b /עמוק /נסתרים /Y", Commands.hebrew("COPY \"a /S\" b /s /A:H /Y"));
         eq("מ0.38: RD ← מחק תיקייה", "מחק תיקייה x /עמוק", Commands.hebrew("RD x /S"));
         eq("מ0.38: ECHO — הטקסט לא נגוע", "הודעה a /S b", Commands.hebrew("ECHO a /S b"));
@@ -2449,6 +2447,9 @@ public final class Tests {
             check("מ0.45: העורך מכיר את כל פקודות הקבצים (" + unknown + ")", unknown.isEmpty());
             check("מ0.45: ...ואת הפרטים החדשים: רענן מלא /קוראים:, ודא … בסל, מדידה /עד:", html.contains("valsw('/קוראים:'") && html.contains("valsw('/בסל:'")
                     && html.contains("'עד זמן לשורה'") && html.contains("can('commandMatrix')"));
+            check("מ0.45+: העורך הישן נמחק — החדש נפתח עם הקובץ (startFile), ויש בו הפקודות הנפוצות ושמירה כנפוצה",
+                    html.contains("V.startFile()") && html.contains("V.templates()") && html.contains("V.saveTemplate(")
+                            && !new File(System.getProperty("vfm.src"), "src/com/tikiyot/vfm/BatchEditScreen.java").exists());
         } catch (Exception e) {
             check("מ0.41: התוסף שבהתקנה — " + e, false);
         }
@@ -3418,59 +3419,8 @@ public final class Tests {
 
 
     /** 1.23.0: CmdLine — שינוי פרמטר אחד בלי לאבד דבר; התבניות; קובץ הבדיקה. */
+    /** 1.23.0: הפקודות הנפוצות (CmdLine — של העורך הישן — נמחק במ0.45+, עם העורך). */
     private static void v1230() {
-        Commands.Def cp = Commands.get("COPY");
-        Commands.Param src = cp.positional().get(0), dst = cp.positional().get(1), keep = cp.switchFor("/S"),
-                taken = cp.switchFor(Batch.SW_TAKEN), journal = cp.switchFor(Batch.SW_JOURNAL), limit = cp.switchFor(Batch.SW_LIMIT),
-                date = cp.switchFor("/" + Batch.SW_DATE);
-        String raw = "COPY   \"%פנימי%\\א ב\"  x /Q";
-        check("1.23.0: שורה שלא שונתה — אות באות", CmdLine.parse(raw).text().equals(raw));
-        CmdLine c = CmdLine.parse(raw);
-        check("1.23.0: ערכים לפי מקום", c.value(src).equals("%פנימי%\\א ב") && c.value(dst).equals("x"));
-        c.set(dst, "%כרטיס%\\ג ד");
-        check("1.23.0: שינוי יעד — מרכאות, ו/Q נשאר", c.text().equals("COPY \"%פנימי%\\א ב\" \"%כרטיס%\\ג ד\" /Q"));
-        CmdLine d = CmdLine.parse("COPY a b /תאריך:שבוע");
-        d.set(keep, "1");
-        check("1.23.0: מתג חדש — במקומו לפי ההגדרה", d.text().equals("COPY a b /עמוק /תאריך:שבוע"));
-        d.set(journal, "x y.txt");
-        check("1.23.0: ערך עם רווח — במרכאות", d.text().equals("COPY a b /עמוק /יומן:\"x y.txt\" /תאריך:שבוע"));
-        check("1.23.0: הערך חוזר כמו שנקבע", CmdLine.parse(d.text()).value(journal).equals("x y.txt"));
-        d.set(keep, "");
-        check("1.23.0: מתג כבוי — יוצא", d.text().equals("COPY a b /יומן:\"x y.txt\" /תאריך:שבוע"));
-        CmdLine y = CmdLine.parse("COPY a b /Y");
-        check("1.23.0: /Y = להחליף", y.value(taken).equals(Batch.TAKEN_REPLACE));
-        y.set(taken, Batch.TAKEN_SKIP);
-        check("1.23.0: /Y ← /תפוס:לדלג (באותו מקום)", y.text().equals("COPY a b " + Batch.SW_TAKEN + Batch.TAKEN_SKIP));
-        check("1.23.0: /מסלול = /S", CmdLine.parse("COPY a b " + Batch.SW_KEEP).value(keep).equals("1"));
-        CmdLine l = CmdLine.parse("MOVE %רק-ביעד% h /עד:20%");
-        Commands.Param mlimit = Commands.get("MOVE").switchFor(Batch.SW_LIMIT);
-        check("1.23.0: אחוז", l.value(mlimit).equals("20"));
-        l.set(mlimit, "30");
-        check("1.23.0: אחוז — עם %", l.text().equals("MOVE %רק-ביעד% h /עד:30%") && l.usesCompare() && l.destructive());
-        Commands.Def comp = Commands.get("COMP");
-        CmdLine k = CmdLine.parse("COMP /רשימה:גיבוי \"%כרטיס%\\גיבוי\\נוכחי\"");
-        check("1.23.0: COMP /רשימה: — המקור לא רלוונטי, היעד ראשון",
-                k.slot(comp.positional().get(0)) < 0 && k.value(comp.positional().get(1)).equals("%כרטיס%\\גיבוי\\נוכחי") && k.missing().isEmpty());
-        CmdLine n = CmdLine.of(cp);
-        check("1.23.0: פקודה חדשה — חסרים מקור ויעד", n.missing().size() == 2 && n.text().equals("העתק"));
-        n.set(dst, "b");
-        check("1.23.0: יעד לפני מקור — מקום ריק למקור", n.text().equals("העתק \"\" b"));
-        n.set(src, "a");
-        check("1.23.0: ואז המקור במקומו", n.text().equals("העתק a b") && n.missing().isEmpty());
-        n.set(limit, "20");
-        n.set(date, "שבוע");
-        n.set(taken, Batch.TAKEN_STOP);
-        check("1.23.0: כמה מתגים — בסדר ההגדרה", n.text().equals("העתק a b " + Batch.SW_TAKEN + Batch.TAKEN_STOP + " /עד:20% /תאריך:שבוע"));
-        Commands.Param txt = Commands.get("ECHO").positional().get(0);
-        CmdLine e = CmdLine.parse("ECHO שלום  עולם");
-        check("1.23.0: ECHO — הטקסט כמו שהוא", e.value(txt).equals("שלום  עולם"));
-        e.set(txt, "חדש");
-        check("1.23.0: ECHO — שינוי", e.text().equals("ECHO חדש"));
-        check("1.23.0: שורה לא מוכרת — בלי הגדרה, נשמרת", CmdLine.parse("FORMAT C:").def == null && CmdLine.parse("FORMAT C:").text().equals("FORMAT C:"));
-        check("1.23.0: פועל — לא פקודת קבצים", CmdLine.parse("פתח מסך חיפוש").def == null);
-        check("1.23.0: חיפוש בתפריט — העתק / CO / שינוי", Commands.matches(cp, "העתק") && Commands.matches(cp, "co")
-                && Commands.matches(Commands.get("REN"), "שנה") && !Commands.matches(cp, "מחק"));
-
         // התבניות
         String src0 = System.getProperty("vfm.src");
         String tplText = "";
@@ -3488,7 +3438,7 @@ public final class Tests {
             for (String h : v.keySet()) v.put(h, "%פנימי%\\x");
             List<String> filled = CmdTemplates.fill(t.lines, v);
             boolean ok = CmdTemplates.holes(filled).isEmpty();
-            for (String fl : filled) ok &= CmdLine.parse(fl).def != null || Batch.isLoopStart(fl) || Batch.isLoopEnd(fl)
+            for (String fl : filled) ok &= Commands.get(Commands.normal(fl).split(" ")[0]) != null || Batch.isLoopStart(fl) || Batch.isLoopEnd(fl)
                     || fl.startsWith(Batch.MEASURE) || fl.startsWith("::") || fl.equals(Batch.CHECK);             // 1.25.0: שורות מבנה; הערה
             check("1.23.0: תבנית — ממולאת ומוכרת: " + t.name, ok);
         }

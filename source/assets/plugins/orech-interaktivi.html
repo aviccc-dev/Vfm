@@ -1101,7 +1101,22 @@ function cmdTree(pick,skip){
   }
   sheetIn.appendChild(box);
 }
-function drawCmds(){top('פקודה');cmdTree(setCmd);}
+function drawCmds(){top('פקודה');cmdTree(setCmd);if(sh.group==null)tplList();}
+// גרסה 13: הפקודות הנפוצות (מה שהיה בעורך הישן) — נכנסות במקום השורה, כמו שהן; המקומות הפתוחים (<…>) נשאלים בהרצה
+function tplList(){
+  const ts=can('templates')?J(V.templates(),[]):[];
+  if(!ts.length)return;
+  sheetIn.appendChild(E('div','grp','פקודות נפוצות — נכנסות כאן; מה שבסוגריים <…> נשאל בהרצה'));
+  const box=E('div','items');
+  ts.forEach(t=>box.appendChild(B('it',[E('span',null,(t.mine?'☆ ':'★ ')+t.name),E('span','k',t.lines.length+' שורות')],()=>insertTpl(t))));
+  sheetIn.appendChild(box);
+}
+function insertTpl(t){
+  const at=act>=0?act:lines.length,cur=act>=0&&!(lines[act]||'').trim();
+  closeSheet();
+  const ls=lines.slice();ls.splice(at,cur?1:0,...t.lines);
+  parseAll(ls.join('\n')+'\n');upd();draw();toast('נכנסה: '+t.name);
+}
 // גרסה 9 — המשתמש: "איפה שכתוב 'הפקודה כתוב' — כתיקייה ותת־תיקייה". הקבוצה של הפקודה בתפריט ← הפקודה
 function groupName(k){const g=Mo.menu().find(([g,ks])=>ks.indexOf(k)>=0);return g?g[0]:null;}
 function drawCmdMenu(){
@@ -1136,6 +1151,8 @@ function drawFiles(){
   box.appendChild(B('it',[E('span',null,'+ קובץ חדש'),E('span','k','')],()=>{sh={kind:'newfile'};drawSheet();}));
   box.appendChild(B('it',[E('span',null,'📂 קובץ מהכונן…'),E('span','k','')],()=>pickTyped('קובץ פקודות',VBAT,'קובצי פקודות',p=>openFile({name:p.split('/').pop(),path:p}))));
   if(file)box.appendChild(B('it',[E('span',null,'שמירה בשם…'),E('span','k','')],()=>{sh={kind:'newfile',saveAs:true};drawSheet();}));
+  if(lines.length&&can('saveTemplate'))box.appendChild(B('it',[E('span',null,'☆ שמירה כפקודה נפוצה…'),E('span','k','')],()=>openSheet({kind:'name',title:'שם הפקודה הנפוצה',ph:'למשל גיבוי שבועי',
+    ok:n=>{commit();toast(V.saveTemplate(n,text())?'נשמרה בפקודות הנפוצות שלי':'לא נשמרה');}})));
   sheetIn.appendChild(box);
   if(fs.length>10){
     const f=E('input','fi wide');f.type='text';f.placeholder='סינון לפי שם';f.dir='auto';sheetIn.appendChild(f);
@@ -1225,6 +1242,9 @@ function theme(){
 }
 theme();
 (function start(){
+  // גרסה 13: העורך הישן נמחק — עריכה מרשימה ומהפס הצף פותחת כאן, עם הקובץ
+  const sf=can('startFile')?V.startFile():null;
+  if(sf){const c=V.readText(sf);if(c!=null){load({name:sf.split('/').pop(),path:sf},c);return;}toast('הקובץ לא נקרא: '+sf.split('/').pop());}
   const last=pref('file',null);
   if(last){
     const f0=myFiles().concat(J(V.commandFiles(),[])).find(f=>f.path===last||f.name===last);
@@ -1243,6 +1263,8 @@ function demoBridge(){
   return {
     theme:()=>null,load:k=>store[k]!=null?store[k]:(k==='file'?'/k/גיבוי שבועי.vbat':null),save:(k,v)=>{store[k]=v;},
     commandFiles:list,myCommands:list,
+    templates:()=>JSON.stringify([{name:'גיבוי',mine:false,lines:['העתק "<מקור>" "<יעד>" /עמוק /תפוס:לדלג']},{name:'ניקוי זמניים',mine:true,lines:['מחק "%הורדות%\\*.tmp"','הודעה נוקה']}]),
+    saveTemplate:(n,t)=>{store['tpl:'+n]=t;return true;},startFile:()=>store.__start||null,
     readText:p=>files[p]==null?null:files[p],
     saveCommandFile:(p,t,rep)=>{const path=p.startsWith('/')?p:'/k/'+(p.endsWith('.vbat')?p:p+'.vbat');if(files[path]!=null&&!rep)return 'exists';files[path]=t;window.__saved=t;return '';},
     writeCommandFile:(n,t)=>{files['/k/'+n]=t;window.__saved=t;return '';},

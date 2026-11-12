@@ -412,16 +412,6 @@ final class Commands {
         return out.toArray(new String[0]);
     }
 
-    /** 1.23.0: לחיפוש בתפריט — שם, שם נרדף, השם בעברית, או מילה מההסבר. ריק — הכול. */
-    static boolean matches(Def d, String query) {
-        String q = query == null ? "" : query.trim();
-        if (q.isEmpty()) return true;
-        String u = q.toUpperCase(Locale.ROOT);
-        if (d.name.startsWith(u) || d.name.startsWith(q) || d.he.startsWith(q)) return true;
-        for (String a : d.aliases) if (a.startsWith(u) || a.startsWith(q)) return true;
-        return q.length() >= 2 && d.what.contains(q);
-    }
-
     private static String join(List<String> l, String sep) {
         StringBuilder sb = new StringBuilder();
         for (String s : l) sb.append(sb.length() > 0 ? sep : "").append(s);

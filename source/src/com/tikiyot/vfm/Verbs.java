@@ -227,11 +227,6 @@ final class Verbs {
         return OPEN + " " + LIST + " " + Names.key(path);
     }
 
-    /** 1.17.0: רשימה מ"שמור לתוכנה" כתפריט. */
-    static String openMenu(List<String> path) {
-        return OPEN + " " + MENU + " " + Names.key(path);
-    }
-
     /**
      * מ0.42 (ב8; המשתמש, 12.11.2026: "שיעדכן גם רשימות וכפתורים ועדיף שתהיה הודעה על כך"): רשימה או חכמה ששינתה שם במסד
      * (id: from ← to). השורה — אם היא פונה אליה (פתח / צור רשימה, פתח / צור / עדכן רשימה חכמה, ושורות הרשימות: ידנית "…",
@@ -485,7 +480,7 @@ final class Verbs {
         else if (s.equals(S_VIRTUAL)) a.startActivity(SearchScreen.fileManager(a, c.cond.isEmpty() ? null : c.cond));
         else if (s.equals(S_SETTINGS)) a.startActivity(new Intent(a, SettingsScreen.class));
         else if (s.equals(S_TRASH)) a.startActivity(new Intent(a, TrashScreen.class));
-        else if (s.equals(S_EDITOR)) a.startActivity(new Intent(a, BatchEditScreen.class));   // 1.28.0: בלי קובץ — טיוטה
+        else if (s.equals(S_EDITOR)) LabScreen.edit(a, null);                // מ0.45+: העורך האינטראקטיבי (הישן נמחק)
         else if (s.equals(S_BACKUPS)) DbScreen.openBackups(a);                // מ0.37
         else if (s.equals(S_DIAG)) LabScreen.open(a, Words.DbCmd.TOOL_DIAG);  // מ0.37: דוח האבחון כפקודה; מ0.43: תוסף האבחון
         else if (s.equals(S_LAB) || s.equals(S_PLUGINS)) LabScreen.open(a, c.cond, c.ver, null);   // מ0.38: המעבדה; מ0.40: התוספים — רק בפקודה

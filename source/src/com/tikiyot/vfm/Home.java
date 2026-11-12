@@ -14,10 +14,6 @@ public class Home extends Activity {
      */
     static void go(Activity a) {
         if (a instanceof DbListScreen && ((DbListScreen) a).isHomeScreen()) return;
-        if (BatchEditScreen.anyUnsaved()) {
-            Ui.toast(a, Words.Db.HOME_UNSAVED);
-            return;
-        }
         DbScreen.startFresh(a);
     }
 

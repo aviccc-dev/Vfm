@@ -52,7 +52,6 @@ final class TopRow {
         if (a instanceof DiskScreen) return Verbs.S_DISK;
         if (a instanceof TrashScreen) return Verbs.S_TRASH;
         if (a instanceof SettingsScreen) return Verbs.S_SETTINGS;
-        if (a instanceof BatchEditScreen) return Verbs.S_EDITOR;
         if (a instanceof LabScreen) return Verbs.S_PLUGINS;
         return null;
     }
@@ -269,79 +268,5 @@ final class TopRow {
         b.addView(ic);
         b.addView(nm);
         return b;
-    }
-
-    interface Chosen {
-        void ok(String icon, String name, String act);
-    }
-
-    /**
-     * "מה הכפתור יעשה?" — 1.16.1: אותו תפריט כמו ➕ בבית (המשתמש: "שני המקומות אמורים להיות זהים; ההבדל היחיד —
-     * הפלוס מוסיף במסך הבית, והשני מוסיף כפתור במקום שמחליטים"): רשימה ידנית · רשימה חכמה · פקודה (תפריט הפקודות
-     * האחד — ובו גם שורה בכתב ותיקייה במנהל הקבצים). התוצאה — שורת פקודה.
-     */
-    static void pick(final Activity a, final Chosen cb) {
-        Ui.options(a, Words.Top.WHAT, new String[]{Words.Main.ADD_MANUAL, Words.Main.ADD_SMART, Words.Main.ADD_CMD, Words.Top.T_MENU},
-                new DialogInterface.OnClickListener() {
-            @Override
-            public void onClick(DialogInterface d, int w) {
-                if (w == 0 && DbPicker.on(a)) DbPicker.choose(a, Words.Main.ADD_MANUAL.trim(), new DbPicker.Picked() {   // מ0.23
-                    @Override
-                    public void ok(String mode, long id, List<String> path) {
-                        cb.ok("📋", path.get(path.size() - 1), Verbs.openList(path));
-                    }
-                });
-                else if (w == 1 && DbPicker.on(a)) dbSmart(a, cb);                // מ0.23: החכמות של המסד
-                else if (w == 3 && DbPicker.on(a)) dbMenus(a, cb);
-                else if (w == 0 || w == 1 || w == 3) Ui.toast(a, Words.DbCmd.NO_DB);   // מ0.29: רשימות — רק במסד
-                else CmdMenu.show(a, null, new CmdMenu.Picked() {
-                    @Override
-                    public void ok(String icon, String name, String line, File file) { cb.ok(icon, name, line); }
-                });
-            }
-        });
-    }
-
-    /** מ0.23: רשימה חכמה מהמסד — בשמה (כמו שהפקודה "פתח חכמה" מוצאת אותה). */
-    private static void dbSmart(Activity a, final Chosen cb) {
-        final List<String> all = new ArrayList<String>();
-        for (String n : DbPicker.names(a).get("smart")) {
-            String name = n.substring(n.lastIndexOf('\\') + 1);
-            if (!all.contains(name)) all.add(name);
-        }
-        if (all.isEmpty()) {
-            Ui.toast(a, Words.Top.NO_SMART);
-            return;
-        }
-        List<String> names = new ArrayList<String>();
-        for (String n : all) names.add("✨ " + n);
-        Ui.list(a, Words.Main.ADD_SMART.trim(), names, new DialogInterface.OnClickListener() {
-            @Override
-            public void onClick(DialogInterface d, int k) { cb.ok("✨", all.get(k), Verbs.openSmart(all.get(k))); }
-        });
-    }
-
-    /** מ0.41: "☰ תפריט" — הרשימות שבתוך התפריטים של התוכנה (הכללי, ושל האופן שעל המסך). */
-    private static void dbMenus(Activity a, final Chosen cb) {
-        final List<List<String>> paths = Menus.get(a).paths();
-        if (paths.isEmpty()) {
-            Ui.toast(a, Words.Verb.NOT_FOUND + Reserved.ROOT);
-            return;
-        }
-        List<String> labels = new ArrayList<String>();
-        for (List<String> p : paths) {
-            StringBuilder in = new StringBuilder();
-            for (int i = 1; i < p.size(); i++) in.append("    ");
-            labels.add(in + "☰ " + p.get(p.size() - 1));
-        }
-        Ui.list(a, Words.Top.T_MENU, labels, new DialogInterface.OnClickListener() {
-            @Override
-            public void onClick(DialogInterface d, int k) {
-                List<String> p = new ArrayList<String>();
-                p.add(Reserved.ROOT);
-                p.addAll(paths.get(k));
-                cb.ok("☰", p.get(p.size() - 1), Verbs.openMenu(p));
-            }
-        });
     }
 }

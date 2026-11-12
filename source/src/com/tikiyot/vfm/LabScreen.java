@@ -38,7 +38,20 @@ import java.util.Map;
 
 public final class LabScreen extends Activity {
 
-    static final String EXTRA = "exp", EXTRA_VER = "ver", EXTRA_FILE = "file";
+    static final String EXTRA = "exp", EXTRA_VER = "ver", EXTRA_FILE = "file", EXTRA_CMD = "cmd";
+    /** מ0.45+: קובץ הפקודות שהעורך האינטראקטיבי פותח (startFile — פעם אחת). */
+    private String startCmd;
+
+    /**
+     * מ0.45+ (המשתמש: "לבדוק ולתקן מה שצריך ולמחוק אותו"): עורך הפקודות — העורך האינטראקטיבי; הישן (BatchEditScreen) נמחק.
+     * f — קובץ לפתוח בו, או null (מה שהיה פתוח בו).
+     */
+    static void edit(android.content.Context c, File f) {
+        Intent i = new Intent(c, LabScreen.class).putExtra(EXTRA, Words.DbCmd.TOOL_EDITOR);
+        if (f != null) i.putExtra(EXTRA_CMD, f.getAbsolutePath());
+        if (!(c instanceof Activity)) i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+        c.startActivity(i);
+    }
     /** תשובת saveCommandFile כשיש כבר קובץ — העמוד שואל: להחליף או שם אחר. */
     static final String EXISTS = "exists";
     private static final String PREFS = "lab";
@@ -66,6 +79,7 @@ public final class LabScreen extends Activity {
     protected void onCreate(Bundle b) {
         super.onCreate(b);
         exp = getIntent().getStringExtra(EXTRA);
+        startCmd = getIntent().getStringExtra(EXTRA_CMD);
         vars = BatchUi.vars(this, Shortcuts.dir());
         bundled(false);
         if (exp == null) { showList(); return; }
@@ -679,6 +693,45 @@ public final class LabScreen extends Activity {
          * מ0.45: "כל הפקודות" — קובץ פקודות שנבנה מההגדרה האחת (CmdMatrix): כל פקודה, ובכל אחת כל מתג. לפני — הגיבוי הקטן ליד
          * קובץ ההרצה (ל־/מצב:). null — לא הצליח (ביומן).
          */
+        /** מ0.45+: קובץ הפקודות לפתוח בעורך (מרשימה, מהפס הצף) — פעם אחת; null — אין. */
+        @JavascriptInterface
+        public String startFile() {
+            String p = startCmd;
+            startCmd = null;
+            return p;
+        }
+
+        /** מ0.45+: הפקודות הנפוצות — של התוכנה ושלי (מה שהיה בעורך הישן): [{name, mine, lines}]. */
+        @JavascriptInterface
+        public String templates() {
+            try {
+                org.json.JSONArray a = new org.json.JSONArray();
+                for (CmdTemplates.Tpl t : CmdTemplates.system(LabScreen.this)) a.put(tpl(t, false));
+                for (CmdTemplates.Tpl t : CmdTemplates.mine()) a.put(tpl(t, true));
+                return a.toString();
+            } catch (Throwable t) {
+                Log.e("Lab.templates", t);
+                return "[]";
+            }
+        }
+
+        private org.json.JSONObject tpl(CmdTemplates.Tpl t, boolean mine) throws org.json.JSONException {
+            org.json.JSONObject o = new org.json.JSONObject();
+            o.put("name", t.name);
+            o.put("mine", mine);
+            org.json.JSONArray l = new org.json.JSONArray();
+            for (String x : t.lines) l.put(x);
+            o.put("lines", l);
+            return o;
+        }
+
+        /** מ0.45+: לשמור כפקודה נפוצה שלי. */
+        @JavascriptInterface
+        public boolean saveTemplate(String name, String text) {
+            if (name == null || name.trim().isEmpty() || text == null) return false;
+            return CmdTemplates.save(name.trim(), java.util.Arrays.asList(text.replace("\r", "").split("\n"))) != null;
+        }
+
         @JavascriptInterface
         public String commandMatrix() {
             try {
