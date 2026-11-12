@@ -48,12 +48,53 @@ final class StoreTests {
             t.o.passed += br.passed;
             for (String f : br.failed) t.o.failed.add("גיבוי — " + f);
             t.ck("גיבוי: החוזה רץ (לפחות 60 בדיקות)", br.passed + br.failed.size() >= 60);
+            t.checkedOnce(dir);
             String p = SqlStore.persistenceCheck(dir);
             t.ck("שמירה בין פתיחות, WAL, גרסה עתידית לא נפתחת" + (p == null ? "" : ": " + p), p == null);
         } catch (Throwable x) {
             t.o.failed.add("חריגה: " + x);
         }
         return t.o;
+    }
+
+    /** מ0.42: מסד שנמצא תקין ולא השתנה — לא נבדק שוב; שהשתנה אחרי הבדיקה (עמוד הרוס) — נבדק, ונתפס. */
+    private void checkedOnce(File dir) throws IOException {
+        File f = new File(dir, "042-once.db");
+        SqlStore a = SqlStore.open(f, new IdCounter(new File(dir, "042-once.txt")));
+        for (int i = 0; i < 300; i++) a.createList("רשימה " + i, 0);
+        a.close();
+        SqlStore.openReadOnly(f).close();
+        SqlStore.openReadOnly(f).close();
+        ck("מ0.42: מסד תקין — נפתח שוב ושוב", true);
+        long len = f.length();
+        java.io.RandomAccessFile raf = new java.io.RandomAccessFile(f, "rw");
+        try {
+            raf.seek(16);
+            int page = ((raf.read() & 0xff) << 8) | (raf.read() & 0xff);
+            if (page == 1) page = 65536;
+            raf.seek(page);                                                       // העמוד השני — כולו (כמו בחוזה של הגיבוי)
+            byte[] b = new byte[page];
+            new java.util.Random(42).nextBytes(b);
+            raf.write(b);
+        } finally {
+            raf.close();
+        }
+        f.setLastModified(f.lastModified() + 2000);
+        boolean caught = false;
+        try {
+            SqlStore.openReadOnly(f).close();
+        } catch (SqlStore.Damaged d) {
+            caught = true;
+        }
+        File copy = new File(dir, "042-once-copy.db");
+        SqlStore.copyFile(f, copy);
+        boolean fresh = false;
+        try {
+            SqlStore.openReadOnly(copy).close();
+        } catch (SqlStore.Damaged d) {
+            fresh = true;
+        }
+        ck("מ0.42: ...ואחרי שעמוד בו נהרס (אותו גודל: " + (f.length() == len) + ", עותק חדש נתפס: " + fresh + ") — נבדק שוב, ופגום", caught);
     }
 
     private void contract(String name, StoreContract.Opener opener, File dir) {

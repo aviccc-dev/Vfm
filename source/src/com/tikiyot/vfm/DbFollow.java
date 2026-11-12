@@ -96,6 +96,13 @@ final class DbFollow {
 
     /** בבניית מ, אחרי שמסך המסד נפתח פעם אחת (יש הקשר) — על כל מסד של אופן. אחרת — 0, בלי כלום. */
     private static int each(boolean write, Each e) {
+        return each(write, null, e);
+    }
+
+    /**
+     * paths — מ0.42: לכתיבה, רק מסד שאחד מהקבצים רשום בו (קודם — לקריאה, בלי בדיקת תקינות חוזרת); עד כאן כל מסד נפתח לכתיבה.
+     */
+    private static int each(boolean write, Collection<String> paths, Each e) {
         android.content.Context c = DbListScreen.app;
         if (c == null) return 0;
         int sum = 0;
@@ -109,6 +116,7 @@ final class DbFollow {
         for (String m : modes) {
             SqlStore s = null;
             try {
+                if (write && paths != null && !has(DbScreen.dbFile(c, m), paths)) continue;
                 s = write ? SqlStore.open(DbScreen.dbFile(c, m), new IdCounter(DbScreen.counterFile()))
                         : SqlStore.openReadOnly(DbScreen.dbFile(c, m));
                 sum += e.run(s);
@@ -121,16 +129,26 @@ final class DbFollow {
         return sum;
     }
 
+    private static boolean has(java.io.File db, Collection<String> paths) {
+        SqlStore r = SqlStore.openReadOnly(db);
+        try {
+            for (String p : paths) if (p != null && r.findFile(p) != 0) return true;
+            return false;
+        } finally {
+            r.close();
+        }
+    }
+
     static int movedEverywhere(final Map<String, String> moved) {
         if (moved == null || moved.isEmpty()) return 0;
-        return each(true, new Each() {
+        return each(true, moved.keySet(), new Each() {
             @Override public int run(Store s) { return moved(s, moved); }
         });
     }
 
     static int goneEverywhere(final Collection<String> paths) {
         if (paths == null || paths.isEmpty()) return 0;
-        return each(true, new Each() {
+        return each(true, paths, new Each() {
             @Override public int run(Store s) { return gone(s, paths); }
         });
     }

@@ -106,12 +106,13 @@ public final class SqlStore implements Store {
      */
     public static SqlStore openReadOnly(File file) {
         if (!file.isFile()) throw new Failure("no such file: " + file.getPath());
+        String sig = sig(file);
         SQLiteDatabase db = connect(file, true);
         try {
             int v = db.getVersion();
             if (v > VERSION) throw new Failure("database is newer: " + v);
             if (v < 1) throw new Failure("not a database of this app");
-            mustBeWhole(db);
+            mustBeWhole(db, file, sig);
             return new SqlStore(db);
         } catch (SQLiteException e) {
             db.close();
@@ -127,6 +128,7 @@ public final class SqlStore implements Store {
      * בדיקה בפתיחה, לקריאה בלבד: גרסה ותקינות. מסד פגום לא נפתח לכתיבה בכלל — גם לא לשינוי שיטת היומן (שכותב בכותרת).
      */
     private static void probe(File file) {
+        String sig = sig(file);
         SQLiteDatabase db;
         try {
             db = connect(file, true);
@@ -137,7 +139,7 @@ public final class SqlStore implements Store {
         try {
             int v = db.getVersion();
             if (v > VERSION) throw new Failure("database is newer: " + v);
-            if (v > 0) mustBeWhole(db);
+            if (v > 0) mustBeWhole(db, file, sig);
         } catch (SQLiteException e) {
             if (corrupt(e)) throw new Damaged(String.valueOf(e.getMessage()));
             Log.e("SqlStore.probe", e);                                        // כמו למעלה: הבדיקה היא הגנה נוספת, לא תנאי לפתיחה
@@ -162,6 +164,25 @@ public final class SqlStore implements Store {
         if (t instanceof SQLiteDatabaseCorruptException) return true;
         String m = String.valueOf(t.getMessage()).toLowerCase();
         return m.contains("malformed") || m.contains("not a database") || m.contains("corrupt") || m.contains("notadb");
+    }
+
+    /**
+     * מ0.42 (ממצא 1 של מ0.41: העברת קובץ — 1.5 שניות; כל אחד משבעת המסדים נפתח, וכל פתיחה — quick_check): קובץ שנמצא תקין,
+     * ומאז לא השתנה (גודל ותאריך, שלו ושל קובץ היומן שלו — לפני הפתיחה) — לא נבדק שוב. השתנה, הוחלף (שחזור) — נבדק.
+     */
+    private static final java.util.Map<String, String> whole = new java.util.concurrent.ConcurrentHashMap<String, String>();
+
+    private static String sig(File f) {
+        File w = new File(f.getPath() + "-wal");
+        return f.length() + ":" + f.lastModified() + ":" + (w.isFile() ? w.length() + ":" + w.lastModified() : "-");
+    }
+
+    private static void mustBeWhole(SQLiteDatabase db, File file, String sig) {
+        String k = file.getAbsolutePath();
+        if (sig.equals(whole.get(k))) return;
+        whole.remove(k);
+        mustBeWhole(db);
+        whole.put(k, sig);
     }
 
     /** בדיקת התקינות הקצרה. Damaged אם נמצא פגם. */
