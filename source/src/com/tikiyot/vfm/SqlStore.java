@@ -50,7 +50,10 @@ public final class SqlStore implements Store {
     private static final DatabaseErrorHandler KEEP = new DatabaseErrorHandler() {
         @Override
         public void onCorruption(SQLiteDatabase d) {
-            Log.i("SqlStore: corruption reported, the file is kept");
+            // מ0.44: עם הקובץ — כדי שיהיה ברור כשזה מסד זמני של "ודא מסד" (שם הורסים קובץ בכוונה), ולא מסד של אופן
+            String f = "?";
+            try { f = d.getPath(); } catch (Throwable ignored) { }
+            Log.i("SqlStore: corruption reported, the file is kept: " + f + (f.contains("/mselftest/") ? " (ודא מסד — מסד זמני שנהרס בכוונה)" : ""));   // בכונן
         }
     };
 
