@@ -2147,8 +2147,8 @@ public final class Tests {
             check("מ0.42: קובץ פקודות ברשימה — עודכן, ומה שאחרי \"אופן\" אחר — לא (" + now + ")", done.contains(cmd)
                     && now.startsWith("פתח רשימה \"לקוחות ותיקים/פעילים 2027\"\n") && now.contains("אופן \"אחר\"\nפתח רשימה \"לקוחות ותיקים/חדשים השבוע\""));
             check("מ0.42: אותו שם — כלום", Shortcuts.listRenamed(s, m, b, "פעילים 2027", "פעילים 2027").isEmpty());
-            check("מ0.42: ההודעה — כמה ואילו", Words.DbCmd.followed(java.util.Arrays.asList("פותח")).contains("קובץ פקודות אחד")
-                    && Words.DbCmd.followed(java.util.Arrays.asList("א", "ב")).contains("2 קובצי פקודות"));
+            eq("מ0.42: ההודעה — קובץ אחד", " · עודכן קובץ פקודות אחד שפונה לרשימה: פותח", Words.DbCmd.followed(java.util.Arrays.asList("פותח")));
+            eq("מ0.42: ההודעה — כמה", " · עודכנו 2 קובצי פקודות שפונים לרשימה: א, ב", Words.DbCmd.followed(java.util.Arrays.asList("א", "ב")));
             DbListCmd.Res res = DbListCmd.Res.ok("x").renamed(b, "א", "א");
             check("מ0.42: Res — שם שלא השתנה אינו שינוי שם", res.renamed == 0);
         } catch (Exception e) {

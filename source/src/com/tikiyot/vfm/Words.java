@@ -2003,6 +2003,7 @@ public final class Words {
         }
 
         /** מ0.41: בטל לא-משויכים */
+        public static final String LOOSE_AT_RUN = "ייבדק בהרצה: קבצים שאינם באף רשימה (קובץ שנמחק בכונן בשורות שלפני — יוצא מהרשימות שלו)";   // מ0.42
         public static final String LOOSE_NONE = "אין במסד קבצים שאינם באף רשימה",
                 LOOSE_USAGE = "\"לא-משויכים\" — רק כך: בטל לא-משויכים · ודא לא-משויכים /פריטים:N";
 
@@ -2179,7 +2180,9 @@ public final class Words {
         public static final String FOLLOW_FAILED = " · ⚠ קובצי הפקודות שפונים לרשימה לא עודכנו (הפרטים ביומן)";
 
         public static String followed(java.util.List<String> names) {
-            return " · עודכנו " + (names.size() == 1 ? "קובץ פקודות אחד שפונה" : names.size() + " קובצי פקודות שפונים") + " לרשימה: " + names;
+            StringBuilder sb = new StringBuilder();
+            for (String n : names) sb.append(sb.length() > 0 ? ", " : "").append(n);
+            return names.size() == 1 ? " · עודכן קובץ פקודות אחד שפונה לרשימה: " + sb : " · עודכנו " + names.size() + " קובצי פקודות שפונים לרשימה: " + sb;
         }
 
         // מ0.42 — ודא מסד · ודא … באינדקס · צור אופן

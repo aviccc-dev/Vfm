@@ -998,8 +998,13 @@ final class DbListCmd {
         }
         if (r.error != null) { s.error = r.error; return; }
         s.describe = Words.DbCmd.inDb(r.text);
-        s.noop = r.noop;
-        if (r.noop) return;
+        // מ0.42 (בדיקת המכשיר דרך תוסף האבחון: "ודא לא-משויכים /פריטים:0 — בפועל: 2"): "בטל לא-משויכים" נבדק תמיד בהרצה. קובץ
+        // שנמחק בכונן בשורות שלפני יוצא מהרשימות שלו במסד (DbFollow) — וההדמיה לא יודעת (ד, 37). עד כאן ההדמיה אמרה "אין", והשורה
+        // לא רצה בכלל; זה הוסתר כל עוד נשארו "לא משויכים" מהרצות קודמות.
+        boolean atRun = sd.size() == 1 && sd.get(0).kind == ListCmd.LOOSE;
+        if (atRun && r.noop) s.describe = Words.DbCmd.LOOSE_AT_RUN;
+        s.noop = r.noop && !atRun;
+        if (s.noop) return;
         final Work w = work;
         final boolean before = destructive;
         s.op = new ListCmd.Op() {
