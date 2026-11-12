@@ -230,19 +230,4 @@ public final class Sort {
             }
         };
     }
-
-    /** רשימה ידנית: לפי מסלול הרשימה, בסעיף "מיון רשימות" (כמו קודם). */
-    public static Store list(final String listKey) {
-        return new Store() {
-            @Override
-            public String get(String key, String def) {
-                return Conf.get(Conf.LIST_SORT, key.equals(SmartLists.SORT) ? listKey : listKey + " · " + key, def);
-            }
-
-            @Override
-            public void set(String key, String value) {
-                Conf.set(Conf.LIST_SORT, key.equals(SmartLists.SORT) ? listKey : listKey + " · " + key, value);
-            }
-        };
-    }
 }

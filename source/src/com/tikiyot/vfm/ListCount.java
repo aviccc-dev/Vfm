@@ -1,16 +1,11 @@
 package com.tikiyot.vfm;
 
-// 1.14.0: ספירה אחת לרשימה ידנית — מה שמוצג מתחת לרשימה, בהפניה אליה, ובאריח שלה בבית ובסביבה.
-// באג (המשתמש, 18.10: "ברשימות ידניות לא מופיע מה הן מכילות — כתוב 0 פריטים; אולי רק בחלק מהמצבים"): כל מקום ספר
-// אחרת, ואף אחד לא ספר הפניות ↪ ותיקיות מתעדכנות. כאן — הכול: קבצים, תתי־רשימות, רשימות חכמות, תיקיות מתעדכנות
-// והפניות (מה שברשימה שאליה מפנים), בכל העומק; הפניה שחוזרת על עצמה — פעם אחת (בלי לולאה).
-// מה שרק האינדקס יודע (כמה קבצים מוצאת חכמה, כמה יש בתיקייה) — מ-Library כשהוא מוכן; עד אז — רק הרשימות נספרות.
-// אחראי: הספירה בלבד (בלי ממשק — נבדק).
+// 1.14.0: הספירה שמתחת לרשימה. מ0.29 (המנוע הישן נמחק): הספירה עצמה — DbCount, על המסד; כאן נשארו הנוסח (text) ומה
+// שרק האינדקס יודע — כמה קבצים מוצאת רשימה חכמה (FromLibrary, עם זיכרון לפי התנאי).
+// אחראי: הנוסח והספירה מהאינדקס (בלי ממשק — נבדק).
 
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Map;
-import java.util.Set;
 
 final class ListCount {
 
@@ -32,7 +27,6 @@ final class ListCount {
      */
     static final class FromLibrary {
         private final Library lib;
-        private final Map<String, String> condOf = new HashMap<String, String>();
         /** לבדיקות: כמה חיפושים נעשו. */
         int searches;
         private final Map<String, long[]> cache = new HashMap<String, long[]>();

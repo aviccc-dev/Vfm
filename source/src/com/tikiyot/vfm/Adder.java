@@ -1,6 +1,6 @@
 package com.tikiyot.vfm;
 
-// הוספת תיקייה מהכונן לרשימה. פעולה אחת לכל המסכים: מנהל קבצים, חיפוש ופס צף.
+// הוספת תיקייה מהכונן לרשימה. פעולה אחת לכל המסכים: מנהל הקבצים והחיפוש.
 
 import android.app.Activity;
 import android.content.DialogInterface;

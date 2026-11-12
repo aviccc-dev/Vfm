@@ -23,7 +23,6 @@ public final class FnSmart extends Func {
         i.putExtra(SearchScreen.EXTRA_FIXED, true);
         i.putExtra(SearchScreen.EXTRA_TITLE, t.get("שם", Words.SMART_LIST));   // קבצים ישנים, בלי מזהה // תחביר
         i.putExtra(SearchScreen.EXTRA_SORT, cs[1].isEmpty() ? "שם" : cs[1]);  // תחביר
-        i.putExtra(SearchScreen.EXTRA_FUNC, t.id);
         i.putExtra(SearchScreen.EXTRA_VIEW, cs[2]);                           // 148
         i.putExtra(SearchScreen.EXTRA_HIDDEN, t.is(SmartLists.HIDDEN));
         a.startActivity(i);

@@ -10,7 +10,6 @@ public final class Conf {
 
     public static final String GENERAL = "כללי";  // תחביר
     public static final String SEARCH = "חיפוש";  // תחביר
-    public static final String LIST_SORT = "מיון רשימות";  // תחביר
 
     public static final String FULL = "נתונים מלאים";  // תחביר
     public static final String DELETED = "קובץ שנמחק";  // תחביר

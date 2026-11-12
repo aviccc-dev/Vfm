@@ -743,8 +743,6 @@ final class Batch {
         /** 1.20.0: ההשוואה האחרונה (COMP), והאינדקס לחתימות שכבר חושבו (יכול להיות null). */
         Compare.Result compare;
         Library lib;
-        /** 1.24.0: הרשימות בזיכרון — מה יהיה בהן אחרי השורות שלפני (ListCmd); null — עוד לא נטען. לא נשמר. */
-        Tree tree;
         /** מ0.12: כשעובדים במסד — עותק של המסד בזיכרון (DbListCmd), והקבצים לכל תנאי; null — עוד לא נטען. לא נשמר. */
         Store db;
         /** מ0.32 (ממצא 38): עותק המסד של כל אופן שכבר טופל בקובץ — חזרה לאופן לא שוכחת מה שהשורות הקודמות עשו בו. */
@@ -2119,20 +2117,6 @@ final class Batch {
     static boolean wantsCheck(String text) {
         for (String raw : Bidi.strip(text).replace("\r", "").split("\n")) if (clean(raw).equals(CHECK)) return true;
         return false;
-    }
-
-    /** 1.26.0: רק פתיחת מסכים ורשימות (פקודות התפריט ⭐) — הרצה מהירה, בלי מסך ההרצה. */
-    static boolean onlyOpens(String text) {
-        for (String raw : Bidi.strip(text).replace("\r", "").split("\n")) {
-            String line = Commands.normal(clean(raw));
-            if (line.isEmpty() || line.startsWith("::") || Program.isHeader(line)) continue;
-            if (isLoopStart(line) || isLoopEnd(line) || line.startsWith(MEASURE) || line.equals(AS_IF) || line.equals(AS_IF2)) return false;
-            if (Verbs.isVerb(line)) continue;
-            String w = tokens(line).isEmpty() ? "" : Commands.canonical(tokens(line).get(0));
-            if (w.equals("ECHO") || w.equals("ECHO.") || w.equals("START") || w.equals("REM")) continue;
-            return false;
-        }
-        return true;
     }
 
     /** 1.25.0: סיכום המדידה, ויומן (שורה לכל שורה בדוח, נוסף בכל ריצה). */

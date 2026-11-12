@@ -6,7 +6,6 @@ package com.tikiyot.vfm;
 
 import java.io.File;
 import java.util.ArrayList;
-import java.util.LinkedList;
 import java.util.List;
 
 public final class Tree {
@@ -25,31 +24,12 @@ public final class Tree {
             this.size = size;
             this.bad = bad;
         }
-
-        public String name() {
-            int i = path.lastIndexOf('/');
-            return i >= 0 && i < path.length() - 1 ? path.substring(i + 1) : path;
-        }
     }
 
     public static final class Node {
         public String name = "";
-        public Node parent;
         public final List<Node> children = new ArrayList<Node>();
         public final List<Entry> entries = new ArrayList<Entry>();
-        /** צלמית, תיאור, עיצוב, "למה" ("" — אין). */
-        public String icon = "", desc = "", design = "", why = "";
-
-        public Node child(String n) {
-            for (Node c : children) if (c.name.equals(n)) return c;
-            return null;
-        }
-
-        public ArrayList<String> path() {
-            LinkedList<String> p = new LinkedList<String>();
-            for (Node x = this; x.parent != null; x = x.parent) p.addFirst(x.name);
-            return new ArrayList<String>(p);
-        }
 
         public String uniqueChildName(String base, Node except) {
             base = Names.cleanName(base);
@@ -63,17 +43,6 @@ public final class Tree {
             for (Node c : children) if (c != except && c.name.equals(n)) return true;
             return false;
         }
-
-        /** [תתי-רשימות, קבצים] בכל העומק */
-        public int[] totals() {
-            int[] r = {0, entries.size()};
-            for (Node c : children) {
-                int[] t = c.totals();
-                r[0] += 1 + t[0];
-                r[1] += t[1];
-            }
-            return r;
-        }
     }
 
     private Tree() { }
@@ -83,48 +52,16 @@ public final class Tree {
         return new Tree();
     }
 
-    public Node find(List<String> path) {
-        Node cur = root;
-        for (String p : path) {
-            cur = cur.child(p);
-            if (cur == null) return null;
-        }
-        return cur;
-    }
-
     public static Node newChild(Node parent, String name) {
         Node c = new Node();
         c.name = Names.cleanName(name);
-        c.parent = parent;
         parent.children.add(c);
         return c;
-    }
-
-    public static boolean contains(List<Entry> list, String path) {
-        for (Entry e : list) if (e.path.equals(path)) return true;
-        return false;
     }
 
     /** האם path הוא top או בתוכו. */
     static boolean inside(List<String> path, List<String> top) {
         return path.size() >= top.size() && path.subList(0, top.size()).equals(top);
-    }
-
-    /** לכל קובץ — באילו רשימות הוא (המסלול המלא של כל רשימה). */
-    public java.util.Map<String, List<String>> whereListed() {
-        java.util.Map<String, List<String>> out = new java.util.HashMap<String, List<String>>();
-        whereListed(root, out);
-        return out;
-    }
-
-    private static void whereListed(Node n, java.util.Map<String, List<String>> out) {
-        String label = n.name.isEmpty() ? null : Names.fullLabel(n.path());
-        for (Entry e : n.entries) {
-            List<String> l = out.get(e.path);
-            if (l == null) out.put(e.path, l = new ArrayList<String>());
-            if (label != null && !l.contains(label)) l.add(label);
-        }
-        for (Node c : n.children) whereListed(c, out);
     }
 
     /** סריקת תיקייה מהכונן לעץ מנותק: עם המבנה (תתי־רשימות), או הקבצים בלבד. איטי — מתאים לרקע. */

@@ -3,7 +3,7 @@ package com.tikiyot.vfm;
 // מ0.22: תפריט הפקודות ⭐ ו"פתח תפריט <רשימה>" — מהמסד. מ0.41: מהתפריטים של התוכנה (Menus) — "פקודות" שבאופן "שמור
 // לתוכנה", ואחריה "שמור לתוכנה / פקודות" של האופן שעל המסך, אם יש לו (עד כאן: של האופן, ואם אין — של אופן אחר).
 // קובצי הפקודות — פקודות; תתי־רשימות — תפריטי משנה; חכמה — מה שהיא מוצאת. נגיעה ארוכה — עריכה.
-// אחראי: התפריט מהמסד (הרשימה — DbMore.menu). אסור לו: לגעת במנוע הישן.
+// אחראי: החלון של התפריט (מה שבו — Menus; הפריטים של רשימה — DbMore.menu).
 
 import android.app.Activity;
 import android.content.DialogInterface;
@@ -21,19 +21,19 @@ final class DbCmdMenu {
      * לתוכנה" ("שמור לתוכנה/פקודות", או רק "בחירה"); ואם אין — רשימה כלשהי של האופן בדרך הזו, כתפריט (כמו עד כאן).
      * false — אין רשימה כזו.
      */
-    static boolean show(Activity a, List<String> path, File newIn, CmdMenu.Picked pick, String screen, boolean top) {
+    static boolean show(Activity a, List<String> path, File newIn, CmdMenu.Picked pick, boolean top) {
         boolean reserved = !path.isEmpty() && path.get(0).trim().equals(Reserved.ROOT);
         List<String> rel = Menus.relative(path);
         Menus.Snap m = Menus.get(a);
         if (reserved) {
             if (!m.has(rel)) return false;
-            menu(a, rel, newIn, pick, screen, top);
+            menu(a, rel, newIn, pick, top);
             return true;
         }
         String mode = DbListScreen.currentMode;
         long id = find(a, mode, path);
-        if (id != 0) open(a, mode, id, path, newIn, pick, screen, top);
-        else if (m.has(rel)) menu(a, rel, newIn, pick, screen, top);
+        if (id != 0) open(a, mode, id, path, newIn, pick, top);
+        else if (m.has(rel)) menu(a, rel, newIn, pick, top);
         else return false;
         return true;
     }
@@ -54,7 +54,7 @@ final class DbCmdMenu {
 
     /** תפריט מהתפריטים של התוכנה — ממוזג; תת־רשימה נפתחת באותה דרך (ולכן גם היא ממוזגת). "סידור" — הרשימה הכללית. */
     private static void menu(final Activity a, final List<String> rel, final File newIn, final CmdMenu.Picked pick,
-                             final String screen, final boolean top) {
+                             final boolean top) {
         Menus.Snap m = Menus.get(a);
         final Object[] where = m.where(rel);
         dialog(a, top && rel.equals(Menus.CMDS) ? Words.CmdM.TITLE : rel.isEmpty() ? Reserved.ROOT : rel.get(rel.size() - 1), m.at(rel), new Sub() {
@@ -62,14 +62,14 @@ final class DbCmdMenu {
             public void open(DbMore.Entry e) {
                 List<String> sub = new ArrayList<String>(rel);
                 sub.add(e.label);
-                menu(a, sub, newIn, pick, screen, false);
+                menu(a, sub, newIn, pick, false);
             }
-        }, where == null ? null : (String) where[0], where == null ? 0 : (Long) where[1], newIn, pick, screen, top);
+        }, where == null ? null : (String) where[0], where == null ? 0 : (Long) where[1], newIn, pick, top);
     }
 
     /** רשימה של האופן (לפי המספר) כתפריט. */
     private static void open(final Activity a, final String mode, final long id, final List<String> path, final File newIn,
-                             final CmdMenu.Picked pick, final String screen, final boolean top) {
+                             final CmdMenu.Picked pick, final boolean top) {
         List<Menus.Item> items = new ArrayList<Menus.Item>();
         SqlStore s = null;
         try {
@@ -87,9 +87,9 @@ final class DbCmdMenu {
             public void open(DbMore.Entry e) {
                 List<String> sub = new ArrayList<String>(path);
                 sub.add(e.label);
-                DbCmdMenu.open(a, mode, e.id, sub, newIn, pick, screen, false);
+                DbCmdMenu.open(a, mode, e.id, sub, newIn, pick, false);
             }
-        }, mode, id, newIn, pick, screen, top);
+        }, mode, id, newIn, pick, top);
     }
 
     /** איך נפתחת תת־רשימה (לפי הדרך — בתפריטים של התוכנה; לפי המספר — ברשימה של האופן). */
@@ -104,7 +104,7 @@ final class DbCmdMenu {
     }
 
     private static void dialog(final Activity a, String title, List<Menus.Item> items, final Sub sub, final String arrMode, final long arrId,
-                               final File newIn, final CmdMenu.Picked pick, final String screen, boolean top) {
+                               final File newIn, final CmdMenu.Picked pick, boolean top) {
         final List<String> labels = new ArrayList<String>();
         final List<Runnable> taps = new ArrayList<Runnable>(), holds = new ArrayList<Runnable>();
         for (Menus.Item it : items) {
@@ -134,7 +134,7 @@ final class DbCmdMenu {
                 holds.add(null);
             }
         }
-        if (top && pick != null) CmdMenu.extras(a, screen, pick, labels, taps, holds);
+        if (top && pick != null) CmdMenu.extras(a, pick, labels, taps, holds);
         if (arrMode != null && arrId != 0) {
             labels.add(Words.CmdM.ARRANGE);
             taps.add(new Runnable() {

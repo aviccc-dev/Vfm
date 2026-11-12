@@ -4,28 +4,24 @@ package com.tikiyot.vfm;
 
 import android.app.Activity;
 import android.content.ClipData;
-import android.content.DialogInterface;
 import android.content.Intent;
 import android.net.Uri;
 import android.os.Bundle;
 import android.util.DisplayMetrics;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.AdapterView;
 import android.widget.BaseAdapter;
 import android.widget.Button;
 import android.widget.LinearLayout;
 import android.widget.ListView;
 import android.widget.TextView;
 
-import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
 
 public class ShareScreen extends Activity {
 
     private static final class Row {
-        ArrayList<String> path;
         String label, sub;
     }
 

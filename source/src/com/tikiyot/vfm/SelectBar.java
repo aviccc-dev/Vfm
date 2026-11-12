@@ -28,10 +28,10 @@ public final class SelectBar {
 
     /** פעולה בפס: עיקרית (אריח) או תחת "עוד". */
     private static final class Item {
-        String icon, shortLabel, label;
+        String shortLabel, label;
         Runnable action;
         When when;
-        boolean main, danger, physical;
+        boolean main, physical;
         View tile;
     }
 
@@ -175,28 +175,17 @@ public final class SelectBar {
         boolean ok();
     }
 
-    /**
-     * פעולה בפס. main — בין הארבע העיקריות (אריח עם צלמית); אחרת — תחת "עוד".
-     * danger — פעולה הורסת: באדום, והמרשם שם אותה אחרונה.
-     */
-    public void addWhen(String icon, String shortLabel, String label, final Runnable action, When when,
-                        boolean main, boolean danger) {
-        addWhen(icon, shortLabel, label, action, when, main, danger, false);
-    }
-
     /** physical — בתפריט "פיזי" (1.14.0), לא בין העיקריות ולא תחת "עוד". */
     public void addWhen(String icon, String shortLabel, String label, final Runnable action, When when,
                         boolean main, boolean danger, boolean physical) {
         final Item it = new Item();
         it.physical = physical;
         if (physical) main = false;
-        it.icon = icon;
         it.shortLabel = shortLabel == null ? label : shortLabel;
         it.label = label;
         it.action = action;
         it.when = when;
         it.main = main;
-        it.danger = danger;
         if (main) {
             it.tile = tile(icon, it.shortLabel, danger);
             it.tile.setOnClickListener(new View.OnClickListener() {

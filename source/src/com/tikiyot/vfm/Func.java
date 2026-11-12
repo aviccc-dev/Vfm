@@ -50,9 +50,4 @@ public abstract class Func {
         for (Func f : all()) if (f.kind.equals(kind)) return f;
         return null;
     }
-
-    public static String iconOf(String kind) {
-        Func f = byKind(kind);
-        return f != null ? f.icon : "📄";
-    }
 }

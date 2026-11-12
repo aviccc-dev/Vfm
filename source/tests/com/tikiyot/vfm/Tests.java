@@ -1282,17 +1282,6 @@ public final class Tests {
         check("90: קובץ הגדרות שלא נקרא מסומן", ini.unreadable);
         check("90: שמירה של קובץ הגדרות שלא נקרא נדחית", !ini.saveQuiet() && bad.isDirectory());
         wipe(bad);
-
-        // 90ג: הגיבוי האחרון
-        File bdir = new File(Paths.backups(), "מבנה-בדיקה");
-        wipe(bdir);
-        bdir.mkdirs();
-        Files.writeAtomic(new File(bdir, "2026-01-01_10-00-00-000-מבנה.txt"), "ישן");
-        Files.writeAtomic(new File(bdir, "2026-03-01_10-00-00-000-מבנה.txt"), "חדש");
-        Files.writeAtomic(new File(bdir, "2026-04-01_10-00-00-000-אחר.txt"), "לא שלו");
-        File last = Files.latestBackup(new File("מבנה.txt"), "מבנה-בדיקה");
-        eq("90: הגיבוי האחרון של הקובץ", "חדש", last == null ? null : Files.readUtf8(last));
-        wipe(bdir);
     }
 
     // ---------- ביקורת רביעית: נכונות (95, 88, 89) ----------
@@ -3377,7 +3366,6 @@ public final class Tests {
         Library lib = Library.forTests(new ArrayList<Index>(Arrays.asList(i1, i2)));
         File sf = new File(home, "מבנה-1220.ini");
         sf.delete();
-        Conf.set(Conf.GENERAL, SmartLists.PRESETS_DONE, "");
         File tf = new File(home, "מבנה-1220.txt");
         tf.delete();
         try {
@@ -4136,8 +4124,6 @@ public final class Tests {
         try { t = Files.readUtf8(big); } catch (Exception e) { }
         check("192: יומן התקלות — נשאר הסוף, מתחילת שורה", big.length() <= Log.KEEP + 200 && t.endsWith("שורה 19999\n")
                 && t.startsWith(Words.LogW.TRIMMED + "\nשורה "));
-        check("192: הסרת רשימות — כמה יוצא", Words.Manual.removesLists(2, 5, 340, 0).contains("2 רשימות")
-                && Words.Manual.removesLists(2, 5, 340, 0).contains("5 רשימות־משנה") && Words.Manual.removesLists(2, 5, 340, 0).contains("340 פריטים"));
         wipe(root);
     }
 

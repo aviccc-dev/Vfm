@@ -293,11 +293,6 @@ public final class Ui {
         return fullCache;
     }
 
-    /** נקרא בכל פתיחת מסך, כדי שעריכה ידנית של הקובץ תיקלט. */
-    public static void reloadFull() {
-        fullCache = null;
-    }
-
     public static void setFull(Context c, final boolean v) {
         fullCache = v;
         new Thread(new Runnable() {

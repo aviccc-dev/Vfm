@@ -47,7 +47,7 @@ final class Backups {
     static final String DAILY = "יומי", BEFORE = "לפני", MANUAL = "ידני", TEXT = "טקסט", DAMAGED = "פגום";  // בכונן
     static final String RECORD = "רישום.txt";  // בכונן
     /** הפעולות שלפניהן נעשה עותק — חלק משם הקובץ. */
-    static final String OP_IMPORT = "העתקה מהישן", OP_DELETE = "מחיקת רשימה", OP_PURGE = "מחיקה לצמיתות", OP_RESTORE = "שחזור";  // בכונן
+    static final String OP_IMPORT = "העתקה מהישן", OP_DELETE = "מחיקת רשימה", OP_RESTORE = "שחזור";  // בכונן
     /** מ0.20: עותק ביציאה מהתוכנה (רק אם השתנה משהו מאז העותק האחרון). */
     static final String OP_EXIT = "יציאה";  // בכונן
 

@@ -414,12 +414,6 @@ final class Commands {
         return q.length() >= 2 && d.what.contains(q);
     }
 
-    static List<Def> of(Family f) {
-        List<Def> out = new ArrayList<Def>();
-        for (Def d : ALL) if (d.family == f) out.add(d);
-        return out;
-    }
-
     private static String join(List<String> l, String sep) {
         StringBuilder sb = new StringBuilder();
         for (String s : l) sb.append(sb.length() > 0 ? sep : "").append(s);

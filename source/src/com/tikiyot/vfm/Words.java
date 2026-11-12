@@ -8,12 +8,8 @@ public final class Words {
     private Words() { }
 
     // ---------- מונחים ----------
-    public static final String LISTS = "רשימות";
-    public static final String LIST = "רשימה";
     public static final String SMART_LIST = "רשימה חכמה";
-    public static final String MANUAL_LISTS = "רשימות ידניות";
     public static final String NEW_LIST = "רשימה חדשה";
-    /** בורר הרשימות (106). */
     /** 173: פריטי התפריט הקבועים בכל מסך רשימה. */
     public static final String FULL_SHORT = "נתונים מלאים / מקוצרים", SORT = "מיון";
     public static final String ALL_LISTS = "כל הרשימות", TOOL_LISTS = "הרשימות של הכלים",
@@ -24,8 +20,6 @@ public final class Words {
             INSIDE_LIST = "בתוך רשימה זו", INSIDE_FOLDER = "בתוך תיקייה זו",
             NOT_LIST_TARGET = "אי אפשר לבחור את הרשימה הזו כיעד";
     public static final String ROOT = "השורש";
-
-    // ---------- כותרות עולם ----------
 
     // ---------- פעולות ברשימות ----------
     public static final String ADD_TO_LIST = "הוספה לרשימה";
@@ -82,7 +76,6 @@ public final class Words {
     public static final String FILE_NOT_FOUND = "הקובץ לא נמצא", FOLDER_NOT_FOUND = "התיקייה לא נמצאה";
     public static final String FILE_NOT_AT_PATH = "הקובץ לא נמצא במסלול שלו";
     public static final String NO_TOUCH_FILES = "לא נוגע בקבצים";
-    public static final String BACKUP_SAVED = "נשמר גיבוי לפני המחיקה, בתיקייה .גיבויים";
     public static final String LOADING_INDEX = "טוען את האינדקס…";
     public static final String CANT_READ_FILE = "לא הצלחתי לקרוא את הקובץ";
     public static final String CANT_CREATE_FOLDER = "לא הצלחתי ליצור את התיקייה";
@@ -131,26 +124,9 @@ public final class Words {
     public static final class SearchTabs {
         private SearchTabs() { }
 
-        /** לפי הסדר של com.tikiyot.vfm.SearchTabs.KINDS. */
-        public static final String[] TABS = {SMART_LIST, "כפולים"};   // 154: "רשימה חכמה" — מול "רשימה ידנית"
         /** 197: בפס הקטן שבראש הטופס. */
         public static final String[] SHORT = {"חכמה", "כפולים"};
         public static final String KIND_L = "סוג";
-    }
-
-    // ---------- העתקה בין אופני עבודה (162) ----------
-    // ---------- רשימה בתוך רשימה (161) ----------
-    public static final class Inner {
-        private Inner() { }
-
-        public static final String ADD = "➕ רשימה בתוך הרשימה", COMMON = "מתבנית…",
-                MANUAL = "רשימה ידנית קיימת…", NEW = "חדשה…", REMOVE = "הסרה מהרשימה",
-                GONE = "כבר לא קיימת — אפשר להסיר אותה", NONE_COMMON = "אין עדיין תבניות",
-                ALREADY = "כבר נמצאת כאן";
-
-        public static String removeWhat(boolean local) {
-            return local ? "הרשימה החכמה מוסרת (היא שייכת רק לכאן) — לסל" : "רק הקישור מוסר; הרשימה עצמה נשארת";
-        }
     }
 
     // ---------- תוויות על הצלמית (160) ----------
@@ -175,7 +151,7 @@ public final class Words {
     public static final class Find {
         private Find() { }
 
-        public static final String SETTINGS = "⚙ הגדרות", SAVE = "💾 שמירה", SAVE_AS = "💾 שמירה בשם — רשימה חכמה בבית…", SAVE_AS_TITLE = "שמירה בשם — רשימה חכמה בבית",
+        public static final String SETTINGS = "⚙ הגדרות", SAVE_AS = "💾 שמירה בשם — רשימה חכמה בבית…", SAVE_AS_TITLE = "שמירה בשם — רשימה חכמה בבית",
                 ALL_DRIVES = "אין מקורות = כל הכוננים", HINT = "חיפוש…";
 
         public static String saved(String name) {
@@ -201,8 +177,7 @@ public final class Words {
         private Named() { }
 
         // 154: "הגדרות נפוצות" (המשתמש: "צריך לשנות את השם — במקום 'שמירה בשם' — הגדרות נפוצות")
-        public static final String TITLE = "תבניות רשימה חכמה", SAVE_AS = "💾 שמירה כתבנית…",
-                SAVE_AS_TITLE = "שמירה כתבנית", NAME_HINT = "שם, למשל: ספרים מהחודש",
+        public static final String SAVE_AS_TITLE = "שמירה כתבנית", NAME_HINT = "שם, למשל: ספרים מהחודש",
                 GONE = "התבנית שהכלי מקשר אליה נמחקה מהקובץ הראשי";
 
         public static String exists(String name) {
@@ -213,7 +188,7 @@ public final class Words {
             return "ההגדרות שלה יוחלפו בהגדרות שבטופס" + (tools > 0 ? ", בכל " + (tools == 1 ? "הכלי שמקשר" : tools + " הכלים שמקשרים") + " אליה" : "");
         }
 
-        public static final String UPDATE = "לעדכן", SAVED_AS = "נשמרה כתבנית";
+        public static final String UPDATE = "לעדכן";
     }
 
     // ---------- קובצי פקודות (117א) ----------
@@ -268,21 +243,8 @@ public final class Words {
         public static final String NEEDS_INDEX = "רשימה כמקור צריכה את האינדקס — הוא עוד לא מוכן. לנסות שוב בעוד רגע";
         public static final String LIST_NO_MOVE = "מקור שהוא רשימה — רק COPY (MOVE היה מוציא קבצים מהמקומות שלהם)";
 
-        public static String listNotFound(String n) {
-            return "אין רשימה בשם: " + n + " (גם לא בתוך \"שמור לתוכנה\"). אפשר לכתוב את הדרך המלאה, למשל: א / ב";
-        }
-
         public static String smartSkipped(int n) {
             return " · ⚠ " + n + " רשימות חכמות שברשימה לא נמצאו (נמחקו?) — לא נכללו";
-        }
-
-        public static String listsSeen(String mode, String top, String reserved) {
-            return "\n   באופן \"" + mode + "\" — רשימות: " + (top.isEmpty() ? "אין" : top)
-                    + (reserved == null ? " · אין \"שמור לתוכנה\"" : " · בתוך \"שמור לתוכנה\": " + (reserved.isEmpty() ? "אין" : reserved));
-        }
-
-        public static String listAmbiguous(String n, String ways) {
-            return "יש כמה רשימות בשם " + n + ": " + ways + " — לכתוב את הדרך המלאה";
         }
 
         public static String listEmpty(String n) {
@@ -434,10 +396,6 @@ public final class Words {
             return "נעצר לפני שורה " + line;
         }
 
-        public static String line(int line, String out) {
-            return "שורה " + line + ": " + out;
-        }
-
         /** 1.25.0: "שורה 12 (סבב 3): …". */
         public static String line(String label, String out) {
             return "שורה " + label + ": " + out;
@@ -456,15 +414,8 @@ public final class Words {
         }
 
         // התפריט והחלונות
-        public static final String EDIT = "✎ עריכה",
-                RUN = "הרצה", NOTHING_TO_DO = "אין בקובץ פקודות לביצוע.",
-                NO_CHANGE = "לא ישתנה דבר בכונן", CHANGES = "ישתנו קבצים בכונן",
-                DELETES_TO_TRASH = " · DEL ו-RD מעבירים לסל המחזור",
-                UNDO = "מחיקה — מסל המחזור; העברה והעתקה — הרשימות עוקבות";
-
-        public static String errorLines(int n) {
-            return n + " שורות עם שגיאה — ידלגו עליהן (לפי \"המשך\" שבקובץ) · ";
-        }
+        public static final String NOTHING_TO_DO = "אין בקובץ פקודות לביצוע.",
+                NO_CHANGE = "לא ישתנה דבר בכונן";
 
         public static String preview(String file) {
             return "📜 " + file + " — תצוגה מקדימה";
@@ -472,10 +423,6 @@ public final class Words {
 
         public static String done(String file) {
             return "📜 " + file + " — בוצע";
-        }
-
-        public static String runTitle(String file) {
-            return "הרצת " + file;
         }
 
         public static String running(String file) {
@@ -510,7 +457,7 @@ public final class Words {
         // העורך (1.23.0: הטופס הישן יצא — הטקסטים של הממשק החדש ב-Words.Ed)
         public static final String SAVE_BTN = "💾 שמירה", PREVIEW_AND_RUN = "▶ תצוגה מקדימה והרצה", PICK = "📁 בחירה",
                 SHARE_BTN = "📤 שיתוף", ASK_SAVE = "לשמור את השינויים?",   // 203
-                DONT_SAVE = "בלי לשמור", REPLACE_NOTE = " (הקודם לסל)";
+                DONT_SAVE = "בלי לשמור";
 
         /** ההסבר בראש קובץ פקודות חדש. התחביר (פקודות, משתנים, מתגים, דוגמה) — מ-Batch. */
         public static String template(String commands, String vars, String filters, String ask, String skip, String example) {
@@ -543,20 +490,7 @@ public final class Words {
     public static final class WorkModes {
         private WorkModes() { }
 
-        public static final String SHARE = "📤 שיתוף ההגדרות";               // 158
-
-        // 156: הדוגמאות
-        public static final String EXAMPLES_AGAIN = "📚 להחזיר את הדוגמאות", EXAMPLES_BACK = "הדוגמאות הוחזרו",
-                EXAMPLES_RESET = "חזרה לברירת מחדל — הדוגמאות", EXAMPLES_RESET_OK = "להחזיר",
-                EXAMPLES_RESET_WHAT = "כל אופן הדוגמאות חוזר למצבו הראשון — רשימות, כלים, כפתורים והגדרות (חוץ מ\"הדוגמאות שלי\") — וגם תיקיית התרגול של הפקודות",
-                EXAMPLES_RESET_UNDO = "אפשר לשחזר את הקודם מסל המחזור";
-
-        public static final String EXISTS = "כבר יש אופן עבודה בשם הזה", NOT_FOUND = "האופן לא נמצא",
-                ACTIVE = "האופן פעיל. עוברים לאופן אחר וממחקים משם", SWITCH_FAILED = "המעבר נכשל";
-
-        public static String moved(String what, String to) {
-            return "אופני עבודה: הועבר " + what + " אל \"" + to + "\"";
-        }
+        public static final String EXISTS = "כבר יש אופן עבודה בשם הזה";
     }
 
     // ---------- אריזה ושליחה (116, 117) ----------
@@ -877,7 +811,6 @@ public final class Words {
         public static final String QUICK_REFRESH = "רענון מהיר";
         public static final String EDIT_INI = "עריכת קבצי ההגדרות";
         public static final String CHECK_PATH = "בדיקת מסלול באינדקס";
-        public static final String CLEAN_ORPHANS = "ניקוי רשימות ללא כלי";
         public static final String ERROR_LOG = "יומן תקלות";
         public static final String DEEP_REFRESH = "רענון מעמיק — גודל ותאריך של כל הקבצים";
         public static final String REBUILD_WHAT = "סריקה מלאה של כל הכוננים. בכרטיס זה עשוי לקחת זמן";
@@ -930,13 +863,6 @@ public final class Words {
         public static final String IN_INDEX_LINE = "\nבאינדקס: ";
         public static final String FOUND = "✓ נמצא";
         public static final String TRY_QUICK = "\n\nכדאי ללחוץ \"רענון מהיר\".";
-        public static final String NO_ORPHANS = "אין רשימות ללא כלי";
-        public static final String DELETE_ORPHANS = "מחיקת רשימות ללא כלי";
-        public static final String LISTS_COLON = " רשימות: ";
-        public static final String ITEMS_OLD_ROOT = " פריטים מהשורש הישן";
-        public static final String DELETE = "מחיקה";
-        public static final String BEFORE_CLEAN = "לפני ניקוי רשימות ללא כלי";
-        public static final String DELETED = "נמחקו";
         public static final String LOG_EMPTY = "היומן ריק";
         public static final String LOG = "יומן";
         public static final String SHARE = "שיתוף";
@@ -950,132 +876,31 @@ public final class Words {
         private Main() { }
 
         public static final String APP_NAME = "מנהל קבצים וירטואלי";
-        public static final String NEED_ACCESS = "כדי לנהל קבצים בכל המכשיר, התוכנה צריכה הרשאת גישה לכל הקבצים.";
         public static final String GRANT = "מתן הרשאה";
-        public static final String NEW_MODE_MENU = "➕ אופן עבודה חדש…";
-        public static final String MODE = "אופן עבודה";
-        public static final String LONG_PRESS_MODE = " · נגיעה ארוכה: שינוי שם ומחיקה";
-        public static final String RENAME = "שינוי שם";
-        public static final String DELETE_MODE = "מחיקת האופן";
-        public static final String ACTIVE = " (הפעיל)";
-        public static final String RENAME_MODE = "שינוי שם האופן";
-        public static final String NAME = "שם";
-        public static final String RENAMED = "השם שונה";
-        public static final String MODE_ACTIVE_CANT = "האופן פעיל. עוברים לאופן אחר וממחקים משם";
-        public static final String DELETE_MODE_TITLE = "מחיקת אופן העבודה \"";
-        public static final String NO_TOUCH_DRIVE = "לא נוגע בקבצים בכונן";
-        public static final String LISTS_AND = " רשימות ו־";
-        public static final String ITEMS_LEAVE = " פריטים, וגם הכלים שבבית, ההגדרות והאינדקס של האופן, יוצאו ממנו";
-        public static final String MODE_DELETED = "האופן נמחק";
-        public static final String NEW_MODE = "אופן עבודה חדש";
-        public static final String NEW_MODE_HINT = "שם, למשל: בדיקות מקיפות";
-        public static final String START_WITH = "\": במה להתחיל?";
-        public static final String EMPTY_MODE = "ריק — בלי רשימות ובלי כלים";
-        public static final String COPY_OF = "העתק של \"";
-        public static final String STRUCTURE = "מבנה";
         public static final String SETTINGS = "הגדרות";
-        public static final String THE_FILE = "הקובץ \"";
-        public static final String MISSING = "\" חסר";
-        public static final String ALL_LISTS_IN_IT = "כל הרשימות נמצאות בו";
-        public static final String ALL_TILES_IN_IT = "כל הכלים שבמסך הבית נמצאים בו";
-        public static final String BACKUP_FROM = "יש גיבוי מ-";
-        public static final String RESTORE_FROM_IT = ". לשחזר ממנו?";
-        public static final String NEW_FILE_STARTS_EMPTY = "\"קובץ חדש\": יתחיל קובץ ריק";
-        public static final String RESTORE = "שחזור";
-        public static final String RESTORED_FROM_BACKUP = "שוחזר מהגיבוי";
-        public static final String NEW_FILE = "קובץ חדש";
-        public static final String MODE_LINE = "אופן עבודה: ";
-        public static final String FILES_IN_INDEX = " קבצים באינדקס · עודכן ";
-        public static final String BUILT_IN = "\nנבנה ב־";   // 1.10.0: שורה משלו — בלי "·" בודדת בסוף שורה
         public static final String ADD = "הוספה";
-        public static final String UNKNOWN_TOOL = "כלי עבודה לא מוכר: ";
         public static final String WHAT_TO_ADD = "מה להוסיף";
         /** 1.13.1: ➕ בבית — ארבע שורות (הוכרע 16.10). */
         public static final String ADD_MANUAL = "📋  רשימה ידנית", ADD_SMART = "✨  רשימה חכמה",   // 1.16.1: אותו תפריט
                 ADD_CMD = "▶  פקודה";                                                                // גם בכפתור
-        public static final String OPEN = "פתיחה";
-        public static final String ICON = "צלמית";
-        public static final String MOVE_RIGHT = "הזזה ימינה";
-        public static final String MOVE_LEFT = "הזזה שמאלה";
-        public static final String DELETE = "מחיקה";
-        public static final String DESC = "תיאור";
     }
 
-    /** הרשימה הידנית (VirtualScreen) */
+    /** הרשימה הידנית — מסך הרשימה (DbListScreen) ופעולות הבחירה בו; עד מ0.29 — VirtualScreen */
     public static final class Manual {
 
-        public static final String SETTINGS_HERE = "⚙ הגדרות הרשימה הזו";   // 1.16.0
         public static final String DESC = "תיאור";
         public static final String DESC_HINT = "למשל: מה יש כאן ולמה";
         private Manual() { }
 
-        /** 1.13.0 */
-        public static final String DESC_WORD = "יורד", ASC_WORD = "עולה";
-        public static final String NEW_REF = "↪ קישור לרשימה קיימת — בלי להעתיק אותה";
-        public static final String REF = "↪ ", REF_GONE = "↪ הרשימה לא נמצאה: ";
-        public static final String REF_SELF = "אי אפשר לקשר לרשימה הזו עצמה או לרשימה שמעליה";
-        public static final String ORDER = "הזזה", ORDER_DOTS = "↕ הזזה…", ORDER_SHORT = "הזזה";
-        public static final String ORDER_UP = "▲ למעלה", ORDER_DOWN = "▼ למטה", ORDER_TOP = "⤒ לראש", ORDER_BOTTOM = "⤓ לסוף";
-        public static final String ORDER_SORTED = "הסדר נשמר. התצוגה ממוינת אחרת — מיון \"הסדר שלי\" כדי לראות אותו";
+        public static final String ORDER_DOTS = "↕ הזזה…", ORDER_SHORT = "הזזה";
 
-        public static final String MANUAL_LIST = "רשימה ידנית";
-        /** 1.10.0 (פריט 8): "רשימה חדשה" — ידנית או חכמה. */
-        public static final String NEW_MANUAL = "📋 רשימה ידנית — אני בוחר מה נכנס",
-                NEW_SMART = "✨ רשימה חכמה — לפי הגדרה, מתעדכנת לבד";
-        public static final String BAD_LINE = "שורה לא מובנת";
-        public static final String CANT_READ_TREE = "לא הצלחתי לקרוא את מבנה.txt. שינויים לא יישמרו עד שהקובץ ייקרא. כדאי לצאת ולהיכנס שוב.";
-        public static final String COUNTING = "סופר…";
         public static final String LISTS_DOT = " רשימות · ";
         public static final String ITEMS_SUFFIX = " פריטים";
-        public static final String LISTS_SEP = " רשימות   ·   ";
-        public static final String NEW_ONE = "החדש: ";
-        public static final String UP = " (למעלה)";
-        public static final String NO_LISTS_YET = "אין עדיין רשימות.\nרשימה מצביעה על קבצים בלי להזיז אותם.";
-        public static final String LIST_EMPTY = "הרשימה ריקה.";
-        public static final String GO_TO_LEVEL = "מעבר לרמה";
-        public static final String REMOVE_LINE = "הסרת השורה";
-        public static final String EDIT_BY_HAND = "עריכה ידנית";
-        public static final String LISTS_AND = " רשימות ו-";
-        public static final String REMOVE_TITLE = "הסרה מהרשימה: ";
-        public static final String REMOVES_ONLY = "מסיר מהרשימה בלבד";
 
-        /** 94: כמה יוצא כשמסירים רשימות שלמות. */
-        public static String removesLists(int lists, int subLists, int innerItems, int items) {
-            return "יוסרו " + lists + (lists == 1 ? " רשימה" : " רשימות")
-                    + (subLists > 0 ? ", ובתוכן " + subLists + " רשימות־משנה" : "")
-                    + (innerItems > 0 ? (subLists > 0 ? " ו־" : ", ובתוכן ") + Files.count(innerItems) + " פריטים" : "")
-                    + (items > 0 ? "; ועוד " + Files.count(items) + " פריטים מהרשימה הזו" : "")
-                    + ". הקבצים עצמם נשארים בכונן.";
-        }
-        public static final String CAN_ADD_AGAIN = "אפשר להוסיף שוב";
-        public static final String REMOVE = "הסרה";
-        public static final String BEFORE_DELETING = "לפני מחיקת ";
         public static final String LISTS_SUFFIX = " רשימות";
-        public static final String MEDIA_OUT = "המדיה הוצאה או פגומה — הקובץ יחזור כשהכונן יהיה זמין";
-        public static final String OPEN_TRASH = "פתיחת סל המחזור";
-        public static final String SEARCH_AGAIN = "חיפוש מחדש";
-        public static final String LIST_NAME = "שם הרשימה";
-        public static final String CURRENT_PLACE = " (המיקום הנוכחי)";
-        public static final String SEARCHING_SIZE = "מחפש לפי גודל…";
-        public static final String SEARCHING_FILE = "מחפש את הקובץ…";
-        public static final String BY_NAME_SIZE = "לפי שם וגודל";
-        /** 190 */
-        public static final String BY_SIG = "לפי התוכן (חתימה)";
-        public static final String BY_NAME = "לפי שם בלבד";
-        public static final String BY_SIZE = "לפי גודל בלבד";
-        public static final String NO_SUCH_NAME = "לא נמצא קובץ בשם הזה";
-        public static final String SEARCH_SIZE_ASK = "לחפש קובץ באותו גודל בדיוק, גם אם שמו שונה?";
-        public static final String SEARCH_BY_SIZE = "חיפוש לפי גודל";
-        public static final String NOT_ON_DEVICE = "הקובץ לא נמצא במכשיר";
-        public static final String UPDATE_PATH_TITLE = "עדכון המסלול בכל הרשימות";
-        public static final String FOUND = "נמצא ";
         public static final String BACKUP_BEFORE_CHANGE = "נשמר גיבוי לפני השינוי, בתיקייה .גיבויים";
-        public static final String UPDATE = "עדכון";
-        public static final String MATCHES = " התאמות";
         public static final String PATH_UPDATED_IN = "המסלול עודכן ב-";
         public static final String NOTHING_TO_UPDATE = "לא נמצא פריט לעדכון";
-        public static final String EDIT_TREE_TITLE = "עריכה ידנית של מבנה.txt";
-        public static final String REFRESH = "רענון";
     }
 
     /** הכפולים (DupScreen) */
@@ -1154,9 +979,6 @@ public final class Words {
         public static final String INDEX_UP_TO_DATE = "האינדקס מעודכן";
         public static final String FOLDERS_REFRESHED = " תיקיות רועננו";
         public static final String IN_LIST = "✓ ברשימה";
-        public static final String LISTS_DOT = " רשימות · ";
-        public static final String ADDED_TO_LIST = "נוסף לרשימה";
-        public static final String ALREADY_IN_LIST = "כבר נמצא ברשימה";
         public static final String FILES_IN_INDEX = " קבצים באינדקס · עודכן ";
         public static final String STILL_LOADING = " · האינדקס עדיין נטען";
         public static final String MS_FORMAT = " · %.1f מ\"ש";
@@ -1174,15 +996,12 @@ public final class Words {
         public static final String READ_ONLY_SUFFIX = "  ·  לקריאה בלבד";
         public static final String ADD_LINE = "➕ שורה";
         public static final String NO_SECTION = "ללא מקטע";
-        public static final String COPY_NOTE = "\nעותק שנבנה מהקובץ הראשי. שינוי כאן יימחק; לעריכה יש לערוך את \"";
-        public static final String ID_LINES_NOTE = "\nשורות \"מזהה\" מקשרות כלים ורשימות חכמות, ואינן ניתנות לעריכה.";
         public static final String UNKNOWN_KEPT = " שורות שאינן מוכרות יישמרו כמות שהן";
         public static final String CHANGED_OUTSIDE = "הקובץ השתנה מבחוץ";
         public static final String RELOAD = "טעינה מחדש";
         public static final String OVERWRITE = "דריסה";
         public static final String SAVE_FAILED_LOG = "השמירה נכשלה. הפרטים ביומן";
         public static final String READ_ONLY_COPY = "עותק לקריאה בלבד";
-        public static final String ID_NOT_EDITABLE = "שורת מזהה אינה ניתנת לעריכה";
         public static final String KEY = "שם";
         public static final String VALUE = "ערך";
         public static final String EDIT_LINE = "עריכת שורה";
@@ -1200,7 +1019,6 @@ public final class Words {
 
         private ShareIn() { }
 
-        public static final String INSIDE = " בתוך";
         public static final String NEED_APP_FIRST = "צריך קודם לפתוח את התוכנה ולתת הרשאת גישה לקבצים.";
         public static final String NO_FILES_RECEIVED = "לא התקבלו קבצים.";
         public static final String IDENTIFYING = "מזהה ";
@@ -1211,12 +1029,6 @@ public final class Words {
         public static final String NOT_IDENTIFIED = " לא זוהו)";
         public static final String NO_LISTS_YET = "אין עדיין רשימות.\nאפשר ליצור כלי רשימות במסך הבית, ואז לשתף אליה.";
         public static final String PICK_LIST = "📋 בחירת רשימה…";
-        public static final String ITEMS_SUFFIX = " פריטים";
-        public static final String ADDED_N = "נוספו ";
-        public static final String TO_LIST = " לרשימה";
-        public static final String ALREADY_THERE = "כבר היו ברשימה";
-        public static final String LIST_CREATED = "נוצרה הרשימה \"";
-        public static final String AND_FILES_ADDED = "\" ונוספו הקבצים";
     }
 
     /** סל המחזור (TrashScreen) */
@@ -1236,20 +1048,12 @@ public final class Words {
         public static final String EMPTY_TRASH = "ריקון הסל";
     }
 
-    /** 1.10.0: מכלים בסל המחזור (BinBox) */
+    /** הודעות על הסל. עד מ0.29 — המכלים של המנוע הישן בסל (BinBox, נמחק); OLD_ENGINE — פריט כזה שנשאר בסל */
     public static final class Box {
         private Box() { }
         public static final String OLD_ENGINE = "הוסר במנוע הישן — אין שחזור בגרסה הזו";
 
-        public static final String LIST = "רשימה";
-        public static final String LISTS = "רשימות";
-        public static final String SMART = "רשימה חכמה";
-        public static final String TOOL = "כלי";
-        public static final String MODE = "אופן עבודה";
-        public static final String FROM_MODE = " · מהאופן ";
         public static final String IN_BIN = "אפשר לשחזר מסל המחזור";
-        public static final String REMOVED = "הוסר מהתוכנה";
-        public static final String HOW = "הוסר מהתוכנה — נגיעה ארוכה: שחזור, או מחיקה לצמיתות";
     }
 
     /** רשימת קובצי ההגדרות (IniListScreen) */
@@ -1310,7 +1114,6 @@ public final class Words {
         public static final String SEND_DOTS = "שליחה למכשיר…";
         public static final String UNZIP_DOTS = "פריסת ZIP…";
         public static final String COPY_PATH = "העתקת המסלול";
-        public static final String RENAME = "שינוי שם";
         public static final String MOVE_THEN_PASTE = "העברה (ואז הדבקה)";
         public static final String COPY_THEN_PASTE = "העתקה (ואז הדבקה)";
         public static final String RESTORE_ICON = "↩ שחזור";
@@ -1369,7 +1172,6 @@ public final class Words {
         public static final String IS_TRASH = "זה סל המחזור";
         public static final String NOT_INTO_MOVED = "אי אפשר לתוך התיקייה שמעבירים";
         public static final String ALREADY_HERE = "הם כבר בתיקייה הזו";
-        public static final String PICK_LIST_FIRST = "בוחרים קודם רשימה";
     }
 
     /** הוספה לרשימה (Adder) */
@@ -1394,19 +1196,12 @@ public final class Words {
         public static final String LISTS_AND = " רשימות ו-";
     }
 
-    /** תפריט הכלי (ToolMenu) */
+    /** עד מ0.29 — תפריט הכלי (ToolMenu, נמחק); נשאר השם בטופס הרשימה (DbListScreen) */
     public static final class ToolM {
 
         private ToolM() { }
 
-        public static final String DELETE = "הסרה";
-        public static final String DESC = "תיאור";
         public static final String NAME = "שם";
-        public static final String TOOLS = " כלים", PICKED = " נבחרו";   // 1.17.1
-        public static final String DELETE_LIST_OF = "הסרת הרשימה \"";
-        public static final String DELETE_OF = "הסרת \"";
-        public static final String DELETES_TOOL_AND_LIST = "הרשימה מוסרת — עם כל מה שבתוכה; הקישורים אליה נשברים";
-        public static final String REMOVES_FROM_SCREEN = "הכלי מוסר מהמסך בלבד";
     }
 
     /** כלי הכפולים — הטופס (FnDup); מפתחות וערכים בקובץ ההגדרות — תחביר */
@@ -1466,24 +1261,6 @@ public final class Words {
         public static final String NAME = "שם";
     }
 
-    /** כלי הרשימות (FnVirtual) */
-    public static final class ListT {
-        private ListT() { }
-
-        public static final String THE_LIST = "הרשימה \"";
-        public static final String NOT_FOUND_CREATED = "\" לא נמצאה, ונוצרה ריקה בשם הזה. אם שינית לה שם מחוץ לתוכנה — אפשר לבחור אותה מחדש בהגדרות הכלי.";
-        public static final String BEFORE_DELETING = "לפני מחיקת ";
-        public static final String TOOL_NAME_OPT = "שם הכלי (לא חובה)";
-        public static final String EXISTING_LIST = "רשימה קיימת";
-        public static final String NEW_LIST_NAME = "שם הרשימה החדשה (ריק = כשם הכלי)";
-        public static final String PICK_LIST = "📋 בחירת רשימה…";
-        public static final String NO_LIST_PICKED = "לא נבחרה רשימה";
-        public static final String CHOOSE_LIST = "בחירת רשימה";
-        public static final String TOOL_NAME = "שם הכלי";
-        public static final String WHICH_LIST = "על איזו רשימה הכלי עובד";
-        public static final String NEED_LIST = "צריך לבחור רשימה";
-    }
-
     /** רכיב המקורות (Sources) */
     public static final class Src {
         private Src() { }
@@ -1500,9 +1277,6 @@ public final class Words {
     public static final class ActsW {
         private ActsW() { }
 
-        public static final String ALREADY_IN_LIST = "כבר נמצא ברשימה \"";
-        public static final String ADDED_N = "נוספו ";
-        public static final String TO_LIST = " לרשימה \"";
         public static final String SEND = "שליחה";
         public static final String NOT_AT_PATH = "הקבצים לא נמצאו במסלול שלהם";
         public static final String NO_ROOM_PACK = "אין מספיק מקום לארוז את התיקיות: צריך ";
@@ -1564,7 +1338,6 @@ public final class Words {
         public static final String NAME_L = "שם", WORDS_L = "מכיל מילים", WORDS_HINT = "לא חובה";
         public static final String FROM_WHERE = "מאיפה (מקורות)";
         public static final String WORDS_IN_NAME = "מילים בשם";
-        public static final String NO_SOURCES_ALL = "אין מקורות = כל הכוננים";
         public static final String COND_IN_FILE = "התנאי שייכתב בקובץ";
         /** 196: הסידור החדש של הטופס */
         public static final String FROM = "מאיפה";
@@ -1595,15 +1368,11 @@ public final class Words {
         }
     }
 
-    /** שורת הסיכום של כלי (Stats) */
+    /** שורת הסיכום של רשימה (DbListScreen, ListCount); עד מ0.29 — Stats */
     public static final class StatsW {
         private StatsW() { }
 
-        public static final String ZERO_ITEMS = "0 פריטים";
-        public static final String LISTS_DOT = " רשימות · ";
         public static final String FILES = " קבצים";
-        public static final String EMPTY = "ריק";
-        public static final String FILES_DOT = " קבצים · ";
     }
 
     /** כלי אפליקציה (FnApp) */
@@ -1683,18 +1452,11 @@ public final class Words {
         public static final String PHYSICAL = "פיזי", PHYSICAL_TITLE = "פיזי — נוגע בקבצים בכונן";
     }
 
-    /** בורר הרשימות (ListPicker) */
+    /** בורר הרשימות (DbPicker) */
     public static final class ListP {
         private ListP() { }
 
         public static final String LIST_NAME = "שם הרשימה";
-    }
-
-    /** העתקה מאופן אחר — הבורר (CopySource) */
-    public static final class CopyS {
-        private CopyS() { }
-
-        public static final String LISTS_DOT = " רשימות · ";
     }
 
     /** תאריך וגודל — הניסוחים בטופס; יחידות התאריך הן חלק מהתנאי (תחביר) */
@@ -1731,16 +1493,6 @@ public final class Words {
         public static final String AGO = "לפני ";
         public static final String MINUTES = " דקות";
         public static final String HOURS = " שעות";
-    }
-
-    /** 1.9.0: תיקייה חיה ברשימה */
-    public static final class Live {
-        private Live() { }
-
-        public static final String UPDATING = "🔄 מתעדכנת";
-        public static final String GONE = "⚠ התיקייה לא נמצאה בכונן";
-        public static final String REMOVE = "הסרת התיקייה המתעדכנת מהרשימה";
-        public static final String NO_SETTINGS = "לתיקייה מתעדכנת אין הגדרות — היא התיקייה עצמה";   // 1.17.1
     }
 
     /** 1.9.0: מנהל קבצים בקריאה ישירה מהכונן */
@@ -1780,7 +1532,6 @@ public final class Words {
         public static final String ZIP_CREATES = "נוצר קובץ ZIP חדש ליד התיקייה; התיקייה עצמה נשארת";
         public static final String ZIPPING = "דוחס…";
         public static final String ZIPPED = "נוצר: ";
-        public static final String DRIVE_ROOT = "זה שורש הכונן — אין תיקייה מעל";
     }
 
     /** 1.9.0: שורת הכפתורים העליונה */
@@ -1789,40 +1540,20 @@ public final class Words {
 
         public static final String HOME = "בית", BACK = "חזרה", SEARCH = "חיפוש", COMMANDS = "פקודות",
                 FILES = "קבצים פיזיים", SETTINGS = "הגדרות", ADD = "כפתור";
-        public static final String EDIT = "✏ עריכה", RIGHT = "→ הזזה ימינה", LEFT = "← הזזה שמאלה",
-                DELETE = "הסרת הכפתור", RESET = "↺ חזרה לברירת מחדל";
-        public static final String RESET_ASK = "חזרה לברירת מחדל";
-        public static final String RESET_WHAT = "רק הכפתורים — לא רשימות ולא קבצים · רק באופן העבודה הזה";
         public static final String WHAT = "מה הכפתור יעשה?";
         public static final String T_LINE = "⌨ שורת פקודה בכתב", T_MENU = "☰ תפריט — רשימה מ\"שמור לתוכנה\"";
-        public static final String NAME = "שם", ICON = "סמל (אות או סימן אחד)", ACTION = "מה הכפתור עושה: ",
-                CHANGE = "שינוי…", FIXED = " (קבוע — זה כפתור עוגן)";
         public static final String NO_SMART = "אין רשימות חכמות שמורות";
         public static final String NO_BATCH = "אין קובצי פקודות";
         public static final String LINE_HINT = "למשל: פתח רשימה חכמה אחרונים · מצא סוג:ספרים תאריך:שבוע · MOVE …";
-        public static final String GONE = "היעד של הכפתור לא נמצא: ";
-        public static final String ANCHOR = "כפתור עוגן — אפשר לשנות שם, סמל ומקום, אבל לא להסיר";
-        public static final String UNKNOWN = "פעולה לא מוכרת בכפתור: ";
         /** 1.13.0 */
         public static final String VIRTUAL = "קבצים וירטואליים", TRASH = "סל המחזור", EDITOR = "עורך הפקודות";
-        public static final String STALE = "השורות שונו במסך אחר — רועננו. אפשר לנסות שוב";
-        public static final String SAVED_AS = "נשמר: ";
 
         /** 1.10.0: סוגי המסכים — שמות המקומות של השורות שלהם (גם בקובץ הכפתורים). */
         public static final String S_LIST = "רשימה ידנית", S_HOME = "מסך הבית",
-                S_SEARCH = "חיפוש ורשימה חכמה", S_DISK = "קבצים פיזיים", S_TRASH = "סל המחזור", S_DUP = "כפולים",
-                S_SETTINGS = "הגדרות", S_BATCH = "עורך הפקודות", S_ASIF = "תוצאת הדמיה", S_EDITOR = "עורך ההגדרות";
+                S_SEARCH = "חיפוש ורשימה חכמה", S_DISK = "קבצים פיזיים", S_TRASH = "סל המחזור",
+                S_SETTINGS = "הגדרות", S_BATCH = "עורך הפקודות";
         /** 1.10.0: מה שהיה כפתורים קבועים בתחתית. */
         public static final String NEW_LIST = "רשימה", FROM_DRIVE = "מהכונן", FROM_SEARCH = "מחיפוש";
-        public static final String MOVE_ROW = "↕ העברה לשורה אחרת", NEW_BUTTON = "➕ כפתור חדש", NEW_ROW = "➕ שורה חדשה",
-                DELETE_ROW = "הסרת השורה";
-        public static final String P_TOP = "למעלה · בכל המסכים", P_BOTTOM = "למטה · בכל המסכים",
-                P_TOP_HERE = "למעלה · רק ב", P_BOTTOM_HERE = "למטה · רק ב";
-        public static final String WHERE_ROW = "איפה השורה החדשה?", MAX_ROWS = "יש כבר 5 שורות במקום הזה",
-                ROW_ADDED = "נוספה שורה — ➕ שבסופה מוסיף כפתורים", ROW = "שורה ",
-                NO_OTHER_ROW = "אין שורה אחרת במסך הזה — אפשר להוסיף שורה (נגיעה ארוכה על ➕)";
-        public static final String RESET_PLACE = "רק ", RESET_ALL = "כל הכפתורים בכל המסכים";
-        public static final String T_OWN = "🧩 פעולה של ";
 
         public static String notHere(String name) {
             return "\"" + name + "\" — פעולה של מסך אחר, לא של המסך הזה";
@@ -1905,9 +1636,6 @@ public final class Words {
         public static final String RESET_DONE = "העיצוב חזר למקור. הצלמיות והצבעים של הרשימות נשארו";
         public static final String NOT_BUILT_IN = "חזרה לברירת מחדל — רק לעיצוב מובנה";
         public static final String FROM_MODE = "  · מתוך ";
-        public static final String COLOR = "צבע (בעיצוב הנוכחי)";
-        public static final String COLOR_HINT = "ירוק, סגול, כתום, אפור, כחול, אדום, או #0F6E56";
-        public static final String ICON_IN = "צלמית (בעיצוב הנוכחי)";
         public static final String CHOSEN = "העיצוב: ";
         public static final String COPY_FAILED = "העתקת העיצוב נכשלה";
     }
@@ -2017,8 +1745,7 @@ public final class Words {
                 NEED_COMPARE = "⚠ %רק-במקור% / %רק-ביעד% צריכים שורת COMP לפניהם",
                 NOT_UNDERSTOOD = "שורה שהממשק לא מכיר — נשמרת כמו שהיא. אפשר לערוך אותה בקובץ הפתוח",
                 ONE_OPEN = "⚠ רק פקודת פתיחה אחת נפתחת בסוף — האחרונה", NO_STEP = "השורה לא מבוצעת (הערה או כותרת)",
-                TAG_HEADER = "כותרת", TAG_UNKNOWN = "?", NONE = "—", ON = "פעיל", PICK = "בחירה…", FILL = "השלמת התבנית",
-                VARS = "משתנים", EMPTY_FILE = "הקובץ ריק — בחר פקודה מהרשימה, והיא תיכנס לכאן",
+                TAG_HEADER = "כותרת", TAG_UNKNOWN = "?", NONE = "—", ON = "פעיל", PICK = "בחירה…", FILL = "השלמת התבנית", EMPTY_FILE = "הקובץ ריק — בחר פקודה מהרשימה, והיא תיכנס לכאן",
                 ALREADY_AS_IF = "יש כבר הדמיה בראש הקובץ", ALREADY_MEASURE = "השורה הזו כבר בראש הקובץ",
                 NO_SMART = "אין רשימות חכמות", WHOLE_HOME = "★ כל מה שבבית",
                 DRAFT = "פקודה חדשה (עוד לא נשמרה)", DRAFT_NAME = "שם לקובץ הפקודות (נשמר ב\"שלי\")",
@@ -2067,19 +1794,11 @@ public final class Words {
         private WhyW() { }
 
         public static final String PREFIX = "💡 למה: ";
-        public static final String KEY_LIST = "רשימה:", KEY_TOOL = "כלי:", KEY_SCREEN = "מסך:";
+        public static final String KEY_SCREEN = "מסך:";
         public static final String FIELD = "למה (לא חובה)";
         public static final String HINT = "מה המטרה — כדי לזכור גם בעוד חודש";
         public static final String VIRTUAL_FILES = "מהאינדקס — מהיר, עם חיפוש וסינון. פעולה על קובץ (העברה, מחיקה) נעשית גם בכונן, עם אזהרה";
         public static final String DISK_FILES = "ישר מהכונן, כמו כל מנהל קבצים. כל פעולה נעשית בכונן, ואחר כך נשמרת באינדקס";
-    }
-
-    /** 1.15.0: הסבת הסביבות (Envs) */
-    public static final class EnvsW {
-        private EnvsW() { }
-
-        public static final String BACKUP = "לפני הסבת הסביבות לרשימות — ",
-                UNIFY = "לפני האיחוד (תיקיות מתעדכנות, הגדרות נפוצות) — ";   // 1.17.3
     }
 
     /** 1.26.0: מסך ההרצה (claude/hartzat-pkudot.md). */
@@ -2186,8 +1905,6 @@ public final class Words {
                 INTO_SMART = "אי אפשר להכניס לתוך רשימה חכמה — היא מוצאת את הקבצים לבד, לפי התנאים שלה",
                 INTO_ITSELF = "אי אפשר להכניס רשימה לתוך עצמה (או לתוך רשימה שבתוכה)",
                 MOVE_TO_LIST = "העברה לרשימה — אין לה מובן: לרשימה נכנסים רק המסלולים, והקבצים נשארים במקומם. להוספה — COPY",
-                MOVE_LATER = "העברה של רשימות — עדיין לא בפקודות; בינתיים — העתקה ואחריה מחיקה",
-                HOME_ONLY_CONTENT = "\"*\" הוא הבית — כמקור רק עם \"תוכן\": תוכן ידנית \"*\"",
                 HOME_FILES = "לבית אין קבצים משלו — אפשר לבחור רשימה",
                 HOME_NO_REMOVE = "את הבית אי אפשר למחוק בפקודה",
                 MD_SMART = "רשימה חכמה — יוצרים בטופס שלה; בפקודה — העתקה של חכמה קיימת",
@@ -2225,10 +1942,6 @@ public final class Words {
             return "התוכן של " + label + " (" + n + ")";
         }
 
-        public static String homeContent(int n) {
-            return "כל מה שבבית (" + n + " כלים)";
-        }
-
         public static String filesOf(String files, String label) {
             return files + " מתוך " + label;
         }
@@ -2239,14 +1952,6 @@ public final class Words {
 
         public static String exists(String label) {
             return "הרשימה " + label + " כבר קיימת — בלי שינוי";
-        }
-
-        public static String removes(String what) {
-            return what + " — יוצא מהרשימות (לסל); הקבצים לא נוגעים";
-        }
-
-        public static String removed(String what) {
-            return what + " — יצא (לסל)";
         }
 
         public static String copy(String what, String to) {
@@ -2265,10 +1970,6 @@ public final class Words {
             StringBuilder sb = new StringBuilder();
             for (String p : paths) sb.append(sb.length() > 0 ? ", " : "").append('"').append(p).append('"');
             return " · בלי " + sb + " (היעד עצמו — לא לתוך עצמו)";
-        }
-
-        public static String dupSkipped(int n) {
-            return " (רשימות כפולים לא נספרו: " + n + ")";
         }
 
         public static String nowIn(long lists, long items) {
@@ -2313,7 +2014,6 @@ public final class Words {
                 TEST_SYSTEM_FILE = "בדיקת מערכת",  // בכונן — מ0.40: כל הבדיקות בקובץ אחד
                 TEST_V23_FILE = "בדיקת מ0.23",  // בכונן
                 TEST_V24_FILE = "בדיקת מ0.24",  // בכונן
-                TOOLS_DIR = "כלים",  // בכונן
                 TEST_READY = "אופן \"בדיקות מערכת\" — נגיעה ב\"בדיקת פקודות\" מריצה את הבדיקה";
 
         public static String removed(String what) {
@@ -2325,7 +2025,8 @@ public final class Words {
                 LOOSE_USAGE = "\"לא-משויכים\" — רק כך: בטל לא-משויכים · ודא לא-משויכים /פריטים:N";
 
         public static String looseRemoved(int n) {
-            return Words.files(n) + " שאינם באף רשימה — הרישום שלהם נמחק מהמסד (לפני הביצוע — גיבוי של המסד); הקבצים בכונן לא נוגעים";
+            return (n == 1 ? "קובץ אחד שאינו באף רשימה — הרישום שלו נמחק" : n + " קבצים שאינם באף רשימה — הרישום שלהם נמחק")
+                    + " מהמסד (לפני הביצוע — גיבוי של המסד); הקבצים בכונן לא נוגעים";
         }
 
         public static final String N_VERIFY = "ודא",  // תחביר
@@ -2499,8 +2200,7 @@ public final class Words {
             return "נשמר: \"" + name + "\"";
         }
 
-        public static final String COPY_TO = "📋 העתקה לרשימה…", COPY_TO_TITLE = "העתקה לתוך:",
-                REMOVE_HERE = "🗑 הסרה מכאן", REMOVE_YES = "להסיר", ALL_ACTIONS = "⚙ כל הפעולות (מסך המסד)";
+        public static final String REMOVE_HERE = "🗑 הסרה מכאן", REMOVE_YES = "להסיר";
 
         public static String removeQuestionN(int n) {
             return n + " פריטים — יוצאים מהרשימה הזו. רשימה שלא נשארת באף מקום — נמחקת עם מה שרק שלה; "
@@ -2509,11 +2209,6 @@ public final class Words {
 
         public static String items(int n) {
             return n + " פריטים";
-        }
-
-        public static String removeQuestion(String name) {
-            return "\"" + name + "\" — יוצא מהרשימה הזו. רשימה שלא נשארת באף מקום — נמחקת עם מה שרק שלה; "
-                    + "לפני כן — גיבוי של המסד. הקבצים בכונן לא נוגעים.";
         }
 
         public static String homeContent(int n) {
@@ -2533,17 +2228,13 @@ public final class Words {
         }
     }
 
-    /** 1.14.0: הלוח הווירטואלי (VClip) */
+    /** 1.14.0: הלוח הווירטואלי — היום DbClip (עד מ0.29 — VClip) */
     public static final class VClipW {
         private VClipW() { }
 
-        public static final String TO_COPY = " — לקישור", TO_MOVE = " — להעברה", TO_DUPLICATE = " — להעתקה",
-                FROM_MODE = " · מהאופן ", NOT_HERE = "אי אפשר להדביק את זה כאן",
-                TOOL_NOT_IN_LIST = "את הכלי הזה אי אפשר להכניס לרשימה",
-                COPY = "🔗 קישור", MOVE = "✂ העברה", DUPLICATE = "📋 העתקה", DUPLICATE_SHORT = "העתקה", COPY_SHORT = "קישור",
-                SETTINGS = "⚙ הגדרות", ORIGINAL = "⚙ עריכת הרשימה המקורית", REMOVE = "הסרה",
-                HINT = " · נווט והדבק",
-                PASTED = "הודבקו: ", SKIPPED = " · לא הודבקו: ", FAILED = "ההעתקה לא הצליחה";
+        public static final String COPY = "🔗 קישור", MOVE = "✂ העברה", DUPLICATE = "📋 העתקה", DUPLICATE_SHORT = "העתקה", COPY_SHORT = "קישור",
+                SETTINGS = "⚙ הגדרות",
+                PASTED = "הודבקו: ", SKIPPED = " · לא הודבקו: ";
     }
 
     /** מ0.24: הלוח של המסד (DbClip, DbListScreen) */
@@ -2577,8 +2268,7 @@ public final class Words {
         public static final String TITLE = "⭐ פקודות · נגיעה — הרצה · ארוכה — עריכה",
                 FOLDER = "📂 פתיחת תיקייה במנהל הקבצים…", NEW = "➕ פקודה חדשה…",
                 ARRANGE = "✎ סידור התפריט (הרשימה)…", SAVE_AS = "שמירה בשם — פקודות המערכת לא משתנות",
-                MINE_SUFFIX = " — שלי",
-                FROM_EXAMPLES = "התפריט בא מ\"שמור לתוכנה\" שבאופן \"דוגמאות\" — לסדר אותו שם, או להעתיק את \"שמור לתוכנה\" לאופן הזה";
+                MINE_SUFFIX = " — שלי";
     }
 
     /** 1.13.1: "פקודה / קיצור דרך" (Shortcuts) */
@@ -2594,21 +2284,15 @@ public final class Words {
 
         public static final String TITLE = "פקודה";
         public static final String WHICH = "איזה קובץ פקודות?";
-        public static final String MISSING = "הקובץ לא נמצא";
-
-        public static String added(String name) {
-            return "נוסף לבית: " + name;
-        }
     }
 
-    /** מ0.1: מנוע המסד — המסך (DbScreen) והבנייה השנייה (Flavor). */
+    /** מ0.1: מנוע המסד — מסך המסד (DbScreen), הגיבויים, הייבוא, האבחון. (הבנייה השנייה — Flavor — יצאה במ0.29: יש בנייה אחת.) */
     public static final class Db {
         public static final String MODE_NEW = "➕ אופן חדש…", MODE_NAME = "שם האופן",
                 EXAMPLES_RESTORE = "↺ שחזור הדוגמאות", EXAMPLES_RESTORE_GO = "שחזור",
                 EXAMPLES_RESTORE_WHAT = "רשימות הדוגמאות באופן \"דוגמאות\" חוזרות למצב ההתחלתי. מה שהוספת להן — יוצא מהן. \"הדוגמאות שלי\", \"שמור לתוכנה\" ורשימות אחרות שהוספת לאופן — נשארות.",
                 EXAMPLES_RESTORE_BACK = "לפני השחזור נשמר גיבוי של המסד (הגדרות ← גיבויים)";
         public static String examplesRestored(int n) { return "הדוגמאות שוחזרו · הוחלפו " + n + " רשימות"; }
-        public static final String ADD_DUPS = "⧉  כפולים";
         public static final String HOME_UNSAVED = "יש קובץ פקודות פתוח עם שינויים שלא נשמרו — לשמור או לסגור אותו, ואז בית";
         private Db() { }
 
@@ -2621,16 +2305,11 @@ public final class Words {
         }
 
         public static final String APP_NAME_M = "מנהל קבצים וירטואלי · מ";
-        public static final String MENU = "מסד נתונים (מ)";
         public static final String TITLE = "מסד נתונים";
         /** מ0.9: המראה המוכר. */
-        public static final String LIST_GONE = "הרשימה הזו כבר לא קיימת במסד", MENU_ACTIONS = "⚙ מסד: גיבוי, העתקה, בדיקה ופעולות",
-                MENU_OLD = "↩ הצד הישן (לפני המסד)",
+        public static final String LIST_GONE = "הרשימה הזו כבר לא קיימת במסד",
                 FAMILIAR = "🏠 בית", ADD_IN_LIST = "הוספת קבצים — מתוך רשימה", NO_HOME = "אין בית במסד הזה";
 
-        public static String homeInfo(String mode, int n) {
-            return "אופן עבודה: " + mode + " · " + Words.items(n);
-        }
         /** מ0.8: קבצים מהכונן לרשימה. */
         public static final String ADD_FROM_FOLDER = "📂 קבצים מתיקייה…", ADD_FROM_SEARCH = "🔍 קבצים מחיפוש…",
                 FOLDER_NO_FILES = "אין קבצים בתיקייה הזו (תתי־תיקיות ונסתרים לא מוצגים)",
@@ -2651,103 +2330,25 @@ public final class Words {
         public static final String NEED_ACCESS = "כדי לשמור את מונה המזהים בתיקיית הנתונים, התוכנה צריכה הרשאת גישה לכל הקבצים.";
         public static final String ALL_LISTS = "כל הרשימות";
         public static final String CRUMB_SEP = " › ";
-        public static final String NEW_LIST = "➕ רשימה חדשה";
-        public static final String NEW_SUBLIST = "➕ רשימה בתוך הרשימה";
-        public static final String NEW_NOTE = "➕ רעיון";
-        public static final String EMPTY = "אין עדיין רשימות";
-        public static final String EMPTY_LIST = "הרשימה ריקה";
         public static final String HINT = "נגיעה: פתיחה · נגיעה ארוכה: עוד פעולות";
         public static final String LIST_NAME = "שם הרשימה";
         public static final String NOTE_TEXT = "הרעיון";
         public static final String NEW_LIST_TITLE = "רשימה חדשה";
-        public static final String NEW_NOTE_TITLE = "רעיון חדש";
-        public static final String RENAME = "שינוי שם";
-        public static final String MOVE_UP = "הזזה למעלה";
-        public static final String MOVE_DOWN = "הזזה למטה";
-        public static final String REMOVE = "הסרה מהרשימה";
-        public static final String DELETE_LIST = "מחיקת הרשימה";
-        public static final String DELETE_YES = "מחיקה";
-        public static final String DELETE_DETAIL = "הפריטים שבתוכה נשארים, בלי רשימה. מספר הזיהוי לא יחזור.";
-        public static final String KIND_LIST = "רשימה";
         public static final String KIND_NOTE = "רעיון";
-        public static final String KIND_FILE = "קובץ";
-        public static final String KIND_SMART = "רשימה חכמה";
-        public static final String KIND_TITLE = "כותרת";
-        public static final String ADD_MENU = "➕ הוספה…";
         public static final String KIND_GROUP = "חבורה";
-        public static final String KIND_REF = "רשימה (גם במקום אחר)";
-        public static final String NEW_REF = "↪ הפניה לרשימה";
-        public static final String NEW_TITLE = "➕ כותרת";
-        public static final String NEW_GROUP = "◆ חבורה";
-        public static final String NEW_TITLE_TITLE = "כותרת חדשה";
-        public static final String TITLE_TEXT = "הכותרת";
-        public static final String GROUP_NAME = "חבורה";
-        public static final String REF_PICK = "איזו רשימה להכניס לכאן? (אותה רשימה — תופיע בשני המקומות)";
-        public static final String TO_GROUP = "הפיכה לחבורה";
-        public static final String TO_LIST = "הפיכה לרשימה רגילה";
         public static final String GROUP_EMPTY = "חבורה ריקה";
         public static final String TRASH = "🗑 סל המחזור";
-        public static final String TRASH_SUB = "רעיונות וכותרות שנמחקו · שחזור או מחיקה לצמיתות";
-        public static final String TRASH_EMPTY = "הסל ריק.";
-        public static final String TRASH_HINT = "נגיעה ארוכה על פריט: שחזור או מחיקה לצמיתות.";
-        public static final String TO_TRASH = "מחיקה (לסל המחזור)";
-        public static final String RESTORE = "שחזור";
-        public static final String PURGE = "מחיקה לצמיתות";
-        public static final String PURGE_DETAIL = "הפריט יימחק לגמרי, ואי אפשר יהיה לשחזר אותו. מספר הזיהוי לא יחזור.";
-        public static final String LAST_LIST_KEEP = "להשאיר בלי שיוך";
-        public static final String LAST_LIST_TRASH = "לסל המחזור";
-        public static final String RESTORED = "שוחזר";
-
-        public static String lastListQuestion(String name) {
-            return "\"" + name + "\" לא נמצא באף רשימה אחרת. מה לעשות איתו?";
-        }
-
-        public static String cycleBlocked(String item, String list) {
-            return "לא נוסף: \"" + item + "\" כבר מכילה את \"" + list + "\" — זה היה יוצר מעגל.";
-        }
-
-        public static String sameName(String name) {
-            return "יש כבר רשימה בשם \"" + name + "\". זו רשימה נוספת עם מספר זיהוי משלה; כדי שתהיה אותה רשימה בשני מקומות — \"הפניה לרשימה\".";
-        }
 
         public static String groupLabel(String head, int count) {
             return "◆ " + head + " (" + count + ")";
         }
-        public static final String NEW_SMART = "⚡ חכמה חדשה";
         public static final String UNASSIGNED = "📥 לא משויכים";
-        public static final String UNASSIGNED_SUB = "קבצים ורעיונות שאינם באף רשימה · מתעדכנת לבד";
-        public static final String UNASSIGNED_EMPTY = "אין פריטים בלי רשימה.";
-        public static final String UNASSIGNED_HINT = "נגיעה ארוכה על פריט: הוספה לרשימה.";
-        public static final String ADD_TO_LIST = "הוספה לרשימה…";
-        public static final String ADD_TO_LIST_TITLE = "הוספה לרשימה";
-        public static final String NO_LISTS = "אין עדיין רשימות — צרו רשימה קודם.";
-        public static final String SMART_NAME = "שם הרשימה החכמה";
-        public static final String SMART_COND = "התנאי (כמו בחיפוש, למשל: סוג:תמונות תאריך:שבוע)";
-        public static final String NEW_SMART_TITLE = "רשימה חכמה חדשה";
-        public static final String EDIT_COND = "עריכת התנאי";
-        public static final String EDIT_COND_TITLE = "התנאי של הרשימה החכמה";
         public static final String SMART_NO_COND = "אין תנאי — הרשימה לא מוצאת כלום. אפשר להגדיר אותו בעריכת התנאי.";
         public static final String INDEX_NOT_READY = "האינדקס עוד נבנה — התוצאות יופיעו כשיסתיים. אפשר לחזור בעוד רגע.";
-        public static final String SMART_EMPTY = "הרשימה לא מצאה כלום.";
-        public static final String SMART_READONLY = "קריאה בלבד — הרשימה החכמה מוצאת לבד לפי התנאי.";
-        public static final String DELETE_SMART_DETAIL = "התנאי נמחק, והיא יוצאת מכל הרשימות שהיא בהן. הקבצים עצמם לא נפגעים. מספר הזיהוי לא יחזור.";
-
-        public static String smartLine(long id, String cond) {
-            return KIND_SMART + " · מספר " + id + (cond.isEmpty() ? " · בלי תנאי" : " · " + cond);
-        }
-
-        public static String smartInfo(String cond, int count, long size) {
-            return "תנאי: " + (cond.isEmpty() ? "—" : cond) + " · " + Words.items(count) + (size > 0 ? " · " + Files.size(size) : "");
-        }
 
         public static String smartNote(String note) {
             return "⚠ " + note;
         }
-
-        public static String smartMore(int shown, int total) {
-            return "מוצגים " + shown + " הראשונים מתוך " + total + ". " + SMART_READONLY;
-        }
-        public static final String ALREADY_THERE = "הפריט כבר ברשימה";
 
         public static final String MODE_PICK = "אופן עבודה (לכל אופן מסד משלו)";
 
@@ -2755,74 +2356,13 @@ public final class Words {
             return "אופן עבודה: " + mode + " ▾";
         }
 
-        public static final String IMPORT = "📥 העתקה מהישן";
-        public static final String IMPORT_TITLE = "העתקה מהמנוע הישן";
-        public static final String IMPORT_NO_OLD = "לא נמצאו רשימות של המנוע הישן בתיקיית \"מנהל קבצים וירטואלי\" (אופני עבודה ← מבנה.txt). ההעתקה קוראת משם בלבד.";
-        public static final String IMPORT_PICK = "האופן הפתוח אינו קיים במנוע הישן. איזה אופן להעתיק (למסד של אותו אופן)?";
-        public static final String IMPORT_READING = "קורא את המנוע הישן ובודק מה יועתק…";
-        public static final String IMPORT_COPYING = "מעתיק…";
-        public static final String IMPORT_YES = "העתקה";
-        public static final String IMPORT_NOTHING = "אין מה להעתיק — כל מה שבמקור כבר במסד, באותו מצב.";
-        public static final String IMPORT_DONE_TITLE = "ההעתקה הסתיימה";
-        public static final String IMPORT_PREVIEW_TITLE = "מה ייעשה (עדיין לא נשמר דבר)";
-
         public static String modeLine(String name, boolean active) {
             String n = name.equals(Reserved.ROOT) || name.equals(DbCmd.TEST_MODE) ? "⚙ " + name + " · של התוכנה" : name;   // מ0.41
             return active ? n + " (הפעיל)" : n;
         }
 
-        public static String importFailed(String why) {
-            return "ההעתקה נכשלה, ולא השתנה דבר במסד: " + why;
-        }
-
-        /** הדוח. בתצוגה מקדימה — "ייווספו"; אחרי ההעתקה — "נוספו". */
-        public static String importReport(boolean done, String mode, int listsNew, int listsKnown, int smartNew, int smartKnown,
-                                          int filesNew, int filesKnown,
-                                          int filesUpdated, int linksAdded, int refsAdded, int propsSet, int rootFiles,
-                                          int bad, int refCycles, int refMissing, int smart, int nested, int live) {
-            StringBuilder sb = new StringBuilder("מקור: " + mode + "\n");
-            sb.append("רשימות: ").append(listsNew).append(done ? " נוספו" : " ייווספו").append(" · ").append(listsKnown).append(" כבר היו\n");
-            sb.append("רשימות חכמות: ").append(smartNew).append(done ? " נוספו" : " ייווספו").append(" · ").append(smartKnown).append(" כבר היו\n");
-            sb.append("קבצים: ").append(filesNew).append(done ? " נוספו" : " ייווספו").append(" · ").append(filesKnown + filesUpdated).append(" כבר היו");
-            if (filesUpdated > 0) sb.append(" (").append(filesUpdated).append(done ? " עודכנו" : " יעודכנו").append(" לפי החתימה במקור)");
-            sb.append('\n').append(linksAdded).append(done ? " קישורים נוספו" : " קישורים ייווספו").append(" (קבצים ורשימות חכמות) לרשימות");
-            if (refsAdded > 0) sb.append("\n").append(refsAdded).append(done ? " הפניות בין רשימות נוספו" : " הפניות בין רשימות ייווספו");
-            if (propsSet > 0) sb.append(" · ").append(propsSet).append(done ? " פרטי רשימה הושלמו" : " פרטי רשימה יושלמו");
-            if (rootFiles > 0) sb.append("\n").append(rootFiles).append(" קבצים בלי רשימה (היו בשורש הרשימות)");
-            if (live > 0) sb.append("\n").append(live).append(done ? " תיקיות חיות הועתקו" : " תיקיות חיות יועתקו").append(" כרשימות חכמות של התיקייה");
-            if (bad + refCycles + refMissing + smart + nested > 0) {
-                sb.append("\n\nלא מועתק בגרסה הזו (נשאר במנוע הישן, לא נמחק):");
-                if (refCycles > 0) sb.append("\n").append(refCycles).append(" הפניות שהיו סוגרות מעגל (רשימה שכבר בתוך עצמה) — במסד אין מעגלים");
-                if (refMissing > 0) sb.append("\n").append(refMissing).append(" הפניות לרשימה שאינה קיימת");
-                if (smart > 0) sb.append("\n").append(smart).append(" הפניות לרשימות חכמות שלא נמצאו או שאינן הגדרה (נמחקו, כלי, כפולים)");
-                if (nested > 0) sb.append("\n").append(nested).append(" \"רשימות בתוך\" שבתוך רשימות חכמות (מ0.4)");
-                if (bad > 0) sb.append("\n").append(bad).append(" שורות פגומות בקובץ הרשימות");
-            }
-            sb.append("\n\nההגדרות הכלליות והעיצובים נשארים בקובצי טקסט (לא במסד).");
-            return sb.toString();
-        }
-
-        /** מ0.6: שורות מסך הבית בדוח ההעתקה. tools = 0 — אין כלים במקור (אין מה להוסיף). */
-        public static String importHome(boolean done, boolean isNew, int tools, int added, int known, int skipped, int missing) {
-            if (tools == 0) return "";
-            StringBuilder sb = new StringBuilder("\n\nמסך הבית: " + tools + " כלים במקור");
-            if (isNew) sb.append(done ? " · רשימת הבית נוצרה" : " · רשימת הבית תיווצר");
-            sb.append("\n").append(added).append(done ? " נכנסו לבית" : " ייכנסו לבית").append(" · ").append(known).append(" כבר היו בו");
-            if (skipped > 0) sb.append("\n").append(skipped).append(" כלים מסוג שלא מועתק (כפולים, פס, אפליקציה, סל, הגדרות)");
-            if (missing > 0) sb.append("\n").append(missing).append(" כלים שהרשימה או קובץ הפקודות שלהם לא קיימים");
-            return sb.toString();
-        }
-
         public static String status(int lists, long last, String code, String info) {
             return Words.lists(lists) + " · מספר זיהוי אחרון " + last + " · קוד מערכת " + code + "\n" + info;
-        }
-
-        public static String kindLine(String kind, long id, String more) {
-            return kind + " · מספר " + id + (more.isEmpty() ? "" : " · " + more);
-        }
-
-        public static String deleteQuestion(String name, long id) {
-            return "למחוק את הרשימה \"" + name + "\" (מספר זיהוי " + id + ")?";
         }
 
         public static String openFailed(String why) {
@@ -2833,203 +2373,15 @@ public final class Words {
             return "הפעולה נכשלה: " + why;
         }
 
-        public static final String FULL_CHECK = "🧪 בדיקה מלאה";
         public static final String EMPTY_TITLE = "המסד ריק", EMPTY_RESTORE = "לשחזר", EMPTY_NOT_NOW = "לא עכשיו";
 
         public static String emptyRestore(String mode, String when) {
             return "המסד של האופן \"" + mode + "\" ריק (אולי אחרי התקנה מחדש), ונמצא גיבוי תקין מ־" + when
                     + ". לשחזר ממנו? לפני ההחלפה יוצג מה יש בו.";
         }
-        public static final String FULL_CHECK_TITLE = "בדיקה מלאה";
         public static final String BACK_TO_LIST = "↩ חזרה לרשימה", ADDING_FILES = "הוספת קבצים לרשימה. אחרי הבחירה — חוזרים אליה.";
-        public static final String FULL_CHECK_RUNNING = "מריץ בדיקה מלאה — בודק את המסד, ומעתיק כל אופן למסד זמני ומשווה למקור. כמה שניות…";
         public static final String COPY_REPORT = "📋 העתקה";
         public static final String REPORT_COPIED = "הדוח הועתק. הדביקו אותו לי בשיחה.";
-        public static final String VERDICT_OK = "✅ הכול תקין";
-        public static final String REAL_NONE = "המסד האמיתי של האופן: עוד לא נוצר (לא הועתק)";
-
-        public static String verdictBad(int n) {
-            return "❌ נמצאו " + n + " בעיות:";
-        }
-
-        public static String checkTotal(long ms) {
-            return "זמן הבדיקה: " + ms + " מ״ש";
-        }
-
-        public static String headerLine(String app, String android, String model, int sdk) {
-            return "דוח בדיקה מלאה · " + app + " · אנדרואיד " + android + " (API " + sdk + ") · " + model;
-        }
-
-        public static String selfTestLine(boolean ok, String text) {
-            return (ok ? "✅ " : "❌ ") + "בדיקה עצמית של שכבת האחסון: " + text;
-        }
-
-        public static String modeHead(String mode) {
-            return "━━ אופן: " + mode + " ━━";
-        }
-
-        public static String modeSource(int lists, int files, int defs, int refs, int smart, int nested, int live, int bad) {
-            return "במקור: " + lists + " רשימות · " + files + " קבצים · " + defs + " רשימות חכמות · " + refs + " הפניות · " + live
-                    + " תיקיות חיות (מועתקות כרשימות חכמות) · לא מועתק בגרסה הזו: "
-                    + smart + " הפניות חכמות שלא נמצאו, " + nested + " רשימות בתוך חכמות, " + bad + " שורות פגומות";
-        }
-
-        public static String modeRefs(int total, int copied, int cycles, int missing, int wrong, int dbCycles) {
-            return "   הפניות: במקור " + total + " · הועתקו " + copied + " · נחסמו כמעגל " + cycles + " · לרשימה שלא קיימת " + missing
-                    + " · שגויות " + wrong + " · מעגלים במסד: " + dbCycles;
-        }
-
-        public static String modeRealRefs(int copied, int dbCycles) {
-            return "   הפניות במסד האמיתי: " + copied + " · מעגלים: " + dbCycles;
-        }
-
-        public static String pRefs(String mode, int n) {
-            return "אופן " + mode + ": " + n + " הפניות לא הועתקו נכון";
-        }
-
-        public static String pCycles(String mode, int n) {
-            return "אופן " + mode + ": במסד " + n + " רשימות שנמצאות בתוך עצמן (מעגל)";
-        }
-
-        public static String exCycle(String list, String target) {
-            return "נחסם כמעגל: \"" + list + "\" ← \"" + target + "\"";
-        }
-
-        public static String modeTempSmart(int defs, int found, int wrong, int unExpected, int unGot) {
-            return "   רשימות חכמות: במקור " + defs + " · נמצאו " + found + " · תנאי או מיון שונה: " + wrong
-                    + " · לא משויכים: צפוי " + unExpected + ", במסד " + unGot;
-        }
-
-        public static String modeRealUnassigned(int n) {
-            return "   לא משויכים במסד האמיתי: " + n;
-        }
-
-        public static String evalNone() {
-            return "הערכת רשימות חכמות: האינדקס עוד לא מוכן — ההערכה דולגה (נסו שוב בעוד רגע)";
-        }
-
-        public static String evalLine(int checked, int withHits, int noHits, int notUnderstood, int noCond, long files, long ms) {
-            return "הערכת רשימות חכמות מול האינדקס: נבדקו " + checked + " תנאים · עם תוצאות: " + withHits + " · בלי תוצאות: " + noHits
-                    + " · לא הובנו: " + notUnderstood + " · בלי תנאי: " + noCond + " · סה״כ " + files + " קבצים · " + ms + " מ״ש";
-        }
-
-        public static String evalNoHits(String names) {
-            return "   בלי תוצאות: " + names;
-        }
-
-        public static String evalBad(String name, String note) {
-            return "   לא הובן: " + name + " — " + note;
-        }
-
-        private static String yn(boolean b) {
-            return b ? "כן" : "לא";
-        }
-
-        public static String modeTemp(int lists, int files, int found, int membersWrong, int filesMissing, int sigWrong,
-                                      boolean againOk, boolean checkOk, long ms) {
-            return "העתקה לבדיקה (מסד זמני): " + lists + " רשימות, " + files + " קבצים · רשימות שנמצאו: " + found
-                    + " · חברות שגויה: " + membersWrong + " · קבצים חסרים: " + filesMissing + " · חתימות שגויות: " + sigWrong
-                    + " · העתקה חוזרת בלי שינוי: " + yn(againOk) + " · המסד תקין: " + yn(checkOk) + " · " + ms + " מ״ש";
-        }
-
-        public static String modeReal(int dbLists, int srcLists, int found, int membersWrong, int filesMissing, int newLists,
-                                      int newFiles, int updated, int links, int smartMissing, boolean checkOk) {
-            return "המסד האמיתי: " + dbLists + " רשימות (במקור " + srcLists + ") · נמצאו " + found + " מהרשימות של המקור · חברות שגויה: "
-                    + membersWrong + " · קבצים חסרים: " + filesMissing + " · מה שעוד יתווסף אם נעתיק שוב: " + newLists + " רשימות, "
-                    + newFiles + " קבצים, " + updated + " עדכוני חתימה, " + links + " קישורים, " + smartMissing
-                    + " רשימות חכמות · המסד תקין: " + yn(checkOk);
-        }
-
-        public static String modeEmpty(int total, int truly, int pending) {
-            return "רשימות ריקות במסד: " + total + " · ריקות גם במקור: " + truly + " · יש בהן משהו שעוד לא מועתק: " + pending;
-        }
-
-        public static String pSelfTest() {
-            return "הבדיקה העצמית של שכבת האחסון נכשלה";
-        }
-
-        public static String pCrash(String mode, String why) {
-            return "אופן " + mode + ": הבדיקה עצמה נכשלה — " + why;
-        }
-
-        public static String pListCount(String mode, int expected, int got) {
-            return "אופן " + mode + ": במקור " + expected + " רשימות ובהעתקה " + got;
-        }
-
-        public static String pMembers(String mode, int n) {
-            return "אופן " + mode + ": ב־" + n + " רשימות החברים שונים ממה שבמקור";
-        }
-
-        public static String pFiles(String mode, int n) {
-            return "אופן " + mode + ": " + n + " קבצים מהמקור לא הועתקו";
-        }
-
-        public static String pSig(String mode, int n) {
-            return "אופן " + mode + ": " + n + " חתימות לא הועתקו נכון";
-        }
-
-        public static String pAgain(String mode) {
-            return "אופן " + mode + ": העתקה חוזרת עדיין שינתה משהו";
-        }
-
-        public static String pCheck(String mode, String why) {
-            return "אופן " + mode + ": בדיקת התקינות של המסד נכשלה — " + why;
-        }
-
-        public static String pRealBehind(String mode, int lists, int files, int updated, int links, int smart, int refs) {
-            return "אופן " + mode + ": המסד האמיתי לא תואם למקור — חסרים " + lists + " רשימות, " + files + " קבצים, "
-                    + updated + " עדכוני חתימה, " + links + " קישורים, " + smart + " רשימות חכמות, " + refs + " הפניות (העתקה חוזרת תשלים)";
-        }
-
-        /** מ0.6: הבית בבדיקה המלאה. */
-        public static String modeHome(int tools, int expected, int got, int skipped, int missing, boolean orderOk) {
-            return "   מסך הבית: כלים במקור " + tools + " · צפויים בבית " + expected + " · נמצאו " + got + " · סוג שלא מועתק " + skipped
-                    + " · בלי רשימה או קובץ " + missing + " · הסדר זהה: " + yn(orderOk);
-        }
-
-        public static String modeRealHome(int expected, int got, int behind) {
-            return "   מסך הבית במסד האמיתי: צפויים " + expected + " · נמצאו " + got + " · העתקה חוזרת תוסיף " + behind;
-        }
-
-        public static String pHome(String mode, int expected, int got) {
-            return "אופן " + mode + ": מסך הבית לא הועתק נכון — צפויים " + expected + " כלים, בבית " + got + " (או בסדר אחר)";
-        }
-
-        public static String pHomeBehind(String mode, int n) {
-            return "אופן " + mode + ": במסד האמיתי חסרים " + n + " כלים בבית (העתקה חוזרת תשלים)";
-        }
-
-        public static String pSmartMissing(String mode, int n) {
-            return "אופן " + mode + ": " + n + " רשימות חכמות מהמקור לא הועתקו";
-        }
-
-        public static String pSmartWrong(String mode, int n) {
-            return "אופן " + mode + ": ב־" + n + " רשימות חכמות התנאי או המיון לא הועתקו נכון";
-        }
-
-        public static String pUnassigned(String mode, int expected, int got) {
-            return "אופן " + mode + ": \"לא משויכים\" שונה ממה שצפוי — צפוי " + expected + ", במסד " + got;
-        }
-
-        public static String pSmartCond(String mode, int n) {
-            return "אופן " + mode + ": מנוע החיפוש לא הבין חלק מהתנאים ב־" + n + " רשימות חכמות";
-        }
-
-        public static String exSmartMissing(String name) {
-            return "חסרה רשימה חכמה: " + name;
-        }
-
-        public static String exListMissing(String path) {
-            return "חסרה רשימה: " + path;
-        }
-
-        public static String exMembers(String path, int want, int got) {
-            return "חברים שונים ברשימה \"" + path + "\": במקור " + want + ", במסד " + got;
-        }
-
-        public static String exFileMissing(String path) {
-            return "חסר קובץ: " + path;
-        }
 
         // ---------- מ0.5: גיבוי ----------
 
@@ -3045,9 +2397,7 @@ public final class Words {
         public static final String BACKUP_BAD = "הגיבוי הזה פגום או אינו שלם — אי אפשר לשחזר ממנו.";
         public static final String BACKUP_CHANGED_WARN = "שימו לב: הקובץ הזה שונה מאז שנרשם. התוכנה תבדוק אותו לפני השחזור.";
         public static final String KEPT_DAMAGED_INFO = "זה המסד הפגום, כפי שנשמר לפני שחזור. ממנו לא משחזרים — הוא נשמר רק כדי שלא יאבד דבר.";
-        public static final String GO_ON_WITHOUT_BACKUP = "להמשיך בלי גיבוי";
         public static final String DAMAGED_HINT = "אפשר לשחזר מגיבוי: \"♻️ שחזור מגיבוי\". המסד הפגום יישמר קודם, כמו שהוא, בתיקיית הגיבויים.";
-        public static final String BACKUPS_NONE = "   גיבויים בתיקייה: אין עדיין (הגיבוי היומי נעשה כשפותחים את מסך המסד באופן הזה)";
 
         public static String backupsSub(int n, String newest) {
             return "עותק יומי כשיש שינוי, ולפני פעולות מוחקות · " + n + " קבצים · האחרון " + newest;
@@ -3101,50 +2451,6 @@ public final class Words {
 
         public static String damaged(String mode, String why) {
             return "❌ המסד של האופן \"" + mode + "\" פגום, ולכן לא נפתח ולא נכתב בו דבר.\n(" + why + ")";
-        }
-
-        public static String backupLine(boolean copyOk, long copyBytes, boolean textOk, int records, long textBytes, boolean restoreOk, long ms) {
-            return "גיבוי (על עותק זמני): עותק דרך SQLite — " + (copyOk ? "זהה" : "שונה!") + " (" + kb(copyBytes) + ") · גיבוי טקסט — "
-                    + records + " רשומות, " + kb(textBytes) + (textOk ? ", שוחזר למסד ריק וזהה" : ", השחזור ממנו שונה!")
-                    + " · שחזור מעותק — " + (restoreOk ? "זהה" : "שונה!") + " · " + ms + " מ״ש";
-        }
-
-        public static String backupsLine(int total, int daily, int before, int text, int manual, String newest, int ok, int changed, int bad, int kept) {
-            return "   גיבויים בתיקייה: " + total + " (יומיים " + daily + ", לפני פעולה " + before + ", טקסט " + text + ", ידניים " + manual
-                    + ") · האחרון: " + newest + " · תקינים: " + ok + " · שונו: " + changed + " · פגומים: " + bad
-                    + (kept > 0 ? " · עותקי מסד פגום שנשמרו: " + kept : "");
-        }
-
-        public static String realDamaged(String why) {
-            return "המסד האמיתי של האופן: פגום — לא נפתח ולא נכתב (" + why + ")";
-        }
-
-        public static String pRealDamaged(String mode) {
-            return "אופן " + mode + ": המסד האמיתי פגום — אפשר לשחזר מגיבוי";
-        }
-
-        public static String pBackupCopy(String mode) {
-            return "אופן " + mode + ": העותק של המסד שונה מהמסד";
-        }
-
-        public static String pBackupText(String mode) {
-            return "אופן " + mode + ": גיבוי הטקסט, או השחזור ממנו, שונה מהמסד";
-        }
-
-        public static String pBackupRestore(String mode) {
-            return "אופן " + mode + ": שחזור מעותק נתן מסד שונה";
-        }
-
-        public static String pBackupFailed(String mode, String why) {
-            return "אופן " + mode + ": בדיקת הגיבוי נכשלה — " + why;
-        }
-
-        public static String pBackupsChanged(String mode, int n) {
-            return "אופן " + mode + ": " + n + " גיבויים בתיקייה שונו מאז שנרשמו";
-        }
-
-        public static String pBackupsBad(String mode, int n) {
-            return "אופן " + mode + ": " + n + " גיבויים בתיקייה פגומים";
         }
 
         public static final String DUMP_TITLE = "מנהל קבצים וירטואלי · מ — גיבוי טקסט של מסד. הפורמט מתועד בקוד (DbDump). לא לערוך ביד: שינוי של תו אחד פוסל את הקובץ.";

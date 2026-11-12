@@ -129,10 +129,6 @@ final class DbPicker {
         return c;
     }
 
-    static String keyOf(List<String> p) {
-        return key(p);
-    }
-
     private static String key(List<String> p) {
         StringBuilder sb = new StringBuilder();
         for (String s : p) sb.append(s).append('\u0001');

@@ -212,21 +212,6 @@ public final class Library {
         }).start();
     }
 
-    /**
-     * 163: מעבר לאופן עבודה אחר בלי לסגור את התוכנה — שוכחים את האינדקס של האופן הקודם; ההפעלה הבאה (start)
-     * טוענת את של החדש (ובונה, אם אין לו). רק כשאין בנייה באמצע (busy) — אחרת היא הייתה נשמרת לאופן החדש.
-     */
-    public void forgetMode() {
-        synchronized (startLock) {
-            started = false;
-        }
-        ready = false;
-        status = "";
-        synchronized (swapLock) {
-            publish(new ArrayList<Index>());
-        }
-    }
-
     public synchronized void load() {
         List<Index> list = new ArrayList<Index>();
         for (Vols.Vol v : Vols.list(app)) {
@@ -682,14 +667,6 @@ public final class Library {
         return out;
     }
 
-    public List<Hit> bySize(long size) {
-        List<Hit> out = new ArrayList<Hit>();
-        if (size <= 0) return out;
-        for (Index ix : indexes)
-            for (Index.Rec r : ix.files) if (!r.gone && !ix.trash(r) && !ix.hidden(r) && r.size == size) out.add(hit(ix, r));
-        return out;
-    }
-
     public int totalFiles() {
         int n = 0;
         for (Index ix : indexes) n += ix.fileCount();
@@ -991,7 +968,6 @@ public final class Library {
         }
         for (int i = 0; i < 4; i++) res.hits.addAll(buckets[i]);
         res.hits.addAll(noPrefix);
-        int exact = res.counts[FULL];
 
         if (loose && res.total < 10 && !terms.isEmpty()) addLoose(res, cond, terms, seen, snap);
         if (terms.size() > 1) addPartial(res, cond, terms, seen, snap);
@@ -1111,9 +1087,6 @@ public final class Library {
         return false;
     }
 
-    // ---------- פעולות על קבצים ----------
-
-
     // ---------- עדכון נקודתי: כל פעולה שמשנה קובץ מעדכנת את האינדקס ----------
 
     /**
@@ -1189,18 +1162,6 @@ public final class Library {
                 s[1] += r.size;
             }
         return s;
-    }
-
-    /** 1.23.4: הקבצים שבתיקייה ובכל תתי־התיקיות — מסלול → גודל. */
-    public java.util.Map<String, Long> treeFiles(String dir) {
-        java.util.Map<String, Long> m = new java.util.HashMap<String, Long>();
-        Index ix = owner(dir + "/");
-        if (ix == null) return m;
-        boolean[] in = subtree(ix, ix.dirId(dir));
-        if (in == null) return m;
-        for (Index.Rec r : ix.files)
-            if (!r.gone && r.dir >= 0 && in[r.dir]) m.put(ix.path(r), r.size);
-        return m;
     }
 
     /** התיקיות שבתת־העץ (תיקייה-אם תמיד לפני בתה באינדקס). null אם אינה באינדקס. */

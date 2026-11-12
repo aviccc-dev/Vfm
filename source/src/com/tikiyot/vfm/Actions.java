@@ -141,7 +141,7 @@ public final class Actions {
             false, true, false, false, Tool.LIST);
     public static final Action REMOVE_FROM_LIST = new Action("remove", Words.REMOVE_FROM_LIST, Kind.VIRTUAL,
             false, true, false, false, Tool.LIST);
-    /** 1.16.0: "הגדרות" לרשימה אחת שנבחרה — שם, צלמית, צבע, תיאור, "למה", עיצוב (ListSettings; עד כאן — שלוש פעולות). */
+    /** 1.16.0: "הגדרות" לרשימה אחת שנבחרה — שם, צלמית, צבע, תיאור, "למה", עיצוב (היום — טופס הרשימה של DbListScreen; עד מ0.29 — ListSettings). */
     public static final Action SETTINGS_LIST = new Action("settings", Words.VClipW.SETTINGS, Kind.VIRTUAL,
             true, true, true, false, Tool.LIST);
     /** 1.13.0: הזזה ידנית ברשימה — פריטים ורשימות שנבחרו (למעלה · למטה · לראש · לסוף). */

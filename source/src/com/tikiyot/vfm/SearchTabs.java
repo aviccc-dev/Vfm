@@ -10,8 +10,6 @@ import android.view.View;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 
-import java.util.ArrayList;
-import java.util.List;
 
 final class SearchTabs {
 
@@ -19,11 +17,6 @@ final class SearchTabs {
     static final String[] KINDS = {FnSmart.KIND, FnDup.KIND};
 
     private SearchTabs() { }
-
-    static boolean isSearch(String kind) {
-        for (String k : KINDS) if (k.equals(kind)) return true;
-        return false;
-    }
 
     /** הטופס, בלשונית kind. t — ההגדרות הקיימות; עוברות רק ללשונית מהסוג שלהן. done — עם הסוג שנבחר (target.kind). */
     static void configure(final Activity a, String asked, final String name, final Target t, final Func.Done done) {

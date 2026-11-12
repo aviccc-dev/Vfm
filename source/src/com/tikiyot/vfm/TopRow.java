@@ -26,15 +26,6 @@ import java.util.List;
 
 final class TopRow {
 
-    /** מסך שיש לו פעולות משלו (מה שהיה כפתורים קבועים בתחתית). */
-    interface Host {
-        /** הפעולות של המסך: {פעולה, סמל, שם}. */
-        List<String[]> actions();
-
-        /** ביצוע פעולה של המסך; false — לא שלו. */
-        boolean act(String code);
-    }
-
     static final String BOTTOM_TAG = "rows-bottom";  // תחביר
 
     private final Activity a;
@@ -136,7 +127,7 @@ final class TopRow {
                         p.add(Reserved.ROOT);
                         p.addAll(it.path);                                      // הרשימה של השורה (הכללית, או של המסך)
                         p.add(it.e.label);
-                        if (!DbCmdMenu.show(a, p, null, null, null, false)) Ui.toast(a, Words.Verb.NOT_FOUND + it.e.label);
+                        if (!DbCmdMenu.show(a, p, null, null, false)) Ui.toast(a, Words.Verb.NOT_FOUND + it.e.label);
                     }
                 });
             } else {
@@ -280,11 +271,6 @@ final class TopRow {
         return b;
     }
 
-    /** 1.11.0: המסך יודע מה "כאן" שלו (ב"קבצים פיזיים" — התיקייה הפתוחה). */
-    interface Here {
-        File hereDir();
-    }
-
     interface Chosen {
         void ok(String icon, String name, String act);
     }
@@ -292,9 +278,9 @@ final class TopRow {
     /**
      * "מה הכפתור יעשה?" — 1.16.1: אותו תפריט כמו ➕ בבית (המשתמש: "שני המקומות אמורים להיות זהים; ההבדל היחיד —
      * הפלוס מוסיף במסך הבית, והשני מוסיף כפתור במקום שמחליטים"): רשימה ידנית · רשימה חכמה · פקודה (תפריט הפקודות
-     * האחד — ובו גם שורה בכתב, תיקייה במנהל הקבצים ופעולה של המסך). התוצאה — שורת פקודה.
+     * האחד — ובו גם שורה בכתב ותיקייה במנהל הקבצים). התוצאה — שורת פקודה.
      */
-    static void pick(final Activity a, final String screen, final Chosen cb) {
+    static void pick(final Activity a, final Chosen cb) {
         Ui.options(a, Words.Top.WHAT, new String[]{Words.Main.ADD_MANUAL, Words.Main.ADD_SMART, Words.Main.ADD_CMD, Words.Top.T_MENU},
                 new DialogInterface.OnClickListener() {
             @Override
@@ -311,7 +297,7 @@ final class TopRow {
                 else CmdMenu.show(a, null, new CmdMenu.Picked() {
                     @Override
                     public void ok(String icon, String name, String line, File file) { cb.ok(icon, name, line); }
-                }, screen);
+                });
             }
         });
     }

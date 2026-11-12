@@ -3,7 +3,7 @@ package com.tikiyot.vfm;
 // מ0.9: רשימה מהמסד במראה המוכר — אותו שלד כמו כל מסכי הרשימות (ListScreen): השורות או הרשת לפי העיצוב (Ui.row /
 // Looks.row), הצלמית והסוג (Ui.kind), שורות הכפתורים (TopRow). הבית הוא רשימת הבית שבמסד, ברשת.
 // נגיעה: רשימה — נפתחת כאן; רשימה חכמה — במסך החיפוש המוכר (לקריאה, כמו כלי חכם); קובץ — נפתח (פקודה — רצה).
-// נגיעה ארוכה — מסך המסד באותה רשימה (שם כל הפעולות). אחראי: להציג. אסור לו: לכתוב למסד (נפתח לקריאה בלבד).
+// נגיעה ארוכה — בחירה, ופס הבחירה עם הפעולות (כמו בכל מסכי הרשימות). אחראי: להציג. הכתיבה למסד — דרך DbVerbs (חוץ מהעותק ביציאה).
 // מ0.9.1 (צילום המשתמש: "מעבר בין האופנים חסר, והנתונים מתחת לצלמיות"): בבית — "אופן עבודה: X ▾" ושורת האינדקס כמו
 // בבית הישן; מתחת לכל רשימה — הספירה (DbCount, באותו נוסח כמו ListCount), מחושבת ברקע; הצלמיות בבית — בלי מסגרת.
 
@@ -23,7 +23,7 @@ public class DbListScreen extends ListScreen<Store.Member> {
     static final String EXTRA_MODE = "mode", EXTRA_LIST = "list", EXTRA_SORT = "sort";
     /** מ0.22: מיון מהפקודה ("פתח רשימה … מיין:…"); ריק — הסדר של הרשימה. */
     private String sortBy = "";
-    private static final int MENU_DB = 1, MENU_DESIGN = 2, MENU_SETTINGS = 3, MENU_OLD = 4, MENU_CMDS = 5, MENU_TESTS = 6, MENU_BACKUPS = 7, MENU_DIAG = 8;
+    private static final int MENU_DESIGN = 2, MENU_SETTINGS = 3, MENU_CMDS = 5, MENU_TESTS = 6, MENU_DIAG = 8;
 
     private String mode;
     private long listId;
@@ -51,10 +51,6 @@ public class DbListScreen extends ListScreen<Store.Member> {
     protected void onDestroy() {
         alive--;
         super.onDestroy();
-    }
-
-    static void goHome(DbListScreen a) {
-        Home.go(a);                                                           // מ0.25: דרך אחת — הבית נפתח מחדש
     }
 
     @Override
@@ -725,7 +721,7 @@ public class DbListScreen extends ListScreen<Store.Member> {
     }
 
 
-    /** מ0.11.1: התפריט — כמו בבית הישן (פקודות, הגדרות, עיצוב), ועוד: מסך המסד, והצד הישן. */
+    /** מ0.11.1: התפריט ⋮ — פקודות, הגדרות, עיצוב, הבדיקות ודוח האבחון. */
     @Override
     protected void menu(Menu menu) {
         menu.add(0, MENU_CMDS, 0, Words.BATCH_MENU);
@@ -735,7 +731,6 @@ public class DbListScreen extends ListScreen<Store.Member> {
         // מ0.37: "⚙ מסד" ירדה מהתפריט — במסך המסד נשארו רק הגיבויים, והכניסה אליהם מההגדרות
         menu.add(0, MENU_TESTS, 0, Words.DbCmd.MENU_TESTS);
         menu.add(0, MENU_DIAG, 0, Words.DbCmd.MENU_DIAG);                     // מ0.30
-        // מ0.25: "↩ הצד הישן" יצא — מחיקת המנוע הישן, שלב 1: אין עוד דרך אליו מבניית מ.
     }
 
     @Override
@@ -777,9 +772,5 @@ public class DbListScreen extends ListScreen<Store.Member> {
 
             @Override public void changed() { refresh(); }
         });
-    }
-
-    List<Store.Member> shown() {
-        return rows;
     }
 }

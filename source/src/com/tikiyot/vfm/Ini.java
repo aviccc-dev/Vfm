@@ -21,11 +21,6 @@ public final class Ini {
             String t = raw.trim();
             return t.startsWith("[") && t.endsWith("]");
         }
-
-        public String headerName() {
-            String t = raw.trim();
-            return t.substring(1, t.length() - 1).trim();
-        }
     }
 
     public final File file;
@@ -104,19 +99,6 @@ public final class Ini {
         for (Line l : entries(section))
             if (l.key.equals(key)) return l.value == null || l.value.isEmpty() ? def : l.value;
         return def;
-    }
-
-    /** סוף המקטע שמתחיל בשורה at, בלי שורות ריקות בסופו. */
-    public int sectionEnd(int at) {
-        int end = lines.size();
-        for (int i = at + 1; i < lines.size(); i++) {
-            if (lines.get(i).isHeader()) {
-                end = i;
-                break;
-            }
-        }
-        while (end > at + 1 && lines.get(end - 1).raw.trim().isEmpty()) end--;
-        return end;
     }
 
     // ---------- שינוי, תמיד ברמת השורה ----------

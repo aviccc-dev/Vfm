@@ -23,8 +23,6 @@ import android.widget.TextView;
 
 import java.io.File;
 import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Comparator;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
@@ -40,10 +38,8 @@ public class SearchScreen extends Activity implements Clip.Holder {
     public static final String EXTRA_TITLE = "title";
     public static final String EXTRA_SORT = "sort";
     public static final String EXTRA_PICK_INTO = "pick";    // מסלול הרשימה שאליה מוסיפים
-    public static final String EXTRA_FUNC = "func";         // מזהה הכלי: ההגדרות נשמרות בסעיף שלו
     public static final String EXTRA_VIEW = "view";         // 148: ברצף / בתיקיות — ברירת המחדל של הרשימה
     public static final String EXTRA_DIR = "dir";           // 159: בתיקיות — מאיפה מתחילים
-    public static final String EXTRA_OWNER = "owner";       // 161: מזהה הרשימה (לרשימות שבתוכה)
     public static final String EXTRA_HIDDEN = "hidden";     // 159: מוסתרים מוצגים
 
     /**
@@ -121,34 +117,21 @@ public class SearchScreen extends Activity implements Clip.Holder {
     };
 
 
-    private String funcId;
-
-    /** 1.17.3: רשימה חכמה (כלי, או רשימה בתוך רשימה) — ולא חיפוש פתוח; לשורות הכפתורים. */
-    boolean isList() {
-        return funcId != null;
-    }
-
     /** מ0.41: איזה מסך זה, לשורות שלו — "קבצים וירטואליים", רשימה חכמה (תנאי קבוע), או חיפוש פתוח. מהפתיחה עצמה (לפני onCreate). */
     String rowsScreen() {
         android.content.Intent i = getIntent();
         if (SmartLists.FILE_MANAGER.equals(i.getStringExtra(EXTRA_TITLE))) return Verbs.S_VIRTUAL;
         return i.getBooleanExtra(EXTRA_FIXED, false) ? Verbs.S_SMART_SCREEN : Verbs.S_SEARCH;
     }
-    /**
-     * 1.15.0: איפה נשמרות ההגדרות של המסך ("למה", הכפתורים הדולקים, המיון…): הכלי — או רשימה חכמה פנימית (מאז שהסביבות
-     * הוסבו לרשימות, הכלים החכמים שבהן הם רשימות פנימיות — עם ה"למה" וההגדרות שלהם). null — ההגדרות הכלליות.
-     */
-    private String settingsId;
     /** 1.13.0: שורת "למה". */
     private String whyText = "", whyKey = "";
 
-    /** הגדרה של המסך: בסעיף הכלי (לפי המזהה), או בהגדרות הכלליות כשלא נפתח מכלי. */
+    /** הגדרה של המסך — בהגדרות הכלליות של החיפוש (מ0.29: אין עוד סעיף לכל כלי). */
     private String setting(String key, String def) {
-        return Conf.get(Conf.SEARCH, key, def);                               // מ0.29: אין עוד סעיף כלי בקובץ הראשי
+        return Conf.get(Conf.SEARCH, key, def);
     }
 
     private void saveSetting(final String key, final String value) {
-        final String id = settingsId;
         new Thread(new Runnable() {
             @Override
             public void run() {
@@ -191,16 +174,13 @@ public class SearchScreen extends Activity implements Clip.Holder {
         fixedQuery = getIntent().getStringExtra(EXTRA_QUERY);
         String extraSort = getIntent().getStringExtra(EXTRA_SORT);
         pickInto = getIntent().getStringArrayListExtra(EXTRA_PICK_INTO);
-        funcId = getIntent().getStringExtra(EXTRA_FUNC);
         String v = getIntent().getStringExtra(EXTRA_VIEW);
         if (v != null) view = v;
         startDir = getIntent().getStringExtra(EXTRA_DIR);
         hidden = getIntent().getBooleanExtra(EXTRA_HIDDEN, false);
-        funcId = null;                                                        // מ0.29: אין עוד כלים בקובץ הראשי (המנוע הישן נמחק)
-        settingsId = null;
         paths = "כן".equals(setting(SmartLists.PATHS, "לא"));  // תחביר
         loose = !"לא".equals(setting(SmartLists.LOOSE, "כן"));  // תחביר
-        Sort.Store st = Sort.tool(settingsId, Conf.SEARCH, "");
+        Sort.Store st = Sort.tool(null, Conf.SEARCH, "");
         srt = Sort.withAdded(Sort.RANK, true, st);
         if (extraSort != null && st.get(SmartLists.SORT, "").isEmpty()) srt.prefer(extraSort);
         if (fixed && getWindow() != null)
@@ -578,18 +558,6 @@ public class SearchScreen extends Activity implements Clip.Holder {
         } else {                                                              // 1.13.1: קובץ פקודות — כקובץ (תפריט: הרצה / עריכה)
             Ui.open(this, new File(hit.path()));
         }
-    }
-
-    /** הפריט היחיד שנבחר, או null. */
-    private Library.Hit single() {
-        if (selected.size() != 1) return null;
-        String p = selected.iterator().next();
-        for (Object o : rows) if (o instanceof Library.Hit && ((Library.Hit) o).path().equals(p)) return (Library.Hit) o;
-        return null;
-    }
-
-    private void startSelecting() {
-        sel.start();
     }
 
     private void stopSelecting() {

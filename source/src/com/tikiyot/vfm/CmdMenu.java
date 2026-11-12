@@ -9,7 +9,9 @@ package com.tikiyot.vfm;
 // וקישורים — תפריטי משנה; רשימה חכמה — תפריט משנה של מה שהיא מוצאת. ברירת המחדל: שמור לתוכנה / פקודות.
 // עד כאן — חמישה מקומות שונים: "⭐ קובצי פקודות" ב־⋮, "פקודה / קיצור דרך" ב־➕ בבית, "מה הכפתור יעשה?",
 // מסך "⭐ פקודות", ונגיעה על קובץ פקודות (תפריט "הרצה / עריכה").
-// אחראי: התפריט. ההרצה — Verbs ו־BatchUi; הקבצים — Shortcuts.
+// מ0.41: מה שבתפריט — Menus, והחלון — DbCmdMenu. כאן נשארו: הכניסות (show), שורה בכתב ותיקייה בבחירה (extras),
+// מה שרשימה חכמה מוצאת (found), "שמירה בשם" לפקודת מערכת, ו"פקודה חדשה" (create).
+// אחראי: הכניסות לתפריט. ההרצה — Verbs ו־BatchUi; הקבצים — Shortcuts.
 
 import android.app.Activity;
 import android.content.DialogInterface;
@@ -44,30 +46,30 @@ final class CmdMenu {
 
     /** הרצה. newIn — תיקייה ל"➕ פקודה חדשה" (null — תיקיית הקיצורים). */
     static void show(Activity a, File newIn) {
-        showList(a, Reserved.CMDS_PATH, newIn, null, null, true);
+        showList(a, Reserved.CMDS_PATH, newIn, null, true);
     }
 
     /**
-     * pick — בחירה במקום הרצה (null — הרצה); screen — שם המסך, ל"🧩 פעולה של המסך" (רק כשמוסיפים כפתור).
+     * pick — בחירה במקום הרצה (null — הרצה).
      * בבחירה — גם שורה בכתב ותיקייה במנהל הקבצים (אלה פקודות שאין להן קובץ).
      */
-    static void show(Activity a, File newIn, Picked pick, String screen) {
-        showList(a, Reserved.CMDS_PATH, newIn, pick, screen, true);
+    static void show(Activity a, File newIn, Picked pick) {
+        showList(a, Reserved.CMDS_PATH, newIn, pick, true);
     }
 
     /** "פתח תפריט <רשימה>" — רשימה מ"שמור לתוכנה" כתפריט. */
-    static void showList(Activity a, List<String> path, Picked pick, String screen) {
-        showList(a, path, null, pick, screen, true);
+    static void showList(Activity a, List<String> path, Picked pick) {
+        showList(a, path, null, pick, true);
     }
 
     private static void showList(final Activity a, final List<String> path, final File newIn, final Picked pick,
-                                 final String screen, final boolean top) {
-        if (DbVerbs.active() && DbCmdMenu.show(a, path, newIn, pick, screen, top)) return;   // מ0.22: מהמסד; מ0.41: התפריטים של התוכנה (Menus)
+                                 final boolean top) {
+        if (DbVerbs.active() && DbCmdMenu.show(a, path, newIn, pick, top)) return;   // מ0.22: מהמסד; מ0.41: התפריטים של התוכנה (Menus)
         Ui.toast(a, Words.Verb.NOT_FOUND + Names.label(path));
     }
 
-    /** בבחירה: שורה בכתב · תיקייה במנהל הקבצים · פעולה של המסך (פקודות בלי קובץ). */
-    static void extras(final Activity a, final String screen, final Picked pick, List<String> labels,
+    /** בבחירה: שורה בכתב · תיקייה במנהל הקבצים (פקודות בלי קובץ). */
+    static void extras(final Activity a, final Picked pick, List<String> labels,
                                List<Runnable> taps, List<Runnable> holds) {
         labels.add(Words.Top.T_LINE);
         taps.add(new Runnable() {
@@ -90,13 +92,6 @@ final class CmdMenu {
             }
         });
         holds.add(null);
-        if (screen != null && a instanceof TopRow.Host && !((TopRow.Host) a).actions().isEmpty()) {
-            labels.add(Words.Top.T_OWN + screen);
-            taps.add(new Runnable() {
-                @Override public void run() { own(a, screen, pick); }
-            });
-            holds.add(null);
-        }
     }
 
     /** נגיעה: הרצה, או בחירה. */
@@ -124,19 +119,6 @@ final class CmdMenu {
             @Override public void onClick(DialogInterface d, int w) { useFile(a, files.get(w), pick); }
         }, new Ui.Index1() {
             @Override public void ok(int w) { BatchUi.edit(a, files.get(w)); }
-        });
-    }
-
-    /** "🧩 פעולה של המסך" — הפעולות שהמסך עצמו מכיר (בכפתור בלבד). */
-    private static void own(Activity a, String screen, final Picked pick) {
-        final List<String[]> acts = ((TopRow.Host) a).actions();
-        String[] names = new String[acts.size()];
-        for (int i = 0; i < acts.size(); i++) names[i] = acts.get(i)[1] + " " + acts.get(i)[2];
-        Ui.options(a, Words.Top.T_OWN + screen, names, new DialogInterface.OnClickListener() {
-            @Override
-            public void onClick(DialogInterface d, int k) {
-                pick.ok(acts.get(k)[1], acts.get(k)[2], Verbs.fromOld(acts.get(k)[0]), null);
-            }
         });
     }
 

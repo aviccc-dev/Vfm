@@ -5,13 +5,10 @@ package com.tikiyot.vfm;
 // כאן: הקריאה, השמירה, הרשימות המוכנות, ומה כלי מציג בפועל. בלי ממשק — נבדק. הממשק: SmartForm.
 
 import java.util.ArrayList;
-import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Map;
 
 final class SmartLists {
 
-    static final String SECTION = "הגדרה נפוצה: ";  // תחביר
     /** המפתח בסעיף הכלי — המזהה של ההגדרה הנפוצה שהוא מקשר אליה. */
     static final String LINK = "הגדרה נפוצה";  // תחביר
     static final String COND = "תנאי", SORT = "מיון", DIR = "כיוון", VIEW = "תצוגה";  // תחביר
@@ -21,12 +18,10 @@ final class SmartLists {
      * בהגדרות הכלליות: אילו רשימות מוכנות כבר נכתבו (שמות, מופרדים ב-|). כל אחת — פעם אחת;
      * מה שהמשתמש מחק — לא חוזר; מוכנה חדשה בגרסה חדשה — נכתבת.
      */
-    static final String PRESETS_DONE = "רשימות חכמות מוכנות";  // תחביר
 
     /** מנהל קבצים (151) — "אפשרות פשוטה ולא חכמה": כל הקבצים בכל הכוננים, בתיקיות, כולל הכול. */
     /** 1.13.0: "קבצים וירטואליים" (המשתמש) — מול "קבצים פיזיים"; עד 1.12 — "מנהל קבצים" (מתחלף לבד). */
     static final String FILE_MANAGER = "קבצים וירטואליים";  // תחביר
-    static final String OLD_FILE_MANAGER = "מנהל קבצים";  // תחביר
 
     /** הרשימות המוכנות: שם, תנאי, מיון, כיוון, תצוגה. */
     static final String[][] PRESETS = {

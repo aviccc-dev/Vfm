@@ -152,12 +152,6 @@ final class BatchUi {
         }
         for (String n : plan.notes) sb.append(n).append("\n");                // 1.25.0: לולאה שנעצרה כבר בתכנון
         if (plan.steps.isEmpty()) sb.append(Words.Cmd.NOTHING_TO_DO);
-        boolean deletes = false;
-        for (Batch.Step s : plan.steps) if (s.error == null && (s.cmd.equals("DEL") || s.cmd.equals("RD"))) deletes = true;
-        String files = plan.changes() == 0 ? Words.Cmd.NO_CHANGE
-                : Words.Cmd.CHANGES + (deletes ? Words.Cmd.DELETES_TO_TRASH : "");
-        // 216: "הפיך" — רק כשיש מחיקה (המשתמש: "כאשר אין מחיקה או פעולה בלתי הפיכה — אין צורך שיודיע שהפעולה הפיכה")
-        String undo = (plan.errors > 0 ? Words.Cmd.errorLines(plan.errors) : "") + (deletes ? Words.Cmd.UNDO : "");
         if (plan.changes() == 0 && plan.start == null && plan.open == null) {
             show(a, Words.Cmd.preview(f.getName()), sb.toString(), null);
             return;
@@ -212,12 +206,7 @@ final class BatchUi {
             show(a, Words.DbCmd.NOT_RUN_TITLE, Words.DbCmd.notRun(plan.errors) + "\n\n" + plan.errorText(), null);
             return;
         }
-        // 216: רק "פתיחה" (START) בלי שינוי בכונן ובלי שגיאות — ישר, בלי אישור
-        if (plan.changes() == 0 && plan.errors == 0 && plan.echoes.isEmpty()) {
-            go.run();
-            return;
-        }
-        go.run();                                                              // 1.28.0: בלי "בדיקה" — רץ מיד, בלי אישור
+        go.run();                                                              // 1.28.0: בלי "בדיקה" — רץ מיד, בלי אישור (אישור ותצוגה — במסך ההרצה)
     }
 
     /** 216: מה ש־START ביקש — קובץ נפתח, תיקייה נפתחת במנהל הקבצים. */

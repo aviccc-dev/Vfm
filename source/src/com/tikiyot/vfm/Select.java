@@ -116,15 +116,6 @@ public final class Select {
         toggleList(name);
     }
 
-    public boolean has(String path) {
-        return files.contains(path);
-    }
-
-    /** הקובץ היחיד שנבחר, או null. */
-    public String single() {
-        return files.size() == 1 && lists.isEmpty() && dirs.isEmpty() ? files.iterator().next() : null;
-    }
-
     /** אחרי רענון: מה שכבר לא מוצג יוצא מהבחירה. */
     public void keep(Collection<String> shown) {
         if (files.retainAll(shown)) bar.setCount(count());

@@ -2,6 +2,8 @@ package com.tikiyot.vfm;
 
 // שורת פקודה כשדות (117א, שלב 2): הטופס ממלא את השדות מהשורה, והשורה נבנית מחדש מהשדות — כך הטקסט
 // והטופס תמיד מתאימים. בלי ממשק, ולכן נבדק. הממשק — BatchEditScreen. מתגים שהטופס לא מכיר נשמרים כמו שהם.
+// מועמד למחיקה (מ0.42): התוכנה משתמשת היום רק ב־COMMANDS וב־toVar; השאר (השדות, parse, toLine, filter, source, help) — רק הבדיקות.
+// הטופס של השורה כבר לא בנוי עליהם. למחוק עם הבדיקות שלהם, ואת COMMANDS ו־toVar להעביר למקום אחר.
 
 import java.util.ArrayList;
 import java.util.List;
@@ -19,9 +21,7 @@ final class BatchLine {
     }
 
     /** 128: השדות והתחביר של תאריך וגודל — מ-DateSize (מקום אחד). */
-    static final String[] DATE_MODES = DateSize.DATE_MODES, DATE_UNITS = DateSize.DATE_UNITS,
-            SIZE_MODES = DateSize.SIZE_MODES, SIZE_UNITS = DateSize.SIZE_UNITS;
-    static final String[] TAKEN = {Batch.TAKEN_ASK, Batch.TAKEN_SKIP, Batch.TAKEN_REPLACE + Words.Cmd.REPLACE_NOTE};
+    static final String[] SIZE_UNITS = DateSize.SIZE_UNITS;
 
     String cmd = "COPY";
     /** תיקיית המקור (כמו שנכתבה, עם משתנים), והתבנית (*.pdf) — או ריק. */

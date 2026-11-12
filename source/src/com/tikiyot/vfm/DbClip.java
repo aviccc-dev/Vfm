@@ -67,10 +67,6 @@ final class DbClip {
         if (items.isEmpty()) mode = null;
     }
 
-    static synchronized String mode() {
-        return mode;
-    }
-
     static synchronized boolean anyMove() {
         for (Item it : items) if (it.how == MOVE) return true;
         return false;

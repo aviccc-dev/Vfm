@@ -853,7 +853,7 @@ final class ImportTests {
         // המעבר מ"דוגמאות": מה שהמשתמש הוסיף עובר, והרשימה יוצאת משם עם רישומי הקבצים שלה
         MemStore ex = new MemStore(IdCounter.memory());
         long eh = DbPaths.ensureHome(ex), er = ex.createList(Reserved.ROOT, eh), ec = ex.createList(Reserved.CMDS, er), em = ex.createList(Reserved.MINE, ec),
-                eb = ex.createList(Reserved.BACKUP, er), other = ex.createList("רשימה אחרת", eh);
+                eb = ex.createList("גיבוי", er), other = ex.createList("רשימה אחרת", eh);
         DbFiles.add(ex, ec, Arrays.asList(SYS + "בית.vbat", "/x/הוספתי.vbat"), null);
         DbFiles.add(ex, em, Arrays.asList("/x/פקודה שלי.vbat"), null);
         DbFiles.add(ex, eb, Arrays.asList("/x/לגיבוי.txt"), null);
@@ -863,7 +863,7 @@ final class ImportTests {
         int moved = Menus.moveFrom(ex, DbExamples.MODE, s);
         long cmds = Menus.at(s, home, Menus.CMDS), myList = Menus.at(s, home, Menus.MINE);
         ck("מעבר מהדוגמאות: הרשימות עברו לבית של אופן התפריטים", moved > 0 && filesIn(s, myList) == 1 && s.listsOf(s.findFile("/x/פקודה שלי.vbat")).contains(myList)
-                && s.listsOf(s.findFile("/x/הוספתי.vbat")).contains(cmds) && Menus.at(s, home, Arrays.asList(Reserved.BACKUP)) != 0);
+                && s.listsOf(s.findFile("/x/הוספתי.vbat")).contains(cmds) && Menus.at(s, home, Arrays.asList("גיבוי")) != 0);
         int same = 0;
         for (Store.Member m : s.members(cmds)) if (m.item.name.equals("בית.vbat")) same++;
         boolean smart = false;

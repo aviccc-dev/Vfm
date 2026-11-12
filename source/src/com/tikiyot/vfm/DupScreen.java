@@ -308,9 +308,6 @@ public class DupScreen extends Activity {
         return out;
     }
 
-    /** "גודל ושם דומה" (85): מקבצים לפי גודל, ובתוך כל גודל — לפי דמיון השמות (alike). */
-    static final String SIMILAR = Words.Dup.SIZE_SIMILAR;
-
     /** 195: השם, הגודל והתוכן — מתוך "השוואה". */
     private DupMode dm() {
         if (dmCache == null || !mode.equals(dmFor)) {

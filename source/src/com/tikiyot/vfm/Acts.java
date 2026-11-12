@@ -11,10 +11,6 @@ import java.util.List;
 
 public final class Acts {
 
-    public interface Changed {
-        void changed();
-    }
-
     private Acts() { }
 
     /** הוספת קבצים לרשימה, עם בורר יעד. */
@@ -41,14 +37,6 @@ public final class Acts {
     /** לשליחה: התיקייה שבה נארזות תיקיות לפני שליחה (בתוך תיקיות המערכת של אופן העבודה). */
     static File sendDir() {
         return new File(Paths.system(), Words.ActsW.SEND);
-    }
-
-    /**
-     * שליחה של כמה קבצים ותיקיות (116) — דרך חלון השיתוף של המערכת (Quick Share, Bluetooth, שיאומי…).
-     * קבצים נשלחים כמו שהם. תיקייה (1.10.0): בבחירה — הקבצים שבה כמו שהם (גם מתיקיות המשנה), או ZIP בשמה.
-     */
-    public static void shareMany(final Activity a, List<String> files, final List<String> dirs) {
-        shareMany(a, files, dirs, false);
     }
 
     /** toDevice: "שליחה למכשיר" (117) — רק תוכנות העברה; אחרת "שיתוף" — כל התוכנות. */

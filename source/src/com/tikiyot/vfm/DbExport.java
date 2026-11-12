@@ -11,9 +11,7 @@ package com.tikiyot.vfm;
 // אחראי: הטקסט ושם הקובץ (בלי ממשק — נבדק). אסור לו: לכתוב למסד.
 
 import java.io.File;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Set;
 
 final class DbExport {
 

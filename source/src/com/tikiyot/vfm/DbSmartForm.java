@@ -67,27 +67,23 @@ final class DbSmartForm {
     }
 
     private static Result result(String n, Target out) {
-        {
-            {
-                Result r = new Result();
-                r.name = n == null ? "" : n.trim();
-                r.cond = out.get(SmartLists.COND, "");
-                r.sort = out.get(SmartLists.SORT, "");
-                r.view = out.get(SmartLists.VIEW, "");
-                String link = out.get(SmartLists.LINK, "");
-                if (r.cond.isEmpty() && !link.isEmpty()) {                     // נבחרה תבנית — התנאי שלה (במסד אין קישור)
-                    SmartLists.Named l = SmartLists.byId(link);
-                    if (l != null) {
-                        r.cond = l.cond;
-                        if (r.view.isEmpty()) r.view = l.view;
-                    }
-                }
-                r.icon = out.get(Program.ICON, "");
-                r.desc = out.get(DESC, "");
-                r.why = out.get(Program.WHY, "");
-                return r;
+        Result r = new Result();
+        r.name = n == null ? "" : n.trim();
+        r.cond = out.get(SmartLists.COND, "");
+        r.sort = out.get(SmartLists.SORT, "");
+        r.view = out.get(SmartLists.VIEW, "");
+        String link = out.get(SmartLists.LINK, "");
+        if (r.cond.isEmpty() && !link.isEmpty()) {                     // נבחרה תבנית — התנאי שלה (במסד אין קישור)
+            SmartLists.Named l = SmartLists.byId(link);
+            if (l != null) {
+                r.cond = l.cond;
+                if (r.view.isEmpty()) r.view = l.view;
             }
         }
+        r.icon = out.get(Program.ICON, "");
+        r.desc = out.get(DESC, "");
+        r.why = out.get(Program.WHY, "");
+        return r;
     }
 
     /** שומר בעסקה אחת: smart = 0 — נוצרת (בתוך into, אם לא 0). מחזיר את מספר הזיהוי. */

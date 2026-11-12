@@ -9,7 +9,7 @@ package com.tikiyot.vfm;
 //            "צור רשימה" בלי שם — החלון של "רשימה חדשה".
 //   עדכן  — שינוי ההגדרות של רשימה חכמה קיימת, רק במפורש:  עדכן רשימה חכמה "שם" <תנאי>
 //   מצא   — מה שעונה לתנאים, כרשימה זמנית, בלי לשמור:  מצא סוג:ספרים תאריך:שבוע
-//   חזור · הרץ <קובץ פקודות> · הוסף מהכונן / מחיפוש / כלי — פעולות המסך הנוכחי (החלון שהכפתור פותח).
+//   חזור · הרץ <קובץ פקודות> · הוסף מהכונן / מחיפוש (במסד — DbVerbs) · צור רשימה.
 // כפתור = שורת פקודה (המשתמש: "יש כמה פקודות שנמצאות בכפתורים בלי פקודות"); גם קובץ פקודות מכיר אותן — כ־START:
 // נפתחות בסוף ההרצה. המסכים: הבית · חיפוש · פקודות · קבצים פיזיים · קבצים וירטואליים · הגדרות · סל.
 // אחראי: לפענח ולבצע את פקודות הפתיחה. אסור לו: לשנות קבצים בכונן (זה Batch, דרך Physical).
@@ -229,6 +229,7 @@ final class Verbs {
     /**
      * 1.13.1 (באג): רשימה שינתה שם או מקום — שורת "פתח רשימה" / "צור רשימה" שמפנה אליה (או אל תת־רשימה שלה)
      * נכתבת מחדש למסלול החדש; לא נוגעת בה — null.
+     * מועמד למחיקה (מ0.42): רק Shortcuts.listMoved קורא לה, ואליו — אף אחד (שינוי שם של רשימה במסד לא מעדכן קובצי פקודות). למחוק — או לחבר.
      */
     static String listMoved(String line, List<String> from, List<String> to) {
         Cmd c = parse(line);
@@ -284,7 +285,7 @@ final class Verbs {
         return a;
     }
 
-    /** הפעולה של המסך (TopRow.Host) שמתאימה לפקודה — או null. */
+    /** פקודה שהייתה פעולה של מסך במנוע הישן (רשימה חדשה, הוספה מהכונן / מחיפוש) — היום רק במסד (DbVerbs); אחרת — null. */
     static String hostCode(Cmd c) {
         if (c.kind.equals(K_NEW_LIST)) return Buttons.ACT + "רשימה חדשה";       // תחביר
         if (c.kind.equals(K_ADD)) {
@@ -364,13 +365,13 @@ final class Verbs {
         if (DbVerbs.active() && DbVerbs.run(a, c)) return true;               // מ0.10: במסד — פקודות הרשימות על המסד
         String host = hostCode(c);
         if (host != null) {
-            if (!(a instanceof TopRow.Host) || !((TopRow.Host) a).act(host)) Ui.toast(a, Words.Top.notHere(label(c)));
+            Ui.toast(a, Words.Top.notHere(label(c)));                         // מ0.42: אין עוד מסך שעושה אותן בעצמו (TopRow.Host — נמחק)
             return true;
         }
         if (c.kind.equals(K_BACK)) {                                          // באג (1.17.6): בבית — יציאה מהתוכנה;
             a.onBackPressed();                                                // בבית של המסד — בחירת אופן (DbListScreen.onBackPressed)
         }
-        else if (c.kind.equals(K_MENU)) CmdMenu.showList(a, Names.parsePath(c.arg), null, null);   // 1.17.0
+        else if (c.kind.equals(K_MENU)) CmdMenu.showList(a, Names.parsePath(c.arg), null);   // 1.17.0
         else if (c.kind.equals(K_TOOL)) {                                       // מ0.19: הכלי עם הפרמטרים שבשורה
             Target t = toolTarget(c.arg);
             Func f = t == null ? null : Func.byKind(t.kind);
@@ -415,16 +416,6 @@ final class Verbs {
         else if (s.equals(S_BACKUPS)) DbScreen.openBackups(a);                // מ0.37
         else if (s.equals(S_DIAG)) Diag.run(a, DbListScreen.currentMode);     // מ0.37: דוח האבחון כפקודה
         else if (s.equals(S_LAB) || s.equals(S_PLUGINS)) LabScreen.open(a, c.cond, c.ver, null);   // מ0.38: המעבדה; מ0.40: התוספים — רק בפקודה
-    }
-
-    static void openSmart(Activity a, SmartLists.Named n, String sort) {
-        Intent i = new Intent(a, SearchScreen.class);
-        i.putExtra(SearchScreen.EXTRA_QUERY, n.cond);
-        i.putExtra(SearchScreen.EXTRA_FIXED, true);
-        i.putExtra(SearchScreen.EXTRA_TITLE, n.name);
-        i.putExtra(SearchScreen.EXTRA_SORT, sort != null && !sort.isEmpty() ? sort : n.sort.isEmpty() ? Sort.NAME : n.sort);
-        i.putExtra(SearchScreen.EXTRA_VIEW, n.view.isEmpty() ? FolderView.FLAT : n.view);
-        a.startActivity(i);
     }
 
     // ---------- הנתון החי ----------

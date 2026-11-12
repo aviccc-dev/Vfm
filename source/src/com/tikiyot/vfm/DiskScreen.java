@@ -17,13 +17,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
-public class DiskScreen extends ListScreen<File> implements Clip.Holder, TopRow.Here {
-
-    /** 1.11.0: "כאן" של המסך — התיקייה הפתוחה (לכפתור ⭐ ולמשתנה %כאן%). */
-    @Override
-    public File hereDir() {
-        return here();
-    }
+public class DiskScreen extends ListScreen<File> implements Clip.Holder {
 
     static final String EXTRA_DIR = "dir";
     private static final int MENU_HIDDEN = 1, MENU_NEW = 2, MENU_PASTE = 3, MENU_SORT = 4, MENU_UP = 5, MENU_DETAILS = 6, MENU_ZIP = 7;

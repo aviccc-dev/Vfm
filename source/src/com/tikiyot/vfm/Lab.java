@@ -29,7 +29,6 @@ final class Lab {
     static final String PREFIX = "תוסף", OLD_PREFIX = "מעבדה";   // תחביר
     static final String DIR = "תוספים", OLD_DIR = "מעבדה", EXT = ".html";   // בכונן
     static final String META = "vfm-plugin", META_VERSION = "vfm-plugin-version", OLD_META = "vfm-lab", OLD_META_VERSION = "vfm-lab-version";
-    static final long MAX = 5L * 1024 * 1024;
     /** כמה מתחילת העמוד נקרא כדי למצוא את השם והגרסה (ה־meta בראש העמוד). */
     private static final int HEAD = 8192;
 
@@ -179,13 +178,6 @@ final class Lab {
         } finally {
             if (in != null) try { in.close(); } catch (Throwable ignored) { }
         }
-    }
-
-    /** עמוד של תוסף — יש בו meta name="vfm-plugin" (או "vfm-lab", עד מ0.39) בתחילת הקובץ. */
-    static boolean isPage(File f) {
-        if (f.length() > MAX) return false;
-        String h = head(f);
-        return h.contains(META + "\"") || h.contains(OLD_META + "\"");
     }
 
     // ---------- העמודים שבתיקייה ----------

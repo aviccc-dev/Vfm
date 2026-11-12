@@ -227,7 +227,7 @@ public class BatchEditScreen extends Activity {
         chips.addView(button(Words.Cmd.OPEN_BTN, new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                TopRow.pick(BatchEditScreen.this, Words.Top.S_BATCH, new TopRow.Chosen() {
+                TopRow.pick(BatchEditScreen.this, new TopRow.Chosen() {
                     @Override public void ok(String icon, String name, String line) { insertLines(lines(line)); }
                 });
             }
@@ -853,7 +853,7 @@ public class BatchEditScreen extends Activity {
         panel.addView(button(Words.Ed.PICK, new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                TopRow.pick(BatchEditScreen.this, Words.Top.S_BATCH, new TopRow.Chosen() {
+                TopRow.pick(BatchEditScreen.this, new TopRow.Chosen() {
                     @Override
                     public void ok(String icon, String name, String act) {
                         if (act.startsWith(d.name + " ")) e.setText(act.substring(d.name.length() + 1));

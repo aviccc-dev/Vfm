@@ -23,7 +23,7 @@ public final class Files {
     private Files() { }
 
     // ---------- 170: קריאה פעם אחת (ביצועים) ----------
-    // קובצי התוכנה (הקובץ הראשי, מבנה.txt, ההגדרות) נקראים הרבה פעמים בכל רענון. קובץ שלא השתנה
+    // קובצי התוכנה (ההגדרות, העיצובים) נקראים הרבה פעמים בכל רענון. קובץ שלא השתנה
     // (אותו תאריך ואותו גודל) — מהזיכרון. מה שהתוכנה כותבת — נשמר מיד כמו שנכתב. קובץ שהשתנה מבחוץ
     // לפני רגע — נקרא מהכונן, ונזכר רק כשהוא יציב (שעון גס בכרטיס: שני שינויים באותה שנייה ייראו זהים).
 
@@ -175,33 +175,6 @@ public final class Files {
             }
         } catch (Throwable t) {
             Log.e("גיבוי " + f.getName(), t);
-        }
-    }
-
-    /** 90: הגיבוי האוטומטי האחרון של קובץ (לפי השם), או null. */
-    public static File latestBackup(File f, String group) {
-        try {
-            File[] all = new File(Paths.backups(), group).listFiles();
-            File best = null;
-            if (all != null) for (File b : all)
-                if (b.isFile() && b.length() > 0 && b.getName().endsWith("-" + f.getName())
-                        && (best == null || b.getName().compareTo(best.getName()) > 0)) best = b;
-            return best;
-        } catch (Throwable t) {
-            return null;
-        }
-    }
-
-    /** גיבוי בשם, לפני פעולה הרסנית. */
-    public static void backupNamed(File f, String label) {
-        try {
-            if (!f.exists()) return;
-            File dir = new File(Paths.backups(), "בשם");  // בכונן
-            dir.mkdirs();
-            String stamp = new SimpleDateFormat("yyyy-MM-dd_HH-mm", Locale.US).format(new Date());
-            copy(f, new File(dir, stamp + " " + label.replace('/', '-') + " - " + f.getName()));
-        } catch (Throwable t) {
-            Log.e("גיבוי בשם", t);
         }
     }
 

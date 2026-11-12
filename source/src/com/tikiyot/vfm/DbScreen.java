@@ -49,9 +49,7 @@ public class DbScreen extends Activity {
     private final ArrayList<Long> path = new ArrayList<Long>();
     private static final long UNASSIGNED_ID = -1L, TRASH_ID = -2L;
     /** מספר ההצגה הנוכחית; הערכה של רשימה חכמה שהסתיימה אחרי שעזבו אותה — מתעלמים ממנה. */
-    private int token;
     private final android.os.Handler ui = new android.os.Handler(android.os.Looper.getMainLooper());
-    private static final int SMART_ROWS = 300;
 
     static File dbFile(android.content.Context c, String mode) {
         return c.getDatabasePath(DB_PREFIX + mode + DB_SUFFIX);
@@ -384,7 +382,6 @@ public class DbScreen extends Activity {
     }
 
     private void show() {
-        token++;
         try {
             List<Store.Item> all = store.lists();
             status.setText(Words.Db.status(all.size(), store.lastId(), store.systemCode(), store.info()));
@@ -423,17 +420,6 @@ public class DbScreen extends Activity {
             Log.e("DbScreen.show", t);
             status.setText(Words.Db.failed(String.valueOf(t.getMessage())));
         }
-    }
-
-    /** "לא משויכים" / סל המחזור: שורה מיוחדת בראש הרשימות — מחושבת בכל פעם, לא נשמרת. */
-    private View specialRow(String title, String subText, int count, final long id) {
-        return specialRow(title, subText + " · " + Words.items(count), new Runnable() {
-            @Override
-            public void run() {
-                path.add(id);
-                show();
-            }
-        });
     }
 
     private View specialRow(String title, String subLine, final Runnable tap) {
@@ -480,10 +466,6 @@ public class DbScreen extends Activity {
 
     /** מוסיף פריט (קובץ, רעיון, רשימה חכמה) לרשימה ידנית שבוחרים. */
     // ---------- מ0.8: קבצים מהכונן ----------
-
-    private interface ListPicked {
-        void ok(long list);
-    }
 
     /** הוספה בעסקה אחת, והודעה כמה נוספו וכמה כבר היו. */
     private void addFiles(long list, List<String> paths, List<Long> sizes) {
@@ -613,13 +595,6 @@ public class DbScreen extends Activity {
     }
 
     // ---------- מ0.5: גיבוי ושחזור ----------
-
-    /** הגיבוי לפני ההעתקה נכשל — לא מעתיקים. */
-    private static final class BackupFailed extends RuntimeException {
-        BackupFailed(String m) {
-            super(m);
-        }
-    }
 
     /** הגיבויים של האופן: בתיקייה הגלויה של התוכנה; עותקים זמניים — באחסון הפרטי. */
     private Backups backups(String m) {
@@ -868,7 +843,6 @@ public class DbScreen extends Activity {
 
     /** המסד פגום: לא פותחים ולא כותבים; מציעים לשחזר מגיבוי. */
     private void showDamaged() {
-        token++;
         status.setText(Words.Db.damaged(mode, damaged));
         crumb.setText(Words.Db.ALL_LISTS);
         hint.setText(Words.Db.DAMAGED_HINT);

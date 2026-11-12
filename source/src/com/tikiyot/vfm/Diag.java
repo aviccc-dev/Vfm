@@ -228,9 +228,7 @@ final class Diag {
                                 .append(" · \"פקודות\": ").append(cmds).append(" · \"הפקודות שלי\" לפי הדרך: ").append(mine)
                                 .append(" · בתוך \"פקודות\": ").append(mineIn).append('\n');
                         if (mine != mineIn) sb.append("❌ שתי רשימות שונות של \"הפקודות שלי\" — זו הסיבה לסעיף 7\n");
-                        int same = 0;
                         for (Store.Item it : s.lists()) if (it.name.equals(Reserved.MINE) || it.name.equals(Reserved.ROOT)) {
-                            same++;
                             sb.append("   · ").append(it.name).append(" #").append(it.id).append(" בתוך ").append(s.listsOf(it.id)).append(" · ")
                                     .append(s.count(it.id)).append(" פריטים\n");
                         }
@@ -504,7 +502,7 @@ final class Diag {
                 Menus.Snap m = Menus.of(a, mode);
                 for (List<String> p : m.paths()) {
                     Object[] w = m.where(p);
-                    sb.append("   · ").append(Names.label(p)).append(" [").append(w == null ? "?" : w[0]).append("]: ").append(shown(m.at(p))).append('\n');
+                    sb.append("   · ").append(Names.fullLabel(p)).append(" [").append(w == null ? "?" : w[0]).append("]: ").append(shown(m.at(p))).append('\n');
                 }
                 List<Menus.Row> top = m.rows(null, Menus.ROW_TOP);
                 sb.append(ok(!top.isEmpty())).append("שורות עליונות בכל המסכים: ").append(top.size()).append(top.isEmpty() ? " — שורת החירום תוצג" : "").append('\n');

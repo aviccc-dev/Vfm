@@ -11,6 +11,8 @@ package com.tikiyot.vfm;
 //           · פתח תיקייה <מסלול> · הרץ <קובץ פקודות> · צור רשימה · הוסף מהכונן / מחיפוש / כלי · או כל שורה של קובץ פקודות.
 //           קובץ של לפני 1.13.0 (מסך:בית, רשימה:…, קובץ:…, פקודה:…, פעולה:…) — מתורגם בקריאה (Verbs.fromOld).
 // אחראי: מה בשורות. אסור לו: לבצע (הביצוע — TopRow).
+// מועמד למחיקה (מ0.42): המעבר החד־פעמי מ"כפתורים.txt" נעשה (במכשיר — מ0.41). כשאין עוד מכשיר בלי מעבר — הקריאה של הקובץ (parseAll,
+// Layout, Verbs.fromOld) יכולה לצאת, ושורת החירום (defaults) — לעבור ל־Menus.
 
 import java.io.File;
 import java.util.ArrayList;
@@ -28,11 +30,7 @@ final class Buttons {
             BATCH = "קובץ:", LINE = "פקודה:", ACT = "פעולה:";   // תחביר
     /** 1.13.0: פקודות. */
     static final String HOME = Verbs.HOME_LINE, BACK = Verbs.BACK_LINE, SEARCH = Verbs.openScreen(Verbs.S_SEARCH),
-            COMMANDS = Verbs.openScreen(Verbs.S_COMMANDS), FILES = Verbs.openScreen(Verbs.S_DISK),
-            SETTINGS = Verbs.openScreen(Verbs.S_SETTINGS);
-    /** 1.10.0: פעולות של סוג מסך — הקוד שהמסך מכיר (TopRow.Host). */
-    static final String NEW_LIST = ACT + "רשימה חדשה", FROM_DRIVE = ACT + "מהכונן",   // תחביר
-            FROM_SEARCH = ACT + "מחיפוש";   // תחביר
+            COMMANDS = Verbs.openScreen(Verbs.S_COMMANDS), FILES = Verbs.openScreen(Verbs.S_DISK);
     /** 1.13.0: אותן פעולות — כשורת פקודה בכפתור. */
     static final String C_NEW_LIST = Verbs.CREATE + " " + Verbs.LIST, C_FROM_DRIVE = Verbs.ADD + " " + Verbs.A_DRIVE,
             C_FROM_SEARCH = Verbs.ADD + " " + Verbs.A_SEARCH;
@@ -58,15 +56,6 @@ final class Buttons {
             this.icon = icon;
             this.name = name;
             this.act = act;
-        }
-
-        /** עוגן: בית וחזרה — הפעולה קבועה, ותמיד יש עותק באחת השורות הכלליות (פריט 9: "תמיד נגישים"). */
-        boolean anchor() {
-            return HOME.equals(act) || BACK.equals(act);
-        }
-
-        String line() {
-            return icon + " | " + name + " | " + act;
         }
     }
 

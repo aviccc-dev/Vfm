@@ -1,14 +1,9 @@
 package com.tikiyot.vfm;
 
 // אופני עבודה (105). אחראי: איזה אופן פעיל, רשימת האופנים, יצירה (ריק או העתק), מעבר.
-// כל אופן הוא תיקייה משלו, ובה כל מה שהיה בתיקיית התוכנה: מבנה.txt, הגדרות/, .מערכת/ (האינדקס), .גיבויים/.
+// כל אופן הוא תיקייה משלו: הגדרות/, .מערכת/ (האינדקס), .גיבויים/ (הרשימות עצמן — במסד של האופן, באחסון הפרטי).
 // משותף לכל האופנים: הקבצים בכונן עצמם וסל המחזור. אסור לו: לדעת מה יש בתוך הקבצים.
 
-import android.app.Activity;
-import android.app.AlarmManager;
-import android.app.PendingIntent;
-import android.content.Context;
-import android.content.Intent;
 
 import java.io.File;
 import java.util.ArrayList;
@@ -19,8 +14,6 @@ public final class Modes {
 
     public static final String DIR = "אופני עבודה";                       // בכונן
     public static final String FIRST = "עבודה אמיתית";                    // בכונן
-    /** אופן שנמחק לא נמחק באמת: התיקייה שלו עוברת לכאן, בתיקיית התוכנה (105). */
-    public static final String DELETED = ".אופנים שנמחקו";                // בכונן
     private static String current;
 
     private Modes() { }

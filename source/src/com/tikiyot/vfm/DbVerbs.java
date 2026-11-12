@@ -1,9 +1,8 @@
 package com.tikiyot.vfm;
 
-// מ0.10: פקודות הרשימות (פתח / צור / עדכן רשימה, רשימה חכמה; "רשימה חדשה"; הוספה מהכונן ומחיפוש) — כשעובדים במסד,
-// פועלות על המסד; כשעובדים בישן — כמו תמיד (Verbs). "עובדים במסד" = מסך המסד המוכר פתוח (DbListScreen.alive).
-// המשתמש: "ושאר הפקודות עובדות באותו מסד, וכאשר אני בישן — עובדות בישן."
-// אחראי: לפתוח את המסד, להפעיל את DbPaths ולפתוח את המסך. אסור לו: לגעת במנוע הישן.
+// מ0.10: פקודות הרשימות (פתח / צור / עדכן רשימה, רשימה חכמה; "רשימה חדשה"; הוספה מהכונן ומחיפוש) — על המסד של
+// האופן. מ0.25: תמיד במסד (אין עוד צד ישן). active — יש אופן ויש תוכנה (בבדיקות במחשב — לא, ואז "אין מסד").
+// אחראי: לפתוח את המסד, להפעיל את DbPaths ולפתוח את המסך.
 
 import android.app.Activity;
 import android.content.Intent;
@@ -16,17 +15,15 @@ final class DbVerbs {
 
     /** האם הפקודות עכשיו של המסד. */
     static boolean active() {
-        {
-            // מ0.25 (מחיקת המנוע הישן, שלב 1): בבניית מ הפקודות תמיד של המסד — גם כשמסך המסד עוד לא הוצג
-            // (שיתוף מאפליקציה אחרת, קיצור דרך): האופן — זה שנשמר.
-            if (DbListScreen.currentMode == null && DbListScreen.app != null)
-                try {
-                    DbListScreen.currentMode = DbScreen.savedMode(DbListScreen.app);
-                } catch (Throwable t) {
-                    Log.e("DbVerbs.active", t);
-                }
-            return DbListScreen.currentMode != null && DbListScreen.app != null;
-        }
+        // מ0.25 (מחיקת המנוע הישן, שלב 1): בבניית מ הפקודות תמיד של המסד — גם כשמסך המסד עוד לא הוצג
+        // (שיתוף מאפליקציה אחרת, קיצור דרך): האופן — זה שנשמר.
+        if (DbListScreen.currentMode == null && DbListScreen.app != null)
+            try {
+                DbListScreen.currentMode = DbScreen.savedMode(DbListScreen.app);
+            } catch (Throwable t) {
+                Log.e("DbVerbs.active", t);
+            }
+        return DbListScreen.currentMode != null && DbListScreen.app != null;
     }
 
     /** מבצע את הפקודה במסד; false — אינה פקודת רשימות (ממשיכה כרגיל: מסכים, תיקייה, חיפוש, הרצה). */
@@ -140,25 +137,21 @@ final class DbVerbs {
     static void saveDups(final Activity a, final String mode, final long in, String name, final Target t) {
         final Func f = Func.byKind(FnDup.KIND);
         if (f == null) return;
-        {
-            {
-                final java.io.File file = Shortcuts.write(f.icon, name == null || name.isEmpty() ? f.title : name,
-                        Verbs.toolLine(t.kind, t.params));
-                if (file == null) {
-                    Ui.toast(a, Words.SAVE_FAILED);
-                    return;
-                }
-                write(a, mode, new Job() {
-                    @Override
-                    public long run(Store s, List<String> p) {
-                        DbFiles.add(s, in != 0 ? in : DbPaths.home(s), java.util.Collections.singletonList(file.getAbsolutePath()), null, true);
-                        return in;
-                    }
-                }, null);
-                if (a instanceof DbListScreen) ((DbListScreen) a).reload();
-                f.open(a, t);
-            }
+        final java.io.File file = Shortcuts.write(f.icon, name == null || name.isEmpty() ? f.title : name,
+                Verbs.toolLine(t.kind, t.params));
+        if (file == null) {
+            Ui.toast(a, Words.SAVE_FAILED);
+            return;
         }
+        write(a, mode, new Job() {
+            @Override
+            public long run(Store s, List<String> p) {
+                DbFiles.add(s, in != 0 ? in : DbPaths.home(s), java.util.Collections.singletonList(file.getAbsolutePath()), null, true);
+                return in;
+            }
+        }, null);
+        if (a instanceof DbListScreen) ((DbListScreen) a).reload();
+        f.open(a, t);
     }
 
     /** פקודה (מתפריט הפקודות האחד) — קובץ הפקודות נכנס לרשימה. */
@@ -176,7 +169,7 @@ final class DbVerbs {
                 }, null);
                 if (a instanceof DbListScreen) ((DbListScreen) a).reload();
             }
-        }, null);
+        });
     }
 
     /** קבצים מתיקייה / מחיפוש — מסך המסד נפתח ברשימה, וישר חלון הבחירה. */

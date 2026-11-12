@@ -164,11 +164,6 @@ public final class SmartForm {
             return !empty.isChecked() && !kinds.all && kinds.empty();         // 175: תיקיות — בלי סוג
         }
 
-        /** מקורות וסוגים תמיד; תאריך, גודל ומילים — רק ברשימה חכמה. */
-        public void addTo(Activity a, LinearLayout b, boolean full) {
-            addTo(a, b, full, true);
-        }
-
         /** 153: בלי שדה המילים — במסך החיפוש המילים בשורת ההקלדה. */
         public void addTo(Activity a, LinearLayout b, boolean full, boolean withWords) {
             b.addView(Ui.label(a, Words.SmartF.FROM_WHERE));

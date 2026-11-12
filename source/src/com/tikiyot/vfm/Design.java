@@ -176,6 +176,8 @@ final class Design {
     }
 
     // ---------- החלק הפרטי ----------
+    // מועמד למחיקה (מ0.42): iconOf, colorOf, setPrivate, listMoved ו־renamed — רק הבדיקות קוראות להם. במסד — הצלמית של
+    // רשימה נשמרת ברשימה עצמה. מה שנשאר בשימוש: הקריאה של הסעיף [רשימות] (load), ושמירתו בחזרה לברירת מחדל (withPrivate).
 
     static String key(List<String> path) {
         return Names.key(path);
@@ -542,31 +544,6 @@ final class Design {
 
     static void setHome(String name) {
         Conf.set(Conf.GENERAL, HOME_KEY, name);
-    }
-
-    /** שם העיצוב של רשימה: שלה; אם אין — של הרשימה שמעליה; …; ואז מסך הבית (החלטות 1 ו־5). */
-    static String nameFor(Tree t, List<String> path) {
-        for (int i = path.size(); i >= 0; i--) {
-            Tree.Node n = t.find(path.subList(0, i));
-            if (n != null && !n.design.isEmpty()) return n.design;
-        }
-        String home = homeName();
-        return home.isEmpty() ? DEFAULT : home;
-    }
-
-    /** מאיפה הגיע העיצוב: null — נבחר לרשימה עצמה; אחרת שם הרשימה שמעליה, או "" — מסך הבית. */
-    static String inheritedFrom(Tree t, List<String> path) {
-        Tree.Node self = t.find(path);
-        if (self != null && !self.design.isEmpty()) return null;
-        for (int i = path.size() - 1; i >= 0; i--) {
-            Tree.Node n = t.find(path.subList(0, i));
-            if (n != null && !n.design.isEmpty()) return i == 0 ? Words.MANUAL_LISTS : path.get(i - 1);
-        }
-        return "";
-    }
-
-    static Design forList(Tree t, List<String> path) {
-        return get(nameFor(t, path));
     }
 
     // ---------- העיצובים המובנים ----------

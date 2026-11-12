@@ -40,18 +40,6 @@ final class DateSize {
         sizeUnit = d.sizeUnit;
     }
 
-    DateSize copy() {
-        DateSize d = new DateSize();
-        d.dateMode = dateMode;
-        d.dateValue = dateValue;
-        d.added = added;
-        d.allowAdded = allowAdded;
-        d.sizeMode = sizeMode;
-        d.sizeNumber = sizeNumber;
-        d.sizeUnit = sizeUnit;
-        return d;
-    }
-
     /** ערך גודל שהשדות יודעים להציג: מספר, ואולי B/KB/MB/GB. */
     static boolean sizeOk(String v) {
         return v.trim().toUpperCase(Locale.ROOT).matches("\\d+(\\.\\d+)?\\s*(B|KB|MB|GB)?");
