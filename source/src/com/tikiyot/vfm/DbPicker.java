@@ -188,7 +188,7 @@ final class DbPicker {
             Ui.toast(a, Words.Db.NO_DB_HERE);
             return;
         }
-        PickerModel m = new PickerModel(new Source(snap), null, null, null);
+        PickerModel m = new PickerModel(new Source(snap), null);
         PickDialog.Creator creator = new PickDialog.Creator() {
             @Override
             public void create(final Activity act, final ArrayList<String> parent, final PickDialog.Chosen done) {
@@ -230,7 +230,7 @@ final class DbPicker {
                 cb.ok(mode, id, path);
             }
         };
-        PickDialog.show(a, title, m, PickDialog.LISTS, creator, chosen, null);
+        PickDialog.show(a, title, m, PickDialog.LISTS, creator, chosen);
     }
 
     // ================= הוספת קבצים (המשותף לכל "לרשימה") =================
@@ -321,7 +321,7 @@ final class DbPicker {
             for (Store.Member m : s.members(it.id)) {
                 if (m.item.type != Store.FILE) continue;
                 Store.FileInfo f = s.file(m.item.id);
-                if (f != null) n.entries.add(new Tree.Entry(f.path, f.size, false));
+                if (f != null) n.entries.add(new Tree.Entry(f.path, f.size));
             }
         }
         return t;

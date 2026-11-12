@@ -409,7 +409,7 @@ final class Verbs {
         else if (s.equals(S_SEARCH)) a.startActivity(new Intent(a, SearchScreen.class));
         else if (s.equals(S_COMMANDS)) CmdMenu.show(a, null);             // 1.16.1: אותו תפריט בכל מקום
         else if (s.equals(S_DISK)) DiskScreen.open(a, c.cond.isEmpty() ? null : c.cond);
-        else if (s.equals(S_VIRTUAL)) a.startActivity(SearchScreen.fileManager(a, "", c.cond.isEmpty() ? null : c.cond, null));
+        else if (s.equals(S_VIRTUAL)) a.startActivity(SearchScreen.fileManager(a, c.cond.isEmpty() ? null : c.cond));
         else if (s.equals(S_SETTINGS)) a.startActivity(new Intent(a, SettingsScreen.class));
         else if (s.equals(S_TRASH)) a.startActivity(new Intent(a, TrashScreen.class));
         else if (s.equals(S_EDITOR)) a.startActivity(new Intent(a, BatchEditScreen.class));   // 1.28.0: בלי קובץ — טיוטה

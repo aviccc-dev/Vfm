@@ -46,7 +46,7 @@ public final class FolderPicker {
             roots.put(p, label);
         }
         final IndexSource src = new IndexSource(drives);
-        PickerModel m = new PickerModel(src, roots, null, null);
+        PickerModel m = new PickerModel(src, roots);
         m.direct = !canCreate;                               // בלי יצירה: נגיעה אחת בוחרת
         if (m.roots.size() == 1) m.enter(m.roots.get(0));    // כונן אחד: נכנסים אליו ישר
         PickDialog.Creator creator = !canCreate ? null : new PickDialog.Creator() {
@@ -73,6 +73,6 @@ public final class FolderPicker {
             @Override public void ok(ArrayList<String> path) { cb.ok(src.fileOf(path)); }
         };
         if (extra != null) PickDialog.show(a, title, m, PickDialog.FOLDERS, creator, chosen, extraLabel, extra);
-        else PickDialog.show(a, title, m, PickDialog.FOLDERS, creator, chosen, null);
+        else PickDialog.show(a, title, m, PickDialog.FOLDERS, creator, chosen);
     }
 }

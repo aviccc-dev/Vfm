@@ -37,26 +37,22 @@ public class SearchScreen extends Activity implements Clip.Holder {
     public static final String EXTRA_FIXED = "fixed";
     public static final String EXTRA_TITLE = "title";
     public static final String EXTRA_SORT = "sort";
-    public static final String EXTRA_PICK_INTO = "pick";    // מסלול הרשימה שאליה מוסיפים
     public static final String EXTRA_VIEW = "view";         // 148: ברצף / בתיקיות — ברירת המחדל של הרשימה
     public static final String EXTRA_DIR = "dir";           // 159: בתיקיות — מאיפה מתחילים
     public static final String EXTRA_HIDDEN = "hidden";     // 159: מוסתרים מוצגים
 
     /**
      * 159 — "מנהל קבצים": רשימה חכמה בלי סינון, "בתיקיות — כולל הכול" (במקום המסך הישן).
-     * sources — תנאי מקורות ("" — כל הכוננים); dir — התיקייה שנפתחת (או null); pickInto — הוספה לרשימה (או null).
+     * כל הכוננים; dir — התיקייה שנפתחת (או null).
      */
-    static android.content.Intent fileManager(android.content.Context c, String sources, String dir,
-                                              java.util.ArrayList<String> pickInto) {
+    static android.content.Intent fileManager(android.content.Context c, String dir) {
         android.content.Intent i = new android.content.Intent(c, SearchScreen.class);
-        i.putExtra(EXTRA_QUERY, sources == null || sources.isEmpty()
-                ? Sources.toCond(java.util.Arrays.asList(Sources.INTERNAL, Sources.CARD)) : sources);
+        i.putExtra(EXTRA_QUERY, Sources.toCond(java.util.Arrays.asList(Sources.INTERNAL, Sources.CARD)));
         i.putExtra(EXTRA_VIEW, FolderView.ALL);
         i.putExtra(EXTRA_FIXED, true);
         i.putExtra(EXTRA_SORT, Sort.NAME);
         i.putExtra(EXTRA_TITLE, SmartLists.FILE_MANAGER);
         if (dir != null) i.putExtra(EXTRA_DIR, dir);
-        if (pickInto != null) i.putStringArrayListExtra(EXTRA_PICK_INTO, pickInto);
         return i;
     }
 
@@ -65,7 +61,6 @@ public class SearchScreen extends Activity implements Clip.Holder {
     private final List<Object> rows = new ArrayList<Object>();
     private Set<String> selected = new LinkedHashSet<String>();
     private Select sel;
-    private final Set<String> inList = new java.util.HashSet<String>();
     /** 146: שורות שאחרי פעולה כבר אינן עונות — נשארות באפור עד רענון (מסך יציב). המפתח: המסלול שבשורה. */
     private final java.util.Map<String, FileItem.State> out = new java.util.HashMap<String, FileItem.State>();
     private String infoBase = "";
@@ -101,7 +96,6 @@ public class SearchScreen extends Activity implements Clip.Holder {
     private String queryNorm = "", fixedQuery;
     private Sort srt;
     private boolean fixed, paths, loose = true;
-    private ArrayList<String> pickInto;
     private Runnable pending;
     private static final int[] SECTION_BG = Library.MATCH_COLORS;
     /** שורת תוצאה בעיני המיון (79). */
@@ -173,7 +167,6 @@ public class SearchScreen extends Activity implements Clip.Holder {
         fixed = getIntent().getBooleanExtra(EXTRA_FIXED, false);
         fixedQuery = getIntent().getStringExtra(EXTRA_QUERY);
         String extraSort = getIntent().getStringExtra(EXTRA_SORT);
-        pickInto = getIntent().getStringArrayListExtra(EXTRA_PICK_INTO);
         String v = getIntent().getStringExtra(EXTRA_VIEW);
         if (v != null) view = v;
         startDir = getIntent().getStringExtra(EXTRA_DIR);
@@ -188,18 +181,11 @@ public class SearchScreen extends Activity implements Clip.Holder {
         String title = getIntent().getStringExtra(EXTRA_TITLE);
         whyText = SmartLists.FILE_MANAGER.equals(title) ? Words.WhyW.VIRTUAL_FILES : "";
         whyKey = Words.WhyW.KEY_SCREEN + title;
-        setTitle(pickInto != null ? Words.ADD_TO_LIST + ": " + Names.label(pickInto)
-                : title != null && !title.isEmpty() ? title : Words.Look.SEARCH);
+        setTitle(title != null && !title.isEmpty() ? title : Words.Look.SEARCH);
     }
 
     /** שורת החיפוש וחלונית ההגדרות (153). */
     private void buildQuery(LinearLayout root) {
-        if (pickInto != null) {
-            TextView hint = Ui.info(this);
-            hint.setText(Words.Look.TAP_ADDS + Words.NO_TOUCH);
-            hint.setBackgroundColor(Ui.BG_SOFT);
-            root.addView(hint);
-        }
         String[] split = SmartLists.split(fixedQuery);                        // 153: הגדרות לחלונית, מילים לשורה
         input = Ui.field(this, split[1], Words.Find.HINT);
         input.setTextSize(18);
@@ -220,7 +206,7 @@ public class SearchScreen extends Activity implements Clip.Holder {
         parts = new SmartForm.Parts(this, Words.Find.ALL_DRIVES);
         parts.load(split[0]);
         LinearLayout box = Ui.form(this);
-        parts.addTo(this, box, true, false);
+        parts.addTo(this, box);
         panel = new android.widget.ScrollView(this);
         panel.addView(box);
         panel.setVisibility(View.GONE);
@@ -235,7 +221,6 @@ public class SearchScreen extends Activity implements Clip.Holder {
                 settings.setText(Words.Find.SETTINGS + (open ? " ▾" : " ▸"));
             }
         });
-        if (pickInto != null) settings.setVisibility(View.GONE);
         root.addView(settings);
         root.addView(panel, new LinearLayout.LayoutParams(-1, Ui.dp(this, 300)));
     }
@@ -310,7 +295,7 @@ public class SearchScreen extends Activity implements Clip.Holder {
                 FileItem.State gone = out.get(hit.path());
                 boolean marked = FolderView.ALL.equals(view) && fv != null && here != null;   // 148: "כולל הכול" — מסמנים התאמות
                 boolean match = marked && fv.isMatch(hit.path());
-                String status = gone != null ? gone.note : inList.contains(hit.path()) ? Words.Look.IN_LIST : null;
+                String status = gone != null ? gone.note : null;
                 if (match) status = status == null ? "✓" : "✓ · " + status;
                 if (hit.section > 0) status = (status == null ? "" : status + " · ")
                         + Library.MATCH_TYPES[hit.section];
@@ -389,7 +374,7 @@ public class SearchScreen extends Activity implements Clip.Holder {
         });
         bar = sel.bar;
         selected = sel.files;
-        sel.actions(this, Actions.Tool.SEARCH, pickInto != null ? Names.label(pickInto) : null, new Runnable() {
+        sel.actions(this, Actions.Tool.SEARCH, new Runnable() {
             @Override public void run() { stay(); }                            // 146: מסך יציב אחרי פעולה
         }, java.util.Collections.<Actions.Action, Runnable>singletonMap(Actions.ADD_TO_LIST, new Runnable() {
             @Override public void run() { addSelected(); }
@@ -457,7 +442,6 @@ public class SearchScreen extends Activity implements Clip.Holder {
         super.onResume();
         lib.start(null);
         lib.returned();                                                  // 110
-        loadInList();
         search();
         showClip();
     }
@@ -488,7 +472,7 @@ public class SearchScreen extends Activity implements Clip.Holder {
     /** מה בלוח; "הדבקה כאן" — רק ב"כולל הכול", בתוך תיקייה שאפשר להדביק בה. */
     private void showClip() {
         if (clipBar == null) return;
-        if (Clip.isEmpty() || pickInto != null) {
+        if (Clip.isEmpty()) {
             clipBar.setVisibility(View.GONE);
             return;
         }
@@ -530,11 +514,6 @@ public class SearchScreen extends Activity implements Clip.Holder {
         super.onPause();
     }
 
-    private void loadInList() {
-        inList.clear();
-        if (pickInto == null) return;
-    }
-
     // ---------- נגיעות ובחירה ----------
 
     private void tap(Library.Hit hit) {
@@ -546,15 +525,7 @@ public class SearchScreen extends Activity implements Clip.Holder {
         if (sel.on()) {
             if (hit.isDir()) sel.toggleDir(hit.path()); else toggle(hit);
         } else if (hit.isDir()) {
-            if (pickInto != null) {
-                Adder.folder(this, new File(hit.path()), pickInto, new Adder.Done() {
-                    @Override public void done() { loadInList(); adapter.notifyDataSetChanged(); }
-                });
-            } else {
-                startActivity(fileManager(this, "", hit.path(), null));         // 159
-            }
-        } else if (pickInto != null) {
-            Ui.toast(this, Words.DbCmd.NO_DB);                                // מ0.29: בחירה לתוך רשימה של המנוע הישן — אין עוד
+            startActivity(fileManager(this, hit.path()));                     // 159
         } else {                                                              // 1.13.1: קובץ פקודות — כקובץ (תפריט: הרצה / עריכה)
             Ui.open(this, new File(hit.path()));
         }
@@ -576,10 +547,9 @@ public class SearchScreen extends Activity implements Clip.Holder {
         }
         List<File> folders = new ArrayList<File>();
         for (String d : sel.dirs) folders.add(new File(d));
-        Adder.many(this, folders, new ArrayList<String>(selected), pickInto, new Adder.Done() {   // (76)
+        Adder.many(this, folders, new ArrayList<String>(selected), new Adder.Done() {   // (76)
             @Override
             public void done() {
-                loadInList();
                 adapter.notifyDataSetChanged();
             }
         });
@@ -922,10 +892,7 @@ public class SearchScreen extends Activity implements Clip.Holder {
         menu.add(0, 4, 3, Words.FULL_SHORT);
         menu.add(0, 5, 4, Words.Views.MENU);                                  // 148
         if (FolderView.ALL.equals(view)) menu.add(0, 8, 7, hidden ? Words.Here.HIDE_HIDDEN : Words.Here.SHOW_HIDDEN);   // 149
-        if (pickInto != null && folderMode() && here != null) menu.add(0, 9, 8, Words.Here.ADD_FOLDER);
-        if (pickInto == null) {                                               // 153
-            menu.add(0, 7, 6, Words.Find.SAVE_AS);
-        }
+        menu.add(0, 7, 6, Words.Find.SAVE_AS);                                // 153
         return true;
     }
 
@@ -944,17 +911,7 @@ public class SearchScreen extends Activity implements Clip.Holder {
             showFolder();
             return true;
         }
-        if (item.getItemId() == 9 && pickInto != null && here != null) {      // 149: התיקייה כולה לרשימה
-            Adder.folder(this, new File(here), pickInto, new Adder.Done() {
-                @Override
-                public void done() {
-                    loadInList();
-                    adapter.notifyDataSetChanged();
-                }
-            });
-            return true;
-        }
-        if (item.getItemId() == 6 || item.getItemId() == 7) {                 // 153
+        if (item.getItemId() == 7) {                                          // 153: "שמירה בשם"
             save();
             return true;
         }

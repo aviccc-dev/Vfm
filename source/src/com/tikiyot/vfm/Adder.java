@@ -17,18 +17,12 @@ public final class Adder {
 
     private Adder() { }
 
-    /** listPath == null: בחירת רשימה בבורר היעד. */
-    public static void folder(final Activity a, final File folder, final List<String> listPath, final Done done) {
-        many(a, java.util.Collections.singletonList(folder), new ArrayList<String>(), listPath, done);
-    }
-
     /**
      * הוספה לרשימה של כמה תיקיות וקבצים בבת אחת (76). שאלה אחת לכל התיקיות: מתעדכנת (1.9.0, ברירת המחדל), צילום עם המבנה, או הקבצים בלבד.
-     * listPath == null: בחירת רשימה בבורר היעד.
+     * הרשימה — נבחרת בבורר היעד.
      */
-    public static void many(final Activity a, final List<File> folders, final List<String> files,
-                            final List<String> listPath, final Done done) {
-        if (listPath == null && DbPicker.on(a)) {                             // מ0.23: עובדים במסד — הרשימות של המסד
+    public static void many(final Activity a, final List<File> folders, final List<String> files, final Done done) {
+        if (DbPicker.on(a)) {                                                 // מ0.23: עובדים במסד — הרשימות של המסד
             manyDb(a, folders, files, done);
             return;
         }

@@ -644,11 +644,6 @@ public final class Library {
         return r == null ? null : hit(ix, r);
     }
 
-    /** האם קובץ קיים, לפי האינדקס. */
-    public boolean exists(String path) {
-        return find(path) != null;
-    }
-
     /** קבצים לפי שם, ואם ידוע גם לפי גודל. */
     public List<Hit> byName(String name, long size) {
         List<Hit> out = new ArrayList<Hit>();

@@ -229,7 +229,6 @@ public class DupScreen extends Activity {
             @Override public int lists() { return 0; }
             @Override public int dirs() { return 0; }
             @Override public List<String> dirPaths() { return new ArrayList<String>(); }
-            @Override public String picking() { return null; }
             @Override
             public void changed() {
                 selected.clear();
@@ -762,8 +761,8 @@ public class DupScreen extends Activity {
         Clip.set(paths, new ArrayList<String>(), false, wholeWarning(true));
         selected.clear();
         show();
-        startActivity(SearchScreen.fileManager(this, "", Clip.startDir() == null ? null          // 159
-                : Clip.startDir().getAbsolutePath(), null));
+        startActivity(SearchScreen.fileManager(this, Clip.startDir() == null ? null             // 159
+                : Clip.startDir().getAbsolutePath()));
         Ui.toast(this, Clip.label() + Words.Dup.PASTE_HINT);
     }
 

@@ -330,7 +330,7 @@ public class DiskScreen extends ListScreen<File> implements Clip.Holder {
     private void addSelected() {
         List<File> folders = new ArrayList<File>();
         for (String p : sel.dirs) folders.add(new File(p));
-        Adder.many(this, folders, new ArrayList<String>(sel.files), null, new Adder.Done() {
+        Adder.many(this, folders, new ArrayList<String>(sel.files), new Adder.Done() {
             @Override public void done() { sel.stop(); refresh(); }
         });
     }

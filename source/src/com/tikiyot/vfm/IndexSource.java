@@ -162,6 +162,12 @@ final class IndexSource extends PickSource {
         return fileOf(d, path.subList(1, path.size()));
     }
 
+    /** מ0.42: הכותרת ברמת הכוננים (עד כאן הוצג שם "הרשימות של הכלים" — שריד של הבורר של המנוע הישן). */
+    @Override
+    String top() {
+        return Words.DiskW.DRIVES;
+    }
+
     @Override
     public boolean large() {
         return true;

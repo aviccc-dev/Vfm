@@ -47,7 +47,7 @@ abstract class PickSource {
         return null;
     }
 
-    /** 171: הכותרת כשעומדים בשורש; null — "כל הרשימות". */
+    /** 171: הכותרת כשעומדים בשורש או ברשימת נקודות הפתיחה; null — "כל הרשימות". */
     String top() {
         return null;
     }

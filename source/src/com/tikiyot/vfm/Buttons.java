@@ -68,11 +68,6 @@ final class Buttons {
             if (r == null) places.put(place, r = new ArrayList<List<Btn>>());
             return r;
         }
-
-        boolean has(String place) {
-            List<List<Btn>> r = places.get(place);
-            return r != null && !r.isEmpty();
-        }
     }
 
     private Buttons() { }

@@ -140,12 +140,6 @@ final class Sig {
         return map().get(path);
     }
 
-    /** חתימה תקפה: נשמרה לאותו גודל ותאריך שינוי. אחרת — null. */
-    static synchronized String valid(String path, long size, long mtime) {
-        Entry e = map().get(path);
-        return e != null && e.size == size && e.mtime == mtime ? e.sig : null;
-    }
-
     static synchronized void put(String path, long size, long mtime, String sig) {
         if (sig == null) return;
         map().put(path, new Entry(size, mtime, sig));
@@ -180,7 +174,7 @@ final class Sig {
     }
 
     private static void collect(Tree.Node n, Set<String> out) {
-        for (Tree.Entry e : n.entries) if (!e.bad) out.add(e.path);
+        for (Tree.Entry e : n.entries) out.add(e.path);
         for (Tree.Node c : n.children) collect(c, out);
     }
 
@@ -481,7 +475,7 @@ final class Sig {
     /** הפריטים שהקובץ שלהם אינו במקומו (לא באינדקס ולא בכונן), עם הגודל שברשימה. */
     private static void missingIn(Library lib, Tree.Node n, Map<String, Long> out) {
         for (Tree.Entry e : n.entries) {
-            if (e.bad || out.containsKey(e.path)) continue;
+            if (out.containsKey(e.path)) continue;
             Library.Hit h = lib != null && lib.ready ? lib.find(e.path) : null;
             if (h != null && h.rec != null && !h.rec.gone) continue;
             if (new File(e.path).isFile()) continue;

@@ -135,14 +135,12 @@ public final class Select {
     }
 
     /** הפעולות מהמרשם (80, רמה 2). after — אחרי פעולה שהצליחה: הבחירה מסתיימת, ואז after. */
-    public void actions(Activity a, Actions.Tool tool, final String picking, final Runnable after,
-                        Map<Actions.Action, Runnable> own) {
+    public void actions(Activity a, Actions.Tool tool, final Runnable after, Map<Actions.Action, Runnable> own) {
         Actions.fill(a, bar, tool, new Actions.Selection() {
             @Override public List<String> files() { return new ArrayList<String>(files); }
             @Override public int lists() { return lists.size(); }
             @Override public int dirs() { return dirs.size(); }
             @Override public List<String> dirPaths() { return new ArrayList<String>(dirs); }
-            @Override public String picking() { return picking; }
             @Override
             public void changed() {
                 stop();

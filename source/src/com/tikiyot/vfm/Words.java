@@ -12,9 +12,9 @@ public final class Words {
     public static final String NEW_LIST = "רשימה חדשה";
     /** 173: פריטי התפריט הקבועים בכל מסך רשימה. */
     public static final String FULL_SHORT = "נתונים מלאים / מקוצרים", SORT = "מיון";
-    public static final String ALL_LISTS = "כל הרשימות", TOOL_LISTS = "הרשימות של הכלים",
+    public static final String ALL_LISTS = "כל הרשימות",
             PICK_HERE = "לכאן", PICK_UP = "למעלה", VIEW_FOLDERS = "תיקיות", VIEW_TREE = "עץ",
-            SEARCH_LIST = "חיפוש רשימה…", OTHER_TOOL_LIST = "לרשימה בכלי אחר…",
+            SEARCH_LIST = "חיפוש רשימה…",
             NEW_FOLDER = "תיקייה חדשה", RENAME_ON_DRIVE = "שינוי שם בכונן", SEARCH_FOLDER = "חיפוש תיקייה…",
             NO_LISTS_HERE = "אין כאן רשימות", NO_FOLDERS_HERE = "אין כאן תיקיות",
             INSIDE_LIST = "בתוך רשימה זו", INSIDE_FOLDER = "בתוך תיקייה זו",
@@ -143,8 +143,7 @@ public final class Words {
         private Here() { }
 
         public static final String TO_ALL = "עבור למצב \"כולל הכול\" ולהדביק שם", PICK = "בחירת תיקייה…",
-                LATER = "אחר כך", PASTE_PICK = "הדבקה…", PICK_TITLE = "להדביק לתיקייה",
-                ADD_FOLDER = "➕ הוספת התיקייה הזו לרשימה", SHOW_HIDDEN = "הצגת מוסתרים", HIDE_HIDDEN = "הסתרת מוסתרים";
+                LATER = "אחר כך", PASTE_PICK = "הדבקה…", PICK_TITLE = "להדביק לתיקייה", SHOW_HIDDEN = "הצגת מוסתרים", HIDE_HIDDEN = "הסתרת מוסתרים";
     }
 
     // ---------- החיפוש האחד (153) ----------
@@ -184,9 +183,7 @@ public final class Words {
             return "כבר יש תבנית בשם \"" + name + "\"";
         }
 
-        public static String overwrite(int tools) {
-            return "ההגדרות שלה יוחלפו בהגדרות שבטופס" + (tools > 0 ? ", בכל " + (tools == 1 ? "הכלי שמקשר" : tools + " הכלים שמקשרים") + " אליה" : "");
-        }
+        public static final String OVERWRITE = "ההגדרות שלה יוחלפו בהגדרות שבטופס";
 
         public static final String UPDATE = "לעדכן";
     }
@@ -962,11 +959,9 @@ public final class Words {
         /** 189: בשורה, כשממוין לפי תאריך ההוספה — התאריך שאחריו הוא של ההוספה. */
         public static final String ADDED = "נוסף";
         public static final String ADDED_UNKNOWN = "נוסף: לא ידוע";
-        public static final String TAP_ADDS = "נגיעה בתוצאה מוסיפה אותה לרשימה · ";
         public static final String REFRESHING = "מרענן את האינדקס…";
         public static final String INDEX_UP_TO_DATE = "האינדקס מעודכן";
         public static final String FOLDERS_REFRESHED = " תיקיות רועננו";
-        public static final String IN_LIST = "✓ ברשימה";
         public static final String FILES_IN_INDEX = " קבצים באינדקס · עודכן ";
         public static final String STILL_LOADING = " · האינדקס עדיין נטען";
         public static final String MS_FORMAT = " · %.1f מ\"ש";
@@ -1114,8 +1109,6 @@ public final class Words {
         public static final String UNZIP = "פריסה";
         public static final String PATH = "מסלול";
         public static final String NAME_ON_DRIVE = "שם בכונן";
-        public static final String ADD_TO_ICON = "➕ הוספה ל";
-        public static final String ADD_TO = "הוספה ל";
         public static final String PASTE_HINT_FOLDER = " — מנווטים לתיקייה ולוחצים \"הדבקה כאן\"";
     }
 
@@ -1325,7 +1318,6 @@ public final class Words {
         /** 197: הטופס הדחוס — תוויות בשורה עם השדה. */
         public static final String NAME_L = "שם", WORDS_L = "מכיל מילים", WORDS_HINT = "לא חובה";
         public static final String FROM_WHERE = "מאיפה (מקורות)";
-        public static final String WORDS_IN_NAME = "מילים בשם";
         public static final String COND_IN_FILE = "התנאי שייכתב בקובץ";
         /** 196: הסידור החדש של הטופס */
         public static final String FROM = "מאיפה";
@@ -1350,9 +1342,8 @@ public final class Words {
         public static final String UNLINK = "✂ לנתק — רק לרשימה הזו";
         public static final String NONE_SAVED = "עוד אין תבניות";
 
-        public static String shared(String name, int tools) {
-            return "הגדרה נפוצה \"" + name + "\"" + (tools > 1 ? " — גם ב־" + (tools - 1) + (tools - 1 == 1 ? " מקום נוסף" : " מקומות נוספים") : "")
-                    + "; שינוי כאן ישנה בכל מקום שהיא.";
+        public static String shared(String name) {
+            return "הגדרה נפוצה \"" + name + "\"; שינוי כאן ישנה בכל מקום שהיא.";
         }
     }
 

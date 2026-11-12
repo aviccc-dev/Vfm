@@ -57,14 +57,14 @@ final class PickDialog {
     static final Kind FOLDERS = new Kind("📁", Words.NEW_FOLDER, Words.INSIDE_FOLDER, Words.NO_FOLDERS_HERE, Words.SEARCH_FOLDER);
     private static final int GUTTER_DP = 20;
 
-    /** creator = null: אי אפשר ליצור. crossTool = null: אין מעבר לרשימה של כלי אחר. */
-    static void show(Activity a, String title, PickerModel m, Kind kind, Creator creator, Chosen cb, Runnable crossTool) {
-        new PickDialog(a, title, m, kind, creator, cb, crossTool).open();
+    /** creator = null: אי אפשר ליצור. */
+    static void show(Activity a, String title, PickerModel m, Kind kind, Creator creator, Chosen cb) {
+        new PickDialog(a, title, m, kind, creator, cb).open();
     }
 
     /** 204: עם יעד נוסף ליד הכוננים (למשל "📤 שיתוף") — שורה ברמת הכוננים; נגיעה סוגרת ומריצה. */
     static void show(Activity a, String title, PickerModel m, Kind kind, Creator creator, Chosen cb, String extraLabel, Runnable extra) {
-        PickDialog d = new PickDialog(a, title, m, kind, creator, cb, null);
+        PickDialog d = new PickDialog(a, title, m, kind, creator, cb);
         d.extraLabel = extraLabel;
         d.extra = extra;
         d.open();
@@ -79,7 +79,6 @@ final class PickDialog {
     private final Kind kind;
     private final Creator creator;
     private final Chosen cb;
-    private final Runnable crossTool;
     private boolean tree;
     private String query = "";
     private AlertDialog dialog;
@@ -88,14 +87,13 @@ final class PickDialog {
     private TextView crumb, toggle;
     private EditText search;
 
-    private PickDialog(Activity a, String title, PickerModel m, Kind kind, Creator creator, Chosen cb, Runnable crossTool) {
+    private PickDialog(Activity a, String title, PickerModel m, Kind kind, Creator creator, Chosen cb) {
         this.a = a;
         this.title = title;
         this.m = m;
         this.kind = kind;
         this.creator = creator;
         this.cb = cb;
-        this.crossTool = crossTool;
         tree = "tree".equals(a.getSharedPreferences("vfm", Context.MODE_PRIVATE).getString("pickerView", "folders"));
     }
 
@@ -237,14 +235,6 @@ final class PickDialog {
         for (PickerModel.Row r : list) rows.addView(rowView(r, tree && !searching, folders));
         if (searching && m.truncated)
             rows.addView(note(Words.Pick.SHOWING + PickerModel.SEARCH_MAX + Words.Pick.FIRST_NARROW));
-        if (crossTool != null && m.crossTool() && !searching && (tree || m.current.equals(m.scopeBase)))
-            rows.addView(plain("📂 " + Words.OTHER_TOOL_LIST, new View.OnClickListener() {
-                @Override
-                public void onClick(View v) {
-                    dialog.dismiss();
-                    crossTool.run();
-                }
-            }));
         if (list.isEmpty() && !(extra != null && top)) rows.addView(note(searching ? Words.Pick.NOT_FOUND : kind.none));
         dialog.getButton(AlertDialog.BUTTON_POSITIVE)
                 .setVisibility(folders && m.canChooseHere() ? View.VISIBLE : View.GONE);

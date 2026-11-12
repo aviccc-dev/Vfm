@@ -3,6 +3,8 @@ package com.tikiyot.vfm;
 // פריט — קובץ אחד כפי שכל הכלים רואים אותו (80, מודל אחד של פריט).
 // אחראי: שם, מקום, גודל, תאריך, ומצב — מחושב כאן בלבד, וכך הסימונים זהים בכל הכלים.
 // אסור לו: לשנות קבצים או רשימות.
+// מועמד למחיקה (מ0.42) — לצמצום: התוכנה משתמשת היום רק במצב (State, dropped, absent), תמיד עם האינדקס ובלי גודל ידוע;
+// השדות (שם, גודל, תאריך), knownSize ו־useIndex — רק הבדיקות. אפשר לצמצם ל"מה המצב של הקובץ במסלול הזה".
 
 import java.io.File;
 
@@ -40,11 +42,6 @@ public final class FileItem {
             this.many = many;
         }
 
-        /** הקובץ נמצא בכונן (גם אם מוסתר או בסל). */
-        public boolean present() {
-            return this == OK || this == HIDDEN || this == IN_TRASH;
-        }
-
         /** לשורת הסיכום: "⚠ 3 חסרים" · "2 במדיה שהוצאה או פגומה". */
         public String count(int n) {
             return (icon.isEmpty() || this == OFFLINE ? "" : icon + " ") + n + " " + many;
@@ -63,15 +60,6 @@ public final class FileItem {
     }
 
     // ---------- יצירה ----------
-
-    /** מתוך האינדקס: הקובץ קיים, והמצב לפי הסימונים שבאינדקס. */
-    public static FileItem of(Index ix, Index.Rec r) {
-        FileItem it = new FileItem(ix.path(r));
-        it.size = r.size;
-        it.mtime = r.mtime;
-        it.state = ix.trash(r) ? State.IN_TRASH : ix.hidden(r) ? State.HIDDEN : State.OK;
-        return it;
-    }
 
     /**
      * לפי מסלול (למשל פריט ברשימה ידנית). useIndex=false כשהאינדקס עוד נבנה —

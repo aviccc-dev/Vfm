@@ -17,12 +17,10 @@ public final class Tree {
     public static final class Entry {
         public String path;
         public long size = -1;
-        public final boolean bad;
 
-        public Entry(String path, long size, boolean bad) {
+        public Entry(String path, long size) {
             this.path = path;
             this.size = size;
-            this.bad = bad;
         }
     }
 
@@ -31,16 +29,16 @@ public final class Tree {
         public final List<Node> children = new ArrayList<Node>();
         public final List<Entry> entries = new ArrayList<Entry>();
 
-        public String uniqueChildName(String base, Node except) {
+        public String uniqueChildName(String base) {
             base = Names.cleanName(base);
-            if (!taken(base, except)) return base;
+            if (!taken(base)) return base;
             int n = 2;
-            while (taken(base + " (" + n + ")", except)) n++;
+            while (taken(base + " (" + n + ")")) n++;
             return base + " (" + n + ")";
         }
 
-        private boolean taken(String n, Node except) {
-            for (Node c : children) if (c != except && c.name.equals(n)) return true;
+        private boolean taken(String n) {
+            for (Node c : children) if (c.name.equals(n)) return true;
             return false;
         }
     }
@@ -73,7 +71,7 @@ public final class Tree {
         } else {
             List<String> all = new ArrayList<String>();
             collectFiles(folder, all);
-            for (String p : all) detached.entries.add(new Entry(p, new File(p).length(), false));
+            for (String p : all) detached.entries.add(new Entry(p, new File(p).length()));
         }
         return detached;
     }
@@ -84,8 +82,8 @@ public final class Tree {
         java.util.Arrays.sort(all);
         for (File f : all) {
             if (Vols.skip(f, false)) continue;
-            if (f.isDirectory()) fill(newChild(node, node.uniqueChildName(f.getName(), null)), f);
-            else node.entries.add(new Entry(f.getAbsolutePath(), f.length(), false));
+            if (f.isDirectory()) fill(newChild(node, node.uniqueChildName(f.getName())), f);
+            else node.entries.add(new Entry(f.getAbsolutePath(), f.length()));
         }
     }
 

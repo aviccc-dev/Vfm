@@ -1,6 +1,6 @@
 package com.tikiyot.vfm;
 
-// הגדרות של מופע פונקציה, כאוסף זוגות. אחראי: להעביר הגדרות בין הקובץ למסכים.
+// הגדרות של כלי, כאוסף זוגות. אחראי: להעביר הגדרות בין שורת הפקודה ("פתח כלי"), הטפסים והמסכים.
 
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -8,8 +8,6 @@ import java.util.Map;
 public final class Target {
 
     public final String kind;
-    /** מזהה הכלי בקובץ הראשי, אם הגיע ממנו. לא נשמר כפרמטר. */
-    public String id = "";
     public final Map<String, String> params = new LinkedHashMap<String, String>();
 
     private Target(String kind) {

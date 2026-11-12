@@ -95,10 +95,4 @@ final class DateSize {
         if (sizeMode == 0 || sizeNumber.trim().isEmpty()) return "";
         return SIZE + (sizeMode == 1 ? ">" : "<") + sizeNumber.trim() + (sizeUnit.equals("B") ? "" : sizeUnit);
     }
-
-    /** בתחביר החיפוש: "תאריך:<שנה גודל:>10MB". */
-    String toCond() {
-        String d = dateToken(), s = sizeToken();
-        return (d + (d.isEmpty() || s.isEmpty() ? "" : " ") + s).trim();
-    }
 }

@@ -2,8 +2,8 @@ package com.tikiyot.vfm;
 
 // המודל של הבורר (106): אילו צמתים מוצגים ובאיזה סדר, איך עולים ונכנסים, מה נפתח, ומה נמצא בחיפוש.
 // בלי ממשק, ולכן נבדק במחשב. הממשק — PickDialog. המקור (רשימות או תיקיות) — PickSource.
-// שלושה מצבים: U — נקודות פתיחה קבועות (הרשימות של כלים, או הכוננים), בשם שלהן;
-// S — בתוך רשימה אחת של כלי; R — הכול, מהשורש.
+// שני מצבים: U — נקודות פתיחה קבועות (הכוננים), בשם שלהן; R — הכול, מהשורש (הרשימות).
+// (עד מ0.42 היה גם S — בתוך רשימה אחת של כלי, עם מעבר ל"רשימה בכלי אחר"; של המנוע הישן, אף אחד לא פתח אותו.)
 
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -13,7 +13,7 @@ import java.util.Set;
 
 final class PickerModel {
 
-    static final int U = 0, S = 1, R = 2;
+    static final int U = 0, R = 1;
 
     /** כמה תוצאות חיפוש מוצגות לכל היותר. */
     static final int SEARCH_MAX = 150;
@@ -30,16 +30,13 @@ final class PickerModel {
     }
 
     final PickSource src;
-    final List<String> except;
     final int mode;
-    /** S: הרשימה של הכלי. */
-    final ArrayList<String> scopeBase;
     /** U: נקודות הפתיחה, ושמותיהן. */
     final List<ArrayList<String>> roots = new ArrayList<ArrayList<String>>();
     final List<String> rootNames = new ArrayList<String>();
     /** תצוגת תיקיות: איפה עומדים. null = נקודות הפתיחה (U); ריק = שורש העץ (R). */
     ArrayList<String> current;
-    /** בחירה בנגיעה אחת בתצוגת עץ (בלי שאלה): ברירת מחדל ב-U, כמו ברשימות של כלים. */
+    /** בחירה בנגיעה אחת בתצוגת עץ (בלי שאלה): ברירת מחדל ב-U. */
     boolean direct;
     /** החיפוש האחרון הציג רק חלק מהתוצאות. */
     boolean truncated;
@@ -48,41 +45,28 @@ final class PickerModel {
     private List<Row> all;
     private List<String> allNorm;
 
-    /** bases: נקודות פתיחה בשמן (רק כשלא נקבעה רשימה של כלי), או null. except: צומת שאינו יעד, או null. */
-    PickerModel(PickSource src, Map<ArrayList<String>, String> bases, List<String> except, List<String> base) {
+    /** bases: נקודות פתיחה בשמן, או null — הכול, מהשורש. */
+    PickerModel(PickSource src, Map<ArrayList<String>, String> bases) {
         this.src = src;
-        this.except = except;
-        if (base == null && bases != null)
+        if (bases != null)
             for (Map.Entry<ArrayList<String>, String> e : bases.entrySet())
                 if (exists(e.getKey())) {
                     roots.add(e.getKey());
                     rootNames.add(e.getValue());
                 }
-        boolean scoped = base != null && !base.isEmpty() && exists(base);
         if (!roots.isEmpty()) {
             mode = U;
-            scopeBase = null;
             current = null;
-        } else if (scoped) {
-            mode = S;
-            scopeBase = new ArrayList<String>(base);
-            current = new ArrayList<String>(scopeBase);
         } else {
             mode = R;
-            scopeBase = null;
             current = new ArrayList<String>();
         }
         direct = mode == U;
-        if (src.large()) {                       // עץ גדול: נקודות הפתיחה פתוחות, והשאר סגור
+        if (src.large())                         // עץ גדול: נקודות הפתיחה פתוחות, והשאר סגור
             for (ArrayList<String> r : roots) {
                 expanded.add(key(r));
                 src.visit(r);                                     // 137
             }
-            if (scopeBase != null) {
-                expanded.add(key(scopeBase));
-                src.visit(scopeBase);
-            }
-        }
     }
 
     boolean exists(List<String> p) {
@@ -90,12 +74,7 @@ final class PickerModel {
     }
 
     boolean pickable(List<String> p) {
-        return (except == null || !p.equals(except)) && src.whyNot(p) == null;
-    }
-
-    /** האם יש אפשרות לעבור לרשימה של כלי אחר. */
-    boolean crossTool() {
-        return mode == S;
+        return src.whyNot(p) == null;
     }
 
     private static ArrayList<String> child(List<String> p, String name) {
@@ -142,7 +121,6 @@ final class PickerModel {
 
     boolean canUp() {
         if (mode == U) return current != null;
-        if (mode == S) return !current.equals(scopeBase);
         return !current.isEmpty();
     }
 
@@ -173,15 +151,13 @@ final class PickerModel {
 
     /** הכותרת בתצוגת תיקיות: איפה עומדים. */
     String crumb() {
-        if (current == null) return roots.isEmpty() ? Words.ALL_LISTS : Words.TOOL_LISTS;
-        if (current.isEmpty()) return src.top() != null ? src.top() : Words.ALL_LISTS;
+        if (current == null || current.isEmpty()) return src.top() != null ? src.top() : Words.ALL_LISTS;
         return src.fullLabel(current);
     }
 
-    /** איפה נוצר צומת חדש. null = צריך קודם לבחור באיזו נקודת פתיחה (כלי או כונן). */
+    /** איפה נוצר צומת חדש. null = צריך קודם לבחור באיזו נקודת פתיחה (כונן). */
     ArrayList<String> createIn(boolean folderView) {
         if (folderView) return current;
-        if (mode == S) return scopeBase;
         return mode == R ? new ArrayList<String>() : null;
     }
 
@@ -196,8 +172,6 @@ final class PickerModel {
         if (mode == U) {
             for (int i = 0; i < roots.size(); i++)
                 addTree(roots.get(i), rootNames.get(i), 0, new boolean[0], i == roots.size() - 1, all, out);
-        } else if (mode == S) {
-            addTree(scopeBase, scopeBase.get(scopeBase.size() - 1), 0, new boolean[0], true, all, out);
         } else {
             List<String> top = src.children(new ArrayList<String>());
             if (top != null)

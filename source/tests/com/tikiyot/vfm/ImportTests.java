@@ -335,10 +335,10 @@ final class ImportTests {
         ck("תיקייה חיה: אותה תיקייה שוב — בלי כפולה", DbMore.liveFolder(s, ok.id, "/storage/emulated/0/תמונות") == 0);
         Tree.Node scan = new Tree.Node();
         scan.name = "תיקייה";
-        scan.entries.add(new Tree.Entry("/storage/emulated/0/תיקייה/a.txt", 3, false));
+        scan.entries.add(new Tree.Entry("/storage/emulated/0/תיקייה/a.txt", 3));
         Tree.Node subn = new Tree.Node();
         subn.name = "פנימית";
-        subn.entries.add(new Tree.Entry("/storage/emulated/0/תיקייה/פנימית/b.txt", 4, false));
+        subn.entries.add(new Tree.Entry("/storage/emulated/0/תיקייה/פנימית/b.txt", 4));
         scan.children.add(subn);
         int[] st = DbMore.attach(s, ok.id, scan, true, false);
         long tl = DbPaths.find(s, M, Names.parsePath("ד/תיקייה")), pl = DbPaths.find(s, M, Names.parsePath("ד/תיקייה/פנימית"));
@@ -346,8 +346,8 @@ final class ImportTests {
                 && s.count(tl) == 2 && s.count(pl) == 1);
         Tree.Node flat = new Tree.Node();
         flat.name = "שטוחה";
-        flat.entries.add(new Tree.Entry("/storage/emulated/0/תיקייה/a.txt", 3, false));
-        flat.entries.add(new Tree.Entry("/storage/emulated/0/תיקייה/c.txt", 3, false));
+        flat.entries.add(new Tree.Entry("/storage/emulated/0/תיקייה/a.txt", 3));
+        flat.entries.add(new Tree.Entry("/storage/emulated/0/תיקייה/c.txt", 3));
         int[] sf = DbMore.attach(s, ok.id, flat, false, false);
         ck("תיקייה — הקבצים בלבד: ישר לתוך הרשימה, בלי רשימה חדשה", sf[0] == 0 && sf[1] == 2);
         int[] sa = DbMore.attach(s, ok.id, scan, true, false);

@@ -164,21 +164,17 @@ public final class SmartForm {
             return !empty.isChecked() && !kinds.all && kinds.empty();         // 175: תיקיות — בלי סוג
         }
 
-        /** 153: בלי שדה המילים — במסך החיפוש המילים בשורת ההקלדה. */
-        public void addTo(Activity a, LinearLayout b, boolean full, boolean withWords) {
+        /** 153: לחלונית ההגדרות של מסך החיפוש — בלי שדה המילים (שם המילים בשורת ההקלדה). */
+        public void addTo(Activity a, LinearLayout b) {
             b.addView(Ui.label(a, Words.SmartF.FROM_WHERE));
             b.addView(src.view);
             b.addView(Ui.label(a, Words.Kinds.TITLE));
             b.addView(pickArea);
-            if (!full) return;
             b.addView(empty);                                                 // 175
             filterView = FilterForm.build(a, ds, new Runnable() {
                 @Override public void run() { if (onChange != null) onChange.run(); }
             });
             b.addView(filterView);
-            if (!withWords) return;
-            b.addView(Ui.label(a, Words.SmartF.WORDS_IN_NAME));
-            b.addView(words);
         }
 
         /** 197: "מאיפה" — שורה עם תווית, מעל "מה מחפשים". */
@@ -334,7 +330,7 @@ public final class SmartForm {
                     unlink.setVisibility(View.GONE);
                 } else {
                     SmartLists.Named n = named.get(current[0] - 1);
-                    String txt = Words.SmartF.shared(n.name, 0);
+                    String txt = Words.SmartF.shared(n.name);
                     shareNote.setText(txt);
                     shareTop.setText("🔗 " + txt);
                     shareTop.setVisibility(View.VISIBLE);
@@ -716,7 +712,7 @@ public final class SmartForm {
                 };
                 if (old == null) store.run();
                 else Ui.ask(a, Words.Named.exists(n), Words.NO_TOUCH_FILES,
-                        Words.Named.overwrite(0), null, Words.Named.UPDATE, store);
+                        Words.Named.OVERWRITE, null, Words.Named.UPDATE, store);
             }
         });
     }

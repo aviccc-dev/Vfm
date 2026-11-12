@@ -227,7 +227,7 @@ abstract class ListScreen<T> extends Activity {
 
     /** הפס ומרשם הפעולות (own — הפעולות שהמסך מבצע בעצמו), ואז המסך מוצג. */
     protected void done(LinearLayout root, Actions.Tool tool, Map<Actions.Action, Runnable> own) {
-        sel.actions(this, tool, null, new Runnable() {
+        sel.actions(this, tool, new Runnable() {
             @Override public void run() { refresh(); }
         }, own);
         root.addView(sel.bar.view);

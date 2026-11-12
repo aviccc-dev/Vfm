@@ -214,7 +214,7 @@ final class BatchUi {
         if (start == null) return;
         if (Batch.isHome(start)) Home.go(a);                                  // 1.9.0
         else if (start.isFile()) Ui.open(a, start);
-        else a.startActivity(SearchScreen.fileManager(a, "", start.getAbsolutePath(), null));   // 159
+        else a.startActivity(SearchScreen.fileManager(a, start.getAbsolutePath()));   // 159
     }
 
     private static void show(final Activity a, String title, final String body, final File start) {
@@ -248,7 +248,7 @@ final class BatchUi {
             b.setPositiveButton(Words.Cmd.openFolder(start.getName()), new DialogInterface.OnClickListener() {
                 @Override
                 public void onClick(DialogInterface d, int w) {
-                    a.startActivity(SearchScreen.fileManager(a, "", start.getAbsolutePath(), null));   // 159
+                    a.startActivity(SearchScreen.fileManager(a, start.getAbsolutePath()));   // 159
                 }
             });
         b.show();

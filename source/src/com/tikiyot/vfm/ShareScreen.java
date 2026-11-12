@@ -9,11 +9,8 @@ import android.net.Uri;
 import android.os.Bundle;
 import android.util.DisplayMetrics;
 import android.view.View;
-import android.view.ViewGroup;
-import android.widget.BaseAdapter;
 import android.widget.Button;
 import android.widget.LinearLayout;
-import android.widget.ListView;
 import android.widget.TextView;
 
 import java.util.ArrayList;
@@ -21,16 +18,10 @@ import java.util.List;
 
 public class ShareScreen extends Activity {
 
-    private static final class Row {
-        String label, sub;
-    }
-
     private final List<String> files = new ArrayList<String>();
-    private final List<Row> rows = new ArrayList<Row>();
-    private BaseAdapter adapter;
     private TextView status;
-    private ListView list;
-    private Button newFolder;
+    /** "בחירת רשימה" — מוצג אחרי שהקבצים זוהו (126: הבורר האחד, במקום שורות משלו). */
+    private Button pickButton;
 
     @Override
     protected void onCreate(Bundle saved) {
@@ -45,30 +36,12 @@ public class ShareScreen extends Activity {
         status.setTextColor(Ui.TEXT);
         root.addView(status);
 
-        list = new ListView(this);
-        list.setVisibility(View.GONE);
-        adapter = new BaseAdapter() {
-            @Override public int getCount() { return rows.size(); }
-            @Override public Object getItem(int i) { return rows.get(i); }
-            @Override public long getItemId(int i) { return i; }
-
-            @Override
-            public View getView(int pos, View convert, ViewGroup parent) {
-                View v = Ui.row(ShareScreen.this, convert);
-                Row r = rows.get(pos);
-                Ui.bindIcon(v, "📋", r.label, r.sub);
-                return v;
-            }
-        };
-        list.setAdapter(adapter);
-        root.addView(list, new LinearLayout.LayoutParams(-1, 0, 1f));
-
         LinearLayout bar = new LinearLayout(this);
         bar.setLayoutDirection(Ui.DIRECTION);
-        newFolder = new Button(this);
-        newFolder.setText("➕ " + Words.NEW_LIST);
-        newFolder.setVisibility(View.GONE);
-        newFolder.setOnClickListener(new View.OnClickListener() {
+        pickButton = new Button(this);
+        pickButton.setText(Words.ShareIn.PICK_LIST);
+        pickButton.setVisibility(View.GONE);
+        pickButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 pick();
@@ -79,7 +52,7 @@ public class ShareScreen extends Activity {
         cancel.setOnClickListener(new View.OnClickListener() {
             @Override public void onClick(View v) { finish(); }
         });
-        bar.addView(newFolder, new LinearLayout.LayoutParams(0, -2, 2f));
+        bar.addView(pickButton, new LinearLayout.LayoutParams(0, -2, 2f));
         bar.addView(cancel, new LinearLayout.LayoutParams(0, -2, 1f));
         root.addView(bar);
         setContentView(root);                                          // 1.9.0: חלון השיתוף הנכנס — בלי השורה העליונה (חלון קטן, במשימה נפרדת)
@@ -151,12 +124,7 @@ public class ShareScreen extends Activity {
             status.setText(Words.ShareIn.NO_LISTS_YET);
             return;
         }
-        list.setVisibility(View.GONE);
-        newFolder.setVisibility(View.VISIBLE);
-        newFolder.setText(Words.ShareIn.PICK_LIST);
-        newFolder.setOnClickListener(new View.OnClickListener() {
-            @Override public void onClick(View v) { pick(); }
-        });
+        pickButton.setVisibility(View.VISIBLE);
         pick();
     }
 

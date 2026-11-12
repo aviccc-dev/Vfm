@@ -53,8 +53,6 @@ public final class Actions {
         public final boolean lists;
         /** הפעולה עובדת רק על רשימה (שינוי שם). */
         public final boolean onlyLists;
-        /** הפעולה לא זמינה בזמן בחירת קבצים לרשימה מסוימת ("➕ מחיפוש"). */
-        public final boolean notWhilePicking;
         /** עובדת גם על תיקיות בכונן (הוספה לרשימה, מחיקה, העברה, העתקה — 82). */
         public boolean folders;
         /** בפס (83): שם הצלמית (res/drawable/ic_<שם>.xml — סט אחיד בצבע אחד), ומילה קצרה מתחתיה. */
@@ -63,15 +61,13 @@ public final class Actions {
         private final java.util.Set<Tool> main = java.util.EnumSet.noneOf(Tool.class);
         private final Tool[] tools;
 
-        private Action(String id, String label, Kind kind, boolean one, boolean lists, boolean onlyLists,
-                       boolean notWhilePicking, Tool... tools) {
+        private Action(String id, String label, Kind kind, boolean one, boolean lists, boolean onlyLists, Tool... tools) {
             this.id = id;
             this.label = label;
             this.kind = kind;
             this.one = one;
             this.lists = lists;
             this.onlyLists = onlyLists;
-            this.notWhilePicking = notWhilePicking;
             this.tools = tools;
         }
 
@@ -92,11 +88,10 @@ public final class Actions {
 
         /** האם הפעולה מתאימה לבחירה: files קבצים ו-lists רשימות נבחרו. */
         /** dirs — תיקיות בכונן שנבחרו. פעולה שאינה עובדת על תיקיות לא מוצגת כשיש כאלה. */
-        public boolean fits(Tool t, int files, int lists, int dirs, boolean picking) {
+        public boolean fits(Tool t, int files, int lists, int dirs) {
             if (!in(t)) return false;
             if (dirs > 0 && !folders) return false;
             if (dirs > 0) return !one && files + dirs >= 1;
-            if (picking && notWhilePicking) return false;
             if (onlyLists) return files == 0 && (one ? lists == 1 : lists >= 1);
             if (!this.lists && lists > 0) return false;
             int n = files + (this.lists ? lists : 0);
@@ -110,57 +105,57 @@ public final class Actions {
 
     /** 1.16.0: מחיפוש ומרשימה חכמה — "העתקה" לרשימה ידנית (המילון, `claude/milon.md`). */
     public static final Action ADD_TO_LIST = new Action("add", Words.VClipW.DUPLICATE + " " + Words.TO_LIST_WORD, Kind.VIRTUAL,
-            false, false, false, false, Tool.DRIVE, Tool.SEARCH, Tool.DUP);
+            false, false, false, Tool.DRIVE, Tool.SEARCH, Tool.DUP);
     public static final Action OPEN = new Action("open", Words.Act.OPEN, Kind.VIRTUAL,
-            true, false, false, true, Tool.DRIVE, Tool.SEARCH, Tool.LIST, Tool.TRASH, Tool.DUP);
+            true, false, false, Tool.DRIVE, Tool.SEARCH, Tool.LIST, Tool.TRASH, Tool.DUP);
     /** 1.11.0: פתיחה באמצעות — תמיד חלון בחירת אפליקציה; עריכה — באפליקציה שתבחר (קובץ פקודות — העורך שלנו). */
     public static final Action OPEN_WITH = new Action("openWith", Words.Act.OPEN_WITH, Kind.VIRTUAL,
-            true, false, false, true, Tool.DRIVE, Tool.SEARCH, Tool.LIST, Tool.DUP);
+            true, false, false, Tool.DRIVE, Tool.SEARCH, Tool.LIST, Tool.DUP);
     public static final Action EDIT = new Action("edit", Words.Act.EDIT, Kind.VIRTUAL,
-            true, false, false, true, Tool.DRIVE, Tool.SEARCH, Tool.LIST, Tool.DUP);
+            true, false, false, Tool.DRIVE, Tool.SEARCH, Tool.LIST, Tool.DUP);
     /** 116: שיתוף — לכל תוכנה (וואטסאפ, ג'ימייל…); גם כמה קבצים, וגם תיקיות (נארזות ל-ZIP, כדי שהמבנה יישמר). */
     public static final Action SHARE = new Action("share", Words.Act.SHARE_DOTS, Kind.PHYSICAL,          // 1.14.0: פיזי
-            false, false, false, true, Tool.DRIVE, Tool.SEARCH, Tool.LIST, Tool.DUP);
+            false, false, false, Tool.DRIVE, Tool.SEARCH, Tool.LIST, Tool.DUP);
     /** 117: שליחה למכשיר — כמו שיתוף, אבל רק תוכנות העברה בין מכשירים (Xiaomi Share, שיתוף מהיר, Bluetooth…). */
     public static final Action SEND_DEVICE = new Action("sendDevice", Words.Act.SEND_DOTS, Kind.PHYSICAL,
-            false, false, false, true, Tool.DRIVE, Tool.SEARCH, Tool.LIST, Tool.DUP);
+            false, false, false, Tool.DRIVE, Tool.SEARCH, Tool.LIST, Tool.DUP);
     /** 116: פריסת ZIP לתיקייה חדשה לידו — רק כשנבחר קובץ ZIP אחד. */
     public static final Action UNZIP = new Action("unzip", Words.Act.UNZIP_DOTS, Kind.PHYSICAL,
-            true, false, false, true, Tool.DRIVE, Tool.SEARCH, Tool.LIST, Tool.DUP);
+            true, false, false, Tool.DRIVE, Tool.SEARCH, Tool.LIST, Tool.DUP);
     public static final Action COPY_PATH = new Action("path", Words.Act.COPY_PATH, Kind.VIRTUAL,
-            true, false, false, true, Tool.DRIVE, Tool.SEARCH, Tool.LIST, Tool.DUP);
+            true, false, false, Tool.DRIVE, Tool.SEARCH, Tool.LIST, Tool.DUP);
     /**
      * 1.14.0: ללוח האחד (VClip). 1.16.0 (המילון): "קישור" — רק לרשימות (↪, מתעדכן); "העתקה" — עותק עצמאי של רשימה,
      * ולקובץ — עוד מקום שבו הוא מופיע (המשתמש: "רוצים שהקובץ יופיע בעוד רשימה — כך שזו העתקה"); וירטואלית, לא בתפריט "פיזי".
      */
     public static final Action MOVE_TO_LIST = new Action("move", Words.VClipW.MOVE, Kind.VIRTUAL,
-            false, true, false, false, Tool.LIST);
+            false, true, false, Tool.LIST);
     public static final Action ALSO_TO_LIST = new Action("also", Words.VClipW.COPY, Kind.VIRTUAL,
-            false, true, true, false, Tool.LIST);
+            false, true, true, Tool.LIST);
     public static final Action DUPLICATE_LIST = new Action("duplicate", Words.VClipW.DUPLICATE, Kind.VIRTUAL,
-            false, true, false, false, Tool.LIST);
+            false, true, false, Tool.LIST);
     public static final Action REMOVE_FROM_LIST = new Action("remove", Words.REMOVE_FROM_LIST, Kind.VIRTUAL,
-            false, true, false, false, Tool.LIST);
+            false, true, false, Tool.LIST);
     /** 1.16.0: "הגדרות" לרשימה אחת שנבחרה — שם, צלמית, צבע, תיאור, "למה", עיצוב (היום — טופס הרשימה של DbListScreen; עד מ0.29 — ListSettings). */
     public static final Action SETTINGS_LIST = new Action("settings", Words.VClipW.SETTINGS, Kind.VIRTUAL,
-            true, true, true, false, Tool.LIST);
+            true, true, true, Tool.LIST);
     /** 1.13.0: הזזה ידנית ברשימה — פריטים ורשימות שנבחרו (למעלה · למטה · לראש · לסוף). */
     public static final Action ORDER_LIST = new Action("order", Words.Manual.ORDER_DOTS, Kind.VIRTUAL,
-            false, true, false, false, Tool.LIST);
+            false, true, false, Tool.LIST);
     /** 84: שינוי שם של קובץ אחד בכונן, בכל כלי שמציג קבצים — גם ברשימה ידנית. */
     public static final Action RENAME_FILE = new Action("renameFile", Words.RENAME_ON_DRIVE + "…", Kind.PHYSICAL,
-            true, false, false, true, Tool.DRIVE, Tool.SEARCH, Tool.LIST, Tool.DUP);
+            true, false, false, Tool.DRIVE, Tool.SEARCH, Tool.LIST, Tool.DUP);
     /** 142: העברה / העתקה כמו באנדרואיד — לוח, ניווט, "הדבקה כאן" (מנהל הקבצים). */
     public static final Action MOVE_TO_FOLDER = new Action("moveTo", Words.Act.MOVE_THEN_PASTE, Kind.PHYSICAL,
-            false, false, false, true, Tool.DRIVE, Tool.SEARCH, Tool.LIST, Tool.DUP);
+            false, false, false, Tool.DRIVE, Tool.SEARCH, Tool.LIST, Tool.DUP);
     public static final Action COPY_TO_FOLDER = new Action("copyTo", Words.Act.COPY_THEN_PASTE, Kind.PHYSICAL,
-            false, false, false, true, Tool.DRIVE, Tool.SEARCH, Tool.LIST, Tool.DUP);
+            false, false, false, Tool.DRIVE, Tool.SEARCH, Tool.LIST, Tool.DUP);
     public static final Action RESTORE = new Action("restore", Words.Act.RESTORE_ICON, Kind.PHYSICAL,
-            false, false, false, false, Tool.TRASH);
+            false, false, false, Tool.TRASH);
     public static final Action DELETE_FROM_DRIVE = new Action("delete", Words.Act.DELETE_ON_DRIVE, Kind.DESTRUCTIVE,
-            false, false, false, true, Tool.DRIVE, Tool.SEARCH, Tool.LIST, Tool.DUP);
+            false, false, false, Tool.DRIVE, Tool.SEARCH, Tool.LIST, Tool.DUP);
     public static final Action DELETE_FOREVER = new Action("forever", Words.Act.PURGE, Kind.DESTRUCTIVE,
-            false, false, false, false, Tool.TRASH);
+            false, false, false, Tool.TRASH);
 
     static {
         ADD_TO_LIST.folders = true;
@@ -220,9 +215,9 @@ public final class Actions {
     }
 
     /** הפעולות שמתאימות לבחירה הזו בכלי הזה, בסדר הפס (dirs — תיקיות בכונן שנבחרו; כמו הפס עצמו). */
-    public static List<Action> fitting(Tool t, int files, int lists, int dirs, boolean picking) {
+    public static List<Action> fitting(Tool t, int files, int lists, int dirs) {
         List<Action> out = new ArrayList<Action>();
-        for (Action a : forTool(t)) if (a.fits(t, files, lists, dirs, picking)) out.add(a);
+        for (Action a : forTool(t)) if (a.fits(t, files, lists, dirs)) out.add(a);
         return out;
     }
 
@@ -248,16 +243,13 @@ public final class Actions {
         /** מסלולי התיקיות שנבחרו (82). */
         List<String> dirPaths();
 
-        /** שם הרשימה שאליה בוחרים קבצים ("➕ מחיפוש"), או null. */
-        String picking();
-
         /** אחרי שינוי: סיום הבחירה ורענון המסך. */
         void changed();
     }
 
     /**
      * ממלא את הפס בכל הפעולות של הכלי. own — ביצוע שהמסך מספק לפעולות שתלויות בו (רשימות, סל,
-     * הוספה לרשימה בזמן בחירה). לשאר יש ביצוע משותף כאן. פעולה שאין לה ביצוע — לא מוצגת.
+     * הוספה לרשימה). לשאר יש ביצוע משותף כאן. פעולה שאין לה ביצוע — לא מוצגת.
      */
     public static void fill(final Activity a, SelectBar bar, final Tool tool, final Selection sel,
                             Map<Action, Runnable> own) {
@@ -265,13 +257,10 @@ public final class Actions {
             Runnable run = own != null ? own.get(act) : null;
             if (run == null) run = common(a, act, sel);
             if (run == null) continue;
-            boolean pick = act == ADD_TO_LIST && sel.picking() != null;
-            String label = pick ? Words.Act.ADD_TO_ICON + sel.picking() : act.label;
-            String shortLabel = pick ? Words.Act.ADD_TO + sel.picking() : act.shortLabel;
-            bar.addWhen(act.icon, shortLabel, label, run, new SelectBar.When() {
+            bar.addWhen(act.icon, act.shortLabel, act.label, run, new SelectBar.When() {
                 @Override
                 public boolean ok() {
-                    return act.fits(tool, sel.files().size(), sel.lists(), sel.dirs(), sel.picking() != null)
+                    return act.fits(tool, sel.files().size(), sel.lists(), sel.dirs())
                             && (act != UNZIP || isZip(sel.files()));
                 }
             }, act.mainIn(tool), act.kind == Kind.DESTRUCTIVE, inPhysicalMenu(act, tool));

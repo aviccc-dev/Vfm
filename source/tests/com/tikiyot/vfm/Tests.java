@@ -315,8 +315,7 @@ public final class Tests {
         eq("80.5: כרטיס שני", "💾 כרטיס זיכרון 2", Drive.label(false, Drive.name(false, 2)));
         eq("80.5: לפי מסלול", Drive.INTERNAL_NAME, Drive.nameOf("/storage/emulated/0/Download"));
         eq("80.5: מקור קריא", "💾 כרטיס זיכרון (כולו)", Sources.label(Drive.CARD));
-        eq("80: בידוד כיוון", "\u2068Download\u2069", Text.iso("Download"));
-        eq("80: הבידוד לא נכנס לחיפוש", Text.norm("Download"), Text.norm(Text.iso("Download")).replace("\u2068", "").replace("\u2069", ""));
+        eq("80: הבידוד לא נכנס לחיפוש", Text.norm("Download"), Text.norm(Text.ISO + "Download" + Text.PDI).replace("\u2068", "").replace("\u2069", ""));
         Sort ds = Sort.of(Sort.SPACE, false, null);
         eq("כפולים: ברירת המחדל — מקום לפינוי", Sort.SPACE, ds.by);
         check("כפולים: בתפריט — הבסיס המשותף ו'מקום לפינוי'", java.util.Arrays.asList(ds.options()).containsAll(
@@ -410,10 +409,10 @@ public final class Tests {
         check("1.10.0: קובץ של 1.9.0 — הכול בשורה העליונה, עוגנים חוזרים", top.size() == 4 && top.get(0).act.equals(Buttons.HOME)
                 && top.get(3).act.equals(Buttons.BACK));
         eq("1.10.0: השם הישן \"מנהל קבצים\" — \"קבצים פיזיים\"", Words.Top.FILES, top.get(2).name);
-        check("1.10.0: קובץ של 1.9.0 — ברירת המחדל של התחתונות נשמרת", old.has(listBottom));
+        check("1.10.0: קובץ של 1.9.0 — ברירת המחדל של התחתונות נשמרת", old.places.get(listBottom) != null && !old.places.get(listBottom).isEmpty());
         Buttons.Layout rows = Buttons.parseAll("[למעלה]\n🏠 | בית | מסך:בית\n---\n→ | חזרה | מסך:חזרה\n[" + listBottom + "]\n");
         check("1.10.0: שתי שורות במקום אחד", rows.rows(Buttons.TOP).size() == 2);
-        check("1.10.0: מקום שרוקן — נשאר ריק (בלי ברירת מחדל)", !rows.has(listBottom));
+        check("1.10.0: מקום שרוקן — נשאר ריק (בלי ברירת מחדל)", rows.places.get(listBottom) == null || rows.places.get(listBottom).isEmpty());
         StringBuilder many = new StringBuilder("[למעלה]\n");
         for (int i = 0; i < 8; i++) many.append("⭐ | א | מסך:פקודות\n---\n");
         check("1.10.0: עד 5 שורות במקום", Buttons.parseAll(many.toString()).rows(Buttons.TOP).size() == Buttons.MAX_ROWS);
@@ -655,7 +654,7 @@ public final class Tests {
         eq("80: קובץ במקומו גם בלי אינדקס", FileItem.State.OK, FileItem.of(lib, ok, -1, false).state);
         eq("80: מוסתר", FileItem.State.HIDDEN,
                 FileItem.of(lib, new File(root, "Documents/.סוד.txt").getAbsolutePath(), -1, true).state);
-        eq("80: בתוך הסל", FileItem.State.IN_TRASH, FileItem.of(ix, rec(ix, "נמחק.pdf")).state);
+        eq("80: בתוך הסל", FileItem.State.IN_TRASH, FileItem.of(lib, ix.path(rec(ix, "נמחק.pdf")), -1, true).state);
         eq("80: חסר", FileItem.State.MISSING,
                 FileItem.of(lib, new File(root, "אין/כזה.pdf").getAbsolutePath(), 5, true).state);
         eq("66: כונן שאינו זמין — לא 'חסר'", FileItem.State.OFFLINE,
@@ -670,9 +669,6 @@ public final class Tests {
         eq("סיכום: חסרים", "⚠ 3 חסרים", FileItem.State.MISSING.count(3));
         eq("סיכום: מדיה", "2 במדיה שהוצאה או פגומה", FileItem.State.OFFLINE.count(2));
         eq("סיכום: נמחקו", "🗑 1 נמחקו · בסל המחזור", FileItem.State.DELETED.count(1));
-        check("מוסתר ובסל נחשבים קיימים", FileItem.State.HIDDEN.present() && FileItem.State.IN_TRASH.present());
-        check("חסר, נמחק ומדיה אינם קיימים", !FileItem.State.MISSING.present()
-                && !FileItem.State.DELETED.present() && !FileItem.State.OFFLINE.present());
     }
 
     // ---------- תור אחד לשינויי האינדקס (80) ----------
@@ -800,30 +796,26 @@ public final class Tests {
                         a.label.contains("מהכונן") || a.label.contains("לצמיתות"));
         check("64: המילה \"מחיקה\" לבד לא משמשת", !labels(Actions.all()).contains("מחיקה"));
 
-        List<String> one = labels(Actions.fitting(Actions.Tool.SEARCH, 1, 0, 0, false));
-        List<String> two = labels(Actions.fitting(Actions.Tool.SEARCH, 2, 0, 0, false));
+        List<String> one = labels(Actions.fitting(Actions.Tool.SEARCH, 1, 0, 0));
+        List<String> two = labels(Actions.fitting(Actions.Tool.SEARCH, 2, 0, 0));
         check("חיפוש, קובץ אחד: פתיחה", one.contains("פתיחה"));
         check("חיפוש, שני קבצים: בלי פתיחה", !two.contains("פתיחה"));
         check("חיפוש, שני קבצים: מחיקה מהכונן", two.contains("מחיקה מהכונן"));
-        eq("חיפוש, כלום לא נבחר: אין פעולות", 0, Actions.fitting(Actions.Tool.SEARCH, 0, 0, 0, false).size());
+        eq("חיפוש, כלום לא נבחר: אין פעולות", 0, Actions.fitting(Actions.Tool.SEARCH, 0, 0, 0).size());
         // 174: תיקיות בכונן בבחירה — רק מה שעובד על תיקיות (כמו הפס)
-        List<Actions.Action> withDir = Actions.fitting(Actions.Tool.SEARCH, 1, 0, 1, false);
+        List<Actions.Action> withDir = Actions.fitting(Actions.Tool.SEARCH, 1, 0, 1);
         check("174: תיקייה + קובץ — מחיקה מהכונן, העברה, הוספה לרשימה", withDir.contains(Actions.DELETE_FROM_DRIVE)
                 && withDir.contains(Actions.MOVE_TO_FOLDER) && withDir.contains(Actions.ADD_TO_LIST));
         boolean onlyFolders = true;
         for (Actions.Action x : withDir) if (!x.folders) onlyFolders = false;
         check("174: עם תיקייה — אין פעולה שאינה עובדת על תיקיות", onlyFolders);
-        check("174: תיקייה לבד — יש פעולות", !Actions.fitting(Actions.Tool.SEARCH, 0, 0, 1, false).isEmpty());
-        check("בחירה לרשימה (➕ מחיפוש): בלי מחיקה", !labels(Actions.fitting(Actions.Tool.SEARCH, 2, 0, 0, true))
-                .contains("מחיקה מהכונן"));
-        check("בחירה לרשימה: הוספה נשארת", labels(Actions.fitting(Actions.Tool.SEARCH, 2, 0, 0, true))
-                .contains(Actions.ADD_TO_LIST.label));
+        check("174: תיקייה לבד — יש פעולות", !Actions.fitting(Actions.Tool.SEARCH, 0, 0, 1).isEmpty());
 
-        List<String> list = labels(Actions.fitting(Actions.Tool.LIST, 1, 0, 0, false));
+        List<String> list = labels(Actions.fitting(Actions.Tool.LIST, 1, 0, 0));
         check("רשימה ידנית: הסרה מהרשימה", list.contains(Words.REMOVE_FROM_LIST));
         check("רשימה ידנית: אין \"הוספה לרשימה\" (יש העברה/הוספה גם)", !list.contains(Actions.ADD_TO_LIST.label));
         check("רשימה ידנית: פתיחה קובץ אחד (חדש מהמרשם)", list.contains("פתיחה"));
-        List<String> withList = labels(Actions.fitting(Actions.Tool.LIST, 1, 1, 0, false));
+        List<String> withList = labels(Actions.fitting(Actions.Tool.LIST, 1, 1, 0));
         check("רשימה ידנית, קובץ ורשימה: בלי מחיקה מהכונן", !withList.contains("מחיקה מהכונן"));
         check("רשימה ידנית, קובץ ורשימה: העברה (ללוח)", withList.contains(Words.VClipW.MOVE));
         // 1.14.0: בכלי וירטואלי — שום פעולה פיזית בין העיקריות או תחת "עוד"; הכול בתפריט "פיזי"
@@ -834,22 +826,22 @@ public final class Tests {
         check("1.14.0: שיתוף — פיזי", Actions.SHARE.kind == Actions.Kind.PHYSICAL && Actions.inPhysicalMenu(Actions.SHARE, Actions.Tool.LIST));
         check("1.14.0: במנהל הקבצים — הפיזיות בפס כמו קודם", !Actions.inPhysicalMenu(Actions.DELETE_FROM_DRIVE, Actions.Tool.DRIVE)
                 && Actions.DELETE_FROM_DRIVE.mainIn(Actions.Tool.DRIVE));
-        check("1.16.0: העתקה — גם רשימות וגם קבצים, וירטואלית (לא בתפריט פיזי)", Actions.DUPLICATE_LIST.fits(Actions.Tool.LIST, 0, 2, 0, false)
-                && Actions.DUPLICATE_LIST.fits(Actions.Tool.LIST, 1, 1, 0, false) && !Actions.inPhysicalMenu(Actions.DUPLICATE_LIST, Actions.Tool.LIST));
-        check("1.16.0: קישור — רק לרשימות", Actions.ALSO_TO_LIST.fits(Actions.Tool.LIST, 0, 2, 0, false)
-                && !Actions.ALSO_TO_LIST.fits(Actions.Tool.LIST, 1, 1, 0, false));
-        check("1.16.0: הגדרות — לרשימה אחת בלבד", Actions.fitting(Actions.Tool.LIST, 0, 1, 0, false).contains(Actions.SETTINGS_LIST)
-                && !Actions.fitting(Actions.Tool.LIST, 1, 1, 0, false).contains(Actions.SETTINGS_LIST)
-                && !Actions.fitting(Actions.Tool.LIST, 0, 2, 0, false).contains(Actions.SETTINGS_LIST));
+        check("1.16.0: העתקה — גם רשימות וגם קבצים, וירטואלית (לא בתפריט פיזי)", Actions.DUPLICATE_LIST.fits(Actions.Tool.LIST, 0, 2, 0)
+                && Actions.DUPLICATE_LIST.fits(Actions.Tool.LIST, 1, 1, 0) && !Actions.inPhysicalMenu(Actions.DUPLICATE_LIST, Actions.Tool.LIST));
+        check("1.16.0: קישור — רק לרשימות", Actions.ALSO_TO_LIST.fits(Actions.Tool.LIST, 0, 2, 0)
+                && !Actions.ALSO_TO_LIST.fits(Actions.Tool.LIST, 1, 1, 0));
+        check("1.16.0: הגדרות — לרשימה אחת בלבד", Actions.fitting(Actions.Tool.LIST, 0, 1, 0).contains(Actions.SETTINGS_LIST)
+                && !Actions.fitting(Actions.Tool.LIST, 1, 1, 0).contains(Actions.SETTINGS_LIST)
+                && !Actions.fitting(Actions.Tool.LIST, 0, 2, 0).contains(Actions.SETTINGS_LIST));
 
-        List<String> trash = labels(Actions.fitting(Actions.Tool.TRASH, 3, 0, 0, false));
+        List<String> trash = labels(Actions.fitting(Actions.Tool.TRASH, 3, 0, 0));
         eq("סל: שחזור ומחיקה לצמיתות", Arrays.asList("↩ שחזור", "מחיקה לצמיתות"), trash);
         check("סל: אין מחיקה מהכונן", !labels(Actions.forTool(Actions.Tool.TRASH)).contains("מחיקה מהכונן"));
-        check("76: תיקייה נבחרה — הוספה לרשימה", Actions.ADD_TO_LIST.fits(Actions.Tool.DRIVE, 0, 0, 2, false));
-        check("76: תיקייה וקובץ — הוספה לרשימה", Actions.ADD_TO_LIST.fits(Actions.Tool.DRIVE, 1, 0, 1, false));
-        check("82: תיקייה נבחרה — יש מחיקה מהכונן", Actions.DELETE_FROM_DRIVE.fits(Actions.Tool.DRIVE, 1, 0, 1, false));
-        check("82: תיקייה נבחרה — יש העברה", Actions.MOVE_TO_FOLDER.fits(Actions.Tool.SEARCH, 0, 0, 1, false));
-        check("82: תיקייה נבחרה — יש העתקה", Actions.COPY_TO_FOLDER.fits(Actions.Tool.DRIVE, 0, 0, 2, false));
+        check("76: תיקייה נבחרה — הוספה לרשימה", Actions.ADD_TO_LIST.fits(Actions.Tool.DRIVE, 0, 0, 2));
+        check("76: תיקייה וקובץ — הוספה לרשימה", Actions.ADD_TO_LIST.fits(Actions.Tool.DRIVE, 1, 0, 1));
+        check("82: תיקייה נבחרה — יש מחיקה מהכונן", Actions.DELETE_FROM_DRIVE.fits(Actions.Tool.DRIVE, 1, 0, 1));
+        check("82: תיקייה נבחרה — יש העברה", Actions.MOVE_TO_FOLDER.fits(Actions.Tool.SEARCH, 0, 0, 1));
+        check("82: תיקייה נבחרה — יש העתקה", Actions.COPY_TO_FOLDER.fits(Actions.Tool.DRIVE, 0, 0, 2));
         check("82: העתקה — פיזית, לפני ההורסות", Actions.forTool(Actions.Tool.DRIVE).indexOf(Actions.COPY_TO_FOLDER)
                 < Actions.forTool(Actions.Tool.DRIVE).indexOf(Actions.DELETE_FROM_DRIVE));
         check("82: אין העתקה בסל", !Actions.COPY_TO_FOLDER.in(Actions.Tool.TRASH));
@@ -877,7 +869,7 @@ public final class Tests {
                 && !Actions.MOVE_TO_FOLDER.mainIn(Actions.Tool.LIST) && Actions.REMOVE_FROM_LIST.mainIn(Actions.Tool.LIST));
         check("83: סל — פתיחה, שחזור, לצמיתות", Actions.OPEN.mainIn(Actions.Tool.TRASH) && Actions.RESTORE.mainIn(Actions.Tool.TRASH)
                 && Actions.DELETE_FOREVER.mainIn(Actions.Tool.TRASH));
-        check("תיקייה נבחרה — בלי פתיחה", !Actions.OPEN.fits(Actions.Tool.DRIVE, 0, 0, 1, false));
+        check("תיקייה נבחרה — בלי פתיחה", !Actions.OPEN.fits(Actions.Tool.DRIVE, 0, 0, 1));
         check("מנהל הקבצים: אין הסרה מהרשימה", !labels(Actions.forTool(Actions.Tool.DRIVE)).contains(Words.REMOVE_FROM_LIST));
     }
 
@@ -1378,8 +1370,9 @@ public final class Tests {
         java.util.LinkedHashMap<ArrayList<String>, String> roots = new java.util.LinkedHashMap<ArrayList<String>, String>();
         roots.put(new ArrayList<String>(in), "📱 זיכרון פנימי");
         roots.put(new ArrayList<String>(java.util.Arrays.asList("card")), "💾 כרטיס");
-        PickerModel m = new PickerModel(src, roots, null, null);
+        PickerModel m = new PickerModel(src, roots);
         eq("106: הכוננים הם נקודות הפתיחה", PickerModel.U, m.mode);
+        eq("מ0.42: הכותרת ברמת הכוננים — \"כוננים\" (היה: \"הרשימות של הכלים\")", Words.DiskW.DRIVES, m.crumb());
         eq("106: תיקיות — הכוננים", "[📱 זיכרון פנימי, 💾 כרטיס]", pickLabels(m.folderRows()).toString());
         m.direct = false;
         m.enter(java.util.Arrays.asList("internal", "ספרים"));
@@ -1415,7 +1408,7 @@ public final class Tests {
         bd.add(new IndexSource.Drv("internal", "זיכרון", "/storage/emulated/0", big));
         java.util.LinkedHashMap<ArrayList<String>, String> br = new java.util.LinkedHashMap<ArrayList<String>, String>();
         br.put(new ArrayList<String>(in), "זיכרון");
-        PickerModel bm = new PickerModel(new IndexSource(bd), br, null, null);
+        PickerModel bm = new PickerModel(new IndexSource(bd), br);
         eq("106: חיפוש עם הרבה תוצאות — חתוך", PickerModel.SEARCH_MAX, bm.search("תיקייה").size());
         check("106: ומסומן שיש עוד", bm.truncated);
         check("106: חיפוש צר — לא חתוך", bm.search("תיקייה 7").size() < PickerModel.SEARCH_MAX && !bm.truncated);
@@ -2625,7 +2618,7 @@ public final class Tests {
         eq("137: ובתוך תיקייה שאינה באינדקס — מהכונן", "[Media]", src.children(java.util.Arrays.asList("internal", "WhatsApp")).toString());
         java.util.LinkedHashMap<ArrayList<String>, String> rts = new java.util.LinkedHashMap<ArrayList<String>, String>();
         rts.put(new ArrayList<String>(in), "זיכרון");
-        PickerModel pm = new PickerModel(new IndexSource(dv), rts, null, null);
+        PickerModel pm = new PickerModel(new IndexSource(dv), rts);
         pm.enter(in);
         eq("137: בבורר — נכנסים לכונן ורואים גם את החדשה", "[WhatsApp, ספרים]", pickLabels(pm.folderRows()).toString());
         check("137: אפשר לבחור אותה", rowOf(pm.folderRows(), "WhatsApp").pickable);
@@ -2745,18 +2738,18 @@ public final class Tests {
         DateSize d = new DateSize();
         check("128: תאריך — לפני שנה", d.take("תאריך:<שנה") && d.dateMode == 2 && d.dateValue.equals("שנה"));
         check("128: גודל — גדול מ־10MB", d.take("גודל:>10MB") && d.sizeMode == 1 && d.sizeNumber.equals("10") && d.sizeUnit.equals("MB"));
-        eq("128: חזרה לתחביר החיפוש", "תאריך:<שנה גודל:>10MB", d.toCond());
+        eq("128: חזרה לתחביר החיפוש", "תאריך:<שנה גודל:>10MB", d.dateToken() + " " + d.sizeToken());
         check("128: תאריך שני — לא נקלט (כבר יש)", !d.take("תאריך:יום"));
         DateSize e = new DateSize();
         check("128: גודל בלי סימן — לא נקלט, לא מנחשים", !e.take("גודל:10MB") && e.sizeMode == 0);
         check("128: בתים", e.take("גודל:<500") && e.sizeUnit.equals("B") && e.sizeToken().equals("גודל:<500"));
         DateSize f = new DateSize();
         check("128: \"מאז\" עם >=", f.take("תאריך:>=2026-09-01") && f.dateMode == 1 && f.dateValue.equals("2026-09-01"));
-        eq("128: ריק — כלום", "", new DateSize().toCond());
+        eq("128: ריק — כלום", "", new DateSize().dateToken() + new DateSize().sizeToken());
         // התנאים של הרשימות החכמות הישנות (מהרשימות הקבועות) — נקלטים
         for (String old : new String[]{"תאריך:יום", "תאריך:שבוע", "תאריך:חודש", "תאריך:שנה", "גודל:>1MB", "גודל:>10MB", "גודל:>100MB", "גודל:<1MB"})
             check("128: תנאי ישן נקלט — " + old, new DateSize().take(old));
-        Cond c = Cond.parse("סוג:pdf " + d.toCond());
+        Cond c = Cond.parse("סוג:pdf " + d.dateToken() + " " + d.sizeToken());
         check("128: התנאי מובן לחיפוש", c.unknown.isEmpty() && c.tests.size() == 3);
 
         // 141: שמות בחלון האישור
@@ -4101,8 +4094,8 @@ public final class Tests {
         File tf = new File(home, "מבנה-190.txt");
         try {
             Sig.put("/x/קובץ.pdf", 5, 6, "2:abc");
-            eq("190: חתימה תקפה — אותו גודל ותאריך", "2:abc", Sig.valid("/x/קובץ.pdf", 5, 6));
-            check("190: קובץ שהשתנה — החתימה אינה תקפה", Sig.valid("/x/קובץ.pdf", 5, 7) == null);
+            check("190: נרשמה — עם הגודל והתאריך", Sig.stored("/x/קובץ.pdf") != null && Sig.stored("/x/קובץ.pdf").sig.equals("2:abc")
+                    && Sig.stored("/x/קובץ.pdf").size == 5 && Sig.stored("/x/קובץ.pdf").mtime == 6);
             Sig.save();
             Sig.forget();
             check("190: נשמר ונקרא", Sig.stored("/x/קובץ.pdf") != null && Sig.stored("/x/קובץ.pdf").sig.equals("2:abc"));
@@ -4302,11 +4295,11 @@ public final class Tests {
         DateSize ds = new DateSize();
         ds.allowAdded = true;
         check("189: הטופס קולט נוסף:", ds.take("נוסף:<חודש") && ds.added && ds.dateMode == 2 && ds.dateValue.equals("חודש"));
-        eq("189: ובחזרה", "נוסף:<חודש", ds.toCond());
+        eq("189: ובחזרה", "נוסף:<חודש", ds.dateToken());
         DateSize batch = new DateSize();
         check("189: בקובץ פקודות — לא (נשאר כמו שהוא)", !batch.take("נוסף:שבוע"));
         ds.added = false;
-        eq("189: בחירה \"של השינוי\" — תאריך:", "תאריך:<חודש", ds.toCond());
+        eq("189: בחירה \"של השינוי\" — תאריך:", "תאריך:<חודש", ds.dateToken());
         eq("189: הרשימה החכמה — נוסף: בחלונית ההגדרות", "נוסף:שבוע", SmartLists.split("נוסף:שבוע יוגה")[0]);
 
         // המיון
@@ -4666,7 +4659,7 @@ public final class Tests {
         boolean viaPath = false;
         for (Library.Hit h : res.hits) if (!h.isDir() && h.path().contains("/ג/ד/")) viaPath = true;
         check("184: חיפוש במסלולים — נמצא לפי שם תיקייה במסלול", viaPath);
-        check("184: קובץ לפי מסלול — נמצא", lib.find(f1.getAbsolutePath()) != null && lib.exists(f1.getAbsolutePath()));
+        check("184: קובץ לפי מסלול — נמצא", lib.find(f1.getAbsolutePath()) != null);
         check("184: קובץ שנמחק — לא נמצא", lib.find(f2.getAbsolutePath()) == null);
         check("184: תיקייה — אינה קובץ", lib.find(new File(root, "א0/ב1").getAbsolutePath()) == null);
         check("184: מחוץ לכונן — לא נמצא", lib.find("/אחר/x.pdf") == null);
