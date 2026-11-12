@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="vfm-plugin" content="אבחון">
-<meta name="vfm-plugin-version" content="4">
+<meta name="vfm-plugin-version" content="5">
 <title>אבחון</title>
 <style>
 /* תוסף "אבחון" (מ0.42): הבדיקות, הדוחות והתקלות — מה שהיה ב־⋮ ובהגדרות (claude/tosaf-bdikot.md).
@@ -129,6 +129,10 @@ const GROUPS=[
     inc:['בדיקת לחץ.vbat'],clean:[[TEST_MODE,['בדיקת לחץ']]]},
   {k:'modes',s:'קובץ אחד שעובד בשני אופנים',n:'שני אופנים',d:'קובץ אחד שעובד בשני אופנים ("בדיקות מערכת" ו"דוגמאות"), וכל רשימה נרשמת באופן שלה.',
     inc:['בדיקת שני אופנים.vbat'],clean:[[TEST_MODE,['בדיקת-אופן-א']],[EXAMPLES,['בדיקת-אופן-ב']]]},
+  {k:'matrix',s:'כל פקודה עם כל מתג — נבנה מהגדרת הפקודות',n:'כל הפקודות',min:58,gen:'matrix',d:'התוכנה בונה את הקובץ מההגדרה של הפקודות: לכל פקודה — שורה בסיסית ושורה לכל מתג (ולכל אפשרות של מתג), בתיקייה זמנית. פקודה או מתג חדשים נכנסים לבד. בסוף "ודא תקין" — כל השורות רצו בלי כישלון ובלי להיתקע; התיקייה הזמנית נמחקת, גם מהסל.',
+    clean:[[TEST_MODE,['בדיקת כל הפקודות']]]},
+  {k:'stop',s:'יותר כישלונות ממה ש"המשך (N)" מתיר — ההרצה נעצרת',n:'עצירה באמצע',min:58,own:true,d:'הרצה נפרדת (עוד אישור במסך ההרצה, אחרי האחרות): "המשך (1)", שתי שורות שנכשלות בהרצה, ושורה שלישית שאסור שתרוץ. עוברת — אם ההרצה נעצרה לפני השלישית, והקובץ שלה לא נכתב.',
+    clean:[]},
   {k:'db',s:'המנוע מול ה־SQLite, ותקינות כל מסד',n:'המסד',d:'המנוע של המסד מול ה־SQLite של המכשיר (על מסדים זמניים), ותקינות המסד של כל אופן. לא משנה דבר.',
     lines:['ודא מסד'],clean:[]},
   {k:'index',s:'רענון מהיר ועמוק, וקובץ חדש באינדקס',n:'אינדקס',d:'רענון מהיר ורענון עמוק, עם זמן לכל שורה; קובץ חדש — האינדקס מכיר אותו.',
@@ -138,6 +142,8 @@ const GROUPS=[
   {k:'rebuild',s:'בנייה מההתחלה, בכל הכוננים, עם זמנים',n:'בניית האינדקס מחדש',heavy:true,d:'בונה את האינדקס מההתחלה, בכל הכוננים, עם מדידת זמן (מה שהיה הכפתור בהגדרות). קובץ שנכתב לפני — נמצא אחרי. בזמן הבנייה החיפוש איטי.',
     lines:['צור תיקייה "%פנימי%\\בדיקת בנייה (אפשר למחוק)"','כתוב "%פנימי%\\בדיקת בנייה (אפשר למחוק)\\א.txt" "בנייה"','רענן מלא',
       'ודא "%פנימי%\\בדיקת בנייה (אפשר למחוק)\\א.txt" באינדקס','מחק תיקייה "%פנימי%\\בדיקת בנייה (אפשר למחוק)" /עמוק'],clean:[]},
+  {k:'readers',s:'בנייה עם 1, 4, 8 ו־16 קוראים — מה הכי מהיר',n:'כמה קוראים',heavy:true,min:58,d:'בונה את האינדקס מחדש ארבע פעמים — עם 1, 4, 8 ו־16 קוראים לכל כונן — ומודד כל אחת. אחרי ההרצה: הזמנים, המהירה, וכפתור לקבוע אותה (מה שהיה בהגדרות: "בניית האינדקס — במקביל").',
+    lines:['רענן מלא /קוראים:1','רענן מלא /קוראים:4','רענן מלא /קוראים:8','רענן מלא /קוראים:16','ודא תקין'],clean:[]},
   {k:'load',s:'העתקה ו־3 סבבים על האופן שבוחרים (המקור לא נוגע)',n:'עומס',heavy:true,d:'על הנתונים האמיתיים של האופן שנבחר: מעתיק את כל מה שבבית לרשימה "בדיקת עומס" ומכפיל אותה 3 סבבים, עם מדידת זמן. המקור לא נוגע; בסוף הרשימה מבוטלת.',
     inc:['בדיקת עומס.vbat'],clean:[[REAL,['בדיקת עומס']]]}
 ];
@@ -148,27 +154,40 @@ function saveResults(){setPref('results',JSON.stringify(results));}
 // גרסה 4 (המשתמש: "לסדר את כל הבדיקות האפשריות ולאפשר לסמן אותם באיקס ואז להריץ"): רשימה אחת עם סימון, והרצה אחת של המסומנות.
 // בתוכנה מ0.44 ומעלה — שורת "קטע" לפני כל בדיקה, וכך לכל אחת ✅/❌ משלה; לפני כן — רק בהרצה של אחת.
 const SECTIONS=(info.versionCode||0)>=57;
+// גרסה 5 (מ0.45): מחק אופן, הסל, "ודא תקין", "מדידה /עד:", כל הפקודות, כמה קוראים, עצירה באמצע. בגרסה ישנה יותר — הבדיקות האלה כבויות.
+const V45=(info.versionCode||0)>=58;
+const usable=g=>!g.min||(info.versionCode||0)>=g.min;
+// התיקיות הזמניות של הבדיקות: בסוף כל הרצה — גם מהסל (מ0.45: "רוקן סל"), שלא יצטברו שם
+const TEMP_DIRS=['בדיקת יצוא','בדיקת מ0.24','בדיקת מ0.37','בדיקת מ0.38','בדיקת מ0.40','בדיקת מ0.41','בדיקת מ0.42','בדיקת מ0.45','בדיקת מנהל קבצים',
+  'בדיקת מעקב','בדיקת אינדקס','בדיקת בנייה','בדיקת כל הפקודות'].map(n=>'%פנימי%\\'+n+' (אפשר למחוק)');
+const LIMIT='3דקות';   // שורה שלוקחת יותר — ❌ (אולי נתקעה)
+const STALE=10*60000;  // הרצה שלא חזרה ממנה תוצאה אחרי 10 דקות
 function modesList(){return J(can('modes')?V.modes():null,[]);}
 function realModes(){return modesList().filter(m=>m!==TEST_MODE&&m!==MENUS_MODE);}
 function realMode(){const ms=realModes(),p=pref('real',''),s=info.savedMode||'';
   return ms.indexOf(p)>=0?p:ms.indexOf(s)>=0?s:ms.length?ms[0]:TEST_MODE;}
 function dataDir(){return V.dataDir();}
-function resultPath(id){return dataDir()+'/תוצאות/'+id+'.txt';}
+// מ0.45: 6 קבצים מתחלפים (עד כאן — קובץ לכל הרצה, והתיקייה גדלה). "הדוח המלא" בודק שהקובץ עוד של אותה הרצה.
+const SLOTS=6;
+function nextPath(){const n=((+pref('slot','0')||0)+1)%SLOTS;setPref('slot',String(n));return dataDir()+'/תוצאות/'+n+'.txt';}
+if(V45&&can('cleanData')&&pref('cleaned','')!=='5'){try{V.cleanData('תוצאות');}catch(e){}setPref('cleaned','5');}
 const CLEAN='ניקוי';
 let sel=J(pref('sel',null),null);
 if(!Array.isArray(sel))sel=GROUPS.filter(g=>!g.heavy).map(g=>g.k);
 function saveSel(){setPref('sel',JSON.stringify(sel));}
 let open=null;   // השורה שהפרטים שלה פתוחים
 
-function runner(id,gs,real){
-  const L=['בדיקה','המשך ()','מדידה','דוח "'+resultPath(id)+'"',
+function runner(id,gs,real,path){
+  const L=['בדיקה','המשך ()',V45?'מדידה /עד:'+LIMIT:'מדידה','דוח "'+path+'"',
     'ECHO '+MARK+id+' · '+gs.map(g=>g.n).join(', ')+' · גרסה '+(info.version||'?')+' · '+when(Date.now()),
     ':: אופן הבדיקות — נוצר אם אין (מ0.42: "צור אופן")','צור אופן "'+TEST_MODE+'"'];
-  gs.forEach(g=>{L.push(SECTIONS?'קטע "'+g.n+'"':':: '+g.n);(g.inc||[]).forEach(f=>L.push('כלול "'+f+'"'));(g.lines||[]).forEach(x=>L.push(x));});
+  gs.forEach(g=>{L.push(SECTIONS?'קטע "'+g.n+'"':':: '+g.n);(g.inc||[]).forEach(f=>L.push('כלול "'+f+'"'));(g.lines||[]).forEach(x=>L.push(x));
+    if(g.gen==='matrix'){const t=can('commandMatrix')?V.commandMatrix():null;if(!t)throw new Error('כל הפקודות: הקובץ לא נבנה (הפרטים ביומן)');t.split('\n').filter(x=>x.trim()).forEach(x=>L.push(x));}});
   const by={},order=[];
   gs.forEach(g=>g.clean.forEach(c=>{const m=c[0]===REAL?real:c[0];if(!by[m]){by[m]=[];order.push(m);}c[1].forEach(x=>{if(by[m].indexOf(x)<0)by[m].push(x);});}));
-  if(order.length){
+  if(order.length||V45){
     L.push(SECTIONS?'קטע "'+CLEAN+'"':':: '+CLEAN);
+    if(V45){L.push(':: התיקיות הזמניות של הבדיקות — גם מהסל');TEMP_DIRS.forEach(d=>L.push('רוקן סל "'+d+'"'));}
     L.push(':: הרשימות שהבדיקות יצרו, כל אחת מהאופן שלה; ואז רישומי הקבצים שנשארו בלי רשימה באופן הבדיקות');
     order.forEach(m=>{L.push('אופן "'+m+'"');by[m].forEach(x=>{L.push('בטל ידנית "'+x+'"');L.push('ודא ידנית "'+x+'" חסרה');});});
     if(by[TEST_MODE]){if(order[order.length-1]!==TEST_MODE)L.push('אופן "'+TEST_MODE+'"');L.push('בטל לא-משויכים','ודא לא-משויכים /פריטים:0');}
@@ -187,23 +206,40 @@ function writeFiles(real){
 
 function run(){
   if(!ready){say('התוסף צריך את מ0.42 של התוכנה ומעלה',true);return;}
-  const gs=GROUPS.filter(g=>sel.indexOf(g.k)>=0);
-  if(!gs.length){say('לא סומנה אף בדיקה');return;}
+  const all=GROUPS.filter(g=>sel.indexOf(g.k)>=0&&usable(g));
+  if(!all.length){say('לא סומנה אף בדיקה');return;}
+  const gs=all.filter(g=>!g.own),own=all.filter(g=>g.own).map(g=>g.k);
   try{
-    const real=realMode(),id=Date.now().toString(36);
+    if(!gs.length){runOwn(own[0],own.slice(1));return;}
+    const real=realMode(),id=Date.now().toString(36),path=nextPath();
     writeFiles(real);
-    const label=gs.length===GROUPS.length?'הכול':gs.map(g=>g.n).join(', ');
-    setPref('pending',JSON.stringify({id:id,label:label,groups:gs.map(g=>g.k),path:resultPath(id),at:Date.now()}));
-    V.runFile(runner(id,gs,real),dataDir()+'/אבחון — '+(gs.length===1?gs[0].n:gs.length+' בדיקות')+'.vbat',true);
+    const label=all.length===GROUPS.filter(usable).length?'הכול':gs.map(g=>g.n).join(', ');
+    const text=runner(id,gs,real,path);
+    setPref('pending',JSON.stringify({id:id,label:label,groups:gs.map(g=>g.k),path:path,at:Date.now(),next:own}));
+    V.runFile(text,dataDir()+'/אבחון — '+(gs.length===1?gs[0].n:gs.length+' בדיקות')+'.vbat',true);
     render();
   }catch(e){fail('הרצה',e);}
+}
+
+// מ0.45: "עצירה באמצע" — הרצה משלה ("המשך (1)" חל על כל הקובץ): שתי שורות שנכשלות בהרצה (שחזור מהסל של מה שלא נמחק),
+// ואחריהן שורה שכותבת קובץ — שאסור שתרוץ.
+const STOP_MARK='עצירה — סימן.txt';
+function runOwn(k,rest,chained){
+  const g=GROUPS.find(x=>x.k===k);if(!g)return;
+  const id=Date.now().toString(36),path=nextPath(),dir=dataDir();
+  if(V.saveText(STOP_MARK,'',false)==null)throw new Error('לא נכתב: '+STOP_MARK);
+  const text=['בדיקה','המשך (1)','מדידה /עד:'+LIMIT,'דוח "'+path+'"','ECHO '+MARK+id+' · '+g.n+' · גרסה '+(info.version||'?')+' · '+when(Date.now()),
+    'קטע "'+g.n+'"','שחזר מהסל "'+dir+'/לא נמחק 1.txt"','שחזר מהסל "'+dir+'/לא נמחק 2.txt"','כתוב "'+dir+'/'+STOP_MARK+'" "נכתב — ההרצה לא נעצרה"'].join('\n')+'\n';
+  setPref('pending',JSON.stringify({id:id,label:g.n,groups:[k],path:path,at:Date.now(),next:rest||[],own:k,chained:!!chained}));
+  V.runFile(text,dir+'/אבחון — '+g.n+'.vbat',true);
+  render();
 }
 
 /** הדוח ← לכל בדיקה: ✅ כמה, ❌ ושורותיהן, ⚠. לפי שורות "▸ <שם>" (קטע); בלי — הכול לבדיקה אחת. */
 function parse(t,keys){
   const lines=t.split('\n'),byName={},out={};
   GROUPS.forEach(g=>byName[g.n]=g.k);byName[CLEAN]=CLEAN;
-  const one=()=>({ok:0,bad:0,badLines:[],warn:[]});
+  const one=()=>({ok:0,bad:0,badLines:[],warn:[],times:{}});
   let cur=SECTIONS?null:(keys.length===1?keys[0]:'_together');
   if(cur)out[cur]=one();
   let sum=null,ms=null;
@@ -214,11 +250,13 @@ function parse(t,keys){
     const tm=l.match(/^זמן: (.+)$/);if(tm){ms=tm[1];return;}
     if(!cur)return;
     const r=out[cur];
+    const rd=l.match(/· (\d+) קוראים לכל כונן · ⏱ ([\d.]+) (שניות|אלפיות)/);   // "כמה קוראים"
+    if(rd)r.times[rd[1]]=Math.round(+rd[2]*(rd[3]==='שניות'?1000:1));
     if(/^שורה [^:]+: ✅/.test(l))r.ok++;
     else if(/^שורה [^:]+: ❌/.test(l)){r.bad++;r.badLines.push(l);}
     else if(/^שורה [^:]+: .*⚠|^שום שורה לא רצה/.test(l))r.warn.push(l);
   });
-  return {groups:out,sum:sum,time:ms,blocked:t.indexOf('שום שורה לא רצה')>=0};
+  return {groups:out,sum:sum,time:ms,blocked:t.indexOf('שום שורה לא רצה')>=0,stopped:(lines.find(l=>/^⛔ נעצר לפני שורה/.test(l))||'')};
 }
 
 /** חזרה לעמוד (ממסך ההרצה): הקובץ של ה"דוח" — עם המזהה של ההרצה הזו, רק אם היא הסתיימה. */
@@ -227,17 +265,25 @@ function collect(){
   const t=V.readText(p.path);
   if(t==null||t.indexOf(MARK+p.id)<0)return;              // בוטלה, או עוד לא הסתיימה
   const r=parse(t,p.groups),at=Date.now();
+  if(p.own==='stop'){                                                    // עברה — אם נעצרה לפני השורה השלישית, והקובץ שלה ריק
+    const wrote=(V.readText(dataDir()+'/'+STOP_MARK)||'').length>0,ok=!!r.stopped&&!wrote;
+    r.groups.stop={ok:ok?1:0,bad:ok?0:1,badLines:ok?[]:[r.stopped?'❌ נעצרה, אבל השורה השלישית רצה':'❌ ההרצה לא נעצרה ("המשך (1)" ושני כישלונות)'],warn:r.stopped?[r.stopped]:[],times:{}};
+    r.sum=[ok?1:0,ok?0:1];
+  }
   p.groups.forEach(k=>{
-    const g=r.groups[k]||r.groups._together||{ok:0,bad:0,badLines:[],warn:[]};
+    const g=r.groups[k]||r.groups._together||{ok:0,bad:0,badLines:[],warn:[],times:{}};
     results[k]={ok:g.ok,bad:g.bad,badLines:g.badLines.slice(0,60),warn:g.warn.slice(0,30),blocked:r.blocked,together:!!r.groups._together&&p.groups.length>1,
-      at:at,version:info.version,path:p.path,label:p.label};
+      at:at,version:info.version,path:p.path,label:p.label,id:p.id,times:g.times||{}};
   });
   const c=r.groups[CLEAN];
-  results._last={label:p.label,groups:p.groups,at:at,version:info.version,path:p.path,sum:r.sum,time:r.time,blocked:r.blocked,
+  const own=p.own&&r.groups[p.own];
+  if(own&&p.chained&&results._last)results._last.after=(results._last.after||[]).concat([p.label+': '+(own.bad?'❌':'✅')]);   // אחרי ההרצה הראשית — שורה בה
+  else results._last={label:p.label,groups:p.groups,at:at,version:info.version,path:p.path,id:p.id,sum:r.sum,time:r.time,blocked:r.blocked,
     clean:c?{ok:c.ok,bad:c.bad,badLines:c.badLines.slice(0,20)}:null};
   saveResults();setPref('pending','');
   const bad=r.sum?r.sum[1]:0;
   say(r.blocked?'⚠ הקובץ לא רץ — שגיאות בקובץ':bad?'❌ '+bad+' נכשלו · '+(r.sum?r.sum[0]:0)+' עברו':'✅ '+(r.sum?r.sum[0]:0)+' עברו, בלי כישלון',!!(r.blocked||bad));
+  if(p.next&&p.next.length)setTimeout(()=>{try{say('עוד הרצה: '+GROUPS.find(x=>x.k===p.next[0]).n);runOwn(p.next[0],p.next.slice(1),true);}catch(e){fail('הרצה',e);}},900);
 }
 window.vfmResume=function(){try{loadInfo();collect();render();}catch(e){fail('חזרה',e);}};
 
@@ -248,9 +294,12 @@ function setTab(t){tab=t;setPref('tab',t);render();window.scrollTo(0,0);}
 $('tabs').addEventListener('click',e=>{const b=e.target.closest('button');if(b)setTab(b.dataset.t);});
 
 function pendingFor(k){const p=J(pref('pending',null),null);return p&&p.groups&&p.groups.indexOf(k)>=0?p:null;}
+const stale=p=>p&&Date.now()-p.at>STALE;
 function badge(k){
-  const r=results[k];
-  if(pendingFor(k))return '<span class="badge wait">⏳ ממתין</span>';
+  const r=results[k],g=GROUPS.find(x=>x.k===k);
+  if(g&&!usable(g))return '<span class="badge none">צריך מ0.45</span>';
+  const pf=pendingFor(k);
+  if(pf)return stale(pf)?'<span class="badge bad">⚠ לא חזרה תוצאה</span>':'<span class="badge wait">⏳ ממתין</span>';
   if(!r)return '<span class="badge none">לא הורץ</span>';
   const old=r.version!==info.version;
   if(r.blocked)return '<span class="badge bad">⚠ לא רץ</span>';
@@ -261,7 +310,9 @@ function details(g){
   const r=results[g.k],p=pendingFor(g.k);
   let h='<div class="det"><p>'+esc(g.d)+'</p>';
   if(g.k==='load')h+='<div class="row">על האופן: <select id="realSel">'+realModes().map(m=>'<option'+(m===realMode()?' selected':'')+'>'+esc(m)+'</option>').join('')+'</select></div>';
-  if(p)h+='<div class="st wait">⏳ ממתין לתוצאה של ההרצה מ־'+when(p.at)+' — אם היא בוטלה, אפשר להריץ שוב</div>';
+  if(!usable(g))h+='<div class="st none">צריך את מ0.45 של התוכנה ומעלה</div>';
+  if(p&&stale(p))h+='<div class="st bad">⚠ לא חזרה תוצאה מההרצה מ־'+when(p.at)+' — אולי נתקעה, או שבוטלה. אפשר להריץ שוב; אם נתקעה — היומן ("⚠ יומן") והדוח המלא של ההרצה יראו איפה</div>';
+  else if(p)h+='<div class="st wait">⏳ ממתין לתוצאה של ההרצה מ־'+when(p.at)+' — אם היא בוטלה, אפשר להריץ שוב</div>';
   else if(!r)h+='<div class="st none">עוד לא הורץ</div>';
   else{
     const old=r.version!==info.version?' · <b>בגרסה '+esc(r.version)+' — לא בגרסה הזו</b>':'';
@@ -269,14 +320,27 @@ function details(g){
     else if(r.together)h+='<div class="st '+(r.bad?'bad':'ok')+'">הורצה עם אחרות (בגרסה הזו של התוכנה אין חלוקה לבדיקות) · '+(r.bad?'❌ '+r.bad+' נכשלו · ':'✅ ')+r.ok+' עברו · '+when(r.at)+old+'</div>';
     else h+='<div class="st '+(r.bad?'bad':'ok')+'">'+(r.bad?'❌ '+r.bad+' נכשלו · ':'✅ ')+r.ok+' עברו · '+when(r.at)+old+'</div>';
     h+=lines((r.badLines||[]).concat(r.warn||[]));
-    if(r.path)h+='<div class="row"><button class="btn" data-a="show" data-p="'+esc(r.path)+'" data-n="'+esc(r.label||'')+'">הדוח המלא</button></div>';
+    if(g.k==='readers')h+=readersBox(r);
+    if(r.path)h+='<div class="row"><button class="btn" data-a="show" data-p="'+esc(r.path)+'" data-i="'+esc(r.id||'')+'" data-n="'+esc(r.label||'')+'">הדוח המלא</button></div>';
   }
   return h+'</div>';
 }
 function lines(a){return a&&a.length?'<div class="lines">'+esc(a.join('\n'))+'</div>':'';}
+// "כמה קוראים": הזמן של כל בנייה, המהירה, וקביעה (מה שהיה בהגדרות)
+function fmt(ms){return ms<1000?ms+' אלפיות':(ms/1000).toFixed(1)+' שניות';}
+function readersBox(r){
+  const ks=Object.keys(r.times||{}).map(Number).sort((a,b)=>a-b);
+  if(!ks.length)return '';
+  const best=ks.reduce((a,b)=>r.times[b]<r.times[a]?b:a,ks[0]),cur=info.readers;
+  let h='<div class="kv" style="margin-top:6px">';
+  ks.forEach(n=>h+='<b>'+n+' קוראים</b><span>'+fmt(r.times[n])+(n===best?' · <b style="color:var(--ok)">הכי מהיר</b>':'')+(n===cur?' · עכשיו':'')+'</span>');
+  h+='</div><div class="row">'+(best===cur?'<span class="st ok">✓ עכשיו '+cur+' — המהיר</span>'
+    :'<button class="btn main" data-a="readers" data-n="'+best+'"'+(can('setReaders')?'':' disabled')+'>לקבוע '+best+' קוראים</button><span class="st none">עכשיו: '+(cur||'?')+'</span>')+'</div>';
+  return h;
+}
 function trow(g){
   const on=sel.indexOf(g.k)>=0;
-  return '<div class="trow'+(open===g.k?' open':'')+'"><label class="ck"><input type="checkbox" data-k="'+g.k+'"'+(on?' checked':'')+'></label>'
+  return '<div class="trow'+(open===g.k?' open':'')+'"><label class="ck"><input type="checkbox" data-k="'+g.k+'"'+(on&&usable(g)?' checked':'')+(usable(g)?'':' disabled')+'></label>'
     +'<div class="tm" data-a="open" data-k="'+g.k+'"><div class="tn"><b>'+esc(g.n)+'</b>'+badge(g.k)+'</div><div class="ts">'+esc(g.s)+'</div></div></div>'
     +(open===g.k?details(g):'');
 }
@@ -285,8 +349,8 @@ function lastRun(){
   const bad=l.sum?l.sum[1]:0,okn=l.sum?l.sum[0]:0;
   return '<div class="last '+(l.blocked||bad?'bad':'ok')+'"><b>ההרצה האחרונה</b> · '+when(l.at)+' · '+esc(l.label)+'<br>'
     +(l.blocked?'⚠ לא רצה — שגיאות בקובץ':(bad?'❌ '+bad+' נכשלו · ':'✅ ')+okn+' עברו')+(l.time?' · '+esc(l.time):'')
-    +(l.clean&&l.clean.bad?' · הניקוי: ❌ '+l.clean.bad:'')
-    +(l.path?' <button class="btn sm" data-a="show" data-p="'+esc(l.path)+'" data-n="'+esc(l.label)+'">הדוח המלא</button>':'')+'</div>';
+    +(l.clean&&l.clean.bad?' · הניקוי: ❌ '+l.clean.bad:'')+(l.after?' · ואחריה — '+esc(l.after.join(' · ')):'')
+    +(l.path?' <button class="btn sm" data-a="show" data-p="'+esc(l.path)+'" data-i="'+esc(l.id||'')+'" data-n="'+esc(l.label)+'">הדוח המלא</button>':'')+'</div>';
 }
 
 function renderTests(){
@@ -297,7 +361,7 @@ function renderTests(){
   h+='<div class="sect">בדיקות רגילות</div>'+GROUPS.filter(g=>!g.heavy).map(trow).join('');
   h+='<div class="sect">בדיקות כבדות <small>— לוקחות זמן; העומס — על הנתונים האמיתיים (רק מעתיק)</small></div>'+GROUPS.filter(g=>g.heavy).map(trow).join('');
   h+='<p class="note">כל הרצה עוברת במסך ההרצה (מה יקרה, אישור), ובסוף חוזרים לכאן. הבדיקות רצות באופן "'+TEST_MODE+'", והרשימות שהן יוצרות מבוטלות בסוף. נגיעה בשם — הפרטים.</p>';
-  const n=sel.length;
+  const n=sel.filter(k=>{const g=GROUPS.find(x=>x.k===k);return g&&usable(g);}).length;
   h+='<div class="runbar"><button class="btn main" data-a="run"'+(ready&&n?'':' disabled')+'>▶ הרץ את המסומנות ('+n+')</button></div>';
   return h;
 }
@@ -329,11 +393,14 @@ function fullReport(){
   out+='\n=== הבדיקות ===\n';
   let latest=null;
   const l=results._last;
-  if(l){latest=l;out+='ההרצה האחרונה: '+when(l.at)+' · '+l.label+' · '+(l.blocked?'⚠ לא רצה':(l.sum?(l.sum[1]?'❌ '+l.sum[1]+' נכשלו · ':'✅ ')+l.sum[0]+' עברו':''))+(l.time?' · '+l.time:'')+'\n';}
+  if(l){latest=l;out+='ההרצה האחרונה: '+when(l.at)+' · '+l.label+' · '+(l.blocked?'⚠ לא רצה':(l.sum?(l.sum[1]?'❌ '+l.sum[1]+' נכשלו · ':'✅ ')+l.sum[0]+' עברו':''))+(l.time?' · '+l.time:'')+(l.after?' · ואחריה — '+l.after.join(' · '):'')+'\n';}
   GROUPS.forEach(g=>{const r=results[g.k];
     if(!r){out+=g.n+': עוד לא הורץ\n';return;}
     out+=g.n+': '+(r.blocked?'⚠ לא רץ — שגיאות בקובץ':(r.bad?'❌ '+r.bad+' נכשלו · ':'✅ ')+r.ok+' עברו'+(r.together?' (יחד עם אחרות)':''))+' · '+when(r.at)+' · גרסה '+r.version+'\n';
-    (r.badLines||[]).concat(r.warn||[]).forEach(x=>out+='   '+x+'\n');});
+    (r.badLines||[]).concat(r.warn||[]).forEach(x=>out+='   '+x+'\n');
+    Object.keys(r.times||{}).forEach(n=>out+='   '+n+' קוראים: '+fmt(r.times[n])+'\n');});
+  const pp=J(pref('pending',null),null);
+  if(pp&&stale(pp))out+='⚠ לא חזרה תוצאה מההרצה מ־'+when(pp.at)+' ('+pp.label+') — אולי נתקעה, או שבוטלה\n';
   if(latest&&latest.path){const t=V.readText(latest.path);if(t)out+='\n=== הדוח המלא של ההרצה האחרונה ('+latest.label+') ===\n'+t+'\n';}
   out+='\n=== המסדים ===\n'+dbs().map(dbLine).join('\n')+'\n';
   out+='\n=== האינדקס ===\n'+indexText();
@@ -378,6 +445,7 @@ function indexText(){
   let out='באינדקס: '+info.totalFiles+' קבצים · '+info.totalDirs+' תיקיות · עודכן: '+when(info.lastBuilt)+'\n';
   (info.indexes||[]).forEach(x=>out+='· '+x.label+': '+x.files+' קבצים\n');
   if(info.indexStatus)out+=info.indexStatus+'\n';
+  if(info.readers)out+='קוראים לכל כונן בבנייה: '+info.readers+(info.lastBuild?' · הבנייה האחרונה: '+info.lastBuild:'')+'\n'+(info.lastBuildDrives?info.lastBuildDrives+'\n':'');
   return out;
 }
 
@@ -403,7 +471,7 @@ function renderLog(){
 
 let lastPath=pref('path','');
 function renderIndex(){
-  return '<div class="sect">האינדקס</div><div class="card"><h2>האינדקס</h2><div class="lines">'+esc(indexText())+'</div><p>בדיקה עם זמנים — בלשונית "בדיקות": "אינדקס" ו"בניית האינדקס מחדש".</p></div>'
+  return '<div class="sect">האינדקס</div><div class="card"><h2>האינדקס</h2><div class="lines">'+esc(indexText())+'</div><p>בדיקה עם זמנים — בלשונית "בדיקות": "אינדקס", "בניית האינדקס מחדש" ו"כמה קוראים" (שם גם קובעים).</p></div>'
     +'<div class="card"><h2>בדיקת מסלול</h2><p>האם הקובץ בכונן, והאם האינדקס מכיר אותו. בקובץ פקודות: ודא "&lt;קובץ&gt;" באינדקס.</p>'
     +'<input type="text" id="pathIn" placeholder="/storage/emulated/0/Download/..." value="'+esc(lastPath)+'">'
     +'<div class="row"><button class="btn main" data-a="path">בדיקה</button>'+(can('pickFile')?'<button class="btn" data-a="pickf">בחירת קובץ…</button>':'')+'</div><div id="pathOut"></div></div>'
@@ -432,7 +500,9 @@ $('main').addEventListener('click',e=>{
     if(a==='run'){const rs=$('realSel');if(rs)setPref('real',rs.value);run();}
     else if(a==='open'){open=open===b.dataset.k?null:b.dataset.k;render();}
     else if(a==='pick'&&b.dataset.w){const w=b.dataset.w;sel=w==='all'?GROUPS.map(g=>g.k):w==='light'?GROUPS.filter(g=>!g.heavy).map(g=>g.k):[];saveSel();render();}
-    else if(a==='show'){const t=V.readText(b.dataset.p);openSheet('הדוח — '+b.dataset.n,t==null?'הקובץ לא נמצא: '+b.dataset.p:t,b.dataset.p);}
+    else if(a==='show'){const t=V.readText(b.dataset.p),i=b.dataset.i;   // מ0.45: הקובץ מתחלף — רק אם הוא עוד של אותה הרצה
+      openSheet('הדוח — '+b.dataset.n,t==null?'הקובץ לא נמצא: '+b.dataset.p:i&&t.indexOf(MARK+i)<0?'הדוח של ההרצה הזו כבר הוחלף בהרצה מאוחרת יותר (נשמרים '+SLOTS+' האחרונים).':t,b.dataset.p);}
+    else if(a==='readers'){const n=+b.dataset.n;if(!V.setReaders(n)){say('⚠ לא נקבע',true);return;}loadInfo();render();say('נקבע: '+n+' קוראים לכל כונן — מהבנייה הבאה');}
     else if(a==='report'){const p=V.saveText('דוח תוסף אבחון '+(info.version||'')+'.txt',fullReport(),true);
       if(!p){say('⚠ הדוח לא נשמר (הפרטים ביומן)',true);return;}say('נשמר בהורדות: '+p.split('/').pop());V.send(p);}
     else if(a==='preview')openSheet('דוח מלא',fullReport(),null);
@@ -471,12 +541,16 @@ function demoBridge(){
   const later=(id,v)=>setTimeout(()=>window.vfmResult(id,v),30);
   files['/d/log.txt']='2026-11-12 10:00:01  בניית אינדקס (בבקשה): פנימי 1.2 שנ\'\n2026-11-12 10:05:12  שגיאה ב-Lab.copy: java.io.IOException: x\n\tat a.b(c)\n2026-11-12 11:00:00  תוסף אבחון: נפתח\n';
   files['/d/trial.txt']='2026-11-10 09:12 | יומית | 0.31 שנ\' | נבדקו 4157 | נמצאו 2\n2026-11-11 09:12 | יומית | 0.30 שנ\' | נבדקו 4160 | נמצאו 0\n';
-  return {info:()=>JSON.stringify({version:'מ0.42',versionCode:57,device:'גרסה מ0.42 · Samsung SM-X200 · אנדרואיד 14 (API 34)',access:true,freeMb:20480,log:'/d/log.txt',trial:'/d/trial.txt',savedMode:'עבודה',indexReady:true,lastFullBuild:Date.now()-86400000,lastDaily:Date.now()-3600000,pointsSupported:true,labVersion:'2',indexes:[{label:'פנימי',files:41230},{label:'כרטיס',files:8120}],totalFiles:49350,totalDirs:3120,lastBuilt:Date.now()-7200000,indexStatus:''}),
+  return {info:()=>JSON.stringify({version:'מ0.45',versionCode:58,readers:8,lastBuild:'פנימי 9.2 שנ\' · סך הכול 9.2 שנ\'',lastBuildDrives:'פנימי: 23,923 קבצים',device:'גרסה מ0.42 · Samsung SM-X200 · אנדרואיד 14 (API 34)',access:true,freeMb:20480,log:'/d/log.txt',trial:'/d/trial.txt',savedMode:'עבודה',indexReady:true,lastFullBuild:Date.now()-86400000,lastDaily:Date.now()-3600000,pointsSupported:true,labVersion:'2',indexes:[{label:'פנימי',files:41230},{label:'כרטיס',files:8120}],totalFiles:49350,totalDirs:3120,lastBuilt:Date.now()-7200000,indexStatus:''}),
     theme:()=>null,load:k=>store[k]!=null?store[k]:null,save:(k,v)=>{store[k]=v;},modes:()=>JSON.stringify(['בדיקות מערכת','דוגמאות','עבודה','שמור לתוכנה']),
     dataDir:()=>'/d/אבחון',saveText:(n,t,dl)=>{const p=(dl?'/dl/':'/d/אבחון/')+n;files[p]=t;return p;},readText:p=>files[p]==null?null:files[p],
-    runFile:(t,w,r)=>{window.__ran={text:t,where:w,real:r};const id=(t.match(/הרצת אבחון (\S+)/)||[])[1],rp=(t.match(/^דוח "(.*)"$/m)||[])[1];
+    commandMatrix:()=>'צור תיקייה "%פנימי%\\בדיקת כל הפקודות (אפשר למחוק)"\nודא תקין\n',setReaders:n=>{window.__readers=n;return true;},cleanData:s=>{window.__cleaned=s;return 0;},
+    runFile:(t,w,r)=>{window.__ran={text:t,where:w,real:r};(window.__runs=window.__runs||[]).push(t);const id=(t.match(/הרצת אבחון (\S+)/)||[])[1],rp=(t.match(/^דוח "(.*)"$/m)||[])[1];
       let rep='ECHO כל "ודא" מסמן ✅ או ❌\nהרצת אבחון '+id+' · ניסוי\n',n=1,ok=0,bad=0;
-      t.split('\n').forEach(l=>{const m=l.match(/^קטע "(.*)"$/);if(!m)return;rep+='שורה '+(n++)+': ▸ '+m[1]+' · ⏱ 0 אלפיות\n';
+      if(t.indexOf('המשך (1)')>=0){files[rp]=rep+'שורה 1: ▸ עצירה באמצע\nשורה 2: אין בסל דבר שנמחק מ"לא נמחק 1.txt"\nשורה 3: אין בסל דבר שנמחק מ"לא נמחק 2.txt"\n⛔ נעצר לפני שורה 4: 2 כישלונות, מותר 1.\n';return;}
+      t.split('\n').forEach(l=>{const q=l.match(/^רענן מלא \/קוראים:(\d+)$/);
+        if(q){rep+='שורה '+(n++)+': האינדקס נבנה מחדש · 23923 קבצים · 2100 תיקיות · '+q[1]+' קוראים לכל כונן · ⏱ '+(30/Math.sqrt(+q[1])).toFixed(1)+' שניות\n';return;}
+        const m=l.match(/^קטע "(.*)"$/);if(!m)return;rep+='שורה '+(n++)+': ▸ '+m[1]+' · ⏱ 0 אלפיות\n';
         rep+='שורה '+(n++)+': ✅ "א" קיימת · ⏱ 2 אלפיות\n';ok++;if(m[1]==='לחץ'){rep+='שורה '+(n++)+': ❌ "בדיקת לחץ" — בפועל: חסרה · ⏱ 1 אלפיות\n';bad++;}});
       files[rp]=rep+(bad?'❌':'✅')+' ודא: '+ok+' עברו · '+bad+' נכשלו\nזמן: 12.8 שניות\n';},
     pathInfo:p=>JSON.stringify({path:p,disk:true,dir:false,size:1234,index:p.indexOf('Download')>=0}),send:p=>{window.__sent=p;},

@@ -2110,7 +2110,10 @@ public final class Tests {
             check("מ0.43: קובצי הבדיקה — כבר לא בקובץ ההתקנה (רק בתוסף)", !new File(src, "assets/tests").exists());
             check("מ0.43: התוסף מנקה בסוף — בטל לא-משויכים, ובודק את האינדקס ובנייתו", html.contains("'בטל לא-משויכים'") && html.contains("'רענן מלא'")
                     && html.contains("'רענן עמוק'") && html.contains("dbStats"));
-            check("מ0.42: העמוד יוצר את אופן הבדיקות ומבקש את התוצאה בקובץ", html.contains("'צור אופן \"'+TEST_MODE") && html.contains("'דוח \"'+resultPath("));
+            check("מ0.42: העמוד יוצר את אופן הבדיקות ומבקש את התוצאה בקובץ", html.contains("'צור אופן \"'+TEST_MODE") && html.contains("'דוח \"'+path"));
+            check("מ0.45: כל הפקודות (מהגשר), עצירה באמצע (הרצה משלה), כמה קוראים, מגבלת זמן לשורה, והתיקיות הזמניות — גם מהסל",
+                    html.contains("V.commandMatrix()") && html.contains("function runOwn") && html.contains("'המשך (1)'") && html.contains("'רענן מלא /קוראים:16'")
+                            && html.contains("V.setReaders(") && html.contains("'מדידה /עד:'+LIMIT") && html.contains("'רוקן סל \"'+d"));
         } catch (Exception e) {
             check("מ0.42: תוסף האבחון — " + e, false);
         }
@@ -2436,6 +2439,13 @@ public final class Tests {
                     && first.getName().equals("תוסף " + nv[0] + " " + nv[1] + ".html") && Lab.newest(root, nv[0]) != null && Lab.newest(root, nv[0]).ver.equals(nv[1]));
             check("מ0.41: ...פעם שנייה — כבר יש אותה גרסה, לא נכתב שוב", Lab.addBundled(root, html, asset.getName()) == null && root.listFiles().length == 1);
             check("מ0.41: העמוד מכיר את הטופס של רשימה חכמה (smartForm), ורק כשהתוכנה מכירה", html.contains("can('smartForm')") && html.contains("ask('smartForm'"));
+            // מ0.45: העורך מכיר כל פקודת קבצים שבהגדרה (בשם העברי) — פקודה חדשה בלי העורך: הבדיקה נכשלת
+            List<String> unknown = new ArrayList<String>();
+            for (Commands.Def d : Commands.ALL)
+                if (d.family == Commands.Family.FILE && !html.contains("'" + Commands.word(d) + "':{")) unknown.add(Commands.word(d));
+            check("מ0.45: העורך מכיר את כל פקודות הקבצים (" + unknown + ")", unknown.isEmpty());
+            check("מ0.45: ...ואת הפרטים החדשים: רענן מלא /קוראים:, ודא … בסל, מדידה /עד:", html.contains("valsw('/קוראים:'") && html.contains("valsw('/בסל:'")
+                    && html.contains("'עד זמן לשורה'") && html.contains("can('commandMatrix')"));
         } catch (Exception e) {
             check("מ0.41: התוסף שבהתקנה — " + e, false);
         }
