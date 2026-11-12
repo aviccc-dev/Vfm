@@ -4,12 +4,12 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="vfm-plugin" content="עורך אינטראקטיבי">
-<meta name="vfm-plugin-version" content="10">
+<meta name="vfm-plugin-version" content="11">
 <meta name="vfm-lab" content="עורך אינטראקטיבי">
-<meta name="vfm-lab-version" content="10">
+<meta name="vfm-lab-version" content="11">
 <title>עורך אינטראקטיבי</title>
 <style>
-/* גרסה 10 — גרסת בדיקה לעיצוב (claude/orech-itzuvim.md): הראש בשורה אחת (☰ הקובץ · ביטול/חזרה · הרצה), תפריט קובץ אחד,
+/* גרסה 11 — גרסת בדיקה לעיצוב, על גרסה 10 שבאה עם התוכנה (claude/orech-itzuvim.md): הראש בשורה אחת (☰ הקובץ · ביטול/חזרה · הרצה), תפריט קובץ אחד,
    פס פעולות בשורה הפתוחה (הזזה, שכפול, הוספה, מחיקה), * ? % צמודים לתחתית, ופתיחה לפי תיקיות.
    תוסף "עורך אינטראקטיבי": העורך החדש על קובצי הפקודות האמיתיים. הצבעים — מהתוכנה (vfm.theme), כאן רק ברירת מחדל.
    vfm-lab — כדי שגם הגרסה המותקנת (מ0.39, "הוסף מעבדה") תכיר את העמוד; מ0.40 — vfm-plugin, בתיקיית "תוספים" */
@@ -187,6 +187,7 @@ const DETS={
   'עמוק':{txt:'בדיקה מלאה של הכונן',word:true,write:()=>'עמוק',read:t=>t==='עמוק'?'':undefined},
   'קיים':{g:'ex',word:true,write:(v,l,c)=>c&&c.fem?'קיימת':'קיים',read:t=>t==='קיים'||t==='קיימת'?'':undefined},
   'חסר':{g:'ex',word:true,write:(v,l,c)=>c&&c.fem?'חסרה':'חסר',read:t=>t==='חסר'||t==='חסרה'?'':undefined},
+  'באינדקס':{g:'ex',word:true,txt:'האינדקס מכיר את הקובץ (מ0.42)',write:()=>'באינדקס',read:t=>t==='באינדקס'?'':undefined},
   'מכיל':{val:'text',ph:'טקסט',txt:'הקובץ מכיל את הטקסט',write:v=>'מכיל '+q(v)},
   'קבצים':valsw('/קבצים:','num','מספר',null,'כמה קבצים בתיקייה (בלי תתי־תיקיות)'),
   'רשימות':valsw('/רשימות:','num','מספר',null,'כמה רשימות יש בה'),
@@ -279,8 +280,8 @@ const CMDS={
   'פתח רשימה חכמה':{w:'פתח רשימה חכמה',form:'open',what:'בסוף ההרצה פותח רשימה חכמה',slots:[{link:'',kind:'pick',pk:['smart']}],det:['מיון']},
   'פתח תיקייה':{w:'פתח תיקייה',form:'open',what:'בסוף ההרצה פותח תיקייה בתוכנה',slots:[{link:'',kind:'pick',pk:['folder']}],det:[]},
   'פתח תפריט':{w:'פתח תפריט',form:'open',what:'בסוף ההרצה פותח רשימה כתפריט',slots:[{link:'',kind:'pick',pk:['list']}],det:[]},
-  'פתח תוסף':{w:()=>compat.plugins?'פתח תוסף':'פתח מסך מעבדה',read:['פתח מסך מעבדה','פתח מסך תוספים'],form:'plugin',what:'בסוף ההרצה פותח תוסף (בלי שם — רשימת התוספים)',
-    slots:[{link:'',kind:'text',label:'שם התוסף',opt:true}],det:[]},
+  'פתח תוסף':{w:()=>compat.plugins?'פתח תוסף':'פתח מסך מעבדה',read:['פתח מסך מעבדה','פתח מסך תוספים'],form:'plugin',what:'בסוף ההרצה פותח תוסף (בלי שם — רשימת התוספים; בלי גרסה — החדשה)',
+    slots:[{link:'',kind:'text',label:'שם התוסף',opt:true},{link:'גרסה',kind:'text',label:'גרסה',opt:true}],det:[]},   // גרסה 10: גם הגרסה
   'פתח כלי':{w:'פתח כלי',form:'tool',what:'בסוף ההרצה פותח כלי (כפולים, סל, פס…)',
     slots:[{link:'',kind:'word',choose:'tool',label:'בחירת כלי'},{link:'',kind:'text',label:'פרטים, למשל /מפתח:ערך',opt:true,bare:true}],det:[]},
   'מצא':{w:'מצא',form:'find',what:'בסוף ההרצה פותח חיפוש עם תנאי',slots:[{link:'',kind:'cond',label:'תנאי'}],det:['מיון']},
@@ -296,8 +297,12 @@ const CMDS={
   'דוח':{w:'דוח',en:'REPORT',read:['REPORT'],what:'היומן של ההרצה נכתב גם לקובץ',slots:[{link:'ל',kind:'pick',pk:['outfile']}],det:[]},
 
   'ודא':{w:'ודא',en:'VERIFY',read:['VERIFY'],what:'בודק בתוך הקובץ: ✅ או ❌, ולא עוצר',
-    slots:[{link:'ש',kind:'pick',pk:['file','folder','list','smart']}],det:['קיים','חסר','מכיל','קבצים','רשימות','פריטים']},
+    slots:[{link:'ש',kind:'pick',pk:['file','folder','list','smart']}],det:['קיים','חסר','באינדקס','מכיל','קבצים','רשימות','פריטים']},
   'ודא שגיאה':{w:'ודא שגיאה',en:'VERIFY שגיאה',form:'fixed',what:'השורה הבאה אמורה להיכשל',slots:[],det:[]},
+  // גרסה 10 (מ0.42): ודא מסד · צור אופן · בטל לא-משויכים
+  'ודא מסד':{w:'ודא מסד',en:'VERIFY מסד',form:'fixed',what:'בודק את המסד: המנוע מול ה־SQLite של המכשיר, ותקינות המסד של כל אופן. לא משנה דבר',slots:[],det:[]},
+  'צור אופן':{w:'צור אופן',form:'name1',what:'יוצר אופן חדש (מסד עם בית); קיים — בלי שינוי. אחריו — "אופן" עובר אליו',slots:[{link:'',kind:'text',label:'שם האופן'}],det:[]},
+  'בטל לא-משויכים':{w:'בטל לא-משויכים',en:'RD לא-משויכים',form:'fixed',what:'מוחק מהמסד רישומי קבצים שאינם באף רשימה (בכונן — לא נוגע)',slots:[],det:[]},
   'המתן':{w:'המתן',en:'WAIT',read:['WAIT'],what:'מחכה לפני השורה הבאה',slots:[{link:'',kind:'num',label:'שניות'}],det:[]},
   'המשך':{w:'המשך',en:'CONTINUE',read:['CONTINUE'],form:'cont',what:'כמה כישלונות מותרים לפני שהקובץ נעצר. ריק — אחד',
     slots:[{link:'',kind:'num',label:'כמה',opt:true}],det:['בלי עצירה']},
@@ -320,12 +325,12 @@ const CMDS={
 Object.keys(CMDS).forEach(k=>{const d=CMDS[k];d.id=k;if(!d.read)d.read=[];if(!d.slots)d.slots=[];if(!d.det)d.det=[];});
 const MENU=[
   ['קבצים ותיקיות',['העתק','העבר','מחק','שנה','צור תיקייה','מחק תיקייה','השווה','הפעל']],
-  ['רשימות',['צור רשימה','צור רשימה חכמה','עדכן רשימה חכמה','העתק','העבר','שנה','בטל','קשר','צור רעיון','צור כותרת']],
+  ['רשימות',['צור רשימה','צור רשימה חכמה','עדכן רשימה חכמה','העתק','העבר','שנה','בטל','בטל לא-משויכים','קשר','צור רעיון','צור כותרת']],
   ['פתיחה בסוף ההרצה',['פתח מסך','פתח רשימה','פתח רשימה חכמה','פתח תיקייה','פתח תפריט','פתח כלי','פתח תוסף','מצא','חזרה','הרץ','הוסף','צור פקודה']],
   ['הודעות וכתיבה',['הודעה','הערה','כתוב','דוח']],
-  ['בדיקות וזרימה',['ודא','ודא שגיאה','המתן','המשך','כלול','לולאה','הדמיה','בדיקה','מדידה']],
+  ['בדיקות וזרימה',['ודא','ודא שגיאה','ודא מסד','המתן','המשך','כלול','לולאה','הדמיה','בדיקה','מדידה']],
   ['כותרת הקובץ',['צלמית','שם','למה']],
-  ['המסד והתוספים',['אופן','גבה','רענן','הוסף תוסף','החלף תוסף']]   // גרסה 9: "אופן" — כאן (המשתמש לא מצא אותה ב"רשימות")
+  ['המסד והתוספים',['אופן','צור אופן','גבה','רענן','הוסף תוסף','החלף תוסף']]   // גרסה 9: "אופן" — כאן (המשתמש לא מצא אותה ב"רשימות")
 ];
 // מ0.40: "הוסף תוסף" ו"החלף תוסף" ירדו (העמודים עוברים ב"העבר"); בגרסה הקודמת — עדיין בתפריט
 function menu(){return MENU.map(([g,ks])=>[g,compat.plugins?ks.filter(k=>k!=='הוסף תוסף'&&k!=='החלף תוסף'):ks]);}
@@ -406,7 +411,9 @@ function fromLine(s){
     case 'screen':{const sc=ALL_SCREENS.slice().sort((a,b)=>b.length-a.length).find(x=>rest===x||rest.startsWith(x+' '));if(!sc)return null;
       if(sc==='מעבדה'||sc==='תוספים'){const a=unq(rest.slice(sc.length));const p=blank('פתח תוסף');p.vals[0]=a?{kind:'text',raw:a}:null;return p;}
       m.vals[0]={kind:'word',raw:sc};const a=unq(rest.slice(sc.length));m.vals[1]=a?{kind:'place',raw:a}:null;return m;}
-    case 'plugin':{const a=unq(rest);m.vals[0]=a?{kind:'text',raw:a}:null;return m;}
+    case 'plugin':{const r=rest.trim();const nv=r[0]==='"'||r[0]==='«'?nameAndRest(r):[r,''];   // כמו המנוע: בלי מרכאות — כל השאר הוא השם
+      const a=unq(nv[0]),g=unq(nv[1]);m.vals[0]=a?{kind:'text',raw:a}:null;m.vals[1]=a&&g?{kind:'text',raw:g}:null;return m;}
+    case 'name1':{const a=unq(rest);if(!a)return null;m.vals[0]={kind:'text',raw:a};return m;}
     case 'tool':{const nr=nameAndRest(rest);if(TOOLS.indexOf(nr[0])<0)return null;m.vals[0]={kind:'word',raw:nr[0]};m.vals[1]=nr[1]?{kind:'text',raw:nr[1]}:null;return m;}
     case 'run':{const r=unq(rest);if(!r)return null;m.vals[0]={kind:'place',raw:r};return m;}
     case 'add':{if(ADDS.indexOf(rest)<0)return null;m.vals[0]={kind:'word',raw:rest};return m;}
@@ -521,7 +528,8 @@ function toLine(m,lang){
     case 'find':if(has(v[0]))parts.push(v[0].raw);return parts.concat(detsOut(m,lang)).join(' ');
     case 'open':if(has(v[0]))parts.push(q(v[0].kind==='place'?v[0].raw:listPath(v[0].raw)));return parts.concat(detsOut(m,lang)).join(' ');
     case 'screen':if(has(v[0]))parts.push(v[0].raw);if(has(v[0])&&has(v[1]))parts.push(q(v[1].raw));return parts.join(' ');
-    case 'plugin':if(has(v[0]))parts.push(q(v[0].raw));return parts.join(' ');
+    case 'plugin':if(has(v[0]))parts.push(q(v[0].raw));if(has(v[0])&&has(v[1]))parts.push(q(v[1].raw));return parts.join(' ');
+    case 'name1':if(has(v[0]))parts.push(q(v[0].raw));return parts.join(' ');
     case 'tool':if(has(v[0]))parts.push(v[0].raw);if(has(v[0])&&has(v[1]))parts.push(v[1].raw);return parts.join(' ');
     case 'run':case 'add':if(has(v[0]))parts.push(v[0].kind==='word'?v[0].raw:q(v[0].raw));return parts.join(' ');
     case 'comp':
@@ -648,7 +656,7 @@ function myFiles(){return J(can('myCommands')?V.myCommands():V.commandFiles(),[]
 
 // ---------- המצב ----------
 let file=null, lines=[], models=[], saved='', act=-1, M=null, sh=null, lastInput=null, snap=null;
-let hist=[{t:'',l:''}], hpos=0, histT=null;   // גרסה 10: ביטול וחזרה — הטקסט והשפה
+let hist=[{t:'',l:''}], hpos=0, histT=null;   // גרסה 11: ביטול וחזרה — הטקסט והשפה
 let lang=pref('lang','he')==='en'?'en':'he', view=pref('view','inter')==='plain'?'plain':'inter', real=false;
 const $=id=>document.getElementById(id);
 const ed=$('ed'),plain=$('plain'),keys=$('keys'),addrow=$('addrow'),sheet=$('sheet'),sheetIn=$('sheetIn'),shade=$('shade');
@@ -658,7 +666,7 @@ function text(){if(view==='plain'&&file)return plain.value.replace(/\r/g,'')+(pl
 function dirty(){return file&&text()!==saved;}
 function commit(){if(act>=0&&M&&JSON.stringify(M)!==snap){lines[act]=Mo.toLine(M,lang);models[act]=JSON.parse(JSON.stringify(M));}upd();}   // שורה שרק נפתחה — נשארת כמו שנכתבה
 function upd(){
-  // גרסה 10 — המשתמש: "צריך במקום מרוכז וברור פתיחת קובץ, סגירה, שמירה בשם"; השמירה — "מספיק בתפריט". קובץ שלא נשמר — נקודה ליד השם
+  // גרסה 11 — המשתמש: "צריך במקום מרוכז וברור פתיחת קובץ, סגירה, שמירה בשם"; השמירה — "מספיק בתפריט". קובץ שלא נשמר — נקודה ליד השם
   fname.textContent='';
   fname.append(E('span','hb','☰'),E('span','nm',file?file.name.replace(/\.vbat$/,''):'בחירת קובץ פקודות'));
   if(dirty()){const d=E('span','dot','●');d.setAttribute('aria-label','לא נשמר');fname.append(d);}
@@ -682,7 +690,7 @@ function load(f,content){
   if(fixed.length)openSheet({kind:'fixed',list:fixed});
 }
 
-// ---------- ביטול וחזרה (גרסה 10) ----------
+// ---------- ביטול וחזרה (גרסה 11) ----------
 // המשתמש: "חזור לביטול צריכים להיות סמוכים ולא בשני מקומות". הקובץ כולו נשמר כטקסט אחרי כל שינוי (הקלדה — אחרי הפסקה קצרה).
 function histReset(){clearTimeout(histT);histT=null;hist=[{t:file?text():'',l:lang}];hpos=0;updUndo();}
 function same(e){return e&&e.t===text()&&e.l===lang;}
@@ -840,7 +848,7 @@ function activate(i){
 }
 function deactivate(){if(act<0)return;commit();act=-1;M=null;draw();}
 function newLineAfter(){commit();const at=act>=0?act+1:lines.length;lines.splice(at,0,'');models.splice(at,0,{cmd:null,vals:[],dets:[],typing:''});act=-1;M=null;activate(at);}
-// ---------- פס הפעולות של השורה הפתוחה (גרסה 10) ----------
+// ---------- פס הפעולות של השורה הפתוחה (גרסה 11) ----------
 // עד גרסה 9 לא הייתה הזזה ולא שכפול, ולכן לא היה אפשר להכניס שורות קיימות לתוך לולאה. מחיקה — רק כאן (לא גם בתפריט הפקודה).
 function lineActions(){
   const r=E('div','lnact');
@@ -1166,7 +1174,7 @@ function replaceCmd(k){
   closeSheet();
   const all=dropped.concat(g);if(all.length)toast('ירד, לא מתאים ל"'+k+'": '+all.join(', '));
 }
-// ---------- תפריט הקובץ (גרסה 10) ----------
+// ---------- תפריט הקובץ (גרסה 11) ----------
 function drawMenu(){
   top(file?file.name.replace(/\.vbat$/,''):'קובץ');
   sheetIn.appendChild(E('div','grp','קובץ'));
@@ -1204,7 +1212,7 @@ function closeFile(){
   go();
 }
 
-// ---------- פתיחה לפי תיקיות (גרסה 10) ----------
+// ---------- פתיחה לפי תיקיות (גרסה 11) ----------
 // המשתמש: "בפתיחת קובץ היה עדיף שיביא את כל התיקיות שיש בהם קבצי פקודות, ומתוכם יבחר ויפתח" · "הפקודות שלי" בראש ·
 // "כאשר בוחרים פתיחת קובץ נעשה רענון מהיר". כל התיקיות במכשיר — מהאינדקס, דרך findFiles בגשר (גרסת התוכנה הבאה):
 // מחזירה מיד את מה שבאינדקס, ואחרי הרענון המהיר — שוב, ב־vfmResult. עד אז — התיקיות שהעורך מכיר.
@@ -1359,7 +1367,7 @@ function drawLeave(){
 }
 const VARS=[['הורדות','תיקיית ההורדות'],['פנימי','הזיכרון הפנימי'],['כרטיס','כרטיס הזיכרון'],['כאן','התיקייה של הקובץ'],['תאריך','התאריך והשעה עכשיו'],
   ['שעה','השעה עכשיו'],['ייחודי','מספר שלא חוזר'],['סבב','מספר הסבב בלולאה'],['רק-במקור','אחרי השווה: רק במקור'],['רק-ביעד','אחרי השווה: רק ביעד'],
-  ['שיתוף','מה ששותף לתוכנה'],['בית','הבית של התוכנה (בהפעל)'],['מזהה-כרטיס','המזהה של כרטיס הזיכרון']];
+  ['שיתוף','מה ששותף לתוכנה'],['נבחרים','הקבצים שנבחרו — רק בפקודה שברשימת "בחירה"'],['בית','הבית של התוכנה (בהפעל)'],['מזהה-כרטיס','המזהה של כרטיס הזיכרון']];
 function drawVars(){
   top('משתנה');
   const f=sh.target,box=E('div','items');
