@@ -2241,15 +2241,18 @@ public final class Tests {
         eq("מ0.45: מדידה /עד: עם שתי מילים (\"/עד:2 דקות\")", 120000L, Batch.plan("מדידה /עד:2 דקות\n", r, v).lineLimit);
         eq("מ0.45: מדידה /עד: לא מובן — שגיאה", 1, Batch.plan("מדידה /עד:מחר\n", r, v).errors);
         // השמות בשתי מילים
-        eq("מ0.45: \"מחק אופן\" — DROPMODE", "DROPMODE \"זמני\"", Commands.normal("מחק אופן \"זמני\""));
+        eq("מ0.45: \"בטל אופן\" — DROPMODE", "DROPMODE \"זמני\"", Commands.normal("בטל אופן \"זמני\""));
+        eq("מ0.45: ...\"מחק אופן\" (השם הראשון) — עדיין נקרא", "DROPMODE \"זמני\"", Commands.normal("מחק אופן \"זמני\""));
+        eq("מ0.45: העורך כותב \"בטל אופן\"", "בטל אופן \"זמני\"", Commands.hebrew("DROPMODE \"זמני\""));
+        eq("מ0.45: \"בטל לא-משויכים\" ו\"בטל ידנית\" — כמו קודם", "בטל ידנית \"א\"", Commands.normal("בטל ידנית \"א\""));
         eq("מ0.45: \"רוקן סל\" לבד — PURGE", "PURGE", Commands.normal("רוקן סל"));
         eq("מ0.45: \"שחזר מהסל\" — UNTRASH", "UNTRASH \"א\"", Commands.normal("שחזר מהסל \"א\""));
         eq("מ0.45: \"מחק תיקייה\" — עדיין RD", "RD \"א\"", Commands.normal("מחק תיקייה \"א\""));
         eq("מ0.45: העורך כותב בעברית", "שחזר מהסל \"א\"", Commands.hebrew("UNTRASH \"א\""));
         check("מ0.45: מחק אופן / ודא אופן — רק במסד (במחשב: שגיאה מוסברת)",
-                Words.DbCmd.VERIFY_DB_ONLY.equals(Batch.plan("מחק אופן \"זמני\"\n", r, v).steps.get(0).error)
+                Words.DbCmd.VERIFY_DB_ONLY.equals(Batch.plan("בטל אופן \"זמני\"\n", r, v).steps.get(0).error)
                         && Words.DbCmd.VERIFY_DB_ONLY.equals(Batch.plan("ודא אופן \"זמני\" חסר\n", r, v).steps.get(0).error));
-        eq("מ0.45: מחק אופן בלי שם — שגיאה", Words.DbCmd.DROP_MODE_USAGE, Batch.plan("מחק אופן\n", r, v).steps.get(0).error);
+        eq("מ0.45: מחק אופן בלי שם — שגיאה", Words.DbCmd.DROP_MODE_USAGE, Batch.plan("בטל אופן\n", r, v).steps.get(0).error);
         // רענן מלא /קוראים:
         eq("מ0.45: רענן מלא /קוראים:4 — בלי שגיאות", 0, Batch.plan("רענן מלא /קוראים:4\n", r, v).errors);
         check("מ0.45: ...ובתצוגה — כמה קוראים", Batch.plan("רענן מלא /קוראים:4\n", r, v).steps.get(0).describe.contains("4 קוראים"));

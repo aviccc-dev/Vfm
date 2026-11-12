@@ -2145,10 +2145,12 @@ public final class Words {
         }
 
         // מ0.45 — מחק אופן, הסל, ודא תקין, רענן מלא /קוראים:
-        public static final String N_DROP_MODE = "מחק אופן", N_UNTRASH = "שחזר מהסל", N_PURGE = "רוקן סל",  // תחביר
-                W_DROP_MODE = "מוחק אופן עבודה: המסד שלו. אם יש בו משהו — גיבוי לפני (ממנו אפשר לשחזר: \"צור אופן\" באותו שם, ואז הגיבויים). "
-                        + "לא את האופן הפתוח במסך, ולא את \"שמור לתוכנה\"",
-                H_DROP_MODE = "שם האופן", DROP_MODE_USAGE = "צורה: מחק אופן \"<שם>\"",
+        // מ0.45+ (המשתמש: "והיה דיבור לשלב אותה בהסר"; claude/bitul-ofen.md): "בטל אופן" — אופן הוא אוסף רשימות, כמו "בטל ידנית".
+        // "מחק אופן" (כך נבנה במ0.45) — עדיין נקרא
+        public static final String N_DROP_MODE = "בטל אופן", N_DROP_MODE_OLD = "מחק אופן", N_UNTRASH = "שחזר מהסל", N_PURGE = "רוקן סל",  // תחביר
+                W_DROP_MODE = "מבטל אופן עבודה: המסד שלו (אם יש בו משהו — גיבוי לפני; ממנו אפשר לשחזר: \"צור אופן\" באותו שם, ואז הגיבויים), "
+                        + "ותיקיית ההגדרות שלו — לסל. קבצים בכונן — לא נוגע. לא את האופן הפתוח במסך, ולא את \"שמור לתוכנה\"",
+                H_DROP_MODE = "שם האופן", DROP_MODE_USAGE = "צורה: בטל אופן \"<שם>\"",
                 W_UNTRASH = "מחזיר מהסל למקום המקורי את מה שנמחק מהמסלול הזה (האחרון שנמחק). שם תפוס — \"(משוחזר)\". לא מחזיר לרשימות",
                 H_UNTRASH = "המסלול המקורי — איפה שהיה לפני המחיקה", UNTRASH_USAGE = "צורה: שחזר מהסל \"<מסלול מקורי>\"",
                 W_PURGE = "מחיקה לצמיתות מהסל: מה שנמחק מהמסלול הזה (או מתוך התיקייה הזו). בלי מסלול — כל הסל. אין דרך חזרה",
@@ -2158,15 +2160,17 @@ public final class Words {
                 SW_IN_TRASH = "/בסל:", W_IN_TRASH = "בסל",   // תחביר
                 SW_READERS = "/קוראים:", READERS_USAGE = "צורה: רענן מלא /קוראים:N (1 עד 16)";   // תחביר
 
-        public static String dropModeWill(String n) { return "יימחק האופן \"" + n + "\" (המסד שלו; אם יש בו משהו — גיבוי לפני)"; }
-        public static String dropModeNone(String n) { return "אין אופן \"" + n + "\" — אין מה למחוק"; }
-        public static String dropModeOpen(String n) { return "האופן \"" + n + "\" פתוח עכשיו — לא נמחק (לעבור לאופן אחר, ואז)"; }
-        public static String dropModeSystem(String n) { return "\"" + n + "\" הוא של התוכנה — לא נמחק"; }
-        public static String dropModeDone(String n, boolean kept) {
-            return "נמחק האופן \"" + n + "\"" + (kept ? " · גיבוי נשמר (\"צור אופן\" באותו שם — ואז הגיבויים)" : " (היה ריק)");
+        public static String dropModeWill(String n) { return "יבוטל האופן \"" + n + "\" (המסד שלו — אם יש בו משהו, גיבוי לפני; תיקיית ההגדרות שלו — לסל)"; }
+        public static String dropModeNone(String n) { return "אין אופן \"" + n + "\" — אין מה לבטל"; }
+        public static String dropModeOpen(String n) { return "האופן \"" + n + "\" פתוח עכשיו — לא בוטל (לעבור לאופן אחר, ואז)"; }
+        public static String dropModeSystem(String n) { return "\"" + n + "\" הוא של התוכנה — לא בוטל"; }
+        public static String dropModeDone(String n, boolean kept, boolean folder) {
+            return "בוטל האופן \"" + n + "\"" + (kept ? " · גיבוי נשמר (\"צור אופן\" באותו שם — ואז הגיבויים)" : " (היה ריק)")
+                    + (folder ? " · תיקיית ההגדרות שלו — בסל" : "");
         }
-        public static String dropModeFailed(String n, String why) { return "האופן \"" + n + "\" לא נמחק: " + why; }
-        public static final String DROP_MODE_NO_BACKUP = "לא נשמר גיבוי — ולכן לא נמחק (הפרטים ביומן)";
+        public static String dropModeFailed(String n, String why) { return "האופן \"" + n + "\" לא בוטל: " + why; }
+        public static final String DROP_MODE_NO_BACKUP = "לא נשמר גיבוי — ולכן לא בוטל (הפרטים ביומן)",
+                DROP_MODE_FOLDER_KEPT = " · ⚠ תיקיית ההגדרות שלו לא עברה לסל (הפרטים ביומן)";
 
         public static String untrashWill(String name, boolean now) {
             return "יוחזר מהסל: \"" + name + "\"" + (now ? "" : " (עכשיו אינו בסל — ייבדק בהרצה)");

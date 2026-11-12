@@ -1386,7 +1386,7 @@ final class DbListCmd {
     }
 
     /**
-     * מ0.45: "מחק אופן "<שם>"" — המסד של האופן נמחק (עם קובצי היומן שלו). יש בו משהו — גיבוי לפני (לא נשמר — לא נמחק); הגיבויים
+     * מ0.45: "בטל אופן "<שם>"" (נבנה בשם "מחק אופן", שעדיין נקרא) — המסד של האופן נמחק (עם קובצי היומן שלו). יש בו משהו — גיבוי לפני (לא נשמר — לא נמחק); הגיבויים
      * נשארים, ו"צור אופן" באותו שם מחזיר אליהם. לא: האופן הפתוח במסך, "שמור לתוכנה", והאופן שהקובץ עובד בו עכשיו. אין אופן כזה —
      * בלי שינוי (ניקוי שאפשר להריץ שוב). ההדמיה: "אופן" אחריו — שגיאה.
      */
@@ -1434,8 +1434,20 @@ final class DbListCmd {
                     return Words.DbCmd.dropModeFailed(name, Words.Db.failed(f.getName()));
                 }
                 if (name.equals(DbScreen.savedMode(c))) DbScreen.saveMode(c, "");   // הפתיחה הבאה — באופן אחר
-                Log.i("נמחק אופן: " + name + (kept ? " (גיבוי לפני)" : " (ריק)"));
-                return Words.DbCmd.dropModeDone(name, kept);
+                // מ0.45+ (claude/bitul-ofen.md, המשתמש: "למה להשאיר? בלי אופן היא סתם בלבול"): תיקיית ההגדרות שלו — לסל (לא לצמיתות)
+                boolean folder = false;
+                String note = "";
+                File dir = Modes.dirOf(name);
+                if (dir.isDirectory() && !name.equals(Modes.current()) && lib != null) {
+                    Physical.Result r = Physical.delete(lib, new ArrayList<String>(), java.util.Collections.singletonList(dir.getAbsolutePath()), false);
+                    folder = r.failed == 0 && !r.done.isEmpty();
+                    if (!folder) {
+                        note = Words.DbCmd.DROP_MODE_FOLDER_KEPT;
+                        Log.i("ביטול אופן: תיקיית ההגדרות לא עברה לסל — " + dir + " · " + r.note);
+                    }
+                }
+                Log.i("בוטל אופן: " + name + (kept ? " (גיבוי לפני)" : " (ריק)") + (folder ? " · התיקייה לסל" : ""));
+                return Words.DbCmd.dropModeDone(name, kept, folder) + note;
             }
         };
     }

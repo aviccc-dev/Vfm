@@ -215,7 +215,7 @@ final class Commands {
             HE_COMP = "השווה", HE_START = "הפעל", HE_ECHO = "הודעה", HE_REM = "הערה",   // תחביר
             HE_MD = "צור תיקייה", HE_RD = "מחק תיקייה", HE_DEEP = "/עמוק", HE_HIDDEN = "/נסתרים";   // תחביר
     private static final String[][] TWO_WORDS = {{HE_MD, "MD"}, {HE_RD, "RD"},
-            {Words.DbCmd.N_DROP_MODE, Batch.DROP_MODE}, {Words.DbCmd.N_UNTRASH, Batch.UNTRASH}, {Words.DbCmd.N_PURGE, Batch.PURGE}};   // מ0.45
+            {Words.DbCmd.N_DROP_MODE, Batch.DROP_MODE}, {Words.DbCmd.N_DROP_MODE_OLD, Batch.DROP_MODE}, {Words.DbCmd.N_UNTRASH, Batch.UNTRASH}, {Words.DbCmd.N_PURGE, Batch.PURGE}};   // מ0.45
     private static final String[][] HE_SWITCHES = {{HE_DEEP, "/S"}, {HE_HIDDEN, "/A:H"}};
 
     /** השורה בצורה שהמנוע קורא: "צור תיקייה" ← MD, "מחק תיקייה" ← RD, והמתגים העבריים ← האנגליים (מחוץ למרכאות). */

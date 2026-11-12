@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="vfm-plugin" content="עורך אינטראקטיבי">
-<meta name="vfm-plugin-version" content="12">
+<meta name="vfm-plugin-version" content="13">
 <meta name="vfm-lab" content="עורך אינטראקטיבי">
 <meta name="vfm-lab-version" content="8">
 <title>עורך אינטראקטיבי</title>
@@ -187,7 +187,7 @@ const TAKEN=['אם תפוס לשאול','אם תפוס לדלג','אם תפוס 
 // מה שרק מ0.40 מכיר — בגרסה הקודמת לא מוצע
 const NEW040=['אם תפוס לשנות-שם','מכיל בקובץ','בלי לפתוח'];
 // מה שרק מ0.45 מכיר
-const NEW045=['קוראים','בסל','כמה בסל','עד זמן לשורה'],NEW045_CMDS=['מחק אופן','שחזר מהסל','רוקן סל','ודא תקין','ודא אופן','קטע'];
+const NEW045=['קוראים','בסל','כמה בסל','עד זמן לשורה'],NEW045_CMDS=['בטל אופן','שחזר מהסל','רוקן סל','ודא תקין','ודא אופן','קטע'];
 const DATES=['מהיום','מהשבוע','מהחודש','מהשנה','תאריך אחר'];
 const TRANSFER=['הכל','נסתרים'].concat(TAKEN,DATES,['גודל','מכיל בקובץ','עד אחוז','יומן']);
 
@@ -292,14 +292,15 @@ const CMDS={
   'צור אופן':{w:'צור אופן',form:'name1',what:'יוצר אופן חדש (מסד עם בית); קיים — בלי שינוי. אחריו — "אופן" עובר אליו',slots:[{link:'',kind:'text',label:'שם האופן'}],det:[]},
   'בטל לא-משויכים':{w:'בטל לא-משויכים',en:'RD לא-משויכים',form:'fixed',what:'מוחק מהמסד רישומי קבצים שאינם באף רשימה (בכונן — לא נוגע)',slots:[],det:[]},
   // גרסה 12 (מ0.45): מחק אופן · שחזר מהסל · רוקן סל · ודא תקין · ודא אופן · קטע
-  'מחק אופן':{w:'מחק אופן',en:'DROPMODE',read:['DROPMODE'],form:'name1',what:'מוחק אופן עבודה — המסד שלו (אם יש בו משהו — גיבוי לפני). לא את האופן הפתוח',
-    slots:[{link:'',kind:'text',label:'שם האופן'}],det:[]},
+  // גרסה 13 (המשתמש: "מחיקת אופן חסרה בורר / והיה דיבור לשלב אותה בהסר"): "בטל אופן" — עם בורר האופנים, ליד "בטל"
+  'בטל אופן':{w:'בטל אופן',en:'DROPMODE',read:['DROPMODE','מחק אופן'],form:'name1',what:'מבטל אופן עבודה: המסד שלו (אם יש בו משהו — גיבוי לפני), ותיקיית ההגדרות שלו — לסל. קבצים בכונן — לא נוגע. לא את האופן הפתוח',
+    slots:[{link:'',kind:'mode',label:'בחירת אופן'}],det:[]},
   'שחזר מהסל':{w:'שחזר מהסל',en:'UNTRASH',read:['UNTRASH'],what:'מחזיר מהסל למקום המקורי את מה שנמחק מהמסלול הזה (האחרון שנמחק)',
     slots:[{link:'את',kind:'pick',pk:['file','folder']}],det:[]},
   'רוקן סל':{w:'רוקן סל',en:'PURGE',read:['PURGE'],what:'מחיקה לצמיתות מהסל: מה שנמחק מהמסלול הזה (או מתוך התיקייה). בלי מסלול — כל הסל',
     slots:[{link:'של',kind:'pick',pk:['file','folder'],opt:true}],det:[]},
   'ודא תקין':{w:'ודא תקין',en:'VERIFY תקין',form:'fixed',what:'כל השורות מתחילת הקטע (או הקובץ) רצו בלי כישלון',slots:[],det:[]},
-  'ודא אופן':{w:'ודא אופן',en:'VERIFY אופן',form:'name1',what:'האופן קיים, או חסר',slots:[{link:'',kind:'text',label:'שם האופן'}],det:['קיים','חסר']},
+  'ודא אופן':{w:'ודא אופן',en:'VERIFY אופן',form:'name1',what:'האופן קיים, או חסר',slots:[{link:'',kind:'mode',label:'בחירת אופן'}],det:['קיים','חסר']},
   'קטע':{w:'קטע',en:'SECTION',read:['SECTION'],form:'name1',what:'כותרת בדוח של ההרצה, במקום שלה ("▸ שם"). לא משנה דבר',slots:[{link:'',kind:'text',label:'שם הקטע'}],det:[]},
   'המתן':{w:'המתן',en:'WAIT',read:['WAIT'],what:'מחכה לפני השורה הבאה',slots:[{link:'',kind:'num',label:'שניות'}],det:[]},
   'המשך':{w:'המשך',en:'CONTINUE',read:['CONTINUE'],form:'cont',what:'כמה כישלונות מותרים לפני שהקובץ נעצר. ריק — אחד',
@@ -323,12 +324,12 @@ const CMDS={
 Object.keys(CMDS).forEach(k=>{const d=CMDS[k];d.id=k;if(!d.read)d.read=[];if(!d.slots)d.slots=[];if(!d.det)d.det=[];});
 const MENU=[
   ['קבצים ותיקיות',['העתק','העבר','מחק','שנה','צור תיקייה','מחק תיקייה','השווה','הפעל','שחזר מהסל','רוקן סל']],
-  ['רשימות',['צור רשימה','צור רשימה חכמה','עדכן רשימה חכמה','העתק','העבר','שנה','בטל','בטל לא-משויכים','קשר','צור רעיון','צור כותרת']],
+  ['רשימות',['צור רשימה','צור רשימה חכמה','עדכן רשימה חכמה','העתק','העבר','שנה','בטל','בטל אופן','בטל לא-משויכים','קשר','צור רעיון','צור כותרת']],
   ['פתיחה בסוף ההרצה',['פתח מסך','פתח רשימה','פתח רשימה חכמה','פתח תיקייה','פתח תפריט','פתח כלי','פתח תוסף','מצא','חזרה','הרץ','הוסף','צור פקודה']],
   ['הודעות וכתיבה',['הודעה','הערה','כתוב','דוח']],
   ['בדיקות וזרימה',['ודא','ודא שגיאה','ודא מסד','ודא תקין','ודא אופן','קטע','המתן','המשך','כלול','לולאה','הדמיה','בדיקה','מדידה']],
   ['כותרת הקובץ',['צלמית','שם','למה']],
-  ['המסד והתוספים',['אופן','צור אופן','מחק אופן','גבה','רענן','הוסף תוסף','החלף תוסף']]   // גרסה 9: "אופן" — כאן (המשתמש לא מצא אותה ב"רשימות")
+  ['המסד והתוספים',['אופן','צור אופן','בטל אופן','גבה','רענן','הוסף תוסף','החלף תוסף']]   // גרסה 9: "אופן" — כאן (המשתמש לא מצא אותה ב"רשימות")
 ];
 // מ0.40: "הוסף תוסף" ו"החלף תוסף" ירדו (העמודים עוברים ב"העבר"); בגרסה הקודמת — עדיין בתפריט
 function menu(){return MENU.map(([g,ks])=>[g,(compat.plugins?ks.filter(k=>k!=='הוסף תוסף'&&k!=='החלף תוסף'):ks).filter(k=>compat.v45||NEW045_CMDS.indexOf(k)<0)]);}
@@ -411,7 +412,7 @@ function fromLine(s){
       m.vals[0]={kind:'word',raw:sc};const a=unq(rest.slice(sc.length));m.vals[1]=a?{kind:'place',raw:a}:null;return m;}
     case 'plugin':{const r=rest.trim();const nv=r[0]==='"'||r[0]==='«'?nameAndRest(r):[r,''];   // כמו המנוע: בלי מרכאות — כל השאר הוא השם
       const a=unq(nv[0]),g=unq(nv[1]);m.vals[0]=a?{kind:'text',raw:a}:null;m.vals[1]=a&&g?{kind:'text',raw:g}:null;return m;}
-    case 'name1':{const nr=def.det.length?nameAndRest(rest):[unq(rest),''];if(!nr[0])return null;m.vals[0]={kind:'text',raw:nr[0]};
+    case 'name1':{const nr=def.det.length?nameAndRest(rest):[unq(rest),''];if(!nr[0])return null;m.vals[0]={kind:def.slots[0].kind==='mode'?'mode':'text',raw:nr[0]};
       if(nr[1]){const d=readDet(def,nr[1]);if(!d)return null;m.dets.push(d);}return m;}
     case 'tool':{const nr=nameAndRest(rest);if(TOOLS.indexOf(nr[0])<0)return null;m.vals[0]={kind:'word',raw:nr[0]};m.vals[1]=nr[1]?{kind:'text',raw:nr[1]}:null;return m;}
     case 'run':{const r=unq(rest);if(!r)return null;m.vals[0]={kind:'place',raw:r};return m;}
