@@ -304,6 +304,26 @@ final class Batch {
         return false;
     }
 
+    /**
+     * מ0.43: דוח של הרצה — ליומן התקלות בקיצור: כמה שורות, הסיכום של "ודא", וכל שורה עם ❌ או ⚠ (עד 30). עד כאן — כל הדוח, ובדיקה
+     * אחת (300 שורות) דחקה את התקלות מהיומן. הדוח המלא — בשורה "דוח" ובמסך ההרצה.
+     */
+    static String logLine(List<String> report) {
+        if (report.isEmpty()) return Words.Cmd.NO_CHANGE;
+        if (report.size() <= 12) return report.toString();
+        StringBuilder sb = new StringBuilder(Words.DbCmd.logLines(report.size()));
+        int shown = 0;
+        for (String r : report) {
+            boolean bad = r.contains("❌") || r.contains("⚠");
+            boolean sum = r.contains(Words.DbCmd.VERIFY_SUM_MARK);
+            if ((bad && shown < 30) || sum) {
+                sb.append(" · ").append(r);
+                if (bad) shown++;
+            }
+        }
+        return sb.toString();
+    }
+
     /** מ0.37: "דוח "<קובץ>"" — ההודעות (ECHO) והיומן נכתבים לקובץ; כישלון בכתיבה — שורה ביומן, לא עוצר. */
     private static void writeReport(Plan plan, List<String> report) {
         if (plan.reportFile == null) return;

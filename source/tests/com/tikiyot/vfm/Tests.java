@@ -2146,6 +2146,13 @@ public final class Tests {
             check("מ0.42: אותו שם — כלום", Shortcuts.listRenamed(s, m, b, "פעילים 2027", "פעילים 2027").isEmpty());
             eq("מ0.42: ההודעה — קובץ אחד", " · עודכן קובץ פקודות אחד שפונה לרשימה: פותח", Words.DbCmd.followed(java.util.Arrays.asList("פותח")));
             eq("מ0.42: ההודעה — כמה", " · עודכנו 2 קובצי פקודות שפונים לרשימה: א, ב", Words.DbCmd.followed(java.util.Arrays.asList("א", "ב")));
+            List<String> rep = new ArrayList<String>();
+            for (int i = 1; i <= 20; i++) rep.add("שורה " + i + ": " + (i == 7 ? "❌ \"א\" — בפועל: חסרה" : "✅ \"ב\" קיימת"));
+            rep.add(Words.DbCmd.verifySummary(19, 1));
+            String ll = Batch.logLine(rep);
+            check("מ0.43: דוח ארוך ביומן — בקיצור: כמה שורות, ה־❌, והסיכום (" + ll + ")", ll.startsWith("21 שורות בדוח") && ll.contains("שורה 7: ❌")
+                    && !ll.contains("שורה 8:") && ll.contains("ודא: 19 עברו · 1 נכשלו"));
+            eq("מ0.43: דוח קצר — כמו שהוא", "[שורה 1: נוצרה א]", Batch.logLine(java.util.Collections.singletonList("שורה 1: נוצרה א")));
             DbListCmd.Res res = DbListCmd.Res.ok("x").renamed(b, "א", "א");
             check("מ0.42: Res — שם שלא השתנה אינו שינוי שם", res.renamed == 0);
         } catch (Exception e) {

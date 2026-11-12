@@ -287,7 +287,7 @@ public class RunScreen extends Activity {
                 report = rep;
                 took = System.currentTimeMillis() - started;
                 running = false;
-                Log.i("קובץ פקודות: " + file + " · " + (report.isEmpty() ? Words.Cmd.NO_CHANGE : report.toString()));
+                Log.i("קובץ פקודות: " + file + " · " + Batch.logLine(report));   // מ0.43: בקיצור
                 Ui.afterIndex(RunScreen.this, new Runnable() {
                     @Override public void run() { summary(); }
                 });

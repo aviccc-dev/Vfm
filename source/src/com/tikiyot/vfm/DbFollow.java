@@ -113,10 +113,16 @@ final class DbFollow {
             Log.e("DbFollow.modes", t);
             return 0;
         }
+        long t0 = System.currentTimeMillis();
+        StringBuilder times = new StringBuilder();
         for (String m : modes) {
             SqlStore s = null;
+            long m0 = System.currentTimeMillis();
             try {
-                if (write && paths != null && !has(DbScreen.dbFile(c, m), paths)) continue;
+                if (write && paths != null && !has(DbScreen.dbFile(c, m), paths)) {
+                    times.append(times.length() > 0 ? " · " : "").append(m).append(' ').append(System.currentTimeMillis() - m0);
+                    continue;
+                }
                 s = write ? SqlStore.open(DbScreen.dbFile(c, m), new IdCounter(DbScreen.counterFile()))
                         : SqlStore.openReadOnly(DbScreen.dbFile(c, m));
                 sum += e.run(s);
@@ -125,9 +131,15 @@ final class DbFollow {
             } finally {
                 if (s != null) s.close();
             }
+            if (s != null) times.append(times.length() > 0 ? " · " : "").append(m).append(" ✎").append(System.currentTimeMillis() - m0);
         }
+        long all = System.currentTimeMillis() - t0;
+        // מ0.43 (בדיקת המכשיר: העברת קובץ מרשימה לתיקייה — עדיין 1.5 שניות): איטי — ליומן, לכל אופן כמה זמן (✎ — נפתח לכתיבה)
+        if (all >= SLOW) Log.i("עדכון הרשימות אחרי הכונן: " + all + " מ\"ש — " + times);   // בכונן
         return sum;
     }
+
+    static final long SLOW = 300;
 
     private static boolean has(java.io.File db, Collection<String> paths) {
         SqlStore r = SqlStore.openReadOnly(db);

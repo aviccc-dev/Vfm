@@ -2115,6 +2115,13 @@ public final class Words {
             return "▸ כלול: " + name + " (" + lines + " שורות)";
         }
 
+        /** מ0.43: מה שמזהה את שורת הסיכום של "ודא" (Batch.logLine). */
+        public static final String VERIFY_SUM_MARK = " ודא: ";
+
+        public static String logLines(int n) {
+            return n + " שורות בדוח";
+        }
+
         public static String verifySummary(int ok, int bad) {
             return (bad == 0 ? "✅" : "❌") + " ודא: " + ok + " עברו · " + bad + " נכשלו";
         }

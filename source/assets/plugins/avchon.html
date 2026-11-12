@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="vfm-plugin" content="אבחון">
-<meta name="vfm-plugin-version" content="2">
+<meta name="vfm-plugin-version" content="3">
 <title>אבחון</title>
 <style>
 /* תוסף "אבחון" (מ0.42): הבדיקות, הדוחות והתקלות — מה שהיה ב־⋮ ובהגדרות (claude/tosaf-bdikot.md).
@@ -171,7 +171,8 @@ function run(gs,label){
 function parse(t){
   const lines=t.split('\n'),bad=[],warn=[];let sum=null;
   lines.forEach(l=>{const m=l.match(/ודא: (\d+) עברו · (\d+) נכשלו/);if(m){sum=[+m[1],+m[2]];return;}
-    if(l.indexOf('❌')>=0)bad.push(l);else if(/⚠|שום שורה לא רצה/.test(l))warn.push(l);});
+    // רק שורות של הדוח ("שורה 12: …") — ההודעות (ECHO) בראש הקובץ מסבירות "✅ או ❌", ואינן כישלון (גרסה 3)
+    if(/^שורה [^:]+: ❌/.test(l))bad.push(l);else if(/^שורה [^:]+: .*⚠|^שום שורה לא רצה/.test(l))warn.push(l);});
   const blocked=t.indexOf('שום שורה לא רצה')>=0;
   return {ok:sum?sum[0]:0,bad:sum?sum[1]:bad.length,badLines:bad.slice(0,80),warn:warn.slice(0,40),blocked:blocked};
 }
@@ -260,7 +261,10 @@ function fullReport(){
   out+='\n=== האינדקס ===\n'+indexText();
   out+='\n=== תקופת הניסיון של האינדקס ===\n'+trialText();
   const log=info.log?V.readText(info.log):null;
-  out+='\n=== יומן התקלות (הסוף) ===\n'+(log?log.slice(-12000):'ריק')+'\n';
+  const es=log?logEntries(log):[],errs=es.filter(isErr);
+  out+='\n=== יומן התקלות — התקלות האחרונות ('+errs.length+' מתוך '+es.length+' רשומות) ===\n'
+    +(errs.length?errs.slice(-30).map(e=>e.d+'  '+(e.t.length>1500?e.t.slice(0,1500)+'…':e.t)).join('\n'):'אין תקלות')+'\n';
+  out+='\n=== היומן — 25 הרשומות האחרונות ===\n'+(es.length?es.slice(-25).map(e=>e.d+'  '+(e.t.length>400?e.t.slice(0,400)+'…':e.t)).join('\n'):'ריק')+'\n';
   return out;
 }
 
@@ -306,10 +310,10 @@ function logEntries(t){
     if(m){cur={d:m[1],t:m[2]};out.push(cur);}else if(cur&&l.trim())cur.t+='\n'+l;});
   return out;
 }
+function isErr(e){return /^(שגיאה ב|קריסה)/.test(e.t);}
 function renderLog(){
   const t=info.log?V.readText(info.log):null;
   const es=t?logEntries(t):[];
-  const isErr=e=>/^(שגיאה ב|קריסה)/.test(e.t);
   const shown=(logMode==='err'?es.filter(isErr):es).slice(-200).reverse();
   let h='<div class="card"><h2><span class="grow">⚠ יומן התקלות</span><span class="seg"><button data-a="logm" data-m="err" class="'+(logMode==='err'?'on':'')+'">תקלות</button><button data-a="logm" data-m="all" class="'+(logMode==='all'?'on':'')+'">הכול</button></span></h2>'
     +'<p>'+es.length+' רשומות · '+es.filter(isErr).length+' תקלות. היומן מקצר את עצמו (נשאר הסוף).</p>'
