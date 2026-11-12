@@ -67,9 +67,10 @@ public final class LabScreen extends Activity {
         super.onCreate(b);
         exp = getIntent().getStringExtra(EXTRA);
         vars = BatchUi.vars(this, Shortcuts.dir());
-        bundled();
+        bundled(false);
         if (exp == null) { showList(); return; }
         File root = Lab.root();
+        if (Lab.newest(root, exp) == null) bundled(true);                     // מ0.42: תוסף שבא עם התוכנה ונמחק — חוזר כשפותחים אותו
         String ver = getIntent().getStringExtra(EXTRA_VER), file = getIntent().getStringExtra(EXTRA_FILE);
         if (file != null) for (Lab.Page p : Lab.versions(root, exp)) if (p.file.getAbsolutePath().equals(file)) page = p;
         if (page == null && ver != null) {
@@ -81,11 +82,11 @@ public final class LabScreen extends Activity {
     }
 
     /** מ0.41: התוספים שבאים עם התוכנה — לתיקיית התוספים, פעם אחת לכל גרסה של התוכנה (מי שמחק — לא חוזר עד הגרסה הבאה). */
-    private void bundled() {
+    private void bundled(boolean force) {
         try {
             SharedPreferences p = prefs();
             int vc = getPackageManager().getPackageInfo(getPackageName(), 0).versionCode;
-            if (p.getInt("bundled", 0) == vc || !Ui.hasFiles(this)) return;
+            if ((p.getInt("bundled", 0) == vc && !force) || !Ui.hasFiles(this)) return;
             String[] names = getAssets().list(Lab.BUNDLED);
             if (names != null) for (String n : names)
                 if (Lab.isHtml(n)) {
@@ -102,6 +103,8 @@ public final class LabScreen extends Activity {
     protected void onResume() {
         super.onResume();
         if (exp == null && web == null) showList();                          // אחרי שעמוד עבר לתיקייה — הרשימה מתעדכנת
+        // מ0.42: חזרה לעמוד (למשל ממסך ההרצה) — העמוד קורא את התוצאה (תוסף האבחון: קובץ ה"דוח" של ההרצה)
+        if (web != null) web.evaluateJavascript("window.vfmResume&&window.vfmResume()", null);
     }
 
     // ---------- רשימת הניסויים ----------
@@ -293,6 +296,19 @@ public final class LabScreen extends Activity {
                 o.put("labVersion", page == null ? "" : page.ver);
                 String h = page == null ? null : Lab.higher(Lab.root(), page);   // מ0.40: יש גרסה גבוהה יותר בתיקייה
                 o.put("labNewer", h == null ? "" : h);
+                // מ0.42 — לתוסף האבחון: המכשיר, ההרשאה, המקום, היומנים והאינדקס (מה שהיה בראש דוח האבחון ובהגדרות)
+                o.put("versionCode", getPackageManager().getPackageInfo(getPackageName(), 0).versionCode);
+                o.put("device", Log.device());
+                o.put("access", Ui.hasFiles(LabScreen.this));
+                o.put("freeMb", android.os.Environment.getExternalStorageDirectory().getUsableSpace() / (1024 * 1024));
+                o.put("log", Log.file().getAbsolutePath());
+                o.put("trial", Trial.file().getAbsolutePath());
+                o.put("savedMode", DbScreen.savedMode(LabScreen.this));
+                Library lib = Library.get(LabScreen.this);
+                o.put("indexReady", lib.ready);
+                o.put("lastFullBuild", lib.lastFullBuild());
+                o.put("lastDaily", lib.lastDaily());
+                o.put("pointsSupported", lib.pointsSupported());
                 return o.toString();
             } catch (Throwable t) {
                 return "{}";
@@ -634,6 +650,71 @@ public final class LabScreen extends Activity {
                     });
                 }
             });
+        }
+
+        /** מ0.42: התיקייה של התוסף לקבצים שהוא כותב (קובצי עזר לבדיקות, תוצאות, דוחות). */
+        @JavascriptInterface
+        public String dataDir() {
+            return Lab.dataDir(exp).getAbsolutePath();
+        }
+
+        /**
+         * מ0.42: כתיבת קובץ טקסט — בתיקייה של התוסף, או (downloads) בתיקיית ההורדות. רק שם: לא כתיבה לכל מקום. מחזיר את המסלול
+         * המלא, או null (והתקלה — ביומן).
+         */
+        @JavascriptInterface
+        public String saveText(String name, String text, boolean downloads) {
+            try {
+                String n = Lab.safe(new File(name == null ? "" : name).getName());
+                if (n.isEmpty()) return null;
+                File dir = downloads ? android.os.Environment.getExternalStoragePublicDirectory(android.os.Environment.DIRECTORY_DOWNLOADS)
+                        : Lab.dataDir(exp);
+                if (!dir.isDirectory()) dir.mkdirs();
+                File f = new File(dir, n);
+                boolean was = f.isFile();
+                Files.writeAtomic(f, text == null ? "" : text);
+                Library lib = Library.get(LabScreen.this);
+                if (was) lib.fileRemoved(f.getAbsolutePath());
+                lib.fileAdded(f);
+                return f.getAbsolutePath();
+            } catch (Throwable t) {
+                Log.e("Lab.saveText", t);
+                return null;
+            }
+        }
+
+        /** מ0.42: שליחת קובץ (דוח, יומן) — כמו "שליחה" של דוח האבחון. */
+        @JavascriptInterface
+        public void send(final String path) {
+            runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    File f = resolve(path);
+                    if (f == null || !f.isFile()) {
+                        Ui.toast(LabScreen.this, Words.Verb.NOT_FOUND + path);
+                        return;
+                    }
+                    Acts.sendReady(LabScreen.this, java.util.Collections.singletonList(f));
+                }
+            });
+        }
+
+        /** מ0.42: מה שהיה "בדיקת מסלול באינדקס" בהגדרות: {disk, dir, index, size}. קריאה בלבד. */
+        @JavascriptInterface
+        public String pathInfo(String path) {
+            try {
+                File f = resolve(path);
+                JSONObject o = new JSONObject();
+                o.put("path", f == null ? "" : f.getAbsolutePath());
+                o.put("disk", f != null && f.exists());
+                o.put("dir", f != null && f.isDirectory());
+                o.put("size", f == null ? -1 : f.length());
+                o.put("index", f != null && Library.get(LabScreen.this).find(f.getAbsolutePath()) != null);
+                return o.toString();
+            } catch (Throwable t) {
+                Log.e("Lab.pathInfo", t);
+                return "{}";
+            }
         }
 
         /** זיכרון קטן לכל ניסוי (נשאר בין פתיחות). */

@@ -68,9 +68,14 @@ public final class Log {
         }
     }
 
+    /** מ0.42: הקובץ של היומן (לתוסף האבחון — קורא אותו, ולא מניח איפה הוא). */
+    public static File file() {
+        return new File(Paths.system(), "יומן.txt");  // בכונן
+    }
+
     private static void write(String msg) {
         try {
-            File f = new File(Paths.system(), "יומן.txt");  // בכונן
+            File f = file();
             if (f.length() > MAX) keepTail(f);                        // 102: לא למחוק — לשמור את הסוף
             OutputStreamWriter w = new OutputStreamWriter(new FileOutputStream(f, true), "UTF-8");
             w.write(new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.US).format(new Date())
@@ -82,7 +87,7 @@ public final class Log {
 
     public static synchronized String read() {
         try {
-            File f = new File(Paths.system(), "יומן.txt");  // בכונן
+            File f = file();
             if (!f.exists()) return "";
             FileInputStream in = new FileInputStream(f);
             ByteArrayOutputStream bo = new ByteArrayOutputStream();
@@ -97,7 +102,7 @@ public final class Log {
     }
 
     public static synchronized void clear() {
-        new File(Paths.system(), "יומן.txt").delete();  // בכונן
+        file().delete();
     }
 
     public static void install() {

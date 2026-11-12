@@ -66,32 +66,66 @@ final class Shortcuts {
     }
 
     /**
-     * 1.13.1 (באג): רשימה שינתה שם או מקום — הקיצורים שפותחים אותה עוברים איתה.
-     * מ0.42 — הוחלט לחבר (המשתמש, 12.11.2026): שינוי שם במסד יעדכן קובצי פקודות וכפתורים, עם הודעה. עוד לא חובר.
+     * מ0.42 (ב8; המשתמש, 12.11.2026: "שיעדכן גם רשימות וכפתורים ועדיף שתהיה הודעה על כך"): רשימה או חכמה ששינתה שם במסד
+     * של האופן — קובצי הפקודות שפונים אליה מתעדכנים (Verbs.renamed): מה שבתיקיית הקיצורים, וקובצי פקודות שברשימות של האופן
+     * ושל אופן התפריטים (הכפתורים). פקודות המערכת — לא. שורות אחרי "אופן" של אופן אחר — לא. s — המסד אחרי שינוי השם.
+     * מחזיר את הקבצים שעודכנו (להודעה).
      */
-    static int listMoved(List<String> from, List<String> to) {
-        int n = 0;
-        for (File f : mine()) {
+    static List<File> listRenamed(Store s, String mode, long id, String from, String to) {
+        List<File> done = new ArrayList<File>();
+        Store.Item it = s.item(id);
+        if (it == null || from == null || to == null || from.equals(to) || (it.type != Store.LIST && it.type != Store.SMART)) return done;
+        java.util.Set<String> paths = new java.util.LinkedHashSet<String>();
+        for (File f : mine()) paths.add(f.getAbsolutePath());
+        commandFiles(s, paths);
+        android.content.Context c = DbListScreen.app;
+        if (c != null && !Menus.MODE.equals(mode) && DbScreen.dbFile(c, Menus.MODE).isFile()) {
+            SqlStore m = SqlStore.openReadOnly(DbScreen.dbFile(c, Menus.MODE));
+            try {
+                commandFiles(m, paths);
+            } finally {
+                m.close();
+            }
+        }
+        for (String p : paths) {
+            File f = new File(p);
+            if (!f.isFile() || Reserved.isSystem(f)) continue;
             try {
                 String[] lines = Files.readUtf8(f).split("\n", -1);
                 boolean changed = false;
+                String in = null;                                                  // "אופן" שבקובץ — עד כאן
                 for (int i = 0; i < lines.length; i++) {
-                    String now = Verbs.listMoved(lines[i], from, to);
+                    List<String> tk = Batch.tokens(Bidi.strip(lines[i]).trim());
+                    if (tk.size() == 2 && Batch.MODE.equals(Commands.canonical(tk.get(0)))) {
+                        in = tk.get(1).trim();
+                        continue;
+                    }
+                    if (in != null && !in.equals(mode)) continue;
+                    String now = Verbs.renamed(lines[i], s, mode, id, it.type == Store.SMART, from, to);
                     if (now != null) {
                         lines[i] = now;
                         changed = true;
                     }
                 }
-                if (changed) {
-                    StringBuilder sb = new StringBuilder();
-                    for (int i = 0; i < lines.length; i++) sb.append(i > 0 ? "\n" : "").append(lines[i]);
-                    Files.writeAtomic(f, sb.toString());
-                    n++;
-                }
+                if (!changed) continue;
+                StringBuilder sb = new StringBuilder();
+                for (int i = 0; i < lines.length; i++) sb.append(i > 0 ? "\n" : "").append(lines[i]);
+                Files.writeAtomic(f, sb.toString());
+                done.add(f);
             } catch (Throwable e) {
-                Log.e("קיצור — רשימה שעברה", e);
+                Log.e("רשימה ששינתה שם — " + f.getName(), e);   // בכונן
             }
         }
-        return n;
+        return done;
+    }
+
+    /** קובצי הפקודות שברשימות של המסד (בכל רשימה, פעם אחת). */
+    private static void commandFiles(Store s, java.util.Set<String> out) {
+        for (Store.Item l : s.lists())
+            for (Store.Member m : s.members(l.id)) {
+                if (m.item.type != Store.FILE) continue;
+                Store.FileInfo fi = s.file(m.item.id);
+                if (fi != null && Batch.isBatch(new File(fi.path).getName())) out.add(fi.path);
+            }
     }
 }

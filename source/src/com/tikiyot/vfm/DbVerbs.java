@@ -54,6 +54,17 @@ final class DbVerbs {
             else openSmart(a, mode, id, sort);
             return true;
         }
+        if (c.kind.equals(Verbs.K_MODE)) {                                       // מ0.42: מכפתור — נוצר (אם אין) ונפתח, כמו "אופן חדש"
+            String name = c.arg.trim();
+            long h = DbScreen.prepare(a, name);
+            if (h == 0) {
+                Ui.toast(a, Words.DbCmd.modeFailed(name));
+                return true;
+            }
+            DbScreen.saveMode(a, name);
+            DbListScreen.open(a, name, h);
+            return true;
+        }
         if (c.kind.equals(Verbs.K_NOTE) || c.kind.equals(Verbs.K_TITLE)) {      // מ0.37: מכפתור — בלי רשימה = הרשימה שעל המסך
             final boolean title = c.kind.equals(Verbs.K_TITLE);
             final String text = c.arg;

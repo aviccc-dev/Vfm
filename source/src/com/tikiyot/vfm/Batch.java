@@ -184,6 +184,10 @@ final class Batch {
      */
     private static boolean small(final Plan plan, final Step s, String cmd, List<String> tk, File here,
                                  Map<String, String> vars, final Sim sim) {
+        if (cmd.equals(VERIFY) && tk.size() == 2 && tk.get(1).trim().equals(W_DB)) {   // מ0.42: ודא מסד
+            DbListCmd.planVerifyDb(s);
+            return true;
+        }
         if (cmd.equals(VERIFY) && tk.size() == 2 && tk.get(1).trim().equals(W_ERROR)) {
             s.cmd = EXPECT;
             s.noop = true;
@@ -405,6 +409,8 @@ final class Batch {
     /** מ0.37 — הפקודות הקטנות: כתוב לקובץ · המתן · גבה (המסד) · רענן (האינדקס) · דוח (היומן לקובץ). */
     static final String WRITE = "WRITE", WAIT = "WAIT", BACKUP = "BACKUP", REFRESH = "REFRESH", REPORT = "REPORT", LAB = "LAB";
     static final String SW_APPEND = "/הוסף", W_DEEP = "עמוק", W_ERROR = "שגיאה";   // תחביר
+    /** מ0.42: "ודא מסד" — המנוע של המסד מול ה־SQLite של המכשיר, ותקינות המסד של כל אופן. */
+    static final String W_DB = "מסד";   // תחביר
     static final String V_TIME = "שעה", V_UNIQUE = "ייחודי";   // תחביר
     /** מ0.17: קישור — אותה רשימה / אותו פריט גם במקום נוסף (במסד). */
     static final String LINK = "LINK";
@@ -763,6 +769,8 @@ final class Batch {
         Store db;
         /** מ0.32 (ממצא 38): עותק המסד של כל אופן שכבר טופל בקובץ — חזרה לאופן לא שוכחת מה שהשורות הקודמות עשו בו. */
         final java.util.Map<String, Store> dbs = new java.util.HashMap<String, Store>();
+        /** מ0.42: האופנים ש"צור אופן" יוצר בקובץ (בהדמיה — מסד ריק עם בית ב־dbs). */
+        final java.util.Set<String> created = new java.util.HashSet<String>();
         /** מ0.15: האופן מ"אופן" בקובץ; null — האופן שפתוח. */
         String mode;
         /** מ0.17.1: "אופן" שנכשל — כל שורות המסד שאחריו נכשלות (לא לרוץ בטעות על אופן אחר). */
@@ -1133,12 +1141,13 @@ final class Batch {
                 s.error = vc.error;
                 s.describe = Verbs.describe(vc);
                 String doneIn = null;
-                if (s.error == null && DbVerbs.active()) doneIn = DbListCmd.planVerb(s, vc, sim);   // מ0.25: החלק הכותב — בסדר השורות
+                if (s.error == null && Verbs.K_MODE.equals(vc.kind)) DbListCmd.planMode(s, vc.arg, sim);   // מ0.42: צור אופן
+                else if (s.error == null && DbVerbs.active()) doneIn = DbListCmd.planVerb(s, vc, sim);   // מ0.25: החלק הכותב — בסדר השורות
                 // מ0.30 (ממצא 39): "פתח רשימה / רשימה חכמה" אחרי "אופן X" — נפתחת באופן של הקובץ, לא באופן שפתוח במסך
                 if (s.error == null && doneIn == null && sim.mode != null && Verbs.OPEN.equals(vc.verb) && vc.arg != null && !vc.arg.trim().isEmpty()
                         && (Verbs.K_LIST.equals(vc.kind) || Verbs.K_SMART.equals(vc.kind))) doneIn = sim.mode;
                 if (s.error != null) plan.errors++;
-                else if (!Verbs.K_NOTE.equals(vc.kind) && !Verbs.K_TITLE.equals(vc.kind) && !vc.noOpen) {   // מ0.37: רעיון / כותרת; מ0.40: /בלי-לפתוח
+                else if (!Verbs.K_NOTE.equals(vc.kind) && !Verbs.K_TITLE.equals(vc.kind) && !Verbs.K_MODE.equals(vc.kind) && !vc.noOpen) {   // מ0.37: רעיון / כותרת; מ0.40: /בלי-לפתוח; מ0.42: אופן
                     plan.open = s.open;
                     plan.opens.add(new String[]{s.open, doneIn});
                 }
@@ -1195,7 +1204,7 @@ final class Batch {
                 String m = tk.size() == 2 ? tk.get(1).trim() : "";
                 if (m.isEmpty()) s.error = Words.DbCmd.MODE_USAGE;
                 else if (!DbVerbs.active()) s.error = Words.DbCmd.VERIFY_DB_ONLY;
-                else if (!DbScreen.dbModes(DbListScreen.app).contains(m))
+                else if (!DbScreen.dbModes(DbListScreen.app).contains(m) && !sim.created.contains(m))   // מ0.42: גם מה ש"צור אופן" שלפניו יצר
                     s.error = sim.modeError = Words.DbCmd.noMode(m, DbScreen.dbModes(DbListScreen.app));
                 else {
                     sim.dbs.put(sim.mode == null ? "" : sim.mode, sim.db);          // מ0.32: עותק לכל אופן

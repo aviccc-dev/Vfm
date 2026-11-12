@@ -1623,6 +1623,7 @@ public final class Words {
     public static final class Verb {
         private Verb() { }
         public static final String MENU = "תפריט: ";   // 1.17.0
+        public static final String MODE = "אופן: ";   // מ0.42
         public static final String TOOL = "כלי: ";   // מ0.19
         /** מ0.40 */
         public static final String NO_OPEN_ONLY = "/בלי-לפתוח — רק ב\"צור רשימה\", \"צור רשימה חכמה\" ו\"עדכן רשימה חכמה\"";
@@ -1643,7 +1644,7 @@ public final class Words {
             if (verb.equals("מצא")) return "שימוש: מצא <תנאי>, למשל: מצא סוג:ספרים תאריך:שבוע";
             if (verb.equals("הרץ")) return "שימוש: הרץ <קובץ פקודות>";
             if (verb.equals("הוסף")) return "שימוש: הוסף מהכונן · הוסף מחיפוש";
-            if (verb.equals("צור")) return "שימוש: צור רשימה <שם> · צור רשימה חכמה \"שם\" <תנאי> · צור פקודה";   // 1.22.5: גם צור פקודה
+            if (verb.equals("צור")) return "שימוש: צור רשימה <שם> · צור רשימה חכמה \"שם\" <תנאי> · צור פקודה · צור אופן \"שם\"";   // 1.22.5: גם צור פקודה; מ0.42: אופן
             if (verb.equals("עדכן")) return "שימוש: עדכן רשימה חכמה \"שם\" <תנאי>";
             if (verb.equals("חזור")) return "שימוש: חזור";                                   // 1.22.5 (עד כאן — השימוש של פתח)
             return "שימוש: פתח מסך <מסך> · פתח רשימה <מסלול> · פתח רשימה חכמה <שם> · פתח תיקייה <מסלול> · פתח תפריט <רשימה>";
@@ -1969,6 +1970,8 @@ public final class Words {
         public static final String TOOL_BAR = "פס צף", TOOL_APP = "פתיחת אפליקציה", TOOL_DUPS = "כפולים בכל הכוננים";   // בכונן (מ0.25)
         /** מ0.41: הפקודה המוכנה שפותחת את העורך האינטראקטיבי — השם הוא גם שם התוסף (כמו שכתוב בעמוד שלו). */
         public static final String TOOL_EDITOR = "עורך אינטראקטיבי";   // בכונן
+        /** מ0.42: תוסף האבחון (בא עם התוכנה). */
+        public static final String TOOL_DIAG = "אבחון";   // בכונן
         public static final String TOOL_EXPORT = "יצוא רשימה", TOOL_IMPORT = "ייבוא רשימה",   // בכונן
                 HOLE_EXPORT = "רשימה-לייצוא", HOLE_FILE = "שם-הקובץ-בתיקיית-יצוא", HOLE_INTO = "לתוך-רשימה";   // תחביר
 
@@ -1980,7 +1983,7 @@ public final class Words {
 
         public static final String NO_HOME = "אין בית במסד הזה", SAME_NAME = "כבר יש שם רשימה בשם הזה",
                 ALREADY = "כבר בה",
-                MENU_TESTS = "🧪 בדיקת הפקודות (אופן \"בדיקות מערכת\")", MENU_DIAG = "🩺 דוח אבחון", DIAG_RUNNING = "מכין דוח אבחון…",
+                MENU_TESTS = "🧪 בדיקת הפקודות (אופן \"בדיקות מערכת\")", MENU_DIAG = "🩺 דוח אבחון", MENU_PLUGIN_DIAG = "🔬 תוסף אבחון — בדיקות, דוחות, תקלות", DIAG_RUNNING = "מכין דוח אבחון…",
                 DIAG_SEND = "שליחה",
                 TEST_MODE = "בדיקות מערכת",  // בכונן
                 TEST_FILE = "בדיקת פקודות",  // בכונן
@@ -2009,7 +2012,7 @@ public final class Words {
         }
 
         public static final String N_VERIFY = "ודא",  // תחביר
-                W_VERIFY = "בדיקה בתוך קובץ פקודות: ✅ או ❌, ולא עוצרת. ודא ידנית \"א\" קיימת · חסרה · /רשימות:2 /פריטים:1",
+                W_VERIFY = "בדיקה בתוך קובץ פקודות: ✅ או ❌, ולא עוצרת. ודא ידנית \"א\" קיימת · חסרה · /רשימות:2 /פריטים:1 · ודא \"קובץ\" קיים · באינדקס · ודא מסד",
                 H_VERIFY = "הרשימה שבודקים (ידנית \"א\" או חכמה \"א\")",
                 P_VERIFY = "מה לוודא", H_VERIFY_WHAT = "קיימת · חסרה · /רשימות:N · /פריטים:N (כמו \"עכשיו בה\" בדוח)",
                 VERIFY_DB_ONLY = "ודא — עובדת כשעובדים במסד", NO_DB = "אין מסד לאופן הזה — לפתוח את הבית פעם אחת, ואז להריץ שוב",
@@ -2170,6 +2173,49 @@ public final class Words {
 
         public static String verifyResult(boolean ok, String what, String found) {
             return (ok ? "✅ " : "❌ ") + what + (ok ? "" : " — בפועל: " + found);
+        }
+
+        // מ0.42 — ב8: רשימה ששינתה שם — קובצי הפקודות שפונים אליה
+        public static final String FOLLOW_FAILED = " · ⚠ קובצי הפקודות שפונים לרשימה לא עודכנו (הפרטים ביומן)";
+
+        public static String followed(java.util.List<String> names) {
+            return " · עודכנו " + (names.size() == 1 ? "קובץ פקודות אחד שפונה" : names.size() + " קובצי פקודות שפונים") + " לרשימה: " + names;
+        }
+
+        // מ0.42 — ודא מסד · ודא … באינדקס · צור אופן
+        public static final String VERIFY_DB_WHAT = "המסד — המנוע מול ה־SQLite של המכשיר, ותקינות המסד של כל אופן";
+
+        public static String verifyDbResult(boolean ok, String engine, int good, java.util.List<String> bad) {
+            return (ok ? "✅ " : "❌ ") + VERIFY_DB_WHAT + " — המנוע: " + engine + " · מסדים תקינים: " + good
+                    + (bad.isEmpty() ? "" : " · לא תקינים: " + bad);
+        }
+
+        public static String verifyInIndex(String name) {
+            return "\"" + name + "\" באינדקס";
+        }
+
+        public static String indexGot(boolean in, boolean onDisk) {
+            return (in ? "באינדקס" : "לא באינדקס") + " · בכונן: " + (onDisk ? "קיים" : "לא נמצא") + (onDisk && !in ? " (כדאי \"רענן\")" : "");
+        }
+
+        public static String modeBadName(String n) {
+            return "שם אופן לא תקין: \"" + n + "\" (בלי : * ? \" < > |)";
+        }
+
+        public static String modeExists(String n) {
+            return "האופן \"" + n + "\" כבר קיים — בלי שינוי";
+        }
+
+        public static String modeWill(String n) {
+            return "ייווצר אופן חדש: \"" + n + "\" (מסד ריק עם בית)";
+        }
+
+        public static String modeCreated(String n) {
+            return "נוצר אופן: \"" + n + "\"";
+        }
+
+        public static String modeFailed(String n) {
+            return "האופן \"" + n + "\" לא נוצר (אם היו לו גיבויים — לשחזר ממסך הגיבויים). הפרטים ביומן";
         }
 
         public static final String EDIT = "✎ עריכה", ICON = "צלמית",

@@ -34,6 +34,8 @@ final class Verbs {
     static final String TOOL = "כלי";   // תחביר
     /** מ0.37: "צור רעיון "<טקסט>" "<רשימה>"" · "צור כותרת "<טקסט>" "<רשימה>"" — שורה ברשימה שאינה קובץ. */
     static final String NOTE_WORD = "רעיון", TITLE_WORD = "כותרת";   // תחביר
+    /** מ0.42: "צור אופן "<שם>"" — אופן חדש (מסד עם בית); קיים — בלי שינוי. בקובץ — לא נפתח; מכפתור — נפתח. */
+    static final String MODE_WORD = "אופן";   // תחביר
     static final String S_HOME = "הבית", S_SEARCH = "חיפוש", S_COMMANDS = "פקודות", S_DISK = "קבצים פיזיים",   // תחביר
             S_VIRTUAL = "קבצים וירטואליים", S_SETTINGS = "הגדרות", S_TRASH = "סל", S_EDITOR = "עורך פקודות",   // תחביר
             S_BACKUPS = "גיבויים", S_DIAG = "אבחון", S_LAB = "מעבדה", S_PLUGINS = "תוספים";   // תחביר — מ0.37; מ0.38: מעבדה; מ0.40: תוספים
@@ -53,7 +55,7 @@ final class Verbs {
     /** סוגי הפקודה אחרי הפענוח. */
     static final String K_SCREEN = "screen", K_LIST = "list", K_SMART = "smart", K_FOLDER = "folder", K_FIND = "find",
             K_BACK = "back", K_RUN = "run", K_NEW_LIST = "newlist", K_ADD = "add", K_MENU = "menu", K_NEW_CMD = "newcmd", K_TOOL = "tool",
-            K_NOTE = "note", K_TITLE = "title";
+            K_NOTE = "note", K_TITLE = "title", K_MODE = "mode";
 
     static final class Cmd {
         String verb = "", kind = "", arg = "", sort = "", cond = "";
@@ -188,6 +190,10 @@ final class Verbs {
                 c.arg = nr[0];
                 c.cond = nr[1];
                 if (c.arg.isEmpty() || c.cond.isEmpty()) c.error = Words.Verb.usage(c.verb);
+            } else if (c.verb.equals(CREATE) && starts(rest, MODE_WORD)) {    // מ0.42
+                c.kind = K_MODE;
+                c.arg = unquote(after(rest, MODE_WORD));
+                if (c.arg.isEmpty()) c.error = Words.Verb.usage(c.verb);
             } else if (c.verb.equals(CREATE) && (starts(rest, NOTE_WORD) || starts(rest, TITLE_WORD))) {   // מ0.37
                 boolean title = starts(rest, TITLE_WORD);
                 c.kind = title ? K_TITLE : K_NOTE;
@@ -227,20 +233,86 @@ final class Verbs {
     }
 
     /**
-     * 1.13.1 (באג): רשימה שינתה שם או מקום — שורת "פתח רשימה" / "צור רשימה" שמפנה אליה (או אל תת־רשימה שלה)
-     * נכתבת מחדש למסלול החדש; לא נוגעת בה — null.
-     * מ0.42 — הוחלט לחבר (המשתמש, 12.11.2026): שינוי שם במסד יעדכן קובצי פקודות וכפתורים, עם הודעה. עוד לא חובר.
+     * מ0.42 (ב8; המשתמש, 12.11.2026: "שיעדכן גם רשימות וכפתורים ועדיף שתהיה הודעה על כך"): רשימה או חכמה ששינתה שם במסד
+     * (id: from ← to). השורה — אם היא פונה אליה (פתח / צור רשימה, פתח / צור / עדכן רשימה חכמה, ושורות הרשימות: ידנית "…",
+     * חכמה "…", גם כשהיא באמצע הדרך) — חוזרת עם השם החדש; לא פונה — null. "פונה": השם החדש מוביל לאותה רשימה (ולא לאחרת
+     * באותו שם). מוחלף רק השם; כל השאר — כמו שנכתב. במקום listMoved של הישן (1.13.1), שלא חובר.
      */
-    static String listMoved(String line, List<String> from, List<String> to) {
-        Cmd c = parse(line);
-        if (c.error != null || !c.kind.equals(K_LIST)) return null;
-        List<String> was = Names.parsePath(c.arg), p = null;
-        if (was.size() >= from.size() && was.subList(0, from.size()).equals(from)) {   // היא עצמה, או בתוכה
-            p = new ArrayList<String>(to);
-            p.addAll(was.subList(from.size(), was.size()));
+    static String renamed(String line, Store s, String mode, long id, boolean smart, String from, String to) {
+        if (line == null || line.trim().isEmpty()) return null;
+        if (isVerb(line)) {
+            Cmd c = parse(line);
+            if (c.error != null || !(c.kind.equals(K_LIST) || c.kind.equals(K_SMART))) return null;
+            String n = renamedRef(c.arg, Names.parsePath(c.arg), c.kind.equals(K_SMART), s, mode, id, smart, from, to);
+            return n == null ? null : replaceRef(line, c.arg, n);
         }
-        if (p == null) return null;
-        return c.verb + " " + LIST + " " + Names.key(p) + (c.sort.isEmpty() ? "" : " " + SORT + c.sort);
+        ListCmd.Parsed lp = ListCmd.parse(line, new ArrayList<String>());
+        if (lp == null || lp.error != null) return null;
+        String out = line;
+        for (ListCmd.Side x : lp.sides) {
+            if ((x.kind != ListCmd.LIST && x.kind != ListCmd.SMART_LIST) || x.raw == null) continue;
+            String n = renamedRef(x.raw, Names.parsePath(x.raw), x.kind == ListCmd.SMART_LIST, s, mode, id, smart, from, to);
+            String o = n == null ? null : replaceRef(out, x.raw, n);
+            if (o != null) out = o;
+        }
+        return out.equals(line) ? null : out;
+    }
+
+    /** הפניה (דרך, ובחכמה — השם בסוף) שאחד מחלקיה הוא השם הישן של הרשימה הזו — עם השם החדש; אחרת null. */
+    private static String renamedRef(String raw, List<String> p, boolean refSmart, Store s, String mode, long id, boolean smart,
+                                     String from, String to) {
+        if (raw == null || raw.indexOf('%') >= 0 || p == null || p.isEmpty()) return null;
+        for (int k = 0; k < p.size(); k++) {
+            if (!p.get(k).trim().equals(from)) continue;
+            boolean name = refSmart && k == p.size() - 1;                       // הקטע האחרון של "חכמה" — שם של חכמה
+            if (name != smart) continue;
+            List<String> q = new ArrayList<String>(p.subList(0, k + 1));
+            long was = refer(s, mode, q, name);                                  // הישנה מובילה לרשימה אחרת — היא לא שלנו
+            if (was != 0 && was != id) continue;                                  // (לאותה — אפשרי: רשימה מיובאת נמצאת גם לפי המקור)
+            q.set(k, to);
+            if (refer(s, mode, q, name) == id) return segment(raw, k, to);
+        }
+        return null;
+    }
+
+    /** לאן מובילה דרך: לרשימה, או (name) לחכמה שבסופה; 0 — לשום מקום. */
+    private static long refer(Store s, String mode, List<String> q, boolean name) {
+        if (!name) return DbPaths.find(s, mode, q);
+        ListCmd.Side x = new ListCmd.Side();
+        x.kind = ListCmd.SMART_LIST;
+        x.path = q;
+        long[] r = DbListCmd.smart(s, mode, x);
+        return r == null ? 0 : r[1];
+    }
+
+    /** החלק ה־k בדרך (בלי חלקים ריקים, כמו Names.parsePath) — מוחלף; המפרידים נשארים כמו שנכתבו. */
+    static String segment(String raw, int k, String to) {
+        StringBuilder out = new StringBuilder();
+        int seg = 0, start = 0;
+        for (int i = 0; i <= raw.length(); i++) {
+            if (i < raw.length() && raw.charAt(i) != '/' && raw.charAt(i) != '\\') continue;
+            String part = raw.substring(start, i);
+            if (part.trim().isEmpty()) out.append(part);
+            else if (seg++ != k) out.append(part);
+            else {
+                int at = part.indexOf(part.trim());
+                out.append(part.substring(0, at)).append(to).append(part.substring(at + part.trim().length()));
+            }
+            if (i < raw.length()) out.append(raw.charAt(i));
+            start = i + 1;
+        }
+        return out.toString();
+    }
+
+    /** ההפניה בשורה — במרכאות אם היא במרכאות, אחרת כמו שהיא; לא נמצאה — null. */
+    private static String replaceRef(String line, String was, String now) {
+        for (String q : new String[]{"\"", "«"}) {
+            String close = q.equals("«") ? "»" : q;
+            int i = line.indexOf(q + was + close);
+            if (i >= 0) return line.substring(0, i + 1) + now + line.substring(i + 1 + was.length());
+        }
+        int i = line.indexOf(was);
+        return i < 0 ? null : line.substring(0, i) + now + line.substring(i + was.length());
     }
 
     static String openSmart(String name) {
@@ -337,6 +409,7 @@ final class Verbs {
         if (c.kind.equals(K_MENU)) return Words.Verb.MENU + c.arg;
         if (c.kind.equals(K_TOOL)) return Words.Verb.TOOL + c.arg;
         if (c.kind.equals(K_NEW_CMD)) return Words.CmdM.NEW;
+        if (c.kind.equals(K_MODE)) return Words.Verb.MODE + c.arg;
         return c.verb + " " + c.arg;
     }
 

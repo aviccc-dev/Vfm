@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="vfm-plugin" content="עורך אינטראקטיבי">
-<meta name="vfm-plugin-version" content="8">
+<meta name="vfm-plugin-version" content="10">
 <meta name="vfm-lab" content="עורך אינטראקטיבי">
 <meta name="vfm-lab-version" content="8">
 <title>עורך אינטראקטיבי</title>
@@ -83,6 +83,7 @@ body{padding-bottom:calc(24px + env(safe-area-inset-bottom,0px))}
 .crumb{color:var(--muted);font-size:.88rem}
 .items{display:flex;flex-direction:column;border:1px solid var(--rule);border-radius:10px;overflow:hidden}
 .it{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:12px;background:transparent;border:0;border-bottom:1px solid var(--rule);color:var(--fg);font:inherit;text-align:start;cursor:pointer}
+.it.on{background:var(--chip);color:var(--chip-fg);font-weight:600}
 .it:last-child{border-bottom:0}
 .it .k{color:var(--muted);font-size:.85rem;text-align:end}
 .it[aria-checked="true"] .k{color:var(--accent);font-weight:700}
@@ -166,6 +167,7 @@ const DETS={
   'עמוק':{txt:'בדיקה מלאה של הכונן',word:true,write:()=>'עמוק',read:t=>t==='עמוק'?'':undefined},
   'קיים':{g:'ex',word:true,write:(v,l,c)=>c&&c.fem?'קיימת':'קיים',read:t=>t==='קיים'||t==='קיימת'?'':undefined},
   'חסר':{g:'ex',word:true,write:(v,l,c)=>c&&c.fem?'חסרה':'חסר',read:t=>t==='חסר'||t==='חסרה'?'':undefined},
+  'באינדקס':{g:'ex',word:true,txt:'האינדקס מכיר את הקובץ (מ0.42)',write:()=>'באינדקס',read:t=>t==='באינדקס'?'':undefined},
   'מכיל':{val:'text',ph:'טקסט',txt:'הקובץ מכיל את הטקסט',write:v=>'מכיל '+q(v)},
   'קבצים':valsw('/קבצים:','num','מספר',null,'כמה קבצים בתיקייה (בלי תתי־תיקיות)'),
   'רשימות':valsw('/רשימות:','num','מספר',null,'כמה רשימות יש בה'),
@@ -258,8 +260,8 @@ const CMDS={
   'פתח רשימה חכמה':{w:'פתח רשימה חכמה',form:'open',what:'בסוף ההרצה פותח רשימה חכמה',slots:[{link:'',kind:'pick',pk:['smart']}],det:['מיון']},
   'פתח תיקייה':{w:'פתח תיקייה',form:'open',what:'בסוף ההרצה פותח תיקייה בתוכנה',slots:[{link:'',kind:'pick',pk:['folder']}],det:[]},
   'פתח תפריט':{w:'פתח תפריט',form:'open',what:'בסוף ההרצה פותח רשימה כתפריט',slots:[{link:'',kind:'pick',pk:['list']}],det:[]},
-  'פתח תוסף':{w:()=>compat.plugins?'פתח תוסף':'פתח מסך מעבדה',read:['פתח מסך מעבדה','פתח מסך תוספים'],form:'plugin',what:'בסוף ההרצה פותח תוסף (בלי שם — רשימת התוספים)',
-    slots:[{link:'',kind:'text',label:'שם התוסף',opt:true}],det:[]},
+  'פתח תוסף':{w:()=>compat.plugins?'פתח תוסף':'פתח מסך מעבדה',read:['פתח מסך מעבדה','פתח מסך תוספים'],form:'plugin',what:'בסוף ההרצה פותח תוסף (בלי שם — רשימת התוספים; בלי גרסה — החדשה)',
+    slots:[{link:'',kind:'text',label:'שם התוסף',opt:true},{link:'גרסה',kind:'text',label:'גרסה',opt:true}],det:[]},   // גרסה 10: גם הגרסה
   'פתח כלי':{w:'פתח כלי',form:'tool',what:'בסוף ההרצה פותח כלי (כפולים, סל, פס…)',
     slots:[{link:'',kind:'word',choose:'tool',label:'בחירת כלי'},{link:'',kind:'text',label:'פרטים, למשל /מפתח:ערך',opt:true,bare:true}],det:[]},
   'מצא':{w:'מצא',form:'find',what:'בסוף ההרצה פותח חיפוש עם תנאי',slots:[{link:'',kind:'cond',label:'תנאי'}],det:['מיון']},
@@ -275,8 +277,12 @@ const CMDS={
   'דוח':{w:'דוח',en:'REPORT',read:['REPORT'],what:'היומן של ההרצה נכתב גם לקובץ',slots:[{link:'ל',kind:'pick',pk:['outfile']}],det:[]},
 
   'ודא':{w:'ודא',en:'VERIFY',read:['VERIFY'],what:'בודק בתוך הקובץ: ✅ או ❌, ולא עוצר',
-    slots:[{link:'ש',kind:'pick',pk:['file','folder','list','smart']}],det:['קיים','חסר','מכיל','קבצים','רשימות','פריטים']},
+    slots:[{link:'ש',kind:'pick',pk:['file','folder','list','smart']}],det:['קיים','חסר','באינדקס','מכיל','קבצים','רשימות','פריטים']},
   'ודא שגיאה':{w:'ודא שגיאה',en:'VERIFY שגיאה',form:'fixed',what:'השורה הבאה אמורה להיכשל',slots:[],det:[]},
+  // גרסה 10 (מ0.42): ודא מסד · צור אופן · בטל לא-משויכים
+  'ודא מסד':{w:'ודא מסד',en:'VERIFY מסד',form:'fixed',what:'בודק את המסד: המנוע מול ה־SQLite של המכשיר, ותקינות המסד של כל אופן. לא משנה דבר',slots:[],det:[]},
+  'צור אופן':{w:'צור אופן',form:'name1',what:'יוצר אופן חדש (מסד עם בית); קיים — בלי שינוי. אחריו — "אופן" עובר אליו',slots:[{link:'',kind:'text',label:'שם האופן'}],det:[]},
+  'בטל לא-משויכים':{w:'בטל לא-משויכים',en:'RD לא-משויכים',form:'fixed',what:'מוחק מהמסד רישומי קבצים שאינם באף רשימה (בכונן — לא נוגע)',slots:[],det:[]},
   'המתן':{w:'המתן',en:'WAIT',read:['WAIT'],what:'מחכה לפני השורה הבאה',slots:[{link:'',kind:'num',label:'שניות'}],det:[]},
   'המשך':{w:'המשך',en:'CONTINUE',read:['CONTINUE'],form:'cont',what:'כמה כישלונות מותרים לפני שהקובץ נעצר. ריק — אחד',
     slots:[{link:'',kind:'num',label:'כמה',opt:true}],det:['בלי עצירה']},
@@ -299,12 +305,12 @@ const CMDS={
 Object.keys(CMDS).forEach(k=>{const d=CMDS[k];d.id=k;if(!d.read)d.read=[];if(!d.slots)d.slots=[];if(!d.det)d.det=[];});
 const MENU=[
   ['קבצים ותיקיות',['העתק','העבר','מחק','שנה','צור תיקייה','מחק תיקייה','השווה','הפעל']],
-  ['רשימות',['צור רשימה','צור רשימה חכמה','עדכן רשימה חכמה','העתק','העבר','שנה','בטל','קשר','צור רעיון','צור כותרת','אופן']],
+  ['רשימות',['צור רשימה','צור רשימה חכמה','עדכן רשימה חכמה','העתק','העבר','שנה','בטל','בטל לא-משויכים','קשר','צור רעיון','צור כותרת']],
   ['פתיחה בסוף ההרצה',['פתח מסך','פתח רשימה','פתח רשימה חכמה','פתח תיקייה','פתח תפריט','פתח כלי','פתח תוסף','מצא','חזרה','הרץ','הוסף','צור פקודה']],
   ['הודעות וכתיבה',['הודעה','הערה','כתוב','דוח']],
-  ['בדיקות וזרימה',['ודא','ודא שגיאה','המתן','המשך','כלול','לולאה','הדמיה','בדיקה','מדידה']],
+  ['בדיקות וזרימה',['ודא','ודא שגיאה','ודא מסד','המתן','המשך','כלול','לולאה','הדמיה','בדיקה','מדידה']],
   ['כותרת הקובץ',['צלמית','שם','למה']],
-  ['המסד והתוספים',['גבה','רענן','הוסף תוסף','החלף תוסף']]
+  ['המסד והתוספים',['אופן','צור אופן','גבה','רענן','הוסף תוסף','החלף תוסף']]   // גרסה 9: "אופן" — כאן (המשתמש לא מצא אותה ב"רשימות")
 ];
 // מ0.40: "הוסף תוסף" ו"החלף תוסף" ירדו (העמודים עוברים ב"העבר"); בגרסה הקודמת — עדיין בתפריט
 function menu(){return MENU.map(([g,ks])=>[g,compat.plugins?ks.filter(k=>k!=='הוסף תוסף'&&k!=='החלף תוסף'):ks]);}
@@ -385,7 +391,9 @@ function fromLine(s){
     case 'screen':{const sc=ALL_SCREENS.slice().sort((a,b)=>b.length-a.length).find(x=>rest===x||rest.startsWith(x+' '));if(!sc)return null;
       if(sc==='מעבדה'||sc==='תוספים'){const a=unq(rest.slice(sc.length));const p=blank('פתח תוסף');p.vals[0]=a?{kind:'text',raw:a}:null;return p;}
       m.vals[0]={kind:'word',raw:sc};const a=unq(rest.slice(sc.length));m.vals[1]=a?{kind:'place',raw:a}:null;return m;}
-    case 'plugin':{const a=unq(rest);m.vals[0]=a?{kind:'text',raw:a}:null;return m;}
+    case 'plugin':{const r=rest.trim();const nv=r[0]==='"'||r[0]==='«'?nameAndRest(r):[r,''];   // כמו המנוע: בלי מרכאות — כל השאר הוא השם
+      const a=unq(nv[0]),g=unq(nv[1]);m.vals[0]=a?{kind:'text',raw:a}:null;m.vals[1]=a&&g?{kind:'text',raw:g}:null;return m;}
+    case 'name1':{const a=unq(rest);if(!a)return null;m.vals[0]={kind:'text',raw:a};return m;}
     case 'tool':{const nr=nameAndRest(rest);if(TOOLS.indexOf(nr[0])<0)return null;m.vals[0]={kind:'word',raw:nr[0]};m.vals[1]=nr[1]?{kind:'text',raw:nr[1]}:null;return m;}
     case 'run':{const r=unq(rest);if(!r)return null;m.vals[0]={kind:'place',raw:r};return m;}
     case 'add':{if(ADDS.indexOf(rest)<0)return null;m.vals[0]={kind:'word',raw:rest};return m;}
@@ -500,7 +508,8 @@ function toLine(m,lang){
     case 'find':if(has(v[0]))parts.push(v[0].raw);return parts.concat(detsOut(m,lang)).join(' ');
     case 'open':if(has(v[0]))parts.push(q(v[0].kind==='place'?v[0].raw:listPath(v[0].raw)));return parts.concat(detsOut(m,lang)).join(' ');
     case 'screen':if(has(v[0]))parts.push(v[0].raw);if(has(v[0])&&has(v[1]))parts.push(q(v[1].raw));return parts.join(' ');
-    case 'plugin':if(has(v[0]))parts.push(q(v[0].raw));return parts.join(' ');
+    case 'plugin':if(has(v[0]))parts.push(q(v[0].raw));if(has(v[0])&&has(v[1]))parts.push(q(v[1].raw));return parts.join(' ');
+    case 'name1':if(has(v[0]))parts.push(q(v[0].raw));return parts.join(' ');
     case 'tool':if(has(v[0]))parts.push(v[0].raw);if(has(v[0])&&has(v[1]))parts.push(v[1].raw);return parts.join(' ');
     case 'run':case 'add':if(has(v[0]))parts.push(v[0].kind==='word'?v[0].raw:q(v[0].raw));return parts.join(' ');
     case 'comp':
@@ -1057,13 +1066,18 @@ function cmdTree(pick,skip){
     const [g,ks]=Mo.menu()[sh.group];
     sheetIn.appendChild(E('div','crumb','פקודות › '+g));
     box.appendChild(B('it',[E('span',null,'חזרה'),E('span','k','‹')],()=>{sh.group=null;drawSheet();}));
-    ks.filter(k=>k!==skip).forEach(k=>box.appendChild(B('it',[E('span',null,k),E('span','k',CMDS[k].what)],()=>pick(k))));
+    // גרסה 9: הפקודה של השורה נשארת במקומה, מסומנת (עד כאן הוסתרה — והמשתמש לא מצא את "כתוב")
+    ks.forEach(k=>box.appendChild(k===skip?B('it on',[E('span',null,'✓ '+k),E('span','k','הפקודה של השורה')],()=>closeSheet())
+      :B('it',[E('span',null,k),E('span','k',CMDS[k].what)],()=>pick(k))));
   }
   sheetIn.appendChild(box);
 }
 function drawCmds(){top('פקודה');cmdTree(setCmd);}
+// גרסה 9 — המשתמש: "איפה שכתוב 'הפקודה כתוב' — כתיקייה ותת־תיקייה". הקבוצה של הפקודה בתפריט ← הפקודה
+function groupName(k){const g=Mo.menu().find(([g,ks])=>ks.indexOf(k)>=0);return g?g[0]:null;}
 function drawCmdMenu(){
-  top('הפקודה "'+M.cmd+'"');
+  const g=groupName(M.cmd);
+  top(g?g+' › '+M.cmd:'הפקודה "'+M.cmd+'"');
   sheetIn.appendChild(E('div','grp','להחליף בפקודה אחרת. מה שמתאים נשאר'));
   cmdTree(replaceCmd,M.cmd);
   sheetIn.appendChild(B('it danger',M.cmd==='לולאה'?'מחיקת הלולאה (חזור וסוף; מה שבפנים נשאר)':'מחיקת השורה',()=>{const i=act;act=-1;M=null;hideSheet();removeLine(i);}));
@@ -1165,7 +1179,7 @@ function drawLeave(){
 }
 const VARS=[['הורדות','תיקיית ההורדות'],['פנימי','הזיכרון הפנימי'],['כרטיס','כרטיס הזיכרון'],['כאן','התיקייה של הקובץ'],['תאריך','התאריך והשעה עכשיו'],
   ['שעה','השעה עכשיו'],['ייחודי','מספר שלא חוזר'],['סבב','מספר הסבב בלולאה'],['רק-במקור','אחרי השווה: רק במקור'],['רק-ביעד','אחרי השווה: רק ביעד'],
-  ['שיתוף','מה ששותף לתוכנה'],['בית','הבית של התוכנה (בהפעל)'],['מזהה-כרטיס','המזהה של כרטיס הזיכרון']];
+  ['שיתוף','מה ששותף לתוכנה'],['נבחרים','הקבצים שנבחרו — רק בפקודה שברשימת "בחירה"'],['בית','הבית של התוכנה (בהפעל)'],['מזהה-כרטיס','המזהה של כרטיס הזיכרון']];
 function drawVars(){
   top('משתנה');
   const f=sh.target,box=E('div','items');

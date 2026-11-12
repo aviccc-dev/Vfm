@@ -23,7 +23,7 @@ public class DbListScreen extends ListScreen<Store.Member> {
     static final String EXTRA_MODE = "mode", EXTRA_LIST = "list", EXTRA_SORT = "sort";
     /** מ0.22: מיון מהפקודה ("פתח רשימה … מיין:…"); ריק — הסדר של הרשימה. */
     private String sortBy = "";
-    private static final int MENU_DESIGN = 2, MENU_SETTINGS = 3, MENU_CMDS = 5, MENU_TESTS = 6, MENU_DIAG = 8;
+    private static final int MENU_DESIGN = 2, MENU_SETTINGS = 3, MENU_CMDS = 5, MENU_TESTS = 6, MENU_DIAG = 8, MENU_PLUGIN_DIAG = 9;
 
     private String mode;
     private long listId;
@@ -515,8 +515,9 @@ public class DbListScreen extends ListScreen<Store.Member> {
                 public void ok(final DbSmartForm.Result r) {
                     done(DbListCmd.now(mode, new DbListCmd.Work() {
                         @Override public DbListCmd.Res run(Store t, DbListCmd.Finder f) {
+                            String was = t.item(it.id).name;
                             DbSmartForm.save(t, it.id, 0, r);
-                            return DbListCmd.Res.ok(Words.DbCmd.saved(r.name.isEmpty() ? it.name : r.name));
+                            return DbListCmd.Res.ok(Words.DbCmd.saved(r.name.isEmpty() ? it.name : r.name)).renamed(it.id, was, t.item(it.id).name);   // מ0.42: ב8
                         }
                     }, false));
                 }
@@ -548,8 +549,10 @@ public class DbListScreen extends ListScreen<Store.Member> {
                         w = why.getText().toString();
                 done(DbListCmd.now(mode, new DbListCmd.Work() {
                     @Override public DbListCmd.Res run(Store t, DbListCmd.Finder f) {
+                        String was = t.item(it.id).name;
                         String e = DbListCmd.edit(t, it.id, n, i, d, w);              // מ0.23: אותה בדיקת שם כמו REN
-                        return e != null ? DbListCmd.Res.err(e) : DbListCmd.Res.ok(Words.DbCmd.saved(t.item(it.id).name));
+                        return e != null ? DbListCmd.Res.err(e) : DbListCmd.Res.ok(Words.DbCmd.saved(t.item(it.id).name))
+                                .renamed(it.id, was, t.item(it.id).name);             // מ0.42: ב8 — קובצי הפקודות שפונים אליה
                     }
                 }, false));
             }
@@ -731,6 +734,8 @@ public class DbListScreen extends ListScreen<Store.Member> {
         // מ0.37: "⚙ מסד" ירדה מהתפריט — במסך המסד נשארו רק הגיבויים, והכניסה אליהם מההגדרות
         menu.add(0, MENU_TESTS, 0, Words.DbCmd.MENU_TESTS);
         menu.add(0, MENU_DIAG, 0, Words.DbCmd.MENU_DIAG);                     // מ0.30
+        // מ0.42: תוסף האבחון — הבדיקות, הדוחות והתקלות (claude/tosaf-bdikot.md). שתי השורות שלמעלה יורדות אחרי שהוא ייבדק במכשיר
+        menu.add(0, MENU_PLUGIN_DIAG, 0, Words.DbCmd.MENU_PLUGIN_DIAG);
     }
 
     @Override
@@ -740,6 +745,7 @@ public class DbListScreen extends ListScreen<Store.Member> {
         else if (id == MENU_DESIGN) design();
         else if (id == MENU_TESTS) DbTestMode.open(this);
         else if (id == MENU_DIAG) Diag.run(this, mode);
+        else if (id == MENU_PLUGIN_DIAG) LabScreen.open(this, Words.DbCmd.TOOL_DIAG);
         else return false;
         return true;
     }

@@ -92,6 +92,15 @@ final class Lab {
     /** התוספים שבאים עם התוכנה (בקובץ ההתקנה). */
     static final String BUNDLED = "plugins";
 
+    /** מ0.42: הקבצים שתוסף כותב (קובצי עזר, תוצאות) — תיקייה לכל תוסף, מחוץ לתיקיית התוספים (שם כל html הוא גרסה). */
+    static final String DATA_DIR = "נתוני תוספים";   // בכונן
+
+    static File dataDir(String plugin) {
+        File d = new File(new File(Paths.dbData(), DATA_DIR), safe(plugin == null ? "" : plugin));
+        d.mkdirs();
+        return d;
+    }
+
     /**
      * מ0.41 (המשתמש: "להוסיף כפתור שמריץ אותו. וכך הוא הופך להיות חלק אינטגרלי מהתוכנה"): תוסף שבא עם התוכנה נכנס לתיקיית
      * התוספים — קובץ רגיל שם, כמו כל גרסה אחרת — אם אין שם כבר אותו תוסף באותה גרסה. html — תוכן העמוד; fileName — שמו

@@ -58,6 +58,9 @@ public final class Tests {
         run("מ0.40: התוספים, והשורות שהעורך האינטראקטיבי כותב", new Runnable() { public void run() { m040(); } });
         run("מ0.40: העבר — כבר במקום, /תפוס:לשנות-שם, /מכיל:", new Runnable() { public void run() { m040move(); } });
         run("מ0.40: החלק החדש של הבדיקה הכללית — בהרצה אמיתית", new Runnable() { public void run() { m040general(); } });
+        run("מ0.42: פקודות לבדיקות — ודא מסד, צור אופן, ודא … באינדקס", new Runnable() { public void run() { m042cmds(); } });
+        run("מ0.42: תוסף האבחון בא עם התוכנה, עם קובצי הבדיקה של הגרסה", new Runnable() { public void run() { m042plugin(); } });
+        run("מ0.42: רשימה ששינתה שם — קובצי הפקודות שפונים אליה מתעדכנים (ב8)", new Runnable() { public void run() { m042renamed(); } });
         run("מ0.41: בטל לא-משויכים, קובץ של פקודת פתיחה אחת, שמות המסכים", new Runnable() { public void run() { m041(); } });
         run("מ0.41: העורך האינטראקטיבי בא עם התוכנה", new Runnable() { public void run() { m041bundled(); } });
         run("מ0.41: קובץ הדוגמה של רשימת \"בחירה\"", new Runnable() { public void run() { m041example(); } });
@@ -2043,9 +2046,10 @@ public final class Tests {
             }
             check("מ0.40: \"בדיקת מערכת\" — כל החלקים נכללים (" + sp.steps.size() + " שורות), והדוח נכתב לקובץ", calls == 0 && sp.steps.size() > 200
                     && sp.reportFile != null && sp.reportFile.endsWith("דוח בדיקת מערכת.txt"));
-            eq("מ0.41: \"בדיקת מערכת\" — כמה \"ודא\" יש בה (הכללית 67, לחץ 19, שני אופנים 4, עומס 4, הניקוי 5)", 99, verifies);
+            eq("מ0.42: \"בדיקת מערכת\" — כמה \"ודא\" יש בה (הכללית 74, לחץ 19, שני אופנים 4, עומס 4, הניקוי 5)", 106, verifies);
             // מ0.41: הקטע החדש של הכללית — השורות שאינן של המסד מתוכננות בלי שגיאה; "ודא שגיאה" תופס את %נבחרים%
-            String sec = "צור תיקייה \"%פנימי%\\בדיקת יצוא (אפשר למחוק)\"\n" + all.substring(all.indexOf(":: מ0.41 — בטל לא-משויכים"));
+            String m042 = all.substring(all.indexOf(":: מ0.42"), all.indexOf(":: מ0.41 — הבדיקה מנקה"));   // נבדק לבד (m042cmds)
+            String sec = "צור תיקייה \"%פנימי%\\בדיקת יצוא (אפשר למחוק)\"\n" + all.substring(all.indexOf(":: מ0.41 — בטל לא-משויכים")).replace(m042, "");
             Batch.Plan np = Batch.plan(sec, r, v, lib);
             int fsBad = 0, dbLines = 0;
             boolean caught = false;
@@ -2057,6 +2061,14 @@ public final class Tests {
             }
             check("מ0.41: הקטע החדש של הכללית — שורות הכונן בלי שגיאה (" + fsBad + "), ושורות המסד מזוהות (" + dbLines + ")", fsBad == 0 && dbLines == 15);
             check("מ0.41: ...ו\"ודא שגיאה\" תופס את %נבחרים% שמחוץ לרשימת \"בחירה\"", caught);
+            // מ0.42: הקטע של הגרסה — שורות הכונן והאינדקס, בלי שורות המסד (צור אופן "בדיקות מערכת", ודא מסד): כל ה"ודא" עוברים
+            StringBuilder fs42 = new StringBuilder();
+            for (String l : m042.split("\n"))
+                if (!l.equals("צור אופן \"בדיקות מערכת\"") && !l.equals("ודא מסד") && !l.contains("בדיקת שם 042")) fs42.append(l).append('\n');
+            Batch.Plan p42 = Batch.plan(fs42.toString(), r, v, lib);
+            String rep42 = Batch.run(p42, lib, null, null).toString();
+            check("מ0.42: הקטע החדש של הכללית — שם אופן לא תקין נתפס, הקובץ שנכתב באינדקס, והתיקייה הוסרה (" + rep42 + ")",
+                    p42.errors == 0 && rep42.contains("ודא: 4 עברו · 0 נכשלו") && !new File(r, "בדיקת מ0.42 (אפשר למחוק)").exists());
             String clean = Files.readUtf8(sys);
             check("מ0.41: \"בדיקת מערכת\" מנקה אחרי עצמה — מבטלת את הרשימות שהחלקים יוצרים, ובסוף בטל לא-משויכים", clean.contains("בטל ידנית \"בדיקת פקודות\"")
                     && clean.contains("בטל ידנית \"בדיקת לחץ\"") && clean.contains("בטל ידנית \"בדיקת עומס\"") && clean.contains("אופן \"" + DbTestMode.REAL + "\"")
@@ -2064,6 +2076,107 @@ public final class Tests {
         } catch (Exception e) {
             check("מ0.40: הבדיקה הכללית — " + e, false);
         }
+    }
+
+    /** מ0.42: העמוד שבהתקנה — "אבחון", זהה לעמוד שב־lab-pages, ובתוכו קובצי הבדיקה כמו שהם בהתקנה (avchon-build.py). */
+    private static void m042plugin() {
+        try {
+            File src = new File(System.getProperty("vfm.src")), pages = new File(src.getParentFile(), "lab-pages");
+            File asset = new File(src, "assets/" + Lab.BUNDLED + "/avchon.html");
+            String html = Files.readUtf8(asset);
+            String[] nv = Lab.nameOf(html, asset.getName());
+            eq("מ0.42: תוסף האבחון — השם שהתפריט פותח", Words.DbCmd.TOOL_DIAG, nv[0]);
+            File same = new File(pages, "תוסף " + nv[0] + " " + nv[1] + ".html");
+            check("מ0.42: ...זהה לעמוד שב־lab-pages (" + nv[1] + ")", same.isFile() && Files.readUtf8(same).equals(html));
+            File[] t = new File(src, "assets/tests").listFiles();
+            int n = 0;
+            for (File f : t) {
+                if (!f.getName().endsWith(".vbat")) continue;
+                String body = Files.readUtf8(f).replace("\r", "");
+                StringBuilder j = new StringBuilder();
+                for (char c : body.toCharArray())
+                    j.append(c == '"' ? "\\\"" : c == '\\' ? "\\\\" : c == '\n' ? "\\n" : c == '\t' ? "\\t" : String.valueOf(c));
+                String key = "\"" + f.getName().replace(".vbat", "") + "\": \"" + j.toString().replace("</", "<\\/") + "\"";
+                if (html.contains(key)) n++;
+                else check("מ0.42: קובץ הבדיקה " + f.getName() + " — בעמוד כמו בהתקנה (להריץ avchon-build.py)", false);
+            }
+            check("מ0.42: כל קובצי הבדיקה בעמוד (" + n + ")", n >= 9);
+            check("מ0.42: העמוד יוצר את אופן הבדיקות ומבקש את התוצאה בקובץ", html.contains("'צור אופן \"'+TEST_MODE") && html.contains("'דוח \"'+resultPath("));
+        } catch (Exception e) {
+            check("מ0.42: תוסף האבחון — " + e, false);
+        }
+    }
+
+    private static void m042renamed() {
+        MemStore s = new MemStore(IdCounter.memory());
+        long h = DbPaths.ensureHome(s);
+        long a = s.createList("לקוחות", h), b = s.createList("פעילים", a), other = s.createList("פעילים", h);
+        long sm = s.createSmart("חדשים", a);
+        s.rename(b, "פעילים 2026");
+        String m = "עבודה";
+        eq("מ0.42: פתח רשימה — הדרך המלאה", "פתח רשימה \"לקוחות/פעילים 2026\" מיון:שם",
+                Verbs.renamed("פתח רשימה \"לקוחות/פעילים\" מיון:שם", s, m, b, false, "פעילים", "פעילים 2026"));
+        eq("מ0.42: ...עם \\ ובלי מרכאות — המפריד נשאר", "פתח רשימה לקוחות\\פעילים 2026",
+                Verbs.renamed("פתח רשימה לקוחות\\פעילים", s, m, b, false, "פעילים", "פעילים 2026"));
+        check("מ0.42: רשימה אחרת באותו שם (בבית) — לא נוגעים", Verbs.renamed("פתח רשימה \"פעילים\"", s, m, b, false, "פעילים", "פעילים 2026") == null);
+        eq("מ0.42: שורת רשימות — שני הצדדים, רק זה שפונה אליה", "העתק ידנית \"לקוחות/פעילים 2026\" ידנית \"פעילים\"",
+                Verbs.renamed("העתק ידנית \"לקוחות/פעילים\" ידנית \"פעילים\"", s, m, b, false, "פעילים", "פעילים 2026"));
+        eq("מ0.42: /בלי-לפתוח נשאר", "צור רשימה \"לקוחות/פעילים 2026/ינואר\" /בלי-לפתוח",
+                Verbs.renamed("צור רשימה \"לקוחות/פעילים/ינואר\" /בלי-לפתוח", s, m, b, false, "פעילים", "פעילים 2026"));
+        check("מ0.42: עם משתנה — לא נוגעים", Verbs.renamed("פתח רשימה \"%שם%/פעילים\"", s, m, b, false, "פעילים", "פעילים 2026") == null);
+        // רשימה שבאמצע הדרך של חכמה; וחכמה עצמה
+        s.rename(a, "לקוחות ותיקים");
+        eq("מ0.42: חכמה שבתוך רשימה ששינתה שם", "פתח רשימה חכמה \"לקוחות ותיקים/חדשים\"",
+                Verbs.renamed("פתח רשימה חכמה \"לקוחות/חדשים\"", s, m, a, false, "לקוחות", "לקוחות ותיקים"));
+        s.rename(sm, "חדשים השבוע");
+        eq("מ0.42: חכמה ששינתה שם — שורת רשימות", "העתק חכמה \"חדשים השבוע\" ידנית \"ארכיון\"",
+                Verbs.renamed("העתק חכמה \"חדשים\" ידנית \"ארכיון\"", s, m, sm, true, "חדשים", "חדשים השבוע"));
+        check("מ0.42: ...וחכמה — לא נוגעת בשורה של ידנית באותו שם", Verbs.renamed("פתח רשימה \"חדשים\"", s, m, sm, true, "חדשים", "חדשים השבוע") == null);
+        eq("מ0.42: החלק בדרך — רק הוא", "א/ ב חדש /ג", Verbs.segment("א/ ב /ג", 1, "ב חדש"));
+        // הקבצים: קובץ פקודות שבתוך רשימה של המסד — מתעדכן; אחרי "אופן" אחר — לא; ההודעה
+        File r = new File(home, "כונן-042ב");
+        wipe(r);
+        r.mkdirs();
+        File cmd = new File(r, "פותח.vbat");
+        try {
+            Files.writeAtomic(cmd, "פתח רשימה \"לקוחות ותיקים/פעילים 2026\"\nאופן \"אחר\"\nפתח רשימה \"לקוחות ותיקים/חדשים השבוע\"\n");
+            DbFiles.add(s, other, java.util.Collections.singletonList(cmd.getAbsolutePath()), null, false);
+            s.rename(b, "פעילים 2027");
+            List<File> done = Shortcuts.listRenamed(s, m, b, "פעילים 2026", "פעילים 2027");
+            String now = Files.readUtf8(cmd);
+            check("מ0.42: קובץ פקודות ברשימה — עודכן, ומה שאחרי \"אופן\" אחר — לא (" + now + ")", done.contains(cmd)
+                    && now.startsWith("פתח רשימה \"לקוחות ותיקים/פעילים 2027\"\n") && now.contains("אופן \"אחר\"\nפתח רשימה \"לקוחות ותיקים/חדשים השבוע\""));
+            check("מ0.42: אותו שם — כלום", Shortcuts.listRenamed(s, m, b, "פעילים 2027", "פעילים 2027").isEmpty());
+            check("מ0.42: ההודעה — כמה ואילו", Words.DbCmd.followed(java.util.Arrays.asList("פותח")).contains("קובץ פקודות אחד")
+                    && Words.DbCmd.followed(java.util.Arrays.asList("א", "ב")).contains("2 קובצי פקודות"));
+            DbListCmd.Res res = DbListCmd.Res.ok("x").renamed(b, "א", "א");
+            check("מ0.42: Res — שם שלא השתנה אינו שינוי שם", res.renamed == 0);
+        } catch (Exception e) {
+            check("מ0.42: קובצי פקודות — " + e, false);
+        }
+    }
+
+    private static void m042cmds() {
+        File r = new File(home, "כונן-042");
+        wipe(r);
+        r.mkdirs();
+        java.util.Map<String, String> v = Batch.vars(r, r.getAbsolutePath(), null);
+        Verbs.Cmd m = Verbs.parse("צור אופן \"בדיקות מערכת\"");
+        check("מ0.42: צור אופן — השם", m.error == null && m.kind.equals(Verbs.K_MODE) && m.arg.equals("בדיקות מערכת"));
+        check("מ0.42: צור אופן בלי שם — שגיאה", Verbs.parse("צור אופן").error != null);
+        check("מ0.42: צור אופן — אינו נפתח בסוף, ובמחשב (בלי מסד) שגיאה", Batch.plan("צור אופן \"א\"\n", r, v).open == null
+                && Words.DbCmd.VERIFY_DB_ONLY.equals(Batch.plan("צור אופן \"א\"\n", r, v).steps.get(0).error));
+        check("מ0.42: צור אופן — שם לא תקין", Batch.plan("צור אופן \"א:ב\"\n", r, v).steps.get(0).error.startsWith("שם אופן לא תקין"));
+        Batch.Plan d = Batch.plan("ודא מסד\n", r, v);
+        check("מ0.42: ודא מסד — במחשב אין מסד: שגיאה, ולא נבלע", d.errors == 1 && Words.DbCmd.VERIFY_DB_ONLY.equals(d.steps.get(0).error));
+        File f = new File(r, "א.txt");
+        Batch.Plan x = Batch.plan("כתוב \"%כאן%\\א.txt\" \"x\"\nודא \"%כאן%\\א.txt\" באינדקס\n", r, v);
+        check("מ0.42: ודא … באינדקס — מתוכנן", x.errors == 0 && x.steps.get(1).describe.contains("באינדקס"));
+        Batch.run(x, null, null, null);
+        check("מ0.42: ודא … באינדקס — בלי אינדקס: ❌ (ולא ✅ בטעות)", f.isFile() && Boolean.FALSE.equals(x.steps.get(1).verified));
+        check("מ0.42: ודא … באינדקס עם עוד מילה — שגיאה", Batch.plan("ודא \"%כאן%\\א.txt\" באינדקס קיים\n", r, v).errors == 1);
+        check("מ0.42: הטקסט של התוצאה — באינדקס / לא, ובכונן", Words.DbCmd.indexGot(false, true).contains("לא באינדקס")
+                && Words.DbCmd.indexGot(false, true).contains("קיים") && Words.DbCmd.indexGot(true, true).startsWith("באינדקס"));
     }
 
     private static void m041() {

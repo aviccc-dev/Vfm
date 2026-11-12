@@ -34,6 +34,18 @@ final class DbListCmd {
     static final class Res {
         String text, error;
         boolean noop;
+        /** מ0.42 (ב8): רשימה או חכמה ששינתה שם — רק בהרצה אמיתית (realRes) קובצי הפקודות שפונים אליה מתעדכנים. */
+        long renamed;
+        String renamedFrom, renamedTo;
+
+        Res renamed(long id, String from, String to) {
+            if (id != 0 && from != null && to != null && !from.equals(to)) {
+                renamed = id;
+                renamedFrom = from;
+                renamedTo = to;
+            }
+            return this;
+        }
 
         static Res err(String e) {
             Res r = new Res();
@@ -585,7 +597,7 @@ final class DbListCmd {
         s.atomic(new Store.Work() {
             @Override public void run(Store t) { t.rename(fid, n); }
         }, true);
-        return Res.ok(Words.DbCmd.renamed(a.label(), n));
+        return Res.ok(Words.DbCmd.renamed(a.label(), n)).renamed(fid, it.name, n);
     }
 
     /**
@@ -1196,15 +1208,21 @@ final class DbListCmd {
         Boolean want = null;
         int count = -1;
         String has = null;
+        boolean index = false;
         for (int i = 0; i < conds.size(); i++) {
             String t = conds.get(i).trim();
-            if (t.equals(Words.DbCmd.WORD_EXISTS) || t.equals(Words.DbCmd.WORD_EXISTS_M)) want = Boolean.TRUE;
+            if (t.equals(W_IN_INDEX) && conds.size() == 1) index = true;          // מ0.42: ודא "<קובץ>" באינדקס
+            else if (t.equals(Words.DbCmd.WORD_EXISTS) || t.equals(Words.DbCmd.WORD_EXISTS_M)) want = Boolean.TRUE;
             else if (t.equals(Words.DbCmd.WORD_MISSING) || t.equals(Words.DbCmd.WORD_MISSING_M)) want = Boolean.FALSE;
             else if (t.startsWith(SW_FILES_IN)) {                            // מ0.37: /קבצים:N — כמה קבצים בתיקייה (בלי תתי־תיקיות)
                 try { count = Integer.parseInt(t.substring(SW_FILES_IN.length()).trim()); } catch (NumberFormatException e) { count = -1; }
                 if (count < 0) { s.error = Words.DbCmd.VERIFY_USAGE; return; }
             } else if (t.equals(W_CONTAINS) && i + 1 < conds.size()) has = conds.get(++i);   // מ0.37: מכיל "טקסט"
             else { s.error = Words.DbCmd.VERIFY_USAGE; return; }
+        }
+        if (index) {
+            planVerifyIndex(s, f);
+            return;
         }
         final boolean exists = want == null || want;
         final int n = count;
@@ -1246,6 +1264,94 @@ final class DbListCmd {
 
     /** מ0.37: "ודא "<תיקייה>" /קבצים:N" · "ודא "<קובץ>" מכיל "<טקסט>"". */
     static final String SW_FILES_IN = "/קבצים:", W_CONTAINS = "מכיל";   // תחביר
+    /** מ0.42: "ודא "<קובץ>" באינדקס" — מה שהיה "בדיקת מסלול באינדקס" בהגדרות. */
+    static final String W_IN_INDEX = "באינדקס";   // תחביר
+
+    /** מ0.42: האם האינדקס מכיר את הקובץ (ובכונן — קיים?). בהרצה — מול האינדקס של אותו רגע, אחרי שהתור שלו התרוקן. */
+    private static void planVerifyIndex(final Batch.Step s, final File f) {
+        final String what = Words.DbCmd.verifyInIndex(f.getName());
+        s.target = f.getName();
+        s.describe = Words.DbCmd.verifyWill(what);
+        s.op = new ListCmd.Op() {
+            @Override
+            public String run(Library lib) {
+                if (lib != null) lib.flush(5000);                                  // השינויים שבתור (כתוב, העתק…) — נכנסים קודם
+                boolean in = lib != null && lib.find(f.getAbsolutePath()) != null;
+                s.verified = in;
+                return Words.DbCmd.verifyResult(in, what, Words.DbCmd.indexGot(in, f.isFile()));
+            }
+        };
+    }
+
+    /**
+     * מ0.42: "ודא מסד" — מה שהיה חלק 11 של דוח האבחון: המנוע של המסד מול ה־SQLite של המכשיר (StoreContract ו־BackupContract,
+     * על מסדים זמניים בצד), ותקינות המסד של כל אופן (לקריאה בלבד). לא נוגע במסדים — ולכן גם לא בהדמיה.
+     */
+    static void planVerifyDb(final Batch.Step s) {
+        if (DbListScreen.app == null) { s.error = Words.DbCmd.VERIFY_DB_ONLY; return; }
+        final String what = Words.DbCmd.VERIFY_DB_WHAT;
+        s.describe = Words.DbCmd.verifyWill(what);
+        s.op = new ListCmd.Op() {
+            @Override
+            public String run(Library lib) {
+                android.content.Context c = DbListScreen.app;
+                boolean[] ok = {false};
+                String engine = DbScreen.selfTestText(c, ok).trim().replace("\n", " · ");
+                List<String> bad = new ArrayList<String>();
+                int good = 0;
+                for (String m : DbScreen.dbModes(c)) {
+                    SqlStore st = null;
+                    try {
+                        st = SqlStore.openReadOnly(DbScreen.dbFile(c, m));
+                        String chk = st.check();
+                        if (chk == null) good++;
+                        else bad.add(m + ": " + chk);
+                    } catch (Throwable t) {
+                        Log.e("DbListCmd.verifyDb", t);
+                        bad.add(m + ": " + t.getMessage());
+                    } finally {
+                        if (st != null) st.close();
+                    }
+                }
+                boolean all = ok[0] && bad.isEmpty();
+                s.verified = all;
+                return Words.DbCmd.verifyDbResult(all, engine, good, bad);
+            }
+        };
+    }
+
+    /**
+     * מ0.42: "צור אופן "<שם>"" — אופן חדש: מסד עם בית (כמו "אופן חדש" בתפריט האופנים). קיים — בלי שינוי. ההדמיה מכירה אותו
+     * מהשורה הזו: שורת "אופן" שאחריה עובדת, על מסד ריק בזיכרון. המשתמש (על הבדיקות): "סתם מצטבר שם שאריות".
+     */
+    static void planMode(final Batch.Step s, String raw, Batch.Sim sim) {
+        final String name = raw == null ? "" : raw.trim();
+        if (name.isEmpty() || !name.equals(Names.cleanName(name).replaceAll("[:*?\"<>|\n\t]", " ").trim())) {
+            s.error = Words.DbCmd.modeBadName(name);
+            return;
+        }
+        if (!DbVerbs.active()) { s.error = Words.DbCmd.VERIFY_DB_ONLY; return; }
+        s.target = name;
+        if (DbScreen.dbModes(DbListScreen.app).contains(name) || sim.created.contains(name)) {
+            s.noop = true;
+            s.describe = Words.DbCmd.modeExists(name);
+            return;
+        }
+        sim.created.add(name);
+        MemStore m = new MemStore(IdCounter.memory());
+        DbPaths.ensureHome(m);
+        sim.dbs.put(name, m);
+        s.describe = Words.DbCmd.modeWill(name);
+        s.op = new ListCmd.Op() {
+            @Override
+            public String run(Library lib) {
+                if (DbScreen.dbModes(DbListScreen.app).contains(name)) return Words.DbCmd.modeExists(name);
+                if (DbScreen.prepare(DbListScreen.app, name) != 0) return Words.DbCmd.modeCreated(name);
+                lastFailed = true;
+                return Words.DbCmd.modeFailed(name);
+            }
+        };
+    }
 
     /** העותק בזיכרון — פעם אחת לכל קובץ פקודות (השורות הבאות רואות מה שהקודמות עשו). */
     private static Store sim(Batch.Sim sim, String mode) {
@@ -1352,12 +1458,28 @@ final class DbListCmd {
                     return Res.err(Words.DbCmd.beforeFailed(String.valueOf(t.getMessage())));
                 }
             }
-            return w.run(s, over(lib, new HashMap<String, List<String>>()));
+            Res r = w.run(s, over(lib, new HashMap<String, List<String>>()));
+            if (r.error == null && r.renamed != 0) follow(s, mode, r);
+            return r;
         } catch (Throwable t) {
             Log.e("DbListCmd.real", t);
             return Res.err(Words.Db.failed(String.valueOf(t.getMessage())));
         } finally {
             if (s != null) s.close();
+        }
+    }
+
+    /** מ0.42 (ב8): אחרי שינוי שם — קובצי הפקודות שפונים לרשימה מתעדכנים, וההודעה אומרת כמה ואילו. תקלה — נאמרת, לא נבלעת. */
+    private static void follow(Store s, String mode, Res r) {
+        try {
+            List<File> fs = Shortcuts.listRenamed(s, mode, r.renamed, r.renamedFrom, r.renamedTo);
+            if (fs.isEmpty()) return;
+            List<String> names = new ArrayList<String>();
+            for (File f : fs) names.add(Text.stem(f.getName()));
+            r.text = (r.text == null ? "" : r.text) + Words.DbCmd.followed(names);
+        } catch (Throwable t) {
+            Log.e("DbListCmd.follow", t);
+            r.text = (r.text == null ? "" : r.text) + Words.DbCmd.FOLLOW_FAILED;
         }
     }
 
