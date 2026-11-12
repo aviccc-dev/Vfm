@@ -60,6 +60,7 @@ public final class Tests {
         run("מ0.40: החלק החדש של הבדיקה הכללית — בהרצה אמיתית", new Runnable() { public void run() { m040general(); } });
         run("מ0.41: בטל לא-משויכים, קובץ של פקודת פתיחה אחת, שמות המסכים", new Runnable() { public void run() { m041(); } });
         run("מ0.41: העורך האינטראקטיבי בא עם התוכנה", new Runnable() { public void run() { m041bundled(); } });
+        run("מ0.41: קובץ הדוגמה של רשימת \"בחירה\"", new Runnable() { public void run() { m041example(); } });
         run("מ0.41: רשימת \"בחירה\" — %נבחרים%, כמה קבצים הפקודה מקבלת, והתכנון שקובע", new Runnable() { public void run() { m041select(); } });
         run("מ0.37: הפקודות הקטנות — כתוב, ודא (תיקייה, מכיל, קבצים, שגיאה), דוח, המתן, משתנים, רעיון וכותרת", new Runnable() { public void run() { m037(); } });
         run("קובצי פקודות — השורה כשדות לטופס (117א, שלב 2)", new Runnable() { public void run() { batchForm(); } });
@@ -2200,6 +2201,45 @@ public final class Tests {
             check("מ0.41: העמוד מכיר את הטופס של רשימה חכמה (smartForm), ורק כשהתוכנה מכירה", html.contains("can('smartForm')") && html.contains("ask('smartForm'"));
         } catch (Exception e) {
             check("מ0.41: התוסף שבהתקנה — " + e, false);
+        }
+    }
+
+    /** מ0.41: קובץ הדוגמה לבדיקת המכשיר — כותב שתי פקודות לרשימת "בחירה"; מה שנכתב נקרא נכון ורץ על קבצים שנבחרו. */
+    private static void m041example() {
+        File r = new File(home, "כונן-041ג");
+        wipe(r);
+        new File(r, Paths.DB_DIR).mkdirs();
+        new File(r, "Download").mkdirs();
+        try {
+            String text = Files.readUtf8(new File(System.getProperty("vfm.src"), "../lab-pages/דוגמה לבחירה.vbat"));
+            java.util.Map<String, String> v = Batch.vars(r, r.getAbsolutePath(), null);
+            Index ix = new Index("041ג", "041ג", r.getAbsolutePath());
+            ix.scan(null);
+            Library lib = Library.forTests(new ArrayList<Index>(java.util.Collections.singletonList(ix)));
+            Batch.Plan p = Batch.plan(text, r, v, lib);
+            int bad = 0;
+            for (Batch.Step x : p.steps) if (x.error != null && !x.text.contains("ידנית") && !x.text.startsWith("אופן")) bad++;
+            eq("מ0.41: קובץ הדוגמה — שורות הכונן בלי שגיאה", 0, bad);
+            Batch.Plan fs = Batch.plan(text.substring(0, text.indexOf("אופן \"")), r, v, lib);   // במחשב אין מסד — רק שורות הכונן רצות
+            Batch.run(fs, lib, null, null);
+            File dir = new File(r, Paths.DB_DIR + "/פקודות לדוגמה"), copy = new File(dir, "העתק להורדות.vbat"), start = new File(dir, "הפעל.vbat");
+            check("מ0.41: ...שני קובצי פקודות נכתבו, עם צלמית ושם", copy.isFile() && start.isFile() && "📥".equals(Program.read(copy).icon)
+                    && "הפעל".equals(Program.read(start).name));
+            String ct = Files.readUtf8(copy), st = Files.readUtf8(start);
+            check("מ0.41: ...%נבחרים% נשאר כמו שהוא, ו־%הורדות% הוחלף במסלול", ct.contains("%נבחרים%") && !ct.contains("%הורדות%") && ct.contains("/Download"));
+            eq("מ0.41: \"העתק להורדות\" — לכמה קבצים", 2, Menus.arity(ct));
+            eq("מ0.41: \"הפעל\" — לקובץ אחד", 1, Menus.arity(st));
+            File a = new File(r, "א.txt"), b = new File(r, "ב.txt");
+            Files.writeAtomic(a, "אחת");
+            Files.writeAtomic(b, "שתיים");
+            java.util.List<String> two = java.util.Arrays.asList(a.getAbsolutePath(), b.getAbsolutePath());
+            eq("מ0.41: \"העתק להורדות\" על שני קבצים — התכנון עובר", Boolean.TRUE, Menus.planned(Menus.expand(ct, two), dir, v, lib));
+            Batch.Plan run = Batch.plan(Menus.expand(ct, two), dir, v, lib);
+            Batch.run(run, lib, null, null);
+            check("מ0.41: ...והקבצים הועתקו להורדות", run.errors == 0 && new File(r, "Download/א.txt").isFile() && new File(r, "Download/ב.txt").isFile() && a.isFile());
+            eq("מ0.41: \"הפעל\" על קובץ אחד — התכנון עובר", Boolean.TRUE, Menus.planned(Menus.expand(st, two.subList(0, 1)), dir, v, lib));
+        } catch (Exception e) {
+            check("מ0.41: קובץ הדוגמה — " + e, false);
         }
     }
 
