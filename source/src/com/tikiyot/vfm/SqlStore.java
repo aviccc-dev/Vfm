@@ -53,7 +53,9 @@ public final class SqlStore implements Store {
             // מ0.44: עם הקובץ — כדי שיהיה ברור כשזה מסד זמני של "ודא מסד" (שם הורסים קובץ בכוונה), ולא מסד של אופן
             String f = "?";
             try { f = d.getPath(); } catch (Throwable ignored) { }
-            Log.i("SqlStore: corruption reported, the file is kept: " + f + (f.contains("/mselftest/") ? " (ודא מסד — מסד זמני שנהרס בכוונה)" : ""));   // בכונן
+            // המשתמש (12.11.2026): "ודא מסד — לכתוב אולי: מסד פגום, בדיקה תקינה, וי ירוק". מסד אמיתי — שורת תקלה (התוסף מציג אותה)
+            if (f.contains("/mselftest/")) Log.i("ודא מסד: מסד פגום (נהרס בכוונה) — זוהה. בדיקה תקינה ✅ · " + new java.io.File(f).getName());   // בכונן
+            else Log.i("שגיאה במסד: נמצא פגם — " + f + " · הקובץ נשמר, לא נמחק");   // בכונן
         }
     };
 
