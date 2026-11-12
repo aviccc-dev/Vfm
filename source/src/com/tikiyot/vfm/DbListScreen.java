@@ -442,7 +442,7 @@ public class DbListScreen extends ListScreen<Store.Member> {
             Store.FileInfo fi = store.file(it.id);
             File f = fi == null ? null : new File(fi.path);
             boolean there = f != null && f.exists();
-            Ui.bindRow(this, v, it.name, false, there ? f.length() : fi == null ? -1 : fi.size, there ? f.lastModified() : 0,
+            Ui.bindRow(v, it.name, false, there ? f.length() : fi == null ? -1 : fi.size, there ? f.lastModified() : 0,
                     fi == null ? "" : fi.path, there ? null : Words.FILE_NOT_AT_PATH, null);
             String st = stats.get(it.id);                                     // קובץ פקודות — מה שהוא מסנן (כמו בבית הישן)
             if (st != null && !st.isEmpty()) ((TextView[]) v.getTag())[2].setText(st);

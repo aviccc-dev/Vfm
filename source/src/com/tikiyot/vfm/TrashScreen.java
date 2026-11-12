@@ -25,7 +25,6 @@ public class TrashScreen extends ListScreen<Trash.Item> {
         return Long.parseLong(trashName.substring(0, 19).replaceAll("[^0-9]", ""));
     }
 
-    public static final String EXTRA_FUNC = "func";           // מזהה הכלי: המיון נשמר בסעיף שלו (79)
 
     /** פריט בסל בעיני המיון (79). "תאריך מחיקה" — החדש קודם. */
     private static final Sort.Key<Trash.Item> ITEM = new Sort.Key<Trash.Item>() {
@@ -53,8 +52,7 @@ public class TrashScreen extends ListScreen<Trash.Item> {
     protected void onCreate(Bundle saved) {
         super.onCreate(saved);
         LinearLayout root = build(saved, Words.Bin.TRASH_TITLE, Words.Bin.TRASH_SHORT);
-        srt = Sort.of(Sort.DELETED_AT, false, Sort.tool(getIntent() != null ? getIntent().getStringExtra(EXTRA_FUNC) : null,
-                Conf.GENERAL, Words.Bin.TRASH_DOT));
+        srt = Sort.of(Sort.DELETED_AT, false, Sort.tool(Conf.GENERAL, Words.Bin.TRASH_DOT));
         java.util.Map<Actions.Action, Runnable> own = new java.util.HashMap<Actions.Action, Runnable>();
         own.put(Actions.RESTORE, new Runnable() {
             @Override public void run() { restore(chosen()); }
@@ -76,7 +74,7 @@ public class TrashScreen extends ListScreen<Trash.Item> {
         String status = (it.dir ? Words.Bin.DELETED_FEM : Words.Bin.DELETED) + (when != null ? " " + when : "")
                 + (it.dir ? " · " + Words.files(it.files) + " · " + Files.size(it.size) : "")
                 + (it.original == null ? Words.Bin.NO_ORIGINAL : "");
-        Ui.bindRow(this, v, shownName(it.name()), it.dir, it.size,
+        Ui.bindRow(v, shownName(it.name()), it.dir, it.size,
                 it.mtime, it.original != null ? it.original : it.path(), status, null);
     }
 

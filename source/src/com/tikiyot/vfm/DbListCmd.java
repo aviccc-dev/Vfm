@@ -1192,7 +1192,7 @@ final class DbListCmd {
     }
 
     /** מ0.18: ודא "קובץ" קיים / חסר — בכונן (גם מה שהשורות שלפני ייצרו, לפי ההדמיה של Batch). */
-    static void planVerifyFile(final Batch.Step s, final File f, List<String> conds, Batch.Sim sim) {
+    static void planVerifyFile(final Batch.Step s, final File f, List<String> conds) {
         Boolean want = null;
         int count = -1;
         String has = null;

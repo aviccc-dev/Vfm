@@ -16,7 +16,6 @@ public final class FnTrash extends Func {
     @Override
     public void open(Activity a, Target t) {
         Intent i = new Intent(a, TrashScreen.class);
-        i.putExtra(TrashScreen.EXTRA_FUNC, t.id);
         a.startActivity(i);
     }
 

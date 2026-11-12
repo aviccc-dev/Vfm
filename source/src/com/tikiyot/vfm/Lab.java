@@ -16,7 +16,6 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Locale;
-import java.util.Map;
 import java.util.TreeSet;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -284,7 +283,7 @@ final class Lab {
     }
 
     /** "הוסף תוסף" / "החלף תוסף" (וגם "… מעבדה"): ירדו במ0.40 — שגיאה שאומרת מה במקומן (ולא "הוסף" של הפעלים, שמבלבל). */
-    static void plan(Batch.Step s, String line, File here, Map<String, String> vars) {
+    static void plan(Batch.Step s) {
         s.error = Words.Lab.GONE;
     }
 }

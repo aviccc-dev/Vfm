@@ -176,37 +176,8 @@ final class Design {
     }
 
     // ---------- החלק הפרטי ----------
-    // מועמד למחיקה (מ0.42): iconOf, colorOf, setPrivate, listMoved ו־renamed — רק הבדיקות קוראות להם. במסד — הצלמית של
-    // רשימה נשמרת ברשימה עצמה. מה שנשאר בשימוש: הקריאה של הסעיף [רשימות] (load), ושמירתו בחזרה לברירת מחדל (withPrivate).
-
-    static String key(List<String> path) {
-        return Names.key(path);
-    }
-
-    /** הצלמית של הרשימה: מהעיצוב (לפי המסלול); אם אין — מה שנשמר ברשימה ב־1.11.0; אחרת "". */
-    String iconOf(List<String> path, String old) {
-        String[] p = lists.get(key(path));
-        if (p != null && !p[0].isEmpty()) return p[0];
-        return old == null ? "" : old;
-    }
-
-    String colorOf(List<String> path) {
-        String[] p = lists.get(key(path));
-        return p == null ? "" : p[1];
-    }
-
-    /** כתיבת שורה בחלק הפרטי (צלמית וצבע ריקים — השורה יוצאת). שאר הקובץ — כמו שהוא. */
-    static boolean setPrivate(File f, String path, String icon, String color) {
-        try {
-            String text = f.isFile() ? Files.readUtf8(f) : "";
-            String line = privateText(icon, color);
-            Files.writeAtomic(f, withPrivate(text, path, line.isEmpty() ? null : path + " = " + line));
-            return true;
-        } catch (Throwable t) {
-            Log.e("שמירת צלמית בעיצוב", t);
-            return false;
-        }
-    }
+    // עד מ0.29 — צלמית וצבע לכל רשימה, לפי המסלול. במסד הצלמית נשמרת ברשימה עצמה; כאן נשאר רק מה ששומר על מה שכתוב
+    // בקבצים: הקריאה (load) והשמירה בחזרה לברירת מחדל.
 
     /** הטקסט אחרי החלפת השורה של path בחלק הפרטי (newLine == null — מחיקה). */
     static String withPrivate(String text, String path, String newLine) {
@@ -216,46 +187,6 @@ final class Design {
     private static String join(List<String> lines) {
         StringBuilder sb = new StringBuilder();
         for (String l : lines) sb.append(l).append('\n');
-        return sb.toString();
-    }
-
-    /** 88: רשימה שזזה או שקיבלה שם חדש — השורות שלה (ושל מה שבתוכה) בכל עיצובי האופן עוברות איתה. */
-    static int listMoved(List<String> from, List<String> to) {
-        if (from == null || from.isEmpty() || from.equals(to)) return 0;
-        String a = key(from), b = key(to);
-        int n = 0;
-        for (File f : files(dir())) {
-            try {
-                String text = Files.readUtf8(f);
-                String out = renamed(text, a, b);
-                if (!out.equals(text)) {
-                    Files.writeAtomic(f, out);
-                    n++;
-                }
-            } catch (Throwable t) {
-                Log.e("עדכון עיצוב אחרי העברת רשימה", t);
-            }
-        }
-        return n;
-    }
-
-    static String renamed(String text, String a, String b) {
-        StringBuilder sb = new StringBuilder();
-        String section = "";
-        String[] lines = text.replace("\r", "").split("\n", -1);
-        for (int i = 0; i < lines.length; i++) {
-            String l = lines[i], t = l.trim();
-            if (t.startsWith("[") && t.endsWith("]")) section = t.substring(1, t.length() - 1).trim();
-            else if (S_LISTS.equals(section)) {
-                int eq = l.indexOf('=');
-                if (eq > 0) {
-                    String k = l.substring(0, eq).trim();
-                    if (k.equals(a) || k.startsWith(a + "/")) l = b + k.substring(a.length()) + " =" + l.substring(eq + 1);
-                }
-            }
-            sb.append(l);
-            if (i < lines.length - 1) sb.append('\n');
-        }
         return sb.toString();
     }
 

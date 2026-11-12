@@ -67,16 +67,15 @@ public final class Modes {
     }
 
     /**
-     * יוצר אופן חדש. from = null — ריק; אחרת העתק של האופן הזה (בלי הגיבויים שלו).
-     * מחזיר null אם הצליח, או הסבר למה לא.
+     * יוצר אופן חדש, ריק. מחזיר null אם הצליח, או הסבר למה לא.
      */
-    public static String create(String name, String from) {
+    public static String create(String name) {
         String n = clean(name);
         if (n.isEmpty()) return Words.NEED_NAME;
         String bad = Physical.badName(n);                                    // 129
         if (bad != null) return bad;
         File dir = new File(new File(Paths.data(), DIR), n);
         if (dir.exists()) return Words.WorkModes.EXISTS;
-        return dir.mkdirs() ? null : Words.CANT_CREATE_FOLDER;                // מ0.29: רק אופן ריק (העתקת אופן — של המנוע הישן)
+        return dir.mkdirs() ? null : Words.CANT_CREATE_FOLDER;
     }
 }

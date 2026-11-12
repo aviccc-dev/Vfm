@@ -216,8 +216,8 @@ public final class Sort {
 
     // ---------- מקומות שמירה ----------
 
-    /** בסעיף הכלי (לפי המזהה); בלי כלי — בהגדרות הכלליות, בסעיף ובקידומת שניתנו. */
-    public static Store tool(final String funcId, final String section, final String prefix) {
+    /** בהגדרות הכלליות, בסעיף ובקידומת שניתנו (מ0.29: אין עוד סעיף לכל כלי). */
+    public static Store tool(final String section, final String prefix) {
         return new Store() {
             @Override
             public String get(String key, String def) {
@@ -226,7 +226,7 @@ public final class Sort {
 
             @Override
             public void set(String key, String value) {
-                Conf.set(section, prefix + key, value);                         // מ0.29: אין עוד סעיף כלי בקובץ הראשי
+                Conf.set(section, prefix + key, value);
             }
         };
     }

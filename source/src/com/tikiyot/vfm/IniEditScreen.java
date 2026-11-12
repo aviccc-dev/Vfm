@@ -149,7 +149,7 @@ public class IniEditScreen extends Activity {
         }
     }
 
-    private boolean locked(Ini.Line l) {
+    private boolean locked() {
         if (readOnly) {
             Ui.toast(this, Words.IniEd.READ_ONLY_COPY);
             return true;
@@ -158,7 +158,7 @@ public class IniEditScreen extends Activity {
     }
 
     private void edit(final Ini.Line l) {
-        if (locked(l)) return;
+        if (locked()) return;
         LinearLayout b = Ui.form(this);
         final EditText key = Ui.field(this, l.key, null);
         final EditText value = Ui.field(this, l.value, null);
@@ -181,7 +181,7 @@ public class IniEditScreen extends Activity {
     }
 
     private void menu(final Ini.Line l) {
-        if (locked(l)) return;
+        if (locked()) return;
         Ui.options(this, l.key, new String[]{Words.IniEd.EDIT, Words.IniEd.MOVE_UP, Words.IniEd.MOVE_DOWN, Words.IniEd.DELETE_LINE},
                 new DialogInterface.OnClickListener() {
                     @Override

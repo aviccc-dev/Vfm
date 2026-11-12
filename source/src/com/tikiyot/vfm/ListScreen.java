@@ -285,7 +285,7 @@ abstract class ListScreen<T> extends Activity {
     public boolean onOptionsItemSelected(MenuItem it) {
         if (item(it.getItemId())) return true;
         if (it.getItemId() == MENU_FULL) {
-            Ui.setFull(this, !Ui.full(this));
+            Ui.setFull(!Ui.full());
             adapter.notifyDataSetChanged();
             return true;
         }

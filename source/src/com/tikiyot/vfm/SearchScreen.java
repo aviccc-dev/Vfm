@@ -147,7 +147,7 @@ public class SearchScreen extends Activity implements Clip.Holder {
         lib = Library.get(this);
         readIntent();
 
-        if (srt == null) srt = Sort.withAdded(Sort.RANK, true, Sort.tool(null, Conf.SEARCH, ""));
+        if (srt == null) srt = Sort.withAdded(Sort.RANK, true, Sort.tool(Conf.SEARCH, ""));
         LinearLayout root = Ui.screen(this);
         buildQuery(root);
         buildInfo(root);
@@ -180,7 +180,7 @@ public class SearchScreen extends Activity implements Clip.Holder {
         hidden = getIntent().getBooleanExtra(EXTRA_HIDDEN, false);
         paths = "כן".equals(setting(SmartLists.PATHS, "לא"));  // תחביר
         loose = !"לא".equals(setting(SmartLists.LOOSE, "כן"));  // תחביר
-        Sort.Store st = Sort.tool(null, Conf.SEARCH, "");
+        Sort.Store st = Sort.tool(Conf.SEARCH, "");
         srt = Sort.withAdded(Sort.RANK, true, st);
         if (extraSort != null && st.get(SmartLists.SORT, "").isEmpty()) srt.prefer(extraSort);
         if (fixed && getWindow() != null)
@@ -318,10 +318,10 @@ public class SearchScreen extends Activity implements Clip.Holder {
                 boolean byAdded = Sort.ADDED.equals(srt.by) && hit.rec != null;          // 189: התאריך שבשורה — של ההוספה
                 if (byAdded) status = (status == null ? "" : status + " · ")
                         + (hit.rec.added > 0 ? Words.Look.ADDED : Words.Look.ADDED_UNKNOWN);
-                else if (hit.rec != null && Ui.full(SearchScreen.this))                       // 189: בנתונים המלאים — תמיד
+                else if (hit.rec != null && Ui.full())                       // 189: בנתונים המלאים — תמיד
                     status = (status == null ? "" : status + " · ")
                             + (hit.rec.added > 0 ? Words.Look.ADDED + " " + Ui.date(hit.rec.added) : Words.Look.ADDED_UNKNOWN);
-                Ui.bindRow(SearchScreen.this, v, hit.name(), hit.isDir(),
+                Ui.bindRow(v, hit.name(), hit.isDir(),
                         hit.rec != null ? hit.rec.size : 0, hit.rec == null ? 0 : byAdded ? hit.rec.added : hit.rec.mtime,
                         hit.path(), status, queryNorm);
                 if (selected.contains(hit.path()) || sel != null && sel.hasDir(hit.path()))
@@ -428,7 +428,7 @@ public class SearchScreen extends Activity implements Clip.Holder {
      * "שמירה בשם" — רשימה חכמה חדשה במסד, בבית של האופן הפתוח, עם התנאי, המיון והתצוגה שעל המסך.
      * מ0.29: עד כאן נשמרה "הגדרה נפוצה" בקובץ הראשי של המנוע הישן (ולכן לא הופיעה במסד).
      */
-    private void save(boolean as) {
+    private void save() {
         final String q = query(), s = srt.by, w = view;
         Ui.askText(this, Words.Find.SAVE_AS_TITLE, input.getText().toString().trim(), Words.Short.NAME_HINT, new Ui.Text1() {   // מ0.30: שם משלו — לא "תבנית"
             @Override
@@ -955,7 +955,7 @@ public class SearchScreen extends Activity implements Clip.Holder {
             return true;
         }
         if (item.getItemId() == 6 || item.getItemId() == 7) {                 // 153
-            save(item.getItemId() == 7);
+            save();
             return true;
         }
         if (item.getItemId() == 5) {                                          // 148: לפתיחה הזו; ברירת המחדל — בהגדרות הרשימה
@@ -971,7 +971,7 @@ public class SearchScreen extends Activity implements Clip.Holder {
             return true;
         }
         if (item.getItemId() == 4) {
-            Ui.setFull(this, !Ui.full(this));
+            Ui.setFull(!Ui.full());
             adapter.notifyDataSetChanged();
             return true;
         }

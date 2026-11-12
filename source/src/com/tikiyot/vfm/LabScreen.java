@@ -340,7 +340,7 @@ public final class LabScreen extends Activity {
         /** מסלול מלא ← הצורה שבקובצי הפקודות (%הורדות%\…). */
         @JavascriptInterface
         public String toVar(String abs) {
-            return BatchLine.toVar(abs == null ? "" : abs, vars);
+            return Batch.toVar(abs == null ? "" : abs, vars);
         }
 
         /** הצורה שבקובצי הפקודות ← מסלול מלא (null — משתנה לא מוכר). */

@@ -466,7 +466,7 @@ public final class Physical {
                 continue;
             }
             int before = run.filesDone;
-            String dst = run.transfer(f, folder, true);
+            String dst = run.transfer(f, folder);
             if (dst == null) continue;
             run.r.done.add(p);
             run.r.to.put(p, dst);
@@ -627,8 +627,8 @@ public final class Physical {
             if (progress != null) progress.step(filesDone, total, bytesDone, totalBytes);
         }
 
-        /** src אל תוך dir. top — פריט שנבחר (לא תוכן של תיקייה). מחזיר את המקום החדש, או null. */
-        String transfer(File src, File dir, boolean top) {
+        /** src אל תוך dir. מחזיר את המקום החדש, או null. */
+        String transfer(File src, File dir) {
             if (stop()) return null;
             boolean isDir = src.isDirectory();
             File dst = new File(dir, src.getName());
@@ -689,7 +689,7 @@ public final class Physical {
             File[] kids = src.listFiles();
             if (kids != null) for (File k : kids) {
                 if (stop()) break;
-                transfer(k, dst, false);
+                transfer(k, dst);
             }
             if (!copy) removeIfEmpty(src);
         }
@@ -728,7 +728,7 @@ public final class Physical {
                 File[] kids = src.listFiles();
                 if (kids != null) for (File k : kids) {
                     if (stop()) break;
-                    transfer(k, dst, false);
+                    transfer(k, dst);
                 }
                 if (!copy) removeIfEmpty(src);
                 lib.dirChanged(dst.getAbsolutePath());

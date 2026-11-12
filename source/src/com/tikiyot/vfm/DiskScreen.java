@@ -150,7 +150,7 @@ public class DiskScreen extends ListScreen<File> implements Clip.Holder {
             Ui.bindIcon(v, "💾", label != null ? label : f.getName(), Words.DiskW.NO_INDEX + " · " + f.getAbsolutePath());
             return;
         }
-        Ui.bindRow(this, v, f.getName(), f.isDirectory(), f.isDirectory() ? 0 : f.length(), f.lastModified(), null, null, null);
+        Ui.bindRow(v, f.getName(), f.isDirectory(), f.isDirectory() ? 0 : f.length(), f.lastModified(), null, null, null);
     }
 
     @Override

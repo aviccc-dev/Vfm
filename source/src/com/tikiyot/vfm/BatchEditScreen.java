@@ -771,7 +771,7 @@ public class BatchEditScreen extends Activity {
                     @Override
                     public void ok(File folder) {
                         String old = Bidi.strip(e.getText().toString()), mask = maskOf(old);
-                        e.setText(BatchLine.toVar(folder.getAbsolutePath(), vars) + (mask.isEmpty() ? "" : "\\" + mask));
+                        e.setText(Batch.toVar(folder.getAbsolutePath(), vars) + (mask.isEmpty() ? "" : "\\" + mask));
                     }
                 }, share ? Words.Cmd.SHARE_BTN : null, share ? new Runnable() {
                     @Override public void run() { e.setText(Batch.var(Batch.V_SHARE)); }

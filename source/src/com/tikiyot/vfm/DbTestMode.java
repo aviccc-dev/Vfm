@@ -52,7 +52,7 @@ final class DbTestMode {
     }
 
     /** מ0.31: הבדיקה הכללית — הקובץ שבתיקיית אופן הבדיקות (לדוח האבחון). מ0.40: חלק של "בדיקת מערכת", בשם קבוע. */
-    static File generalFile(Activity a) throws Exception {
+    static File generalFile() throws Exception {
         return new File(Modes.dirOf(Words.DbCmd.TEST_MODE), Words.DbCmd.TEST_ALL_FILE + "." + Batch.EXT);
     }
 
@@ -60,7 +60,7 @@ final class DbTestMode {
         final String mode = Words.DbCmd.TEST_MODE;
         try {
             if (!Modes.dirOf(mode).isDirectory()) {
-                String err = Modes.create(mode, null);
+                String err = Modes.create(mode);
                 if (err != null) {
                     Ui.toast(a, err);
                     return;

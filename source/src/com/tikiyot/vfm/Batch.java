@@ -182,7 +182,7 @@ final class Batch {
      * מ0.37 (המשתמש, 11.11.2026: "אם כבר אז תאסוף כמה קטנות, לא רק את אלה של הבדיקות"): כתוב · המתן · גבה · רענן · דוח ·
      * "ודא שגיאה". מחזיר true אם השורה שלהן (ואז s מוכן: שגיאה, או תיאור ופעולה).
      */
-    private static boolean small(final Plan plan, final Step s, String cmd, List<String> tk, String line, File here,
+    private static boolean small(final Plan plan, final Step s, String cmd, List<String> tk, File here,
                                  Map<String, String> vars, final Sim sim) {
         if (cmd.equals(VERIFY) && tk.size() == 2 && tk.get(1).trim().equals(W_ERROR)) {
             s.cmd = EXPECT;
@@ -382,7 +382,7 @@ final class Batch {
         return out;
     }
 
-    // ---------- התחביר בעברית — במקום אחד (131). גם BatchLine והעורך לוקחים מכאן. ----------
+    // ---------- התחביר בעברית — במקום אחד (131). גם העורך לוקח מכאן. ----------
     /** משתנים: %פנימי% %כרטיס% %הורדות% %כאן%. */
     static final String V_INTERNAL = Sources.INTERNAL, V_CARD = Sources.CARD, V_DOWNLOADS = "הורדות", V_HERE = "כאן";   // תחביר
     /**
@@ -517,6 +517,22 @@ final class Batch {
 
     static boolean isSwitch(String t) {
         return SWITCH.matcher(t).matches();
+    }
+
+    /** מסלול מלא שנבחר בבורר — בסגנון bat: המשתנה הארוך ביותר שמתאים בהתחלה, ו-"\\". */
+    static String toVar(String abs, Map<String, String> vars) {
+        String best = null, bestVal = "";
+        for (Map.Entry<String, String> e : vars.entrySet()) {
+            if (e.getKey().equals(V_HERE)) continue;                      // תלוי בקובץ — לא מציעים
+            String v = e.getValue();
+            if ((abs.equals(v) || abs.startsWith(v + "/")) && v.length() > bestVal.length()) {
+                best = e.getKey();
+                bestVal = v;
+            }
+        }
+        String rest = best == null ? abs : abs.substring(bestVal.length());
+        String out = (best == null ? "" : "%" + best + "%") + rest.replace('/', '\\');
+        return out.isEmpty() ? abs : out;
     }
 
     /** משתנים קבועים. */
@@ -1102,7 +1118,7 @@ final class Batch {
                 s.line = n + 1;
                 s.text = shown;
                 s.cmd = LAB;
-                Lab.plan(s, line, here, vars);
+                Lab.plan(s);
                 if (s.error != null) plan.errors++;
                 plan.steps.add(s);
                 continue;
@@ -1170,7 +1186,7 @@ final class Batch {
                 plan.steps.add(s);
                 continue;
             }
-            if (small(plan, s, cmd, tk, line, here, vars, sim)) {                // מ0.37: הפקודות הקטנות
+            if (small(plan, s, cmd, tk, here, vars, sim)) {                // מ0.37: הפקודות הקטנות
                 if (s.error != null) plan.errors++;
                 plan.steps.add(s);
                 continue;
@@ -1209,7 +1225,7 @@ final class Batch {
                 String[] err = {null};
                 String p = path(tk.get(1), here, vars, err);
                 if (p == null) s.error = err[0];
-                else DbListCmd.planVerifyFile(s, new File(p), conds, sim);
+                else DbListCmd.planVerifyFile(s, new File(p), conds);
                 if (s.error != null) plan.errors++;
                 plan.steps.add(s);
                 continue;
@@ -1268,7 +1284,7 @@ final class Batch {
                 String[] err = {null};
                 String p = path(a.raw, here, vars, err);
                 if (p == null) { s.error = err[0]; return; }
-                DbListCmd.planVerifyFile(s, new File(p), conds, sim);
+                DbListCmd.planVerifyFile(s, new File(p), conds);
                 return;
             }
             DbListCmd.planVerify(s, a, conds, sim);
@@ -1512,7 +1528,7 @@ final class Batch {
             s.dest = d;
             s.describe = Words.Cmd.openAtEnd(Bidi.path(d.getAbsolutePath()));
         } else {
-            s.error = Words.Cmd.unknownCommand(cmd) + " (" + join(java.util.Arrays.asList(BatchLine.COMMANDS), " ") + ")";
+            s.error = Words.Cmd.unknownCommand(cmd) + " (" + join(java.util.Arrays.asList(Commands.fileNames()), " ") + ")";
         }
     }
 
@@ -2241,7 +2257,7 @@ final class Batch {
 
     /** תבנית לקובץ חדש — ההסבר מהמילון, התחביר מכאן. */
     static String template() {
-        return Words.Cmd.template(join(Arrays.asList(BatchLine.COMMANDS), "  "),
+        return Words.Cmd.template(join(Arrays.asList(Commands.fileNames()), "  "),
                 var(V_INTERNAL) + "  " + var(V_CARD) + "  " + var(V_DOWNLOADS) + "  " + var(V_HERE) + "  " + var(V_SHARE) + "  " + var(V_HOME)
                         + "  " + var(V_NOW) + "  " + var(V_CARD_ID),
                 "/" + SW_DATE + "יום  /" + SW_DATE + "<שנה  /" + SW_SIZE + ">10MB",   // תחביר

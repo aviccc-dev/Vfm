@@ -40,7 +40,6 @@ public class DupScreen extends Activity {
     public static final String EXTRA_SCOPE = "scope";
     public static final String EXTRA_MODE = "mode";
     public static final String EXTRA_AGAINST = "against";
-    public static final String EXTRA_FUNC = "func";          // מזהה הכלי: המיון נשמר בסעיף שלו
 
     private static final String ISO = Text.ISO, PDI = Text.PDI;   // בידוד כיוון כתיבה — ממקום אחד
 
@@ -139,7 +138,7 @@ public class DupScreen extends Activity {
         mode = extra(EXTRA_MODE);
         if (mode.isEmpty()) mode = Words.Dup.NAME_SIZE;
         against = extra(EXTRA_AGAINST).trim();
-        srt = Sort.of(Sort.SPACE, false, Sort.tool(extra(EXTRA_FUNC).isEmpty() ? null : extra(EXTRA_FUNC), FnDup.KIND, ""));
+        srt = Sort.of(Sort.SPACE, false, Sort.tool(FnDup.KIND, ""));
         between = !against.isEmpty();
         setTitle(Words.Dup.DUPLICATES);
 

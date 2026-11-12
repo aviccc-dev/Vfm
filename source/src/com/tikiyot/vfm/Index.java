@@ -395,7 +395,7 @@ public final class Index {
     public static volatile java.util.Set<String> EXCLUDED = new HashSet<String>();
 
     /** דילוג בסריקה: מוסתרים נכנסים (עם סימון, 63); לא נכנסים Android/data ו-obb, ומה שהוצא. */
-    private static boolean skip(int parent, File f) {
+    private static boolean skip(File f) {
         if (Vols.skip(f, true)) return true;
         java.util.Set<String> ex = EXCLUDED;
         return !ex.isEmpty() && ex.contains(f.getAbsolutePath());
@@ -586,7 +586,7 @@ public final class Index {
             File[] all = paths.poll().listFiles();
             if (all == null) continue;
             for (File f : all) {
-                if (skip(parent, f)) continue;
+                if (skip(f)) continue;
                 if (f.isDirectory()) {
                     newDir(parent, f);
                     parents.add(dirs.size() - 1);
@@ -627,7 +627,7 @@ public final class Index {
         l.mtime = new long[n];
         for (int i = 0; i < n; i++) {
             File f = all[i];
-            if (skip(parent, f)) continue;
+            if (skip(f)) continue;
             l.names[i] = f.getName();
             l.isDir[i] = f.isDirectory();
             if (!l.isDir[i]) l.size[i] = f.length();
@@ -960,7 +960,7 @@ public final class Index {
         boolean changed = false;
         Set<String> diskFiles = new HashSet<String>(), diskDirs = new HashSet<String>();
         for (File f : all) {
-            if (skip(id, f)) continue;
+            if (skip(f)) continue;
             if (f.isDirectory()) diskDirs.add(f.getName()); else diskFiles.add(f.getName());
         }
         Set<String> knownFiles = new HashSet<String>(), knownDirs = new HashSet<String>();
@@ -993,7 +993,7 @@ public final class Index {
                 }
             }
         for (File f : all) {
-            if (skip(id, f)) continue;
+            if (skip(f)) continue;
             if (f.isDirectory()) {
                 if (knownDirs.contains(f.getName())) continue;
                 newDir(id, f);
@@ -1011,7 +1011,7 @@ public final class Index {
         File[] all = dir.listFiles();
         if (all == null) return;
         for (File f : all) {
-            if (skip(parent, f)) continue;
+            if (skip(f)) continue;
             if (f.isDirectory()) {
                 newDir(parent, f);
                 scanInto(dirs.size() - 1, f);

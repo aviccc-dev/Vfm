@@ -24,7 +24,6 @@ public final class FnDup extends Func {
         i.putExtra(DupScreen.EXTRA_SCOPE, t.get("היקף", ""));  // תחביר
         i.putExtra(DupScreen.EXTRA_MODE, t.get("השוואה", "שם וגודל"));  // תחביר
         i.putExtra(DupScreen.EXTRA_AGAINST, between(t) ? t.get("מול", "") : "");  // תחביר
-        i.putExtra(DupScreen.EXTRA_FUNC, t.id);
         a.startActivity(i);
     }
 

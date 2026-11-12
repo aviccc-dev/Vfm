@@ -200,22 +200,10 @@ public final class Words {
         public static final String HEADER_HELP = "כותרת: צלמית — כאריח בבית הקובץ נראה כתוכנה (צלמית, שם ו\"למה\"; במקום אחר — קובץ טקסט) · הדמיה — הכול רץ בכאילו, בלי לשנות דבר";
 
 
-        /** מה כל פקודה עושה — מההגדרה האחת (1.22.5: Commands). */
-        public static String what(String cmd) {
-            Commands.Def d = Commands.get(cmd);
-            return d == null ? "" : d.what;
-        }
-
         /** איך כותבים אותה — נבנה מההגדרה האחת (1.22.5: עם המתגים עצמם, במקום "[מתגים]"). */
         public static String usage(String cmd) {
             Commands.Def d = Commands.get(cmd);
             return d == null ? "" : d.usage();
-        }
-
-        /** "COPY — העתקת קבצים.  COPY <מקור> <יעד> [מתגים]". */
-        public static String help(String cmd) {
-            String w = what(cmd);
-            return w.isEmpty() ? "" : cmd + " — " + w + ".  " + usage(cmd);
         }
 
         // שגיאות בשורה

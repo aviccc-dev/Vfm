@@ -515,10 +515,8 @@ public final class Tests {
 
         // החלק הפרטי — צלמית וצבע לפי המסלול
         Design withLists = Design.parse("x", "[רשימות]\nלימוד = צלמית 📚 · צבע ירוק\nלימוד/הערות = צבע #112233\n");
-        eq("1.12.0: צלמית לפי המסלול", "📚", withLists.iconOf(Arrays.asList("לימוד"), "📋"));
-        eq("1.12.0: בלי צלמית בעיצוב — מה שהיה ברשימה (1.11.0)", "📒", withLists.iconOf(Arrays.asList("לימוד", "הערות"), "📒"));
-        eq("1.12.0: צבע", "#112233", withLists.colorOf(Arrays.asList("לימוד", "הערות")));
-        eq("1.12.0: רשימה בשם אחר — בלי", "", withLists.colorOf(Arrays.asList("ספרים")));
+        check("1.12.0: החלק הפרטי — נקרא", Arrays.equals(new String[]{"📚", "ירוק"}, withLists.lists.get("לימוד"))
+                && Arrays.equals(new String[]{"", "#112233"}, withLists.lists.get("לימוד/הערות")) && withLists.lists.get("ספרים") == null);
         String t1 = Design.withPrivate("[אמצע]\nטורים = 3\n", "לימוד", "לימוד = צלמית 📚");
         check("1.12.0: שורה פרטית ראשונה — נוסף [רשימות]", t1.contains("[רשימות]\nלימוד = צלמית 📚") && t1.startsWith("[אמצע]"));
         String t2 = Design.withPrivate(t1, "לימוד", "לימוד = צלמית 📖");
@@ -527,11 +525,6 @@ public final class Tests {
         check("1.12.0: שורה פרטית חדשה — בתוך [רשימות], לפני הקבוצה הבאה",
                 t3.indexOf("ספרים = צבע כחול") < t3.indexOf("[אחר]") && t3.indexOf("ספרים = צבע כחול") > t3.indexOf("[רשימות]"));
         check("1.12.0: מחיקת שורה פרטית", !Design.withPrivate(t3, "לימוד", null).contains("לימוד ="));
-        String moved = Design.renamed("[רשימות]\nלימוד = צלמית 📚\nלימוד/הערות = צבע ירוק\nלימודים = צבע כחול\n[אמצע]\nלימוד = 3\n",
-                "לימוד", "תורה");
-        check("1.12.0: רשימה שזזה — השורות שלה ושל מה שבתוכה עוברות", moved.contains("תורה = צלמית 📚")
-                && moved.contains("תורה/הערות = צבע ירוק") && moved.contains("לימודים = צבע כחול")
-                && moved.contains("[אמצע]\nלימוד = 3"));
         check("1.12.0: פירוק השורה הפרטית", Arrays.equals(new String[]{"📚", "ירוק"}, Design.privateValue("צלמית 📚 · צבע ירוק")));
 
         // @עיצוב ברשימה — נקרא ונשמר; הירושה
@@ -552,7 +545,8 @@ public final class Tests {
         eq("1.12.0: שמירה בשם", null, Design.saveAs(g, "מדף ספרים"));
         check("1.12.0: שמירה בשם — העותק זהה", Design.get("מדף ספרים").grid && Design.get("מדף ספרים").cols == 3);
         eq("1.12.0: שמירה בשם תפוס — נדחה", Words.DesignW.EXISTS, Design.saveAs(g, "מדף ספרים"));
-        check("1.12.0: צלמית לרשימה — נכתבת לקובץ", Design.setPrivate(Design.fileOf(Design.FILES), "לימוד", "📚", "ירוק"));
+        Files.writeAtomic(Design.fileOf(Design.FILES), Design.withPrivate(Files.readUtf8(Design.fileOf(Design.FILES)), "לימוד",
+                "לימוד = " + Design.privateText("📚", "ירוק")));
         Files.writeAtomic(Design.fileOf(Design.FILES),
                 Files.readUtf8(Design.fileOf(Design.FILES)).replace("טורים = 3", "טורים = 5"));
         Design.fileOf(Design.FILES).setLastModified(System.currentTimeMillis() + 2000);
@@ -561,7 +555,7 @@ public final class Tests {
         Design.fileOf(Design.FILES).setLastModified(System.currentTimeMillis() + 4000);
         Design r = Design.get(Design.FILES);
         check("1.12.0: חזרה לברירת מחדל — המראה מהמקור, הצלמיות נשארו", r.cols == 3
-                && "📚".equals(r.iconOf(Arrays.asList("לימוד"), "")) && "ירוק".equals(r.colorOf(Arrays.asList("לימוד"))));
+                && Arrays.equals(new String[]{"📚", "ירוק"}, r.lists.get("לימוד")));
         check("1.12.0: חזרה לברירת מחדל — רק למובנה", !Design.reset("מדף ספרים"));
 
         // מאופן אחר — מועתק לאופן הזה; שם תפוס בתוכן אחר — עם שם האופן
@@ -586,10 +580,7 @@ public final class Tests {
                 "בדיקת עיצובים", new File(other, "מדף ספרים" + Design.EXT).getAbsolutePath()}));
         wipe(other.getParentFile().getParentFile());
 
-        // רשימה שזזה — בכל עיצובי האופן; ספירת הרשימות באופן — @עיצוב אינו פריט
-        Design.listMoved(Arrays.asList("לימוד"), Arrays.asList("תורה"));
-        Design.fileOf(Design.FILES).setLastModified(System.currentTimeMillis() + 6000);
-        eq("1.12.0: רשימה שזזה — הצלמית איתה", "📚", Design.get(Design.FILES).iconOf(Arrays.asList("תורה"), ""));
+        // ספירת הרשימות באופן — @עיצוב אינו פריט
         String m = "בדיקת ספירה 1120";
         File md = new File(new File(Paths.data(), Modes.DIR), m);
         md.mkdirs();
@@ -617,7 +608,7 @@ public final class Tests {
         Design back = Design.get(Design.FILES);
         check("1.12.1: שמירה מהטופס — נקראת בחזרה", back.cols == 4 && back.tint && back.nameT.weight == 500
                 && Design.NONE.equals(back.around) && back.grid);
-        check("1.12.1: שמירה מהטופס — הצלמיות נשארו", "📚".equals(back.iconOf(Arrays.asList("תורה"), "")));
+        check("1.12.1: שמירה מהטופס — הצלמיות נשארו", Arrays.equals(new String[]{"📚", "ירוק"}, back.lists.get("לימוד")));
 
         // 1.12.1: שינוי שם ומחיקה — הרשימות ומסך הבית מתעדכנים
         String homeWas = Design.homeName();
@@ -2467,56 +2458,14 @@ public final class Tests {
                 && Cond.parse("תאריך:<2026-01-01").unknown.isEmpty());
     }
 
-    // ---------- קובצי פקודות: השורה כשדות לטופס (117א, שלב 2) ----------
+    // ---------- קובצי פקודות: מסלול מהבורר ← משתנה (117א, שלב 2) ----------
 
     private static void batchForm() {
-        BatchLine b = BatchLine.parse("MOVE \"%הורדות%\\*.pdf\" \"%פנימי%\\ספרים חדשים\" /תאריך:שבוע /גודל:>10MB /Y");
-        eq("שלב 2: פקודה", "MOVE", b.cmd);
-        eq("שלב 2: תיקיית מקור", "%הורדות%", b.srcDir);
-        eq("שלב 2: תבנית", "*.pdf", b.mask);
-        eq("שלב 2: יעד", "%פנימי%\\ספרים חדשים", b.dest);
-        check("שלב 2: תאריך — מאז שבוע", b.dateMode == 1 && b.dateValue.equals("שבוע"));
-        check("שלב 2: גודל — גדול מ־10MB", b.sizeMode == 1 && b.sizeNumber.equals("10") && b.sizeUnit.equals("MB"));
-        eq("שלב 2: /Y — להחליף", 2, b.taken);
-        eq("שלב 2: חזרה לשורה — יעד עם רווח במרכאות", "MOVE %הורדות%\\*.pdf \"%פנימי%\\ספרים חדשים\" /תאריך:שבוע /גודל:>10MB /Y", b.toLine());
-        eq("שלב 2: פירוק של השורה שנבנתה נותן אותה שורה", b.toLine(), BatchLine.parse(b.toLine()).toLine());
-
-        BatchLine d = BatchLine.parse("del %הורדות%\\*.* /תאריך:<שנה /MAXAGE:3 /Q");
-        eq("שלב 2: אותיות קטנות — DEL", "DEL", d.cmd);
-        check("שלב 2: לפני שנה", d.dateMode == 2 && d.dateValue.equals("שנה"));
-        eq("שלב 2: מתגים שהטופס לא מכיר — נשמרים", "[/MAXAGE:3, /Q]", d.other.toString());
-        eq("שלב 2: DEL חוזר", "DEL %הורדות%\\*.* /תאריך:<שנה /MAXAGE:3 /Q", d.toLine());
-        d.dateMode = 0;
-        d.sizeMode = 2;
-        d.sizeNumber = "500";
-        d.sizeUnit = "KB";
-        eq("שלב 2: שינוי בטופס — השורה מתעדכנת", "DEL %הורדות%\\*.* /גודל:<500KB /MAXAGE:3 /Q", d.toLine());
-
-        BatchLine c = BatchLine.parse("COPY \"%כאן%\\ספר.pdf\" גיבוי");
-        check("שלב 2: קובץ אחד בלי תבנית", c.mask.isEmpty() && c.srcDir.equals("%כאן%\\ספר.pdf"));
-        eq("שלב 2: /תפוס:לדלג", "COPY a b /תפוס:לדלג", BatchLine.parse("COPY a b /תפוס:לדלג").toLine());
-        eq("שלב 2: RD /S", "RD \"%פנימי%\\תיקייה ישנה\" /S", BatchLine.parse("RMDIR \"%פנימי%\\תיקייה ישנה\" /S").toLine());
-        eq("שלב 2: REN", "REN \"ספר ישן.pdf\" חדש.pdf", BatchLine.parse("RENAME \"ספר ישן.pdf\" חדש.pdf").toLine());
-        eq("שלב 2: ECHO שומר את הטקסט", "ECHO העברה הסתיימה!", BatchLine.parse("@echo העברה הסתיימה!").toLine());
-        eq("שלב 2: START", "START %פנימי%\\ספרים", BatchLine.parse("START %פנימי%\\ספרים").toLine());
-        BatchLine n = new BatchLine();
-        n.cmd = "COPY";
-        n.srcDir = "%הורדות%";
-        n.mask = "*.epub";
-        n.dest = "%כרטיס%\\ספרים";
-        n.dateMode = 1;
-        n.dateValue = "3ימים";
-        eq("שלב 2: שורה חדשה מהטופס", "COPY %הורדות%\\*.epub %כרטיס%\\ספרים /תאריך:3ימים", n.toLine());
-        Batch.Plan p = Batch.plan(n.toLine(), home, Batch.vars(home, "/storage/emulated/0", "/storage/AAAA-BBBB"));
-        check("שלב 2: השורה מהטופס מובנת למנוע (בלי שגיאת תחביר)", p.steps.size() == 1
-                && (p.steps.get(0).error == null || !p.steps.get(0).error.contains("לא הובן")));
-
         java.util.Map<String, String> vars = Batch.vars(new File("/storage/emulated/0/קיצורי דרך"), "/storage/emulated/0", "/storage/AAAA-BBBB");
-        eq("שלב 2: מסלול מהבורר — המשתנה הארוך ביותר", "%הורדות%\\ספרים", BatchLine.toVar("/storage/emulated/0/Download/ספרים", vars));
-        eq("שלב 2: פנימי", "%פנימי%\\ספרים\\חדשים", BatchLine.toVar("/storage/emulated/0/ספרים/חדשים", vars));
-        eq("שלב 2: כרטיס", "%כרטיס%", BatchLine.toVar("/storage/AAAA-BBBB", vars));
-        eq("שלב 2: מחוץ למשתנים — כמו שהוא, עם \\", "\\mnt\\x", BatchLine.toVar("/mnt/x", vars));
-        check("שלב 2: הסבר לכל פקודה", !BatchLine.help("MOVE").isEmpty() && BatchLine.help("FORMAT").isEmpty());
+        eq("שלב 2: מסלול מהבורר — המשתנה הארוך ביותר", "%הורדות%\\ספרים", Batch.toVar("/storage/emulated/0/Download/ספרים", vars));
+        eq("שלב 2: פנימי", "%פנימי%\\ספרים\\חדשים", Batch.toVar("/storage/emulated/0/ספרים/חדשים", vars));
+        eq("שלב 2: כרטיס", "%כרטיס%", Batch.toVar("/storage/AAAA-BBBB", vars));
+        eq("שלב 2: מחוץ למשתנים — כמו שהוא, עם \\", "\\mnt\\x", Batch.toVar("/mnt/x", vars));
     }
 
     // ---------- תיקוני הביקורות השישית והשביעית ----------
@@ -2599,15 +2548,6 @@ public final class Tests {
         eq("139: %~dp0\\ — גם עם לוכסן", new File(root, "x.pdf").getAbsolutePath(), Batch.path("%~dp0\\x.pdf", root, vars, err));
         Batch.Plan e = Batch.plan("ECHO.\nECHO שלום", root, vars);
         check("139: ECHO. — מוכר", e.errors == 0 && e.echoes.size() == 2);
-
-        // 122: הטופס לא משנה שורה בשקט
-        eq("122: /S ב-DEL נשמר", "DEL %הורדות%\\*.pdf /S", BatchLine.parse("DEL %הורדות%\\*.pdf /S").toLine());
-        eq("122: /S ב-COPY נשמר", "COPY a b /S", BatchLine.parse("COPY a b /S").toLine());
-        eq("122: גודל בלי סימן — נשמר כמו שהוא", "DEL a /גודל:10MB", BatchLine.parse("DEL a /גודל:10MB").toLine());
-        BatchLine bytes = BatchLine.parse("DEL a\\*.* /גודל:<500");
-        int ui = java.util.Arrays.asList(BatchLine.SIZE_UNITS).indexOf(bytes.sizeUnit);
-        bytes.sizeUnit = BatchLine.SIZE_UNITS[ui < 0 ? 2 : ui];      // מה שהטופס עושה בשמירה בלי שינוי
-        eq("122(ג): בתים נשארים בתים אחרי הטופס", "DEL a\\*.* /גודל:<500", bytes.toLine());
 
         // 119: אריזה כשהפלט בתוך התיקייה
         File prog = new File(root, "תוכנה");
@@ -2719,8 +2659,8 @@ public final class Tests {
         check("142: הפעולות — \"ואז הדבקה\"", Actions.MOVE_TO_FOLDER.label.contains("הדבקה") && Actions.COPY_TO_FOLDER.label.contains("הדבקה"));
 
         // 129: שם אופן — אותו כלל של שם בכונן
-        check("129: שם אופן עם \":\" נדחה", Modes.create("בדיקות: מקיפות", null) != null);
-        check("129: שם אופן עם \"?\" נדחה", Modes.create("מה?", null) != null);
+        check("129: שם אופן עם \":\" נדחה", Modes.create("בדיקות: מקיפות") != null);
+        check("129: שם אופן עם \"?\" נדחה", Modes.create("מה?") != null);
     }
 
     // ---------- הלוח ברשימות (142), ומהירות הבורר (133) ----------
@@ -2816,8 +2756,6 @@ public final class Tests {
         // התנאים של הרשימות החכמות הישנות (מהרשימות הקבועות) — נקלטים
         for (String old : new String[]{"תאריך:יום", "תאריך:שבוע", "תאריך:חודש", "תאריך:שנה", "גודל:>1MB", "גודל:>10MB", "גודל:>100MB", "גודל:<1MB"})
             check("128: תנאי ישן נקלט — " + old, new DateSize().take(old));
-        // אותו תחביר בקובצי הפקודות
-        eq("128: שורת פקודה דרך DateSize", "DEL a\\*.* /תאריך:<שנה /גודל:<500", BatchLine.parse("DEL a\\*.* /תאריך:<שנה /גודל:<500").toLine());
         Cond c = Cond.parse("סוג:pdf " + d.toCond());
         check("128: התנאי מובן לחיפוש", c.unknown.isEmpty() && c.tests.size() == 3);
 
@@ -2869,10 +2807,6 @@ public final class Tests {
         check("131: פריט אחד / רשימה אחת", Words.items(1).equals("פריט אחד") && Words.lists(4).equals("4 רשימות"));
         check("131: ועוד", Words.andMore(18).equals("ועוד 18"));
         check("187: שינוי אחד / 3 שינויים (ביומן)", Words.Lib.changes(1).equals("שינוי אחד") && Words.Lib.changes(3).equals("3 שינויים"));
-        // קובצי פקודות — הסבר אחד לכל פקודה, גם בעורך וגם בשגיאות
-        for (String c : BatchLine.COMMANDS)
-            check("131: הסבר ושימוש — " + c, BatchLine.help(c).startsWith(c + " — ") && BatchLine.help(c).endsWith(Words.Cmd.usage(c)));
-        check("131: פקודה לא מוכרת — בלי הסבר", BatchLine.help("XCOPY").isEmpty());
         Batch.Plan p = Batch.plan("RD\n", new File("/x"), Batch.vars(new File("/x"), "/p", null));
         check("131: שגיאת שימוש — מהמילון", p.steps.size() == 1 && Words.Cmd.usage("RD").equals(p.steps.get(0).error));
         // התחביר במקום אחד: התבנית והטופס מבינים זה את זה
@@ -2880,8 +2814,6 @@ public final class Tests {
         check("131: התבנית — המשתנים מהתחביר", t.contains(Batch.var(Batch.V_HERE)) && t.contains(Batch.var(Batch.V_DOWNLOADS)));
         check("131: התבנית — שם תפוס מהתחביר", t.contains(Batch.SW_TAKEN + Batch.TAKEN_SKIP));
         check("131: תאריך וגודל — מ-DateSize", Batch.SW_DATE.equals(DateSize.DATE) && Batch.SW_SIZE.equals(DateSize.SIZE));
-        BatchLine b = BatchLine.parse("COPY a b " + Batch.SW_TAKEN + Batch.TAKEN_SKIP);
-        check("131: /תפוס:לדלג — נקלט ונכתב בחזרה", b.taken == 1 && b.toLine().endsWith(Batch.SW_TAKEN + Batch.TAKEN_SKIP));
         // שמות בכונן — מ-Paths
 
         String src = System.getProperty("vfm.src");
@@ -3308,12 +3240,11 @@ public final class Tests {
     /** 1.22.5: ההגדרה האחת — שלמה, תואמת למנוע, וכל פרמטר עם שם והסבר. */
     private static void v1225() {
         check("1.22.5: פקודות הקבצים — אותן ובאותו סדר (מ0.14: ודא)",
-                java.util.Arrays.equals(BatchLine.COMMANDS, new String[]{"COPY", "MOVE", "DEL", "REN", "MD", "RD", "COMP", "LINK", "VERIFY", "MODE", "CONTINUE", "WRITE", "WAIT", "BACKUP", "REFRESH", "REPORT", "CALL", "START", "ECHO", "REM"}));
+                java.util.Arrays.equals(Commands.fileNames(), new String[]{"COPY", "MOVE", "DEL", "REN", "MD", "RD", "COMP", "LINK", "VERIFY", "MODE", "CONTINUE", "WRITE", "WAIT", "BACKUP", "REFRESH", "REPORT", "CALL", "START", "ECHO", "REM"}));
         check("1.22.5: שמות נרדפים", Commands.canonical("MKDIR").equals("MD") && Commands.canonical("rmdir").equals("RD")
                 && Commands.canonical("ERASE").equals("DEL") && Commands.canonical("RENAME").equals("REN")
                 && Commands.canonical("copy").equals("COPY") && Commands.canonical("FORMAT").equals("FORMAT")
                 && Commands.canonical("ECHO.").equals("ECHO."));
-        check("1.22.5: שם נרדף בטופס", BatchLine.parse("MKDIR \"%פנימי%\\x\"").cmd.equals("MD"));
         for (Commands.Def d : Commands.ALL) {
             check("1.22.5: מה עושה — " + d.name, !d.what.isEmpty());
             check("1.22.5: שימוש — " + d.name, !d.usage().isEmpty() && (d.family != Commands.Family.FILE || d.usage().startsWith(Commands.word(d))));   // מ0.38: בעברית
@@ -3402,7 +3333,6 @@ public final class Tests {
             check("1.22.0: רשימה ריקה — שגיאה", Batch.plan("COMP /רשימה:ריקה \"גיבוי\\נוכחי\"", r1, vars, lib).errors == 1);
             check("1.22.0: בלי אינדקס — שגיאה", Batch.plan("COMP /רשימה:\"המסמכים שלי\" \"גיבוי\\נוכחי\"", r1, vars).errors == 1);
             check("1.22.0: /רשימה: ב־COPY — שגיאה", Batch.plan("COPY /רשימה:x Docs ש", r1, vars, lib).errors >= 1);
-            eq("1.22.0: הטופס — COMP עם רשימה נשמר", "COMP גיבוי\\נוכחי /רשימה:x", BatchLine.parse("COMP /רשימה:x \"גיבוי\\נוכחי\"").toLine());
             // 1.22.4: קבצי הגיבוי לא בחיפוש הרגיל (ממצא 6); כן — עם מצב:
             boolean inBk = false, anyTxt = false;
             for (Library.Hit hh : lib.search("סוג:txt", false, true).hits) {
@@ -3422,9 +3352,6 @@ public final class Tests {
             }
             String nf = Batch.plan("COMP /רשימה:\"אין כזו\" \"גיבוי\\נוכחי\"", r1, vars, lib).steps.get(0).error;
             Batch.Plan amb = Batch.plan("COMP /רשימה:כפול \"גיבוי\\נוכחי\"", r1, vars, lib);
-            String line = BatchLine.parse("COMP /רשימה:\"המסמכים שלי\" יעד /יומן:\"גיבוי\\יומן חדש.txt\"").toLine();
-            check("1.22.0: הטופס — ערך עם רווח נשאר במרכאות", line.contains("/רשימה:\"המסמכים שלי\"") && line.contains("/יומן:\"גיבוי\\יומן חדש.txt\"")
-                    && BatchLine.parse(line).toLine().equals(line));
         } finally {
         }
     }
@@ -3672,7 +3599,6 @@ public final class Tests {
         check("1.20.0: יעד חסר בלי MD — שגיאה", Batch.plan("COMP מסמכים אין-כזה", root, vars).errors == 1);
         check("1.20.0: /עד: לא מספר — שגיאה", Batch.plan("COMP מסמכים גיבוי\nMOVE %רק-ביעד% ה /עד:הרבה", root, vars).errors == 1);
         check("1.20.0: /תפוס:לעצור — מוכר", Batch.plan("COPY מסמכים\\*.* גיבוי /תפוס:לעצור", root, vars).errors == 0);
-        eq("1.20.0: הטופס — COMP נשמר", "COMP מסמכים גיבוי", BatchLine.parse("COMP מסמכים גיבוי").toLine());
     }
 
     private static String read(File f) {
@@ -3798,9 +3724,6 @@ public final class Tests {
         Batch.run(p, lib, null, null);
         lib.flush(5000);
         check("1.19.0: MOVE /S", new File(root, "יעד-מעבר/פ/ק.pdf").isFile() && !new File(mv, "פ").exists() && mv.isDirectory());
-        // השורה בטופס — המתגים נשמרים
-        BatchLine bl = BatchLine.parse("COPY מקור יעד /S /יומן:\"י\\1.txt\"");
-        check("1.19.0: הטופס — /S ו־/יומן: נשמרים", bl.toLine().contains("/S") && bl.toLine().contains("/יומן:"));
     }
 
     private static void v1180() {

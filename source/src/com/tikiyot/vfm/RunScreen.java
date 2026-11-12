@@ -154,7 +154,7 @@ public class RunScreen extends Activity {
                 Batch.Plan p = null;
                 Throwable err = null;
                 try {
-                    p = Batch.plan(body, here, vars, lib, progress(pr, true));
+                    p = Batch.plan(body, here, vars, lib, progress(pr));
                 } catch (Throwable t) {
                     err = t;
                     Log.e("הכנת קובץ פקודות: " + file, t);
@@ -188,9 +188,9 @@ public class RunScreen extends Activity {
         for (String e : plan.echoes) bodies[1].addView(info("💬 " + e));
         for (Batch.Step s : ok)                                                // 1.27.0: היעד "החדש" כבר קיים — אזהרה
             if (s.noop && s.listPath != null && s.cmd.equals("MD")) bodies[1].addView(warn(Words.Run.exists(s.target)));
-        row(bodies[1], Words.Run.WILL_CREATE, names(ok, Batch.K_CREATE, false));
-        row(bodies[1], Words.Run.WILL_CHANGE, names(ok, Batch.K_CHANGE, false));
-        row(bodies[1], Words.Run.WILL_DELETE, names(ok, Batch.K_DELETE, false));
+        row(bodies[1], Words.Run.WILL_CREATE, names(ok, Batch.K_CREATE));
+        row(bodies[1], Words.Run.WILL_CHANGE, names(ok, Batch.K_CHANGE));
+        row(bodies[1], Words.Run.WILL_DELETE, names(ok, Batch.K_DELETE));
         row(bodies[1], Words.Run.DISK, diskText(ok));
         if (plan.errors > 0) row(bodies[1], Words.Run.ERRORS, String.valueOf(plan.errors));
         for (String n : plan.notes) bodies[1].addView(info(n));
@@ -277,7 +277,7 @@ public class RunScreen extends Activity {
             public void run() {
                 List<String> rep;
                 try {
-                    rep = Batch.run(plan, lib, new Physical.DialogAsker(RunScreen.this), progress(null, false), Acts.deletedStaysGrey(), listen);
+                    rep = Batch.run(plan, lib, new Physical.DialogAsker(RunScreen.this), progress(null), Acts.deletedStaysGrey(), listen);
                 } catch (Throwable t) {
                     Log.e("הרצת קובץ פקודות: " + file, t);
                     rep = new ArrayList<String>();
@@ -309,9 +309,9 @@ public class RunScreen extends Activity {
         }
         for (String e : plan.echoes) bodies[3].addView(info("💬 " + e));
         for (String in : plan.inputs) bodies[3].addView(info(in));
-        row(bodies[3], Words.Run.CREATED, names(ran, Batch.K_CREATE, true));
-        row(bodies[3], Words.Run.CHANGED, names(ran, Batch.K_CHANGE, true));
-        row(bodies[3], Words.Run.DELETED, names(ran, Batch.K_DELETE, true));
+        row(bodies[3], Words.Run.CREATED, names(ran, Batch.K_CREATE));
+        row(bodies[3], Words.Run.CHANGED, names(ran, Batch.K_CHANGE));
+        row(bodies[3], Words.Run.DELETED, names(ran, Batch.K_DELETE));
         row(bodies[3], Words.Run.DISK, diskText(ran));
         row(bodies[3], Words.Run.SKIPPED, skipped == 0 ? Words.Ed.NONE : String.valueOf(skipped));
         row(bodies[3], Words.Run.TIME, Words.Loop.time(took));
@@ -463,7 +463,7 @@ public class RunScreen extends Activity {
 
     // ---------- עזר ----------
 
-    private String names(List<Batch.Step> steps, int kind, boolean after) {
+    private String names(List<Batch.Step> steps, int kind) {
         Set<String> out = new LinkedHashSet<String>();
         int n = 0;
         for (Batch.Step s : steps) {
@@ -496,7 +496,7 @@ public class RunScreen extends Activity {
         return out;
     }
 
-    private Physical.Progress progress(final TextView t, final boolean planning) {
+    private Physical.Progress progress(final TextView t) {
         return new Physical.Progress() {
             long last;
 

@@ -113,7 +113,7 @@ final class HoleForm {
                         });
                     } else {
                         FolderPicker.choose(a, h, true, new FolderPicker.Picked() {
-                            @Override public void ok(File folder) { e.setText(BatchLine.toVar(folder.getAbsolutePath(), vars)); }
+                            @Override public void ok(File folder) { e.setText(Batch.toVar(folder.getAbsolutePath(), vars)); }
                         });
                     }
                 }

@@ -542,7 +542,7 @@ final class Diag {
     private static void general(final Activity a, final Physical.Progress progress, StringBuilder sb) {
         part(sb, "9. הבדיקה הכללית", new Part() {
             @Override public void run(StringBuilder sb) throws Throwable {
-                File f = DbTestMode.generalFile(a);
+                File f = DbTestMode.generalFile();
                 File dir = f.getParentFile();
                 if (!dir.isDirectory() || !DbScreen.dbFile(a, Words.DbCmd.TEST_MODE).isFile()) {
                     sb.append("לא רצה: האופן \"בדיקות מערכת\" עוד לא קיים. לפתוח פעם אחת ⋮ ← בדיקות, ואז להריץ שוב את הדוח\n");

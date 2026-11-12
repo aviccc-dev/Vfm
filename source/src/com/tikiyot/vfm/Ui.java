@@ -288,12 +288,12 @@ public final class Ui {
     /** האם להציג נתונים מלאים בשורות. נזכר לכל התוכנה. */
     private static Boolean fullCache;
 
-    public static boolean full(Context c) {
+    public static boolean full() {
         if (fullCache == null) fullCache = Conf.is(Conf.GENERAL, Conf.FULL, false);
         return fullCache;
     }
 
-    public static void setFull(Context c, final boolean v) {
+    public static void setFull(final boolean v) {
         fullCache = v;
         new Thread(new Runnable() {
             @Override public void run() { Conf.setBool(Conf.GENERAL, Conf.FULL, v); }
@@ -305,9 +305,9 @@ public final class Ui {
      * רגילה: שם (עד שתי שורות), ושורה קבועה "תאריך · גודל · 📁 תיקייה". מלאה: שם מלא, אותה שורה,
      * המסלול המלא בלי חיתוך, ומצב.
      */
-    public static void bindRow(Context c, View row, String name, boolean isDir, long size, long mtime,
+    public static void bindRow(View row, String name, boolean isDir, long size, long mtime,
                                String path, String status, String queryNorm) {
-        boolean full = full(c);
+        boolean full = full();
         TextView[] v = (TextView[]) row.getTag();
         clearKind(v);
         String label = typeLabel(name, isDir);
