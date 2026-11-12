@@ -215,6 +215,17 @@ final class Batch {
             final boolean deep = tk.size() == 2 && tk.get(1).trim().equals(W_DEEP);
             if (tk.size() > 2 || (tk.size() == 2 && !deep)) { s.error = Words.DbCmd.REFRESH_USAGE; return true; }
             s.describe = Words.DbCmd.refreshWill(deep);
+            // מ0.40 — המשתמש: "הוא יכול להריץ פקודה 'רענן אינדקס' לפני שהוא מתחיל". עד כאן "רענן" רץ רק בהרצה — אחרי שכל
+            // השורות כבר תוכננו, ורשימה חכמה בשורה שאחריו לא ראתה קובץ שהורד הרגע. עכשיו — רענון מהיר כבר בהכנה (ברקע, לא
+            // משנה קבצים), והשורות שאחריו מתוכננות מול האינדקס המעודכן. בהרצה — כמו קודם (גם מה ששורות קודמות שינו).
+            if (sim.lib != null && sim.lib.ready)
+                try {
+                    int n = sim.lib.refreshAsked();
+                    sim.condFiles.clear();                                           // מה שחכמות מצאו לפני הרענון — לא תקף
+                    s.describe += Words.DbCmd.refreshedInPlan(n);
+                } catch (Throwable t) {
+                    Log.e("Batch.plan: רענן", t);                                     // בכונן
+                }
             s.op = new ListCmd.Op() {
                 @Override public String run(Library lib) {
                     if (lib == null) return Words.DbCmd.refreshWill(deep);

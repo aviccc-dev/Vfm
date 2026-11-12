@@ -2394,6 +2394,8 @@ public final class Words {
         public static String reportFailed(String why) { return "⚠ היומן לא נכתב לקובץ: " + why; }
         public static String refreshWill(boolean deep) { return deep ? "רענון עמוק של האינדקס" : "רענון של האינדקס"; }
         public static String refreshed(int n) { return "האינדקס רוענן · " + n + " שינויים"; }
+        /** מ0.40: הרענון המהיר שכבר בהכנה — כדי שהשורות שאחריו יראו קבצים חדשים. */
+        public static String refreshedInPlan(int n) { return " (כבר בהכנה: " + n + " שינויים — השורות שאחריו רואות קבצים חדשים)"; }
         public static String backupWill(String mode) { return "גיבוי ידני של המסד של האופן \"" + mode + "\""; }
         public static String backedUp(String mode, String names) { return "נעשה גיבוי של האופן \"" + mode + "\": " + names; }
         public static String writeNoFolder(String p) { return "אין תיקייה: " + p; }

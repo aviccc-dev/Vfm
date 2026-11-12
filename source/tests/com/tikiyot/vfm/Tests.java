@@ -1977,6 +1977,14 @@ public final class Tests {
             eq("מ0.40: /מכיל: ריק — שגיאה", 1, Batch.plan("העתק \"%כאן%\\א\\*.txt\" \"%כאן%\\ב\" /מכיל:\n", r, v).errors);
             eq("מ0.40: /תפוס: לא מוכר — שגיאה שמונה גם את לשנות-שם", true,
                     String.valueOf(Batch.plan("העתק \"%כאן%\\א\\*.txt\" \"%כאן%\\ב\" /תפוס:בלה\n", r, v).steps.get(0).error).contains(Batch.TAKEN_RENAME));
+            File fresh = new File(a, "חדש-מהורדה.txt");                       // "רענן" כבר בהכנה — השורות שאחריו רואות קובץ חדש
+            Files.writeAtomic(fresh, "חדש");
+            new File(a, ".").setLastModified(System.currentTimeMillis() + 5000);
+            a.setLastModified(System.currentTimeMillis() + 5000);
+            boolean before = lib.find(fresh.getAbsolutePath()) != null;
+            Batch.Plan rf = Batch.plan("רענן\n", r, v, lib);
+            check("מ0.40: \"רענן\" — כבר בהכנה: הקובץ החדש באינדקס לפני השורה הבאה (" + rf.steps.get(0).describe + ")", !before
+                    && lib.find(fresh.getAbsolutePath()) != null && rf.errors == 0);
             File big = new File(r, "גדול.bin");
             byte[] data = new byte[200000];
             byte[] word = "סוף-הקובץ".getBytes("UTF-8");
