@@ -1,6 +1,6 @@
 package com.tikiyot.vfm;
 
-// פונקציה: תיקייה חכמה — תנאי שמוצג כתיקייה.
+// כלי: רשימה חכמה — תנאי שנפתח במסך החיפוש; והטופס שלה (SmartForm).
 
 import android.app.Activity;
 import android.content.Intent;

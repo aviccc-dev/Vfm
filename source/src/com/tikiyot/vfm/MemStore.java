@@ -1,6 +1,7 @@
 package com.tikiyot.vfm;
 
-// Store בזיכרון — הבדיקות במחשב. אחראי: אותה התנהגות בדיוק כמו SqlStore (StoreContract מוכיח). אסור לו: להישמר.
+// Store בזיכרון — לבדיקות במחשב, ולהדמיה של קובץ פקודות (DbListCmd.copyOf: העותק שהשורות רצות עליו בתכנון).
+// אחראי: אותה התנהגות בדיוק כמו SqlStore (StoreContract מוכיח). אסור לו: להישמר.
 
 import java.io.IOException;
 import java.util.ArrayList;
