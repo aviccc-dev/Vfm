@@ -158,5 +158,32 @@ public final class Select {
                 if (after != null) after.run();
             }
         }, own);
+        if (tool == Actions.Tool.TRASH) return;                               // קבצים שבסל — רק שחזור ומחיקה
+        bar.more(new SelectBar.More() {                                       // מ0.41: הפקודות של רשימת "בחירה" (Menus)
+            @Override
+            public void fill(List<String> labels, List<Runnable> actions) {
+                if (files.isEmpty() && dirs.isEmpty()) return;
+                final List<String> paths = new ArrayList<String>(files);
+                paths.addAll(dirs);
+                for (Menus.Item it : Menus.get(a).at(Menus.SELECT_PATH)) {
+                    if (it.e.kind != DbMore.E_FILE) continue;
+                    final java.io.File f = new java.io.File(it.e.path);
+                    if (!f.isFile()) continue;
+                    final String text = Menus.textOf(f);
+                    if (text == null) continue;
+                    if (!Menus.fits(a, f, text, new ArrayList<String>(files), new ArrayList<String>(dirs), lists.size())) continue;
+                    String[] look = Menus.look(f);
+                    labels.add(look[0] + "  " + look[1]);
+                    actions.add(new Runnable() {
+                        @Override
+                        public void run() {
+                            BatchUi.run(a, f, Menus.expand(text, paths), true);
+                            stop();
+                            if (after != null) after.run();
+                        }
+                    });
+                }
+            }
+        });
     }
 }

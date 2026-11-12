@@ -52,10 +52,29 @@ final class BatchUi {
             Ui.toast(a, Words.CANT_READ_FILE);
             return;
         }
+        run(a, f, text, false);
+    }
+
+    /**
+     * מ0.41: הרצה של טקסט בשם של קובץ. other — הטקסט אינו מה שכתוב בקובץ (פקודה מרשימת "בחירה": %נבחרים% כבר הוחלף בקבצים
+     * שנבחרו; הקובץ עצמו לא משתנה) — למסך ההרצה נכתב עותק זמני, ו־%כאן% נשאר התיקייה של הקובץ.
+     */
+    static void run(final Activity a, final File f, final String text, boolean other) {
         String verb = Batch.singleVerb(text);                                  // מ0.41: פקודת פתיחה אחת — מיד (כמו כפתור)
         if (verb != null && Verbs.run(a, verb, f.getParentFile())) return;
         if (Batch.wantsCheck(text)) {                                          // 1.28.0: מסך ההרצה — רק עם "בדיקה"
-            RunScreen.start(a, f);
+            File shown = f;
+            if (other)
+                try {
+                    shown = new File(new File(a.getCacheDir(), "select"), f.getName());
+                    shown.getParentFile().mkdirs();
+                    Files.writeAtomic(shown, text);
+                } catch (Throwable t) {
+                    Log.e("BatchUi.run — עותק זמני", t);
+                    Ui.toast(a, Words.Db.failed(String.valueOf(t.getMessage())));
+                    return;
+                }
+            RunScreen.start(a, shown, other ? f.getParentFile() : null);
             return;
         }
         final Map<String, String> vars0 = vars(a, f.getParentFile());

@@ -134,6 +134,7 @@ public class DbListScreen extends ListScreen<Store.Member> {
         if (sortBy == null) sortBy = "";
         currentMode = mode;                                                   // מ0.41: לפני שהשורות מצוירות — התפריטים של האופן הזה
         atHome = homeNow();                                                   // ...ושל מסך הבית, אם זה הבית
+        Menus.ensure(this);                                                   // מ0.41: אופן התפריטים — לפני כל כתיבה אחרת למסדים
         if (Ui.hasFiles(this)) DbCmdMenu.ensureToolsAsync(this, mode);      // מ0.23: יצוא וייבוא ב־⭐
         LinearLayout root = build(saved, Words.Db.APP_NAME_M, "db-list");
         modeBox = new TextView(this);                                         // כמו בבית הישן (Home, 105)

@@ -37,6 +37,26 @@ public final class SelectBar {
 
     private final List<Item> items = new ArrayList<Item>();
 
+    /** מ0.41: פעולות שנקבעות בכל רגע מבחוץ (הפקודות של רשימת "בחירה", לפי מה שנבחר עכשיו) — תחת "עוד", אחרי הקבועות. */
+    public interface More {
+        void fill(List<String> labels, List<Runnable> actions);
+    }
+
+    private More moreSource;
+
+    public void more(More m) {
+        moreSource = m;
+    }
+
+    private void fromOutside(List<String> labels, List<Runnable> actions) {
+        if (moreSource == null) return;
+        try {
+            moreSource.fill(labels, actions);
+        } catch (Throwable t) {
+            Log.e("SelectBar.more", t);
+        }
+    }
+
     public SelectBar(Activity a, final Runnable onDone) {
         this.a = a;
         view = new LinearLayout(a);
@@ -196,14 +216,18 @@ public final class SelectBar {
     }
 
     private void showGroup(boolean phys) {
-        final List<Item> list = group(phys);
-        if (list.isEmpty()) return;
-        String[] labels = new String[list.size()];
-        for (int i = 0; i < labels.length; i++) labels[i] = list.get(i).label;
+        final List<String> names = new ArrayList<String>();
+        final List<Runnable> runs = new ArrayList<Runnable>();
+        for (Item it : group(phys)) {
+            names.add(it.label);
+            runs.add(it.action);
+        }
+        if (!phys) fromOutside(names, runs);                                  // מ0.41: הפקודות של "בחירה"
+        if (names.isEmpty()) return;
         AlertDialog.Builder b = new AlertDialog.Builder(a);
         if (phys) b.setTitle(Words.SelBar.PHYSICAL_TITLE);
-        b.setItems(labels, new DialogInterface.OnClickListener() {
-            @Override public void onClick(DialogInterface d, int w) { list.get(w).action.run(); }
+        b.setItems(names.toArray(new String[0]), new DialogInterface.OnClickListener() {
+            @Override public void onClick(DialogInterface d, int w) { runs.get(w).run(); }
         }).show();
     }
 
@@ -233,6 +257,11 @@ public final class SelectBar {
             if (it.main) it.tile.setVisibility(ok ? View.VISIBLE : View.GONE);
             else if (ok && it.physical) phys = true;
             else if (ok) any = true;
+        }
+        if (!any && moreSource != null) {                                    // מ0.41: רק פקודות של "בחירה" — "עוד" מוצג בגללן
+            List<String> l = new ArrayList<String>();
+            fromOutside(l, new ArrayList<Runnable>());
+            any = !l.isEmpty();
         }
         more.setVisibility(any ? View.VISIBLE : View.GONE);
         physical.setVisibility(phys ? View.VISIBLE : View.GONE);
