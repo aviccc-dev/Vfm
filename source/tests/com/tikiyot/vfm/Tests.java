@@ -2180,18 +2180,14 @@ public final class Tests {
             String html = Files.readUtf8(asset);
             String[] nv = Lab.nameOf(html, asset.getName());
             eq("מ0.41: העמוד שבהתקנה — התוסף שהכפתור פותח", Words.DbCmd.TOOL_EDITOR, nv[0]);
-            int best = 0;
-            File newest = null;
+            File same = null;                                                   // עותק העבודה יכול להיות כבר בגרסה הבאה — משווים לאותה גרסה
             File[] k = pages.listFiles();
             if (k != null) for (File f : k) {
                 if (!Lab.isHtml(f.getName())) continue;
                 String[] x = Lab.nameOf(Files.readUtf8(f), f.getName());
-                if (!x[0].equals(nv[0])) continue;
-                int v = 0;
-                try { v = Integer.parseInt(x[1]); } catch (NumberFormatException e) { v = 0; }
-                if (v > best) { best = v; newest = f; }
+                if (x[0].equals(nv[0]) && x[1].equals(nv[1])) same = f;
             }
-            check("מ0.41: ...והוא זהה לגרסה האחרונה שב־lab-pages (" + best + ")", newest != null && Files.readUtf8(newest).equals(html) && String.valueOf(best).equals(nv[1]));
+            check("מ0.41: ...והוא זהה לעמוד של אותה גרסה שב־lab-pages (" + nv[1] + ")", same != null && Files.readUtf8(same).equals(html));
             File root = new File(home, "תוספים-041");
             wipe(root);
             File first = Lab.addBundled(root, html, asset.getName());
