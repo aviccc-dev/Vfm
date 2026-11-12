@@ -540,7 +540,10 @@ function allowed0(m){
   if(m.cmd==='העתק'||m.cmd==='העבר'){
     if(isL(v[1]))return [];
     if(isL(v[0]))return ok.filter(x=>x==='הכל'||x==='מכיל בקובץ'||DETS[x].g==='taken');
-    return ok;
+    // מ0.40: מתג שלא שייך — שגיאה במנוע. "עד אחוז" — רק למה שההשוואה מצאה; ושם אין סינון ואין "מצב לפי זמן"
+    const cmp=v[0]&&/^%רק-(במקור|ביעד)%$/.test(String(v[0].raw||'').trim());
+    if(cmp)return ok.filter(x=>x==='עד אחוז'||x==='יומן'||DETS[x].g==='taken');
+    return ok.filter(x=>x!=='עד אחוז');
   }
   if(m.cmd==='מחק')return isL(v[0])?[]:ok;
   if(m.cmd==='השווה'){

@@ -355,7 +355,7 @@ final class Commands {
             new Def(Batch.CALL, Words.DbCmd.N_CALL, new String[]{Words.DbCmd.N_CALL}, Family.FILE, Words.DbCmd.W_CALL,
                     list(pos(Type.PATH, Words.Def.P_FILE, Words.DbCmd.H_CALL)), null),
             new Def("START", Words.Def.N_START, new String[]{HE_START}, Family.FILE, Words.Def.W_START,
-                    list(pos(Type.PATH, Words.Def.P_WHAT_OPEN, Words.Def.H_START, Words.Def.U_START)), null),
+                    list(pos(Type.PATH, Words.Def.P_WHAT_OPEN, Words.Def.H_START, Words.Def.U_START), hidden()), null),   // מ0.40: /נסתרים — עם תבנית
             new Def("ECHO", Words.Def.N_ECHO, new String[]{HE_ECHO}, Family.FILE, Words.Def.W_ECHO, list(pos(Type.TEXT, Words.Def.P_TEXT, Words.Def.H_TEXT)), null),
             new Def("REM", Words.Def.N_REM, new String[]{HE_REM}, Family.FILE, Words.Def.W_REM, list(pos(Type.TEXT, Words.Def.P_TEXT, Words.Def.H_TEXT)), null),
             verb(Verbs.OPEN, Words.Def.W_OPEN),

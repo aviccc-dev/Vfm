@@ -1258,6 +1258,8 @@ final class Batch {
             DbListCmd.planVerify(s, a, conds, sim);
             return;
         }
+        String bad = listSwitch(cmd, lp, sw);                                 // מ0.40 (ממצא 41): מתג שלא שייך לשורה — שגיאה
+        if (bad != null) { s.error = bad; return; }
         List<String> fsFiles = new ArrayList<String>();
         File fsDest = null;
         for (int i = 0; i < lp.sides.size(); i++) {
@@ -1284,6 +1286,28 @@ final class Batch {
         else s.error = Words.DbCmd.NO_DB;                                    // מ0.26: המנוע הישן נמחק — רשימות רק במסד
     }
 
+    /**
+     * מ0.40 (ממצא 41): המתגים שמותרים בשורה עם רשימה — לפי צורת השורה. הקבצים של רשימה אל תיקייה (העתק / העבר): /עמוק,
+     * /תפוס:…, /מכיל:; מהכונן אל רשימה: /מכיל:; השוואה: /תנאים. בכל שורה אחרת — אין מתגים. null — תקין.
+     */
+    static String listSwitch(String cmd, ListCmd.Parsed lp, List<String> sw) {
+        List<ListCmd.Side> sd = lp.sides;
+        boolean two = sd.size() == 2, transfer = cmd.equals("COPY") || cmd.equals("MOVE");
+        boolean toFolder = transfer && two && sd.get(0).list() && !sd.get(1).list() && sd.get(1).kind == ListCmd.FS;
+        boolean fromDisk = transfer && two && !sd.get(0).list();
+        for (String x : sw) {
+            String u = x.toUpperCase(Locale.ROOT);
+            if (u.equals("/Q") || u.equals("/F")) continue;
+            if (x.startsWith("/" + SW_DATE) || x.startsWith("/" + SW_SIZE)) return Words.ListCmdW.NO_FILTER;
+            if (x.startsWith("/" + SW_CONTAINS)) { if (toFolder || fromDisk) continue; return Words.ListCmdW.NO_FILTER; }
+            if (x.equals(ListCmd.SW_CONDS)) { if (cmd.equals("COMP")) continue; return Words.Cmd.switchNotHere(x, null); }
+            boolean take = u.equals("/S") || x.equals(SW_KEEP) || u.equals("/Y") || u.equals("/-Y") || x.startsWith(SW_TAKEN);
+            if (take && toFolder) continue;
+            return Words.Cmd.switchNotHere(Commands.switchWord(x), null);
+        }
+        return null;
+    }
+
     private static void plan(Step s, String cmd, List<String> args, List<String> paths, List<String> sw, Sim sim) {
         Filter flt = filter(sw);
         if (flt.error != null) {
@@ -1291,6 +1315,20 @@ final class Batch {
             return;
         }
         if (!flt.contains.isEmpty()) s.contains = flt.contains;               // מ0.40
+        // מ0.40 (ממצא 41; הכלל של המשתמש: "אין מצב שיש שגיאה והקובץ רץ ואף אחד לא יודע"): מתג שלא שייך לפקודה — שגיאה,
+        // ולא בליעה בשקט. מה מותר — מההגדרה האחת (Commands). /Q ו־/F — תאימות ל־bat, מתעלמים בכוונה.
+        Commands.Def def = Commands.get(cmd);
+        boolean fromCmp = (cmd.equals("COPY") || cmd.equals("MOVE")) && paths.size() == 2
+                && (paths.get(0).equals(ONLY_A_MARK) || paths.get(0).equals(ONLY_B_MARK));
+        if (def != null) for (String x : sw) {
+            String u = x.toUpperCase(Locale.ROOT);
+            if (u.equals("/Q") || u.equals("/F")) continue;
+            boolean ok = false;
+            for (Commands.Param p : def.params) if (p.matches(x)) ok = true;
+            if (!ok) { s.error = Words.Cmd.switchNotHere(Commands.switchWord(x), Commands.word(def)); return; }
+            if (x.startsWith(SW_LIMIT) && !fromCmp) { s.error = Words.Cmd.LIMIT_ONLY_COMPARE; return; }
+        }
+        if (fromCmp && !flt.none()) { s.error = Words.Cmd.NO_FILTER_ON_COMPARE; return; }
         for (String x : sw) {
             String u = x.toUpperCase(Locale.ROOT);
             if (u.equals("/Y") || x.equals(SW_TAKEN + TAKEN_REPLACE)) s.replace = true;

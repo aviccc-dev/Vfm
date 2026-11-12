@@ -47,10 +47,17 @@ final class ListCmd {
     static final class Tok {
         final String text;
         final boolean quoted;
+        /** מ0.40: המרכאות — רק בערך של מתג (/מכיל:"שתי מילים"): החלק מתחיל ב־"/" ולא במרכאות, ולכן הוא מתג ולא שם. */
+        final boolean valueQuoted;
 
         Tok(String text, boolean quoted) {
+            this(text, quoted, false);
+        }
+
+        Tok(String text, boolean quoted, boolean valueQuoted) {
             this.text = text;
             this.quoted = quoted;
+            this.valueQuoted = valueQuoted;
         }
     }
 
@@ -77,21 +84,23 @@ final class ListCmd {
     static List<Tok> tokens(String line) {
         List<Tok> out = new ArrayList<Tok>();
         StringBuilder cur = new StringBuilder();
-        boolean q = false, any = false, wasQ = false;
+        boolean q = false, any = false, wasQ = false, lead = false;
         for (int i = 0; i < line.length(); i++) {
             char c = line.charAt(i);
             if (c == '"') {
+                if (!any && cur.length() == 0) lead = true;                    // החלק מתחיל במרכאות — שם
                 q = !q;
                 any = true;
                 wasQ = true;
             } else if (!q && Character.isWhitespace(c)) {
-                if (any || cur.length() > 0) out.add(new Tok(cur.toString(), wasQ));
+                if (any || cur.length() > 0) out.add(new Tok(cur.toString(), wasQ, wasQ && !lead));
                 cur.setLength(0);
                 any = false;
                 wasQ = false;
+                lead = false;
             } else cur.append(c);
         }
-        if (any || cur.length() > 0) out.add(new Tok(cur.toString(), wasQ));
+        if (any || cur.length() > 0) out.add(new Tok(cur.toString(), wasQ, wasQ && !lead));
         return out;
     }
 
@@ -110,7 +119,7 @@ final class ListCmd {
         Side cur = null;
         for (int i = 1; i < tk.size(); i++) {
             Tok t = tk.get(i);
-            if (!t.quoted && (Batch.isSwitch(t.text) || t.text.equals(SW_CONDS))) {
+            if ((!t.quoted && (Batch.isSwitch(t.text) || t.text.equals(SW_CONDS))) || (t.valueQuoted && Batch.isSwitch(t.text))) {
                 switches.add(t.text);
                 continue;
             }

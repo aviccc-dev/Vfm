@@ -334,6 +334,12 @@ public final class Words {
         public static String switchUnknown(String sw) {
             return "המתג " + sw + " לא הובן";
         }
+        /** מ0.40 (ממצא 41): מתג מוכר, במקום שבו הוא לא עושה כלום. cmd — הפקודה, או null — שורה עם רשימה. */
+        public static String switchNotHere(String sw, String cmd) {
+            return "המתג " + sw + " לא שייך " + (cmd == null ? "לשורה הזו" : "לפקודה \"" + cmd + "\"") + " — הוא לא היה עושה כלום";
+        }
+        public static final String LIMIT_ONLY_COMPARE = "/עד:N% — רק אחרי \"השווה\", בשורה שהמקור שלה %רק-במקור% או %רק-ביעד%",
+                NO_FILTER_ON_COMPARE = "סינון (/תאריך, /גודל, /מכיל) לא חל על מה שההשוואה מצאה (%רק-במקור% / %רק-ביעד%)";
 
         public static String unknownCommand(String cmd) {
             return "הפקודה " + cmd + " לא מוכרת";

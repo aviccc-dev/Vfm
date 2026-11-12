@@ -12,10 +12,14 @@ final class Names {
 
     private Names() { }
 
-    /** דרך לרשימה מטקסט — "א/ב" וגם "א / ב". שם רשימה אינו מכיל "/" (מוחלף ב-"∕"). */
+    /**
+     * דרך לרשימה מטקסט — "א/ב" וגם "א / ב". שם רשימה אינו מכיל "/" ולא "\" (cleanName מחליף אותם בתווים דומים).
+     * מ0.40: גם "א\ב" — עד כאן רק שורות "ידנית …" קיבלו "\" (ListCmd), ו"פתח רשימה" / "צור רשימה" / כפתור — לא, ורשימה
+     * בשם "א\ב" "לא נמצאה". מקום אחד — לכל מי ששואל על דרך של רשימה.
+     */
     static ArrayList<String> parsePath(String text) {
         ArrayList<String> out = new ArrayList<String>();
-        if (text != null) for (String p : text.split("/")) if (!p.trim().isEmpty()) out.add(p.trim());
+        if (text != null) for (String p : text.split("[/\\\\]")) if (!p.trim().isEmpty()) out.add(p.trim());
         return out;
     }
 
