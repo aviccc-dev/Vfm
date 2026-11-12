@@ -48,6 +48,7 @@ final class Diag {
                     write(out, sb);
                     modes(a, sb);
                     engine(a, sb);
+                    menus(a, mode, sb);                                           // מ0.41
                     write(out, sb);
                     general(a, busy, sb);                                         // אחרון: אם ייתקע — הדוח שלפניו כבר כתוב
                     write(out, sb);
@@ -482,6 +483,61 @@ final class Diag {
                 sb.append(ok(ok[0])).append(text).append('\n');
             }
         });
+    }
+
+    /** מ0.41: התפריטים — מה יש ברשימות של "שמור לתוכנה", ומה כל מסך מקבל מהן (כך הבדיקה במכשיר חוזרת בדוח). */
+    private static void menus(final Activity a, final String mode, StringBuilder sb) {
+        part(sb, "12. התפריטים — מהרשימות של \"שמור לתוכנה\" (מ0.41)", new Part() {
+            @Override public void run(StringBuilder sb) throws Throwable {
+                Menus.ensure(a);
+                boolean installed = false;
+                if (DbScreen.dbFile(a, Menus.MODE).isFile()) {
+                    SqlStore s = SqlStore.openReadOnly(DbScreen.dbFile(a, Menus.MODE));
+                    try {
+                        long home = DbPaths.home(s);
+                        installed = home != 0 && "1".equals(s.prop(home, Menus.P_INSTALLED));
+                        sb.append(ok(installed)).append("אופן \"").append(Menus.MODE).append("\" מותקן · בבית: ").append(home == 0 ? "—" : names(s, home).toString()).append('\n');
+                    } finally {
+                        s.close();
+                    }
+                } else sb.append(ok(false)).append("אין מסד לאופן \"").append(Menus.MODE).append("\"\n");
+                Menus.Snap m = Menus.of(a, mode);
+                for (List<String> p : m.paths()) {
+                    Object[] w = m.where(p);
+                    sb.append("   · ").append(Names.label(p)).append(" [").append(w == null ? "?" : w[0]).append("]: ").append(shown(m.at(p))).append('\n');
+                }
+                List<Menus.Row> top = m.rows(null, Menus.ROW_TOP);
+                sb.append(ok(!top.isEmpty())).append("שורות עליונות בכל המסכים: ").append(top.size()).append(top.isEmpty() ? " — שורת החירום תוצג" : "").append('\n');
+                for (String sc : new String[]{Verbs.S_HOME, Verbs.S_LIST_SCREEN, Verbs.S_SMART_SCREEN, Verbs.S_SEARCH, Verbs.S_DISK, Verbs.S_VIRTUAL,
+                        Verbs.S_SETTINGS, Verbs.S_TRASH, Verbs.S_PLUGINS, Verbs.S_EDITOR})
+                    for (String side : new String[]{Menus.ROW_TOP, Menus.ROW_BOTTOM})
+                        for (Menus.Row r : m.rows(sc, side))
+                            if (r.items.size() != m.at(Menus.rowPath(null, side, r.n)).size())
+                                sb.append("   במסך \"").append(sc).append("\" — ").append(side).append(' ').append(r.n).append(": ").append(shown(r.items)).append('\n');
+                StringBuilder sel = new StringBuilder();
+                for (Menus.Item it : m.at(Menus.SELECT_PATH)) {
+                    if (it.e.kind != DbMore.E_FILE) continue;
+                    String t = Menus.textOf(new File(it.e.path));
+                    int ar = t == null ? -1 : Menus.arity(t);
+                    sel.append(sel.length() > 0 ? " · " : "").append(new File(it.e.path).getName()).append(ar == 2 ? " (כמה קבצים)" : ar == 1 ? " (קובץ אחד)" : ar == 0 ? " (בלי %נבחרים%)" : " (לא נקרא)");
+                }
+                sb.append("רשימת \"בחירה\": ").append(sel.length() == 0 ? "ריקה" : sel.toString()).append('\n');
+                Lab.Page pg = Lab.newest(Lab.root(), Words.DbCmd.TOOL_EDITOR);
+                sb.append(ok(pg != null)).append("התוסף \"").append(Words.DbCmd.TOOL_EDITOR).append("\" בתיקיית התוספים: ").append(pg == null ? "אין (נכנס בפתיחה הראשונה של מסך התוספים)" : "גרסה " + pg.ver).append('\n');
+                File old = Buttons.file();
+                sb.append("קובץ הכפתורים הישן: ").append(old.isFile() ? "קיים (" + old.length() + " בתים) — השורות שבו עברו לרשימות בהתקנה" : "אין").append('\n');
+            }
+        });
+    }
+
+    private static String shown(List<Menus.Item> items) {
+        StringBuilder sb = new StringBuilder();
+        for (Menus.Item it : items) {
+            String n = it.e.kind == DbMore.E_FILE ? Text.stem(new File(it.e.path).getName()) + (new File(it.e.path).isFile() ? "" : " (אין קובץ!)")
+                    : (it.e.kind == DbMore.E_LIST ? "☰ " : "📜 ") + it.e.label;
+            sb.append(sb.length() > 0 ? " · " : "").append(n);
+        }
+        return sb.length() == 0 ? "—" : sb.toString();
     }
 
     /** "הבדיקה הכללית" — כמו מהתפריט (באופן "בדיקות מערכת"), והיומן שלה. */

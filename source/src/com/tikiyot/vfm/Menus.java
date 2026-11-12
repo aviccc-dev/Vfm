@@ -331,10 +331,14 @@ final class Menus {
     }
 
     /** התמונה של עכשיו — מהזיכרון, אם המסדים לא השתנו. לא זורקת: תקלה — תמונה ריקה (והמסך מצייר את שורת החירום). */
-    static synchronized Snap get(Context c) {
+    static Snap get(Context c) {
+        return of(c, DbListScreen.currentMode);
+    }
+
+    /** התמונה לאופן מסוים (הכללי, ואחריו שלו). */
+    static synchronized Snap of(Context c, String cur) {
         try {
             ensure(c);
-            String cur = DbListScreen.currentMode;
             return new Snap(load(c, MODE), cur == null || cur.equals(MODE) ? null : load(c, cur));
         } catch (Throwable t) {
             Log.e("Menus.get", t);
