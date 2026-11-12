@@ -87,7 +87,9 @@ final class DbTestMode {
             put(a, ASSET_ALL, all, null);
             put(a, ASSET_STRESS, stress, null);
             put(a, ASSET_LOAD, load, realMode(a, mode));
-            put(a, ASSET_SYSTEM, system, null);
+            put(a, ASSET_SYSTEM, system, realMode(a, mode));                     // מ0.41: הניקוי שבסוף — גם באופן האמיתי ("בדיקת עומס")
+            for (String leftover : new String[]{"יצוא-בדיקה.txt", "יצוא-בדיקה-קבצים.txt"})   // בכונן — מ0.41: קובצי היצוא של הכללית כבר לא נכתבים לכאן
+                new File(dir, leftover).delete();
             final List<String> run = Collections.singletonList(system.getAbsolutePath());
             final List<String> keep = java.util.Arrays.asList(system.getAbsolutePath(), all.getAbsolutePath(), stress.getAbsolutePath(),
                     load.getAbsolutePath(), modes.getAbsolutePath());

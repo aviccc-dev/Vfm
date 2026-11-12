@@ -2069,7 +2069,24 @@ public final class Tests {
             }
             check("מ0.40: \"בדיקת מערכת\" — כל החלקים נכללים (" + sp.steps.size() + " שורות), והדוח נכתב לקובץ", calls == 0 && sp.steps.size() > 200
                     && sp.reportFile != null && sp.reportFile.endsWith("דוח בדיקת מערכת.txt"));
-            eq("מ0.40: \"בדיקת מערכת\" — כמה \"ודא\" יש בה (הכללית 56, לחץ 19, שני אופנים 4, עומס 4)", 83, verifies);
+            eq("מ0.41: \"בדיקת מערכת\" — כמה \"ודא\" יש בה (הכללית 67, לחץ 19, שני אופנים 4, עומס 4, הניקוי 5)", 99, verifies);
+            // מ0.41: הקטע החדש של הכללית — השורות שאינן של המסד מתוכננות בלי שגיאה; "ודא שגיאה" תופס את %נבחרים%
+            String sec = "צור תיקייה \"%פנימי%\\בדיקת יצוא (אפשר למחוק)\"\n" + all.substring(all.indexOf(":: מ0.41 — בטל לא-משויכים"));
+            Batch.Plan np = Batch.plan(sec, r, v, lib);
+            int fsBad = 0, dbLines = 0;
+            boolean caught = false;
+            for (Batch.Step x : np.steps) {
+                boolean db = x.text.contains("ידנית") || x.text.contains(ListCmd.LOOSE_WORD) || x.text.startsWith("אופן") || x.text.startsWith("צור רשימה");
+                if (db) dbLines++;
+                else if (x.error != null) fsBad++;
+                if (x.text.contains("%נבחרים%")) caught = x.error == null && Boolean.TRUE.equals(x.verified);
+            }
+            check("מ0.41: הקטע החדש של הכללית — שורות הכונן בלי שגיאה (" + fsBad + "), ושורות המסד מזוהות (" + dbLines + ")", fsBad == 0 && dbLines == 15);
+            check("מ0.41: ...ו\"ודא שגיאה\" תופס את %נבחרים% שמחוץ לרשימת \"בחירה\"", caught);
+            String clean = Files.readUtf8(sys);
+            check("מ0.41: \"בדיקת מערכת\" מנקה אחרי עצמה — מבטלת את הרשימות שהחלקים יוצרים, ובסוף בטל לא-משויכים", clean.contains("בטל ידנית \"בדיקת פקודות\"")
+                    && clean.contains("בטל ידנית \"בדיקת לחץ\"") && clean.contains("בטל ידנית \"בדיקת עומס\"") && clean.contains("אופן \"" + DbTestMode.REAL + "\"")
+                    && clean.indexOf("בטל לא-משויכים") > clean.indexOf("בטל ידנית \"בדיקת-אופן-א\""));
         } catch (Exception e) {
             check("מ0.40: הבדיקה הכללית — " + e, false);
         }
