@@ -121,6 +121,12 @@ final class StoreTests {
             } finally {
                 ex.close();
             }
+            Store mn = opener.fresh(new File(sub, "menus-counter.txt"));       // מ0.41
+            try {
+                new ImportTests(o, name).menus(mn, new File(System.getProperty("vfm.src"), "assets/examples/shamur.txt"), new File(sub, "menus"));
+            } finally {
+                mn.close();
+            }
             Store cs = opener.fresh(new File(sub, "count-counter.txt"));
             try {
                 new ImportTests(o, name).count(cs);

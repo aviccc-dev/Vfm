@@ -1,8 +1,8 @@
 package com.tikiyot.vfm;
 
-// מ0.22: תפריט הפקודות ⭐ ו"פתח תפריט <רשימה>" — מהמסד, כשעובדים במסד. אותה רשימה כמו בישן ("שמור לתוכנה / פקודות"
-// כברירת מחדל): באופן שפתוח, ואם אין שם — באופן אחר שיש בו את הרשימה (מ0.23: לפי המסדים — otherMode). אין במסד — התפריט
-// הישן, כמו קודם. קובצי הפקודות — פקודות; תתי־רשימות — תפריטי משנה; חכמה — מה שהיא מוצאת. נגיעה ארוכה — עריכה.
+// מ0.22: תפריט הפקודות ⭐ ו"פתח תפריט <רשימה>" — מהמסד. מ0.41: מהתפריטים של התוכנה (Menus) — "פקודות" שבאופן "שמור
+// לתוכנה", ואחריה "שמור לתוכנה / פקודות" של האופן שעל המסך, אם יש לו (עד כאן: של האופן, ואם אין — של אופן אחר).
+// קובצי הפקודות — פקודות; תתי־רשימות — תפריטי משנה; חכמה — מה שהיא מוצאת. נגיעה ארוכה — עריכה.
 // אחראי: התפריט מהמסד (הרשימה — DbMore.menu). אסור לו: לגעת במנוע הישן.
 
 import android.app.Activity;
@@ -16,31 +16,26 @@ final class DbCmdMenu {
 
     private DbCmdMenu() { }
 
-    /** false — אין במסד רשימה כזו (התפריט הישן ממשיך). */
+    /**
+     * מ0.41: קודם התפריטים של התוכנה (Menus: הכללי מאופן "שמור לתוכנה", ואחריו של האופן שעל המסך) — הדרך בתוך "שמור
+     * לתוכנה" ("שמור לתוכנה/פקודות", או רק "בחירה"); ואם אין — רשימה כלשהי של האופן בדרך הזו, כתפריט (כמו עד כאן).
+     * false — אין רשימה כזו.
+     */
     static boolean show(Activity a, List<String> path, File newIn, CmdMenu.Picked pick, String screen, boolean top) {
+        boolean reserved = !path.isEmpty() && path.get(0).trim().equals(Reserved.ROOT);
+        List<String> rel = Menus.relative(path);
+        Menus.Snap m = Menus.get(a);
+        if (reserved) {
+            if (!m.has(rel)) return false;
+            menu(a, rel, newIn, pick, screen, top);
+            return true;
+        }
         String mode = DbListScreen.currentMode;
         long id = find(a, mode, path);
-        if (id == 0) {                                                       // מ0.23: האופן "שבשימוש" — לפי המסדים, לא לפי הישן
-            String other = otherMode(a, mode, path);
-            if (other != null) {
-                id = find(a, other, path);
-                mode = other;
-            }
-        }
-        if (id == 0) return false;
-        open(a, mode, id, path, newIn, pick, screen, top);
+        if (id != 0) open(a, mode, id, path, newIn, pick, screen, top);
+        else if (m.has(rel)) menu(a, rel, newIn, pick, screen, top);
+        else return false;
         return true;
-    }
-
-    /**
-     * מ0.23: אופן אחר שיש במסד שלו את הרשימה — קודם הדוגמאות (כמו Reserved.modeInUse בישן), אחר כך השאר לפי הסדר.
-     * null — אין.
-     */
-    static String otherMode(Activity a, String mode, List<String> path) {
-        List<String> all = new ArrayList<String>(DbScreen.dbModes(a));
-        if (all.remove(DbExamples.MODE)) all.add(0, DbExamples.MODE);
-        for (String m : all) if (!m.equals(mode) && find(a, m, path) != 0) return m;
-        return null;
     }
 
     private static long find(Activity a, String mode, List<String> path) {
@@ -57,13 +52,29 @@ final class DbCmdMenu {
         }
     }
 
+    /** תפריט מהתפריטים של התוכנה — ממוזג; תת־רשימה נפתחת באותה דרך (ולכן גם היא ממוזגת). "סידור" — הרשימה הכללית. */
+    private static void menu(final Activity a, final List<String> rel, final File newIn, final CmdMenu.Picked pick,
+                             final String screen, final boolean top) {
+        Menus.Snap m = Menus.get(a);
+        final Object[] where = m.where(rel);
+        dialog(a, top && rel.equals(Menus.CMDS) ? Words.CmdM.TITLE : rel.isEmpty() ? Reserved.ROOT : rel.get(rel.size() - 1), m.at(rel), new Sub() {
+            @Override
+            public void open(DbMore.Entry e) {
+                List<String> sub = new ArrayList<String>(rel);
+                sub.add(e.label);
+                menu(a, sub, newIn, pick, screen, false);
+            }
+        }, where == null ? null : (String) where[0], where == null ? 0 : (Long) where[1], newIn, pick, screen, top);
+    }
+
+    /** רשימה של האופן (לפי המספר) כתפריט. */
     private static void open(final Activity a, final String mode, final long id, final List<String> path, final File newIn,
                              final CmdMenu.Picked pick, final String screen, final boolean top) {
-        List<DbMore.Entry> es;
+        List<Menus.Item> items = new ArrayList<Menus.Item>();
         SqlStore s = null;
         try {
             s = SqlStore.openReadOnly(DbScreen.dbFile(a, mode));
-            es = DbMore.menu(s, id);
+            for (DbMore.Entry e : DbMore.menu(s, id)) items.add(new Menus.Item(e, mode, id, path));
         } catch (Throwable t) {
             Log.e("DbCmdMenu.open", t);
             Ui.toast(a, Words.Db.failed(String.valueOf(t.getMessage())));
@@ -71,26 +82,48 @@ final class DbCmdMenu {
         } finally {
             if (s != null) s.close();
         }
+        dialog(a, path.get(path.size() - 1), items, new Sub() {
+            @Override
+            public void open(DbMore.Entry e) {
+                List<String> sub = new ArrayList<String>(path);
+                sub.add(e.label);
+                DbCmdMenu.open(a, mode, e.id, sub, newIn, pick, screen, false);
+            }
+        }, mode, id, newIn, pick, screen, top);
+    }
+
+    /** איך נפתחת תת־רשימה (לפי הדרך — בתפריטים של התוכנה; לפי המספר — ברשימה של האופן). */
+    private interface Sub {
+        void open(DbMore.Entry e);
+    }
+
+    /** נגיעה בקובץ פקודות שבתפריט או בשורה: "פקודה חדשה" — יוצרת; אחרת — הרצה (או בחירה, כשמוסיפים כפתור). */
+    static void use(Activity a, File f, File newIn, CmdMenu.Picked pick) {
+        if (Reserved.isNew(f)) CmdMenu.create(a, newIn, pick);
+        else CmdMenu.useFile(a, f, pick);
+    }
+
+    private static void dialog(final Activity a, String title, List<Menus.Item> items, final Sub sub, final String arrMode, final long arrId,
+                               final File newIn, final CmdMenu.Picked pick, final String screen, boolean top) {
         final List<String> labels = new ArrayList<String>();
         final List<Runnable> taps = new ArrayList<Runnable>(), holds = new ArrayList<Runnable>();
-        for (final DbMore.Entry e : es) {
+        for (Menus.Item it : items) {
+            final DbMore.Entry e = it.e;
             if (e.kind == DbMore.E_FILE) {
                 final File f = new File(e.path);
                 if (!f.isFile()) continue;
                 Program p = Program.read(f);
                 labels.add((p.isProgram() ? p.icon : "▶") + "  " + p.title(f));
                 taps.add(new Runnable() {
-                    @Override public void run() { if (Reserved.isNew(f)) CmdMenu.create(a, newIn, pick); else CmdMenu.useFile(a, f, pick); }
+                    @Override public void run() { use(a, f, newIn, pick); }
                 });
                 holds.add(new Runnable() {
                     @Override public void run() { if (Reserved.isSystem(f)) { if (!Reserved.isNew(f)) CmdMenu.saveAs(a, f); } else BatchUi.edit(a, f); }
                 });
             } else if (e.kind == DbMore.E_LIST) {
-                final List<String> sub = new ArrayList<String>(path);
-                sub.add(e.label);
                 labels.add(e.label + "  ▸");
                 taps.add(new Runnable() {
-                    @Override public void run() { open(a, mode, e.id, sub, newIn, pick, screen, false); }
+                    @Override public void run() { sub.open(e); }
                 });
                 holds.add(null);
             } else {
@@ -102,17 +135,18 @@ final class DbCmdMenu {
             }
         }
         if (top && pick != null) CmdMenu.extras(a, screen, pick, labels, taps, holds);
-        labels.add(Words.CmdM.ARRANGE);
-        taps.add(new Runnable() {
-            @Override public void run() { DbListScreen.open(a, mode, id); }
+        if (arrMode != null && arrId != 0) {
+            labels.add(Words.CmdM.ARRANGE);
+            taps.add(new Runnable() {
+                @Override public void run() { DbListScreen.open(a, arrMode, arrId); }
+            });
+            holds.add(null);
+        }
+        Ui.list(a, title, labels, new DialogInterface.OnClickListener() {
+            @Override public void onClick(DialogInterface d, int w) { taps.get(w).run(); }
+        }, new Ui.Index1() {
+            @Override public void ok(int w) { if (holds.get(w) != null) holds.get(w).run(); }
         });
-        holds.add(null);
-        Ui.list(a, top && path.equals(Reserved.CMDS_PATH) ? Words.CmdM.TITLE : path.get(path.size() - 1), labels,
-                new DialogInterface.OnClickListener() {
-                    @Override public void onClick(DialogInterface d, int w) { taps.get(w).run(); }
-                }, new Ui.Index1() {
-                    @Override public void ok(int w) { if (holds.get(w) != null) holds.get(w).run(); }
-                });
     }
 
     // ================= מ0.23: יצוא וייבוא — קובצי פקודות מוכנים ב־⭐ =================
@@ -129,6 +163,8 @@ final class DbCmdMenu {
         out.add(new String[]{"⧉", Words.DbCmd.TOOL_DUPS, Verbs.toolLine(FnDup.KIND, new java.util.LinkedHashMap<String, String>())});
         out.add(new String[]{"📌", Words.DbCmd.TOOL_BAR, Verbs.toolLine("פס", new java.util.LinkedHashMap<String, String>())});   // תחביר
         out.add(new String[]{"🔗", Words.DbCmd.TOOL_APP, Verbs.toolLine("אפליקציה", new java.util.LinkedHashMap<String, String>())});   // תחביר; בלי חבילה — נשאל
+        // מ0.41 (המשתמש, 12.11.2026: "להוסיף כפתור שמריץ אותו. וכך הוא הופך להיות חלק אינטגרלי מהתוכנה"): העורך האינטראקטיבי
+        out.add(new String[]{"📝", Words.DbCmd.TOOL_EDITOR, Verbs.OPEN + " " + Verbs.PLUGIN + " \"" + Words.DbCmd.TOOL_EDITOR + "\""});
         return out;
     }
 
@@ -158,7 +194,7 @@ final class DbCmdMenu {
      */
     static List<String> ensureTools(Store s, String mode, List<File> files) {
         final List<String> added = new ArrayList<String>();
-        final long cmds = DbPaths.find(s, mode, Reserved.CMDS_PATH);
+        final long cmds = Menus.at(s, Menus.root(s, mode), Menus.CMDS);     // מ0.41: גם באופן התפריטים (שם השורש הוא הבית)
         if (cmds == 0) return added;
         String had = s.prop(cmds, P_TOOLS);
         final java.util.Set<String> seen = new java.util.LinkedHashSet<String>();

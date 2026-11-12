@@ -92,23 +92,6 @@ final class DbExamples {
         return replaced;
     }
 
-    /** החלק של "שמור לתוכנה" מקובץ הדוגמאות: השורה שלה בבית, והבלוקים שלה. */
-    static String reservedPart(String text) {
-        StringBuilder sb = new StringBuilder(DbExport.SUB).append(Reserved.ROOT).append('\n');
-        boolean in = false;
-        for (String raw : text.split("\r\n|\r|\n")) {
-            String line = raw.trim();
-            if (line.startsWith("#")) {
-                int i = 1;
-                while (i < line.length() && Character.isDigit(line.charAt(i))) i++;
-                String way = line.substring(i).trim();
-                in = way.equals(Reserved.ROOT) || way.startsWith(Reserved.ROOT + Names.SEP);
-            }
-            if (in) sb.append(line).append('\n');
-        }
-        return sb.toString();
-    }
-
     /** תיקיית התרגול: כל קובץ מתחיל ב"=== <מסלול>" (יחסי לתיקייה); "@ישן" בסוף — תאריך השינוי לפני שנתיים. */
     static void demo(File dir, String spec) throws java.io.IOException {
         if (dir.exists()) Trash.wipe(dir);

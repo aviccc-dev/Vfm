@@ -221,7 +221,7 @@ final class Diag {
                         sb.append("רשימות ").append(s.lists().size()).append(" · חכמות ").append(s.smarts().size())
                                 .append(" · לא משויכים ").append(s.unassigned().size()).append('\n');
                         sb.append("זמנים: פתיחה ").append(tOpen).append(" · מציאת הבית ").append(tHome).append(" · קריאת הבית ").append(tMembers).append(" מ\"ש\n");
-                        long root = DbPaths.find(s, m, Reserved.ROOT_PATH), cmds = DbPaths.find(s, m, Reserved.CMDS_PATH), mine = DbPaths.find(s, m, Reserved.MINE_PATH);
+                        long root = Menus.root(s, m), cmds = Menus.at(s, root, Menus.CMDS), mine = Menus.at(s, root, Menus.MINE);   // מ0.41: באופן התפריטים — הבית
                         long mineIn = cmds == 0 ? 0 : DbPaths.child(s, cmds, Reserved.MINE);
                         sb.append("\"שמור לתוכנה\": ").append(root).append(root != 0 ? " (בתוך: " + s.listsOf(root) + ")" : "")
                                 .append(" · \"פקודות\": ").append(cmds).append(" · \"הפקודות שלי\" לפי הדרך: ").append(mine)
@@ -253,7 +253,7 @@ final class Diag {
                 sb.append("\nתפריט ⭐ באופן שעל המסך נלקח מ: ");
                 SqlStore s = SqlStore.openReadOnly(DbScreen.dbFile(a, mode));
                 try {
-                    sb.append(DbPaths.find(s, mode, Reserved.CMDS_PATH) != 0 ? "האופן עצמו" : "אופן אחר — " + DbCmdMenu.otherMode(a, mode, Reserved.CMDS_PATH)).append('\n');
+                    sb.append("אופן \"").append(Menus.MODE).append("\"").append(Menus.at(s, Menus.root(s, mode), Menus.CMDS) != 0 ? ", ואחריו של האופן עצמו" : "").append('\n');
                 } finally {
                     s.close();
                 }
@@ -313,10 +313,10 @@ final class Diag {
                 try {
                     long home = DbPaths.ensureHome(s);
                     sb.append(ok(home != 0 && s.members(home).isEmpty())).append("בית ריק נוצר\n");
-                    DbExamples.install(s, DbExamples.reservedPart(DbExamples.asset(a, DbExamples.ASSET)), internal);
-                    long cmds = DbPaths.find(s, "x", Reserved.CMDS_PATH);
-                    sb.append(ok(cmds != 0)).append("\"שמור לתוכנה\" נכנסת מקובץ הדוגמאות: ").append(names(s, home))
-                            .append(" · בפקודות: ").append(cmds == 0 ? 0 : s.count(cmds)).append('\n');
+                    Menus.defaults(s, DbExamples.asset(a, Menus.ASSET), internal);   // מ0.41: כמו שאופן התפריטים מותקן
+                    long cmds = Menus.at(s, home, Menus.CMDS), row = Menus.at(s, home, Menus.rowPath(null, Menus.ROW_TOP, 1));
+                    sb.append(ok(cmds != 0 && row != 0 && s.count(row) == 5)).append("ברירת המחדל של התפריטים נכנסת: ").append(names(s, home))
+                            .append(" · בפקודות: ").append(cmds == 0 ? 0 : s.count(cmds)).append(" · בשורה למעלה 1: ").append(row == 0 ? 0 : s.count(row)).append('\n');
                 } finally {
                     s.close();
                 }
@@ -329,9 +329,9 @@ final class Diag {
                 if (s == null) return;
                 try {
                     long home = DbPaths.home(s);
-                    long cmds = DbPaths.find(s, mode, Reserved.CMDS_PATH);
+                    long cmds = Menus.at(s, Menus.root(s, mode), Menus.CMDS);
                     long mine = cmds == 0 ? 0 : DbPaths.child(s, cmds, Reserved.MINE);
-                    if (mine == 0) sb.append("באופן הזה אין \"הפקודות שלי\" (התפריט מאופן אחר)\n");
+                    if (mine == 0) sb.append("באופן הזה אין \"הפקודות שלי\" (התפריט מאופן \"" + Menus.MODE + "\")\n");
                     else {
                         DbFiles.Added r = DbFiles.add(s, mine, Collections.singletonList(internal + "/אבחון-פקודה.vbat"), null, false);
                         boolean in = false;

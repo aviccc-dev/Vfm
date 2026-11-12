@@ -58,6 +58,7 @@ public final class Tests {
         run("מ0.40: התוספים, והשורות שהעורך האינטראקטיבי כותב", new Runnable() { public void run() { m040(); } });
         run("מ0.40: העבר — כבר במקום, /תפוס:לשנות-שם, /מכיל:", new Runnable() { public void run() { m040move(); } });
         run("מ0.40: החלק החדש של הבדיקה הכללית — בהרצה אמיתית", new Runnable() { public void run() { m040general(); } });
+        run("מ0.41: בטל לא-משויכים, קובץ של פקודת פתיחה אחת, שמות המסכים", new Runnable() { public void run() { m041(); } });
         run("מ0.37: הפקודות הקטנות — כתוב, ודא (תיקייה, מכיל, קבצים, שגיאה), דוח, המתן, משתנים, רעיון וכותרת", new Runnable() { public void run() { m037(); } });
         run("קובצי פקודות — השורה כשדות לטופס (117א, שלב 2)", new Runnable() { public void run() { batchForm(); } });
         run("תיקוני הביקורות השישית והשביעית (118–122, 134, 135, 139)", new Runnable() { public void run() { review7(); } });
@@ -400,14 +401,7 @@ public final class Tests {
         check("1.9.0: חסומה ריקה — \"חסומה\", לא \"ריקה\"", DiskList.read(blockedDir, false).blocked);
 
         // כפתורים — ארבעה מקומות ושורות (1.10.0)
-        Buttons.Layout def = Buttons.defaultsAll();
-        Buttons.Layout back = Buttons.parseAll(Buttons.textAll(def));
-        check("1.10.0: כפתורים — נכתבים ונקראים", back.rows(Buttons.TOP).size() == 1
-                && back.rows(Buttons.TOP).get(0).size() == Buttons.defaults().size()
-                && back.rows(Buttons.TOP).get(0).get(0).act.equals(Buttons.HOME));
-        String listBottom = Buttons.local(Buttons.BOTTOM, Words.Top.S_LIST);
-        check("1.10.0: הכפתורים הקבועים של הרשימה — בשורה התחתונה שלה", back.rows(listBottom).size() == 1
-                && back.rows(listBottom).get(0).get(0).act.equals(Buttons.C_NEW_LIST));   // 1.13.0: כשורת פקודה
+        String listBottom = Buttons.local(Buttons.BOTTOM, Words.Top.S_LIST);   // מ0.41: הקובץ הישן נקרא רק למעבר לרשימות (Menus)
         Buttons.Layout old = Buttons.parseAll("⭐ | פקודות | מסך:פקודות\n📂 | מנהל קבצים | מסך:מנהל קבצים\nשורה שבורה\n");
         java.util.List<Buttons.Btn> top = old.rows(Buttons.TOP).get(0);
         check("1.10.0: קובץ של 1.9.0 — הכול בשורה העליונה, עוגנים חוזרים", top.size() == 4 && top.get(0).act.equals(Buttons.HOME)
@@ -417,16 +411,6 @@ public final class Tests {
         Buttons.Layout rows = Buttons.parseAll("[למעלה]\n🏠 | בית | מסך:בית\n---\n→ | חזרה | מסך:חזרה\n[" + listBottom + "]\n");
         check("1.10.0: שתי שורות במקום אחד", rows.rows(Buttons.TOP).size() == 2);
         check("1.10.0: מקום שרוקן — נשאר ריק (בלי ברירת מחדל)", !rows.has(listBottom));
-        java.util.List<Buttons.Btn> r0 = rows.rows(Buttons.TOP).get(0), r1 = rows.rows(Buttons.TOP).get(1);
-        check("1.10.0: עוגן יחיד — לא נמחק, והשורה שלו לא נמחקת", !Buttons.removable(rows, Buttons.TOP, r0, 0)
-                && !Buttons.rowRemovable(rows, Buttons.TOP, r0));
-        r1.add(new Buttons.Btn("🏠", "שוב", Buttons.HOME));
-        check("1.10.0: עוגן כפול — אפשר למחוק אחד", Buttons.removable(rows, Buttons.TOP, r0, 0)
-                && Buttons.rowRemovable(rows, Buttons.TOP, r0));
-        check("1.10.0: עוגן אחרון — לא עובר לשורה של סוג מסך", !Buttons.moveTo(rows, Buttons.TOP, r1, 0, listBottom, rows.rows(listBottom).isEmpty()
-                ? newRow(rows, listBottom) : rows.rows(listBottom).get(0)));
-        java.util.List<Buttons.Btn> d0 = Buttons.defaults();
-        check("1.9.0: הזזה", Buttons.move(d0, 1, 1) && d0.get(2).act.equals(Buttons.COMMANDS) && !Buttons.move(d0, 0, -1));
         StringBuilder many = new StringBuilder("[למעלה]\n");
         for (int i = 0; i < 8; i++) many.append("⭐ | א | מסך:פקודות\n---\n");
         check("1.10.0: עד 5 שורות במקום", Buttons.parseAll(many.toString()).rows(Buttons.TOP).size() == Buttons.MAX_ROWS);
@@ -2087,6 +2071,44 @@ public final class Tests {
         } catch (Exception e) {
             check("מ0.40: הבדיקה הכללית — " + e, false);
         }
+    }
+
+    private static void m041() {
+        File r = new File(home, "כונן-041");
+        wipe(r);
+        r.mkdirs();
+        java.util.Map<String, String> v = Batch.vars(r, r.getAbsolutePath(), null);
+        Batch.Plan p = Batch.plan("בטל לא-משויכים\nודא לא-משויכים /פריטים:0\nהעתק לא-משויכים ידנית \"א\"\n", r, v);
+        check("מ0.41: בטל לא-משויכים — שורה של המסד (במחשב אין מסד)", p.steps.size() == 3 && Words.DbCmd.NO_DB.equals(p.steps.get(0).error)
+                && Words.DbCmd.VERIFY_DB_ONLY.equals(p.steps.get(1).error) && p.steps.get(2).error != null);
+        new File(r, "לא-משויכים").mkdirs();
+        Batch.Plan q = Batch.plan("בטל \"לא-משויכים\"\n", r, v);
+        check("מ0.41: \"לא-משויכים\" במרכאות — תיקייה רגילה", q.errors == 0 && q.steps.get(0).cmd.equals("RD"));
+        // קובץ שכולו פקודת פתיחה אחת — רץ מיד (הכפתורים בשורות הם קובצי פקודות)
+        eq("מ0.41: צלמית, שם ופקודת פתיחה — השורה", "פתח מסך הבית", Batch.singleVerb("צלמית 🏠\nשם בית\nפתח מסך הבית\n"));
+        eq("מ0.41: ...גם עם הערה, שורה ריקה ו\"למה\"", "חזור", Batch.singleVerb("צלמית →\nלמה חוזרים\n\nהערה סתם\n:: עוד\nחזור\n"));
+        check("מ0.41: שתי פקודות — לא", Batch.singleVerb("פתח מסך הבית\nפתח מסך חיפוש\n") == null);
+        check("מ0.41: פקודת קבצים — לא", Batch.singleVerb("צלמית ▶\nהעתק \"א\" \"ב\"\n") == null && Batch.singleVerb("מחק \"א\"\n") == null);
+        check("מ0.41: \"צור תיקייה\" אינה פקודת פתיחה", Batch.singleVerb("צור תיקייה \"א\"\n") == null);
+        check("מ0.41: \"בדיקה\" או \"הדמיה\" בראש — לא (מסך ההרצה)", Batch.singleVerb("בדיקה\nפתח מסך הבית\n") == null
+                && Batch.singleVerb("הדמיה\nפתח מסך הבית\n") == null);
+        check("מ0.41: קובץ ריק — לא", Batch.singleVerb("") == null && Batch.singleVerb("צלמית ▶\n") == null);
+        for (String[] x : CmdMenu.system())
+            check("מ0.41: פקודת המערכת \"" + x[1] + "\" — פקודת פתיחה אחת", x[2].equals(Batch.singleVerb(Program.ICON + " " + x[0] + "\n" + Program.NAME + " " + x[1] + "\n" + x[2] + "\n")));
+        // שמות המסכים של השורות — של "פתח מסך", ועוד שניים
+        check("מ0.41: שמות המסכים — \"רשימה\" ו\"רשימה חכמה\" אינם שמות של \"פתח מסך\"", !java.util.Arrays.asList(Verbs.SCREENS).contains(Verbs.S_LIST_SCREEN)
+                && !java.util.Arrays.asList(Verbs.SCREENS).contains(Verbs.S_SMART_SCREEN) && java.util.Arrays.asList(Verbs.SCREENS).contains(Verbs.S_HOME));
+        eq("מ0.41: דרך של שורה כללית", java.util.Arrays.asList("שורה למעלה 2"), Menus.rowPath(null, Menus.ROW_TOP, 2));
+        eq("מ0.41: דרך של שורה של מסך", java.util.Arrays.asList("הבית", "שורה למטה 1"), Menus.rowPath(Verbs.S_HOME, Menus.ROW_BOTTOM, 1));
+        eq("מ0.41: \"שמור לתוכנה/פקודות\" — בתוך התפריטים", Menus.CMDS, Menus.relative(Names.parsePath("שמור לתוכנה/פקודות")));
+        eq("מ0.41: \"בחירה\" — כמו שהיא", Menus.SELECT_PATH, Menus.relative(Names.parsePath("בחירה")));
+        check("מ0.41: הפקודה של העורך האינטראקטיבי — בין הכלים, ופותחת את התוסף", toolLine(Words.DbCmd.TOOL_EDITOR).equals("פתח תוסף \"עורך אינטראקטיבי\"")
+                && Verbs.parse(toolLine(Words.DbCmd.TOOL_EDITOR)).error == null && Verbs.S_PLUGINS.equals(Verbs.parse(toolLine(Words.DbCmd.TOOL_EDITOR)).arg));
+    }
+
+    private static String toolLine(String name) {
+        for (String[] t : DbCmdMenu.dbTools()) if (t[1].equals(name)) return t[2];
+        return "";
     }
 
     private static void m037() {

@@ -1,6 +1,7 @@
 package com.tikiyot.vfm;
 
-// שורות הכפתורים — הנתונים בלבד (בלי ממשק): קריאה, כתיבה, ברירת מחדל, עוגנים.
+// שורות הכפתורים של עד מ0.40 — הקובץ "כפתורים.txt". מ0.41: השורות ברשימות של "שמור לתוכנה" (Menus); כאן נשארו רק קריאת
+// הקובץ הישן (למעבר החד־פעמי) וברירת המחדל שבקוד (שורת החירום של TopRow). מה שהיה:
 // 1.9.0: שורה עליונה אחת. 1.10.0: ארבעה מקומות, ובכל אחד עד 5 שורות (פריט 9, שלבים 2–3):
 //   [למעלה] — בכל המסכים · [למעלה: <סוג מסך>] · [למטה: <סוג מסך>] · [למטה] — בכל המסכים.
 // בקובץ "כפתורים.txt" בתיקיית ההגדרות של אופן העבודה (לכל אופן משלו; עובר בהעתקת אופן):
@@ -119,10 +120,6 @@ final class Buttons {
         return l;
     }
 
-    static File file() {
-        return new File(Paths.settings(), FILE);
-    }
-
     /** כל השורות מהטקסט. עוגן שחסר בשורות הכלליות (נמחק ביד בקובץ) — חוזר לשורה העליונה. */
     static Layout parseAll(String text) {
         Layout lay = new Layout();
@@ -193,117 +190,8 @@ final class Buttons {
         return n;
     }
 
-    static String textAll(Layout lay) {
-        StringBuilder sb = new StringBuilder();
-        sb.append("# שורות הכפתורים — [מקום], ואחריו שורה לכל כפתור:  סמל | שם | פעולה   ·   --- שורה חדשה\n");   // בכונן
-        sb.append("# מקומות: [למעלה] [למעלה: <סוג מסך>] [למטה: <סוג מסך>] [למטה]\n");   // בכונן
-        sb.append("# הפעולה — שורת פקודה: פתח מסך הבית · חזור · פתח מסך חיפוש / פקודות / קבצים פיזיים / קבצים וירטואליים / הגדרות / סל\n");   // בכונן
-        sb.append("#   פתח רשימה <מסלול> · פתח רשימה חכמה <שם> · פתח תיקייה <מסלול> · מצא <תנאי> · הרץ <קובץ פקודות>\n");   // בכונן
-        sb.append("#   צור רשימה · הוסף מהכונן · הוסף מחיפוש · הוסף כלי · או כל שורה של קובץ פקודות\n");   // בכונן
-        for (Map.Entry<String, List<List<Btn>>> e : lay.places.entrySet()) {
-            sb.append('\n').append('[').append(e.getKey()).append("]\n");      // גם מקום ריק נכתב — כדי שלא תחזור אליו ברירת המחדל
-            for (int i = 0; i < e.getValue().size(); i++) {
-                sb.append(ROW_BREAK).append('\n');                              // 1.11.0: לפני כל שורה — כך גם שורה ריקה נשמרת
-                for (Btn b : e.getValue().get(i)) sb.append(b.line()).append('\n');
-            }
-        }
-        return sb.toString();
-    }
-
-    /** הכפתורים של אופן העבודה הפעיל; אין קובץ — ברירת המחדל. */
-    static Layout loadAll() {
-        File f = file();
-        if (!f.isFile()) return defaultsAll();
-        try {
-            return parseAll(Files.readUtf8(f));
-        } catch (Throwable e) {
-            Log.e("קריאת " + FILE, e);
-            return defaultsAll();
-        }
-    }
-
-    static boolean save(Layout lay) {
-        try {
-            Files.writeAtomic(file(), textAll(lay));
-            return true;
-        } catch (Throwable e) {
-            Log.e("שמירת " + FILE, e);
-            return false;
-        }
-    }
-
-    /** 1.13.1 (באג): רשימה שינתה שם או מקום — כפתורים שפותחים אותה עוברים איתה. מחזיר כמה. */
-    static int listMoved(List<String> from, List<String> to) {
-        if (!file().isFile()) return 0;                                       // ברירת המחדל — בלי רשימות בשם
-        Layout lay = loadAll();
-        int n = 0;
-        for (List<List<Btn>> rows : lay.places.values())
-            for (List<Btn> row : rows)
-                for (Btn b : row) {
-                    String now = Verbs.listMoved(b.act, from, to);
-                    if (now != null) {
-                        b.act = now;
-                        n++;
-                    }
-                }
-        if (n > 0) save(lay);
-        return n;
-    }
-
-    /** חזרה לברירת מחדל של כל הכפתורים — רק הכפתורים, רק באופן הזה. */
-    static boolean reset() {
-        File f = file();
-        return !f.exists() || f.delete();
-    }
-
-    /** חזרה לברירת מחדל של מקום אחד. */
-    static void reset(Layout lay, String place) {
-        lay.places.put(place, defaults(place));
-        anchors(lay);
-    }
-
-    /** מתי השתנה הקובץ (0 — אין): כדי שמסך שחזר לקדמה יראה שינוי שנעשה במסך אחר. */
-    static long stamp() {
-        File f = file();
-        return f.isFile() ? f.lastModified() : 0;
-    }
-
-    /** הזזה בתוך השורה: dir = -1 — מקום אחד קודם (ימינה, בשורה מימין לשמאל), +1 — אחד אחרי. */
-    static boolean move(List<Btn> l, int i, int dir) {
-        int j = i + dir;
-        if (i < 0 || i >= l.size() || j < 0 || j >= l.size()) return false;
-        Btn b = l.remove(i);
-        l.add(j, b);
-        return true;
-    }
-
-    /** אפשר למחוק: לא עוגן — או עוגן שיש לו עוד עותק בשורות הכלליות. */
-    static boolean removable(Layout lay, String place, List<Btn> row, int i) {
-        if (i < 0 || i >= row.size()) return false;
-        Btn b = row.get(i);
-        if (!b.anchor()) return true;
-        return !general(place) || count(lay, b.act) > 1;
-    }
-
-    /** אפשר למחוק שורה: אין בה עוגן שאין לו עותק אחר בשורות הכלליות. */
-    static boolean rowRemovable(Layout lay, String place, List<Btn> row) {
-        if (!general(place)) return true;
-        for (Btn b : row)
-            if (b.anchor()) {
-                int inRow = 0;
-                for (Btn x : row) if (x.act.equals(b.act)) inRow++;
-                if (count(lay, b.act) - inRow < 1) return false;
-            }
-        return true;
-    }
-
-    /** העברת כפתור לשורה אחרת (לסופה). עוגן — רק אם נשאר עותק בשורות הכלליות. */
-    static boolean moveTo(Layout lay, String fromPlace, List<Btn> from, int i, String toPlace, List<Btn> to) {
-        if (i < 0 || i >= from.size() || from == to) return false;
-        Btn b = from.get(i);
-        if (b.anchor() && general(fromPlace) && !general(toPlace) && count(lay, b.act) < 2) return false;
-        from.remove(i);
-        to.add(b);
-        return true;
+    /** הקובץ הישן (עד מ0.40). מ0.41: נקרא פעם אחת — השורות שבו עוברות לרשימות (Menus.install); הקובץ נשאר במקומו. */
+    static File file() {
+        return new File(Paths.settings(), FILE);
     }
 }

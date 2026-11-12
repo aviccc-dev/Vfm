@@ -52,6 +52,8 @@ final class BatchUi {
             Ui.toast(a, Words.CANT_READ_FILE);
             return;
         }
+        String verb = Batch.singleVerb(text);                                  // מ0.41: פקודת פתיחה אחת — מיד (כמו כפתור)
+        if (verb != null && Verbs.run(a, verb, f.getParentFile())) return;
         if (Batch.wantsCheck(text)) {                                          // 1.28.0: מסך ההרצה — רק עם "בדיקה"
             RunScreen.start(a, f);
             return;

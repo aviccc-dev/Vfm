@@ -59,8 +59,8 @@ public class DbScreen extends Activity {
 
     /** מ0.29: האופן כשעוד לא נבחר אחד: הראשון שיש לו מסד, ואם אין אף מסד (התקנה חדשה) — הדוגמאות. */
     static String defaultMode(android.content.Context c) {
-        List<String> all = dbModes(c);
-        return all.isEmpty() ? DbExamples.MODE : all.get(0);
+        for (String m : dbModes(c)) if (!m.equals(Menus.MODE)) return m;    // מ0.41: אופן התפריטים אינו אופן עבודה
+        return DbExamples.MODE;
     }
 
     /** האופנים שיש להם מסד כבר. */
@@ -312,28 +312,6 @@ public class DbScreen extends Activity {
         } catch (Throwable t) {
             Log.e("DbScreen.prepare", t);
             return 0;
-        } finally {
-            if (s != null) s.close();
-        }
-    }
-
-    /**
-     * מ0.29: "שמור לתוכנה" (פקודות המערכת, "הפקודות שלי", גיבוי) באופן שאין לו — מקובץ הדוגמאות, לבית של האופן.
-     * false — לא הצליח.
-     */
-    static boolean ensureReserved(android.content.Context c, String mode) {
-        if (mode == null || !dbFile(c, mode).isFile()) return false;
-        SqlStore s = null;
-        try {
-            s = SqlStore.open(dbFile(c, mode), new IdCounter(counterFile()));
-            if (DbPaths.find(s, mode, Reserved.ROOT_PATH) != 0) return true;
-            DbExamples.files(null);
-            DbExamples.install(s, DbExamples.reservedPart(DbExamples.asset(c, DbExamples.ASSET)),
-                    Environment.getExternalStorageDirectory().getAbsolutePath());
-            return DbPaths.find(s, mode, Reserved.ROOT_PATH) != 0;
-        } catch (Throwable t) {
-            Log.e("DbScreen.ensureReserved", t);
-            return false;
         } finally {
             if (s != null) s.close();
         }

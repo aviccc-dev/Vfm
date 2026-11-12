@@ -392,21 +392,8 @@ public final class LabScreen extends Activity {
             JSONArray a = new JSONArray();
             java.util.Set<String> seen = new java.util.HashSet<String>();
             try {
-                String mode = DbListScreen.currentMode;
-                for (int pass = 0; pass < 2; pass++) {
-                    String m = pass == 0 ? mode : DbCmdMenu.otherMode(LabScreen.this, mode, Reserved.MINE_PATH);
-                    if (m == null || !DbScreen.dbFile(LabScreen.this, m).isFile()) continue;
-                    SqlStore s = SqlStore.openReadOnly(DbScreen.dbFile(LabScreen.this, m));
-                    try {
-                        long id = DbPaths.find(s, m, Reserved.MINE_PATH);
-                        if (id == 0) continue;
-                        for (DbMore.Entry en : DbMore.menu(s, id))
-                            if (en.kind == DbMore.E_FILE && new File(en.path).isFile() && seen.add(en.path)) a.put(entry(new File(en.path)));
-                        break;
-                    } finally {
-                        s.close();
-                    }
-                }
+                for (Menus.Item it : Menus.get(LabScreen.this).at(Menus.MINE))            // מ0.41: מהתפריטים — הכללי ושל האופן
+                    if (it.e.kind == DbMore.E_FILE && new File(it.e.path).isFile() && seen.add(it.e.path)) a.put(entry(new File(it.e.path)));
                 for (File f : Shortcuts.mine()) if (seen.add(f.getAbsolutePath())) a.put(entry(f));
             } catch (Throwable t) {
                 Log.e("Lab.myCommands", t);

@@ -66,27 +66,19 @@ final class Reserved {
     }
 
     /**
-     * פקודה חדשה נכנסת ל"הפקודות שלי" — במסד של האופן הפתוח, ואם אין שם רשימה כזו — באופן שיש בו (קודם הדוגמאות).
-     * מ0.29: במסד (עד כאן — בעץ של המנוע הישן, ולכן פקודה חדשה לא הופיעה ב"הפקודות שלי" של המסד).
+     * פקודה חדשה נכנסת ל"הפקודות שלי": של האופן הפתוח, אם יש לו "שמור לתוכנה" משלו; אחרת — של אופן התפריטים (מ0.41;
+     * עד כאן — של אופן אחר שיש בו, קודם הדוגמאות).
      */
     static void addToMine(final File f) {
         android.content.Context c = DbListScreen.app;
-        String cur = DbListScreen.currentMode;
-        if (c == null || cur == null || f == null) return;
-        List<String> modes = new ArrayList<String>();
-        modes.add(cur);
-        List<String> all = DbScreen.dbModes(c);
-        if (all.remove(DbExamples.MODE)) all.add(0, DbExamples.MODE);
-        for (String m : all) if (!modes.contains(m)) modes.add(m);
-        for (String m : modes) {
-            if (!DbScreen.dbFile(c, m).isFile()) continue;
+        if (c == null || f == null) return;
+        Menus.ensure(c);
+        for (String m : new String[]{DbListScreen.currentMode, Menus.MODE}) {
+            if (m == null || !DbScreen.dbFile(c, m).isFile()) continue;
             SqlStore s = null;
             try {
                 s = SqlStore.open(DbScreen.dbFile(c, m), new IdCounter(DbScreen.counterFile()));
-                // מ0.30: אותה "הפקודות שלי" שהתפריט מציג — זו שבתוך "פקודות" שהתפריט פותח (לא רשימה אחרת באותו מקור)
-                long cmds = DbPaths.find(s, m, CMDS_PATH);
-                long mine = cmds == 0 ? 0 : DbPaths.child(s, cmds, MINE);
-                if (mine == 0) mine = DbPaths.find(s, m, MINE_PATH);
+                long mine = Menus.at(s, Menus.root(s, m), Menus.MINE);
                 if (mine == 0) continue;
                 DbFiles.add(s, mine, Collections.singletonList(f.getAbsolutePath()), null, false);
                 return;

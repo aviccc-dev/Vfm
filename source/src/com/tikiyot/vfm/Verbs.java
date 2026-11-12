@@ -38,6 +38,8 @@ final class Verbs {
             S_VIRTUAL = "קבצים וירטואליים", S_SETTINGS = "הגדרות", S_TRASH = "סל", S_EDITOR = "עורך פקודות",   // תחביר
             S_BACKUPS = "גיבויים", S_DIAG = "אבחון", S_LAB = "מעבדה", S_PLUGINS = "תוספים";   // תחביר — מ0.37; מ0.38: מעבדה; מ0.40: תוספים
     static final String[] SCREENS = {S_HOME, S_SEARCH, S_COMMANDS, S_DISK, S_VIRTUAL, S_SETTINGS, S_TRASH, S_EDITOR, S_BACKUPS, S_DIAG, S_PLUGINS, S_LAB};
+    /** מ0.41: שני מסכים שאין להם "פתח מסך" — לשורות של מסך ("רשימה / שורה למטה 1"); יחד עם SCREENS — כל שמות המסכים. */
+    static final String S_LIST_SCREEN = "רשימה", S_SMART_SCREEN = "רשימה חכמה";   // תחביר
     /** מ0.40: "פתח תוסף ["<שם>" ["<גרסה>"]]" — מסך התוספים (בלי שם — הרשימה; בלי גרסה — החדש). כמו "פתח מסך תוספים". */
     static final String PLUGIN = "תוסף";   // תחביר
     static final String A_DRIVE = "מהכונן", A_SEARCH = "מחיפוש";   // תחביר

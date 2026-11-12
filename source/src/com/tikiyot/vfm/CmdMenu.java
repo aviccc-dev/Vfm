@@ -62,10 +62,7 @@ final class CmdMenu {
 
     private static void showList(final Activity a, final List<String> path, final File newIn, final Picked pick,
                                  final String screen, final boolean top) {
-        if (DbVerbs.active() && DbCmdMenu.show(a, path, newIn, pick, screen, top)) return;   // מ0.22: מהמסד, אם יש שם
-        // מ0.29: אין רשימה כזו באף מסד. "שמור לתוכנה" — ברירות המחדל נכנסות לאופן הזה מקובץ הדוגמאות (עד כאן — מהמנוע הישן).
-        if (DbVerbs.active() && !path.isEmpty() && path.get(0).equals(Reserved.ROOT) && DbScreen.ensureReserved(a, DbListScreen.currentMode)
-                && DbCmdMenu.show(a, path, newIn, pick, screen, top)) return;
+        if (DbVerbs.active() && DbCmdMenu.show(a, path, newIn, pick, screen, top)) return;   // מ0.22: מהמסד; מ0.41: התפריטים של התוכנה (Menus)
         Ui.toast(a, Words.Verb.NOT_FOUND + Names.label(path));
     }
 

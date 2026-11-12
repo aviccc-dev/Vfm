@@ -1827,6 +1827,22 @@ public final class Words {
         public static String notHere(String name) {
             return "\"" + name + "\" — פעולה של מסך אחר, לא של המסך הזה";
         }
+
+        /** מ0.41: השורות — מהרשימות של "שמור לתוכנה"; העריכה שם. */
+        public static final String ROWS_TITLE = "השורות — ברשימות של \"שמור לתוכנה\"",
+                ROW_HINT = "זו הרשימה של השורה: מה שבה — הכפתורים. ➕ מוסיף פקודה; נגיעה ארוכה — הסרה וסידור";
+
+        public static String rowAll(String side, int n) {
+            return "✏ " + side + " " + n + " — בכל המסכים";
+        }
+
+        public static String rowHere(String side, int n, String screen) {
+            return "✏ " + side + " " + n + " — רק במסך: " + screen;
+        }
+
+        public static String rowNew(String side, int n) {
+            return "➕ שורה חדשה: " + side + " " + n;
+        }
     }
 
     /** 1.10.0: בכאילו — קובץ פקודות בהדמיה */
@@ -2271,6 +2287,8 @@ public final class Words {
 
         // מ0.23: יצוא וייבוא — קובצי פקודות מוכנים ב־⭐
         public static final String TOOL_BAR = "פס צף", TOOL_APP = "פתיחת אפליקציה", TOOL_DUPS = "כפולים בכל הכוננים";   // בכונן (מ0.25)
+        /** מ0.41: הפקודה המוכנה שפותחת את העורך האינטראקטיבי — השם הוא גם שם התוסף (כמו שכתוב בעמוד שלו). */
+        public static final String TOOL_EDITOR = "עורך אינטראקטיבי";   // בכונן
         public static final String TOOL_EXPORT = "יצוא רשימה", TOOL_IMPORT = "ייבוא רשימה",   // בכונן
                 HOLE_EXPORT = "רשימה-לייצוא", HOLE_FILE = "שם-הקובץ-בתיקיית-יצוא", HOLE_INTO = "לתוך-רשימה";   // תחביר
 
@@ -2749,7 +2767,8 @@ public final class Words {
         public static final String IMPORT_PREVIEW_TITLE = "מה ייעשה (עדיין לא נשמר דבר)";
 
         public static String modeLine(String name, boolean active) {
-            return active ? name + " (הפעיל)" : name;
+            String n = name.equals(Reserved.ROOT) || name.equals(DbCmd.TEST_MODE) ? "⚙ " + name + " · של התוכנה" : name;   // מ0.41
+            return active ? n + " (הפעיל)" : n;
         }
 
         public static String importFailed(String why) {

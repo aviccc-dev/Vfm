@@ -13,6 +13,7 @@ import java.lang.reflect.Proxy;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 
 final class ImportTests {
 
@@ -784,39 +785,145 @@ final class ImportTests {
         ck("פורמט 2: המסד תקין", back.check() == null && s.check() == null);
     }
 
+    private static List<String> filesOf(List<Menus.Item> items) {
+        List<String> out = new ArrayList<String>();
+        for (Menus.Item it : items) out.add(it.e.kind == DbMore.E_FILE ? new File(it.e.path).getName() : (it.e.kind == DbMore.E_LIST ? "☰" : "📜") + it.e.label);
+        return out;
+    }
+
+    /** מ0.41: התפריטים — ברירת המחדל מהקובץ שבהתקנה, המיזוג (הכללי ואחריו של האופן), השורות של מסך, והמעבר מהישן. */
+    void menus(Store s, File asset, File dir) throws Exception {
+        final String IN = "/storage/emulated/0", SYS = IN + "/" + Paths.APP_DIR + "/" + Reserved.SYS_DIR + "/";
+        String text = new String(java.nio.file.Files.readAllBytes(asset.toPath()), "UTF-8");
+        java.util.Set<String> known = new java.util.HashSet<String>();
+        for (File f : Menus.systemFiles().values()) known.add(f.getName());
+        boolean all = true;
+        int refs = 0;
+        for (String line : text.split("\n")) if (line.startsWith(DbExamples.IN)) {
+            refs++;
+            String name = line.substring(line.lastIndexOf('/') + 1, line.lastIndexOf(" | "));
+            if (!line.startsWith(DbExamples.IN + "/" + Paths.APP_DIR + "/" + Reserved.SYS_DIR + "/") || !known.contains(name)) all = false;
+        }
+        ck("תפריטים: כל קובץ שבברירת המחדל — פקודת מערכת או כלי שהתוכנה כותבת (" + refs + ")", all && refs > 20);
+        DbMore.Imported im = Menus.defaults(s, text, IN);
+        long home = DbPaths.home(s);
+        ck("תפריטים: ברירת המחדל נכנסת לבית בלי שורות שלא הובנו", im.bad == 0 && home != 0 && Menus.root(s, Menus.MODE) == home);
+        Menus.Tree g = Menus.tree(s, Menus.MODE);
+        Menus.Snap one = new Menus.Snap(g, null);
+        List<Menus.Row> top = one.rows(null, Menus.ROW_TOP);
+        ck("תפריטים: שורה למעלה 1 — בית, פקודות, חיפוש, קבצים פיזיים, חזרה", top.size() == 1 && top.get(0).n == 1
+                && filesOf(top.get(0).items).equals(Arrays.asList("בית.vbat", "פקודות.vbat", "חיפוש.vbat", "קבצים פיזיים.vbat", "חזרה.vbat")));
+        ck("תפריטים: אין שורה תחתונה כללית; בבית — העורך האינטראקטיבי", one.rows(null, Menus.ROW_BOTTOM).isEmpty() && one.rows(Verbs.S_LIST_SCREEN, Menus.ROW_BOTTOM).isEmpty()
+                && one.rows(Verbs.S_HOME, Menus.ROW_BOTTOM).size() == 1
+                && filesOf(one.rows(Verbs.S_HOME, Menus.ROW_BOTTOM).get(0).items).equals(Arrays.asList(Words.DbCmd.TOOL_EDITOR + ".vbat")));
+        ck("תפריטים: \"פקודות\" — הפקודות, \"הפקודות שלי\" והחכמה; \"בחירה\" — ריקה", one.at(Menus.CMDS).size() == 18 && one.has(Menus.MINE) && one.at(Menus.MINE).isEmpty()
+                && one.has(Menus.SELECT_PATH) && one.at(Menus.SELECT_PATH).isEmpty() && !one.has(Arrays.asList("אין")));
+        ck("תפריטים: הדרכים לבורר — בלי השורש, אב לפני בן", one.paths().size() == 6 && one.paths().indexOf(Menus.CMDS) < one.paths().indexOf(Menus.MINE));
+        ck("תפריטים: ייבוא שני של ברירת המחדל — בלי כפולים", Menus.defaults(s, text, IN).files == 0 && Menus.tree(s, Menus.MODE).lists.get(Menus.key(Menus.CMDS)).size() == 18);
+        // של האופן: מוסיף, לא מחליף; מה שכבר יש — לא פעמיים
+        MemStore w = new MemStore(IdCounter.memory());
+        long wh = DbPaths.ensureHome(w), wr = w.createList(Reserved.ROOT, wh), wrow = w.createList("שורה למעלה 1", wr), wc = w.createList(Reserved.CMDS, wr),
+                wm = w.createList(Reserved.MINE, wc), wscr = w.createList(Verbs.S_HOME, wr), wsrow = w.createList("שורה למעלה 1", wscr);
+        DbFiles.add(w, wrow, Arrays.asList(SYS + "חזרה.vbat", "/x/שלי.vbat"), null);
+        DbFiles.add(w, wm, Arrays.asList("/x/מאופן.vbat"), null);
+        DbFiles.add(w, wc, Arrays.asList(SYS + "בית.vbat", "/x/עוד.vbat"), null);
+        DbFiles.add(w, wsrow, Arrays.asList("/x/בבית.vbat", "/x/שלי.vbat"), null);
+        Menus.Snap two = new Menus.Snap(g, Menus.tree(w, "עבודה"));
+        ck("תפריטים: של האופן — אחרי הכללי, בלי מה שכבר יש", filesOf(two.at(Menus.rowPath(null, Menus.ROW_TOP, 1)))
+                .equals(Arrays.asList("בית.vbat", "פקודות.vbat", "חיפוש.vbat", "קבצים פיזיים.vbat", "חזרה.vbat", "שלי.vbat")));
+        ck("תפריטים: \"הפקודות שלי\" — תפריט משנה אחד, ממוזג", two.at(Menus.CMDS).size() == 19 && filesOf(two.at(Menus.MINE)).equals(Arrays.asList("מאופן.vbat")));
+        List<Menus.Row> homeTop = two.rows(Verbs.S_HOME, Menus.ROW_TOP);
+        ck("תפריטים: שורה של מסך — אחרי הכללית, באותה שורה, בלי כפולים", homeTop.size() == 1 && filesOf(homeTop.get(0).items)
+                .equals(Arrays.asList("בית.vbat", "פקודות.vbat", "חיפוש.vbat", "קבצים פיזיים.vbat", "חזרה.vbat", "שלי.vbat", "בבית.vbat")));
+        ck("תפריטים: במסך אחר — רק הכללית", filesOf(two.rows(Verbs.S_SEARCH, Menus.ROW_TOP).get(0).items).size() == 6);
+        Object[] where = two.where(Menus.MINE);
+        ck("תפריטים: הרשימה לסידור — הכללית; ושל האופן — כשרק לו יש", where != null && Menus.MODE.equals(where[0]) && "עבודה".equals(two.where(Arrays.asList(Verbs.S_HOME, "שורה למעלה 1"))[0]));
+        Menus.Item mine = two.at(Menus.rowPath(null, Menus.ROW_TOP, 1)).get(5);
+        ck("תפריטים: כל שורה יודעת מאיזו רשימה היא", "עבודה".equals(mine.mode) && mine.list == wrow && mine.path.equals(Arrays.asList("שורה למעלה 1")));
+        ck("תפריטים: אופן בלי \"שמור לתוכנה\" — רק הכללי", Menus.tree(new MemStore(IdCounter.memory()), "ריק").lists.isEmpty());
+        // קישור של רשימה לתוך עצמה — לא נתקעים
+        w.addMember(wm, wc == 0 ? wm : w.createList("פנימית", wm));
+        ck("תפריטים: עומק — נקרא", Menus.tree(w, "עבודה").ids.containsKey(Menus.key(Arrays.asList(Reserved.CMDS, Reserved.MINE, "פנימית"))));
+        // הכלים — גם באופן התפריטים (השורש הוא הבית)
+        File t1 = new File(dir, "כלי-חדש.vbat");
+        t1.getParentFile().mkdirs();
+        write(t1, "הערה\n");
+        ck("תפריטים: כלי שחסר נכנס ל\"פקודות\" של אופן התפריטים", DbCmdMenu.ensureTools(s, Menus.MODE, Arrays.asList(t1)).size() == 1
+                && s.findFile(t1.getAbsolutePath()) != 0 && DbCmdMenu.ensureTools(s, Menus.MODE, Arrays.asList(t1)).isEmpty());
+        // המעבר מ"דוגמאות": מה שהמשתמש הוסיף עובר, והרשימה יוצאת משם עם רישומי הקבצים שלה
+        MemStore ex = new MemStore(IdCounter.memory());
+        long eh = DbPaths.ensureHome(ex), er = ex.createList(Reserved.ROOT, eh), ec = ex.createList(Reserved.CMDS, er), em = ex.createList(Reserved.MINE, ec),
+                eb = ex.createList(Reserved.BACKUP, er), other = ex.createList("רשימה אחרת", eh);
+        DbFiles.add(ex, ec, Arrays.asList(SYS + "בית.vbat", "/x/הוספתי.vbat"), null);
+        DbFiles.add(ex, em, Arrays.asList("/x/פקודה שלי.vbat"), null);
+        DbFiles.add(ex, eb, Arrays.asList("/x/לגיבוי.txt"), null);
+        DbFiles.add(ex, other, Arrays.asList("/x/הוספתי.vbat", "/x/נשאר.pdf"), null);
+        long sm = ex.createSmart("חכמה שלי", ec);
+        ex.setProp(sm, Store.P_COND, "סוג:vbat שם:א");
+        int moved = Menus.moveFrom(ex, DbExamples.MODE, s);
+        long cmds = Menus.at(s, home, Menus.CMDS), myList = Menus.at(s, home, Menus.MINE);
+        ck("מעבר מהדוגמאות: הרשימות עברו לבית של אופן התפריטים", moved > 0 && filesIn(s, myList) == 1 && s.listsOf(s.findFile("/x/פקודה שלי.vbat")).contains(myList)
+                && s.listsOf(s.findFile("/x/הוספתי.vbat")).contains(cmds) && Menus.at(s, home, Arrays.asList(Reserved.BACKUP)) != 0);
+        int same = 0;
+        for (Store.Member m : s.members(cmds)) if (m.item.name.equals("בית.vbat")) same++;
+        boolean smart = false;
+        for (Store.Member m : s.members(cmds)) if (m.item.type == Store.SMART && m.item.name.equals("חכמה שלי")) smart = "סוג:vbat שם:א".equals(s.prop(m.item.id, Store.P_COND));
+        ck("מעבר מהדוגמאות: מה שכבר היה — לא פעמיים; רשימה חכמה שנוספה — עם התנאי", same == 1 && smart);
+        ck("מעבר מהדוגמאות: שם היא כבר לא קיימת, ורישומי הקבצים שהיו רק בה נמחקו", DbPaths.find(ex, DbExamples.MODE, Reserved.ROOT_PATH) == 0
+                && ex.findFile("/x/פקודה שלי.vbat") == 0 && ex.findFile(SYS + "בית.vbat") == 0 && ex.unassigned().isEmpty());
+        ck("מעבר מהדוגמאות: מה שהיה גם ברשימה אחרת — נשאר בה", ex.findFile("/x/הוספתי.vbat") != 0 && filesIn(ex, other) == 2 && ex.check() == null);
+        ck("מעבר מהדוגמאות: פעם שנייה — אין מה להעביר", Menus.moveFrom(ex, DbExamples.MODE, s) == 0 && s.check() == null);
+        // המעבר מקובץ הכפתורים הישן
+        final Map<String, File> sys = Menus.systemFiles();
+        final File made = new File(dir, "קיצורים");
+        Menus.Maker maker = new Menus.Maker() {
+            @Override public File file(String icon, String name, String line) {
+                File f = sys.get(line.trim());
+                return f != null ? new File(SYS + f.getName()) : new File(made, name + ".vbat");
+            }
+        };
+        Buttons.Layout lay = Buttons.parseAll("[למעלה]\n---\n🏠 | בית | פתח מסך הבית\n⭐ | אחרונים | פתח רשימה חכמה אחרונים\n→ | חזרה | חזור\n---\n📂 | הורדות | פתח תיקייה /x\n"
+                + "[למעלה: " + Words.Top.S_HOME + "]\n---\n📋 | לימוד | פתח רשימה לימוד\n[למטה: " + Words.Top.S_LIST + "]\n---\n➕ | רשימה | צור רשימה\n"
+                + "[למטה: " + Words.Top.S_DISK + "]\n---\n➕ | רשימה | צור רשימה\n⭐ | אחרונים | פתח רשימה חכמה אחרונים\n");
+        int nb = Menus.fromButtons(s, lay, maker);
+        Menus.Snap after = new Menus.Snap(Menus.tree(s, Menus.MODE), null);
+        ck("מעבר מהכפתורים: השורה העליונה — בדיוק מה שהיה בקובץ, לפי הסדר (מה שבא מברירת המחדל יצא)", filesOf(after.at(Menus.rowPath(null, Menus.ROW_TOP, 1)))
+                .equals(Arrays.asList("בית.vbat", "אחרונים.vbat", "חזרה.vbat")) && filesOf(after.at(Menus.rowPath(null, Menus.ROW_TOP, 2))).equals(Arrays.asList("הורדות.vbat")));
+        ck("מעבר מהכפתורים: שורה של \"מסך הבית\" הישן — בבית וברשימה", filesOf(after.rows(Verbs.S_HOME, Menus.ROW_TOP).get(0).items).contains("לימוד.vbat")
+                && filesOf(after.rows(Verbs.S_LIST_SCREEN, Menus.ROW_TOP).get(0).items).contains("לימוד.vbat") && !filesOf(after.rows(Verbs.S_SEARCH, Menus.ROW_TOP).get(0).items).contains("לימוד.vbat"));
+        ck("מעבר מהכפתורים: \"פעולה של המסך\" לא עוברת; מסך בלי שם — לא עובר", filesOf(after.rows(Verbs.S_DISK, Menus.ROW_BOTTOM).get(0).items).equals(Arrays.asList("אחרונים.vbat"))
+                && after.rows(Verbs.S_SMART_SCREEN, Menus.ROW_BOTTOM).isEmpty() && nb == 7);
+        ck("מעבר מהכפתורים: מה שיצא מהשורה נשאר ב\"פקודות\"; המסד תקין", s.findFile(SYS + "חיפוש.vbat") != 0 && s.unassigned().isEmpty() && s.check() == null);
+    }
+
     /** הדוגמאות — הקובץ שבהתקנה: נקרא כולו, מיובא לבית, ושחזור מחליף רק את רשימות הדוגמאות. */
     void examples(Store s, File asset) throws Exception {
         String text = new String(java.nio.file.Files.readAllBytes(asset.toPath()), "UTF-8");
         List<String> tops = DbExamples.tops(text);
-        ck("דוגמאות: בקובץ יש רשימות בבית, ובהן \"הדוגמאות שלי\" ו\"שמור לתוכנה\"", tops.size() >= 10 && tops.contains(DbExamples.MINE) && tops.contains(Reserved.ROOT));
+        ck("דוגמאות: בקובץ יש רשימות בבית, ובהן \"הדוגמאות שלי\"; \"שמור לתוכנה\" — כבר לא (מ0.41: אופן משלה)", tops.size() >= 10 && tops.contains(DbExamples.MINE) && !tops.contains(Reserved.ROOT)
+                && !text.contains(Reserved.ROOT + Names.SEP));
         DbMore.Imported im = DbExamples.install(s, text, "/storage/emulated/0");
         long home = DbPaths.home(s);
         ck("דוגמאות: מיובאות בלי שורות שלא הובנו (" + im.lists + " רשימות, " + im.smarts + " חכמות, " + im.files + " קבצים)",
-                im.bad == 0 && im.lists > 50 && im.smarts > 30 && im.files > 20 && s.count(home) == tops.size());
-        ck("דוגמאות: \"%פנימי%\" הוחלף בשורש — אין פריט שמתחיל ב-%", s.findFile("/storage/emulated/0/" + Paths.APP_DIR + "/" + Reserved.SYS_DIR + "/בית.vbat") != 0);
-        ck("דוגמאות: \"שמור לתוכנה / פקודות / הפקודות שלי\" קיימת", DbPaths.find(s, "x", Reserved.MINE_PATH) != 0 && DbPaths.find(s, "x", Reserved.CMDS_PATH) != 0);
+                im.bad == 0 && im.lists > 50 && im.smarts > 30 && im.files > 5 && s.count(home) == tops.size());   // מ0.41: הפקודות — באופן התפריטים
+        boolean raw = false;
+        for (Store.Item l : s.lists()) for (Store.Member m : s.members(l.id))
+            if (m.item.type == Store.FILE && s.file(m.item.id).path.startsWith("%")) raw = true;
+        ck("דוגמאות: \"%פנימי%\" הוחלף בשורש — אין פריט שמתחיל ב-%", !raw);
         ck("דוגמאות: המסד תקין אחרי הייבוא", s.check() == null);
         int lists = s.lists().size(), smarts = s.smarts().size();
-        long mine = DbPaths.find(s, "x", Names.parsePath(DbExamples.MINE)), cmdsMine = DbPaths.find(s, "x", Reserved.MINE_PATH);
+        long mine = DbPaths.find(s, "x", Names.parsePath(DbExamples.MINE));
         long userList = s.createList("של המשתמש", home), inMine = s.createList("שמרתי כאן", mine);
-        long fUser = s.createFile(new Store.FileInfo("/storage/emulated/0/my.vbat", "פנימי", 5, 0, null));
-        s.addMember(cmdsMine, fUser);
         long first = 0;
         for (Store.Member m : s.members(home)) if (m.item.type == Store.LIST && m.item.name.equals(tops.get(0))) first = m.item.id;
         long added = s.createList("הוספתי לדוגמה", first);
         int n = DbExamples.restore(s, text, "/storage/emulated/0");
-        ck("שחזור: הוחלפו כל רשימות הדוגמאות חוץ משתי של המשתמש", n == tops.size() - 2);
+        ck("שחזור: הוחלפו כל רשימות הדוגמאות חוץ מ\"הדוגמאות שלי\"", n == tops.size() - 1);
         ck("שחזור: רשימה שהמשתמש הוסיף לבית — נשארה", s.item(userList) != null && s.listsOf(userList).contains(home));
         ck("שחזור: \"הדוגמאות שלי\" — אותה רשימה, עם מה שבה", DbPaths.find(s, "x", Names.parsePath(DbExamples.MINE)) == mine && s.listsOf(inMine).contains(mine));
-        ck("שחזור: פקודה של המשתמש ב\"הפקודות שלי\" — נשארה", s.listsOf(fUser).contains(cmdsMine));
         ck("שחזור: מה שנוסף לרשימת דוגמאות — יצא איתה", s.item(added) == null || s.listsOf(added).isEmpty());
         ck("שחזור: אותו מספר רשימות וחכמות כמו אחרי התקנה (ועוד שתי הרשימות של המשתמש)", s.lists().size() == lists + 2 && s.smarts().size() == smarts);
         ck("שחזור: המסד תקין", s.check() == null);
-        String part = DbExamples.reservedPart(text);
-        MemStore other = new MemStore(IdCounter.memory());
-        DbExamples.install(other, part, "/storage/emulated/0");
-        ck("שמור לתוכנה לבד: רק היא בבית, עם הפקודות", other.count(DbPaths.home(other)) == 1 && DbPaths.find(other, "x", Reserved.CMDS_PATH) != 0
-                && other.count(DbPaths.find(other, "x", Reserved.CMDS_PATH)) > 5);
     }
 
     /** מנוע הערכה מדומה: "סוג:תמונות" — 3, "סוג:תמונות צילום" — 2 (או הערה "לא הובן" כש־badCond), כל השאר — 0. */

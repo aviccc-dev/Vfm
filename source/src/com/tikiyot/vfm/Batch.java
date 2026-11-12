@@ -520,6 +520,24 @@ final class Batch {
     }
 
     /** משתנים קבועים. */
+    /**
+     * מ0.41: קובץ שכולו פקודת פתיחה אחת (חוץ מהכותרת — צלמית, שם, למה — ומהערות): השורה; אחרת null. קובץ כזה רץ מיד, בלי
+     * הכנה ותצוגה מקדימה — כמו כפתור (הכפתורים בשורות הם קובצי פקודות).
+     */
+    static String singleVerb(String text) {
+        String one = null;
+        for (String raw : Bidi.strip(text == null ? "" : text).replace("\r", "").split("\n")) {
+            String l = Commands.normal(raw);
+            if (l.isEmpty() || l.startsWith("::") || Program.isHeader(l)) continue;
+            int sp = l.indexOf(' ');
+            Commands.Def d = Commands.get(sp < 0 ? l : l.substring(0, sp));
+            if (d != null && d.name.equals("REM")) continue;
+            if (one != null || !Verbs.isVerb(l)) return null;
+            one = l;
+        }
+        return one;
+    }
+
     static Map<String, String> vars(File here, String internal, String card) {
         Map<String, String> v = new LinkedHashMap<String, String>();
         v.put(V_INTERNAL, internal);

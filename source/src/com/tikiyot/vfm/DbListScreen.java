@@ -132,6 +132,8 @@ public class DbListScreen extends ListScreen<Store.Member> {
         listId = getIntent().getLongExtra(EXTRA_LIST, 0);
         sortBy = getIntent().getStringExtra(EXTRA_SORT);
         if (sortBy == null) sortBy = "";
+        currentMode = mode;                                                   // מ0.41: לפני שהשורות מצוירות — התפריטים של האופן הזה
+        atHome = homeNow();                                                   // ...ושל מסך הבית, אם זה הבית
         if (Ui.hasFiles(this)) DbCmdMenu.ensureToolsAsync(this, mode);      // מ0.23: יצוא וייבוא ב־⭐
         LinearLayout root = build(saved, Words.Db.APP_NAME_M, "db-list");
         modeBox = new TextView(this);                                         // כמו בבית הישן (Home, 105)
@@ -152,6 +154,19 @@ public class DbListScreen extends ListScreen<Store.Member> {
         });
         root.addView(pasteBar.view);
         done(root, Actions.Tool.LIST, own());                                // מ0.16: פס הבחירה — כמו ברשימה ידנית
+    }
+
+    /** מ0.41: האם הרשימה שנפתחת היא הבית — נקרא כבר בפתיחה (השורות של מסך הבית). */
+    private boolean homeNow() {
+        SqlStore s = null;
+        try {
+            s = SqlStore.openReadOnly(DbScreen.dbFile(this, mode));
+            return "1".equals(s.prop(listId, Store.P_HOME));
+        } catch (Throwable t) {
+            return false;
+        } finally {
+            if (s != null) s.close();
+        }
     }
 
     /** המסד לקריאה בלבד — נפתח בכל טעינה (מסך המסד הוא שכותב). */

@@ -1,22 +1,21 @@
 package com.tikiyot.vfm;
 
-// שורות הכפתורים בכל מסכי התוכנה (פריטים 2 ו־9). 1.9.0: שורה עליונה. 1.10.0: ארבעה מקומות —
-// למעלה (בכל המסכים) · למעלה של סוג המסך · [התוכן] · למטה של סוג המסך · למטה (בכל המסכים); בכל מקום עד 5 שורות.
-// נגיעה — הפעולה; נגיעה ארוכה על כפתור — עריכה / הזזה / העברה לשורה אחרת / מחיקה / חזרה לברירת מחדל.
-// ➕ "כפתור" בסוף כל שורה מוסיף כפתור; נגיעה ארוכה עליו — כפתור חדש / שורה חדשה / מחיקת השורה / חזרה לברירת מחדל.
-// עוגנים: ➕ בסוף כל שורה; 🏠 בית ו־→ חזרה — תמיד באחת השורות הכלליות, והפעולה שלהם קבועה.
-// פס הבחירה (פעולות על הנבחרים) — נשאר כמו שהוא; בזמן בחירה השורות התחתונות מוסתרות.
-// אחראי: הממשק והביצוע. הנתונים — Buttons. פעולות של סוג מסך — המסך עצמו (Host).
+// שורות הכפתורים בכל מסכי התוכנה. 1.9.0: שורה עליונה; 1.10.0: למעלה ולמטה, כלליות ושל סוג המסך, עד 5 שורות בכל מקום.
+// מ0.41 (המשתמש, 12.11.2026: "ברשימה 'שמור לתוכנה' יהיו רשימות — שורה למעלה 1 עד 5, שורה למטה 1 עד 5 — ובכל רשימה כזו אפשר
+// יהיה להוסיף פקודות, והם יופיעו בתוכנה"): השורות נלקחות מהרשימות (Menus) — "שורה למעלה N" בכל המסכים, ואחריה באותה שורה
+// "<שם המסך> / שורה למעלה N". כפתור = קובץ פקודות שברשימה (הצלמית והשם — מהכותרת שלו); תת־רשימה — תפריט משנה; חכמה — מה
+// שהיא מוצאת. נגיעה — הרצה. העריכה — ברשימה עצמה: ➕ שבסוף השורה פותח את הרשימה שלה (וגם נגיעה ארוכה על כפתור).
+// עד מ0.40 — מקובץ "כפתורים.txt", עם עריכה כאן; הקובץ הישן עובר לרשימות פעם אחת (Menus.install).
+// שורת חירום: אין אף שורה עליונה (הרשימות רוקנו, או המסד לא נקרא) — בית · פקודות · חיפוש · קבצים · חזרה, כמו ברירת המחדל.
+// פס הבחירה — נשאר כמו שהוא; בזמן בחירה השורות התחתונות מוסתרות.
+// אחראי: הציור וההרצה. מה בשורות — Menus.
 
 import android.app.Activity;
 import android.content.DialogInterface;
-import android.content.Intent;
 import android.view.Gravity;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.ViewTreeObserver;
-import android.widget.Button;
-import android.widget.EditText;
 import android.widget.HorizontalScrollView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
@@ -39,29 +38,32 @@ final class TopRow {
     static final String BOTTOM_TAG = "rows-bottom";  // תחביר
 
     private final Activity a;
-    private final String screen;
     private final LinearLayout top, bottom;
     private long built = -1;
+    private String screen;
+    /** האופן שהמסך נפתח בו — מסך שאינו רשימה חוזר אליו אחרי שנפתחה מעליו רשימה של אופן אחר (סידור תפריט). */
+    private final String mode;
 
-    private TopRow(Activity a, String screen, LinearLayout top, LinearLayout bottom) {
+    private TopRow(Activity a, LinearLayout top, LinearLayout bottom) {
         this.a = a;
-        this.screen = screen;
         this.top = top;
         this.bottom = bottom;
+        this.mode = DbListScreen.currentMode;
     }
 
-    /** סוג המסך — שם המקום של השורות שלו. */
+    /**
+     * שם המסך, לשורות שלו ("הבית / שורה למטה 1"): השמות של "פתח מסך", ועוד "רשימה" ו"רשימה חכמה" (המשתמש: "אם יש להם שמות
+     * שמורים, אז אפשר להמשיך באותה שיטה"). null — למסך אין שורות משלו, רק הכלליות.
+     */
     static String screenOf(Activity a) {
-        if (a instanceof DbListScreen) return Words.Top.S_HOME;                 // מ0.9: המראה המוכר של המסד — שורת הבית
-        if (a instanceof SearchScreen)                                        // 1.17.3: רשימה חכמה — אותה שורה כמו ידנית
-            return ((SearchScreen) a).isList() ? Words.Top.S_LIST : Words.Top.S_SEARCH;
-        if (a instanceof DiskScreen) return Words.Top.S_DISK;
-        if (a instanceof TrashScreen) return Words.Top.S_TRASH;
-        if (a instanceof DupScreen) return Words.Top.S_DUP;
-        if (a instanceof SettingsScreen) return Words.Top.S_SETTINGS;
-        if (a instanceof BatchEditScreen) return Words.Top.S_BATCH;
-        if (a instanceof AsIfScreen) return Words.Top.S_ASIF;
-        return Words.Top.S_EDITOR;
+        if (a instanceof DbListScreen) return ((DbListScreen) a).isHomeScreen() ? Verbs.S_HOME : Verbs.S_LIST_SCREEN;
+        if (a instanceof SearchScreen) return ((SearchScreen) a).rowsScreen();
+        if (a instanceof DiskScreen) return Verbs.S_DISK;
+        if (a instanceof TrashScreen) return Verbs.S_TRASH;
+        if (a instanceof SettingsScreen) return Verbs.S_SETTINGS;
+        if (a instanceof BatchEditScreen) return Verbs.S_EDITOR;
+        if (a instanceof LabScreen) return Verbs.S_PLUGINS;
+        return null;
     }
 
     /** המסך עם השורות סביבו. כל המסכים קוראים לזה במקום setContentView(content). */
@@ -79,13 +81,16 @@ final class TopRow {
         if (content.getParent() instanceof ViewGroup) ((ViewGroup) content.getParent()).removeView(content);
         box.addView(content, new LinearLayout.LayoutParams(-1, 0, 1f));
         box.addView(bottom, new LinearLayout.LayoutParams(-1, -2));
-        final TopRow t = new TopRow(a, screenOf(a), top, bottom);
+        final TopRow t = new TopRow(a, top, bottom);
         t.build();
-        // מסך שחזר לקדמה — אם השורות שונו במסך אחר, נבנות מחדש
+        // מסך שחזר לקדמה — אם התפריטים שונו (ברשימות), או שהמסך עצמו השתנה (הבית / רשימה) — השורות נבנות מחדש
         box.getViewTreeObserver().addOnWindowFocusChangeListener(new ViewTreeObserver.OnWindowFocusChangeListener() {
             @Override
             public void onWindowFocusChanged(boolean focus) {
-                if (focus && t.built != Buttons.stamp()) t.build();
+                if (!focus) return;
+                if (!(a instanceof DbListScreen) && t.mode != null) DbListScreen.currentMode = t.mode;
+                String now = screenOf(a);
+                if (t.built != Menus.version(a) || (now == null ? t.screen != null : !now.equals(t.screen))) t.build();
             }
         });
         return box;
@@ -96,93 +101,153 @@ final class TopRow {
         return box.findViewWithTag(BOTTOM_TAG);
     }
 
-    private String[] places() {
-        return new String[]{Buttons.TOP, Buttons.local(Buttons.TOP, screen),
-                Buttons.local(Buttons.BOTTOM, screen), Buttons.BOTTOM};
-    }
-
     private void build() {
-        built = Buttons.stamp();
+        built = Menus.version(a);
+        screen = screenOf(a);
         top.removeAllViews();
         bottom.removeAllViews();
-        final Buttons.Layout lay = Buttons.loadAll();
-        for (String place : places()) {
-            List<List<Buttons.Btn>> rows = lay.places.get(place);
-            if (rows == null) continue;
-            boolean up = place.startsWith(Buttons.TOP);
-            for (List<Buttons.Btn> row : rows) (up ? top : bottom).addView(rowView(lay, place, row, up));
+        Menus.Snap m = Menus.get(a);
+        int shown = 0;
+        for (Menus.Row r : m.rows(screen, Menus.ROW_TOP)) shown += add(top, r, true);
+        if (shown == 0) top.addView(emergency());
+        for (Menus.Row r : m.rows(screen, Menus.ROW_BOTTOM)) add(bottom, r, false);
+    }
+
+    /** שורה אחת; מחזיר כמה כפתורים יש בה (קובץ שאינו בכונן — לא מוצג; שורה בלי אף כפתור — לא מוצגת). */
+    private int add(LinearLayout into, final Menus.Row row, boolean up) {
+        LinearLayout r = line();
+        int n = 0;
+        for (final Menus.Item it : row.items) {
+            View v;
+            if (it.e.kind == DbMore.E_FILE) {
+                final File f = new File(it.e.path);
+                if (!f.isFile()) continue;
+                String[] look = Menus.look(f);
+                v = button(look[0], look[1], Ui.ACCENT);
+                v.setOnClickListener(new View.OnClickListener() {
+                    @Override public void onClick(View x) { DbCmdMenu.use(a, f, null, null); }
+                });
+            } else if (it.e.kind == DbMore.E_LIST) {
+                v = button("☰", it.e.label, Ui.ACCENT);
+                v.setOnClickListener(new View.OnClickListener() {
+                    @Override
+                    public void onClick(View x) {
+                        List<String> p = new ArrayList<String>();
+                        p.add(Reserved.ROOT);
+                        p.addAll(it.path);                                      // הרשימה של השורה (הכללית, או של המסך)
+                        p.add(it.e.label);
+                        if (!DbCmdMenu.show(a, p, null, null, null, false)) Ui.toast(a, Words.Verb.NOT_FOUND + it.e.label);
+                    }
+                });
+            } else {
+                v = button("📜", it.e.label, Ui.ACCENT);
+                v.setOnClickListener(new View.OnClickListener() {
+                    @Override public void onClick(View x) { CmdMenu.found(a, it.e.label, it.e.cond == null ? "" : it.e.cond, null); }
+                });
+            }
+            v.setOnLongClickListener(new View.OnLongClickListener() {              // העריכה — ברשימה שהכפתור בה
+                @Override
+                public boolean onLongClick(View x) {
+                    DbListScreen.open(a, it.mode, it.list);
+                    return true;
+                }
+            });
+            r.addView(v);
+            n++;
         }
+        if (n == 0) return 0;
+        r.addView(plus(row.side, row.n));
+        into.addView(framed(r, Ui.BAR, up));
+        return n;
     }
 
-    /**
-     * 1.17.3: שורה אחת לכל הרשימות — ידניות וחכמות (המשתמש: "שורה למסך הבית, ושורה נפרדת לירידה ברמה לתוך רשימה —
-     * לא משנה חכמה או ידנית"). כפתור של פעולה שרק סוג אחד מכיר (למשל "מהכונן" ברשימה ידנית) — לא מוצג בשני.
-     */
-    private boolean fits(Buttons.Btn b) {
-        String code = Verbs.isVerb(b.act) ? Verbs.hostCode(Verbs.parse(b.act)) : b.act.startsWith(Buttons.ACT) ? b.act : null;
-        if (code == null) return true;
-        if (!(a instanceof Host)) return false;
-        for (String[] x : ((Host) a).actions()) if (x[0].equals(code)) return true;
-        return false;
+    /** שורת החירום: כשאין אף שורה עליונה מהרשימות — ברירת המחדל שבקוד, כדי שתמיד יהיו בית וחזרה. */
+    private View emergency() {
+        LinearLayout r = line();
+        for (final Buttons.Btn b : Buttons.defaults()) {
+            View v = button(b.icon, b.name, Ui.ACCENT);
+            v.setOnClickListener(new View.OnClickListener() {
+                @Override public void onClick(View x) { Verbs.run(a, b.act, null); }
+            });
+            r.addView(v);
+        }
+        r.addView(plus(Menus.ROW_TOP, 1));
+        return framed(r, Ui.BAR, true);
     }
 
-    private View rowView(final Buttons.Layout lay, final String place, final List<Buttons.Btn> row, boolean up) {
-        LinearLayout wrap = new LinearLayout(a);
-        wrap.setOrientation(LinearLayout.VERTICAL);
-        HorizontalScrollView sv = new HorizontalScrollView(a);
-        sv.setHorizontalScrollBarEnabled(false);
-        sv.setBackgroundColor(Buttons.general(place) ? Ui.BAR : Ui.BG_SOFT);
+    private LinearLayout line() {
         LinearLayout r = new LinearLayout(a);
         r.setOrientation(LinearLayout.HORIZONTAL);
         r.setLayoutDirection(Ui.DIRECTION);
         int p = Ui.dp(a, 4);
         r.setPadding(p, p, p, p);
+        return r;
+    }
+
+    private View framed(LinearLayout r, int color, boolean up) {
+        LinearLayout wrap = new LinearLayout(a);
+        wrap.setOrientation(LinearLayout.VERTICAL);
+        HorizontalScrollView sv = new HorizontalScrollView(a);
+        sv.setHorizontalScrollBarEnabled(false);
+        sv.setBackgroundColor(color);
         sv.addView(r);
-        for (int i = 0; i < row.size(); i++) {
-            final int at = i;
-            final Buttons.Btn b = row.get(i);
-            if (!fits(b)) continue;                                           // 1.17.3: פעולה שהמסך הזה לא מכיר — לא מוצגת
-            View v = button(b.icon, b.name, Ui.ACCENT);
-            v.setOnClickListener(new View.OnClickListener() {
-                @Override public void onClick(View x) { run(b); }
-            });
-            v.setOnLongClickListener(new View.OnLongClickListener() {
-                @Override
-                public boolean onLongClick(View x) {
-                    if (!stale()) menu(lay, place, row, at);
-                    return true;
-                }
-            });
-            r.addView(v);
-        }
-        View add = button("➕", Words.Top.ADD, Ui.SUB);                       // עוגן: תמיד בסוף השורה
-        add.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View x) {                                     // 1.11.0: נגיעה רגילה — תפריט גלוי (כפתור / שורה)
-                if (stale()) return;
-                Ui.options(a, describe(place), new String[]{Words.Top.NEW_BUTTON, Words.Top.NEW_ROW},
-                        new DialogInterface.OnClickListener() {
-                            @Override
-                            public void onClick(DialogInterface d, int w) {
-                                if (w == 0) addNew(lay, row); else newRow(lay);
-                            }
-                        });
-            }
-        });
-        add.setOnLongClickListener(new View.OnLongClickListener() {
-            @Override
-            public boolean onLongClick(View x) {
-                if (!stale()) rowMenu(lay, place, row);
-                return true;
-            }
-        });
-        r.addView(add);
         View rule = new View(a);
         rule.setBackgroundColor(Ui.RULE);
         if (!up) wrap.addView(rule, new LinearLayout.LayoutParams(-1, 1));
         wrap.addView(sv, new LinearLayout.LayoutParams(-1, -2));
         if (up) wrap.addView(rule, new LinearLayout.LayoutParams(-1, 1));
         return wrap;
+    }
+
+    /**
+     * ➕ בסוף כל שורה: פותח את הרשימה של השורה (באופן "שמור לתוכנה") — שם מוסיפים פקודות, מסירים ומסדרים, כמו בכל רשימה.
+     * הבחירה: השורה בכל המסכים · השורה במסך הזה בלבד · שורה חדשה.
+     */
+    private View plus(final String side, final int n) {
+        View add = button("➕", Words.Top.ADD, Ui.SUB);
+        add.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View x) {
+                final List<String> labels = new ArrayList<String>();
+                final List<Runnable> runs = new ArrayList<Runnable>();
+                labels.add(Words.Top.rowAll(side, n));
+                runs.add(new Runnable() { @Override public void run() { arrange(null, side, n); } });
+                if (screen != null) {
+                    labels.add(Words.Top.rowHere(side, n, screen));
+                    runs.add(new Runnable() { @Override public void run() { arrange(screen, side, n); } });
+                }
+                for (final String sd : new String[]{Menus.ROW_TOP, Menus.ROW_BOTTOM}) {
+                    final int free = freeRow(sd);
+                    if (free == 0) continue;
+                    labels.add(Words.Top.rowNew(sd, free));
+                    runs.add(new Runnable() { @Override public void run() { arrange(null, sd, free); } });
+                }
+                Ui.list(a, Words.Top.ROWS_TITLE, labels, new DialogInterface.OnClickListener() {
+                    @Override public void onClick(DialogInterface d, int w) { runs.get(w).run(); }
+                });
+            }
+        });
+        return add;
+    }
+
+    /** המספר של השורה הכללית הפנויה הבאה בצד הזה (0 — כבר חמש). */
+    private int freeRow(String side) {
+        Menus.Snap m = Menus.get(a);
+        for (int n = 1; n <= Menus.MAX_ROWS; n++) if (m.at(Menus.rowPath(null, side, n)).isEmpty()) return n;
+        return 0;
+    }
+
+    /** פותח את הרשימה של השורה באופן "שמור לתוכנה" (נוצרת אם חסרה). */
+    private void arrange(final String ofScreen, final String side, final int n) {
+        long id = DbVerbs.write(a, Menus.MODE, new DbVerbs.Job() {
+            @Override
+            public long run(Store s, List<String> p) {
+                return Menus.ensure(s, DbPaths.ensureHome(s), Menus.rowPath(ofScreen, side, n));
+            }
+        }, null);
+        if (id == 0) return;
+        Ui.toast(a, Words.Top.ROW_HINT);
+        DbListScreen.open(a, Menus.MODE, id);
     }
 
     private View button(String icon, String name, int color) {
@@ -215,225 +280,13 @@ final class TopRow {
         return b;
     }
 
-    // ---------- הביצוע ----------
-
-    /** 1.13.0: כפתור = שורת פקודה. פקודת פתיחה (פתח / חזור / מצא / הרץ / הוסף…) — מיד; אחרת — שורה של קובץ פקודות. */
-    private void run(Buttons.Btn b) {
-        String act = b.act;
-        if (Verbs.run(a, act, null)) return;
-        File f = new File(Paths.system(), "כפתור." + Batch.EXT);   // בכונן
-        try {
-            Files.writeAtomic(f, act + "\n");
-            BatchUi.run(a, f);
-        } catch (Throwable e) {
-            Log.e("כפתור — שורת פקודה", e);
-        }
-    }
-
     /** 1.11.0: המסך יודע מה "כאן" שלו (ב"קבצים פיזיים" — התיקייה הפתוחה). */
     interface Here {
         File hereDir();
     }
 
-    // ---------- עריכה ----------
-
-    /** 1.13.0 (באג): השורות שונו במסך אחר מאז שהמסך הזה נבנה — לבנות מחדש לפני כל שינוי, כדי לא לדרוס. */
-    private boolean stale() {
-        if (built == Buttons.stamp()) return false;
-        build();
-        Ui.toast(a, Words.Top.STALE);
-        return true;
-    }
-
-    private void saved(Buttons.Layout lay, boolean changed) {
-        if (changed) Buttons.save(lay);
-        build();
-    }
-
-    /** נגיעה ארוכה על כפתור. */
-    private void menu(final Buttons.Layout lay, final String place, final List<Buttons.Btn> row, final int at) {
-        final Buttons.Btn b = row.get(at);
-        final List<String> items = new ArrayList<String>();
-        items.add(Words.Top.EDIT);
-        if (at > 0) items.add(Words.Top.RIGHT);
-        if (at < row.size() - 1) items.add(Words.Top.LEFT);
-        items.add(Words.Top.MOVE_ROW);
-        if (Buttons.removable(lay, place, row, at)) items.add(Words.Top.DELETE);
-        items.add(Words.Top.RESET);
-        Ui.list(a, b.icon + " " + b.name + (b.anchor() ? " · " + Words.Top.ANCHOR : ""), items,
-                new DialogInterface.OnClickListener() {
-                    @Override
-                    public void onClick(DialogInterface d, int w) {
-                        String it = items.get(w);
-                        if (it.equals(Words.Top.EDIT)) edit(lay, b);
-                        else if (it.equals(Words.Top.RIGHT)) saved(lay, Buttons.move(row, at, -1));
-                        else if (it.equals(Words.Top.LEFT)) saved(lay, Buttons.move(row, at, 1));
-                        else if (it.equals(Words.Top.MOVE_ROW)) moveToRow(lay, place, row, at);
-                        else if (it.equals(Words.Top.DELETE)) {
-                            row.remove(at);
-                            saved(lay, true);
-                        } else askReset(lay, place);
-                    }
-                });
-    }
-
-    /** נגיעה ארוכה על ➕ בסוף שורה. */
-    private void rowMenu(final Buttons.Layout lay, final String place, final List<Buttons.Btn> row) {
-        final List<String> items = new ArrayList<String>();
-        items.add(Words.Top.NEW_BUTTON);
-        items.add(Words.Top.NEW_ROW);
-        if (Buttons.rowRemovable(lay, place, row)) items.add(Words.Top.DELETE_ROW);
-        items.add(Words.Top.RESET);
-        Ui.list(a, describe(place), items, new DialogInterface.OnClickListener() {
-            @Override
-            public void onClick(DialogInterface d, int w) {
-                String it = items.get(w);
-                if (it.equals(Words.Top.NEW_BUTTON)) addNew(lay, row);
-                else if (it.equals(Words.Top.NEW_ROW)) newRow(lay);
-                else if (it.equals(Words.Top.DELETE_ROW)) {
-                    lay.rows(place).remove(row);
-                    saved(lay, true);
-                } else askReset(lay, place);
-            }
-        });
-    }
-
-    /** שם המקום כמו שהמשתמש מבין אותו. */
-    private String describe(String place) {
-        if (place.equals(Buttons.TOP)) return Words.Top.P_TOP;
-        if (place.equals(Buttons.BOTTOM)) return Words.Top.P_BOTTOM;
-        return (place.startsWith(Buttons.TOP) ? Words.Top.P_TOP_HERE : Words.Top.P_BOTTOM_HERE) + screen;
-    }
-
-    private void newRow(final Buttons.Layout lay) {
-        final String[] ps = places();
-        String[] labels = new String[ps.length];
-        for (int i = 0; i < ps.length; i++) labels[i] = describe(ps[i]);
-        Ui.options(a, Words.Top.WHERE_ROW, labels, new DialogInterface.OnClickListener() {
-            @Override
-            public void onClick(DialogInterface d, int w) {
-                List<List<Buttons.Btn>> rows = lay.rows(ps[w]);
-                if (rows.size() >= Buttons.MAX_ROWS) {
-                    Ui.toast(a, Words.Top.MAX_ROWS);
-                    return;
-                }
-                List<Buttons.Btn> row = new ArrayList<Buttons.Btn>();
-                rows.add(row);
-                Buttons.save(lay);
-                build();
-                Ui.toast(a, Words.Top.ROW_ADDED);
-            }
-        });
-    }
-
-    private void moveToRow(final Buttons.Layout lay, final String place, final List<Buttons.Btn> row, final int at) {
-        final List<String> targetsPlace = new ArrayList<String>();
-        final List<List<Buttons.Btn>> targets = new ArrayList<List<Buttons.Btn>>();
-        List<String> labels = new ArrayList<String>();
-        for (String p : places()) {
-            List<List<Buttons.Btn>> rows = lay.places.get(p);
-            if (rows == null) continue;
-            for (int i = 0; i < rows.size(); i++) {
-                if (rows.get(i) == row) continue;
-                targetsPlace.add(p);
-                targets.add(rows.get(i));
-                labels.add(describe(p) + (rows.size() > 1 ? " · " + Words.Top.ROW + (i + 1) : ""));
-            }
-        }
-        if (targets.isEmpty()) {
-            Ui.toast(a, Words.Top.NO_OTHER_ROW);
-            return;
-        }
-        Ui.list(a, Words.Top.MOVE_ROW, labels, new DialogInterface.OnClickListener() {
-            @Override
-            public void onClick(DialogInterface d, int w) {
-                if (Buttons.moveTo(lay, place, row, at, targetsPlace.get(w), targets.get(w))) saved(lay, true);
-                else Ui.toast(a, Words.Top.ANCHOR);
-            }
-        });
-    }
-
-    private void askReset(final Buttons.Layout lay, final String place) {
-        Ui.options(a, Words.Top.RESET_ASK, new String[]{Words.Top.RESET_PLACE + describe(place), Words.Top.RESET_ALL},
-                new DialogInterface.OnClickListener() {
-                    @Override
-                    public void onClick(DialogInterface d, int w) {
-                        if (w == 0) {
-                            Buttons.reset(lay, place);
-                            saved(lay, true);
-                        } else {
-                            Ui.ask(a, Words.Top.RESET_ALL, null, Words.Top.RESET_WHAT, null, Words.Top.RESET, new Runnable() {
-                                @Override
-                                public void run() {
-                                    Buttons.reset();
-                                    build();
-                                }
-                            });
-                        }
-                    }
-                });
-    }
-
-    /** עריכה: שם, סמל, ומה הכפתור עושה (לעוגן — קבוע). */
-    private void edit(final Buttons.Layout lay, final Buttons.Btn b) {
-        final String[] act = {b.act};
-        LinearLayout form = Ui.form(a);
-        form.addView(Ui.label(a, Words.Top.NAME));
-        final EditText name = Ui.field(a, b.name, Words.Top.NAME);
-        form.addView(name);
-        form.addView(Ui.label(a, Words.Top.ICON));
-        final EditText icon = Ui.field(a, b.icon, "⭐");
-        form.addView(icon);
-        final TextView what = Ui.label(a, Words.Top.ACTION + act[0] + (b.anchor() ? Words.Top.FIXED : ""));
-        form.addView(what);
-        if (!b.anchor()) {
-            Button change = new Button(a);
-            change.setText(Words.Top.CHANGE);
-            change.setOnClickListener(new View.OnClickListener() {
-                @Override
-                public void onClick(View v) {
-                    chooseTarget(new Chosen() {
-                        @Override
-                        public void ok(String i, String n, String ac) {
-                            act[0] = ac;
-                            what.setText(Words.Top.ACTION + ac);
-                        }
-                    });
-                }
-            });
-            form.addView(change);
-        }
-        Ui.askForm(a, Words.Top.EDIT, form, new Runnable() {
-            @Override
-            public void run() {
-                String n = name.getText().toString().trim(), i = icon.getText().toString().trim();
-                if (!n.isEmpty()) b.name = n.replace("|", " ");
-                if (!i.isEmpty()) b.icon = i.replace("|", " ");
-                b.act = act[0];
-                saved(lay, true);
-                Ui.toast(a, Words.Top.SAVED_AS + b.icon + " " + b.name);   // 1.13.0: שם ארוך מקוצר בשורה — כאן רואים אותו כולו
-            }
-        });
-    }
-
-    private void addNew(final Buttons.Layout lay, final List<Buttons.Btn> row) {
-        chooseTarget(new Chosen() {
-            @Override
-            public void ok(String icon, String name, String act) {
-                Buttons.Btn b = new Buttons.Btn(icon, name.replace("|", " "), act);
-                row.add(b);
-                saved(lay, true);
-                edit(lay, b);                                                 // לשנות שם או סמל מיד, אם רוצים
-            }
-        });
-    }
-
     interface Chosen {
         void ok(String icon, String name, String act);
-    }
-
-    private void chooseTarget(final Chosen cb) {
-        pick(a, screen, cb);
     }
 
     /**
@@ -482,41 +335,27 @@ final class TopRow {
         });
     }
 
-    /** מ0.23: "☰ תפריט" מהמסד — הרשימות שבתוך "שמור לתוכנה" (באופן הפתוח, ואם אין — באופן אחר שיש בו). */
+    /** מ0.41: "☰ תפריט" — הרשימות שבתוך התפריטים של התוכנה (הכללי, ושל האופן שעל המסך). */
     private static void dbMenus(Activity a, final Chosen cb) {
-        String mode = DbPicker.mode(a);
-        DbPicker.Snap snap = DbPicker.snap(a, mode);
-        if (snap == null || snap.kids.get(DbPicker.keyOf(Reserved.ROOT_PATH)) == null) {
-            String other = DbCmdMenu.otherMode(a, mode, Reserved.ROOT_PATH);
-            snap = other == null ? null : DbPicker.snap(a, other);
-        }
-        if (snap == null || snap.kids.get(DbPicker.keyOf(Reserved.ROOT_PATH)) == null) {
+        final List<List<String>> paths = Menus.get(a).paths();
+        if (paths.isEmpty()) {
             Ui.toast(a, Words.Verb.NOT_FOUND + Reserved.ROOT);
             return;
         }
-        final List<List<String>> paths = new ArrayList<List<String>>();
         List<String> labels = new ArrayList<String>();
-        dbCollect(snap, Reserved.ROOT_PATH, 0, paths, labels);
+        for (List<String> p : paths) {
+            StringBuilder in = new StringBuilder();
+            for (int i = 1; i < p.size(); i++) in.append("    ");
+            labels.add(in + "☰ " + p.get(p.size() - 1));
+        }
         Ui.list(a, Words.Top.T_MENU, labels, new DialogInterface.OnClickListener() {
             @Override
             public void onClick(DialogInterface d, int k) {
-                List<String> p = paths.get(k);
+                List<String> p = new ArrayList<String>();
+                p.add(Reserved.ROOT);
+                p.addAll(paths.get(k));
                 cb.ok("☰", p.get(p.size() - 1), Verbs.openMenu(p));
             }
         });
-    }
-
-    private static void dbCollect(DbPicker.Snap snap, List<String> at, int depth, List<List<String>> paths, List<String> labels) {
-        List<String> kids = snap.kids.get(DbPicker.keyOf(at));
-        if (kids == null || depth > 30) return;
-        for (String c : kids) {
-            List<String> p = new ArrayList<String>(at);
-            p.add(c);
-            StringBuilder in = new StringBuilder();
-            for (int i = 0; i < depth; i++) in.append("    ");
-            paths.add(p);
-            labels.add(in + "☰ " + c);
-            dbCollect(snap, p, depth + 1, paths, labels);
-        }
     }
 }

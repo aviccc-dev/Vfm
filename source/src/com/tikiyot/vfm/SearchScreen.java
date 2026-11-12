@@ -127,6 +127,13 @@ public class SearchScreen extends Activity implements Clip.Holder {
     boolean isList() {
         return funcId != null;
     }
+
+    /** מ0.41: איזה מסך זה, לשורות שלו — "קבצים וירטואליים", רשימה חכמה (תנאי קבוע), או חיפוש פתוח. מהפתיחה עצמה (לפני onCreate). */
+    String rowsScreen() {
+        android.content.Intent i = getIntent();
+        if (SmartLists.FILE_MANAGER.equals(i.getStringExtra(EXTRA_TITLE))) return Verbs.S_VIRTUAL;
+        return i.getBooleanExtra(EXTRA_FIXED, false) ? Verbs.S_SMART_SCREEN : Verbs.S_SEARCH;
+    }
     /**
      * 1.15.0: איפה נשמרות ההגדרות של המסך ("למה", הכפתורים הדולקים, המיון…): הכלי — או רשימה חכמה פנימית (מאז שהסביבות
      * הוסבו לרשימות, הכלים החכמים שבהן הם רשימות פנימיות — עם ה"למה" וההגדרות שלהם). null — ההגדרות הכלליות.
