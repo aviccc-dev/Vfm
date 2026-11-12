@@ -306,6 +306,20 @@ public final class LabScreen extends Activity {
                 o.put("savedMode", DbScreen.savedMode(LabScreen.this));
                 Library lib = Library.get(LabScreen.this);
                 o.put("indexReady", lib.ready);
+                // מ0.43: מה שהיה בראש ההגדרות — האינדקס לכל כונן, ומה הוא עושה עכשיו
+                JSONArray ix = new JSONArray();
+                if (lib.ready)
+                    for (Index x : lib.indexes) {
+                        JSONObject d = new JSONObject();
+                        d.put("label", x.label);
+                        d.put("files", x.fileCount());
+                        ix.put(d);
+                    }
+                o.put("indexes", ix);
+                o.put("totalFiles", lib.ready ? lib.totalFiles() : -1);
+                o.put("totalDirs", lib.ready ? lib.totalDirs() : -1);
+                o.put("lastBuilt", lib.lastBuilt());
+                o.put("indexStatus", lib.status);
                 o.put("lastFullBuild", lib.lastFullBuild());
                 o.put("lastDaily", lib.lastDaily());
                 o.put("pointsSupported", lib.pointsSupported());
@@ -697,6 +711,46 @@ public final class LabScreen extends Activity {
                     Acts.sendReady(LabScreen.this, java.util.Collections.singletonList(f));
                 }
             });
+        }
+
+        /**
+         * מ0.43: המסד של כל אופן — מה שהיה בחלק 2 של דוח האבחון: [{mode, kb, ok, error, lists, smarts, loose, home, backups, lastBackup}].
+         * קריאה בלבד (בלי בדיקת תקינות חוזרת למסד שלא השתנה — SqlStore).
+         */
+        @JavascriptInterface
+        public String dbStats() {
+            JSONArray a = new JSONArray();
+            for (String m : DbScreen.dbModes(LabScreen.this)) {
+                JSONObject o = new JSONObject();
+                SqlStore s = null;
+                try {
+                    File f = DbScreen.dbFile(LabScreen.this, m);
+                    o.put("mode", m);
+                    o.put("kb", f.length() / 1024);
+                    try {
+                        s = SqlStore.openReadOnly(f);
+                        long home = DbPaths.home(s);
+                        o.put("ok", true);
+                        o.put("lists", s.lists().size());
+                        o.put("smarts", s.smarts().size());
+                        o.put("loose", s.unassigned().size());
+                        o.put("home", home == 0 ? -1 : s.members(home).size());
+                    } catch (Throwable t) {
+                        o.put("ok", false);
+                        o.put("error", String.valueOf(t.getMessage()));
+                        Log.e("Lab.dbStats " + m, t);
+                    }
+                    List<Backups.Entry> bk = DbScreen.backupsOf(LabScreen.this, m).list();
+                    o.put("backups", bk.size());
+                    o.put("lastBackup", bk.isEmpty() ? "" : bk.get(0).name);
+                } catch (Throwable t) {
+                    Log.e("Lab.dbStats", t);
+                } finally {
+                    if (s != null) s.close();
+                }
+                a.put(o);
+            }
+            return a.toString();
         }
 
         /** מ0.42: מה שהיה "בדיקת מסלול באינדקס" בהגדרות: {disk, dir, index, size}. קריאה בלבד. */

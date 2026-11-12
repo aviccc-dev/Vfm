@@ -548,27 +548,12 @@ public final class Words {
     public static final class Trial {
         private Trial() { }
 
-        public static final String FROM_DATE = "מ־";
-        public static final String FOUND_ANY = "מצא משהו ";
-        public static final String RAN = "רצה ";
-        public static final String FOUND_ANY_FEM = ", מצאה משהו ";
-        public static final String FILES_LINE = " קבצים\n";
-
         public static final String DAILY = "יומית", WEEKLY = "שבועית", SINCE = "מה השתנה מאז",
-                TITLE = "תקופת ניסיון — מה נמצא מעבר לבדיקה השוטפת", BUTTON = "תקופת ניסיון — מה נמצא",
-                EMPTY = "עוד לא נרשם דבר. הבדיקה היומית רצה פעם ביום, והבנייה השבועית — פעם בשבוע.",
                 FILE = "תקופת ניסיון.txt",                                         // בכונן
-                DAILY_ABOUT = "בדיקה מלאה של מה שהמאגר של אנדרואיד לא מכיר (מוסתרים, .nomedia)",
-                WEEKLY_ABOUT = "בנייה מההתחלה, והשוואה לאינדקס שהיה",
-                SINCE_ABOUT = "קבצים שנערכו במקומם, שבדיקת התאריכים לא תפסה",
-                NOT_SUPPORTED = "באנדרואיד הזה אין \"מה השתנה מאז\" — במקומו בנייה מלאה פעם ביום";
+                DAILY_ABOUT = "בדיקה מלאה של מה שהמאגר של אנדרואיד לא מכיר (מוסתרים, .nomedia)";
 
         public static String found(int n) {
             return "נמצאו " + n;
-        }
-
-        public static String runs(int n) {
-            return n == 1 ? "פעם אחת" : n + " פעמים";
         }
     }
 
@@ -795,8 +780,6 @@ public final class Words {
         public static final String EXCLUDED_BUTTON = "תיקיות שלא נכנסות לאינדקס — באופן העבודה הזה";
         public static final String QUICK_REFRESH = "רענון מהיר";
         public static final String EDIT_INI = "עריכת קבצי ההגדרות";
-        public static final String CHECK_PATH = "בדיקת מסלול באינדקס";
-        public static final String ERROR_LOG = "יומן תקלות";
         public static final String DEEP_REFRESH = "רענון מעמיק — גודל ותאריך של כל הקבצים";
         public static final String REBUILD_WHAT = "סריקה מלאה של כל הכוננים. בכרטיס זה עשוי לקחת זמן";
         public static final String REBUILD_UNDO = "בינתיים החיפוש ממשיך לעבוד על האינדקס הקיים";
@@ -835,25 +818,6 @@ public final class Words {
         public static final String MS = " מ\"ש";
         public static final String DEEP_RUNNING = "רענון מעמיק… (כמה שניות)";
         public static final String SECONDS = " שניות";
-        public static final String LAST_FULL_LINE = "\nבנייה מלאה אחרונה: ";
-        public static final String LAST_DAILY_LINE = "\nבדיקה יומית אחרונה: ";
-        public static final String NOT_YET = "עוד לא";
-        public static final String LATEST = "\n\nהאחרונות:\n";
-        public static final String FILE_LINE = "\n(הקובץ: ";
-        public static final String CHECK_PATH_TITLE = "בדיקת מסלול";
-        public static final String CHECK_RESULT = "תוצאת הבדיקה";
-        public static final String ON_DRIVE = "בכונן: ";
-        public static final String EXISTS = "✓ קיים";
-        public static final String NOT_FOUND = "✗ לא נמצא";
-        public static final String IN_INDEX_LINE = "\nבאינדקס: ";
-        public static final String FOUND = "✓ נמצא";
-        public static final String TRY_QUICK = "\n\nכדאי ללחוץ \"רענון מהיר\".";
-        public static final String LOG_EMPTY = "היומן ריק";
-        public static final String LOG = "יומן";
-        public static final String SHARE = "שיתוף";
-        public static final String SHARE_LOG = "שיתוף היומן";
-        public static final String CLEAR = "ניקוי";
-        public static final String LOG_CLEARED = "היומן נוקה";
     }
 
     /** המסך הראשי (Home): אופני עבודה, כלים, הוספה */
@@ -1458,7 +1422,6 @@ public final class Words {
         public static final String TRIMMED = "… (היומן קוצר — נשאר החלק האחרון)";
         public static final String ANDROID = " · אנדרואיד ";
         public static final String ERROR_IN = "שגיאה ב";
-        public static final String CANT_READ_LOG = "לא ניתן לקרוא את היומן: ";
         public static final String CRASH = "קריסה";
     }
 
@@ -1982,21 +1945,8 @@ public final class Words {
         }
 
         public static final String NO_HOME = "אין בית במסד הזה", SAME_NAME = "כבר יש שם רשימה בשם הזה",
-                ALREADY = "כבר בה",
-                MENU_TESTS = "🧪 בדיקת הפקודות (אופן \"בדיקות מערכת\")", MENU_DIAG = "🩺 דוח אבחון", MENU_PLUGIN_DIAG = "🔬 תוסף אבחון — בדיקות, דוחות, תקלות", DIAG_RUNNING = "מכין דוח אבחון…",
-                DIAG_SEND = "שליחה",
-                TEST_MODE = "בדיקות מערכת",  // בכונן
-                TEST_FILE = "בדיקת פקודות",  // בכונן
-                TEST_CALL_FILE = "בדיקת כלול",  // בכונן
-                TEST_LOAD_FILE = "בדיקת עומס",  // בכונן
-                TEST_ALL_FILE = "בדיקה כללית",  // בכונן
-                TEST_MODES_FILE = "בדיקת שני אופנים",  // בכונן
-                TEST_BIN_FILE = "בדיקת סל",  // בכונן
-                TEST_STRESS_FILE = "בדיקת לחץ",  // בכונן
-                TEST_SYSTEM_FILE = "בדיקת מערכת",  // בכונן — מ0.40: כל הבדיקות בקובץ אחד
-                TEST_V23_FILE = "בדיקת מ0.23",  // בכונן
-                TEST_V24_FILE = "בדיקת מ0.24",  // בכונן
-                TEST_READY = "אופן \"בדיקות מערכת\" — נגיעה ב\"בדיקת פקודות\" מריצה את הבדיקה";
+                ALREADY = "כבר בה", MENU_PLUGIN_DIAG = "🔬 אבחון — בדיקות, דוחות, תקלות",
+                TEST_MODE = "בדיקות מערכת";  // בכונן
 
         public static String removed(String what) {
             return what + " — יצא מהרשימות (לפני הביצוע — גיבוי של המסד); הקבצים בכונן לא נוגעים";
@@ -2096,12 +2046,12 @@ public final class Words {
         public static final String N_WRITE = "כתוב", N_WAIT = "המתן", N_BACKUP = "גבה", N_REFRESH = "רענן", N_REPORT = "דוח";  // תחביר
         public static final String W_WRITE = "כותב טקסט לקובץ (יוצר אותו, או מחליף את מה שהיה בו). בלי טקסט — קובץ ריק. /הוסף — מוסיף בסוף",
                 W_WAIT = "מחכה כמה שניות לפני השורה הבאה", W_BACKUP = "גיבוי ידני של המסד של האופן (לא נמחק לבד)",
-                W_REFRESH = "מרענן את האינדקס, כדי שקבצים חדשים יימצאו. \"רענן עמוק\" — בדיקה מלאה",
+                W_REFRESH = "מרענן את האינדקס, כדי שקבצים חדשים יימצאו. \"רענן עמוק\" — בדיקה מלאה; \"רענן מלא\" — בנייה מחדש",
                 W_REPORT = "היומן של ההרצה נכתב גם לקובץ הזה",
                 P_SECONDS = "שניות", H_SECONDS = "כמה שניות לחכות (עד 600)", H_WRITE_FILE = "הקובץ שייכתב", P_TEXT_IN = "טקסט",
                 H_WRITE_TEXT = "מה לכתוב; \\n — שורה חדשה", P_APPEND = "להוסיף בסוף", H_APPEND = "בלי זה — הטקסט מחליף את מה שבקובץ",
-                P_DEEP = "עמוק", H_DEEP = "ריק — רענון מהיר; עמוק — בדיקה מלאה", H_REPORT = "הקובץ שאליו נכתב היומן",
-                WAIT_USAGE = "צורה: המתן <שניות> (עד 600)", REPORT_USAGE = "צורה: דוח \"<קובץ>\"", REFRESH_USAGE = "צורה: רענן · רענן עמוק",
+                P_DEEP = "עמוק", H_DEEP = "ריק — רענון מהיר; עמוק — בדיקה מלאה; מלא — בנייה מחדש", H_REPORT = "הקובץ שאליו נכתב היומן",
+                WAIT_USAGE = "צורה: המתן <שניות> (עד 600)", REPORT_USAGE = "צורה: דוח \"<קובץ>\"", REFRESH_USAGE = "צורה: רענן · רענן עמוק · רענן מלא",
                 BACKUP_USAGE = "צורה: גבה (בלי פרמטרים; אחרי \"אופן\" — של אותו אופן)", WRITE_USAGE = "צורה: כתוב \"<קובץ>\" \"<טקסט>\" [/הוסף]",
                 WRITE_IS_FOLDER = "זו תיקייה — אי אפשר לכתוב לתוכה כקובץ",
                 EXPECT_NEXT = "השורה הבאה צריכה להיכשל", EXPECT_NOTHING = "\"ודא שגיאה\" — אין אחריה שורה לבדוק",
@@ -2113,6 +2063,8 @@ public final class Words {
         public static String reportFailed(String why) { return "⚠ היומן לא נכתב לקובץ: " + why; }
         public static String refreshWill(boolean deep) { return deep ? "רענון עמוק של האינדקס" : "רענון של האינדקס"; }
         public static String refreshed(int n) { return "האינדקס רוענן · " + n + " שינויים"; }
+        public static final String REBUILD_WILL = "בנייה מחדש של האינדקס (כל הכוננים)";   // מ0.43
+        public static String rebuilt(int files, int dirs) { return "האינדקס נבנה מחדש · " + files + " קבצים · " + dirs + " תיקיות"; }
         /** מ0.40: הרענון המהיר שכבר בהכנה — כדי שהשורות שאחריו יראו קבצים חדשים. */
         public static String refreshedInPlan(int n) { return " (כבר בהכנה: " + n + " שינויים — השורות שאחריו רואות קבצים חדשים)"; }
         public static String backupWill(String mode) { return "גיבוי ידני של המסד של האופן \"" + mode + "\""; }
@@ -2133,7 +2085,6 @@ public final class Words {
         public static final String W_CONT = "כמה כישלונות מותרים לפני שהקובץ נעצר. בלי השורה הזו — הכישלון הראשון עוצר. המשך — אחד; המשך (5) — חמישה; המשך () — בלי עצירה",
                 H_CONT = "(מספר) — כמה כישלונות; () — בלי עצירה; ריק — אחד", P_CONT = "כמה", CONT_USAGE = "צורה: המשך · המשך (5) · המשך ()",
                 CONT_ALWAYS = "הקובץ לא ייעצר בגלל כישלונות", NOT_RUN_TITLE = "הקובץ לא רץ — יש בו שגיאה";
-        public static String diagDone(String path) { return "הדוח נכתב לקובץ:\n" + path + "\n\nהבדיקות נעשו על עותקים — המסדים שלך לא השתנו (חוץ מהאופן \"בדיקות מערכת\", שבו רצה הבדיקה הכללית)."; }
         public static String contUpTo(int n) { return n == 1 ? "הקובץ ימשיך אחרי כישלון אחד, וייעצר בשני" : "הקובץ ימשיך אחרי " + n + " כישלונות, וייעצר בבא אחריהם"; }
         public static String notRun(int n) {
             return "שום שורה לא רצה: יש " + n + " שורות שגיאה — יותר מהמותר. לתקן אותן, או להוסיף בראש הקובץ שורת \"המשך\" (המשך — כישלון אחד; המשך (5) — חמישה; המשך () — בלי עצירה)";

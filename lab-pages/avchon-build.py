@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# בונה את תוסף האבחון מהתבנית: קובצי הבדיקה (source/assets/tests) נכנסים לעמוד, והעמוד נכתב פעמיים —
+# בונה את תוסף האבחון מהתבנית: קובצי הבדיקה (lab-pages/avchon-tests; מ0.43 — רק כאן, לא בקובץ ההתקנה) נכנסים לעמוד, והעמוד נכתב פעמיים —
 # "תוסף אבחון <גרסה>.html" כאן, והעותק שבא עם התוכנה (source/assets/plugins/avchon.html).
 # שימוש: python3 avchon-build.py <גרסת התוסף>
 import json, os, sys
@@ -8,7 +8,7 @@ here = os.path.dirname(os.path.abspath(__file__))
 src = os.path.join(here, '..', 'source')
 ver = sys.argv[1] if len(sys.argv) > 1 else '1'
 tests = {}
-tdir = os.path.join(src, 'assets', 'tests')
+tdir = os.path.join(here, 'avchon-tests')
 for n in sorted(os.listdir(tdir)):
     if n.endswith('.vbat'):
         tests[n[:-5]] = open(os.path.join(tdir, n), encoding='utf-8').read().replace('\r', '')

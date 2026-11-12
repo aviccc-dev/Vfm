@@ -64,7 +64,7 @@ input[type=text]{width:100%;direction:ltr;text-align:left}
 <div class="top">
   <div class="head"><h1>🔬 אבחון</h1><div class="sub" id="sub"></div></div>
   <div class="tabs" id="tabs">
-    <button data-t="tests">🧪 בדיקות</button><button data-t="report">📄 דוח</button><button data-t="log">⚠ יומן תקלות</button><button data-t="index">🗂 אינדקס</button>
+    <button data-t="tests">🧪 בדיקות</button><button data-t="db">🗄 מסדים</button><button data-t="report">📄 דוח</button><button data-t="log">⚠ יומן תקלות</button><button data-t="index">🗂 אינדקס</button>
   </div>
 </div>
 <main id="main"></main>
@@ -112,6 +112,13 @@ const GROUPS=[
     inc:['בדיקת שני אופנים.vbat'],clean:[[TEST_MODE,['בדיקת-אופן-א']],[EXAMPLES,['בדיקת-אופן-ב']]]},
   {k:'db',n:'המסד',d:'המנוע של המסד מול ה־SQLite של המכשיר (על מסדים זמניים), ותקינות המסד של כל אופן. לא משנה דבר.',
     lines:['ודא מסד'],clean:[]},
+  {k:'index',n:'אינדקס',d:'רענון מהיר ורענון עמוק, עם זמן לכל שורה; קובץ חדש — האינדקס מכיר אותו.',
+    lines:['רענן','רענן עמוק','צור תיקייה "%פנימי%\\בדיקת אינדקס (אפשר למחוק)"','כתוב "%פנימי%\\בדיקת אינדקס (אפשר למחוק)\\א.txt" "אינדקס"',
+      'ודא "%פנימי%\\בדיקת אינדקס (אפשר למחוק)\\א.txt" באינדקס','מחק תיקייה "%פנימי%\\בדיקת אינדקס (אפשר למחוק)" /עמוק',
+      'ודא "%פנימי%\\בדיקת אינדקס (אפשר למחוק)" חסר'],clean:[]},
+  {k:'rebuild',n:'בניית האינדקס מחדש',heavy:true,d:'בונה את האינדקס מההתחלה, בכל הכוננים, עם מדידת זמן (מה שהיה הכפתור בהגדרות). קובץ שנכתב לפני — נמצא אחרי. בזמן הבנייה החיפוש איטי.',
+    lines:['צור תיקייה "%פנימי%\\בדיקת בנייה (אפשר למחוק)"','כתוב "%פנימי%\\בדיקת בנייה (אפשר למחוק)\\א.txt" "בנייה"','רענן מלא',
+      'ודא "%פנימי%\\בדיקת בנייה (אפשר למחוק)\\א.txt" באינדקס','מחק תיקייה "%פנימי%\\בדיקת בנייה (אפשר למחוק)" /עמוק'],clean:[]},
   {k:'load',n:'עומס',heavy:true,d:'על הנתונים האמיתיים של האופן שנבחר: מעתיק את כל מה שבבית לרשימה "בדיקת עומס" ומכפיל אותה 3 סבבים, עם מדידת זמן. המקור לא נוגע; בסוף הרשימה מבוטלת.',
     inc:['בדיקת עומס.vbat'],clean:[[REAL,['בדיקת עומס']]]}
 ];
@@ -127,7 +134,7 @@ function dataDir(){return V.dataDir();}
 function resultPath(key){return dataDir()+'/תוצאות/'+key+'.txt';}
 
 function runner(id,label,gs,real){
-  const L=['בדיקה','המשך ()','דוח "'+resultPath(gs.length===1?gs[0].k:'all')+'"',
+  const L=['בדיקה','המשך ()','מדידה','דוח "'+resultPath(gs.length===1?gs[0].k:'all')+'"',
     'ECHO '+MARK+id+' · '+label+' · גרסה '+(info.version||'?')+' · '+when(Date.now()),
     ':: אופן הבדיקות — נוצר אם אין (מ0.42: "צור אופן")','צור אופן "'+TEST_MODE+'"'];
   gs.forEach(g=>{L.push(':: '+g.n);(g.inc||[]).forEach(f=>L.push('כלול "'+f+'"'));(g.lines||[]).forEach(x=>L.push(x));});
@@ -205,12 +212,12 @@ function renderTests(){
   let h='';
   if(!ready)h+='<div class="card"><h2>⚠ גרסה ישנה של התוכנה</h2><p>התוסף צריך את מ0.42 ומעלה (היא מכירה "צור אופן", "ודא מסד" ומחזירה את התוצאה לעמוד). בגרסה הזו — ⋮ ← "בדיקת הפקודות" ו"דוח אבחון".</p></div>';
   h+='<p class="note">כל הרצה — במסך ההרצה: מה יקרה, אישור, ובסוף חוזרים לכאן והתוצאה נקראת. הבדיקות רצות באופן "'+TEST_MODE+'" (נוצר בהרצה הראשונה), והרשימות שהן יוצרות מבוטלות בסוף.</p>';
-  h+='<div class="card"><h2><span class="grow">▶ הכול</span></h2><p>כל הקבוצות בהרצה אחת (כמו "בדיקת מערכת"), עם ניקוי בסוף. העומס — על האופן שנבחר בכרטיס שלו.</p>'
+  h+='<div class="card"><h2><span class="grow">▶ הכול</span></h2><p>כל הקבוצות בהרצה אחת, עם ניקוי בסוף. "בלי הכבדות" — בלי העומס ובלי בניית האינדקס מחדש. העומס — על האופן שנבחר בכרטיס שלו.</p>'
     +status('all')+'<div class="row"><button class="btn main" data-a="run" data-k="all"'+(ready?'':' disabled')+'>▶ הרץ הכול</button>'
-    +'<button class="btn" data-a="run" data-k="light"'+(ready?'':' disabled')+'>▶ הכול בלי העומס</button>'+fullBtn('all')+'</div></div>';
+    +'<button class="btn" data-a="run" data-k="light"'+(ready?'':' disabled')+'>▶ הכול בלי הכבדות</button>'+fullBtn('all')+'</div></div>';
   GROUPS.forEach(g=>{
     h+='<div class="card"><h2><span class="grow">'+esc(g.n)+'</span></h2><p>'+esc(g.d)+'</p>'+status(g.k);
-    if(g.heavy)h+='<div class="row">על האופן: <select id="realSel">'+ms.map(m=>'<option'+(m===rm?' selected':'')+'>'+esc(m)+'</option>').join('')+'</select></div>';
+    if(g.k==='load')h+='<div class="row">על האופן: <select id="realSel">'+ms.map(m=>'<option'+(m===rm?' selected':'')+'>'+esc(m)+'</option>').join('')+'</select></div>';
     h+='<div class="row"><button class="btn'+(g.heavy?' warn':'')+'" data-a="run" data-k="'+g.k+'"'+(ready?'':' disabled')+'>▶ הרץ</button>'+fullBtn(g.k)+'</div></div>';
   });
   h+='<p class="note">בדיקות חדשות מגיעות עם גרסה חדשה של התוסף — בלי התקנה של התוכנה. התוצאות נשמרות בתיקייה "נתוני תוספים/אבחון/תוצאות".</p>';
@@ -249,6 +256,8 @@ function fullReport(){
     out+=g.n+': '+(r.inAll?'✅ עבר בהרצת "הכול"':r.blocked?'⚠ לא רץ — שגיאות בקובץ':(r.bad?'❌ '+r.bad+' נכשלו · ':'✅ ')+r.ok+' עברו')+' · '+when(r.at)+' · גרסה '+r.version+'\n';
     (r.badLines||[]).concat(r.warn||[]).forEach(l=>out+='   '+l+'\n');});
   if(latest&&latest.path){const t=V.readText(latest.path);if(t)out+='\n=== הדוח המלא של ההרצה האחרונה ('+latest.label+') ===\n'+t+'\n';}
+  out+='\n=== המסדים ===\n'+dbs().map(dbLine).join('\n')+'\n';
+  out+='\n=== האינדקס ===\n'+indexText();
   out+='\n=== תקופת הניסיון של האינדקס ===\n'+trialText();
   const log=info.log?V.readText(info.log):null;
   out+='\n=== יומן התקלות (הסוף) ===\n'+(log?log.slice(-12000):'ריק')+'\n';
@@ -256,9 +265,38 @@ function fullReport(){
 }
 
 function renderReport(){
-  return '<div class="card"><h2>📄 דוח מלא</h2><p>המכשיר והגרסה, האופנים, התוצאה של כל קבוצת בדיקות (וכל ❌), הדוח המלא של ההרצה האחרונה, תקופת הניסיון של האינדקס, וסוף יומן התקלות — בקובץ אחד בהורדות.</p>'
+  return '<div class="card"><h2>📄 דוח מלא</h2><p>המכשיר והגרסה, התוצאה של כל קבוצת בדיקות (וכל ❌), הדוח המלא של ההרצה האחרונה, המסדים, האינדקס, תקופת הניסיון, וסוף יומן התקלות — בקובץ אחד בהורדות.</p>'
     +'<div class="row"><button class="btn main" data-a="report"'+(ready?'':' disabled')+'>שמירה בהורדות ושליחה</button><button class="btn" data-a="preview">הצגה</button></div></div>'
     +'<div class="card"><h2>המכשיר</h2><div class="lines">'+esc(header())+'</div></div>';
+}
+
+// ---------- המסדים (מה שהיה בחלק 2 של דוח האבחון) ----------
+function dbs(){return J(can('dbStats')?V.dbStats():null,[]);}
+function dbLine(d){return d.mode+': '+(d.ok===false?'✗ פגום ('+(d.error||'')+')':'✓ תקין · רשימות '+d.lists+' · חכמות '+d.smarts+' · בבית '+(d.home<0?'— (אין בית)':d.home)+' · לא־משויכים '+d.loose)
+  +' · '+d.kb+'KB · גיבויים '+d.backups+(d.lastBackup?' (האחרון: '+d.lastBackup+')':'');}
+function renderDb(){
+  if(!can('dbStats'))return '<p class="note">התוכנה בגרסה הזו לא מוסרת את מצב המסדים (צריך מ0.43).</p>';
+  const ds=dbs();
+  let h='<p class="note">המסד של כל אופן: תקינות, כמה רשימות וחכמות, וכמה קבצים רשומים בו בלי להיות באף רשימה ("לא־משויכים" — הקבצים בכונן לא נוגעים בהם). לקריאה בלבד; ביטול — דרך מסך ההרצה.</p>';
+  ds.forEach(d=>{
+    h+='<div class="card"><h2><span class="grow">'+esc(d.mode)+'</span><small>'+d.kb+'KB</small></h2>';
+    if(d.ok===false)h+='<div class="st bad">✗ פגום: '+esc(d.error||'')+' — לשחזר מגיבוי (הגדרות ← גיבויים)</div>';
+    else h+='<div class="kv"><b>תקינות</b><span>✓ תקין</span><b>רשימות</b><span>'+d.lists+'</span><b>חכמות</b><span>'+d.smarts+'</span><b>בבית</b><span>'+(d.home<0?'אין בית':d.home+' פריטים')+'</span>'
+      +'<b>לא־משויכים</b><span'+(d.loose>0?' style="color:var(--warn)"':'')+'>'+d.loose+'</span><b>גיבויים</b><span>'+d.backups+(d.lastBackup?' · '+esc(d.lastBackup):'')+'</span></div>';
+    if(d.ok!==false&&d.loose>0)h+='<div class="row"><button class="btn" data-a="loose" data-m="'+esc(d.mode)+'"'+(ready?'':' disabled')+'>בטל לא־משויכים ('+d.loose+')</button></div>';
+    h+='</div>';});
+  return h;
+}
+function cleanLoose(m){
+  const t='בדיקה\nאופן "'+m+'"\nבטל לא-משויכים\nודא לא-משויכים /פריטים:0\n';
+  V.runFile(t,dataDir()+'/בטל לא-משויכים — '+m+'.vbat',true);
+}
+function indexText(){
+  if(!info.indexReady)return 'האינדקס נטען…\n';
+  let out='באינדקס: '+info.totalFiles+' קבצים · '+info.totalDirs+' תיקיות · עודכן: '+when(info.lastBuilt)+'\n';
+  (info.indexes||[]).forEach(x=>out+='· '+x.label+': '+x.files+' קבצים\n');
+  if(info.indexStatus)out+=info.indexStatus+'\n';
+  return out;
 }
 
 let logMode=pref('logMode','err');
@@ -283,7 +321,8 @@ function renderLog(){
 
 let lastPath=pref('path','');
 function renderIndex(){
-  return '<div class="card"><h2>בדיקת מסלול</h2><p>האם הקובץ בכונן, והאם האינדקס מכיר אותו. בקובץ פקודות: ודא "&lt;קובץ&gt;" באינדקס.</p>'
+  return '<div class="card"><h2>האינדקס</h2><div class="lines">'+esc(indexText())+'</div><p>בדיקה עם זמנים — בלשונית "בדיקות": "אינדקס", ו"בניית האינדקס מחדש".</p></div>'
+    +'<div class="card"><h2>בדיקת מסלול</h2><p>האם הקובץ בכונן, והאם האינדקס מכיר אותו. בקובץ פקודות: ודא "&lt;קובץ&gt;" באינדקס.</p>'
     +'<input type="text" id="pathIn" placeholder="/storage/emulated/0/Download/..." value="'+esc(lastPath)+'">'
     +'<div class="row"><button class="btn main" data-a="path">בדיקה</button>'+(can('pickFile')?'<button class="btn" data-a="pick">בחירת קובץ…</button>':'')+'</div><div id="pathOut"></div></div>'
     +'<div class="card"><h2>תקופת הניסיון</h2><p>מה שהבדיקה היומית, הבנייה השבועית ו"מה השתנה מאז" מצאו מעבר לבדיקה השוטפת.</p><div class="lines">'+esc(trialText())+'</div></div>';
@@ -300,7 +339,7 @@ function checkPath(){
 function render(){
   document.querySelectorAll('#tabs button').forEach(b=>b.classList.toggle('on',b.dataset.t===tab));
   $('sub').textContent=(info.version?'גרסה '+info.version+' · ':'')+(info.model||'')+(info.access===false?' · ✗ אין הרשאה לכל הקבצים':'');
-  try{$('main').innerHTML=tab==='report'?renderReport():tab==='log'?renderLog():tab==='index'?renderIndex():renderTests();}
+  try{$('main').innerHTML=tab==='report'?renderReport():tab==='log'?renderLog():tab==='index'?renderIndex():tab==='db'?renderDb():renderTests();}
   catch(e){$('main').innerHTML='';fail('הצגה',e);}
 }
 
@@ -310,7 +349,7 @@ $('main').addEventListener('click',e=>{
   try{
     if(a==='run'){const k=b.dataset.k;
       const sel=$('realSel');if(sel)setPref('real',sel.value);
-      if(k==='all')run(GROUPS,'הכול');else if(k==='light')run(GROUPS.filter(g=>!g.heavy),'הכול בלי העומס');
+      if(k==='all')run(GROUPS,'הכול');else if(k==='light')run(GROUPS.filter(g=>!g.heavy),'הכול בלי הכבדות');
       else{const g=GROUPS.find(x=>x.k===k);run([g],g.n);}}
     else if(a==='show'){const t=V.readText(b.dataset.p);openSheet('הדוח — '+b.dataset.n,t==null?'הקובץ לא נמצא: '+b.dataset.p:t,b.dataset.p);}
     else if(a==='report'){const p=V.saveText('דוח תוסף אבחון '+(info.version||'')+'.txt',fullReport(),true);
@@ -318,6 +357,7 @@ $('main').addEventListener('click',e=>{
     else if(a==='preview')openSheet('דוח מלא',fullReport(),null);
     else if(a==='logm'){logMode=b.dataset.m;setPref('logMode',logMode);render();}
     else if(a==='sendlog')V.send(info.log);
+    else if(a==='loose')cleanLoose(b.dataset.m);
     else if(a==='path')checkPath();
     else if(a==='pick')ask('pickFile',['בחירת קובץ לבדיקה'],v=>{if(v){$('pathIn').value=v;checkPath();}});
   }catch(err){fail(a,err);}
@@ -346,12 +386,13 @@ function demoBridge(){
   const later=(id,v)=>setTimeout(()=>window.vfmResult(id,v),30);
   files['/d/log.txt']='2026-11-12 10:00:01  בניית אינדקס (בבקשה): פנימי 1.2 שנ\'\n2026-11-12 10:05:12  שגיאה ב-Lab.copy: java.io.IOException: x\n\tat a.b(c)\n2026-11-12 11:00:00  תוסף אבחון: נפתח\n';
   files['/d/trial.txt']='2026-11-10 09:12 | יומית | 0.31 שנ\' | נבדקו 4157 | נמצאו 2\n2026-11-11 09:12 | יומית | 0.30 שנ\' | נבדקו 4160 | נמצאו 0\n';
-  return {info:()=>JSON.stringify({version:'מ0.42',versionCode:55,device:'גרסה מ0.42 · Samsung SM-X200 · אנדרואיד 14 (API 34)',access:true,freeMb:20480,log:'/d/log.txt',trial:'/d/trial.txt',savedMode:'עבודה',indexReady:true,lastFullBuild:Date.now()-86400000,lastDaily:Date.now()-3600000,pointsSupported:true,labVersion:'1'}),
+  return {info:()=>JSON.stringify({version:'מ0.42',versionCode:55,device:'גרסה מ0.42 · Samsung SM-X200 · אנדרואיד 14 (API 34)',access:true,freeMb:20480,log:'/d/log.txt',trial:'/d/trial.txt',savedMode:'עבודה',indexReady:true,lastFullBuild:Date.now()-86400000,lastDaily:Date.now()-3600000,pointsSupported:true,labVersion:'2',indexes:[{label:'פנימי',files:41230},{label:'כרטיס',files:8120}],totalFiles:49350,totalDirs:3120,lastBuilt:Date.now()-7200000,indexStatus:''}),
     theme:()=>null,load:k=>store[k]!=null?store[k]:null,save:(k,v)=>{store[k]=v;},modes:()=>JSON.stringify(['בדיקות מערכת','דוגמאות','עבודה','שמור לתוכנה']),
     dataDir:()=>'/d/אבחון',saveText:(n,t,dl)=>{const p=(dl?'/dl/':'/d/אבחון/')+n;files[p]=t;return p;},readText:p=>files[p]==null?null:files[p],
     runFile:(t,w,r)=>{window.__ran={text:t,where:w,real:r};const id=(t.match(/הרצת אבחון (\S+)/)||[])[1],rp=(t.match(/^דוח "(.*)"$/m)||[])[1];
       files[rp]='ECHO\nהרצת אבחון '+id+' · ניסוי\nשורה 3: ✅ "בדיקת פקודות" קיימת\nשורה 9: ❌ "בדיקת לחץ" — בפועל: חסרה\n✅ ודא: 51 עברו · 1 נכשלו\n';},
     pathInfo:p=>JSON.stringify({path:p,disk:true,dir:false,size:1234,index:p.indexOf('Download')>=0}),send:p=>{window.__sent=p;},
+    dbStats:()=>JSON.stringify([{mode:'עבודה',kb:240,ok:true,lists:31,smarts:4,loose:2,home:9,backups:5,lastBackup:'אוטומטי 12.11.2026 18-01-02.db'},{mode:'בדיקות מערכת',kb:96,ok:true,lists:1,smarts:0,loose:0,home:0,backups:12,lastBackup:''}]),
     pickFile:(id)=>later(id,'/storage/emulated/0/Download/דוח.pdf'),toast:()=>{},log:()=>{}};
 }
 })();

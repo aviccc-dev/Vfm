@@ -3,15 +3,12 @@ package com.tikiyot.vfm;
 // הגדרות התוכנה: הרשאות, אינדקס, רמת עדכון, קבצי הגדרות, בדיקה ויומן.
 
 import android.app.Activity;
-import android.app.AlertDialog;
-import android.content.DialogInterface;
 import android.content.Intent;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
 import android.view.View;
 import android.widget.Button;
-import android.widget.EditText;
 import android.widget.LinearLayout;
 import android.widget.RadioButton;
 import android.widget.RadioGroup;
@@ -79,18 +76,9 @@ public class SettingsScreen extends Activity {
         button(root, Words.Db.BACKUPS, new Runnable() {                                 // מ0.35: הגיבויים של המסד — מכאן
             @Override public void run() { DbScreen.openBackups(SettingsScreen.this); }
         });
-        button(root, Words.Prefs.CHECK_PATH, new Runnable() {
-            @Override public void run() { checkPath(); }
-        });
-        button(root, Words.Prefs.ERROR_LOG, new Runnable() {
-            @Override public void run() { showLog(); }
-        });
-
+        // מ0.43: בדיקת מסלול, יומן התקלות ותקופת הניסיון — בתוסף האבחון (⋮ ← "🔬 אבחון"; claude/tosaf-bdikot.md)
         button(root, Words.Prefs.DEEP_REFRESH, new Runnable() {     // 108, 114
             @Override public void run() { deepRefresh(); }
-        });
-        button(root, Words.Trial.BUTTON, new Runnable() {                              // 182
-            @Override public void run() { showTrial(); }
         });
         bgBtn = button(root, Words.Bg.TITLE, new Runnable() {                            // 190
             @Override
@@ -256,7 +244,7 @@ public class SettingsScreen extends Activity {
     private void show() {
         StringBuilder sb = new StringBuilder();
         sb.append(Words.Prefs.ACCESS_IS).append(Ui.hasFiles(this) ? "✓" : "✗").append("\n");
-        sb.append(Log.device()).append("\n\n");
+        sb.append("\n");
         if (!lib.ready) {
             sb.append(Words.Prefs.INDEX_LOADING);
         } else {
@@ -339,100 +327,5 @@ public class SettingsScreen extends Activity {
                 });
             }
         }).start();
-    }
-
-    /** 182: תקופת הניסיון — הסיכום, והשורות האחרונות מהיומן. */
-    private void showTrial() {
-        java.util.List<String> lines = Trial.lines();
-        StringBuilder sb = new StringBuilder();
-        if (!lib.pointsSupported()) sb.append(Words.Trial.NOT_SUPPORTED).append("\n\n");
-        sb.append(Trial.text(lines));
-        sb.append(Words.Prefs.LAST_FULL_LINE).append(Files.when(lib.lastFullBuild()))
-                .append(Words.Prefs.LAST_DAILY_LINE).append(lib.lastDaily() > 0 ? Files.when(lib.lastDaily()) : Words.Prefs.NOT_YET);
-        if (!lines.isEmpty()) {
-            sb.append(Words.Prefs.LATEST);
-            for (int i = Math.max(0, lines.size() - 15); i < lines.size(); i++) sb.append(lines.get(i)).append("\n");
-        }
-        sb.append(Words.Prefs.FILE_LINE).append(Paths.SYSTEM).append("/").append(Words.Trial.FILE).append(")");
-        final String text = sb.toString();
-        TextView tv = new TextView(this);
-        tv.setText(text);
-        tv.setTextSize(13);
-        tv.setTextIsSelectable(true);
-        int p = Ui.dp(this, 14);
-        tv.setPadding(p, p, p, p);
-        ScrollView sv = new ScrollView(this);
-        sv.addView(tv);
-        new AlertDialog.Builder(this).setTitle(Words.Trial.TITLE).setView(sv)
-                .setPositiveButton(Words.COPY, new DialogInterface.OnClickListener() {
-                    @Override
-                    public void onClick(DialogInterface d, int w) { Ui.copyText(SettingsScreen.this, Words.Trial.BUTTON, text); }
-                })
-                .setNegativeButton(Words.CLOSE, null).show();
-    }
-
-    private void checkPath() {
-        final EditText et = Ui.field(this, "", "/storage/emulated/0/Download/...");
-        LinearLayout b = Ui.form(this);
-        b.addView(et);
-        Ui.askForm(this, Words.Prefs.CHECK_PATH_TITLE, b, new Runnable() {
-            @Override
-            public void run() {
-                String path = et.getText().toString().trim();
-                boolean onDisk = new java.io.File(path).exists();
-                boolean inIndex = false;
-                for (Index ix : lib.indexes) {
-                    for (Index.Rec r : ix.files)
-                        if (!r.gone && ix.path(r).equals(path)) {
-                            inIndex = true;
-                            break;
-                        }
-                    if (inIndex) break;
-                }
-                new AlertDialog.Builder(SettingsScreen.this)
-                        .setTitle(Words.Prefs.CHECK_RESULT)
-                        .setMessage(Words.Prefs.ON_DRIVE + (onDisk ? Words.Prefs.EXISTS : Words.Prefs.NOT_FOUND)
-                                + Words.Prefs.IN_INDEX_LINE + (inIndex ? Words.Prefs.FOUND : Words.Prefs.NOT_FOUND)
-                                + (onDisk && !inIndex ? Words.Prefs.TRY_QUICK : ""))
-                        .setPositiveButton(Words.CLOSE, null)
-                        .show();
-            }
-        });
-    }
-
-    private void showLog() {
-        final String text = Log.device() + "\n\n" + Log.read();
-        TextView tv = new TextView(this);
-        tv.setText(text.trim().isEmpty() ? Words.Prefs.LOG_EMPTY : text);
-        tv.setTextSize(12);
-        tv.setTextIsSelectable(true);
-        int p = Ui.dp(this, 14);
-        tv.setPadding(p, p, p, p);
-        ScrollView sv = new ScrollView(this);
-        sv.addView(tv);
-        new AlertDialog.Builder(this)
-                .setTitle(Words.Prefs.ERROR_LOG)
-                .setView(sv)
-                .setPositiveButton(Words.COPY, new DialogInterface.OnClickListener() {
-                    @Override
-                    public void onClick(DialogInterface d, int w) { Ui.copyText(SettingsScreen.this, Words.Prefs.LOG, text); }
-                })
-                .setNeutralButton(Words.Prefs.SHARE, new DialogInterface.OnClickListener() {
-                    @Override
-                    public void onClick(DialogInterface d, int w) {
-                        Intent i = new Intent(Intent.ACTION_SEND);
-                        i.setType("text/plain");
-                        i.putExtra(Intent.EXTRA_TEXT, text);
-                        startActivity(Intent.createChooser(i, Words.Prefs.SHARE_LOG));
-                    }
-                })
-                .setNegativeButton(Words.Prefs.CLEAR, new DialogInterface.OnClickListener() {
-                    @Override
-                    public void onClick(DialogInterface d, int w) {
-                        Log.clear();
-                        Ui.toast(SettingsScreen.this, Words.Prefs.LOG_CLEARED);
-                    }
-                })
-                .show();
     }
 }

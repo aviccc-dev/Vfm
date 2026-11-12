@@ -2017,7 +2017,8 @@ public final class Tests {
         wipe(r);
         r.mkdirs();
         try {
-            String all = Files.readUtf8(new File(System.getProperty("vfm.src"), "assets/tests/klali.vbat"));
+            File tdir = new File(new File(System.getProperty("vfm.src")).getParentFile(), "lab-pages/avchon-tests");   // מ0.43: רק בתוסף האבחון
+            String all = Files.readUtf8(new File(tdir, "klali.vbat"));
             int a = all.indexOf(":: מ0.40"), b = all.indexOf(":: מ0.40 — הקבצים שברשימה");
             String part = all.substring(a, b) + "מחק תיקייה \"%פנימי%\\בדיקת מ0.40 (אפשר למחוק)\" /עמוק\n";
             java.util.Map<String, String> v = Batch.vars(r, r.getAbsolutePath(), null);
@@ -2029,24 +2030,21 @@ public final class Tests {
             String rep = Batch.run(p, lib, null, null).toString();
             check("מ0.40: ...ובהרצה — כל ה\"ודא\" עוברים (" + rep + ")", rep.contains("ודא: 7 עברו · 0 נכשלו") && !p.trouble);
             check("מ0.40: ...והתיקייה הוסרה", !new File(r, "בדיקת מ0.40 (אפשר למחוק)").exists());
-            // "בדיקת מערכת" — קובץ אחד שכולל את כל החלקים, בשמות שההתקנה נותנת להם (DbTestMode)
-            File td = new File(r, "אופן-בדיקות");
+            // מ0.43: כמו "הכול" של תוסף האבחון — הקבצים בשמות שהתוסף נותן להם (FILES בעמוד), וכל אחד נכלל
+            File td = new File(r, "אבחון");
             td.mkdirs();
-            String[][] parts = {{"klali", Words.DbCmd.TEST_ALL_FILE}, {"lachatz", Words.DbCmd.TEST_STRESS_FILE}, {"shney-ofanim", Words.DbCmd.TEST_MODES_FILE},
-                    {"omes-masad", Words.DbCmd.TEST_LOAD_FILE}, {"pkudot-masad", Words.DbCmd.TEST_FILE}, {"pkudot-kalul", Words.DbCmd.TEST_CALL_FILE},
-                    {"gersa-023", Words.DbCmd.TEST_V23_FILE}, {"gersa-024", Words.DbCmd.TEST_V24_FILE}, {"maarechet", Words.DbCmd.TEST_SYSTEM_FILE + " מ0.40"}};
-            for (String[] x : parts)
-                Files.writeAtomic(new File(td, x[1] + "." + Batch.EXT), Files.readUtf8(new File(System.getProperty("vfm.src"), "assets/tests/" + x[0] + ".vbat")));
-            File sys = new File(td, Words.DbCmd.TEST_SYSTEM_FILE + " מ0.40." + Batch.EXT);
-            Batch.Plan sp = Batch.plan(Files.readUtf8(sys), td, Batch.vars(td, r.getAbsolutePath(), null));
+            String[][] parts = {{"klali", "בדיקה כללית"}, {"lachatz", "בדיקת לחץ"}, {"shney-ofanim", "בדיקת שני אופנים"}, {"omes-masad", "בדיקת עומס"},
+                    {"pkudot-masad", "בדיקת פקודות"}, {"pkudot-kalul", "בדיקת כלול"}, {"gersa-023", "בדיקת מ0.23"}, {"gersa-024", "בדיקת מ0.24"}};
+            for (String[] x : parts) Files.writeAtomic(new File(td, x[1] + "." + Batch.EXT), Files.readUtf8(new File(tdir, x[0] + ".vbat")));
+            Batch.Plan sp = Batch.plan("בדיקה\nהמשך ()\nכלול \"בדיקה כללית.vbat\"\nכלול \"בדיקת לחץ.vbat\"\nכלול \"בדיקת שני אופנים.vbat\"\nכלול \"בדיקת עומס.vbat\"\n",
+                    td, Batch.vars(td, r.getAbsolutePath(), null));
             int calls = 0, verifies = 0;
             for (Batch.Step x : sp.steps) {
                 if (Words.DbCmd.CALL_FAILED.equals(x.error)) calls++;
                 if (Batch.VERIFY.equals(x.cmd) || "EXPECT".equals(x.cmd)) verifies++;   // גם "ודא שגיאה" נספרת בסיכום
             }
-            check("מ0.40: \"בדיקת מערכת\" — כל החלקים נכללים (" + sp.steps.size() + " שורות), והדוח נכתב לקובץ", calls == 0 && sp.steps.size() > 200
-                    && sp.reportFile != null && sp.reportFile.endsWith("דוח בדיקת מערכת.txt"));
-            eq("מ0.42: \"בדיקת מערכת\" — כמה \"ודא\" יש בה (הכללית 74, לחץ 19, שני אופנים 4, עומס 4, הניקוי 5)", 106, verifies);
+            check("מ0.43: \"הכול\" של התוסף — כל החלקים נכללים (" + sp.steps.size() + " שורות)", calls == 0 && sp.steps.size() > 200);
+            eq("מ0.43: \"הכול\" — כמה \"ודא\" יש בחלקים (הכללית 74, לחץ 19, שני אופנים 4, עומס 4)", 101, verifies);
             // מ0.41: הקטע החדש של הכללית — השורות שאינן של המסד מתוכננות בלי שגיאה; "ודא שגיאה" תופס את %נבחרים%
             String m042 = all.substring(all.indexOf(":: מ0.42"), all.indexOf(":: מ0.41 — הבדיקה מנקה"));   // נבדק לבד (m042cmds)
             String sec = "צור תיקייה \"%פנימי%\\בדיקת יצוא (אפשר למחוק)\"\n" + all.substring(all.indexOf(":: מ0.41 — בטל לא-משויכים")).replace(m042, "");
@@ -2069,10 +2067,6 @@ public final class Tests {
             String rep42 = Batch.run(p42, lib, null, null).toString();
             check("מ0.42: הקטע החדש של הכללית — שם אופן לא תקין נתפס, הקובץ שנכתב באינדקס, והתיקייה הוסרה (" + rep42 + ")",
                     p42.errors == 0 && rep42.contains("ודא: 4 עברו · 0 נכשלו") && !new File(r, "בדיקת מ0.42 (אפשר למחוק)").exists());
-            String clean = Files.readUtf8(sys);
-            check("מ0.41: \"בדיקת מערכת\" מנקה אחרי עצמה — מבטלת את הרשימות שהחלקים יוצרים, ובסוף בטל לא-משויכים", clean.contains("בטל ידנית \"בדיקת פקודות\"")
-                    && clean.contains("בטל ידנית \"בדיקת לחץ\"") && clean.contains("בטל ידנית \"בדיקת עומס\"") && clean.contains("אופן \"" + DbTestMode.REAL + "\"")
-                    && clean.indexOf("בטל לא-משויכים") > clean.indexOf("בטל ידנית \"בדיקת-אופן-א\""));
         } catch (Exception e) {
             check("מ0.40: הבדיקה הכללית — " + e, false);
         }
@@ -2088,7 +2082,7 @@ public final class Tests {
             eq("מ0.42: תוסף האבחון — השם שהתפריט פותח", Words.DbCmd.TOOL_DIAG, nv[0]);
             File same = new File(pages, "תוסף " + nv[0] + " " + nv[1] + ".html");
             check("מ0.42: ...זהה לעמוד שב־lab-pages (" + nv[1] + ")", same.isFile() && Files.readUtf8(same).equals(html));
-            File[] t = new File(src, "assets/tests").listFiles();
+            File[] t = new File(pages, "avchon-tests").listFiles();
             int n = 0;
             for (File f : t) {
                 if (!f.getName().endsWith(".vbat")) continue;
@@ -2100,7 +2094,10 @@ public final class Tests {
                 if (html.contains(key)) n++;
                 else check("מ0.42: קובץ הבדיקה " + f.getName() + " — בעמוד כמו בהתקנה (להריץ avchon-build.py)", false);
             }
-            check("מ0.42: כל קובצי הבדיקה בעמוד (" + n + ")", n >= 9);
+            check("מ0.42: כל קובצי הבדיקה בעמוד (" + n + ")", n >= 8);
+            check("מ0.43: קובצי הבדיקה — כבר לא בקובץ ההתקנה (רק בתוסף)", !new File(src, "assets/tests").exists());
+            check("מ0.43: התוסף מנקה בסוף — בטל לא-משויכים, ובודק את האינדקס ובנייתו", html.contains("'בטל לא-משויכים'") && html.contains("'רענן מלא'")
+                    && html.contains("'רענן עמוק'") && html.contains("dbStats"));
             check("מ0.42: העמוד יוצר את אופן הבדיקות ומבקש את התוצאה בקובץ", html.contains("'צור אופן \"'+TEST_MODE") && html.contains("'דוח \"'+resultPath("));
         } catch (Exception e) {
             check("מ0.42: תוסף האבחון — " + e, false);
@@ -4612,16 +4609,15 @@ public final class Tests {
         List<String> lines = Arrays.asList(l1, Trial.line(0, Words.Trial.DAILY, 300, "נבדקו 4157", 0),
                 Trial.line(0, Words.Trial.WEEKLY, 1900, "נוספו 3 · נמחקו 0 · השתנו 1", 4),
                 Trial.line(0, Words.Trial.SINCE, 10, "פנימי", 1), "שורה לא מובנת", "");
-        Map<String, int[]> sum = Trial.summary(lines);
-        check("182: סיכום — יומית: 2 פעמים, נמצאו 2, פעם אחת נמצא", Arrays.equals(sum.get(Words.Trial.DAILY), new int[]{2, 2, 1}));
-        check("182: סיכום — שבועית: פעם אחת, נמצאו 4", Arrays.equals(sum.get(Words.Trial.WEEKLY), new int[]{1, 4, 1}));
-        check("182: סיכום — מה השתנה מאז: נמצא 1", Arrays.equals(sum.get(Words.Trial.SINCE), new int[]{1, 1, 1}));
-        check("182: סיכום במילים", Trial.text(lines).contains("רצה 2 פעמים, מצאה משהו פעם אחת"));
-        eq("182: יומן ריק — הסבר", Words.Trial.EMPTY, Trial.text(new ArrayList<String>()));
+        check("182: השורות — כל אחת בשורה משלה (הסיכום — בתוסף האבחון, מ0.43)", lines.get(2).contains(" | שבועית | ") && lines.get(3).contains(" | " + Words.Trial.SINCE + " | "));
         Trial.file().delete();
         Trial.add(Words.Trial.DAILY, 5, "נבדקו 1", 0);
         Trial.add(Words.Trial.WEEKLY, 5, "נוספו 0 · נמחקו 0 · השתנו 0", 0);
-        eq("182: היומן בקובץ — שתי שורות", 2, Trial.lines().size());
+        try {
+            eq("182: היומן בקובץ — שתי שורות", 2, Files.readUtf8(Trial.file()).trim().split("\n").length);
+        } catch (Exception e) {
+            check("182: היומן בקובץ — " + e, false);
+        }
         check("182: היומן — ב־.מערכת של האופן", Trial.file().getParentFile().getName().equals(Paths.SYSTEM));
         Trial.file().delete();
         wipe(root);

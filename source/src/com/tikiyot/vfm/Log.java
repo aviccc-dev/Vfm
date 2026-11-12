@@ -4,9 +4,7 @@ package com.tikiyot.vfm;
 
 import android.os.Build;
 
-import java.io.ByteArrayOutputStream;
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.OutputStreamWriter;
 import java.io.PrintWriter;
@@ -83,26 +81,6 @@ public final class Log {
             w.close();
         } catch (Throwable ignored) {
         }
-    }
-
-    public static synchronized String read() {
-        try {
-            File f = file();
-            if (!f.exists()) return "";
-            FileInputStream in = new FileInputStream(f);
-            ByteArrayOutputStream bo = new ByteArrayOutputStream();
-            byte[] buf = new byte[8192];
-            int n;
-            while ((n = in.read(buf)) > 0) bo.write(buf, 0, n);
-            in.close();
-            return bo.toString("UTF-8");
-        } catch (Throwable t) {
-            return Words.LogW.CANT_READ_LOG + t;
-        }
-    }
-
-    public static synchronized void clear() {
-        file().delete();
     }
 
     public static void install() {

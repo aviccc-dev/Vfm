@@ -487,7 +487,7 @@ final class Verbs {
         else if (s.equals(S_TRASH)) a.startActivity(new Intent(a, TrashScreen.class));
         else if (s.equals(S_EDITOR)) a.startActivity(new Intent(a, BatchEditScreen.class));   // 1.28.0: בלי קובץ — טיוטה
         else if (s.equals(S_BACKUPS)) DbScreen.openBackups(a);                // מ0.37
-        else if (s.equals(S_DIAG)) Diag.run(a, DbListScreen.currentMode);     // מ0.37: דוח האבחון כפקודה
+        else if (s.equals(S_DIAG)) LabScreen.open(a, Words.DbCmd.TOOL_DIAG);  // מ0.37: דוח האבחון כפקודה; מ0.43: תוסף האבחון
         else if (s.equals(S_LAB) || s.equals(S_PLUGINS)) LabScreen.open(a, c.cond, c.ver, null);   // מ0.38: המעבדה; מ0.40: התוספים — רק בפקודה
     }
 

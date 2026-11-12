@@ -219,8 +219,9 @@ final class Batch {
         }
         if (cmd.equals(REFRESH)) {
             final boolean deep = tk.size() == 2 && tk.get(1).trim().equals(W_DEEP);
-            if (tk.size() > 2 || (tk.size() == 2 && !deep)) { s.error = Words.DbCmd.REFRESH_USAGE; return true; }
-            s.describe = Words.DbCmd.refreshWill(deep);
+            final boolean full = tk.size() == 2 && tk.get(1).trim().equals(W_FULL);   // מ0.43: בנייה מחדש — מה שהיה הכפתור בהגדרות, כבדיקה
+            if (tk.size() > 2 || (tk.size() == 2 && !deep && !full)) { s.error = Words.DbCmd.REFRESH_USAGE; return true; }
+            s.describe = full ? Words.DbCmd.REBUILD_WILL : Words.DbCmd.refreshWill(deep);
             // מ0.40 — המשתמש: "הוא יכול להריץ פקודה 'רענן אינדקס' לפני שהוא מתחיל". עד כאן "רענן" רץ רק בהרצה — אחרי שכל
             // השורות כבר תוכננו, ורשימה חכמה בשורה שאחריו לא ראתה קובץ שהורד הרגע. עכשיו — רענון מהיר כבר בהכנה (ברקע, לא
             // משנה קבצים), והשורות שאחריו מתוכננות מול האינדקס המעודכן. בהרצה — כמו קודם (גם מה ששורות קודמות שינו).
@@ -234,7 +235,11 @@ final class Batch {
                 }
             s.op = new ListCmd.Op() {
                 @Override public String run(Library lib) {
-                    if (lib == null) return Words.DbCmd.refreshWill(deep);
+                    if (lib == null) return full ? Words.DbCmd.REBUILD_WILL : Words.DbCmd.refreshWill(deep);
+                    if (full) {
+                        lib.build(null);
+                        return Words.DbCmd.rebuilt(lib.totalFiles(), lib.totalDirs());
+                    }
                     return Words.DbCmd.refreshed(deep ? lib.deepRefresh() : lib.refreshAsked());
                 }
             };
@@ -408,7 +413,7 @@ final class Batch {
     static final String MODE = "MODE", CALL = "CALL", CONT = "CONTINUE";
     /** מ0.37 — הפקודות הקטנות: כתוב לקובץ · המתן · גבה (המסד) · רענן (האינדקס) · דוח (היומן לקובץ). */
     static final String WRITE = "WRITE", WAIT = "WAIT", BACKUP = "BACKUP", REFRESH = "REFRESH", REPORT = "REPORT", LAB = "LAB";
-    static final String SW_APPEND = "/הוסף", W_DEEP = "עמוק", W_ERROR = "שגיאה";   // תחביר
+    static final String SW_APPEND = "/הוסף", W_DEEP = "עמוק", W_ERROR = "שגיאה", W_FULL = "מלא";   // תחביר
     /** מ0.42: "ודא מסד" — המנוע של המסד מול ה־SQLite של המכשיר, ותקינות המסד של כל אופן. */
     static final String W_DB = "מסד";   // תחביר
     static final String V_TIME = "שעה", V_UNIQUE = "ייחודי";   // תחביר

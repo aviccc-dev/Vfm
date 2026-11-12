@@ -23,7 +23,7 @@ public class DbListScreen extends ListScreen<Store.Member> {
     static final String EXTRA_MODE = "mode", EXTRA_LIST = "list", EXTRA_SORT = "sort";
     /** מ0.22: מיון מהפקודה ("פתח רשימה … מיין:…"); ריק — הסדר של הרשימה. */
     private String sortBy = "";
-    private static final int MENU_DESIGN = 2, MENU_SETTINGS = 3, MENU_CMDS = 5, MENU_TESTS = 6, MENU_DIAG = 8, MENU_PLUGIN_DIAG = 9;
+    private static final int MENU_DESIGN = 2, MENU_SETTINGS = 3, MENU_CMDS = 5, MENU_PLUGIN_DIAG = 9;
 
     private String mode;
     private long listId;
@@ -724,7 +724,7 @@ public class DbListScreen extends ListScreen<Store.Member> {
     }
 
 
-    /** מ0.11.1: התפריט ⋮ — פקודות, הגדרות, עיצוב, הבדיקות ודוח האבחון. */
+    /** מ0.11.1: התפריט ⋮ — פקודות, הגדרות, עיצוב, ותוסף האבחון. */
     @Override
     protected void menu(Menu menu) {
         menu.add(0, MENU_CMDS, 0, Words.BATCH_MENU);
@@ -732,9 +732,7 @@ public class DbListScreen extends ListScreen<Store.Member> {
         menu.add(0, MENU_DESIGN, 0, Words.DesignW.MENU);
         // מ0.35 (המשתמש, 11.11.2026, על הגיבויים: "בינתיים שתעבור להגדרות. היא לא צריכה להיות במקום כזה מרכזי") — הכניסה בהגדרות
         // מ0.37: "⚙ מסד" ירדה מהתפריט — במסך המסד נשארו רק הגיבויים, והכניסה אליהם מההגדרות
-        menu.add(0, MENU_TESTS, 0, Words.DbCmd.MENU_TESTS);
-        menu.add(0, MENU_DIAG, 0, Words.DbCmd.MENU_DIAG);                     // מ0.30
-        // מ0.42: תוסף האבחון — הבדיקות, הדוחות והתקלות (claude/tosaf-bdikot.md). שתי השורות שלמעלה יורדות אחרי שהוא ייבדק במכשיר
+        // מ0.42: תוסף האבחון — הבדיקות, הדוחות והתקלות (claude/tosaf-bdikot.md). מ0.43: במקום "בדיקת הפקודות" ו"דוח אבחון"
         menu.add(0, MENU_PLUGIN_DIAG, 0, Words.DbCmd.MENU_PLUGIN_DIAG);
     }
 
@@ -743,8 +741,6 @@ public class DbListScreen extends ListScreen<Store.Member> {
         if (id == MENU_CMDS) CmdMenu.show(this, null);
         else if (id == MENU_SETTINGS) startActivity(new Intent(this, SettingsScreen.class));
         else if (id == MENU_DESIGN) design();
-        else if (id == MENU_TESTS) DbTestMode.open(this);
-        else if (id == MENU_DIAG) Diag.run(this, mode);
         else if (id == MENU_PLUGIN_DIAG) LabScreen.open(this, Words.DbCmd.TOOL_DIAG);
         else return false;
         return true;
