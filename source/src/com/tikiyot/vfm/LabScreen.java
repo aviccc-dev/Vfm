@@ -1,8 +1,8 @@
 package com.tikiyot.vfm;
 
 // מ0.38 — מסך המעבדה (Lab); מ0.40 — מסך התוספים (המשתמש: "הוא כבר לא אמור להיקרא מעבדה, אלא תוסף עורך אינטראקטיבי").
-// בלי תוסף — רשימת התוספים (נגיעה: פתיחה; "גרסאות": החלפה). עם תוסף — העמוד שלו, ובראש: השם, הגרסה, "גרסאות".
-// נפתח בפקודה: פתח תוסף ["<תוסף>"] (וגם: פתח מסך תוספים / מעבדה).
+// בלי תוסף — רשימת התוספים (נגיעה: החדש; "גרסאות": בחירה). עם תוסף — העמוד שלו, ובראש: השם, הגרסה, "יש גרסה N" אם יש
+// גבוהה יותר בתיקייה, ו"גרסאות". נפתח בפקודה: פתח תוסף ["<תוסף>" ["<גרסה>"]] (וגם: פתח מסך תוספים / מעבדה).
 // הגשר (vfm) — מה שעמוד מעבדה יכול לעשות בתוכנה; כללי, לכל ניסוי (המשתמש: "המעבדה זה לא רק למצב הזה, אלא גם לפיתוחים
 // אחרים"): לקרוא, לבחור בבורר האמיתי, לכתוב קובצי פקודות, ולהריץ פקודות דרך ההרצה הרגילה (תצוגה מקדימה ואישור).
 // אחראי: התצוגה והגשר. אסור לו: לכתוב או למחוק קבצים אחרים ישירות — כל שינוי אחר עובר דרך הפקודות.
@@ -38,18 +38,27 @@ import java.util.Map;
 
 public final class LabScreen extends Activity {
 
-    static final String EXTRA = "exp";
+    static final String EXTRA = "exp", EXTRA_VER = "ver", EXTRA_FILE = "file";
     /** תשובת saveCommandFile כשיש כבר קובץ — העמוד שואל: להחליף או שם אחר. */
     static final String EXISTS = "exists";
     private static final String PREFS = "lab";
 
     private String exp;
+    /** מ0.40: העמוד שנפתח (גרסה אחת של התוסף); null — עוד לא נבחר. */
+    private Lab.Page page;
     private WebView web;
     private Map<String, String> vars;
 
     static void open(Activity a, String exp) {
+        open(a, exp, null, null);
+    }
+
+    /** מ0.40: ver — גרסה מסוימת ("פתח תוסף "<שם>" "<גרסה>""); file — עמוד מסוים (מבחירת הגרסה). שניהם null — החדש. */
+    static void open(Activity a, String exp, String ver, File file) {
         Intent i = new Intent(a, LabScreen.class);
         if (exp != null && !exp.trim().isEmpty()) i.putExtra(EXTRA, exp.trim());
+        if (ver != null && !ver.trim().isEmpty()) i.putExtra(EXTRA_VER, ver.trim());
+        if (file != null) i.putExtra(EXTRA_FILE, file.getAbsolutePath());
         a.startActivity(i);
     }
 
@@ -58,14 +67,22 @@ public final class LabScreen extends Activity {
         super.onCreate(b);
         exp = getIntent().getStringExtra(EXTRA);
         vars = BatchUi.vars(this, Shortcuts.dir());
-        if (exp == null) showList();
-        else showPage();
+        if (exp == null) { showList(); return; }
+        File root = Lab.root();
+        String ver = getIntent().getStringExtra(EXTRA_VER), file = getIntent().getStringExtra(EXTRA_FILE);
+        if (file != null) for (Lab.Page p : Lab.versions(root, exp)) if (p.file.getAbsolutePath().equals(file)) page = p;
+        if (page == null && ver != null) {
+            page = Lab.version(root, exp, ver);
+            if (page == null) Ui.toast(this, Words.Lab.noVersion(exp, ver));
+        }
+        if (page == null && ver == null) page = Lab.newest(root, exp);
+        showPage();
     }
 
     @Override
     protected void onResume() {
         super.onResume();
-        if (exp == null && web == null) showList();                          // אחרי "הוסף תוסף" — הרשימה מתעדכנת
+        if (exp == null && web == null) showList();                          // אחרי שעמוד עבר לתיקייה — הרשימה מתעדכנת
     }
 
     // ---------- רשימת הניסויים ----------
@@ -77,7 +94,7 @@ public final class LabScreen extends Activity {
         TextView title = Ui.label(this, Words.Lab.TITLE);
         title.setTextSize(18);
         box.addView(title);
-        List<String> exps = Lab.experiments(root);
+        List<String> exps = Lab.names(root);
         if (exps.isEmpty()) {
             TextView t = Ui.info(this);
             t.setText(Words.Lab.EMPTY);
@@ -90,7 +107,9 @@ public final class LabScreen extends Activity {
             row.setGravity(Gravity.CENTER_VERTICAL);
             Button open = new Button(this);
             open.setAllCaps(false);
-            open.setText(Words.Lab.row(e, String.valueOf(Lab.active(root, e)), Lab.versions(root, e).size()));
+            List<Lab.Page> all = Lab.versions(root, e);
+            String h = Lab.higher(root, all.get(0));
+            open.setText(Words.Lab.row(e, all.get(0).ver, all.size()) + (h == null ? "" : " · " + Words.Lab.higher(h)));
             open.setOnClickListener(new View.OnClickListener() {
                 @Override public void onClick(View v) { open(LabScreen.this, e); }
             });
@@ -99,7 +118,7 @@ public final class LabScreen extends Activity {
             vs.setAllCaps(false);
             vs.setText(Words.Lab.VERSIONS);
             vs.setOnClickListener(new View.OnClickListener() {
-                @Override public void onClick(View v) { versions(e, null); }
+                @Override public void onClick(View v) { versions(e, false); }
             });
             row.addView(vs);
             box.addView(row);
@@ -107,20 +126,27 @@ public final class LabScreen extends Activity {
         setContentView(TopRow.wrap(this, Ui.scroll(this, box)));
     }
 
-    /** בחירת הגרסה הפעילה; אחריה — then (או רענון הרשימה). */
-    private void versions(final String e, final Runnable then) {
-        final File root = Lab.root();
-        final List<String> vs = Lab.versions(root, e);
-        String act = Lab.active(root, e);
+    /**
+     * מ0.40: בחירת גרסה — כל העמודים של התוסף, החדש (לפי התאריך) קודם; הבחירה פותחת אותו עכשיו. "פתח תוסף" פותח תמיד את
+     * החדש; גרסה קבועה — בפקודה: פתח תוסף "<שם>" "<גרסה>".
+     */
+    private void versions(final String e, final boolean here) {
+        final List<Lab.Page> vs = Lab.versions(Lab.root(), e);
         final List<String> shown = new ArrayList<String>();
-        for (int i = vs.size() - 1; i >= 0; i--) shown.add(Words.Lab.version(vs.get(i)) + (vs.get(i).equals(act) ? " ✓" : ""));
+        for (Lab.Page p : vs)
+            shown.add(Words.Lab.versionRow(p.ver, Files.when(p.file.lastModified()), page != null && p.file.equals(page.file)));
         Ui.list(this, e, shown, new DialogInterface.OnClickListener() {
             @Override
             public void onClick(DialogInterface d, int which) {
-                String err = Lab.setActive(root, e, vs.get(vs.size() - 1 - which));
-                if (err != null) Ui.toast(LabScreen.this, err);
-                if (then != null) then.run();
-                else showList();
+                Lab.Page p = vs.get(which);
+                if (!here) {
+                    open(LabScreen.this, e, null, p.file);
+                    return;
+                }
+                if (web != null) web.destroy();
+                web = null;
+                page = p;
+                showPage();
             }
         });
     }
@@ -129,10 +155,10 @@ public final class LabScreen extends Activity {
 
     private void showPage() {
         final File root = Lab.root();
-        File page = Lab.page(root, exp);
-        if (page == null) {
-            Ui.toast(this, Words.Lab.NOT_FOUND);
+        if (page == null || !page.file.isFile()) {
+            if (Lab.newest(root, exp) == null) Ui.toast(this, Words.Lab.NOT_FOUND);
             exp = null;
+            page = null;
             showList();
             return;
         }
@@ -141,7 +167,7 @@ public final class LabScreen extends Activity {
             File dir = new File(getFilesDir(), "lab-run");
             dir.mkdirs();
             run = new File(dir, "page.html");
-            Files.writeAtomic(run, Files.readUtf8(page));
+            Files.writeAtomic(run, Files.readUtf8(page.file));
         } catch (Throwable t) {
             Log.e("LabScreen.copy", t);
             Ui.toast(this, Words.Db.failed(String.valueOf(t.getMessage())));
@@ -153,18 +179,14 @@ public final class LabScreen extends Activity {
         bar.setLayoutDirection(Ui.DIRECTION);
         bar.setGravity(Gravity.CENTER_VERTICAL);
         bar.setPadding(Ui.dp(this, 10), 0, Ui.dp(this, 6), 0);
-        TextView t = Ui.label(this, Words.Lab.TITLE + " · " + exp + " · " + Words.Lab.version(String.valueOf(Lab.active(root, exp))));
+        String h = Lab.higher(root, page);                                    // "ואם יש יותר חדש — הוא מזוהה בתוסף"
+        TextView t = Ui.label(this, Words.Lab.TITLE + " · " + exp + " · " + Words.Lab.version(page.ver) + (h == null ? "" : " · " + Words.Lab.higher(h)));
         bar.addView(t, new LinearLayout.LayoutParams(0, -2, 1f));
         Button vs = new Button(this);
         vs.setAllCaps(false);
         vs.setText(Words.Lab.VERSIONS);
         vs.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                versions(exp, new Runnable() {
-                    @Override public void run() { web = null; showPage(); }
-                });
-            }
+            @Override public void onClick(View v) { versions(exp, true); }
         });
         bar.addView(vs);
         root2.addView(bar);
@@ -249,7 +271,9 @@ public final class LabScreen extends Activity {
                 o.put("version", getPackageManager().getPackageInfo(getPackageName(), 0).versionName);
                 o.put("mode", String.valueOf(DbListScreen.currentMode));
                 o.put("lab", exp);
-                o.put("labVersion", String.valueOf(Lab.active(Lab.root(), exp)));
+                o.put("labVersion", page == null ? "" : page.ver);
+                String h = page == null ? null : Lab.higher(Lab.root(), page);   // מ0.40: יש גרסה גבוהה יותר בתיקייה
+                o.put("labNewer", h == null ? "" : h);
                 return o.toString();
             } catch (Throwable t) {
                 return "{}";

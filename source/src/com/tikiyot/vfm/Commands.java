@@ -162,6 +162,7 @@ final class Commands {
         return Arrays.asList(
                 sw("/" + Batch.SW_DATE, null, Type.DATE, Words.Def.P_DATE, Words.Def.H_DATE),
                 sw("/" + Batch.SW_SIZE, null, Type.SIZE, Words.Def.P_SIZE, Words.Def.H_SIZE),
+                sw("/" + Batch.SW_CONTAINS, null, Type.TEXT, Words.Def.P_CONTAINS, Words.Def.H_CONTAINS),   // מ0.40
                 hidden(),
                 compat("/D:", Type.DATE), compat("/MAXAGE:", Type.DATE), compat("/MINAGE:", Type.DATE),
                 compat("/MAX:", Type.SIZE), compat("/MIN:", Type.SIZE), compat("/Q", Type.FLAG), compat("/F", Type.FLAG));
@@ -173,7 +174,7 @@ final class Commands {
 
     private static Param taken() {
         return sw(Batch.SW_TAKEN, new String[]{"/Y", "/-Y"}, Type.CHOICE, Words.Def.P_TAKEN, Words.Def.H_TAKEN,
-                Batch.TAKEN_ASK, Batch.TAKEN_SKIP, Batch.TAKEN_REPLACE, Batch.TAKEN_STOP);
+                Batch.TAKEN_ASK, Batch.TAKEN_SKIP, Batch.TAKEN_REPLACE, Batch.TAKEN_STOP, Batch.TAKEN_RENAME);
     }
 
     private static Param[] list(Object... parts) {

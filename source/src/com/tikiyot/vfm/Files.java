@@ -127,6 +127,36 @@ public final class Files {
         }
     }
 
+    /**
+     * מ0.40: האם הבתים של what כתובים בקובץ (חיפוש רציף, בלי לטעון את כולו; נעצר במציאה הראשונה). קובץ שלא נקרא — false.
+     * KMP: כל בית נקרא פעם אחת.
+     */
+    static boolean contains(File f, byte[] what) {
+        if (what.length == 0) return true;
+        int[] back = new int[what.length];
+        for (int i = 1, k = 0; i < what.length; i++) {
+            while (k > 0 && what[i] != what[k]) k = back[k - 1];
+            if (what[i] == what[k]) k++;
+            back[i] = k;
+        }
+        InputStream in = null;
+        try {
+            in = new FileInputStream(f);
+            byte[] buf = new byte[65536];
+            int n, k = 0;
+            while ((n = in.read(buf)) > 0)
+                for (int i = 0; i < n; i++) {
+                    while (k > 0 && buf[i] != what[k]) k = back[k - 1];
+                    if (buf[i] == what[k] && ++k == what.length) return true;
+                }
+            return false;
+        } catch (Throwable t) {
+            return false;
+        } finally {
+            if (in != null) try { in.close(); } catch (Throwable ignored) { }
+        }
+    }
+
     /** עותק לפני שמירה, בתיקיית הגיבויים, עם שמירה על העשרה האחרונים. */
     public static void backup(File f, String group) {
         try {

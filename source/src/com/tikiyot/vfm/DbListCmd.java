@@ -800,8 +800,10 @@ final class DbListCmd {
     /** שורה עם מילות סוג, כשעובדים במסד: אותן בדיקות צורה כמו ListCmd.plan; הפעולה — על העותק בזיכרון, ובהרצה — על המסד. */
     static void plan(final Batch.Step s, final String cmd, ListCmd.Parsed p, List<String> sw, final Batch.Sim sim,
                      final List<String> fsFiles, final File fsDest) {
+        boolean disk = false;                                                  // מ0.40: יש צד בכונן — שם /מכיל: חל
+        for (ListCmd.Side x : p.sides) if (!x.list()) disk = true;
         for (String x : sw)
-            if (x.startsWith("/" + Batch.SW_DATE) || x.startsWith("/" + Batch.SW_SIZE)) {
+            if (x.startsWith("/" + Batch.SW_DATE) || x.startsWith("/" + Batch.SW_SIZE) || (!disk && x.startsWith("/" + Batch.SW_CONTAINS))) {
                 s.error = Words.ListCmdW.NO_FILTER;
                 return;
             }
@@ -911,37 +913,7 @@ final class DbListCmd {
                 return;
             }
             if (b.kind == ListCmd.FS) {                                      // מרשימה לתיקייה — הקבצים עצמם (הביצוע הרגיל)
-                if (fsDest == null || !sim.isDir(fsDest)) { s.error = Words.Cmd.NO_DEST; return; }
-                String[] err = {null};
-                List<String> fs = files(db, mode, a, find, err);
-                if (fs == null) { s.error = err[0]; return; }
-                s.dest = fsDest;
-                // מ0.26: המתגים של שורת רשימה לא נקראים ב־Batch.plan (שם רק שורות כונן) — נקראים כאן. במ0.25 זה הוחמץ,
-                // ולכן התיקון לא פעל במכשיר ("הועתקו 1" במקום "דולגו", והקובץ ישר בתיקייה).
-                for (String x : sw) {
-                    String u = x.toUpperCase(java.util.Locale.ROOT);
-                    if (u.equals("/Y") || x.equals(Batch.SW_TAKEN + Batch.TAKEN_REPLACE)) s.replace = true;
-                    if (x.equals(Batch.SW_TAKEN + Batch.TAKEN_SKIP)) s.skipTaken = true;
-                    if (x.equals(Batch.SW_TAKEN + Batch.TAKEN_STOP)) s.failTaken = true;
-                    if (u.equals("/S") || x.equals(Batch.SW_KEEP)) s.recursive = true;
-                }
-                // מ0.25 (באג 4): /תפוס:לדלג ו־/מסלול גם מרשימה לתיקייה. /מסלול — המסלול המלא של הקובץ מהכונן, בתוך היעד
-                // (המשתמש: "אם הבקשה עם מסלול אז עם כל המסלול"); לכל קובץ תיקיית יעד משלו (targets, כמו בשחזור).
-                for (String x : fs) {
-                    File src = new File(x);
-                    if (!sim.isFile(src)) continue;
-                    File dir = s.recursive ? fullPathUnder(fsDest, src) : fsDest;
-                    File to = new File(dir, src.getName());
-                    if (s.skipTaken && sim.isFile(to)) { s.skipped++; continue; }
-                    s.files.add(src.getAbsolutePath());
-                    if (s.recursive) {
-                        s.targets.add(dir.getAbsolutePath());
-                        for (File up = dir; up != null && !up.equals(fsDest); up = up.getParentFile()) sim.dirs.add(up.getAbsolutePath());
-                    }
-                    sim.move(src.getAbsolutePath(), to, true);
-                }
-                s.describe = Words.Cmd.transfer(true, Words.files(s.files.size()), Bidi.path(fsDest.getAbsolutePath()))
-                        + (s.recursive ? Words.Cmd.KEEP_PATH : "") + (s.skipped > 0 ? Words.Cmd.skippedTaken(s.skipped) : "");
+                toFolder(s, cmd, a, db, mode, find, sw, sim, fsDest);
                 return;
             }
             work = new Work() {
@@ -972,6 +944,10 @@ final class DbListCmd {
         } else if (cmd.equals("MOVE") || cmd.equals(Batch.LINK)) {           // מ0.17: העברה וקישור — במסד
             if (sd.size() != 2) { s.error = Words.DbCmd.USAGE_LINK; return; }
             final ListCmd.Side a = sd.get(0), b = sd.get(1);
+            if (cmd.equals("MOVE") && a.list() && b.kind == ListCmd.FS && !b.content && !b.filesOf) {   // מ0.40: הקבצים עצמם — לתיקייה
+                toFolder(s, cmd, a, db, mode, find, sw, sim, fsDest);
+                return;
+            }
             if (!a.list() && cmd.equals("MOVE")) { s.error = Words.ListCmdW.MOVE_TO_LIST; return; }
             if (!a.list() || a.filesOf || b.content || b.filesOf || b.kind == ListCmd.FS) { s.error = Words.DbCmd.USAGE_LINK; return; }
             if (b.kind == ListCmd.SMART_LIST) { s.error = Words.ListCmdW.INTO_SMART; return; }
@@ -1366,6 +1342,55 @@ final class DbListCmd {
      * מ0.25: תיקיית היעד של קובץ כשמבקשים /מסלול מרשימה — היעד + המסלול המלא של התיקייה שלו בכונן (בלי שורש הכונן):
      * /storage/emulated/0/Download/א/ב.pdf ← <יעד>/Download/א. כרטיס: /storage/XXXX-XXXX/… — אותו דבר. מסלול אחר — כולו.
      */
+    /**
+     * הקבצים שברשימה (ידנית, חכמה, "קבצי …") — אל תיקייה בכונן: העתקה, ומ0.40 גם העברה (המשתמש, על התוספים: "המריץ מעביר את
+     * כולם, ואם צריך משנה שם"). הביצוע — הרגיל של הכונן (Batch.run); כאן רק התכנון, קובץ אחרי קובץ על ההדמיה.
+     */
+    private static void toFolder(Batch.Step s, String cmd, ListCmd.Side a, Store db, String mode, Finder find, List<String> sw,
+                                 Batch.Sim sim, File fsDest) {
+        if (fsDest == null || !sim.isDir(fsDest)) { s.error = Words.Cmd.NO_DEST; return; }
+        final boolean copy = cmd.equals("COPY");
+        String[] err = {null};
+        List<String> fs = files(db, mode, a, find, err);
+        if (fs == null) { s.error = err[0]; return; }
+        s.dest = fsDest;
+        // מ0.26: המתגים של שורת רשימה לא נקראים ב־Batch.plan (שם רק שורות כונן) — נקראים כאן. במ0.25 זה הוחמץ,
+        // ולכן התיקון לא פעל במכשיר ("הועתקו 1" במקום "דולגו", והקובץ ישר בתיקייה).
+        for (String x : sw) {
+            String u = x.toUpperCase(java.util.Locale.ROOT);
+            if (u.equals("/Y") || x.equals(Batch.SW_TAKEN + Batch.TAKEN_REPLACE)) s.replace = true;
+            if (x.equals(Batch.SW_TAKEN + Batch.TAKEN_SKIP)) s.skipTaken = true;
+            if (x.equals(Batch.SW_TAKEN + Batch.TAKEN_STOP)) s.failTaken = true;
+            if (x.equals(Batch.SW_TAKEN + Batch.TAKEN_RENAME)) s.renameTaken = true;
+            if (x.startsWith(Batch.SW_TAKEN) && !Batch.takenValue(x)) { s.error = Batch.takenUnknown(x); return; }
+            if (u.equals("/S") || x.equals(Batch.SW_KEEP)) s.recursive = true;
+        }
+        Batch.Filter flt = Batch.filter(sw);                                   // מ0.40: /מכיל:
+        if (flt.error != null) { s.error = flt.error; return; }
+        // מ0.25 (באג 4): /תפוס:לדלג ו־/מסלול גם מרשימה לתיקייה. /מסלול — המסלול המלא של הקובץ מהכונן, בתוך היעד
+        // (המשתמש: "אם הבקשה עם מסלול אז עם כל המסלול"); לכל קובץ תיקיית יעד משלו (targets, כמו בשחזור).
+        for (String x : fs) {
+            File src = new File(x);
+            if (!sim.isFile(src)) continue;
+            s.total++;
+            if (!flt.ok(sim.real(src))) continue;
+            File dir = s.recursive ? fullPathUnder(fsDest, src) : fsDest;
+            if (!copy && dir.equals(src.getParentFile())) { s.inPlace++; continue; }   // מ0.40: כבר שם — כלום
+            File to = new File(dir, src.getName());
+            if (s.drop(sim, src, to)) continue;
+            s.files.add(src.getAbsolutePath());
+            if (s.recursive) {
+                s.targets.add(dir.getAbsolutePath());
+                for (File up = dir; up != null && !up.equals(fsDest); up = up.getParentFile()) sim.dirs.add(up.getAbsolutePath());
+            }
+            sim.move(src.getAbsolutePath(), s.arrive(sim, to), copy);
+        }
+        int passed = s.files.size() + s.skipped + s.same + s.inPlace;
+        s.describe = Words.Cmd.transfer(copy, Words.files(s.files.size()), Bidi.path(fsDest.getAbsolutePath()))
+                + (s.recursive ? Words.Cmd.KEEP_PATH : "") + (s.total > passed ? Words.Cmd.filtered(passed, s.total) : "") + Batch.notes(s);
+        s.noop = s.files.isEmpty() && s.same + s.inPlace > 0;
+    }
+
     static File fullPathUnder(File dest, File src) {
         String p = src.getParentFile() == null ? "" : src.getParentFile().getAbsolutePath();
         String rel = p;

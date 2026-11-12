@@ -56,6 +56,7 @@ public final class Tests {
         run("מ0.38: הפקודות והמתגים בעברית", new Runnable() { public void run() { m038(); } });
         run("מ0.38: המעבדה", new Runnable() { public void run() { m038lab(); } });
         run("מ0.40: התוספים, והשורות שהעורך האינטראקטיבי כותב", new Runnable() { public void run() { m040(); } });
+        run("מ0.40: העבר — כבר במקום, /תפוס:לשנות-שם, /מכיל:", new Runnable() { public void run() { m040move(); } });
         run("מ0.37: הפקודות הקטנות — כתוב, ודא (תיקייה, מכיל, קבצים, שגיאה), דוח, המתן, משתנים, רעיון וכותרת", new Runnable() { public void run() { m037(); } });
         run("קובצי פקודות — השורה כשדות לטופס (117א, שלב 2)", new Runnable() { public void run() { batchForm(); } });
         run("תיקוני הביקורות השישית והשביעית (118–122, 134, 135, 139)", new Runnable() { public void run() { review7(); } });
@@ -1660,52 +1661,17 @@ public final class Tests {
         a = Lab.nameOf("<p>", "מעבדה עורך 2 (1).html");
         check("מ0.38: בלי meta — משם הקובץ, בלי \"(1)\" של הדפדפן", a[0].equals("עורך") && a[1].equals("2"));
         a = Lab.nameOf("<p>", "מעבדה.html");
-        check("מ0.38: בלי שם בכלל — \"ניסוי\" וגרסה לפי הזמן", a[0].equals(Words.Lab.UNNAMED) && !a[1].isEmpty());
+        check("מ0.38: בלי שם בכלל — \"תוסף\", וגרסה \"?\" (מ0.40: קבועה, לא לפי הזמן)", a[0].equals(Words.Lab.UNNAMED) && a[1].equals("?"));
         eq("מ0.38: שם לא תקין — מתוקן לדומה", "א-ב (ג) חו״ל", Lab.safe("א/ב <ג> חו\"ל*"));
         File dl = new File(home, "הורדות-038");
         wipe(dl);
         dl.mkdirs();
-        File root = Lab.root();
-        wipe(root);
         try {
-            File p1 = new File(dl, "מעבדה עורך 1.html");
-            Files.writeAtomic(p1, "<meta name=\"vfm-lab\" content=\"עורך\"><meta name=\"vfm-lab-version\" content=\"1\">אחת");
-            p1.setLastModified(System.currentTimeMillis() - 60000);
-            File p2 = new File(dl, "מעבדה עורך 2.html");
-            Files.writeAtomic(p2, "<meta name=\"vfm-lab\" content=\"עורך\"><meta name=\"vfm-lab-version\" content=\"2\">שתיים");
-            Files.writeAtomic(new File(dl, "אחר.html"), "x");
-            check("מ0.38: \"הוסף מעבדה\" בלי קובץ — החדש ביותר בהורדות שמתחיל ב\"מעבדה\"", Lab.newest(dl).getName().equals(p2.getName()));
-            File sub = new File(dl, "Claude");
-            sub.mkdirs();
-            File p3 = new File(sub, "lab-page (3).html");                         // מ0.39: שם אחר, בתיקייה פנימה — לפי ה־meta
-            Files.writeAtomic(p3, "<meta name=\"vfm-lab\" content=\"עורך\"><meta name=\"vfm-lab-version\" content=\"3\">");
-            p3.setLastModified(System.currentTimeMillis() + 60000);
-            File junk = new File(dl, "אחר2.html");
-            Files.writeAtomic(junk, "<p>");
-            junk.setLastModified(System.currentTimeMillis() + 120000);
-            check("מ0.39: בלי קובץ — עמוד המעבדה החדש ביותר לפי ה־meta, גם בשם אחר ובתיקייה פנימה; html אחר — לא", Lab.newest(dl).equals(p3));
-            p3.delete();
-            Lab.add(root, p1);
-            Lab.add(root, p2);
-            eq("מ0.38: שתי גרסאות, לפי הסדר", "[1, 2]", Lab.versions(root, "עורך").toString());
-            eq("מ0.38: האחרונה שנוספה — הפעילה", "2", Lab.active(root, "עורך"));
-            check("מ0.38: החלפת גרסה", Lab.setActive(root, "עורך", "1") == null && "1".equals(Lab.active(root, "עורך"))
-                    && Files.readUtf8(Lab.page(root, "עורך")).endsWith("אחת"));
-            check("מ0.38: גרסה שאין — שגיאה, והפעילה לא זזה", Lab.setActive(root, "עורך", "9") != null && "1".equals(Lab.active(root, "עורך")));
-            check("מ0.38: ניסוי שאין — שגיאה", Lab.setActive(root, "אין", "1") != null);
-            Lab.add(root, p1);
-            eq("מ0.38: אותה גרסה שוב — מחליפה, לא מכפילה", 2, Lab.versions(root, "עורך").size());
-            boolean threw = false;
-            try { Lab.add(root, new File(dl, "אין.html")); } catch (Exception e) { threw = true; }
-            check("מ0.38: קובץ שאין — לא נוסף", threw);
-            eq("מ0.38: רשימת הניסויים", "[עורך]", Lab.experiments(root).toString());
             java.util.Map<String, String> vars = Batch.vars(dl, home.getAbsolutePath(), null);
             vars.put(Batch.V_DOWNLOADS, dl.getAbsolutePath());
-            Batch.Plan pl = Batch.plan("הוסף מעבדה\nהוסף מעבדה \"%כאן%\\מעבדה עורך 1.html\"\nהחלף מעבדה \"עורך\" \"2\"\nהחלף מעבדה עורך\nהוסף מעבדה \"%כאן%\\אין.html\"\n", dl, vars);
-            eq("מ0.38: פקודות המעבדה — שתי שורות שגיאה (בלי גרסה; קובץ שאין)", 2, pl.errors);
-            check("מ0.38: \"הוסף מעבדה\" לא נבלע בפועל \"הוסף\"", pl.steps.get(0).cmd.equals(Batch.LAB) && pl.steps.get(0).op != null);
-            String r = pl.steps.get(2).op.run(null);
-            check("מ0.38: \"החלף מעבדה\" רץ", "2".equals(Lab.active(root, "עורך")) && r.contains("2"));
+            Batch.Plan pl = Batch.plan("הוסף מעבדה\nהחלף מעבדה \"עורך\" \"2\"\n", dl, vars);
+            check("מ0.38→מ0.40: \"הוסף/החלף מעבדה\" ירדו — שגיאה עם הסבר, ולא נבלעות בפועל \"הוסף\"", pl.errors == 2
+                    && pl.steps.get(0).cmd.equals(Batch.LAB) && Words.Lab.GONE.equals(pl.steps.get(0).error));
             eq("מ0.38: הפועל \"פתח מסך מעבדה\" מוכר", null, Verbs.parse("פתח מסך מעבדה \"עורך\"").error);
             File w = new File(home, "עורך-מעבדה-038");                       // מה שעמוד המעבדה כותב — המנוע קורא בלי שגיאות
             wipe(w);
@@ -1801,11 +1767,14 @@ public final class Tests {
         check("מ0.40: שם וגרסה של תוסף — מתוך העמוד (vfm-plugin)", a[0].equals("עורך אינטראקטיבי") && a[1].equals("4"));
         a = Lab.nameOf("<p>", "תוסף עורך 2.html");
         check("מ0.40: בלי meta — משם הקובץ שמתחיל ב\"תוסף\"", a[0].equals("עורך") && a[1].equals("2"));
-        check("מ0.40: הפקודות — החדשות והישנות", Lab.isLine("הוסף תוסף") && Lab.isLine("החלף תוסף \"א\" \"1\"") && Lab.isLine("הוסף מעבדה")
-                && !Lab.isLine("הוסף מהכונן") && Lab.current("החלף מעבדה \"א\" \"1\"").equals("החלף תוסף \"א\" \"1\""));
+        check("מ0.40: הפקודות שירדו — מזוהות (כדי לומר מה במקומן)", Lab.isLine("הוסף תוסף") && Lab.isLine("החלף תוסף \"א\" \"1\"") && Lab.isLine("הוסף מעבדה")
+                && !Lab.isLine("הוסף מהכונן"));
         Verbs.Cmd pc = Verbs.parse("פתח תוסף \"עורך אינטראקטיבי\""), pe = Verbs.parse("פתח תוסף"), ps = Verbs.parse("פתח מסך תוספים");
         check("מ0.40: פתח תוסף \"<שם>\" · פתח תוסף · פתח מסך תוספים", pc.error == null && Verbs.K_SCREEN.equals(pc.kind) && Verbs.S_PLUGINS.equals(pc.arg)
-                && pc.cond.equals("עורך אינטראקטיבי") && pe.error == null && pe.cond.isEmpty() && ps.error == null && Verbs.S_PLUGINS.equals(ps.arg));
+                && pc.cond.equals("עורך אינטראקטיבי") && pc.ver.isEmpty() && pe.error == null && pe.cond.isEmpty() && ps.error == null && Verbs.S_PLUGINS.equals(ps.arg));
+        Verbs.Cmd pv = Verbs.parse("פתח תוסף \"עורך אינטראקטיבי\" \"4\""), pu = Verbs.parse("פתח תוסף עורך אינטראקטיבי");
+        check("מ0.40: פתח תוסף \"<שם>\" \"<גרסה>\"; ובלי מרכאות — כל השאר הוא השם", pv.error == null && pv.cond.equals("עורך אינטראקטיבי")
+                && pv.ver.equals("4") && pu.cond.equals("עורך אינטראקטיבי") && pu.ver.isEmpty());
         File root = Lab.root(), old = new File(Paths.dbData(), Lab.OLD_DIR);
         wipe(root);
         wipe(old);
@@ -1815,7 +1784,13 @@ public final class Tests {
             Files.writeAtomic(new File(oe, "3.html"), "<p>");
             File r = Lab.root();
             check("מ0.40: התיקייה \"מעבדה\" עוברת ל\"תוספים\" (פעם אחת)", r.getName().equals(Lab.DIR) && new File(r, "עורך/3.html").isFile() && !old.exists());
-            check("מ0.40: אחרי המעבר — אותו ניסוי, עכשיו תוסף", "[עורך]".equals(Lab.experiments(r).toString()) && "3".equals(Lab.active(r, "עורך")));
+            check("מ0.40: אחרי המעבר — אותו ניסוי, עכשיו תוסף (התיקייה = השם, הקובץ = הגרסה)", "[עורך]".equals(Lab.names(r).toString())
+                    && "3".equals(Lab.newest(r, "עורך").ver));
+            File oe2 = new File(old, "ישן");                                        // "תוספים" כבר קיימת (המריץ יצר אותה) — עובר פריט פריט
+            oe2.mkdirs();
+            Files.writeAtomic(new File(oe2, "1.html"), "<p>");
+            r = Lab.root();
+            check("מ0.40: \"מעבדה\" שנשארה, כש\"תוספים\" כבר קיימת — מה שבה עובר, והיא נמחקת", new File(r, "ישן/1.html").isFile() && !old.exists());
         } catch (Exception e) {
             check("מ0.40: מעבר התיקייה — " + e, false);
         }
@@ -1855,8 +1830,6 @@ public final class Tests {
                 + "ודא שגיאה\nהעתק \"%כאן%\\אין-כזה\" \"%כאן%\\יעד\"\n"
                 + "הפעל \"%כאן%\\יעד\"\n"
                 + "מחק תיקייה \"%כאן%\\יעד\\חדשה\" /עמוק\n"
-                + "הוסף תוסף \"%כאן%\\תוסף עורך אינטראקטיבי 4.html\"\n"
-                + "החלף תוסף \"עורך אינטראקטיבי\" \"4\"\n"
                 + "פתח מסך הבית\nפתח מסך קבצים פיזיים \"%כאן%\"\nפתח תוסף \"עורך אינטראקטיבי\"\n"
                 + "פתח רשימה \"א/ב\" מיון:שם\nפתח רשימה חכמה \"חדשים\"\nפתח תיקייה \"%כאן%\"\nפתח תפריט \"שמור לתוכנה\"\n"
                 + "מצא סוג:ספרים תאריך:שבוע\nחזור\nהרץ \"%כאן%\\ק.vbat\"\nהוסף מהכונן\nצור פקודה\n"
@@ -1900,33 +1873,121 @@ public final class Tests {
             boolean known = java.util.Arrays.asList("COPY", "MOVE", "DEL", "RD", "REN", "COMP", Batch.LINK, Batch.VERIFY).contains(c);
             check("מ0.40: שורת רשימות שהעורך כותב — " + l, lp != null && lp.error == null && lp.anyList() && known);
         }
-        try {                                                                   // קובץ ההתקנה שנשלח עם העמוד — בלי שגיאה
-            File dl = new File(w, "הורדות");
-            dl.mkdirs();
-            Files.writeAtomic(new File(dl, "תוסף עורך אינטראקטיבי 4.html"), "<meta name=\"vfm-lab\" content=\"עורך אינטראקטיבי\">");
-            java.util.Map<String, String> iv = Batch.vars(w, w.getAbsolutePath(), null);
-            iv.put(Batch.V_DOWNLOADS, dl.getAbsolutePath());
-            String inst = Files.readUtf8(new File(System.getProperty("vfm.src"), "../lab-pages/עורך אינטראקטיבי.vbat"));
-            Batch.Plan ip = Batch.plan(inst, w, iv);
-            eq("מ0.40: \"עורך אינטראקטיבי.vbat\" (מעדכן ופותח) — בלי שגיאות", 0, ip.errors);
-            check("מ0.40: ופותח את העורך בסוף", ip.opens.size() == 1 && ip.opens.get(0)[0].contains("עורך אינטראקטיבי"));
-            // המשתמש: "אותו קובץ שמעביר אותו יכול גם להריץ אותו, אחרי שיבדוק שהוא במקום"
-            root = Lab.root();
-            wipe(new File(root, "עורך אינטראקטיבי"));
-            ip.steps.get(0).op.run(null);
-            Batch.Plan again = Batch.plan(inst, w, iv);
-            check("מ0.40: אותו עמוד, כבר הגרסה הפעילה — \"הוסף\" לא עושה כלום, ופותח", again.errors == 0 && again.steps.get(0).noop
-                    && again.steps.get(0).op == null && again.opens.size() == 1);
-            wipe(dl);
-            dl.mkdirs();
-            Batch.Plan none = Batch.plan(inst, w, iv);
-            check("מ0.40: אין בהורדות עמוד — לא שגיאה; פותח את מה שיש", none.errors == 0 && none.steps.get(0).noop && none.opens.size() == 1);
-            eq("מ0.40: קובץ מפורש שאין — עדיין שגיאה", 1, Batch.plan("הוסף תוסף \"%כאן%\\אין.html\"\n", w, iv).errors);
-        } catch (Exception e) {
-            check("מ0.40: קובץ ההתקנה — " + e, false);
-        }
+        m040runner();
         Batch.Plan cm = Batch.plan("השווה /רשימה:\"א/ב\" \"%כאן%\\יעד\"\nאופן \"בדיקות מערכת\"\nMODE \"בדיקות מערכת\"\n", w, wv);
         check("מ0.40: השווה רשימה מול תיקייה (/רשימה:), ואופן — מזוהים", cm.steps.size() == 3 && Batch.MODE.equals(cm.steps.get(1).cmd) && Batch.MODE.equals(cm.steps.get(2).cmd));
+    }
+
+    /** מ0.40: המריץ "עורך אינטראקטיבי.vbat" — מעביר מההורדות לתוספים (זהה — נשאר; שם תפוס — בשם אחר) ופותח את החדש. */
+    private static void m040runner() {
+        File ext = Paths.dbData().getParentFile(), dl = new File(home, "הורדות-040"), root = Lab.root();
+        wipe(dl);
+        wipe(root);
+        dl.mkdirs();
+        try {
+            String v4 = "<meta name=\"vfm-plugin\" content=\"עורך אינטראקטיבי\"><meta name=\"vfm-plugin-version\" content=\"4\">ארבע";
+            String v6 = "<meta name=\"vfm-plugin\" content=\"עורך אינטראקטיבי\"><meta name=\"vfm-plugin-version\" content=\"6\">שש";
+            Files.writeAtomic(new File(dl, "תוסף עורך אינטראקטיבי 6.html"), v6);
+            Files.writeAtomic(new File(dl, "שמור.html"), "<p>תוסף תזונה</p>");                 // html אחר — לא זז
+            java.util.Map<String, String> iv = Batch.vars(dl, ext.getAbsolutePath(), null);
+            iv.put(Batch.V_DOWNLOADS, dl.getAbsolutePath());
+            String inst = Files.readUtf8(new File(System.getProperty("vfm.src"), "../lab-pages/עורך אינטראקטיבי.vbat"));
+            Index ix = new Index("040", "040", ext.getAbsolutePath());
+            Library lib = Library.forTests(new ArrayList<Index>(java.util.Collections.singletonList(ix)));
+            Batch.Plan p1 = Batch.plan(inst, dl, iv);
+            Batch.Step mv = p1.steps.get(p1.steps.size() - 2);
+            StringBuilder e1 = new StringBuilder();
+            for (Batch.Step x : p1.steps) e1.append(" | ").append(x.text).append(" ← ").append(x.error != null ? x.error : x.describe);
+            check("מ0.40: המריץ — בלי שגיאות; מעביר רק את עמוד התוסף (/מכיל:), ופותח את העורך בסוף" + e1, p1.errors == 0 && mv.files.size() == 1
+                    && p1.opens.size() == 1 && p1.opens.get(0)[0].contains("עורך אינטראקטיבי"));
+            Batch.run(p1, lib, null, null);
+            File in6 = new File(root, "תוסף עורך אינטראקטיבי 6.html");
+            check("מ0.40: הועבר לתיקיית התוספים; ה־html האחר נשאר", in6.isFile() && !new File(dl, in6.getName()).exists()
+                    && new File(dl, "שמור.html").isFile());
+            eq("מ0.40: \"פתח תוסף\" — החדש", "6", Lab.newest(root, "עורך אינטראקטיבי").ver);
+            Files.writeAtomic(new File(dl, "תוסף עורך אינטראקטיבי 6.html"), v6);              // אותו עמוד שוב — זהה בחתימה
+            Batch.Plan p2 = Batch.plan(inst, dl, iv);
+            Batch.Step m2 = p2.steps.get(p2.steps.size() - 2);
+            check("מ0.40: זהה כבר בתוספים — לא זז, ולא שגיאה (" + m2.describe + ")", p2.errors == 0 && m2.noop && m2.same == 1);
+            Batch.run(p2, lib, null, null);
+            check("מ0.40: ...והוא נשאר בהורדות, ובתוספים — אחד", new File(dl, in6.getName()).isFile() && Lab.versions(root, "עורך אינטראקטיבי").size() == 1);
+            Files.writeAtomic(new File(dl, "תוסף עורך אינטראקטיבי 6.html"), v6 + " תיקון");    // אותו שם, תוכן אחר — בשם אחר
+            File v4f = new File(dl, "תוסף עורך אינטראקטיבי 4.html");
+            Files.writeAtomic(v4f, v4);
+            v4f.setLastModified(System.currentTimeMillis() - 3600000);
+            Batch.Plan p3 = Batch.plan(inst, dl, iv);
+            check("מ0.40: שם תפוס ותוכן אחר — עובר; וגם הגרסה הישנה", p3.errors == 0 && p3.steps.get(p3.steps.size() - 2).files.size() == 2);
+            Batch.run(p3, lib, null, null);
+            File in62 = new File(root, "תוסף עורך אינטראקטיבי 6 (2).html");
+            check("מ0.40: ...בשם \"(2)\", בלי לשאול; המקור הקודם לא נגע", in62.isFile() && Files.readUtf8(in62).endsWith("תיקון")
+                    && Files.readUtf8(in6).endsWith("שש"));
+            Lab.Page nw = Lab.newest(root, "עורך אינטראקטיבי");
+            check("מ0.40: שלוש גרסאות; החדש לפי התאריך — 6 המתוקן; ומעליו אין גבוהה יותר", Lab.versions(root, "עורך אינטראקטיבי").size() == 3
+                    && nw.file.equals(in62) && Lab.higher(root, nw) == null);
+            Lab.Page old4 = Lab.version(root, "עורך אינטראקטיבי", "4");
+            check("מ0.40: גרסה 4 בפקודה; ובה — \"יש גרסה 6\"", old4 != null && "6".equals(Lab.higher(root, old4)));
+            check("מ0.40: סדר גרסאות — מספרים כמספרים", Lab.compareVer("10", "9") > 0 && Lab.compareVer("5.10", "5.2") > 0
+                    && Lab.compareVer("4", "4") == 0 && Lab.compareVer("6", "6b") < 0);
+            eq("מ0.40: בהורדות — רק מה שלא זז (ה־html האחר)", "[שמור.html]", java.util.Arrays.toString(dl.list()));
+        } catch (Exception e) {
+            check("מ0.40: המריץ — " + e, false);
+        }
+    }
+
+    /** מ0.40: "העבר" — אל התיקייה שהקובץ כבר בה (כלום); /תפוס:לשנות-שם (זהה — נשאר, שם תפוס — שם אחר); /מכיל:. */
+    private static void m040move() {
+        File r = new File(home, "כונן-040ב");
+        wipe(r);
+        File a = new File(r, "א"), b = new File(r, "ב");
+        mk(a, "x.txt", 5);
+        mk(b, "y.txt", 5);
+        try { Files.writeAtomic(new File(a, "x.txt"), "איקס"); } catch (Exception e) { check("מ0.40: הכנה — " + e, false); }
+        java.util.Map<String, String> v = Batch.vars(r, r.getAbsolutePath(), null);
+        Index ix = new Index("040ב", "040ב", r.getAbsolutePath());
+        ix.scan(null);
+        Library lib = Library.forTests(new ArrayList<Index>(java.util.Collections.singletonList(ix)));
+        try {
+            Batch.Plan p = Batch.plan("העבר \"%כאן%\\א\\x.txt\" \"%כאן%\\א\"\n", r, v);
+            Batch.Step s = p.steps.get(0);
+            check("מ0.40 (באג): העברה אל התיקייה שהקובץ כבר בה — \"כבר במקום\", לא \"קובץ אחד\"", p.errors == 0 && s.noop && s.inPlace == 1 && s.files.isEmpty());
+            String rep = Batch.run(p, lib, null, null).toString();
+            check("מ0.40 (באג): ...ובהרצה — לא כישלון ולא שם חדש", !p.trouble && new File(a, "x.txt").isFile() && a.list().length == 1 && rep.contains("כבר במקום"));
+            Batch.Plan cp = Batch.plan("העתק \"%כאן%\\א\\x.txt\" \"%כאן%\\א\"\n", r, v);
+            check("מ0.40: העתקה לאותה תיקייה — כמו קודם, עותק בשם חדש", cp.errors == 0 && cp.steps.get(0).files.size() == 1);
+            Files.writeAtomic(new File(a, "z.txt"), "שונה");
+            Files.writeAtomic(new File(b, "z.txt"), "אחר!");
+            Files.writeAtomic(new File(a, "w.txt"), "זהה");
+            Files.writeAtomic(new File(b, "w-עותק.txt"), "זהה");
+            Batch.Plan rn = Batch.plan("העבר \"%כאן%\\א\\*.txt\" \"%כאן%\\ב\" /תפוס:לשנות-שם\n", r, v);
+            Batch.Step t = rn.steps.get(0);
+            check("מ0.40: לשנות-שם — זהה (גם בשם אחר) נשאר; השאר עוברים (" + t.describe + ")", rn.errors == 0 && t.same == 1 && t.files.size() == 2);
+            Batch.run(rn, lib, null, null);
+            check("מ0.40: לשנות-שם — שם תפוס ותוכן אחר: \"(2)\"; הזהה נשאר במקור", new File(b, "z (2).txt").isFile() && Files.readUtf8(new File(b, "z.txt")).equals("אחר!")
+                    && new File(a, "w.txt").isFile() && new File(b, "x.txt").isFile() && !new File(a, "x.txt").exists());
+            Files.writeAtomic(new File(a, "q1.txt"), "כפול");
+            Files.writeAtomic(new File(a, "q2.txt"), "כפול");
+            Batch.Step two = Batch.plan("העתק \"%כאן%\\א\\q*.txt\" \"%כאן%\\ב\" /תפוס:לשנות-שם\n", r, v).steps.get(0);
+            check("מ0.40: לשנות-שם — שני קבצים זהים זה לזה: רק הראשון עובר", two.files.size() == 1 && two.same == 1);
+            Batch.Step h = Batch.plan("העתק \"%כאן%\\א\\*.txt\" \"%כאן%\\ב\" /מכיל:כפול\n", r, v).steps.get(0);
+            check("מ0.40: /מכיל: — רק הקבצים שהטקסט כתוב בהם (" + h.describe + h.error + ")", h.files.size() == 2 && h.describe.contains("עברו את הסינון"));
+            Batch.Plan ed = Batch.plan("העתק \"%כאן%\\א\" \"%כאן%\\ב\" /תפוס:לשנות-שם /מכיל:\"שתי מילים\"\nמחק \"%כאן%\\א\\*.txt\" /מכיל:זבל\n"
+                    + "COPY \"%כאן%\\א\" \"%כאן%\\ב\" /תפוס:לשנות-שם /מכיל:x\n", r, v);
+            eq("מ0.40: השורות שהעורך (6) כותב עם האפשרויות החדשות — בלי שגיאות", 0, ed.errors);
+            eq("מ0.40: /מכיל: — הבחירה של העורך (בלי מרכאות כפולות בטקסט)", 0, ed.steps.get(0).files.size());
+            eq("מ0.40: /מכיל: ריק — שגיאה", 1, Batch.plan("העתק \"%כאן%\\א\\*.txt\" \"%כאן%\\ב\" /מכיל:\n", r, v).errors);
+            eq("מ0.40: /תפוס: לא מוכר — שגיאה שמונה גם את לשנות-שם", true,
+                    String.valueOf(Batch.plan("העתק \"%כאן%\\א\\*.txt\" \"%כאן%\\ב\" /תפוס:בלה\n", r, v).steps.get(0).error).contains(Batch.TAKEN_RENAME));
+            File big = new File(r, "גדול.bin");
+            byte[] data = new byte[200000];
+            byte[] word = "סוף-הקובץ".getBytes("UTF-8");
+            System.arraycopy(word, 0, data, data.length - word.length, word.length);
+            java.io.FileOutputStream o = new java.io.FileOutputStream(big);
+            o.write(data);
+            o.close();
+            check("מ0.40: חיפוש בקובץ — גם מעבר לגבול של קטע קריאה, ולא מוצא מה שאין", Files.contains(big, word) && !Files.contains(big, "אין".getBytes("UTF-8")));
+        } catch (Exception e) {
+            check("מ0.40: העבר — " + e, false);
+        }
     }
 
     private static void m037() {

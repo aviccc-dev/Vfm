@@ -51,6 +51,24 @@ final class Batch {
         final List<String> targets = new ArrayList<String>();
         /** מ0.25: כמה קבצים דולגו בגלל /תפוס:לדלג — לתיאור ולדוח ("דולגו", לא "אין קבצים"). */
         int skipped;
+        /** מ0.40: /תפוס:לשנות-שם; same — כמה נשארו במקומם כי יש ביעד קובץ זהה להם; inPlace — העברה אל התיקייה שהם כבר בה. */
+        boolean renameTaken;
+        int same, inPlace;
+
+        /**
+         * מ0.40: לפני ההרצה — האם הקובץ src (שיגיע ל־to) יוצא מהשורה לפי /תפוס: (ונספר). מקום אחד לכל סוגי השורות.
+         * לשנות-שם: אם יש בתיקיית היעד קובץ זהה לו — לא זז; אחרת נשאר, ושם תפוס יקבל בהרצה שם אחר.
+         */
+        boolean drop(Sim sim, File src, File to) {
+            if (skipTaken && sim.isFile(to)) { skipped++; return true; }
+            if (renameTaken && sim.sameIn(src, to.getParentFile())) { same++; return true; }
+            return false;
+        }
+
+        /** לאן הקובץ יגיע בהדמיה: בשם תפוס עם לשנות-שם — בשם הפנוי הבא. */
+        File arrive(Sim sim, File to) {
+            return renameTaken && sim.isFile(to) ? sim.free(to) : to;
+        }
         long stateWhen = Long.MIN_VALUE;
         /** 1.22.0: COMP /רשימה:<שם> — המקור הוא רשימה ידנית (עם כל מה שבתוכה). */
         String listName;
@@ -439,10 +457,27 @@ final class Batch {
     static boolean isHome(File f) {
         return f != null && HOME_MARK.equals(f.getPath());
     }
-    /** מתגי סינון: /תאריך:… /גודל:… */
-    static final String SW_DATE = DateSize.DATE, SW_SIZE = DateSize.SIZE;
+    /** מתגי סינון: /תאריך:… /גודל:… · מ0.40: /מכיל:<טקסט> (בלי הקו הנטוי — כמו SW_DATE). */
+    static final String SW_DATE = DateSize.DATE, SW_SIZE = DateSize.SIZE, SW_CONTAINS = "מכיל:";   // תחביר
     /** שם תפוס: /תפוס:לשאול · /תפוס:לדלג · /תפוס:להחליף */
     static final String SW_TAKEN = "/תפוס:", TAKEN_ASK = "לשאול", TAKEN_SKIP = "לדלג", TAKEN_REPLACE = "להחליף";   // תחביר
+    /**
+     * מ0.40: /תפוס:לשנות-שם — שם תפוס: בשם אחר (כמו "(2)"), בלי לשאול; וקובץ שכבר יש ביעד קובץ זהה לו (גודל, ואז חתימה) — לא
+     * זז ממקומו. המשתמש: "אם יש קובץ זהה כבר לפי החתימה הוא לא מעביר את הקובץ שנמצא במקום אחר. רק כאשר הקובץ שונה בחתימה וזהה
+     * בשם — אז הוא מעביר אותו בשם אחר".
+     */
+    static final String TAKEN_RENAME = "לשנות-שם";   // תחביר
+
+    /** "/תפוס:<ערך>" — ערך מוכר. */
+    static boolean takenValue(String sw) {
+        for (String v : new String[]{TAKEN_ASK, TAKEN_SKIP, TAKEN_REPLACE, TAKEN_STOP, TAKEN_RENAME}) if (sw.equals(SW_TAKEN + v)) return true;
+        return false;
+    }
+
+    static String takenUnknown(String sw) {
+        return Words.Cmd.switchUnknown(sw) + " (" + TAKEN_ASK + " · " + TAKEN_SKIP + " · " + TAKEN_REPLACE + " · " + TAKEN_STOP
+                + " · " + TAKEN_RENAME + ")";
+    }
     /** 1.19.0: שמירת מסלול — /S (כמו XCOPY), ובעברית /מסלול. יומן — /יומן:<קובץ>. */
     static final String SW_KEEP = "/מסלול", SW_JOURNAL = "/יומן:";   // תחביר
     /** 1.19.0: %תאריך% — זמן ההרצה (קבוע לכל הקובץ); %מזהה-כרטיס% — שם הכרטיס הקבוע (למשל ABCD-1234). */
@@ -464,7 +499,7 @@ final class Batch {
     private static final Pattern SWITCH = Pattern.compile(
             "^/(-?Y|S|Q|F|A(:.*)?|D(:.*)?|" + SW_DATE + ".*|" + SW_SIZE + ".*|" + SW_TAKEN.substring(1)
                     + ".*|" + SW_KEEP.substring(1) + "|" + SW_JOURNAL.substring(1) + ".*|" + SW_LIMIT.substring(1)
-                    + ".*|" + SW_STATE.substring(1) + ".*|" + SW_LIST.substring(1) + ".*|" + SW_APPEND.substring(1) + "|MAXAGE:.*|MINAGE:.*|MAX:.*|MIN:.*)$",
+                    + ".*|" + SW_STATE.substring(1) + ".*|" + SW_LIST.substring(1) + ".*|" + SW_APPEND.substring(1) + "|" + SW_CONTAINS + ".*|MAXAGE:.*|MINAGE:.*|MAX:.*|MIN:.*)$",
             Pattern.CASE_INSENSITIVE);
 
     static boolean isSwitch(String t) {
@@ -544,15 +579,24 @@ final class Batch {
 
     static final class Filter {
         final List<Cond.Test> tests = new ArrayList<Cond.Test>();
+        /** מ0.40: /מכיל:<טקסט> — רק קבצים שהטקסט כתוב בהם. המשפך: נבדק אחרון, ורק במי שעבר את השאר (גודל, תאריך). */
+        final List<byte[]> contains = new ArrayList<byte[]>();
         String error;
 
+        /** אין סינון בכלל. */
+        boolean none() {
+            return tests.isEmpty() && contains.isEmpty();
+        }
+
         boolean ok(File f) {
-            if (tests.isEmpty()) return true;
-            Index.Rec r = new Index.Rec();
-            r.name = f.getName();
-            r.size = f.length();
-            r.mtime = f.lastModified();
-            for (Cond.Test t : tests) if (!t.ok(null, r)) return false;
+            if (!tests.isEmpty()) {
+                Index.Rec r = new Index.Rec();
+                r.name = f.getName();
+                r.size = f.length();
+                r.mtime = f.lastModified();
+                for (Cond.Test t : tests) if (!t.ok(null, r)) return false;
+            }
+            for (byte[] w : contains) if (!Files.contains(f, w)) return false;
             return true;
         }
     }
@@ -564,6 +608,21 @@ final class Batch {
             String up = s.toUpperCase(Locale.ROOT);
             Cond.Test t = null;
             boolean known = true;
+            if (s.startsWith(SW_CONTAINS)) {                                  // מ0.40
+                String v = s.substring(SW_CONTAINS.length()).trim();
+                if (v.length() >= 2 && v.startsWith("\"") && v.endsWith("\"")) v = v.substring(1, v.length() - 1);
+                if (v.isEmpty()) {
+                    f.error = Words.Cmd.CONTAINS_USAGE;
+                    return f;
+                }
+                try {
+                    f.contains.add(v.getBytes("UTF-8"));
+                } catch (java.io.UnsupportedEncodingException e) {
+                    f.error = Words.Cmd.CONTAINS_USAGE;
+                    return f;
+                }
+                continue;
+            }
             if (s.startsWith(SW_DATE)) t = Cond.date(s.substring(SW_DATE.length()));
             else if (s.startsWith(SW_SIZE)) t = Cond.size(s.substring(SW_SIZE.length()));
             else if (up.startsWith("MAXAGE:")) t = Cond.date(s.substring(7).trim() + "d");
@@ -693,6 +752,33 @@ final class Batch {
             for (String p : added.keySet())
                 if (p.startsWith(d) && p.indexOf('/', d.length()) < 0) out.put(p.substring(d.length()), new File(p));
             return new ArrayList<File>(out.values());
+        }
+
+        /**
+         * מ0.40: האם יש בתיקייה (כמו שתהיה) קובץ זהה ל־src. המשפך: הגודל (חינם) מוציא את רובם; חתימה — רק לשווי גודל,
+         * וחתימת המקור — פעם אחת. חתימה שלא נקראה — ספק, לא "זהה".
+         */
+        boolean sameIn(File src, File dir) {
+            File s = real(src);
+            long n = s.length();
+            String sig = null;
+            for (File g : files(dir)) {
+                File r = real(g);
+                if (r.length() != n) continue;
+                if (sig == null && (sig = Sig.of(s)) == null) return false;
+                if (sig.equals(Sig.of(r))) return true;
+            }
+            return false;
+        }
+
+        /** השם הפנוי הבא לקובץ to בתיקייה שלו, כמו Physical.freeName — אבל לפי ההדמיה. */
+        File free(File to) {
+            File dir = to.getParentFile();
+            String name = to.getName(), base = Text.stem(name), ext = Text.tail(name);
+            if (base.isEmpty()) { base = name; ext = ""; }
+            File f = to;
+            for (int i = 2; isFile(f) || isDir(f); i++) f = new File(dir, base + " (" + i + ")" + ext);
+            return f;
         }
 
         void move(String from, File to, boolean copy) {
@@ -982,7 +1068,7 @@ final class Batch {
                 continue;
             }
             if (Program.isHeader(line)) continue;                             // 1.13.0: צלמית / שם / למה — כותרת התוכנה
-            if (Lab.isLine(line)) {                                           // מ0.38: הוסף מעבדה · החלף מעבדה (לפני הפועל "הוסף")
+            if (Lab.isLine(line)) {                                           // מ0.38: הוסף/החלף מעבדה (לפני הפועל "הוסף"); מ0.40: ירדו — שגיאה עם הסבר
                 Step s = new Step();
                 s.line = n + 1;
                 s.text = shown;
@@ -1172,7 +1258,9 @@ final class Batch {
             if (p == null) { s.error = err[0]; return; }
             if (i == lp.sides.size() - 1 && i > 0) fsDest = new File(p);
             else {
-                match(s, p, filter(sw), false, sim);
+                Filter flt = filter(sw);
+                if (flt.error != null) { s.error = flt.error; return; }
+                match(s, p, flt, false, sim);
                 if (s.error != null) return;
                 if (!s.dirs.isEmpty()) { s.error = Words.ListCmdW.FOLDER_TO_LIST; return; }
                 fsFiles.addAll(s.files);
@@ -1194,11 +1282,10 @@ final class Batch {
             if (u.equals("/Y") || x.equals(SW_TAKEN + TAKEN_REPLACE)) s.replace = true;
             if (x.equals(SW_TAKEN + TAKEN_SKIP)) s.skipTaken = true;
             if (x.equals(SW_TAKEN + TAKEN_STOP)) s.failTaken = true;          // 1.20.0
+            if (x.equals(SW_TAKEN + TAKEN_RENAME)) s.renameTaken = true;      // מ0.40
             if (u.equals("/S") || x.equals(SW_KEEP)) s.recursive = true;
             if (u.equals("/A") || u.startsWith("/A:H") || u.equals("/A:")) s.hidden = true;
-            if (x.startsWith(SW_TAKEN) && !x.equals(SW_TAKEN + TAKEN_REPLACE) && !x.equals(SW_TAKEN + TAKEN_SKIP)
-                    && !x.equals(SW_TAKEN + TAKEN_ASK) && !x.equals(SW_TAKEN + TAKEN_STOP))
-                s.error = Words.Cmd.switchUnknown(x) + " (" + TAKEN_ASK + " · " + TAKEN_SKIP + " · " + TAKEN_REPLACE + " · " + TAKEN_STOP + ")";
+            if (x.startsWith(SW_TAKEN) && !takenValue(x)) s.error = takenUnknown(x);
             if (x.startsWith(SW_LIMIT) && limit(x) < 0) s.error = Words.Cmd.switchUnknown(x);
             if (x.startsWith(SW_LIST)) {                                      // 1.22.0
                 s.listName = x.substring(SW_LIST.length()).trim();
@@ -1253,7 +1340,7 @@ final class Batch {
             s.share = true;
             match(s, paths.get(0), flt, true, sim);                          // תיקייה — כמו שהיא (תיארז בשמה)
             if (s.error != null) return;
-            if (!s.dirs.isEmpty() && !flt.tests.isEmpty()) {
+            if (!s.dirs.isEmpty() && !flt.none()) {
                 s.error = Words.Cmd.filterOnFolder(cmd + " \"" + args.get(0) + "\\*.*\" …");
                 return;
             }
@@ -1280,22 +1367,33 @@ final class Batch {
             s.dest = dest;
             match(s, paths.get(0), flt, cmd.equals("MOVE"), sim);
             if (s.error != null) return;
-            if (!s.dirs.isEmpty() && !flt.tests.isEmpty()) {            // 121: סינון לא חל על תיקייה שלמה
+            if (!s.dirs.isEmpty() && !flt.none()) {            // 121: סינון לא חל על תיקייה שלמה
                 s.error = Words.Cmd.filterOnFolder(cmd + " \"" + args.get(0) + "\\*.*\" …");
                 return;
             }
-            if (s.skipTaken)
-                for (java.util.Iterator<String> it = s.files.iterator(); it.hasNext(); )
-                    if (sim.isFile(new File(dest, new File(it.next()).getName()))) { it.remove(); s.skipped++; }
+            boolean copy = cmd.equals("COPY");
+            // מ0.40: העברה אל התיקייה שהפריט כבר בה — כלום (עד כאן: "קובץ אחד" בתכנון, ו"כבר בתיקייה הזו" ככישלון בהרצה).
+            // ובקובץ אחרי קובץ — כדי שקובץ שני זהה לראשון יראה אותו כבר ביעד (לשנות-שם).
+            for (java.util.Iterator<String> it = s.files.iterator(); it.hasNext(); ) {
+                File f = new File(it.next());
+                if (!copy && dest.equals(f.getParentFile())) { it.remove(); s.inPlace++; continue; }
+                File to = new File(dest, f.getName());
+                if (s.drop(sim, f, to)) { it.remove(); continue; }
+                sim.move(f.getAbsolutePath(), s.arrive(sim, to), copy);
+            }
+            for (java.util.Iterator<String> it = s.dirs.iterator(); it.hasNext(); ) {
+                File d = new File(it.next());
+                if (!copy && dest.equals(d.getParentFile())) { it.remove(); s.inPlace++; continue; }
+                File to = new File(dest, d.getName());
+                if (s.skipTaken && sim.isDir(to)) { it.remove(); s.skipped++; continue; }
+                sim.gone.add(d.getAbsolutePath());
+                sim.dirs.add(s.renameTaken && (sim.isDir(to) || sim.isFile(to)) ? sim.free(to).getAbsolutePath() : to.getAbsolutePath());
+            }
             List<String> what = new ArrayList<String>();
             if (!s.files.isEmpty() || s.dirs.isEmpty()) what.add(Words.files(s.files.size()));
             if (!s.dirs.isEmpty()) what.add(Words.folders(s.dirs.size()));
-            s.describe = Words.Cmd.transfer(cmd.equals("COPY"), join(what, Words.Cmd.AND), Bidi.path(dest.getAbsolutePath())) + filtered(s);
-            for (String f : s.files) sim.move(f, new File(dest, new File(f).getName()), cmd.equals("COPY"));
-            for (String d : s.dirs) {
-                sim.gone.add(d);
-                sim.dirs.add(new File(dest, new File(d).getName()).getAbsolutePath());
-            }
+            s.describe = Words.Cmd.transfer(copy, join(what, Words.Cmd.AND), Bidi.path(dest.getAbsolutePath())) + filtered(s);
+            s.noop = s.files.isEmpty() && s.dirs.isEmpty() && s.same + s.inPlace > 0;   // הכול כבר במקום — לא שגיאה, ואין מה לעשות
         } else if (cmd.equals("REN")) {
             if (paths.size() != 2 || args.get(1).contains("/") || args.get(1).contains("\\")) {
                 s.error = Words.Cmd.usage(cmd);
@@ -1368,21 +1466,20 @@ final class Batch {
         if (Physical.inside(dest, src)) { s.error = Words.Disk.NOT_INTO_ITSELF; return; }
         s.dest = dest;
         s.keepRoot = src.getAbsolutePath();
-        walk(s, src, mask, flt, sim, mask == null && flt.tests.isEmpty(), true);
-        if (s.skipTaken)
-            for (java.util.Iterator<String> it = s.files.iterator(); it.hasNext(); )
-                if (sim.isFile(new File(dest, Physical.rel(s.keepRoot, it.next())))) { it.remove(); s.skipped++; }
+        walk(s, src, mask, flt, sim, mask == null && flt.none(), true);
+        sim.dirs.add(dest.getAbsolutePath());
+        for (java.util.Iterator<String> it = s.files.iterator(); it.hasNext(); ) {   // קובץ אחרי קובץ (מ0.40: לשנות-שם)
+            String f = it.next();
+            File to = new File(dest, Physical.rel(s.keepRoot, f));
+            if (s.drop(sim, new File(f), to)) { it.remove(); continue; }
+            for (File up = to.getParentFile(); up != null && !up.equals(dest); up = up.getParentFile()) sim.dirs.add(up.getAbsolutePath());
+            sim.move(f, s.arrive(sim, to), cmd.equals("COPY"));
+        }
         List<String> what = new ArrayList<String>();
         what.add(Words.files(s.files.size()));
         if (!s.dirs.isEmpty()) what.add(Words.Cmd.emptyFolders(s.dirs.size()));
         s.describe = Words.Cmd.transfer(cmd.equals("COPY"), join(what, Words.Cmd.AND), Bidi.path(dest.getAbsolutePath()))
                 + Words.Cmd.KEEP_PATH + filtered(s);
-        sim.dirs.add(dest.getAbsolutePath());
-        for (String f : s.files) {
-            File to = new File(dest, Physical.rel(s.keepRoot, f));
-            for (File up = to.getParentFile(); up != null && !up.equals(dest); up = up.getParentFile()) sim.dirs.add(up.getAbsolutePath());
-            sim.move(f, to, cmd.equals("COPY"));
-        }
         for (String d : s.dirs) sim.dirs.add(new File(dest, Physical.rel(s.keepRoot, d)).getAbsolutePath());
     }
 
@@ -1495,26 +1592,30 @@ final class Batch {
             s.dirs.clear();
             for (String f : items) {
                 File to = new File(dest, r.relA.get(f));
-                if (s.skipTaken && sim.isFile(to)) { s.skipped++; continue; }
+                boolean dir = new File(f).isDirectory();
+                if (dir ? s.skipTaken && sim.isFile(to) : s.drop(sim, new File(f), to)) { if (dir) s.skipped++; continue; }
                 s.files.add(f);
                 s.targets.add(to.getParentFile().getAbsolutePath());
-                if (new File(f).isDirectory()) sim.dirs.add(to.getAbsolutePath());
-                else sim.move(f, to, true);
+                if (dir) sim.dirs.add(to.getAbsolutePath());
+                else sim.move(f, s.arrive(sim, to), true);
             }
-            s.describe = Words.Cmd.transfer(true, Words.files(s.files.size()), Bidi.path(dest.getAbsolutePath())) + Words.Cmd.KEEP_PATH;
+            s.describe = Words.Cmd.transfer(true, Words.files(s.files.size()), Bidi.path(dest.getAbsolutePath())) + Words.Cmd.KEEP_PATH
+                    + notes(s);
             sim.dirs.add(dest.getAbsolutePath());
             return;
         }
-        if (s.skipTaken)
-            for (java.util.Iterator<String> it = s.files.iterator(); it.hasNext(); )
-                if (sim.isFile(new File(dest, Physical.rel(s.keepRoot, it.next())))) { it.remove(); s.skipped++; }
+        sim.dirs.add(dest.getAbsolutePath());
+        for (java.util.Iterator<String> it = s.files.iterator(); it.hasNext(); ) {   // קובץ אחרי קובץ (מ0.40: לשנות-שם)
+            String f = it.next();
+            File to = new File(dest, Physical.rel(s.keepRoot, f));
+            if (s.drop(sim, new File(f), to)) { it.remove(); continue; }
+            sim.move(f, s.arrive(sim, to), cmd.equals("COPY"));
+        }
         List<String> what = new ArrayList<String>();
         what.add(Words.files(s.files.size()));
         if (!s.dirs.isEmpty()) what.add(Words.folders(s.dirs.size()));
         s.describe = Words.Cmd.transfer(cmd.equals("COPY"), join(what, Words.Cmd.AND), Bidi.path(dest.getAbsolutePath()))
-                + Words.Cmd.KEEP_PATH;
-        sim.dirs.add(dest.getAbsolutePath());
-        for (String f : s.files) sim.move(f, new File(dest, Physical.rel(s.keepRoot, f)), cmd.equals("COPY"));
+                + Words.Cmd.KEEP_PATH + notes(s);
         for (String d : s.dirs) {
             if (cmd.equals("MOVE")) sim.gone.add(d);
             sim.dirs.add(new File(dest, Physical.rel(s.keepRoot, d)).getAbsolutePath());
@@ -1690,8 +1791,15 @@ final class Batch {
     }
 
     private static String filtered(Step s) {
-        String f = s.total > s.files.size() + s.skipped && s.dirs.isEmpty() ? Words.Cmd.filtered(s.files.size(), s.total) : "";
-        return f + (s.skipped > 0 ? Words.Cmd.skippedTaken(s.skipped) : "");
+        int passed = s.files.size() + s.skipped + s.same + s.inPlace;                 // מ0.40: גם מה שיצא אחרי הסינון — עבר אותו
+        String f = s.total > passed && s.dirs.isEmpty() ? Words.Cmd.filtered(passed, s.total) : "";
+        return f + notes(s);
+    }
+
+    /** מה יצא מהשורה אחרי הסינון, ולמה: שם תפוס (לדלג) · זהה כבר ביעד (לשנות-שם) · כבר במקום (העברה). מתחיל ב־" · ". */
+    static String notes(Step s) {
+        return (s.skipped > 0 ? Words.Cmd.skippedTaken(s.skipped) : "") + (s.same > 0 ? Words.Cmd.sameAtDest(s.same) : "")
+                + (s.inPlace > 0 ? Words.Cmd.inPlace(s.inPlace) : "");
     }
 
     // ---------- ביצוע ----------
@@ -1824,19 +1932,20 @@ final class Batch {
                 if (s.files.isEmpty() && s.dirs.isEmpty()) out = Words.Cmd.NO_FILES;
                 else out = stage(plan, s, progress);
             } else if (s.cmd.equals("COPY") || s.cmd.equals("MOVE")) {
-                if (s.files.isEmpty() && s.dirs.isEmpty()) out = s.skipped > 0 ? Words.Cmd.skippedTaken(s.skipped).substring(3) : Words.Cmd.NO_FILES;
+                if (s.files.isEmpty() && s.dirs.isEmpty()) out = notes(s).isEmpty() ? Words.Cmd.NO_FILES : notes(s).substring(3);
                 else {
                     boolean copy = s.cmd.equals("COPY");
                     Physical.Journal j = s.journal == null ? null : new Physical.Journal(new File(s.journal), s.text);   // 1.19.0
-                    Physical.Asker ask = s.replace ? REPLACE_ALL : s.failTaken ? null : asker;   // 1.20.0: /תפוס:לעצור
-                    Physical.Result r = !s.targets.isEmpty()                           // 1.21.0 שחזור, 1.22.0 רשימה
-                            ? Physical.transferTo(lib, s.files, s.targets, s.dest, true, ask, progress, grey, j)
+                    Physical.Asker ask = s.replace ? REPLACE_ALL : s.renameTaken ? RENAME_ALL   // מ0.40: /תפוס:לשנות-שם
+                            : s.failTaken ? null : asker;                                    // 1.20.0: /תפוס:לעצור
+                    Physical.Result r = !s.targets.isEmpty()                           // 1.21.0 שחזור, 1.22.0 רשימה (מ0.40: גם העברה)
+                            ? Physical.transferTo(lib, s.files, s.targets, s.dest, copy, ask, progress, grey, j)
                             : s.keepRoot != null
                             ? Physical.transferKeep(lib, s.keepRoot, s.files, s.dirs, s.dest, copy, ask, progress, grey, j,
                                     !s.fromCompare)
                             : Physical.transfer(lib, s.files, s.dirs, s.dest, copy, ask, progress, grey, j);
                     out = result(r, copy ? Words.Cmd.COPIED : Words.Cmd.MOVED);
-                    if (s.skipped > 0) out += Words.Cmd.skippedTaken(s.skipped);
+                    out += notes(s);
                     if (j != null) {
                         j.close();
                         if (j.failed()) {
@@ -2014,6 +2123,14 @@ final class Batch {
         @Override
         public Physical.Answer ask(File existing, File incoming, String suggested) {
             return new Physical.Answer(Physical.Choice.REPLACE, null, true);
+        }
+    };
+
+    /** מ0.40: /תפוס:לשנות-שם — בהרצה: שם תפוס ← השם הפנוי הבא ("(2)"), גם לתיקייה (בלי מיזוג). */
+    static final Physical.Asker RENAME_ALL = new Physical.Asker() {
+        @Override
+        public Physical.Answer ask(File existing, File incoming, String suggested) {
+            return new Physical.Answer(Physical.Choice.RENAME, null, true);
         }
     };
 

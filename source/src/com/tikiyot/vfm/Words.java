@@ -254,6 +254,11 @@ public final class Words {
         public static final String KEEP_PATH = " · שומר מסלול";
         /** מ0.25: /תפוס:לדלג — כמה דולגו. מתחיל ב־" · " (שלושה תווים) — מי שמציג לבד חותך. */
         public static String skippedTaken(int n) { return " · דולגו " + n + " (שם תפוס)"; }
+        /** מ0.40: /תפוס:לשנות-שם — כמה נשארו במקומם כי יש ביעד קובץ זהה להם. מתחיל ב־" · ". */
+        public static String sameAtDest(int n) { return " · " + n + " נשארו במקומם (יש ביעד זהה)"; }
+        /** מ0.40: העברה אל התיקייה שהם כבר בה. מתחיל ב־" · ". */
+        public static String inPlace(int n) { return " · " + n + " כבר במקום"; }
+        public static final String CONTAINS_USAGE = "צורה: /מכיל:<טקסט> — רק קבצים שהטקסט כתוב בהם";
         /** 1.20.0 */
         public static final String NO_COMPARE = "אין השוואה (COMP) בשורה קודמת";
         public static final String COMPARE_BROKEN = "שורה קודמת על אותה השוואה נכשלה — לא ממשיכים עליה";
@@ -1938,6 +1943,7 @@ public final class Words {
         // שמות הפרמטרים
         public static final String P_SOURCE = "מקור", P_DEST = "יעד", P_FILES = "קבצים", P_FILE = "קובץ", P_NEW_NAME = "שם חדש",
                 P_FOLDER = "תיקייה", P_WHAT_OPEN = "מה לפתוח", P_TEXT = "טקסט", P_KEEP = "שמירת מסלול", P_TAKEN = "שם תפוס",
+                P_CONTAINS = "מכיל", H_CONTAINS = "רק קבצים שהטקסט הזה כתוב בהם (נבדק אחרון, רק במי שעבר את שאר הסינון)",
                 P_JOURNAL = "יומן", P_LIMIT = "עצירה מעל אחוז", P_STATE = "שחזור לפי זמן", P_DATE = "תאריך", P_SIZE = "גודל",
                 P_HIDDEN = "גם מוסתרים", P_LIST = "רשימה כמקור", P_NOT_EMPTY = "גם אם אינה ריקה", P_ARG = "מה";
         // ההסברים
@@ -1951,7 +1957,7 @@ public final class Words {
                 H_START = "תיקייה, קובץ, תבנית (החדש ביותר מבין המתאימים), או %בית%",
                 H_TEXT = "מה שיופיע בדוח (ECHO), או הסבר לקורא הקובץ (REM)",
                 H_KEEP = "כל מה שבתיקייה, גם בתיקיות שבתוכה, נכתב ביעד באותו מבנה. בעברית: /מסלול",
-                H_TAKEN = "מה עושים כשביעד כבר יש קובץ באותו שם. /Y — כמו להחליף",
+                H_TAKEN = "מה עושים כשביעד כבר יש קובץ באותו שם. /Y — כמו להחליף. לשנות-שם: בשם אחר (2), וקובץ שיש ביעד זהה לו — נשאר במקומו",
                 H_JOURNAL = "קובץ טקסט שבו נרשם מיד כל קובץ שהגיע ליעד (מסלול וגודל)",
                 H_LIMIT = "אחרי COMP: אם השורה מוציאה יותר מהאחוז הזה מהקבצים — שגיאה, ושום דבר לא זז",
                 H_STATE = "המקור הוא גיבוי (נוכחי / היסטוריה / יומן): נכתב המצב של אותו זמן — תאריך, או תאריך ושעה",
@@ -2162,7 +2168,7 @@ public final class Words {
                 HOME_NO_REMOVE = "את הבית אי אפשר למחוק בפקודה",
                 MD_SMART = "רשימה חכמה — יוצרים בטופס שלה; בפקודה — העתקה של חכמה קיימת",
                 RD_FILES = "למחיקת הקבצים שברשימה: DEL קבצי ידנית \"שם\"",
-                NO_FILTER = "סינון (/תאריך, /גודל) — עדיין לא חל על רשימות",
+                NO_FILTER = "סינון (/תאריך, /גודל) — עדיין לא חל על רשימות; /מכיל: — רק כשיש צד בכונן",
                 INDEX_NOT_READY = "האינדקס עוד לא מוכן (או שחלק מהרשימה לא ידוע) — אי אפשר לדעת אילו קבצים ברשימה",
                 FOLDER_TO_LIST = "תיקייה שלמה לרשימה — עדיין לא; לקבצים שבה: \"תיקייה\\*.*\"",
                 FROM_DISK = " — הקבצים עצמם, מהכונן",
@@ -3120,22 +3126,19 @@ public final class Words {
     /** מ0.38 — המעבדה (Lab, LabScreen). */
     public static final class Lab {
         // מ0.40: "מעבדה" ← "תוספים" (המשתמש: "הוא כבר לא אמור להיקרא מעבדה, אלא תוסף עורך אינטראקטיבי")
-        public static final String UNNAMED = "תוסף", NO_FILE = "אין קובץ כזה", NOT_HTML = "זה לא עמוד של תוסף (צריך קובץ html)",
-                TOO_BIG = "הקובץ גדול מדי לתוסף (עד 5MB)", NO_DIR = "לא נוצרה תיקיית התוספים",
-                ADD_USAGE = "הוסף תוסף — או: הוסף תוסף \"<קובץ html>\". בלי קובץ: עמוד התוסף החדש ביותר בהורדות",
-                SWITCH_USAGE = "החלף תוסף \"<תוסף>\" \"<גרסה>\"",
-                TITLE = "🧩 תוספים", EMPTY = "אין עדיין תוספים. מורידים עמוד של תוסף להורדות, ומריצים את הפקודה: הוסף תוסף",
+        public static final String UNNAMED = "תוסף",
+                TITLE = "🧩 תוספים", EMPTY = "אין עדיין תוספים. עמוד של תוסף עובר לתיקיית התוספים במריץ שלו (למשל \"עורך אינטראקטיבי.vbat\")",
                 VERSIONS = "גרסאות", NOT_FOUND = "אין תוסף בשם הזה", ONLY_COMMANDS = "תוסף כותב רק קובצי פקודות",
                 NO_FILES_HERE = "אין כאן קבצים", EXISTS_OLD = "יש כבר קובץ בשם הזה — לא נשמר. בגרסה הבאה של העמוד: להחליף, או שם אחר", PICK_FILE = "בחירת קובץ", RUN_FILE = "הרצה מתוסף";
+        /** מ0.40: "הוסף תוסף" ו"החלף תוסף" ירדו (כלל יסודי: פונקציות קיימות קודם). */
+        public static final String GONE = "הפקודה ירדה במ0.40: עמודי התוספים עוברים לתיקיית התוספים ב\"העבר\" (כמו ב\"עורך אינטראקטיבי.vbat\" החדש), "
+                + "\"פתח תוסף\" פותח את החדש, וגרסה אחרת — \"פתח תוסף \"<שם>\" \"<גרסה>\"\" או \"גרסאות\" במסך התוסף";
         public static String noVersion(String exp, String ver) { return "בתוסף \"" + exp + "\" אין גרסה \"" + ver + "\""; }
-        public static String noExperiment(String exp) { return "אין תוסף \"" + exp + "\""; }
-        public static String addWill(String file) { return "יוסיף לתוספים את " + file; }
-        public static String added(String exp, String ver) { return "נוסף תוסף: \"" + exp + "\", גרסה " + ver + " — היא הפעילה"; }
-        public static String switchWill(String exp, String ver) { return "יעביר את התוסף \"" + exp + "\" לגרסה " + ver; }
-        public static String switched(String exp, String ver) { return "התוסף \"" + exp + "\" — עכשיו בגרסה " + ver; }
         public static String version(String ver) { return "גרסה " + ver; }
-        public static final String NOTHING_NEW = "אין בהורדות עמוד של תוסף — אין מה להוסיף";   // מ0.40
-        public static String already(String exp, String ver) { return "התוסף \"" + exp + "\" כבר בגרסה " + ver + " — אין מה להוסיף"; }
+        /** מ0.40 — המשתמש: "ואם יש יותר חדש — הוא מזוהה בתוסף". */
+        public static String higher(String ver) { return "⬆ יש גרסה " + ver; }
         public static String row(String exp, String ver, int n) { return exp + " · גרסה " + ver + (n > 1 ? " (" + n + " גרסאות)" : ""); }
+        /** שורה בבחירת הגרסה: הגרסה, ומתי הקובץ הגיע (שתי גרסאות באותו מספר — לפי התאריך). */
+        public static String versionRow(String ver, String when, boolean open) { return "גרסה " + ver + " · " + when + (open ? " ✓" : ""); }
     }
 }

@@ -38,7 +38,7 @@ final class Verbs {
             S_VIRTUAL = "קבצים וירטואליים", S_SETTINGS = "הגדרות", S_TRASH = "סל", S_EDITOR = "עורך פקודות",   // תחביר
             S_BACKUPS = "גיבויים", S_DIAG = "אבחון", S_LAB = "מעבדה", S_PLUGINS = "תוספים";   // תחביר — מ0.37; מ0.38: מעבדה; מ0.40: תוספים
     static final String[] SCREENS = {S_HOME, S_SEARCH, S_COMMANDS, S_DISK, S_VIRTUAL, S_SETTINGS, S_TRASH, S_EDITOR, S_BACKUPS, S_DIAG, S_PLUGINS, S_LAB};
-    /** מ0.40: "פתח תוסף ["<שם>"]" — מסך התוספים (בלי שם — הרשימה). כמו "פתח מסך תוספים". */
+    /** מ0.40: "פתח תוסף ["<שם>" ["<גרסה>"]]" — מסך התוספים (בלי שם — הרשימה; בלי גרסה — החדש). כמו "פתח מסך תוספים". */
     static final String PLUGIN = "תוסף";   // תחביר
     static final String A_DRIVE = "מהכונן", A_SEARCH = "מחיפוש";   // תחביר
     static final String SORT = "מיון:";   // תחביר
@@ -50,6 +50,8 @@ final class Verbs {
 
     static final class Cmd {
         String verb = "", kind = "", arg = "", sort = "", cond = "";
+        /** מ0.40: "פתח תוסף "<שם>" "<גרסה>"" — הגרסה (ריק — החדש). */
+        String ver = "";
         /** שגיאת תחביר — או null. */
         String error;
     }
@@ -134,10 +136,13 @@ final class Verbs {
                         c.cond = unquote(after(r, sc));                         // קבצים פיזיים / וירטואליים — תיקייה (לא חובה)
                     }
                 if (c.arg.isEmpty()) c.error = Words.Verb.unknownScreen(r);
-            } else if (starts(rest, PLUGIN)) {                                // מ0.40: "פתח תוסף "עורך אינטראקטיבי""
+            } else if (starts(rest, PLUGIN)) {                                // מ0.40: "פתח תוסף "עורך אינטראקטיבי" ["4"]"
                 c.kind = K_SCREEN;
                 c.arg = S_PLUGINS;
-                c.cond = unquote(after(rest, PLUGIN));
+                String r = after(rest, PLUGIN);                                  // בלי מרכאות — כל השאר הוא השם (כמו עד כאן)
+                String[] nv = r.startsWith("\"") || r.startsWith("«") ? nameAndRest(r) : new String[]{r, ""};
+                c.cond = nv[0];
+                c.ver = unquote(nv[1]);
             } else if (starts(rest, S_EDITOR)) {                              // 1.28.0: "פתח עורך פקודות" (גם בלי "מסך")
                 c.kind = K_SCREEN;
                 c.arg = S_EDITOR;
@@ -304,7 +309,8 @@ final class Verbs {
 
     /** מה הפקודה פותחת, במילים. */
     static String label(Cmd c) {
-        if (c.kind.equals(K_SCREEN)) return Words.Verb.SCREEN + c.arg + (c.cond.isEmpty() ? "" : " · " + c.cond);
+        if (c.kind.equals(K_SCREEN)) return Words.Verb.SCREEN + c.arg + (c.cond.isEmpty() ? "" : " · " + c.cond)
+                + (c.ver.isEmpty() ? "" : " · " + Words.Lab.version(c.ver));
         if (c.kind.equals(K_LIST)) return Words.Verb.LIST + c.arg;
         if (c.kind.equals(K_SMART)) return Words.Verb.SMART + c.arg;
         if (c.kind.equals(K_FOLDER)) return Words.Verb.FOLDER + c.arg;
@@ -392,7 +398,7 @@ final class Verbs {
         else if (s.equals(S_EDITOR)) a.startActivity(new Intent(a, BatchEditScreen.class));   // 1.28.0: בלי קובץ — טיוטה
         else if (s.equals(S_BACKUPS)) DbScreen.openBackups(a);                // מ0.37
         else if (s.equals(S_DIAG)) Diag.run(a, DbListScreen.currentMode);     // מ0.37: דוח האבחון כפקודה
-        else if (s.equals(S_LAB) || s.equals(S_PLUGINS)) LabScreen.open(a, c.cond);   // מ0.38: המעבדה; מ0.40: התוספים — רק בפקודה
+        else if (s.equals(S_LAB) || s.equals(S_PLUGINS)) LabScreen.open(a, c.cond, c.ver, null);   // מ0.38: המעבדה; מ0.40: התוספים — רק בפקודה
     }
 
     static void openSmart(Activity a, SmartLists.Named n, String sort) {
