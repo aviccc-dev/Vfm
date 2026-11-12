@@ -38,6 +38,7 @@ final class DbVerbs {
                 @Override public long run(Store s, List<String> p) { return DbPaths.ensure(s, mode, p); }
             }, path) : read(a, mode, path);
             if (id == 0) Ui.toast(a, Words.Verb.NOT_FOUND + c.arg);
+            else if (c.noOpen) Ui.toast(a, Words.ListCmdW.created(c.arg));     // מ0.40: /בלי-לפתוח
             else DbListScreen.open(a, mode, id, c.sort);                    // מ0.22: עם המיון שבפקודה
             return true;
         }
@@ -52,6 +53,7 @@ final class DbVerbs {
             }, null);
             else id = readSmart(a, mode, name);
             if (id == 0) Ui.toast(a, Words.Verb.NOT_FOUND + c.arg);
+            else if (c.noOpen) Ui.toast(a, Words.ListCmdW.created(c.arg));     // מ0.40: /בלי-לפתוח
             else openSmart(a, mode, id, sort);
             return true;
         }

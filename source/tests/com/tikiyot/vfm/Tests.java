@@ -1772,6 +1772,10 @@ public final class Tests {
         Verbs.Cmd pc = Verbs.parse("פתח תוסף \"עורך אינטראקטיבי\""), pe = Verbs.parse("פתח תוסף"), ps = Verbs.parse("פתח מסך תוספים");
         check("מ0.40: פתח תוסף \"<שם>\" · פתח תוסף · פתח מסך תוספים", pc.error == null && Verbs.K_SCREEN.equals(pc.kind) && Verbs.S_PLUGINS.equals(pc.arg)
                 && pc.cond.equals("עורך אינטראקטיבי") && pc.ver.isEmpty() && pe.error == null && pe.cond.isEmpty() && ps.error == null && Verbs.S_PLUGINS.equals(ps.arg));
+        Verbs.Cmd no = Verbs.parse("צור רשימה חכמה \"עמודי תוספים\" תוסף סוג:html /בלי-לפתוח מיון:שם");
+        check("מ0.40: /בלי-לפתוח — יורד מהתנאי ומהמיון", no.error == null && no.noOpen && no.cond.equals("תוסף סוג:html") && no.sort.equals("שם"));
+        check("מ0.40: /בלי-לפתוח — רק בפועל שכותב רשימה", Verbs.parse("פתח רשימה \"א\" /בלי-לפתוח").error != null
+                && Verbs.parse("צור רשימה \"א/ב\" /בלי-לפתוח").error == null);
         Verbs.Cmd pv = Verbs.parse("פתח תוסף \"עורך אינטראקטיבי\" \"4\""), pu = Verbs.parse("פתח תוסף עורך אינטראקטיבי");
         check("מ0.40: פתח תוסף \"<שם>\" \"<גרסה>\"; ובלי מרכאות — כל השאר הוא השם", pv.error == null && pv.cond.equals("עורך אינטראקטיבי")
                 && pv.ver.equals("4") && pu.cond.equals("עורך אינטראקטיבי") && pu.ver.isEmpty());
@@ -1783,14 +1787,15 @@ public final class Tests {
             oe.mkdirs();
             Files.writeAtomic(new File(oe, "3.html"), "<p>");
             File r = Lab.root();
-            check("מ0.40: התיקייה \"מעבדה\" עוברת ל\"תוספים\" (פעם אחת)", r.getName().equals(Lab.DIR) && new File(r, "עורך/3.html").isFile() && !old.exists());
+            check("מ0.40: התיקייה \"מעבדה\" עוברת ל\"תוספים\" (פעם אחת), והעמודים — ישר בה", r.getName().equals(Lab.DIR)
+                    && new File(r, "תוסף עורך 3.html").isFile() && !new File(r, "עורך").exists() && !old.exists());
             check("מ0.40: אחרי המעבר — אותו ניסוי, עכשיו תוסף (התיקייה = השם, הקובץ = הגרסה)", "[עורך]".equals(Lab.names(r).toString())
                     && "3".equals(Lab.newest(r, "עורך").ver));
             File oe2 = new File(old, "ישן");                                        // "תוספים" כבר קיימת (המריץ יצר אותה) — עובר פריט פריט
             oe2.mkdirs();
             Files.writeAtomic(new File(oe2, "1.html"), "<p>");
             r = Lab.root();
-            check("מ0.40: \"מעבדה\" שנשארה, כש\"תוספים\" כבר קיימת — מה שבה עובר, והיא נמחקת", new File(r, "ישן/1.html").isFile() && !old.exists());
+            check("מ0.40: \"מעבדה\" שנשארה, כש\"תוספים\" כבר קיימת — מה שבה עובר, והיא נמחקת", new File(r, "תוסף ישן 1.html").isFile() && !old.exists());
         } catch (Exception e) {
             check("מ0.40: מעבר התיקייה — " + e, false);
         }
@@ -1891,10 +1896,18 @@ public final class Tests {
             Files.writeAtomic(new File(dl, "שמור.html"), "<p>תוסף תזונה</p>");                 // html אחר — לא זז
             java.util.Map<String, String> iv = Batch.vars(dl, ext.getAbsolutePath(), null);
             iv.put(Batch.V_DOWNLOADS, dl.getAbsolutePath());
-            String inst = Files.readUtf8(new File(System.getProperty("vfm.src"), "../lab-pages/עורך אינטראקטיבי.vbat"));
+            String real = Files.readUtf8(new File(System.getProperty("vfm.src"), "../lab-pages/עורך אינטראקטיבי.vbat"));
+            Batch.Plan rp = Batch.plan(real, dl, iv);                           // במחשב אין מסד: רק שורת הרשימה — "אין מסד"
+            int noDb = 0;
+            for (Batch.Step x : rp.steps) if (Words.DbCmd.NO_DB.equals(x.error)) noDb++;
+            check("מ0.40: המריץ (רענן, חכמה /בלי-לפתוח, העבר קבצי חכמה) — מובן; פותח רק את העורך", rp.errors == noDb && noDb == 1
+                    && rp.opens.size() == 1 && rp.opens.get(0)[0].contains("עורך אינטראקטיבי"));
+            // אותה העברה — מההורדות (במחשב אין רשימה חכמה): מה שהמריץ עושה בכל עמוד
+            String inst = real.replace("העבר קבצי חכמה \"עמודי תוספים\"", "העבר \"%הורדות%\\*.html\"")
+                    .replaceAll("(?m)^צור רשימה חכמה.*\n", "");
             Index ix = new Index("040", "040", ext.getAbsolutePath());
             Library lib = Library.forTests(new ArrayList<Index>(java.util.Collections.singletonList(ix)));
-            Batch.Plan p1 = Batch.plan(inst, dl, iv);
+            Batch.Plan p1 = Batch.plan(inst, dl, iv, lib);
             Batch.Step mv = p1.steps.get(p1.steps.size() - 2);
             StringBuilder e1 = new StringBuilder();
             for (Batch.Step x : p1.steps) e1.append(" | ").append(x.text).append(" ← ").append(x.error != null ? x.error : x.describe);
@@ -1906,7 +1919,7 @@ public final class Tests {
                     && new File(dl, "שמור.html").isFile());
             eq("מ0.40: \"פתח תוסף\" — החדש", "6", Lab.newest(root, "עורך אינטראקטיבי").ver);
             Files.writeAtomic(new File(dl, "תוסף עורך אינטראקטיבי 6.html"), v6);              // אותו עמוד שוב — זהה בחתימה
-            Batch.Plan p2 = Batch.plan(inst, dl, iv);
+            Batch.Plan p2 = Batch.plan(inst, dl, iv, lib);
             Batch.Step m2 = p2.steps.get(p2.steps.size() - 2);
             check("מ0.40: זהה כבר בתוספים — לא זז, ולא שגיאה (" + m2.describe + ")", p2.errors == 0 && m2.noop && m2.same == 1);
             Batch.run(p2, lib, null, null);
@@ -1915,7 +1928,7 @@ public final class Tests {
             File v4f = new File(dl, "תוסף עורך אינטראקטיבי 4.html");
             Files.writeAtomic(v4f, v4);
             v4f.setLastModified(System.currentTimeMillis() - 3600000);
-            Batch.Plan p3 = Batch.plan(inst, dl, iv);
+            Batch.Plan p3 = Batch.plan(inst, dl, iv, lib);
             check("מ0.40: שם תפוס ותוכן אחר — עובר; וגם הגרסה הישנה", p3.errors == 0 && p3.steps.get(p3.steps.size() - 2).files.size() == 2);
             Batch.run(p3, lib, null, null);
             File in62 = new File(root, "תוסף עורך אינטראקטיבי 6 (2).html");

@@ -1104,7 +1104,7 @@ final class Batch {
                 if (s.error == null && doneIn == null && sim.mode != null && Verbs.OPEN.equals(vc.verb) && vc.arg != null && !vc.arg.trim().isEmpty()
                         && (Verbs.K_LIST.equals(vc.kind) || Verbs.K_SMART.equals(vc.kind))) doneIn = sim.mode;
                 if (s.error != null) plan.errors++;
-                else if (!Verbs.K_NOTE.equals(vc.kind) && !Verbs.K_TITLE.equals(vc.kind)) {   // מ0.37: רעיון / כותרת — רק כותבים, אין מה לפתוח
+                else if (!Verbs.K_NOTE.equals(vc.kind) && !Verbs.K_TITLE.equals(vc.kind) && !vc.noOpen) {   // מ0.37: רעיון / כותרת; מ0.40: /בלי-לפתוח
                     plan.open = s.open;
                     plan.opens.add(new String[]{s.open, doneIn});
                 }

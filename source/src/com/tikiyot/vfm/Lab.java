@@ -7,7 +7,7 @@ package com.tikiyot.vfm;
 // מספר הגרסה. המריץ מעביר את כולם, ואם צריך משנה שם. והמריץ מריץ את מה שנראה חדש. ואם יש יותר חדש — הוא מזוהה בתוסף".
 // לכן: כל עמוד בתיקיית התוספים הוא גרסה; השם והגרסה — מתוך העמוד (meta). "פתח תוסף" — החדש לפי התאריך; גרסה אחרת — בפקודה
 // או במסך. העמודים מגיעים לתיקייה ב"העבר" הרגיל (כלל יסודי, 12.11: "תמיד לחפש בפונקציות קיימות"), ולכן "הוסף תוסף" ו"החלף
-// תוסף" ירדו. עמודים מעד מ0.39 (תיקייה לכל תוסף, קובץ לכל גרסה) — נקראים כמו שהם.
+// תוסף" ירדו. עמודים מעד מ0.39 (תיקייה לכל תוסף, קובץ לכל גרסה) — עוברים פעם אחת ישר לתיקייה (flatten).
 // אחראי: התיקייה, השמות, הגרסאות. אסור לו: לכתוב קבצים (מלבד המעבר החד־פעמי של התיקייה "מעבדה").
 
 import java.io.File;
@@ -51,7 +51,37 @@ final class Lab {
                 if (left != null && left.length == 0) old.delete();
             }
         }
+        flatten(r);
         return r;
+    }
+
+    /** קובץ "הגרסה הפעילה" של עד מ0.39 — כבר לא בשימוש. */
+    private static final String OLD_ACTIVE = ".פעילה";   // בכונן
+
+    /**
+     * מ0.40: עמודים מעד מ0.39 (תיקייה לכל תוסף, "<גרסה>.html") — עוברים ישר לתיקיית התוספים, בשם "תוסף <שם> <גרסה>.html"
+     * (שם תפוס — "(2)"); ".פעילה" ותיקייה שהתרוקנה — יוצאות. כך כל התוספים במקום אחד, ו"יש כבר זהה" (העבר /תפוס:לשנות-שם)
+     * נבדק מול כולם.
+     */
+    private static void flatten(File r) {
+        File[] ds = r.listFiles();
+        if (ds == null) return;
+        for (File d : ds) {
+            if (!d.isDirectory() || d.getName().startsWith(".")) continue;
+            File[] in = d.listFiles();
+            if (in == null) continue;
+            for (File f : in) {
+                if (!f.isFile() || !isHtml(f.getName())) continue;
+                Page p = page(f, d.getName());
+                String n = safe(PREFIX + " " + p.name + " " + p.ver) + EXT;
+                File to = new File(r, n);
+                if (to.exists()) to = new File(r, Physical.freeName(r, n, false));
+                if (!f.renameTo(to)) Log.i("Lab.flatten: לא עבר " + f);   // בכונן
+            }
+            new File(d, OLD_ACTIVE).delete();
+            String[] left = d.list();
+            if (left != null && left.length == 0) d.delete();
+        }
     }
 
     // ---------- שמות ----------

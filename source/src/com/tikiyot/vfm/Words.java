@@ -1895,6 +1895,8 @@ public final class Words {
         private Verb() { }
         public static final String MENU = "תפריט: ";   // 1.17.0
         public static final String TOOL = "כלי: ";   // מ0.19
+        /** מ0.40 */
+        public static final String NO_OPEN_ONLY = "/בלי-לפתוח — רק ב\"צור רשימה\", \"צור רשימה חכמה\" ו\"עדכן רשימה חכמה\"";
 
         public static final String SCREEN = "מסך ", LIST = "רשימה: ", SMART = "רשימה חכמה: ", FOLDER = "תיקייה: ",
                 FIND = "מצא: ", BACK = "חזרה למסך הקודם", RUN = "הרצה: ";

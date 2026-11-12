@@ -42,6 +42,11 @@ final class Verbs {
     static final String PLUGIN = "תוסף";   // תחביר
     static final String A_DRIVE = "מהכונן", A_SEARCH = "מחיפוש";   // תחביר
     static final String SORT = "מיון:";   // תחביר
+    /**
+     * מ0.40: "צור/עדכן רשימה …" בלי לפתוח אותה בסוף (המשתמש: "בתור אופציה"). בקובץ — רק הכתיבה; מכפתור — רק הודעה. למשל
+     * המריץ של תוסף: יוצר את הרשימה החכמה שממנה הוא מעביר, ופותח רק את התוסף.
+     */
+    static final String NO_OPEN = "/בלי-לפתוח";   // תחביר
 
     /** סוגי הפקודה אחרי הפענוח. */
     static final String K_SCREEN = "screen", K_LIST = "list", K_SMART = "smart", K_FOLDER = "folder", K_FIND = "find",
@@ -52,6 +57,8 @@ final class Verbs {
         String verb = "", kind = "", arg = "", sort = "", cond = "";
         /** מ0.40: "פתח תוסף "<שם>" "<גרסה>"" — הגרסה (ריק — החדש). */
         String ver = "";
+        /** מ0.40: /בלי-לפתוח — כותבים, ולא פותחים בסוף. */
+        boolean noOpen;
         /** שגיאת תחביר — או null. */
         String error;
     }
@@ -112,6 +119,11 @@ final class Verbs {
         String s = Bidi.strip(line == null ? "" : line).trim();
         c.verb = first(s);
         String rest = after(s, c.verb);
+        String bare = (" " + rest + " ").replace(" " + NO_OPEN + " ", " ").trim();   // מ0.40: מילה בפני עצמה, בכל מקום בשורה
+        if (!bare.equals(rest)) {
+            c.noOpen = true;
+            rest = bare;
+        }
         if (c.verb.equals(BACK)) {
             c.kind = K_BACK;
         } else if (c.verb.equals(FIND)) {
@@ -192,6 +204,8 @@ final class Verbs {
         } else {
             c.error = Words.Verb.usage(OPEN);
         }
+        if (c.noOpen && c.error == null && !((c.verb.equals(CREATE) || c.verb.equals(UPDATE)) && (c.kind.equals(K_LIST) || c.kind.equals(K_SMART))))
+            c.error = Words.Verb.NO_OPEN_ONLY;                                  // רק לפועל שכותב רשימה
         return c;
     }
 
