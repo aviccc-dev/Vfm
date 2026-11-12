@@ -372,6 +372,33 @@ final class ImportTests {
         ck("כלים: אין רשימת פקודות — כלום", DbCmdMenu.ensureTools(new MemStore(IdCounter.memory()), M, Arrays.asList(t1)).isEmpty());
     }
 
+    /** מ0.41: "בטל לא-משויכים" — רישומי קבצים שאינם באף רשימה נמחקים מהמסד; "ודא לא-משויכים /פריטים:N". */
+    void loose(Store s) throws Exception {
+        final String M = "פק";
+        long home = s.createList("בית", 0);
+        s.setProp(home, Store.P_HOME, "1");
+        long a = DbPaths.ensure(s, M, Names.parsePath("א")), b = DbPaths.ensure(s, M, Names.parsePath("ב"));
+        DbFiles.add(s, a, Arrays.asList("/s/1.txt", "/s/2.txt"), null);
+        DbFiles.add(s, b, Arrays.asList("/s/2.txt", "/s/3.txt"), null);
+        ListCmd.Side[] x = sides("RD לא-משויכים");
+        ck("בטל לא-משויכים: צד אחד, בלי שם אחריו", x.length == 1 && x[0].kind == ListCmd.LOOSE);
+        ck("בטל לא-משויכים: כשאין כאלה — בלי שינוי", DbListCmd.remove(s, M, x[0]).noop);
+        String[] found = {""};
+        ck("ודא לא-משויכים /פריטים:0", DbListCmd.verify(s, M, x[0], DbListCmd.expect(Arrays.asList("/פריטים:0")), found));
+        DbListCmd.remove(s, M, sides("RD ידנית \"א\"")[0]);                  // 1.txt נשאר בלי רשימה; 2.txt עוד ברשימה ב
+        ck("ודא לא-משויכים /פריטים:1 — אחרי ביטול רשימה", DbListCmd.verify(s, M, x[0], DbListCmd.expect(Arrays.asList("/פריטים:1")), found)
+                && !DbListCmd.verify(s, M, x[0], DbListCmd.expect(Arrays.asList("/פריטים:0")), found) && found[0].endsWith("1"));
+        ck("ודא לא-משויכים חסרה — לא עובר (אין לה קיימת/חסרה)", !DbListCmd.verify(s, M, x[0], DbListCmd.expect(Arrays.asList("חסרה")), found));
+        DbListCmd.Res r = DbListCmd.remove(s, M, x[0]);
+        ck("בטל לא-משויכים: הרישום נמחק מהמסד, ורק שלו", r.error == null && !r.noop && s.findFile("/s/1.txt") == 0
+                && s.findFile("/s/2.txt") != 0 && s.findFile("/s/3.txt") != 0 && s.unassigned().isEmpty() && filesIn(s, b) == 2);
+        ck("בטל לא-משויכים: פעם שנייה — בלי שינוי", DbListCmd.remove(s, M, x[0]).noop);
+        ck("\"לא-משויכים\" במרכאות — שם רגיל, לא מילת סוג", ListCmd.parse("RD \"לא-משויכים\"", new ArrayList<String>()) == null);
+        ListCmd.Parsed p = ListCmd.parse("COPY לא-משויכים ידנית \"ב\"", new ArrayList<String>());
+        ck("לא-משויכים עם צד נוסף — נקרא כשני צדדים (השגיאה — בתכנון)", p != null && p.sides.size() == 2 && p.sides.get(0).kind == ListCmd.LOOSE);
+        ck("תוכן לא-משויכים — שגיאת צורה", ListCmd.parse("RD תוכן לא-משויכים", new ArrayList<String>()).error != null);
+    }
+
     void listCmd(Store s) throws Exception {
         final String M = "פק";
         DbListCmd.Finder f = new DbListCmd.Finder() {

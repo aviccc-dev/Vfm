@@ -22,7 +22,10 @@ final class ListCmd {
     /** 1.25.0: COMP של שתי רשימות חכמות — גם התנאים (המשתמש: "אולי פרמטר שיוסיף את השוואת התנאים"). */
     static final String SW_CONDS = "/תנאים";   // תחביר
 
-    static final int FS = 0, LIST = 1, SMART_LIST = 2, EXPORT = 3;
+    /** מ0.41: "בטל לא-משויכים" · "ודא לא-משויכים /פריטים:N" — הקבצים שהמסד זוכר ואינם באף רשימה. עומדת לבדה, בלי שם אחריה. */
+    static final String LOOSE_WORD = "לא-משויכים";   // תחביר
+
+    static final int FS = 0, LIST = 1, SMART_LIST = 2, EXPORT = 3, LOOSE = 4;
 
     /** צד אחד בשורה: מה הוא, והערך שלו. */
     static final class Side {
@@ -39,7 +42,7 @@ final class ListCmd {
         }
 
         String label() {
-            return home ? Words.ListCmdW.HOME : "\"" + raw + "\"";
+            return kind == LOOSE ? LOOSE_WORD : home ? Words.ListCmdW.HOME : "\"" + raw + "\"";
         }
     }
 
@@ -106,7 +109,7 @@ final class ListCmd {
 
     private static boolean word(Tok t) {
         return !t.quoted && (t.text.equals(MANUAL) || t.text.equals(SMART) || t.text.equals(CONTENT)
-                || t.text.equals(FILES_OF) || t.text.equals(FOLDER) || t.text.equals(FILE_WORD));
+                || t.text.equals(FILES_OF) || t.text.equals(FOLDER) || t.text.equals(FILE_WORD) || t.text.equals(LOOSE_WORD));
     }
 
     /** null — אין בשורה מילת סוג. switches — נאספים בנפרד (כמו ב-Batch). */
@@ -121,6 +124,15 @@ final class ListCmd {
             Tok t = tk.get(i);
             if ((!t.quoted && (Batch.isSwitch(t.text) || t.text.equals(SW_CONDS))) || (t.valueQuoted && Batch.isSwitch(t.text))) {
                 switches.add(t.text);
+                continue;
+            }
+            if (word(t) && t.text.equals(LOOSE_WORD)) {                       // מ0.41: צד שלם — בלי שם אחריו
+                if (cur != null) p.error = Words.ListCmdW.USAGE;
+                cur = new Side();
+                cur.kind = LOOSE;
+                cur.raw = t.text;
+                p.sides.add(cur);
+                cur = null;
                 continue;
             }
             if (cur == null) cur = new Side();

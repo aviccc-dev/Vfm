@@ -489,6 +489,16 @@ public final class StoreContract {
             s.purge(x);
             ck("purge deletes for good, and the id does not come back", s.item(x) == null && s.trashed().isEmpty()
                     && s.createList("after", 0) > last);
+            final long loose = s.createFile(info("/storage/emulated/0/loose.txt", 1, 1, null));   // מ0.41: "בטל לא-משויכים"
+            final long kept = s.createFile(info("/storage/emulated/0/kept.txt", 1, 1, null));
+            s.addMember(l1, kept);
+            fails("purge of a file that is in a list", new Act() { public void run() { s.purge(kept); } });
+            s.purge(loose);
+            ck("purge deletes a file that is in no list, and only it", s.item(loose) == null && s.findFile("/storage/emulated/0/loose.txt") == 0
+                    && s.item(kept) != null && !idsOf(s.unassigned()).contains(loose));
+            s.removeMember(l1, kept);
+            s.purge(kept);
+            ck("a file that left its last list can be purged", s.item(kept) == null);
             fails("a file cannot go to the bin", new Act() {
                 public void run() { s.trash(s.createFile(info("/storage/emulated/0/bin.txt", 1, 1, null))); }
             });

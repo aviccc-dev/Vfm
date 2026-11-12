@@ -166,6 +166,18 @@ final class DbListCmd {
 
     /** RD / DEL על רשימה: רשימה, חכמה, תוכן, או קבצים לפי תבנית — יוצאים מהרשימות (הקבצים בכונן לא נוגעים). */
     static Res remove(Store s, final String mode, final ListCmd.Side a) {
+        if (a.kind == ListCmd.LOOSE) {                                        // מ0.41: רישומי קבצים שאינם באף רשימה — מהמסד בלבד
+            final int[] n = {0};
+            s.atomic(new Store.Work() {
+                @Override public void run(Store t) {
+                    for (Store.Item it : t.unassigned()) if (it.type == Store.FILE) {
+                        t.purge(it.id);
+                        n[0]++;
+                    }
+                }
+            }, true);
+            return n[0] == 0 ? Res.same(Words.DbCmd.LOOSE_NONE) : Res.ok(Words.DbCmd.looseRemoved(n[0]));
+        }
         if (a.kind == ListCmd.SMART_LIST) {
             final long[] r = smart(s, mode, a);
             if (r == null) return Res.err(Words.ListCmdW.noSmart(a.raw));
@@ -807,6 +819,11 @@ final class DbListCmd {
                 s.error = Words.ListCmdW.NO_FILTER;
                 return;
             }
+        for (ListCmd.Side x : p.sides)                                        // מ0.41: "לא-משויכים" — רק "בטל לא-משויכים" (ו"ודא")
+            if (x.kind == ListCmd.LOOSE && !((cmd.equals("RD") || cmd.equals("DEL")) && p.sides.size() == 1)) {
+                s.error = Words.DbCmd.LOOSE_USAGE;
+                return;
+            }
         if (sim.modeError != null) { s.error = sim.modeError; return; }      // מ0.17.1: "אופן" שנכשל — לא לרוץ על אופן אחר
         final String mode = mode(sim);
         final Store db;
@@ -1113,6 +1130,12 @@ final class DbListCmd {
 
     /** הבדיקה עצמה על המסד: Res.ok — עבר; Res.err — נכשל (הטקסט: מה נמצא בפועל). */
     static boolean verify(Store s, String mode, ListCmd.Side a, Expect e, String[] found) {
+        if (a.kind == ListCmd.LOOSE) {                                        // מ0.41: כמה קבצים אינם באף רשימה
+            long n = 0;
+            for (Store.Item it : s.unassigned()) if (it.type == Store.FILE) n++;
+            found[0] = Words.DbCmd.SW_ITEMS + n;
+            return !Boolean.FALSE.equals(e.exists) && e.lists <= 0 && (e.items < 0 || e.items == n);
+        }
         long id = a.kind == ListCmd.SMART_LIST ? (smart(s, mode, a) == null ? 0 : smart(s, mode, a)[1]) : list(s, mode, a);
         if (id == 0) {
             found[0] = Words.DbCmd.WORD_MISSING;

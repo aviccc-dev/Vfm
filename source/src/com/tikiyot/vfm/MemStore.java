@@ -171,8 +171,11 @@ public final class MemStore implements Store {
 
     @Override
     public void purge(long item) {
-        if (items.get(item) == null) throw new Failure("no such item " + item);
-        if (prop(item, P_TRASHED) == null) throw new Failure("not in the bin: " + item);
+        Item it = items.get(item);
+        if (it == null) throw new Failure("no such item " + item);
+        boolean loose = it.type == FILE;                                     // מ0.41: קובץ שאינו באף רשימה
+        if (loose) for (LinkedHashMap<Long, Long> l : members.values()) if (l.containsKey(item)) { loose = false; break; }
+        if (prop(item, P_TRASHED) == null && !loose) throw new Failure("not in the bin: " + item);
         items.remove(item);
         props.remove(item);
         origins.remove(item);

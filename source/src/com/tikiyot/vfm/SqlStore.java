@@ -531,9 +531,11 @@ public final class SqlStore implements Store {
 
     @Override
     public void purge(long item) {
-        if (read(item) == null) throw new Failure("no such item " + item);
-        if (prop(item, P_TRASHED) == null) throw new Failure("not in the bin: " + item);
-        db.execSQL("DELETE FROM items WHERE id=?", new Object[]{item});        // מאפיינים — במחיקה מדורגת; חברויות אין (בסל)
+        Item it = read(item);
+        if (it == null) throw new Failure("no such item " + item);
+        boolean loose = it.type == FILE && num("SELECT COUNT(*) FROM members WHERE item_id=?", s(item)) == 0;   // מ0.41: קובץ שאינו באף רשימה
+        if (prop(item, P_TRASHED) == null && !loose) throw new Failure("not in the bin: " + item);
+        db.execSQL("DELETE FROM items WHERE id=?", new Object[]{item});        // מאפיינים ופרטי הקובץ — במחיקה מדורגת; חברויות אין
     }
 
     @Override

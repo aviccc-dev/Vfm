@@ -103,6 +103,12 @@ final class StoreTests {
             } finally {
                 f4.close();
             }
+            Store lo = opener.fresh(new File(sub, "loose-counter.txt"));       // מ0.41
+            try {
+                new ImportTests(o, name).loose(lo);
+            } finally {
+                lo.close();
+            }
             Store t2 = opener.fresh(new File(sub, "text2-counter.txt"));       // מ0.29
             try {
                 new ImportTests(o, name).text2(t2);
