@@ -214,7 +214,8 @@ final class Commands {
     static final String HE_COPY = "העתק", HE_DUP = "הכפל", HE_MOVE = "העבר", HE_DEL = "מחק", HE_REN = "שנה", HE_UNLIST = "בטל",   // תחביר
             HE_COMP = "השווה", HE_START = "הפעל", HE_ECHO = "הודעה", HE_REM = "הערה",   // תחביר
             HE_MD = "צור תיקייה", HE_RD = "מחק תיקייה", HE_DEEP = "/עמוק", HE_HIDDEN = "/נסתרים";   // תחביר
-    private static final String[][] TWO_WORDS = {{HE_MD, "MD"}, {HE_RD, "RD"}};
+    private static final String[][] TWO_WORDS = {{HE_MD, "MD"}, {HE_RD, "RD"},
+            {Words.DbCmd.N_DROP_MODE, Batch.DROP_MODE}, {Words.DbCmd.N_UNTRASH, Batch.UNTRASH}, {Words.DbCmd.N_PURGE, Batch.PURGE}};   // מ0.45
     private static final String[][] HE_SWITCHES = {{HE_DEEP, "/S"}, {HE_HIDDEN, "/A:H"}};
 
     /** השורה בצורה שהמנוע קורא: "צור תיקייה" ← MD, "מחק תיקייה" ← RD, והמתגים העבריים ← האנגליים (מחוץ למרכאות). */
@@ -299,8 +300,7 @@ final class Commands {
     /** המילה שהעורך כותב לפקודה: העברית (אם יש), אחרת השם. */
     static String word(Def d) {
         if (d.family != Family.FILE) return d.name;
-        if (d.name.equals("MD")) return HE_MD;
-        if (d.name.equals("RD")) return HE_RD;
+        for (String[] m : TWO_WORDS) if (d.name.equals(m[1])) return m[0];   // צור תיקייה · מחק תיקייה · מ0.45: מחק אופן · שחזר מהסל · רוקן סל
         for (String a : d.aliases) if (!a.isEmpty() && a.charAt(0) >= 0x5D0 && a.charAt(0) <= 0x5EA) return a;
         return d.name;
     }
@@ -360,6 +360,12 @@ final class Commands {
             new Def("REM", Words.Def.N_REM, new String[]{HE_REM}, Family.FILE, Words.Def.W_REM, list(pos(Type.TEXT, Words.Def.P_TEXT, Words.Def.H_TEXT)), null),
             new Def(Batch.SECTION, Words.DbCmd.N_SECTION, new String[]{Words.DbCmd.N_SECTION}, Family.FILE, Words.DbCmd.W_SECTION,   // מ0.44
                     list(pos(Type.TEXT, Words.Def.P_TEXT, Words.DbCmd.H_SECTION)), null),
+            new Def(Batch.DROP_MODE, Words.DbCmd.N_DROP_MODE, null, Family.FILE, Words.DbCmd.W_DROP_MODE,   // מ0.45
+                    list(pos(Type.NAME, Words.DbCmd.N_MODE, Words.DbCmd.H_DROP_MODE)), null),
+            new Def(Batch.UNTRASH, Words.DbCmd.N_UNTRASH, null, Family.FILE, Words.DbCmd.W_UNTRASH,
+                    list(pos(Type.PATH, Words.Def.P_FILE, Words.DbCmd.H_UNTRASH)), null),
+            new Def(Batch.PURGE, Words.DbCmd.N_PURGE, null, Family.FILE, Words.DbCmd.W_PURGE,
+                    list(pos(Type.PATH, Words.Def.P_FILE, Words.DbCmd.H_PURGE)), null),
             verb(Verbs.OPEN, Words.Def.W_OPEN),
             verb(Verbs.CREATE, Words.Def.W_CREATE),
             verb(Verbs.UPDATE, Words.Def.W_UPDATE),

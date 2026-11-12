@@ -52,9 +52,7 @@ public class SettingsScreen extends Activity {
                 });
             }
         });
-        readersBtn = button(root, Words.Prefs.READERS_BUTTON, new Runnable() {               // 177
-            @Override public void run() { chooseReaders(); }
-        });
+        // מ0.45 (ב9): "בניית האינדקס — במקביל" (כמה קוראים) — עבר לתוסף האבחון: שם מודדים כמה ראשים הכי מהיר, וקובעים
         deletedBtn = button(root, Words.Prefs.DELETED_BUTTON, new Runnable() {
             @Override public void run() { chooseDeleted(); }
         });
@@ -105,23 +103,6 @@ public class SettingsScreen extends Activity {
                 Words.Prefs.REBUILD_WHAT,
                 Words.Prefs.REBUILD_UNDO, Words.Prefs.BUILD, new Runnable() {
                     @Override public void run() { rebuild(); }
-                });
-    }
-
-    /** איזה כונן נבנה ראשון. */
-    /** 177: כמה קוראים לכל כונן. */
-    private void chooseReaders() {
-        final String[] vals = {"1", "4", "8", "16"};
-        final String[] opts = new String[vals.length];
-        for (int i = 0; i < vals.length; i++) opts[i] = readersLabel(Integer.parseInt(vals[i]));
-        Ui.options(SettingsScreen.this, Words.Prefs.NOW + readersLabel(Library.readers())
-                + (lib.lastBuild().isEmpty() ? "" : Words.Prefs.LAST_BUILD_LINE + lib.lastBuild() + "\n" + lib.lastBuildDrives()), opts,
-                new android.content.DialogInterface.OnClickListener() {
-                    @Override
-                    public void onClick(android.content.DialogInterface d, int w) {
-                        Conf.set(Conf.GENERAL, Conf.READERS, vals[w]);
-                        labels();
-                    }
                 });
     }
 
@@ -209,18 +190,11 @@ public class SettingsScreen extends Activity {
         return b;
     }
 
-    private Button deletedBtn, readersBtn, sendBtn, bgBtn;
-
-    private static String readersLabel(int n) {
-        return n + (n == 1 ? Words.Prefs.READER : Words.Prefs.READERS) + Words.Prefs.PER_DRIVE
-                + (n == Library.READERS_DEFAULT ? Words.Prefs.FASTEST : "");
-    }
+    private Button deletedBtn, sendBtn, bgBtn;
 
     /** הבחירה הפעילה מופיעה על הכפתור עצמו (61). */
     private void labels() {
         if (sendBtn != null) sendBtn.setText(Words.Send.FIXED + ": " + Transfer.fixedLabel(this));
-        if (readersBtn != null) readersBtn.setText(Words.Prefs.BUILD_IS + readersLabel(Library.readers())
-                + (lib.lastBuild().isEmpty() ? "" : Words.Prefs.LAST_SUFFIX + lib.lastBuild()));
         if (bgBtn != null) bgBtn.setText(SigUi.line(lib));                          // 190
         if (deletedBtn != null) deletedBtn.setText(Words.Prefs.DELETED_IS
                 + (Acts.deletedStaysGrey() ? Conf.DELETED_GREY : Conf.DELETED_REMOVE));

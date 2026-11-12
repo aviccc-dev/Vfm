@@ -323,6 +323,9 @@ public final class LabScreen extends Activity {
                 o.put("lastFullBuild", lib.lastFullBuild());
                 o.put("lastDaily", lib.lastDaily());
                 o.put("pointsSupported", lib.pointsSupported());
+                o.put("readers", Library.readers());                            // מ0.45 (ב9): מה שהיה "בניית האינדקס — במקביל" בהגדרות
+                o.put("lastBuild", lib.lastBuild());
+                o.put("lastBuildDrives", lib.lastBuildDrives());
                 return o.toString();
             } catch (Throwable t) {
                 return "{}";
@@ -670,6 +673,51 @@ public final class LabScreen extends Activity {
         @JavascriptInterface
         public String dataDir() {
             return Lab.dataDir(exp).getAbsolutePath();
+        }
+
+        /**
+         * מ0.45: "כל הפקודות" — קובץ פקודות שנבנה מההגדרה האחת (CmdMatrix): כל פקודה, ובכל אחת כל מתג. לפני — הגיבוי הקטן ליד
+         * קובץ ההרצה (ל־/מצב:). null — לא הצליח (ביומן).
+         */
+        @JavascriptInterface
+        public String commandMatrix() {
+            try {
+                CmdMatrix.fixtures(Lab.dataDir(exp), Library.get(LabScreen.this));
+                return CmdMatrix.text(true);
+            } catch (Throwable t) {
+                Log.e("Lab.commandMatrix", t);
+                return null;
+            }
+        }
+
+        /** מ0.45 (ב9): כמה קוראים לכל כונן בבנייה — מה שהיה בהגדרות; התוסף מודד וקובע. 1 עד 16. */
+        @JavascriptInterface
+        public boolean setReaders(int n) {
+            if (n < 1 || n > 16) return false;
+            Conf.set(Conf.GENERAL, Conf.READERS, String.valueOf(n));
+            Log.i("קוראים לכל כונן: " + n + " (מתוסף האבחון)");
+            return true;
+        }
+
+        /**
+         * מ0.45: מחיקת הקבצים שבתת־תיקייה של תיקיית התוסף (רק שם, ורק קבצים): התוצאות של הרצות ישנות. מחזיר כמה נמחקו; -1 — שם
+         * לא תקין.
+         */
+        @JavascriptInterface
+        public int cleanData(String sub) {
+            String n = Lab.safe(sub == null ? "" : sub);
+            if (n.isEmpty() || !n.equals(sub) || n.contains("/") || n.startsWith(".")) return -1;
+            File d = new File(Lab.dataDir(exp), n);
+            File[] k = d.listFiles();
+            int c = 0;
+            Library lib = Library.get(LabScreen.this);
+            if (k != null)
+                for (File f : k)
+                    if (f.isFile() && f.delete()) {
+                        lib.fileRemoved(f.getAbsolutePath());
+                        c++;
+                    }
+            return c;
         }
 
         /**

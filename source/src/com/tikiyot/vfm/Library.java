@@ -306,6 +306,12 @@ public final class Library {
         buildParallel(progress, readers());
     }
 
+    /** מ0.45 (ב9): בנייה עם מספר קוראים קבוע — "רענן מלא /קוראים:N" (תוסף האבחון משווה כמה ראשים הכי מהיר). */
+    public synchronized void build(String reason, final Index.Progress progress, int readers) {
+        why = reason == null ? "" : reason;
+        buildParallel(progress, Math.max(1, Math.min(16, readers)));
+    }
+
     /** 182: מפתח בזיכרון אנדרואיד לכל אופן עבודה — לכל אופן אינדקס משלו, ולכן גם יומית ושבועית משלו. */
     private String modeKey(String name) {
         return name + "@" + Paths.work().getAbsolutePath();

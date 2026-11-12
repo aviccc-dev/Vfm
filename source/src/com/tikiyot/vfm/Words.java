@@ -775,7 +775,6 @@ public final class Words {
 
         public static final String FILE_ACCESS = "הרשאת גישה לקבצים";
         public static final String REBUILD = "בניית האינדקס מחדש";
-        public static final String READERS_BUTTON = "בניית האינדקס — במקביל";
         public static final String DELETED_BUTTON = "קובץ שנמחק — מה קורה ברשימות";
         public static final String EXCLUDED_BUTTON = "תיקיות שלא נכנסות לאינדקס — באופן העבודה הזה";
         public static final String QUICK_REFRESH = "רענון מהיר";
@@ -785,7 +784,6 @@ public final class Words {
         public static final String REBUILD_UNDO = "בינתיים החיפוש ממשיך לעבוד על האינדקס הקיים";
         public static final String BUILD = "בנייה";
         public static final String NOW = "כעת: ";
-        public static final String LAST_BUILD_LINE = "\nבנייה אחרונה: ";
         public static final String GREY_EXAMPLE = " (\"נמחק · בסל המחזור\")";
         public static final String EXCLUDED_NONE = "אין — הכול נכנס לאינדקס";
         public static final String EXCLUDED_ABOUT = "תיקיות שיוצאו מהאינדקס (למשל מטמון). ייכנס לתוקף בבנייה מחדש.\nלכל אופן עבודה אינדקס משלו — וההגדרה הזו שלו בלבד (באופן אחר — רשימה אחרת; ב\"דוגמאות\" — מתאפסת בחזרה לברירת מחדל).";
@@ -798,12 +796,6 @@ public final class Words {
         public static final String EVERY_MINUTE = "כל דקה";
         public static final String EVERY_5 = "כל 5 דקות";
         public static final String EVERY_15 = "כל 15 דקות";
-        public static final String READER = " קורא";
-        public static final String READERS = " קוראים";
-        public static final String PER_DRIVE = " לכל כונן";
-        public static final String FASTEST = " (הכי מהיר)";
-        public static final String BUILD_IS = "בניית האינדקס: ";
-        public static final String LAST_SUFFIX = " · אחרונה: ";
         public static final String DELETED_IS = "קובץ שנמחק, ברשימות: ";
         public static final String ACCESS_IS = "גישה לקבצים: ";
         public static final String INDEX_LOADING = "האינדקס נטען…";
@@ -1804,13 +1796,21 @@ public final class Words {
                 WHAT_LOOP = "לולאה: השורות שבין \"חזור\" ל\"סוף\" רצות כמה פעמים. %סבב% — מספר הסבב (1, 2, 3…). "
                         + "/עד:30שניות — עוצר כשסבב אחד לקח יותר. העריכה — בשורה עצמה.",
                 WHAT_END = "סוף הלולאה שנפתחה ב\"חזור\".",
-                WHAT_MEASURE = "כל הקובץ נמדד: זמן לכל שורה, סך הכול, והשורה האיטית. /יומן:\"קובץ\" — נשמר גם לקובץ, בכל ריצה.",
+                WHAT_MEASURE = "כל הקובץ נמדד: זמן לכל שורה, סך הכול, והשורה האיטית. /יומן:\"קובץ\" — נשמר גם לקובץ, בכל ריצה. "
+                        + "/עד:2דקות — שורה שלקחה יותר מסומנת ❌ (ונספרת עם \"ודא\" שנכשלו).",
                 N_LOOP = "חזור — לולאה", N_END = "סוף לולאה", N_MEASURE = "מדידה",
                 N_CHECK = "בדיקה", WHAT_CHECK = "הקובץ רץ במסך ההרצה, בשלבים: מילוי ← מה יקרה (בדיקה של כל שורה, ואישור) ← מריץ ← סיכום שנשאר. בלי השורה הזו — הקובץ רץ מיד.";
 
         public static String round(int r) {
             return " (סבב " + r + ")";
         }
+
+        /** מ0.45: "מדידה /עד:" — שורה שלקחה יותר מהגבול. */
+        public static String tooSlow(long limit) {
+            return "❌ חרגה מהזמן (עד " + time(limit) + ") — ";
+        }
+
+        public static final String LIMIT_USAGE = "צורה: מדידה /עד:<זמן> (למשל /עד:2דקות)";
 
         public static String took(long ms) {
             return " · ⏱ " + time(ms);
@@ -1963,7 +1963,8 @@ public final class Words {
         }
 
         public static final String N_VERIFY = "ודא",  // תחביר
-                W_VERIFY = "בדיקה בתוך קובץ פקודות: ✅ או ❌, ולא עוצרת. ודא ידנית \"א\" קיימת · חסרה · /רשימות:2 /פריטים:1 · ודא \"קובץ\" קיים · באינדקס · ודא מסד",
+                W_VERIFY = "בדיקה בתוך קובץ פקודות: ✅ או ❌, ולא עוצרת. ודא ידנית \"א\" קיימת · חסרה · /רשימות:2 /פריטים:1 · ודא \"קובץ\" קיים · באינדקס · "
+                        + "בסל · /בסל:0 · ודא מסד · ודא אופן \"שם\" חסר · ודא תקין (כל השורות מתחילת הקטע רצו בלי כישלון)",
                 H_VERIFY = "הרשימה שבודקים (ידנית \"א\" או חכמה \"א\")",
                 P_VERIFY = "מה לוודא", H_VERIFY_WHAT = "קיימת · חסרה · /רשימות:N · /פריטים:N (כמו \"עכשיו בה\" בדוח)",
                 VERIFY_DB_ONLY = "ודא — עובדת כשעובדים במסד", NO_DB = "אין מסד לאופן הזה — לפתוח את הבית פעם אחת, ואז להריץ שוב",
@@ -2050,8 +2051,8 @@ public final class Words {
                 W_REPORT = "היומן של ההרצה נכתב גם לקובץ הזה",
                 P_SECONDS = "שניות", H_SECONDS = "כמה שניות לחכות (עד 600)", H_WRITE_FILE = "הקובץ שייכתב", P_TEXT_IN = "טקסט",
                 H_WRITE_TEXT = "מה לכתוב; \\n — שורה חדשה", P_APPEND = "להוסיף בסוף", H_APPEND = "בלי זה — הטקסט מחליף את מה שבקובץ",
-                P_DEEP = "עמוק", H_DEEP = "ריק — רענון מהיר; עמוק — בדיקה מלאה; מלא — בנייה מחדש", H_REPORT = "הקובץ שאליו נכתב היומן",
-                WAIT_USAGE = "צורה: המתן <שניות> (עד 600)", REPORT_USAGE = "צורה: דוח \"<קובץ>\"", REFRESH_USAGE = "צורה: רענן · רענן עמוק · רענן מלא",
+                P_DEEP = "עמוק", H_DEEP = "ריק — רענון מהיר; עמוק — בדיקה מלאה; מלא — בנייה מחדש (/קוראים:N — כמה קוראים לכל כונן)", H_REPORT = "הקובץ שאליו נכתב היומן",
+                WAIT_USAGE = "צורה: המתן <שניות> (עד 600)", REPORT_USAGE = "צורה: דוח \"<קובץ>\"", REFRESH_USAGE = "צורה: רענן · רענן עמוק · רענן מלא [/קוראים:N]",
                 BACKUP_USAGE = "צורה: גבה (בלי פרמטרים; אחרי \"אופן\" — של אותו אופן)", WRITE_USAGE = "צורה: כתוב \"<קובץ>\" \"<טקסט>\" [/הוסף]",
                 WRITE_IS_FOLDER = "זו תיקייה — אי אפשר לכתוב לתוכה כקובץ",
                 EXPECT_NEXT = "השורה הבאה צריכה להיכשל", EXPECT_NOTHING = "\"ודא שגיאה\" — אין אחריה שורה לבדוק",
@@ -2142,6 +2143,50 @@ public final class Words {
         public static String section(String name) {
             return "▸ " + name;
         }
+
+        // מ0.45 — מחק אופן, הסל, ודא תקין, רענן מלא /קוראים:
+        public static final String N_DROP_MODE = "מחק אופן", N_UNTRASH = "שחזר מהסל", N_PURGE = "רוקן סל",  // תחביר
+                W_DROP_MODE = "מוחק אופן עבודה: המסד שלו. אם יש בו משהו — גיבוי לפני (ממנו אפשר לשחזר: \"צור אופן\" באותו שם, ואז הגיבויים). "
+                        + "לא את האופן הפתוח במסך, ולא את \"שמור לתוכנה\"",
+                H_DROP_MODE = "שם האופן", DROP_MODE_USAGE = "צורה: מחק אופן \"<שם>\"",
+                W_UNTRASH = "מחזיר מהסל למקום המקורי את מה שנמחק מהמסלול הזה (האחרון שנמחק). שם תפוס — \"(משוחזר)\". לא מחזיר לרשימות",
+                H_UNTRASH = "המסלול המקורי — איפה שהיה לפני המחיקה", UNTRASH_USAGE = "צורה: שחזר מהסל \"<מסלול מקורי>\"",
+                W_PURGE = "מחיקה לצמיתות מהסל: מה שנמחק מהמסלול הזה (או מתוך התיקייה הזו). בלי מסלול — כל הסל. אין דרך חזרה",
+                H_PURGE = "המסלול המקורי; ריק — כל הסל", PURGE_USAGE = "צורה: רוקן סל · רוקן סל \"<מסלול מקורי>\"",
+                PURGE_ALL_WILL = "ריקון כל הסל — מחיקה לצמיתות, אין דרך חזרה",
+                W_OK_SINCE = "תקין", OK_SINCE_WHAT = "כל השורות מתחילת הקטע רצו בלי כישלון",   // תחביר
+                SW_IN_TRASH = "/בסל:", W_IN_TRASH = "בסל",   // תחביר
+                SW_READERS = "/קוראים:", READERS_USAGE = "צורה: רענן מלא /קוראים:N (1 עד 16)";   // תחביר
+
+        public static String dropModeWill(String n) { return "יימחק האופן \"" + n + "\" (המסד שלו; אם יש בו משהו — גיבוי לפני)"; }
+        public static String dropModeNone(String n) { return "אין אופן \"" + n + "\" — אין מה למחוק"; }
+        public static String dropModeOpen(String n) { return "האופן \"" + n + "\" פתוח עכשיו — לא נמחק (לעבור לאופן אחר, ואז)"; }
+        public static String dropModeSystem(String n) { return "\"" + n + "\" הוא של התוכנה — לא נמחק"; }
+        public static String dropModeDone(String n, boolean kept) {
+            return "נמחק האופן \"" + n + "\"" + (kept ? " · גיבוי נשמר (\"צור אופן\" באותו שם — ואז הגיבויים)" : " (היה ריק)");
+        }
+        public static String dropModeFailed(String n, String why) { return "האופן \"" + n + "\" לא נמחק: " + why; }
+        public static final String DROP_MODE_NO_BACKUP = "לא נשמר גיבוי — ולכן לא נמחק (הפרטים ביומן)";
+
+        public static String untrashWill(String name, boolean now) {
+            return "יוחזר מהסל: \"" + name + "\"" + (now ? "" : " (עכשיו אינו בסל — ייבדק בהרצה)");
+        }
+        public static String untrashed(String name, String renamed) {
+            return "הוחזר מהסל: \"" + name + "\"" + (renamed != null ? " · השם היה תפוס — \"" + renamed + "\"" : "");
+        }
+        public static String notInTrash(String name) { return "אין בסל דבר שנמחק מ\"" + name + "\""; }
+        public static String purgeWill(String name) { return "מחיקה לצמיתות מהסל: מה שנמחק מ\"" + name + "\" — אין דרך חזרה"; }
+        public static String purged(int n, int failed) {
+            return "נמחקו לצמיתות מהסל: " + n + (failed > 0 ? " · " + failed + " לא נמחקו" : "");
+        }
+
+        public static String verifyInTrash(String name, int n) {
+            return "\"" + name + "\" בסל" + (n >= 0 ? ": " + n : "");
+        }
+        public static String trashGot(int n) { return "בסל: " + n; }
+        public static String okSinceGot(int bad) { return bad + " שורות נכשלו"; }
+        public static String verifyMode(String n, boolean want) { return "האופן \"" + n + "\" " + (want ? "קיים" : "חסר"); }
+        public static String readersNote(int n) { return " · " + n + " קוראים לכל כונן"; }
 
         // מ0.42 — ב8: רשימה ששינתה שם — קובצי הפקודות שפונים אליה
         public static final String FOLLOW_FAILED = " · ⚠ קובצי הפקודות שפונים לרשימה לא עודכנו (הפרטים ביומן)";

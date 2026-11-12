@@ -158,6 +158,8 @@ final class Batch {
         /** 1.25.0: שורת "מדידה" — זמן לכל שורה, סיכום, ויומן (אם נכתב /יומן:). */
         boolean measure;
         String measureJournal;
+        /** מ0.45: "מדידה /עד:<זמן>" — שורה שלקחה יותר מסומנת ❌ (ונספרת עם "ודא" שנכשלו); 0 — בלי. */
+        long lineLimit;
         /** 1.25.0: הלולאות — לכל מזהה: הגבול לסבב (אלפיות שנייה; 0 — בלי) והשורה של "חזור". */
         final List<Long> loopLimit = new ArrayList<Long>();
         final List<Integer> loopLine = new ArrayList<Integer>();
@@ -184,6 +186,42 @@ final class Batch {
      */
     private static boolean small(final Plan plan, final Step s, String cmd, List<String> tk, File here,
                                  Map<String, String> vars, final Sim sim) {
+        if (cmd.equals(DROP_MODE)) {                                            // מ0.45: מחק אופן
+            if (tk.size() != 2 || tk.get(1).trim().isEmpty()) { s.error = Words.DbCmd.DROP_MODE_USAGE; return true; }
+            DbListCmd.planDropMode(s, Verbs.withVars(tk.get(1).trim(), vars), sim);
+            return true;
+        }
+        if (cmd.equals(UNTRASH)) {                                              // מ0.45: שחזר מהסל
+            planUntrash(s, tk, here, vars, sim);
+            return true;
+        }
+        if (cmd.equals(PURGE)) {                                                // מ0.45: רוקן סל
+            planPurge(s, tk, here, vars);
+            return true;
+        }
+        if (cmd.equals(VERIFY) && tk.size() == 2 && tk.get(1).trim().equals(Words.DbCmd.W_OK_SINCE)) {   // מ0.45: ודא תקין
+            s.cmd = OK_SINCE;
+            s.describe = Words.DbCmd.verifyWill(Words.DbCmd.OK_SINCE_WHAT);
+            return true;
+        }
+        if (cmd.equals(VERIFY) && tk.size() == 4 && tk.get(1).trim().equals(Verbs.MODE_WORD)) {   // מ0.45: ודא אופן "<שם>" קיים / חסר
+            final String m = Verbs.withVars(tk.get(2).trim(), vars);
+            String w = tk.get(3).trim();
+            final boolean want = w.equals(Words.DbCmd.WORD_EXISTS_M) || w.equals(Words.DbCmd.WORD_EXISTS);
+            if (!want && !w.equals(Words.DbCmd.WORD_MISSING_M) && !w.equals(Words.DbCmd.WORD_MISSING)) { s.error = Words.DbCmd.VERIFY_USAGE; return true; }
+            if (!DbVerbs.active()) { s.error = Words.DbCmd.VERIFY_DB_ONLY; return true; }
+            final String what = Words.DbCmd.verifyMode(m, want);
+            s.target = m;
+            s.describe = Words.DbCmd.verifyWill(what);
+            s.op = new ListCmd.Op() {
+                @Override public String run(Library lib) {
+                    boolean has = DbScreen.dbModes(DbListScreen.app).contains(m);
+                    s.verified = has == want;
+                    return Words.DbCmd.verifyResult(has == want, what, has ? Words.DbCmd.WORD_EXISTS_M : Words.DbCmd.WORD_MISSING_M);
+                }
+            };
+            return true;
+        }
         if (cmd.equals(SECTION)) {                                              // מ0.44: קטע
             if (tk.size() != 2 || tk.get(1).trim().isEmpty()) { s.error = Words.DbCmd.SECTION_USAGE; return true; }
             s.noop = true;
@@ -224,10 +262,21 @@ final class Batch {
             return true;
         }
         if (cmd.equals(REFRESH)) {
-            final boolean deep = tk.size() == 2 && tk.get(1).trim().equals(W_DEEP);
-            final boolean full = tk.size() == 2 && tk.get(1).trim().equals(W_FULL);   // מ0.43: בנייה מחדש — מה שהיה הכפתור בהגדרות, כבדיקה
-            if (tk.size() > 2 || (tk.size() == 2 && !deep && !full)) { s.error = Words.DbCmd.REFRESH_USAGE; return true; }
-            s.describe = full ? Words.DbCmd.REBUILD_WILL : Words.DbCmd.refreshWill(deep);
+            int readers = 0;                                                     // מ0.45 (ב9): "רענן מלא /קוראים:N" — כמה ראשים הכי מהיר
+            List<String> a = new ArrayList<String>();
+            for (int i = 1; i < tk.size(); i++) {
+                String x = tk.get(i).trim();
+                if (!x.startsWith(Words.DbCmd.SW_READERS)) { a.add(x); continue; }
+                try { readers = Integer.parseInt(x.substring(Words.DbCmd.SW_READERS.length()).trim()); } catch (NumberFormatException e) { readers = -1; }
+                if (readers < 1 || readers > 16) { s.error = Words.DbCmd.READERS_USAGE; return true; }
+            }
+            final boolean deep = a.size() == 1 && a.get(0).equals(W_DEEP);
+            final boolean full = a.size() == 1 && a.get(0).equals(W_FULL);   // מ0.43: בנייה מחדש — מה שהיה הכפתור בהגדרות, כבדיקה
+            if (a.size() > 1 || (a.size() == 1 && !deep && !full)) { s.error = Words.DbCmd.REFRESH_USAGE; return true; }
+            if (readers > 0 && !full) { s.error = Words.DbCmd.READERS_USAGE; return true; }
+            final int rd = readers;
+            final String note = rd > 0 ? Words.DbCmd.readersNote(rd) : "";
+            s.describe = full ? Words.DbCmd.REBUILD_WILL + note : Words.DbCmd.refreshWill(deep);
             // מ0.40 — המשתמש: "הוא יכול להריץ פקודה 'רענן אינדקס' לפני שהוא מתחיל". עד כאן "רענן" רץ רק בהרצה — אחרי שכל
             // השורות כבר תוכננו, ורשימה חכמה בשורה שאחריו לא ראתה קובץ שהורד הרגע. עכשיו — רענון מהיר כבר בהכנה (ברקע, לא
             // משנה קבצים), והשורות שאחריו מתוכננות מול האינדקס המעודכן. בהרצה — כמו קודם (גם מה ששורות קודמות שינו).
@@ -241,10 +290,11 @@ final class Batch {
                 }
             s.op = new ListCmd.Op() {
                 @Override public String run(Library lib) {
-                    if (lib == null) return full ? Words.DbCmd.REBUILD_WILL : Words.DbCmd.refreshWill(deep);
+                    if (lib == null) return full ? Words.DbCmd.REBUILD_WILL + note : Words.DbCmd.refreshWill(deep);
                     if (full) {
-                        lib.build(null);
-                        return Words.DbCmd.rebuilt(lib.totalFiles(), lib.totalDirs());
+                        if (rd > 0) lib.build(Words.Lib.WHY_REQUEST, null, rd);
+                        else lib.build(null);
+                        return Words.DbCmd.rebuilt(lib.totalFiles(), lib.totalDirs()) + note;
                     }
                     return Words.DbCmd.refreshed(deep ? lib.deepRefresh() : lib.refreshAsked());
                 }
@@ -296,6 +346,7 @@ final class Batch {
                         if (lib != null) {
                             if (was) lib.fileRemoved(f.getAbsolutePath());
                             lib.fileAdded(f);
+                            lib.flush(5000);   // מ0.45: שורה שאחריה (מחק, העבר) — מול הגודל החדש, לא "הקובץ השתנה מאז הסריקה"
                         }
                         return Words.DbCmd.written(f.getName(), text.length(), add && was);
                     } catch (Throwable t) {
@@ -308,6 +359,95 @@ final class Batch {
             return true;
         }
         return false;
+    }
+
+    /**
+     * מ0.45: "שחזר מהסל "<מסלול מקורי>"" — מה שנמחק מהמסלול הזה (האחרון, אם נמחק כמה פעמים) חוזר למקומו, כמו "שחזור" במסך הסל
+     * (Physical.restore: שם תפוס — "(משוחזר)"; לא חוזר לרשימות). מה שנמחק בשורות שלפני עוד אינו בסל בהכנה — ולכן לא שגיאה
+     * בהכנה אלא "ייבדק בהרצה", ושם: אין — כישלון.
+     */
+    private static void planUntrash(final Step s, List<String> tk, File here, Map<String, String> vars, Sim sim) {
+        if (tk.size() != 2) { s.error = Words.DbCmd.UNTRASH_USAGE; return; }
+        String[] err = {null};
+        final String p = path(tk.get(1), here, vars, err);
+        if (p == null) { s.error = err[0] != null ? err[0] : Words.DbCmd.UNTRASH_USAGE; return; }
+        final File f = new File(p);
+        boolean now = false;
+        if (sim.lib != null && sim.lib.ready)
+            try {
+                now = trashed(sim.lib, p, false).size() > 0;
+            } catch (Throwable t) {
+                Log.e("Batch.plan: שחזר מהסל", t);
+            }
+        s.target = f.getName();
+        s.dest = f;
+        s.describe = Words.DbCmd.untrashWill(f.getName(), now);
+        sim.gone.remove(p);
+        if (!sim.isFile(f) && !sim.isDir(f)) sim.added.put(p, GHOST);
+        s.op = new ListCmd.Op() {
+            @Override public String run(Library lib) {
+                if (lib == null) return s.describe;
+                lib.flush(5000);                                                   // מה שנמחק הרגע — נכנס לאינדקס של הסל
+                List<Trash.Item> its = trashed(lib, p, false);
+                if (its.isEmpty()) { DbListCmd.lastFailed = true; return Words.DbCmd.notInTrash(f.getName()); }
+                Trash.Item last = its.get(0);
+                for (Trash.Item it : its) if (newer(it.name(), last.name())) last = it;
+                Physical.Result r = Physical.restore(lib, java.util.Collections.singletonList(last));
+                if (r.failed > 0 || r.done.isEmpty()) {
+                    DbListCmd.lastFailed = true;
+                    return Words.Db.failed(r.note);
+                }
+                String to = r.to.get(last.path());
+                return Words.DbCmd.untrashed(f.getName(), to != null && !to.equals(p) ? new File(to).getName() : null);
+            }
+        };
+    }
+
+    /** מ0.45: "רוקן סל" — כל הסל; "רוקן סל "<מסלול מקורי>"" — מה שנמחק מהמסלול הזה (או מתוכו). Physical.deleteForever. */
+    private static void planPurge(final Step s, List<String> tk, File here, Map<String, String> vars) {
+        if (tk.size() > 2) { s.error = Words.DbCmd.PURGE_USAGE; return; }
+        final String p;
+        if (tk.size() == 2) {
+            String[] err = {null};
+            p = path(tk.get(1), here, vars, err);
+            if (p == null) { s.error = err[0] != null ? err[0] : Words.DbCmd.PURGE_USAGE; return; }
+            s.target = new File(p).getName();
+            s.describe = Words.DbCmd.purgeWill(new File(p).getName());
+        } else {
+            p = null;
+            s.describe = Words.DbCmd.PURGE_ALL_WILL;
+        }
+        s.op = new ListCmd.Op() {
+            @Override public String run(Library lib) {
+                if (lib == null) return s.describe;
+                lib.flush(5000);
+                List<Trash.Item> its = p == null ? Trash.list(lib) : trashed(lib, p, true);
+                if (its.isEmpty()) return p == null ? Words.DbCmd.purged(0, 0) : Words.DbCmd.notInTrash(new File(p).getName());
+                Physical.Result r = Physical.deleteForever(lib, its);
+                if (r.failed > 0) DbListCmd.lastFailed = true;
+                return Words.DbCmd.purged(r.done.size(), r.failed);
+            }
+        };
+    }
+
+    /**
+     * מה שנמחק אחרי: השם בסל מתחיל בזמן המחיקה (עד השנייה), ובאותה שנייה נוסף לשם "(2)", "(3)"… (Physical.freeName) — הקצר
+     * קודם, ובאורך שווה — לפי הסדר.
+     */
+    static boolean newer(String a, String b) {
+        int k = Math.min(19, Math.min(a.length(), b.length()));
+        int c = a.substring(0, k).compareTo(b.substring(0, k));
+        if (c != 0) return c > 0;
+        if (a.length() != b.length()) return a.length() > b.length();
+        return a.compareTo(b) > 0;
+    }
+
+    /** מה שבסל ונמחק מהמסלול p (under — גם מתוך התיקייה p). */
+    static List<Trash.Item> trashed(Library lib, String p, boolean under) {
+        List<Trash.Item> out = new ArrayList<Trash.Item>();
+        for (Trash.Item it : Trash.list(lib))
+            if (it.original != null && (it.original.equals(p) || (under && it.original.startsWith(p + "/")))) out.add(it);
+        return out;
     }
 
     /**
@@ -444,6 +584,11 @@ final class Batch {
      * תוסף האבחון יודע כך איזו בדיקה עברה ואיזו נכשלה, כשמריצים כמה ביחד. לא משנה דבר.
      */
     static final String SECTION = "SECTION";
+    /**
+     * מ0.45 (המשתמש: "צריך קודם פקודה חדשה… יצירה של אופן חדש באמת… הסל: שחזור וריקון"): מחק אופן · שחזר מהסל · רוקן סל.
+     * ו"ודא תקין" — כל השורות מתחילת הקטע (או הקובץ) רצו בלי כישלון (לבדיקה שנבנית מהגדרת הפקודות, CmdMatrix).
+     */
+    static final String DROP_MODE = "DROPMODE", UNTRASH = "UNTRASH", PURGE = "PURGE", OK_SINCE = "OKSINCE";
     static final String SW_APPEND = "/הוסף", W_DEEP = "עמוק", W_ERROR = "שגיאה", W_FULL = "מלא";   // תחביר
     /** מ0.42: "ודא מסד" — המנוע של המסד מול ה־SQLite של המכשיר, ותקינות המסד של כל אופן. */
     static final String W_DB = "מסד";   // תחביר
@@ -807,6 +952,12 @@ final class Batch {
         final java.util.Map<String, Store> dbs = new java.util.HashMap<String, Store>();
         /** מ0.42: האופנים ש"צור אופן" יוצר בקובץ (בהדמיה — מסד ריק עם בית ב־dbs). */
         final java.util.Set<String> created = new java.util.HashSet<String>();
+        /** מ0.45: אופנים ש"מחק אופן" שלפני מחק — "אופן" אחריו נכשל בתכנון. */
+        final java.util.Set<String> dropped = new java.util.HashSet<String>();
+
+        boolean hasMode(String m) {
+            return created.contains(m) || (!dropped.contains(m) && DbScreen.dbModes(DbListScreen.app).contains(m));
+        }
         /** מ0.15: האופן מ"אופן" בקובץ; null — האופן שפתוח. */
         String mode;
         /** מ0.17.1: "אופן" שנכשל — כל שורות המסד שאחריו נכשלות (לא לרוץ בטעות על אופן אחר). */
@@ -1149,11 +1300,29 @@ final class Batch {
             if (line.equals(CHECK)) continue;                                  // 1.28.0: שורת כותרת — מסך ההרצה (BatchUi)
             if (line.equals(MEASURE) || line.startsWith(MEASURE + " ")) {     // 1.25.0: שורת כותרת — מדידה
                 plan.measure = true;
-                for (String x : tokens(line))
+                List<String> mt = tokens(line);
+                for (int k = 0; k < mt.size(); k++) {
+                    String x = mt.get(k);
                     if (x.startsWith(SW_JOURNAL)) {
                         String[] err = {null};
                         plan.measureJournal = path(x.substring(SW_JOURNAL.length()).trim(), here, vars, err);
+                    } else if (x.startsWith(SW_LIMIT)) {                         // מ0.45: מגבלת זמן לכל שורה
+                        String v = x.substring(SW_LIMIT.length());
+                        if (k + 1 < mt.size() && !mt.get(k + 1).isEmpty() && !Character.isDigit(mt.get(k + 1).charAt(0))
+                                && !mt.get(k + 1).startsWith("/") && limitMs(v + mt.get(k + 1)) > 0) v += mt.get(++k);   // "/עד:2 דקות"
+                        plan.lineLimit = limitMs(v);
+                        if (plan.lineLimit <= 0) {
+                            plan.lineLimit = 0;
+                            Step s = new Step();
+                            s.line = n + 1;
+                            s.text = shown;
+                            s.cmd = MEASURE;
+                            s.error = Words.Loop.LIMIT_USAGE;
+                            plan.errors++;
+                            plan.steps.add(s);
+                        }
                     }
+                }
                 continue;
             }
             if (Program.isHeader(line)) continue;                             // 1.13.0: צלמית / שם / למה — כותרת התוכנה
@@ -1240,7 +1409,7 @@ final class Batch {
                 String m = tk.size() == 2 ? tk.get(1).trim() : "";
                 if (m.isEmpty()) s.error = Words.DbCmd.MODE_USAGE;
                 else if (!DbVerbs.active()) s.error = Words.DbCmd.VERIFY_DB_ONLY;
-                else if (!DbScreen.dbModes(DbListScreen.app).contains(m) && !sim.created.contains(m))   // מ0.42: גם מה ש"צור אופן" שלפניו יצר
+                else if (!sim.hasMode(m))   // מ0.42: גם מה ש"צור אופן" שלפניו יצר; מ0.45: בלי מה ש"מחק אופן" מחק
                     s.error = sim.modeError = Words.DbCmd.noMode(m, DbScreen.dbModes(DbListScreen.app));
                 else {
                     sim.dbs.put(sim.mode == null ? "" : sim.mode, sim.db);          // מ0.32: עותק לכל אופן
@@ -2015,6 +2184,7 @@ final class Batch {
         int fails = 0;                                                           // מ0.31: כישלונות בהרצה — מול המותר ("המשך")
         Step pending = null;                                                     // מ0.37: "ודא שגיאה"
         int pendingFails = 0;
+        int sectionFails = 0;                                                    // מ0.45: "ודא תקין" — הכישלונות מתחילת הקטע
         if (plan.blocked()) {                                                    // מ0.30: שגיאה בקובץ — שום שורה לא רצה
             plan.trouble = true;
             report.add(Words.DbCmd.notRun(plan.errors));
@@ -2030,7 +2200,17 @@ final class Batch {
         for (int si = 0; si <= plan.steps.size(); si++) {
             if (prev != null && plan.measure) {                                  // 1.25.0: מדידה — זמן השורה הקודמת
                 prev.ms = (System.nanoTime() - t0) / 1000000;
-                if (report.size() > mark) report.set(report.size() - 1, report.get(report.size() - 1) + Words.Loop.took(prev.ms));
+                if (report.size() > mark) {
+                    String last = report.get(report.size() - 1) + Words.Loop.took(prev.ms);
+                    if (plan.lineLimit > 0 && prev.ms > plan.lineLimit) {           // מ0.45: חרגה מהזמן — ❌, ונספרת עם "ודא" שנכשלו
+                        String head = Words.Cmd.line(prev.label(), "");
+                        last = last.startsWith(head) ? head + Words.Loop.tooSlow(plan.lineLimit) + last.substring(head.length())
+                                : Words.Loop.tooSlow(plan.lineLimit) + last;
+                        prev.verified = Boolean.FALSE;
+                        plan.trouble = true;
+                    }
+                    report.set(report.size() - 1, last);
+                }
             }
             if (prev != null && listen != null) listen.after(prev, report.size() > mark ? report.get(report.size() - 1) : null);
             mark = report.size();
@@ -2078,7 +2258,15 @@ final class Batch {
             if (s.contains != null) containsAtRun(s);                          // מ0.40: /מכיל: — מול התוכן של עכשיו
             String out;
             if (s.noop) {                                                       // 1.27.0: גם מה שלא השתנה — נאמר
+                if (s.cmd.equals(SECTION)) sectionFails = fails;
                 report.add(Words.Cmd.line(s.label(), s.describe));
+                continue;
+            }
+            if (s.cmd.equals(OK_SINCE)) {                                       // מ0.45: ודא תקין
+                boolean ok = fails == sectionFails;
+                s.verified = ok;
+                report.add(Words.Cmd.line(s.label(), Words.DbCmd.verifyResult(ok, Words.DbCmd.OK_SINCE_WHAT,
+                        Words.DbCmd.okSinceGot(fails - sectionFails))));
                 continue;
             }
             if (s.cmd.equals("ECHO") || s.cmd.equals("START") || (s.cmd.equals(OPEN) && s.op == null)) continue;
@@ -2160,7 +2348,7 @@ final class Batch {
 
     static int kind(Step s) {
         if (s.cmd.equals("MD")) return K_CREATE;
-        if (s.cmd.equals("DEL") || s.cmd.equals("RD")) return K_DELETE;
+        if (s.cmd.equals("DEL") || s.cmd.equals("RD") || s.cmd.equals(PURGE) || s.cmd.equals(DROP_MODE)) return K_DELETE;   // מ0.45
         if (s.cmd.equals("COPY") || s.cmd.equals("MOVE") || s.cmd.equals("REN")) return s.share ? K_READ : K_CHANGE;
         return K_READ;
     }

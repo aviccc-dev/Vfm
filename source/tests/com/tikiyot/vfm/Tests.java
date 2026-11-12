@@ -62,6 +62,9 @@ public final class Tests {
         run("מ0.42: תוסף האבחון בא עם התוכנה, עם קובצי הבדיקה של הגרסה", new Runnable() { public void run() { m042plugin(); } });
         run("מ0.42: רשימה ששינתה שם — קובצי הפקודות שפונים אליה מתעדכנים (ב8)", new Runnable() { public void run() { m042renamed(); } });
         run("מ0.44: קטע — שורה בדוח במקום שלה", new Runnable() { public void run() { m044section(); } });
+        run("מ0.45: הסל — שחזר מהסל, רוקן סל, ודא בסל", new Runnable() { public void run() { m045trash(); } });
+        run("מ0.45: ודא תקין · מדידה /עד: · השמות בשתי מילים", new Runnable() { public void run() { m045checks(); } });
+        run("מ0.45: כל הפקודות עם כל המתגים — נבנה מההגדרה", new Runnable() { public void run() { m045matrix(); } });
         run("מ0.41: בטל לא-משויכים, קובץ של פקודת פתיחה אחת, שמות המסכים", new Runnable() { public void run() { m041(); } });
         run("מ0.41: העורך האינטראקטיבי בא עם התוכנה", new Runnable() { public void run() { m041bundled(); } });
         run("מ0.41: קובץ הדוגמה של רשימת \"בחירה\"", new Runnable() { public void run() { m041example(); } });
@@ -2045,10 +2048,12 @@ public final class Tests {
                 if (Batch.VERIFY.equals(x.cmd) || "EXPECT".equals(x.cmd)) verifies++;   // גם "ודא שגיאה" נספרת בסיכום
             }
             check("מ0.43: \"הכול\" של התוסף — כל החלקים נכללים (" + sp.steps.size() + " שורות)", calls == 0 && sp.steps.size() > 200);
-            eq("מ0.43: \"הכול\" — כמה \"ודא\" יש בחלקים (הכללית 74, לחץ 19, שני אופנים 4, עומס 4)", 101, verifies);
+            eq("מ0.43: \"הכול\" — כמה \"ודא\" יש בחלקים (הכללית 88, לחץ 19, שני אופנים 4, עומס 4; מ0.45: +14 — אופן חדש והסל)", 115, verifies);
             // מ0.41: הקטע החדש של הכללית — השורות שאינן של המסד מתוכננות בלי שגיאה; "ודא שגיאה" תופס את %נבחרים%
-            String m042 = all.substring(all.indexOf(":: מ0.42"), all.indexOf(":: מ0.41 — הבדיקה מנקה"));   // נבדק לבד (m042cmds)
-            String sec = "צור תיקייה \"%פנימי%\\בדיקת יצוא (אפשר למחוק)\"\n" + all.substring(all.indexOf(":: מ0.41 — בטל לא-משויכים")).replace(m042, "");
+            String m042 = all.substring(all.indexOf(":: מ0.42"), all.indexOf(":: מ0.45 — אופן חדש"));   // נבדק לבד (m042cmds)
+            String m045 = all.substring(all.indexOf(":: מ0.45 — אופן חדש"), all.indexOf(":: מ0.41 — הבדיקה מנקה"));   // נבדק לבד (למטה)
+            String sec = "צור תיקייה \"%פנימי%\\בדיקת יצוא (אפשר למחוק)\"\n" + all.substring(all.indexOf(":: מ0.41 — בטל לא-משויכים"))
+                    .replace(m042, "").replace(m045, "");
             Batch.Plan np = Batch.plan(sec, r, v, lib);
             int fsBad = 0, dbLines = 0;
             boolean caught = false;
@@ -2068,6 +2073,12 @@ public final class Tests {
             String rep42 = Batch.run(p42, lib, null, null).toString();
             check("מ0.42: הקטע החדש של הכללית — שם אופן לא תקין נתפס, הקובץ שנכתב באינדקס, והתיקייה הוסרה (" + rep42 + ")",
                     p42.errors == 0 && rep42.contains("ודא: 4 עברו · 0 נכשלו") && !new File(r, "בדיקת מ0.42 (אפשר למחוק)").exists());
+            // מ0.45: הסל (בלי המסד — "אופן חדש" רק במכשיר): מחק ← שחזר מהסל ← רוקן סל
+            String trash = m045.substring(m045.indexOf(":: מ0.45 — הסל"));
+            Batch.Plan p45 = Batch.plan(trash, r, v, lib);
+            String rep45 = Batch.run(p45, lib, null, null).toString();
+            check("מ0.45: קטע הסל של הכללית — כל ה\"ודא\" עוברים, ומהתיקייה לא נשאר דבר בכונן ובסל (" + rep45 + ")",
+                    p45.errors == 0 && rep45.contains("ודא: 7 עברו · 0 נכשלו") && !new File(r, "בדיקת מ0.45 (אפשר למחוק)").exists());
         } catch (Exception e) {
             check("מ0.40: הבדיקה הכללית — " + e, false);
         }
@@ -2125,6 +2136,123 @@ public final class Tests {
         check("מ0.44: הקטעים בדוח — לפי הסדר, כל אחד לפני השורות שלו (" + all + ")", a >= 0 && a < okA && okA < b && b < okB);
         eq("מ0.44: קטע בלי שם — שגיאה", 1, Batch.plan("קטע\n", r, v).errors);
         eq("מ0.44: \"קטע\" — השם בעברית של SECTION", Batch.SECTION, Commands.canonical("קטע"));
+    }
+
+    private static void m045trash() {
+        File r = new File(home, "כונן-045");
+        wipe(r);
+        r.mkdirs();
+        Index ix = new Index("045", "045", r.getAbsolutePath());
+        ix.scan(null);
+        Library lib = Library.forTests(new ArrayList<Index>(java.util.Collections.singletonList(ix)));
+        java.util.Map<String, String> v = Batch.vars(r, r.getAbsolutePath(), null);
+        String f = "\"%כאן%\\סל\\א.txt\"";
+        String text = "צור תיקייה \"%כאן%\\סל\"\nכתוב " + f + " \"ראשון\"\nמחק " + f + "\nודא " + f + " חסר\nודא " + f + " /בסל:1\n"
+                + "שחזר מהסל " + f + "\nודא " + f + " מכיל \"ראשון\"\nודא " + f + " /בסל:0\n"
+                + "כתוב " + f + " \"שני\"\nמחק " + f + "\nכתוב " + f + " \"שלישי\"\nמחק " + f + "\nודא " + f + " /בסל:2\n"
+                + "שחזר מהסל " + f + "\nודא " + f + " מכיל \"שלישי\"\nודא " + f + " /בסל:1\n"
+                + "מחק " + f + "\nרוקן סל " + f + "\nודא " + f + " /בסל:0\nודא " + f + " חסר\n";
+        Batch.Plan p = Batch.plan(text, r, v, lib);
+        eq("מ0.45: הסל — בלי שגיאות בתכנון (" + p.errorText() + ")", 0, p.errors);
+        String rep = Batch.run(p, lib, null, null).toString();
+        check("מ0.45: מחק ← בסל ← שחזר מהסל (האחרון שנמחק) ← רוקן סל — כל ה\"ודא\" עוברים (" + rep + ")",
+                rep.contains("ודא: 9 עברו · 0 נכשלו") && !p.trouble);
+        // לא בסל — לא שגיאה בהכנה (אולי שורה שלפני מוחקת), אבל כישלון בהרצה
+        Batch.Plan q = Batch.plan("שחזר מהסל \"%כאן%\\סל\\אין.txt\"\nכתוב \"%כאן%\\סל\\אחרי.txt\" \"x\"\n", r, v, lib);
+        check("מ0.45: שחזר מהסל — מה שאינו בסל: \"ייבדק בהרצה\", לא שגיאה", q.errors == 0 && q.steps.get(0).describe.contains("ייבדק בהרצה"));
+        String qr = Batch.run(q, lib, null, null).toString();
+        check("מ0.45: ...ובהרצה — כישלון, והשורות שאחריו לא רצות (" + qr + ")", qr.contains("אין בסל") && qr.contains("⛔")
+                && !new File(r, "סל/אחרי.txt").exists());
+        // רוקן סל בלי מסלול — כל הסל
+        Batch.Plan all = Batch.plan("כתוב \"%כאן%\\סל\\ב.txt\" \"x\"\nמחק \"%כאן%\\סל\\ב.txt\"\nרוקן סל\nודא \"%כאן%\\סל\\ב.txt\" /בסל:0\n", r, v, lib);
+        check("מ0.45: רוקן סל — בתצוגה: כל הסל, ומסומן כמחיקה", all.errors == 0 && all.steps.get(2).describe.equals(Words.DbCmd.PURGE_ALL_WILL)
+                && Batch.kind(all.steps.get(2)) == Batch.K_DELETE);
+        String ar = Batch.run(all, lib, null, null).toString();
+        check("מ0.45: ...והסל ריק (" + ar + ")", ar.contains("ודא: 1 עברו · 0 נכשלו") && Trash.list(lib).isEmpty());
+        eq("מ0.45: שחזר מהסל בלי מסלול — שגיאה", 1, Batch.plan("שחזר מהסל\n", r, v, lib).errors);
+        eq("מ0.45: רוקן סל עם שני מסלולים — שגיאה", 1, Batch.plan("רוקן סל \"א\" \"ב\"\n", r, v, lib).errors);
+        wipe(r);
+    }
+
+    private static void m045matrix() {
+        java.util.Set<String> got = new java.util.HashSet<String>();
+        String all = CmdMatrix.text(true, got);
+        java.util.Set<String> miss = CmdMatrix.needed();
+        miss.removeAll(got);
+        check("מ0.45: לכל פקודה ולכל מתג (ולכל אפשרות) — שורה בקובץ; פקודה חדשה — או דוגמה, או ב־SKIP עם הסבר (" + miss + ")", miss.isEmpty());
+        for (String[] x : CmdMatrix.SKIP) check("מ0.45: SKIP — פקודה שקיימת, עם הסבר: " + x[0], Commands.get(x[0]) != null && x[1].length() > 10);
+        File r = new File(home, "כונן-045מ");
+        wipe(r);
+        r.mkdirs();
+        Index ix = new Index("045מ", "045מ", r.getAbsolutePath());
+        ix.scan(null);
+        Library lib = Library.forTests(new ArrayList<Index>(java.util.Collections.singletonList(ix)));
+        File here = new File(r, "נתוני התוסף");                               // כמו בתוסף: קובץ ההרצה — בתיקייה משלו
+        here.mkdirs();
+        try {
+            Files.writeAtomic(new File(here, "הרצה.vbat"), "ECHO x");
+            CmdMatrix.fixtures(here, null);
+        } catch (java.io.IOException e) {
+            throw new RuntimeException(e);
+        }
+        ix.scan(null);
+        java.util.Map<String, String> v = Batch.vars(here, r.getAbsolutePath(), null);
+        String text = "המשך ()\nמדידה /עד:30שניות\n" + CmdMatrix.text(false);
+        Batch.Plan p = Batch.plan(text, here, v, lib);
+        eq("מ0.45: ...בלי מסד — בלי שגיאות בתכנון (" + p.errorText() + ")", 0, p.errors);
+        List<String> rep = Batch.run(p, lib, null, null);
+        StringBuilder bad = new StringBuilder();
+        for (String x : rep) if (x.contains("❌") || x.contains("⚠") || x.contains("⛔")) bad.append(x).append(" | ");
+        check("מ0.45: ...ובהרצה — \"ודא תקין\" עובר, ושום ❌ (" + bad + ")", bad.length() == 0
+                && rep.toString().contains("✅ " + Words.DbCmd.OK_SINCE_WHAT));
+        StringBuilder left = new StringBuilder();
+        for (Trash.Item it : Trash.list(lib)) left.append(it.name()).append(" ← ").append(it.original).append(" | ");
+        check("מ0.45: ...והתיקייה הזמנית — לא בכונן ולא בסל (" + left + ")", !new File(r, "בדיקת כל הפקודות (אפשר למחוק)").exists() && left.length() == 0);
+        check("מ0.45: ...עם המסד — עוד שורות (קשר, ודא ידנית, השווה /רשימה:)", CmdMatrix.text(true).split("\n").length > CmdMatrix.text(false).split("\n").length + 3);
+        wipe(r);
+    }
+
+    private static void m045checks() {
+        File r = new File(home, "כונן-045ב");
+        wipe(r);
+        r.mkdirs();
+        java.util.Map<String, String> v = Batch.vars(r, r.getAbsolutePath(), null);
+        // ודא תקין — מתחילת הקטע
+        Batch.Plan p = Batch.plan("המשך ()\nקטע \"א\"\nכתוב \"%כאן%\\א.txt\" \"x\"\nודא תקין\nקטע \"ב\"\nמחק \"%כאן%\\אין\\*.txt\"\nREN \"%כאן%\\אין.txt\" \"ב.txt\"\nודא תקין\nקטע \"ג\"\nודא תקין\n", r, v);
+        List<String> rep = Batch.run(p, null, null, null);
+        String all = rep.toString();
+        int ok = 0, bad = 0;
+        for (String x : rep) {
+            if (x.contains("✅ " + Words.DbCmd.OK_SINCE_WHAT)) ok++;
+            if (x.contains("❌ " + Words.DbCmd.OK_SINCE_WHAT)) bad++;
+        }
+        check("מ0.45: ודא תקין — ✅ בקטע בלי כישלון, ❌ בקטע שנכשל בו, ושוב ✅ בקטע הבא (" + all + ")", ok == 2 && bad == 1);
+        // מדידה /עד:
+        Batch.Plan m = Batch.plan("מדידה /עד:300אלפיות\nהמתן 1\nכתוב \"%כאן%\\ג.txt\" \"x\"\nודא \"%כאן%\\ג.txt\" קיים\n", r, v);
+        eq("מ0.45: מדידה /עד: — בלי שגיאות", 0, m.errors);
+        List<String> mr = Batch.run(m, null, null, null);
+        String ms = mr.toString();
+        boolean slow = false;
+        for (String x : mr) if (x.startsWith(Words.Cmd.line("2", "")) && x.contains("❌ חרגה מהזמן")) slow = true;
+        check("מ0.45: ...השורה שחרגה — ❌ אחרי \"שורה N:\", ונספרת עם הנכשלות (" + ms + ")", slow && ms.contains("ודא: 1 עברו · 1 נכשלו") && m.trouble);
+        eq("מ0.45: מדידה /עד: עם שתי מילים (\"/עד:2 דקות\")", 120000L, Batch.plan("מדידה /עד:2 דקות\n", r, v).lineLimit);
+        eq("מ0.45: מדידה /עד: לא מובן — שגיאה", 1, Batch.plan("מדידה /עד:מחר\n", r, v).errors);
+        // השמות בשתי מילים
+        eq("מ0.45: \"מחק אופן\" — DROPMODE", "DROPMODE \"זמני\"", Commands.normal("מחק אופן \"זמני\""));
+        eq("מ0.45: \"רוקן סל\" לבד — PURGE", "PURGE", Commands.normal("רוקן סל"));
+        eq("מ0.45: \"שחזר מהסל\" — UNTRASH", "UNTRASH \"א\"", Commands.normal("שחזר מהסל \"א\""));
+        eq("מ0.45: \"מחק תיקייה\" — עדיין RD", "RD \"א\"", Commands.normal("מחק תיקייה \"א\""));
+        eq("מ0.45: העורך כותב בעברית", "שחזר מהסל \"א\"", Commands.hebrew("UNTRASH \"א\""));
+        check("מ0.45: מחק אופן / ודא אופן — רק במסד (במחשב: שגיאה מוסברת)",
+                Words.DbCmd.VERIFY_DB_ONLY.equals(Batch.plan("מחק אופן \"זמני\"\n", r, v).steps.get(0).error)
+                        && Words.DbCmd.VERIFY_DB_ONLY.equals(Batch.plan("ודא אופן \"זמני\" חסר\n", r, v).steps.get(0).error));
+        eq("מ0.45: מחק אופן בלי שם — שגיאה", Words.DbCmd.DROP_MODE_USAGE, Batch.plan("מחק אופן\n", r, v).steps.get(0).error);
+        // רענן מלא /קוראים:
+        eq("מ0.45: רענן מלא /קוראים:4 — בלי שגיאות", 0, Batch.plan("רענן מלא /קוראים:4\n", r, v).errors);
+        check("מ0.45: ...ובתצוגה — כמה קוראים", Batch.plan("רענן מלא /קוראים:4\n", r, v).steps.get(0).describe.contains("4 קוראים"));
+        eq("מ0.45: /קוראים: בלי מלא — שגיאה", 1, Batch.plan("רענן /קוראים:4\n", r, v).errors);
+        eq("מ0.45: /קוראים:17 — שגיאה", 1, Batch.plan("רענן מלא /קוראים:17\n", r, v).errors);
+        wipe(r);
     }
 
     private static void m042renamed() {
@@ -2954,7 +3082,8 @@ public final class Tests {
         File dir = new File(src, "src/com/tikiyot/vfm");
         // הקבצים שעברו (131; 1.7.78 — הפעולות בכונן; 1.7.79 — המסכים): כל הודעה מהמילון. מותר רק תחביר ושמות בכונן (מסומנים), ויומן.
         // 185 (1.7.82): כל הקבצים, חוץ מהמילון עצמו. תחביר ושמות בכונן — מסומנים בשורה ("// תחביר", "// בכונן")
-        java.util.Set<String> notYet = new java.util.HashSet<String>(Arrays.asList("Words", "Diag"));   // מ0.30: Diag — טקסט של דוח בדיקה (יומן), לא הודעות למסך
+        // מ0.45: CmdMatrix — קובץ פקודות של בדיקה, כולו תחביר (Diag, שהיה כאן, נמחק במ0.43)
+        java.util.Set<String> notYet = new java.util.HashSet<String>(Arrays.asList("Words", "CmdMatrix"));
         File[] srcs = dir.listFiles();
         List<String> names = new ArrayList<String>();
         if (srcs != null) for (File x : srcs)
@@ -3373,7 +3502,7 @@ public final class Tests {
     /** 1.22.5: ההגדרה האחת — שלמה, תואמת למנוע, וכל פרמטר עם שם והסבר. */
     private static void v1225() {
         check("1.22.5: פקודות הקבצים — אותן ובאותו סדר (מ0.14: ודא)",
-                java.util.Arrays.equals(Commands.fileNames(), new String[]{"COPY", "MOVE", "DEL", "REN", "MD", "RD", "COMP", "LINK", "VERIFY", "MODE", "CONTINUE", "WRITE", "WAIT", "BACKUP", "REFRESH", "REPORT", "CALL", "START", "ECHO", "REM", "SECTION"}));   // מ0.44: קטע
+                java.util.Arrays.equals(Commands.fileNames(), new String[]{"COPY", "MOVE", "DEL", "REN", "MD", "RD", "COMP", "LINK", "VERIFY", "MODE", "CONTINUE", "WRITE", "WAIT", "BACKUP", "REFRESH", "REPORT", "CALL", "START", "ECHO", "REM", "SECTION", "DROPMODE", "UNTRASH", "PURGE"}));   // מ0.44: קטע; מ0.45: מחק אופן, שחזר מהסל, רוקן סל
         check("1.22.5: שמות נרדפים", Commands.canonical("MKDIR").equals("MD") && Commands.canonical("rmdir").equals("RD")
                 && Commands.canonical("ERASE").equals("DEL") && Commands.canonical("RENAME").equals("REN")
                 && Commands.canonical("copy").equals("COPY") && Commands.canonical("FORMAT").equals("FORMAT")

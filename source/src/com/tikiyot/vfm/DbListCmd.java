@@ -1214,9 +1214,15 @@ final class DbListCmd {
         int count = -1;
         String has = null;
         boolean index = false;
+        int trash = -2;
         for (int i = 0; i < conds.size(); i++) {
             String t = conds.get(i).trim();
             if (t.equals(W_IN_INDEX) && conds.size() == 1) index = true;          // מ0.42: ודא "<קובץ>" באינדקס
+            else if (t.equals(Words.DbCmd.W_IN_TRASH) && conds.size() == 1) trash = -1;   // מ0.45: ודא "<קובץ>" בסל · /בסל:N
+            else if (t.startsWith(Words.DbCmd.SW_IN_TRASH) && conds.size() == 1) {
+                try { trash = Integer.parseInt(t.substring(Words.DbCmd.SW_IN_TRASH.length()).trim()); } catch (NumberFormatException e) { trash = -3; }
+                if (trash < 0) { s.error = Words.DbCmd.VERIFY_USAGE; return; }
+            }
             else if (t.equals(Words.DbCmd.WORD_EXISTS) || t.equals(Words.DbCmd.WORD_EXISTS_M)) want = Boolean.TRUE;
             else if (t.equals(Words.DbCmd.WORD_MISSING) || t.equals(Words.DbCmd.WORD_MISSING_M)) want = Boolean.FALSE;
             else if (t.startsWith(SW_FILES_IN)) {                            // מ0.37: /קבצים:N — כמה קבצים בתיקייה (בלי תתי־תיקיות)
@@ -1227,6 +1233,10 @@ final class DbListCmd {
         }
         if (index) {
             planVerifyIndex(s, f);
+            return;
+        }
+        if (trash > -2) {
+            planVerifyTrash(s, f, trash);
             return;
         }
         final boolean exists = want == null || want;
@@ -1284,6 +1294,23 @@ final class DbListCmd {
                 boolean in = lib != null && lib.find(f.getAbsolutePath()) != null;
                 s.verified = in;
                 return Words.DbCmd.verifyResult(in, what, Words.DbCmd.indexGot(in, f.isFile()));
+            }
+        };
+    }
+
+    /** מ0.45: "ודא "<קובץ>" בסל" — יש בסל משהו שנמחק מהמסלול הזה; "/בסל:N" — בדיוק N. */
+    private static void planVerifyTrash(final Batch.Step s, final File f, final int n) {
+        final String what = Words.DbCmd.verifyInTrash(f.getName(), n);
+        s.target = f.getName();
+        s.describe = Words.DbCmd.verifyWill(what);
+        s.op = new ListCmd.Op() {
+            @Override
+            public String run(Library lib) {
+                if (lib != null) lib.flush(5000);
+                int c = lib == null ? 0 : Batch.trashed(lib, f.getAbsolutePath(), false).size();
+                boolean ok = n < 0 ? c > 0 : c == n;
+                s.verified = ok;
+                return Words.DbCmd.verifyResult(ok, what, Words.DbCmd.trashGot(c));
             }
         };
     }
@@ -1354,6 +1381,61 @@ final class DbListCmd {
                 if (DbScreen.prepare(DbListScreen.app, name) != 0) return Words.DbCmd.modeCreated(name);
                 lastFailed = true;
                 return Words.DbCmd.modeFailed(name);
+            }
+        };
+    }
+
+    /**
+     * מ0.45: "מחק אופן "<שם>"" — המסד של האופן נמחק (עם קובצי היומן שלו). יש בו משהו — גיבוי לפני (לא נשמר — לא נמחק); הגיבויים
+     * נשארים, ו"צור אופן" באותו שם מחזיר אליהם. לא: האופן הפתוח במסך, "שמור לתוכנה", והאופן שהקובץ עובד בו עכשיו. אין אופן כזה —
+     * בלי שינוי (ניקוי שאפשר להריץ שוב). ההדמיה: "אופן" אחריו — שגיאה.
+     */
+    static void planDropMode(final Batch.Step s, final String name, Batch.Sim sim) {
+        if (!DbVerbs.active()) { s.error = Words.DbCmd.VERIFY_DB_ONLY; return; }
+        s.target = name;
+        if (!sim.hasMode(name)) {
+            s.noop = true;
+            s.describe = Words.DbCmd.dropModeNone(name);
+            return;
+        }
+        if (name.equals(Menus.MODE)) { s.error = Words.DbCmd.dropModeSystem(name); return; }
+        if (name.equals(DbListScreen.currentMode) || name.equals(sim.mode)) { s.error = Words.DbCmd.dropModeOpen(name); return; }
+        sim.created.remove(name);
+        sim.dropped.add(name);
+        sim.dbs.remove(name);
+        s.describe = Words.DbCmd.dropModeWill(name);
+        s.op = new ListCmd.Op() {
+            @Override
+            public String run(Library lib) {
+                android.content.Context c = DbListScreen.app;
+                File f = DbScreen.dbFile(c, name);
+                if (!f.isFile()) return Words.DbCmd.dropModeNone(name);
+                if (name.equals(DbListScreen.currentMode)) { lastFailed = true; return Words.DbCmd.dropModeOpen(name); }
+                boolean kept = false;
+                SqlStore st = null;
+                try {
+                    st = SqlStore.open(f, new IdCounter(DbScreen.counterFile()));
+                    long home = DbPaths.home(st);
+                    boolean empty = st.lists().isEmpty() && st.smarts().isEmpty() && st.unassigned().isEmpty()
+                            && (home == 0 || st.members(home).isEmpty());
+                    if (!empty) {
+                        DbScreen.backupsOf(c, name).before(st, Backups.OP_DROP_MODE, System.currentTimeMillis());
+                        kept = true;
+                    }
+                } catch (Throwable t) {
+                    Log.e("DbListCmd.dropMode", t);
+                    lastFailed = true;
+                    return Words.DbCmd.dropModeFailed(name, Words.DbCmd.DROP_MODE_NO_BACKUP);
+                } finally {
+                    if (st != null) st.close();
+                }
+                if (!android.database.sqlite.SQLiteDatabase.deleteDatabase(f) && f.exists()) {
+                    lastFailed = true;
+                    return Words.DbCmd.dropModeFailed(name, Words.Db.failed(f.getName()));
+                }
+                if (name.equals(DbScreen.savedMode(c))) DbScreen.saveMode(c, "");   // הפתיחה הבאה — באופן אחר
+                Log.i("נמחק אופן: " + name + (kept ? " (גיבוי לפני)" : " (ריק)"));
+                return Words.DbCmd.dropModeDone(name, kept);
             }
         };
     }
