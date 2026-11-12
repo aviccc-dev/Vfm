@@ -1797,6 +1797,16 @@ public final class Tests {
             Files.writeAtomic(new File(oe2, "1.html"), "<p>");
             r = Lab.root();
             check("מ0.40: \"מעבדה\" שנשארה, כש\"תוספים\" כבר קיימת — מה שבה עובר, והיא נמחקת", new File(r, "תוסף ישן 1.html").isFile() && !old.exists());
+            // המריץ העביר מההורדות את אותו עמוד לפני שהתיקייה הישנה עברה — לא נוצר "(2)"; תוכן אחר באותו שם — כן
+            File o3 = new File(old, "כפול");
+            o3.mkdirs();
+            Files.writeAtomic(new File(o3, "5.html"), "<p>חמש</p>");
+            Files.writeAtomic(new File(o3, "6.html"), "<p>שש ישן</p>");
+            Files.writeAtomic(new File(r, "תוסף כפול 5.html"), "<p>חמש</p>");
+            Files.writeAtomic(new File(r, "תוסף כפול 6.html"), "<p>שש חדש</p>");
+            r = Lab.root();
+            check("מ0.40: עמוד ישן שזהה לו כבר בתיקייה — לא מוכפל; שונה באותו שם — \"(2)\"", !new File(r, "תוסף כפול 5 (2).html").exists()
+                    && new File(r, "תוסף כפול 6 (2).html").isFile() && Lab.versions(r, "כפול").size() == 3 && !old.exists());
         } catch (Exception e) {
             check("מ0.40: מעבר התיקייה — " + e, false);
         }
@@ -2056,6 +2066,24 @@ public final class Tests {
             String rep = Batch.run(p, lib, null, null).toString();
             check("מ0.40: ...ובהרצה — כל ה\"ודא\" עוברים (" + rep + ")", rep.contains("ודא: 7 עברו · 0 נכשלו") && !p.trouble);
             check("מ0.40: ...והתיקייה הוסרה", !new File(r, "בדיקת מ0.40 (אפשר למחוק)").exists());
+            // "בדיקת מערכת" — קובץ אחד שכולל את כל החלקים, בשמות שההתקנה נותנת להם (DbTestMode)
+            File td = new File(r, "אופן-בדיקות");
+            td.mkdirs();
+            String[][] parts = {{"klali", Words.DbCmd.TEST_ALL_FILE}, {"lachatz", Words.DbCmd.TEST_STRESS_FILE}, {"shney-ofanim", Words.DbCmd.TEST_MODES_FILE},
+                    {"omes-masad", Words.DbCmd.TEST_LOAD_FILE}, {"pkudot-masad", Words.DbCmd.TEST_FILE}, {"pkudot-kalul", Words.DbCmd.TEST_CALL_FILE},
+                    {"gersa-023", Words.DbCmd.TEST_V23_FILE}, {"gersa-024", Words.DbCmd.TEST_V24_FILE}, {"maarechet", Words.DbCmd.TEST_SYSTEM_FILE + " מ0.40"}};
+            for (String[] x : parts)
+                Files.writeAtomic(new File(td, x[1] + "." + Batch.EXT), Files.readUtf8(new File(System.getProperty("vfm.src"), "assets/tests/" + x[0] + ".vbat")));
+            File sys = new File(td, Words.DbCmd.TEST_SYSTEM_FILE + " מ0.40." + Batch.EXT);
+            Batch.Plan sp = Batch.plan(Files.readUtf8(sys), td, Batch.vars(td, r.getAbsolutePath(), null));
+            int calls = 0, verifies = 0;
+            for (Batch.Step x : sp.steps) {
+                if (Words.DbCmd.CALL_FAILED.equals(x.error)) calls++;
+                if (Batch.VERIFY.equals(x.cmd) || "EXPECT".equals(x.cmd)) verifies++;   // גם "ודא שגיאה" נספרת בסיכום
+            }
+            check("מ0.40: \"בדיקת מערכת\" — כל החלקים נכללים (" + sp.steps.size() + " שורות), והדוח נכתב לקובץ", calls == 0 && sp.steps.size() > 200
+                    && sp.reportFile != null && sp.reportFile.endsWith("דוח בדיקת מערכת.txt"));
+            eq("מ0.40: \"בדיקת מערכת\" — כמה \"ודא\" יש בה (הכללית 56, לחץ 19, שני אופנים 4, עומס 4)", 83, verifies);
         } catch (Exception e) {
             check("מ0.40: הבדיקה הכללית — " + e, false);
         }

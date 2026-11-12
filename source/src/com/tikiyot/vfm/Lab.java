@@ -60,7 +60,7 @@ final class Lab {
 
     /**
      * מ0.40: עמודים מעד מ0.39 (תיקייה לכל תוסף, "<גרסה>.html") — עוברים ישר לתיקיית התוספים, בשם "תוסף <שם> <גרסה>.html"
-     * (שם תפוס — "(2)"); ".פעילה" ותיקייה שהתרוקנה — יוצאות. כך כל התוספים במקום אחד, ו"יש כבר זהה" (העבר /תפוס:לשנות-שם)
+     * (אותו עמוד כבר שם — העותק הישן יוצא; שם תפוס עם תוכן אחר — "(2)"); ".פעילה" ותיקייה שהתרוקנה — יוצאות. כך כל התוספים במקום אחד, ו"יש כבר זהה" (העבר /תפוס:לשנות-שם)
      * נבדק מול כולם.
      */
     private static void flatten(File r) {
@@ -75,6 +75,10 @@ final class Lab {
                 Page p = page(f, d.getName());
                 String n = safe(PREFIX + " " + p.name + " " + p.ver) + EXT;
                 File to = new File(r, n);
+                if (to.isFile() && to.length() == f.length() && Sig.of(to) != null && Sig.of(to).equals(Sig.of(f))) {
+                    f.delete();                                                  // אותו עמוד כבר בתיקייה (המריץ העביר אותו מההורדות) — לא מכפילים
+                    continue;
+                }
                 if (to.exists()) to = new File(r, Physical.freeName(r, n, false));
                 if (!f.renameTo(to)) Log.i("Lab.flatten: לא עבר " + f);   // בכונן
             }
