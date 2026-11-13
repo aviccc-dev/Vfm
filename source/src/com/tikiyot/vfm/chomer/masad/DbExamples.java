@@ -43,10 +43,9 @@ final class DbExamples {
     }
 
     /** מה שהדוגמאות מצביעות עליו בכונן: פקודות המערכת, הכלים, ותיקיית התרגול (נבנית מחדש). תקלה — ביומן, וממשיכים. */
-    static void files(String demo) {
+    static void files(String demo, Runnable systemFiles) {
         try {
-            Reserved.writeSystem();
-            Reserved.writeTools();
+            if (systemFiles != null) systemFiles.run();   // מבנה 26: קובצי פקודות המערכת והכלים — הקורא מוסר מי כותב אותם (החומר אינו פונה לפקודות)
             if (demo != null) demo(new File(Paths.data(), DEMO), demo);
         } catch (Throwable t) {
             Log.e("DbExamples.files", t);
@@ -80,7 +79,7 @@ final class DbExamples {
         final long home = DbPaths.ensureHome(s);
         int replaced = 0;
         for (String name : tops(text)) {
-            if (name.equals(MINE) || name.equals(Reserved.ROOT)) continue;
+            if (name.equals(MINE) || name.equals(Names.RESERVED_ROOT)) continue;
             for (Store.Member m : s.members(home))
                 if (m.item.type == Store.LIST && m.item.name.equals(name)) {
                     Lists.removeFrom(s, home, m.item.id);

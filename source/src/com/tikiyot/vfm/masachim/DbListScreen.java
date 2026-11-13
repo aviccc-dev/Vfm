@@ -333,7 +333,7 @@ public class DbListScreen extends ListScreen<Store.Member> {
 
     /** פותח אופן: המסד נוצר אם אין ומקבל בית (DbScreen.prepare), הבית נפתח, והמסך הזה נסגר. */
     private void openMode(String name) {
-        long h = Db.prepare(this, name);
+        long h = Db.prepare(this, name, Reserved.FILES);
         if (h == 0) {
             Ui.toast(this, Words.Db.NO_HOME);
             return;
@@ -353,7 +353,7 @@ public class DbListScreen extends ListScreen<Store.Member> {
                         new Thread(new Runnable() {
                             @Override
                             public void run() {
-                                final String msg = Db.restoreExamples(getApplicationContext());
+                                final String msg = Db.restoreExamples(getApplicationContext(), Reserved.FILES);
                                 runOnUiThread(new Runnable() {
                                     @Override
                                     public void run() {

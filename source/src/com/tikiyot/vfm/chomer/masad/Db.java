@@ -95,14 +95,15 @@ final class Db {
         c.getSharedPreferences(PREFS, android.content.Context.MODE_PRIVATE).edit().putString(PREF_MODE, m).apply();
     }
 
-    static void setup(android.content.Context c, Store store, String mode) {
+    /** מבנה 26: systemFiles — מה שנכתב לכונן יחד עם הדוגמאות (קובצי פקודות המערכת והכלים); מוסר אותו מי שמבקש להכין את האופן. */
+    static void setup(android.content.Context c, Store store, String mode, Runnable systemFiles) {
         try {
             if (DbPaths.home(store) != 0) return;
             // שמירה על הנתונים: מסד ריק שיש לאופן שלו גיבויים — אולי המסד אבד; לא ממלאים אותו, כדי שההצעה לשחזר מגיבוי
             // (offerRestoreIfEmpty, במסך המסד) תופיע ולא תיחסם.
             if (!Db.backupsOf(c, mode).list().isEmpty()) return;
             if (mode.equals(DbExamples.MODE)) {
-                DbExamples.files(DbExamples.asset(c, DbExamples.ASSET_DEMO));
+                DbExamples.files(DbExamples.asset(c, DbExamples.ASSET_DEMO), systemFiles);
                 DbExamples.install(store, DbExamples.asset(c, DbExamples.ASSET), Environment.getExternalStorageDirectory().getAbsolutePath());
             } else DbPaths.ensureHome(store);
         } catch (Throwable t) {
@@ -111,7 +112,7 @@ final class Db {
     }
 
     /** מ0.29: המסד של האופן קיים ויש בו בית (נוצר אם צריך — setup). מחזיר את הבית; 0 — לא הצליח (אין גישה לקבצים, מסד פגום). */
-    static long prepare(android.content.Context c, String mode) {
+    static long prepare(android.content.Context c, String mode, Runnable systemFiles) {
         if (!Files.hasAccess(c)) return 0;
         SqlStore s = null;
         try {
@@ -123,7 +124,7 @@ final class Db {
                 s = null;
             }
             s = Db.open(c, mode);
-            setup(c, s, mode);
+            setup(c, s, mode, systemFiles);
             return DbPaths.home(s);
         } catch (Throwable t) {
             Log.e("Db.prepare", t);
@@ -134,7 +135,7 @@ final class Db {
     }
 
     /** מ0.29 (באג 1): שחזור הדוגמאות באופן הדוגמאות — גיבוי של המסד לפני, ואז DbExamples.restore. מחזיר הודעה למסך. */
-    static String restoreExamples(android.content.Context c) {
+    static String restoreExamples(android.content.Context c, Runnable systemFiles) {
         SqlStore s = null;
         try {
             s = Db.open(c, DbExamples.MODE);
@@ -144,7 +145,7 @@ final class Db {
                 Log.e("Db.restoreExamples.backup", t);
                 return Words.Db.importBackupFailed(String.valueOf(t.getMessage()));
             }
-            DbExamples.files(DbExamples.asset(c, DbExamples.ASSET_DEMO));
+            DbExamples.files(DbExamples.asset(c, DbExamples.ASSET_DEMO), systemFiles);
             int n = DbExamples.restore(s, DbExamples.asset(c, DbExamples.ASSET), Environment.getExternalStorageDirectory().getAbsolutePath());
             return Words.Db.examplesRestored(n);
         } catch (Throwable t) {

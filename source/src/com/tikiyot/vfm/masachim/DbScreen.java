@@ -85,7 +85,7 @@ public class DbScreen extends Activity {
     private static void start(Activity a, boolean fresh) {
         String m = a.getSharedPreferences(Db.PREFS, MODE_PRIVATE).getString(Db.PREF_MODE, "");
         if (m.isEmpty()) m = Db.defaultMode(a);
-        long home = Db.prepare(a, m);                                             // מ0.29: גם התקנה חדשה — ישר לבית (הדוגמאות)
+        long home = Db.prepare(a, m, Reserved.FILES);                                             // מ0.29: גם התקנה חדשה — ישר לבית (הדוגמאות)
         android.content.Intent i = home != 0 ? DbListScreen.intent(a, m, home, null) : new android.content.Intent(a, DbScreen.class);
         if (fresh) i.addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK | android.content.Intent.FLAG_ACTIVITY_CLEAR_TASK);
         a.startActivity(i);
@@ -225,7 +225,7 @@ public class DbScreen extends Activity {
      * (עד כאן הן הגיעו מהמנוע הישן). מסד שיש בו בית — לא נוגעים.
      */
     private void firstSetup() {
-        Db.setup(this, store, mode);
+        Db.setup(this, store, mode, Reserved.FILES);
     }
 
     /** מ0.37: המסך נפתח רק כדי להוסיף קבצים לרשימה (מתיקייה או מחיפוש) — מ־➕ שבמסך הרשימות. */

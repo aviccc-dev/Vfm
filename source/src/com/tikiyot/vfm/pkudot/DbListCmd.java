@@ -1117,7 +1117,7 @@ final class DbListCmd {
             @Override
             public String run(Library lib) {
                 if (Db.dbModes(Db.app).contains(name)) return Words.DbCmd.modeExists(name);
-                if (Db.prepare(Db.app, name) != 0) return Words.DbCmd.modeCreated(name);
+                if (Db.prepare(Db.app, name, Reserved.FILES) != 0) return Words.DbCmd.modeCreated(name);
                 lastFailed = true;
                 return Words.DbCmd.modeFailed(name);
             }

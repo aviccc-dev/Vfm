@@ -43,7 +43,7 @@ final class DbVerbsUi {
         }
         if (c.kind.equals(Verbs.K_MODE)) {                                       // מ0.42: מכפתור — נוצר (אם אין) ונפתח, כמו "אופן חדש"
             String name = c.arg.trim();
-            long h = Db.prepare(a, name);
+            long h = Db.prepare(a, name, Reserved.FILES);
             if (h == 0) {
                 Ui.toast(a, Words.DbCmd.modeFailed(name));
                 return true;

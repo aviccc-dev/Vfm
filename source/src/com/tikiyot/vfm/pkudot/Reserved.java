@@ -18,6 +18,15 @@ import java.util.List;
 
 final class Reserved {
 
+    /** מבנה 26: כתיבת קובצי פקודות המערכת והכלים — מה שמוסרים לחומר כשמכינים אופן (Db.prepare / setup / restoreExamples). */
+    static final Runnable FILES = new Runnable() {
+        @Override
+        public void run() {
+            writeSystem();
+            writeTools();
+        }
+    };
+
     static final String ROOT = Names.RESERVED_ROOT, CMDS = "פקודות", MINE = "הפקודות שלי",  // בכונן
             NEW = "פקודה חדשה", SYS_DIR = "פקודות המערכת";  // בכונן
     static final List<String> ROOT_PATH = Collections.singletonList(ROOT);

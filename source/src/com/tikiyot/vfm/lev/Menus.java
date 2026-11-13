@@ -396,7 +396,7 @@ final class Menus {
      */
     private static void install(Context c) throws Exception {
         String internal = android.os.Environment.getExternalStorageDirectory().getAbsolutePath();
-        DbExamples.files(null);                                               // קובצי פקודות המערכת והכלים — בכונן
+        DbExamples.files(null, Reserved.FILES);                                               // קובצי פקודות המערכת והכלים — בכונן
         SqlStore s = Db.open(c, MODE);
         try {
             DbMore.Imported d = defaults(s, DbExamples.asset(c, ASSET), internal);
