@@ -2262,9 +2262,19 @@ public final class Tests {
         ok.trouble = true;
         check("מבנה 27: הייתה תקלה — פתיחות הסוף לא רצות", !Manager.opensAllowed(ok));
         File code = new File(System.getProperty("vfm.src"), "src/com/tikiyot/vfm");
+        // מבנה 28: מכוונת — לאן הולך טקסט של פקודות
+        eq("מבנה 28: פקודת פתיחה אחת — מיד", Manager.TO_VERB, Manager.route("צלמית 🏠\nשם בית\nפתח מסך הבית\n", false));
+        eq("מבנה 28: ...נוסתה ולא בוצעה — ממשיכים כקובץ רגיל", Manager.TO_RUN, Manager.route("פתח מסך הבית\n", true));
+        eq("מבנה 28: \"בדיקה\" בראש — למסך ההרצה", Manager.TO_CHECK, Manager.route(Batch.CHECK + "\nפתח מסך הבית\n", false));
+        String holes = "COPY <מקור> <יעד>\n";
+        check("מבנה 28: מקומות פתוחים — נשאלים לפני ההרצה", !CmdTemplates.holes(Manager.lines(holes)).isEmpty() && Manager.route(holes, false) == Manager.TO_HOLES);
+        eq("מבנה 28: \"בדיקה\" קודמת למקומות הפתוחים (מסך ההרצה שואל עליהם בעצמו)", Manager.TO_CHECK, Manager.route(Batch.CHECK + "\n" + holes, false));
+        eq("מבנה 28: קובץ רגיל — הכנה והרצה", Manager.TO_RUN, Manager.route("MD \"א\"\n", false));
+        eq("מבנה 28: השורות — בלי \\r", Arrays.asList("א", "ב"), Manager.lines("א\r\nב\r\n"));
         String bu = read(new File(code, "masachim/rechivim/BatchUi.java")), rs = read(new File(code, "masachim/RunScreen.java"));
         check("מבנה 27: שני הרצפים שואלים את המנהל, ואינם מחליטים בעצמם",
-                bu.contains("Manager.approve(plan)") && rs.contains("Manager.approve(plan)") && !bu.contains("plan.blocked()") && !rs.contains("plan.blocked()"));
+                bu.contains("Manager.approve(plan)") && rs.contains("Manager.approve(plan)") && !bu.contains("plan.blocked()") && !rs.contains("plan.blocked()")
+                        && bu.contains("Manager.route(text, false)") && !bu.contains("Batch.wantsCheck("));
     }
 
     private static void m045checks() {

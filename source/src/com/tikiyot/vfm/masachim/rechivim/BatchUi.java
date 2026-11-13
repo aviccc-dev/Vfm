@@ -59,9 +59,12 @@ final class BatchUi {
      * שנבחרו; הקובץ עצמו לא משתנה) — למסך ההרצה נכתב עותק זמני, ו־%כאן% נשאר התיקייה של הקובץ.
      */
     static void run(final Activity a, final File f, final String text, boolean other) {
-        String verb = Batch.singleVerb(text);                                  // מ0.41: פקודת פתיחה אחת — מיד (כמו כפתור)
-        if (verb != null && VerbsUi.run(a, verb, f.getParentFile())) return;
-        if (Batch.wantsCheck(text)) {                                          // 1.28.0: מסך ההרצה — רק עם "בדיקה"
+        int to = Manager.route(text, false);                                   // מבנה 28: לאן הולך הטקסט — מחליט המנהל; כאן רק מבצעים
+        if (to == Manager.TO_VERB) {                                           // מ0.41: פקודת פתיחה אחת — מיד (כמו כפתור)
+            if (VerbsUi.run(a, Batch.singleVerb(text), f.getParentFile())) return;
+            to = Manager.route(text, true);                                    // לא בוצעה — ממשיכים כקובץ רגיל
+        }
+        if (to == Manager.TO_CHECK) {                                          // 1.28.0: מסך ההרצה — רק עם "בדיקה"
             File shown = f;
             if (other)
                 try {
@@ -77,8 +80,8 @@ final class BatchUi {
             return;
         }
         final Map<String, String> vars0 = vars(a, f.getParentFile());
-        List<String> lines = java.util.Arrays.asList(text.replace("\r", "").split("\n"));
-        if (!CmdTemplates.holes(lines).isEmpty()) {                            // 1.25.6: מקומות פתוחים — נשאלים לפני ההרצה
+        List<String> lines = Manager.lines(text);
+        if (to == Manager.TO_HOLES) {                                          // 1.25.6: מקומות פתוחים — נשאלים לפני ההרצה
             HoleForm.ask(a, f.getName(), lines, vars0, new HoleForm.Filled() {
                 @Override
                 public void ok(List<String> filled) {
