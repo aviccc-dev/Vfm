@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="vfm-plugin" content="אבחון">
-<meta name="vfm-plugin-version" content="6">
+<meta name="vfm-plugin-version" content="7">
 <title>אבחון</title>
 <style>
 /* תוסף "אבחון" (מ0.42): הבדיקות, הדוחות והתקלות — מה שהיה ב־⋮ ובהגדרות (claude/tosaf-bdikot.md).
@@ -184,7 +184,9 @@ function runner(id,gs,real,path){
   gs.forEach(g=>{L.push(SECTIONS?'קטע "'+g.n+'"':':: '+g.n);(g.inc||[]).forEach(f=>L.push('כלול "'+f+'"'));(g.lines||[]).forEach(x=>L.push(x));
     if(g.gen==='matrix'){const t=can('commandMatrix')?V.commandMatrix():null;if(!t)throw new Error('כל הפקודות: הקובץ לא נבנה (הפרטים ביומן)');t.split('\n').filter(x=>x.trim()).forEach(x=>L.push(x));}});
   const by={},order=[];
-  gs.forEach(g=>g.clean.forEach(c=>{const m=c[0]===REAL?real:c[0];if(!by[m]){by[m]=[];order.push(m);}c[1].forEach(x=>{if(by[m].indexOf(x)<0)by[m].push(x);});}));
+  // אבחון 7: מנקים בסדר הפוך לסדר היצירה. בדיקת העומס מעתיקה את כל הבית — גם רשימת בדיקה שעוד לא נוקתה — ולכן "בדיקת עומס" מתבטלת
+  // ראשונה; אחרת "ודא … חסרה" של רשימה אחרת מוצא את העותק שלה שבתוך "בדיקת עומס" (קרה כשהאופן האמיתי הוא "דוגמאות")
+  gs.slice().reverse().forEach(g=>g.clean.forEach(c=>{const m=c[0]===REAL?real:c[0];if(!by[m]){by[m]=[];order.push(m);}c[1].forEach(x=>{if(by[m].indexOf(x)<0)by[m].push(x);});}));
   if(order.length||V45){
     L.push(SECTIONS?'קטע "'+CLEAN+'"':':: '+CLEAN);
     if(V45){L.push(':: התיקיות הזמניות של הבדיקות — גם מהסל');TEMP_DIRS.forEach(d=>L.push('רוקן סל "'+d+'"'));}
