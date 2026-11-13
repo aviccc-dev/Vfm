@@ -101,7 +101,7 @@ public class DiskScreen extends ListScreen<File> implements Clip.Holder {
             Ui.toast(this, Words.DiskW.CANT_HERE);
             return;
         }
-        Physical.paste(this, d, new Runnable() {
+        PhysicalUi.paste(this, d, new Runnable() {
             @Override
             public void run() {
                 refresh();
@@ -263,7 +263,7 @@ public class DiskScreen extends ListScreen<File> implements Clip.Holder {
                 if (d != null) Ui.askText(this, Words.DiskW.NEW_FOLDER, "", Words.DiskW.NEW_FOLDER_NAME, new Ui.Text1() {
                     @Override
                     public void ok(String name) {
-                        Physical.askMakeFolder(DiskScreen.this, d, name, new Runnable() {
+                        PhysicalUi.askMakeFolder(DiskScreen.this, d, name, new Runnable() {
                             @Override public void run() { refresh(); }
                         });
                     }
@@ -282,7 +282,7 @@ public class DiskScreen extends ListScreen<File> implements Clip.Holder {
                 if (d != null) details(d);
                 return true;
             case MENU_ZIP:
-                if (d != null) Physical.askZip(this, d, new Runnable() {
+                if (d != null) PhysicalUi.askZip(this, d, new Runnable() {
                     @Override public void run() { refresh(); }
                 });
                 return true;

@@ -277,7 +277,7 @@ public class RunScreen extends Activity {
             public void run() {
                 List<String> rep;
                 try {
-                    rep = Batch.run(plan, lib, new Physical.DialogAsker(RunScreen.this), progress(null), Acts.deletedStaysGrey(), listen);
+                    rep = Batch.run(plan, lib, new PhysicalUi.DialogAsker(RunScreen.this), progress(null), Acts.deletedStaysGrey(), listen);
                 } catch (Throwable t) {
                     Log.e("הרצת קובץ פקודות: " + file, t);
                     rep = new ArrayList<String>();

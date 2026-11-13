@@ -57,7 +57,7 @@ public final class FolderPicker {
                     public void ok(String value) {
                         final String name = value.trim();
                         // יצירה בכונן היא פעולה פיזית: דרך Physical, עם חלון האישור והמילה "בכונן"
-                        Physical.askMakeFolder(act, src.fileOf(parent), name, new Runnable() {
+                        PhysicalUi.askMakeFolder(act, src.fileOf(parent), name, new Runnable() {
                             @Override
                             public void run() {
                                 ArrayList<String> path = new ArrayList<String>(parent);

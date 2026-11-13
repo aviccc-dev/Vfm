@@ -113,7 +113,7 @@ public class TrashScreen extends ListScreen<Trash.Item> {
             Ui.toast(this, Words.NOTHING_SELECTED);
             return;
         }
-        Physical.askRestore(this, list, after);
+        PhysicalUi.askRestore(this, list, after);
     }
 
     private void empty(List<Trash.Item> list) {
@@ -121,7 +121,7 @@ public class TrashScreen extends ListScreen<Trash.Item> {
             Ui.toast(this, Words.NOTHING_SELECTED);
             return;
         }
-        Physical.askDeleteForever(this, list, after);
+        PhysicalUi.askDeleteForever(this, list, after);
     }
 
     // ---------- תפריט ----------

@@ -97,7 +97,7 @@ final class BatchUi {
         final Library lib = Library.get(a);
         // 1.25.4 (באג, המשתמש: "אחרי ההרצה — גם אין דוח וגם לא רואים שינוי ברשימות"): ההכנה יכולה לקחת זמן
         // (לולאות, רשימות גדולות) — עד כאן בלי שום סימן על המסך. עכשיו — חלון "מכין…" עם עצירה, ותקלה — הודעה.
-        final Physical.Busy busy = new Physical.Busy(a, Words.Cmd.preparing(f.getName()));
+        final PhysicalUi.Busy busy = new PhysicalUi.Busy(a, Words.Cmd.preparing(f.getName()));
         new Thread(new Runnable() {                                      // התכנון — מהכונן; קבצים חדשים נכנסים לאינדקס בביצוע (134)
             @Override
             public void run() {
@@ -158,13 +158,13 @@ final class BatchUi {
         final Runnable go = new Runnable() {
             @Override
             public void run() {
-                final Physical.Busy busy = new Physical.Busy(a, Words.Cmd.running(f.getName()));
+                final PhysicalUi.Busy busy = new PhysicalUi.Busy(a, Words.Cmd.running(f.getName()));
                 new Thread(new Runnable() {
                     @Override
                     public void run() {
                         List<String> rep;
                         try {
-                            rep = Batch.run(plan, lib, new Physical.DialogAsker(a), busy, Acts.deletedStaysGrey());
+                            rep = Batch.run(plan, lib, new PhysicalUi.DialogAsker(a), busy, Acts.deletedStaysGrey());
                         } catch (Throwable t) {                               // 1.25.4: תקלה בהרצה — דוח עם התקלה
                             Log.e("הרצת קובץ פקודות: " + f, t);
                             rep = new ArrayList<String>();

@@ -300,7 +300,7 @@ public final class Actions {
         if (act == UNZIP) return new Runnable() {
             @Override
             public void run() {
-                Physical.askUnzip(a, sel.files().get(0), new Physical.Done() {
+                PhysicalUi.askUnzip(a, sel.files().get(0), new Physical.Done() {
                     @Override public void done(Physical.Result r) { sel.changed(); }
                 });
             }
@@ -311,7 +311,7 @@ public final class Actions {
         if (act == DELETE_FROM_DRIVE) return new Runnable() {
             @Override
             public void run() {
-                Physical.askDelete(a, new ArrayList<String>(sel.files()), sel.dirPaths(), null, new Physical.Done() {
+                PhysicalUi.askDelete(a, new ArrayList<String>(sel.files()), sel.dirPaths(), null, new Physical.Done() {
                     @Override public void done(Physical.Result r) { sel.changed(); }
                 });
             }
@@ -319,7 +319,7 @@ public final class Actions {
         if (act == RENAME_FILE) return new Runnable() {
             @Override
             public void run() {
-                Physical.askRename(a, sel.files().get(0), new Physical.Done() {
+                PhysicalUi.askRename(a, sel.files().get(0), new Physical.Done() {
                     @Override public void done(Physical.Result r) { sel.changed(); }
                 });
             }

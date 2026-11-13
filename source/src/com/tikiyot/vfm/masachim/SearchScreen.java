@@ -393,7 +393,7 @@ public class SearchScreen extends Activity implements Clip.Holder {
         clipText.setTextSize(14);
         clipBar.addView(clipText, new LinearLayout.LayoutParams(0, -2, 1f));
         pasteHere = clipButton(Words.PASTE_HERE, new Runnable() {
-            @Override public void run() { Physical.paste(SearchScreen.this, here == null ? null : new File(here), afterPaste()); }
+            @Override public void run() { PhysicalUi.paste(SearchScreen.this, here == null ? null : new File(here), afterPaste()); }
         });
         clipButton(Words.Here.PASTE_PICK, new Runnable() {
             @Override public void run() { pastePick(); }
@@ -484,7 +484,7 @@ public class SearchScreen extends Activity implements Clip.Holder {
 
     private void pastePick() {
         FolderPicker.choose(this, Words.Here.PICK_TITLE, true, new FolderPicker.Picked() {
-            @Override public void ok(File folder) { Physical.paste(SearchScreen.this, folder, afterPaste()); }
+            @Override public void ok(File folder) { PhysicalUi.paste(SearchScreen.this, folder, afterPaste()); }
         });
     }
 

@@ -738,7 +738,7 @@ public class DupScreen extends Activity {
     private void deleteSelected() {
         final List<Copy> list = new ArrayList<Copy>(selected);
         if (list.isEmpty()) return;
-        Physical.askDelete(this, selectedPaths(list), wholeWarning(false), new Physical.Done() {
+        PhysicalUi.askDelete(this, selectedPaths(list), wholeWarning(false), new Physical.Done() {
             @Override
             public void done(Physical.Result r) {
                 for (Copy c : list) if (r.done.contains(c.hit.path())) c.done = FileItem.State.DELETED.icon + " " + FileItem.State.DELETED.line;

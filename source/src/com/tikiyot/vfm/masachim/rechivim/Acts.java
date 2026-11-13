@@ -110,7 +110,7 @@ public final class Acts {
             Ui.toast(a, Words.ActsW.NO_ROOM_PACK + Files.size(need) + Words.ActsW.FREE + Files.size(free));
             return;
         }
-        final Physical.Busy busy = new Physical.Busy(a, Words.ActsW.PACKING);
+        final PhysicalUi.Busy busy = new PhysicalUi.Busy(a, Words.ActsW.PACKING);
         new Thread(new Runnable() {
             @Override
             public void run() {

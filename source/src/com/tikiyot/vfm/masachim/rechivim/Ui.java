@@ -450,7 +450,7 @@ public final class Ui {
                     new android.content.DialogInterface.OnClickListener() {
                         @Override
                         public void onClick(android.content.DialogInterface d, int w) {
-                            if (w == 0) Physical.askUnzip(a, z.getAbsolutePath(), null);
+                            if (w == 0) PhysicalUi.askUnzip(a, z.getAbsolutePath(), null);
                             else openOutside(a, z);
                         }
                     });

@@ -157,7 +157,7 @@ final class CmdMenu {
                     String n = name.trim();
                     if (!n.toLowerCase(java.util.Locale.ROOT).endsWith("." + Batch.EXT)) n += "." + Batch.EXT;
                     final File f = new File(newIn, n);
-                    Physical.askNewFile(a, f, Batch.template(), new Runnable() {
+                    PhysicalUi.askNewFile(a, f, Batch.template(), new Runnable() {
                         @Override public void run() { made(a, f, name, pick); }
                     });
                     return;

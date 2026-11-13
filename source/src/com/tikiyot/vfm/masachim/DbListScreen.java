@@ -349,7 +349,7 @@ public class DbListScreen extends ListScreen<Store.Member> {
                 Words.Db.EXAMPLES_RESTORE_GO, new Runnable() {
                     @Override
                     public void run() {
-                        final Physical.Busy busy = new Physical.Busy(DbListScreen.this, Words.Db.EXAMPLES_RESTORE);
+                        final PhysicalUi.Busy busy = new PhysicalUi.Busy(DbListScreen.this, Words.Db.EXAMPLES_RESTORE);
                         new Thread(new Runnable() {
                             @Override
                             public void run() {
