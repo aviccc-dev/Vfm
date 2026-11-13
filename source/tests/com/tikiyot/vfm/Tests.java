@@ -2220,6 +2220,19 @@ public final class Tests {
         for (Trash.Item it : Trash.list(lib)) left.append(it.name()).append(" ← ").append(it.original).append(" | ");
         check("מ0.45: ...והתיקייה הזמנית — לא בכונן ולא בסל (" + left + ")", !new File(r, "בדיקת כל הפקודות (אפשר למחוק)").exists() && left.length() == 0);
         check("מ0.45: ...עם המסד — עוד שורות (קשר, ודא ידנית, השווה /רשימה:)", CmdMatrix.text(true).split("\n").length > CmdMatrix.text(false).split("\n").length + 3);
+        // מבנה 5: הקובץ הזמני של יומן המחיקות ("." + השם + "." + מספר + ".tmp" — Files.writeAtomic) שנתפס באינדקס באמצע כתיבה —
+        // לא פריט בסל. (הסינון בדק רק שם שמתחיל ב־LOG, והזמני מתחיל בנקודה נוספת; הבדיקה שלמעלה נכשלה לפעמים, לפי התזמון.)
+        File tr = new File(r, Index.TRASH);
+        tr.mkdirs();
+        try {
+            new java.io.FileOutputStream(new File(tr, "." + Trash.LOG + ".123.tmp")).close();
+        } catch (java.io.IOException e) {
+            throw new RuntimeException(e);
+        }
+        lib.fileAdded(new File(tr, "." + Trash.LOG + ".123.tmp"));                // כמו שהאינדקס שומע על קובץ חדש — בלי להסתמך על סריקה
+        StringBuilder tmp = new StringBuilder();
+        for (Trash.Item it : Trash.list(lib)) tmp.append(it.name()).append(" | ");
+        check("מבנה 5: הקובץ הזמני של יומן המחיקות — לא פריט בסל (" + tmp + ")", tmp.length() == 0);
         wipe(r);
     }
 

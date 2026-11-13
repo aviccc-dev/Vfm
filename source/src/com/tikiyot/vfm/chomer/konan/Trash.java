@@ -124,7 +124,8 @@ public final class Trash {
             for (Index.Rec r : ix.files) {
                 if (r.gone || r.dir < 0) continue;
                 if (r.dir == top) {
-                    if (r.name.startsWith(LOG)) continue;                // מ0.45: היומן עצמו (וקובץ הכתיבה הזמני שלו) — כשקבצים נסתרים נכנסים לאינדקס
+                    // מ0.45: היומן עצמו — כשקבצים נסתרים נכנסים לאינדקס. מבנה 5: וגם קובץ הכתיבה הזמני שלו, ששמו מתחיל בנקודה נוספת (Files.writeAtomic)
+                    if (r.name.startsWith(LOG) || r.name.startsWith("." + LOG)) continue;
                     Item it = new Item();
                     it.hit = Library.hit(ix, r);
                     it.original = log.get(r.name);
