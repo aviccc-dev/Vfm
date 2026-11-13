@@ -157,7 +157,7 @@ final class FolderView {
             return out;
         }
         for (String s : sources) {
-            if (Sources.INTERNAL.equals(s) || Sources.CARD.equals(s)) {
+            if (Drive.INTERNAL.equals(s) || Drive.CARD.equals(s)) {
                 for (String[] v : vols) if (v[1].equals(s) && !out.contains(v[0])) out.add(v[0]);
             } else if (!out.contains(s)) out.add(s);
         }

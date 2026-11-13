@@ -149,7 +149,7 @@ final class State {
         int sp = n.indexOf(' ');
         if (sp > 0 && n.substring(0, sp).matches("\\d+") && n.indexOf('.') > sp) n = n.substring(sp + 1).trim();
         try {
-            java.text.SimpleDateFormat f = new java.text.SimpleDateFormat(Batch.NOW_FORMAT, Locale.ROOT);
+            java.text.SimpleDateFormat f = new java.text.SimpleDateFormat(Files.NOW_FORMAT, Locale.ROOT);
             f.setLenient(false);
             java.text.ParsePosition pos = new java.text.ParsePosition(0);
             java.util.Date d = f.parse(n, pos);

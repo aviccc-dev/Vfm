@@ -40,7 +40,7 @@ final class Shortcuts {
     /** 1.15.0: בתיקיית קיצורים של אופן כלשהו (הסבת הסביבות — בכל האופנים). */
     static File write(File dir, String icon, String name, String line) {
         String base = name.replaceAll("[/\\\\:*?\"<>|\n\t]", " ").trim();
-        if (base.isEmpty()) base = FnCommand.KIND;
+        if (base.isEmpty()) base = Target.KIND_COMMAND;
         StringBuilder sb = new StringBuilder();
         sb.append(Program.ICON).append(' ').append(icon.isEmpty() ? "▶" : icon).append('\n');
         sb.append(Program.NAME).append(' ').append(name).append('\n');

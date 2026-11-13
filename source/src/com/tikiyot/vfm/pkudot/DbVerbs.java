@@ -146,7 +146,7 @@ final class DbVerbs {
      * כמו שהייבוא מהישן עושה לכלי כפולים קיים (מ0.19). נגיעה — פותחת את מסך הכפולים עם ההגדרות האלה.
      */
     static void saveDups(final Activity a, final String mode, final long in, String name, final Target t) {
-        final Func f = Func.byKind(FnDup.KIND);
+        final Func f = Func.byKind(Target.KIND_DUP);
         if (f == null) return;
         final java.io.File file = Shortcuts.write(f.icon, name == null || name.isEmpty() ? f.title : name,
                 Verbs.toolLine(t.kind, t.params));

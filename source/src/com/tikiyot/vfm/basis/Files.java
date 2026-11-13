@@ -213,4 +213,28 @@ public final class Files {
             return c.checkSelfPermission(android.Manifest.permission.WRITE_EXTERNAL_STORAGE) == 0;
         return true;
     }
+
+    // --- מבנה 9: קבועים ושאלות קטנות שישבו גבוה מדי (בפקודות ובכונן), וגם מי שמתחתם צריך אותם ---
+
+    /** תבנית התאריך והשעה שבשמות קבצים (%עכשיו%, יומן ההרצה, יומני המצב). עד כאן — Batch.NOW_FORMAT. */
+    public static final String NOW_FORMAT = "dd.MM.yyyy HH-mm-ss";
+    /** הסיומת של קובץ פקודות. עד כאן — Batch.EXT. */
+    public static final String CMD_EXT = "vbat";
+
+    /** השם הוא של קובץ פקודות. עד כאן — Batch.isBatch. */
+    public static boolean isCmdFile(String name) {
+        String n = name.toLowerCase(java.util.Locale.ROOT);
+        return n.endsWith("." + CMD_EXT);
+    }
+
+    /** בדיקת שם לקובץ או לתיקייה בכונן. null = תקין; אחרת ההסבר. */
+    public static String badName(String name) {
+        String n = name == null ? "" : name.trim();
+        if (n.isEmpty()) return Words.NEED_NAME;
+        if (n.equals(".") || n.equals("..")) return Words.Disk.BAD_NAME;
+        for (char c : new char[]{'/', '\\', ':', '*', '?', '"', '<', '>', '|'})
+            if (n.indexOf(c) >= 0) return Words.Disk.NO_CHAR + c;
+        if (n.getBytes(java.nio.charset.Charset.forName("UTF-8")).length > 255) return Words.Disk.NAME_TOO_LONG;
+        return null;
+    }
 }

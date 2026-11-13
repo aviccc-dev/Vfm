@@ -19,11 +19,10 @@ import java.util.regex.Pattern;
 
 final class Batch {
 
-    static final String EXT = "vbat";
+    static final String EXT = Files.CMD_EXT;
 
     static boolean isBatch(String name) {
-        String n = name.toLowerCase(java.util.Locale.ROOT);
-        return n.endsWith("." + EXT);
+        return Files.isCmdFile(name);
     }
 
     /** שורה מתוכננת: מה תעשה, על אילו קבצים, ומה נכשל כבר בתכנון. */
@@ -689,7 +688,7 @@ final class Batch {
     static final String SW_STATE = "/מצב:";   // תחביר
     /** 1.22.0: COMP /רשימה:"<רשימה>" <יעד> — המקור הוא רשימה ידנית (קבצים, תתי־רשימות, חכמות, תיקיות מתעדכנות). */
     static final String SW_LIST = "/רשימה:";   // תחביר
-    static final String NOW_FORMAT = "dd.MM.yyyy HH-mm-ss";   // בכונן
+    static final String NOW_FORMAT = Files.NOW_FORMAT;
 
     static String var(String name) {
         return "%" + name + "%";

@@ -1291,15 +1291,9 @@ public final class Physical {
 
     // ================= שינוי שם בכונן (84) ומחיקה של תיקייה חדשה (106) =================
 
-    /** בדיקת שם לקובץ או לתיקייה בכונן. null = תקין; אחרת ההסבר. */
+    /** בדיקת שם לקובץ או לתיקייה בכונן. null = תקין; אחרת ההסבר. מבנה 9: הבדיקה עצמה — ב־Files (גם הבסיס שואל). */
     public static String badName(String name) {
-        String n = name == null ? "" : name.trim();
-        if (n.isEmpty()) return Words.NEED_NAME;
-        if (n.equals(".") || n.equals("..")) return Words.Disk.BAD_NAME;
-        for (char c : new char[]{'/', '\\', ':', '*', '?', '"', '<', '>', '|'})
-            if (n.indexOf(c) >= 0) return Words.Disk.NO_CHAR + c;
-        if (n.getBytes(java.nio.charset.Charset.forName("UTF-8")).length > 255) return Words.Disk.NAME_TOO_LONG;
-        return null;
+        return Files.badName(name);
     }
 
     /**

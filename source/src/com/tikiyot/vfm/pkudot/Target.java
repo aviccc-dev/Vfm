@@ -7,6 +7,9 @@ import java.util.Map;
 
 public final class Target {
 
+    /** שמות הכלים שגם הפקודות מזכירות (מבנה 9: עד כאן — FnDup.KIND, FnCommand.KIND, בקומת המסכים). */
+    static final String KIND_DUP = "כפולים", KIND_COMMAND = "פקודה";  // תחביר
+
     public final String kind;
     public final Map<String, String> params = new LinkedHashMap<String, String>();
 

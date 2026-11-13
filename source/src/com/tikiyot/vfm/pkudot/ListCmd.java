@@ -17,7 +17,7 @@ final class ListCmd {
     static final String MANUAL = "ידנית", SMART = "חכמה", CONTENT = "תוכן", FILES_OF = "קבצי", FOLDER = "תיקייה";   // תחביר
     /** מ0.18: יעד שהוא קובץ טקסט — יצוא מהמסד. */
     static final String FILE_WORD = "קובץ";   // תחביר
-    static final String HOME = "*";
+    static final String HOME = Names.HOME;
     /** 1.25.0: COMP של שתי רשימות חכמות — גם התנאים (המשתמש: "אולי פרמטר שיוסיף את השוואת התנאים"). */
     static final String SW_CONDS = "/תנאים";   // תחביר
 

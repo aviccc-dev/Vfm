@@ -133,7 +133,7 @@ final class DbExport {
      */
     static File target(String raw, String defaultName, File exportDir) {
         String r = raw == null ? "" : raw.trim().replace('\\', '/');   // מ0.18.1: "\\" כמו בשאר הפקודות (באנדרואיד — שם קובץ אסור)
-        if (r.isEmpty() || r.equals(ListCmd.HOME)) {
+        if (r.isEmpty() || r.equals(Names.HOME)) {
             String base = safe(defaultName);
             File f = new File(exportDir, base + ".txt");
             for (int k = 2; f.exists(); k++) f = new File(exportDir, base + " (" + k + ").txt");

@@ -13,7 +13,7 @@ import java.util.List;
 
 public final class FnCommand extends Func {
 
-    public static final String KIND = "פקודה", FILE = "קובץ";  // תחביר
+    public static final String KIND = Target.KIND_COMMAND, FILE = "קובץ";  // תחביר
 
     public FnCommand() {
         super(KIND, Words.CmdTool.TITLE, "▶");

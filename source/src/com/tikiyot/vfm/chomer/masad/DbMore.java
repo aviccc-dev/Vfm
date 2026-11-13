@@ -262,7 +262,7 @@ final class DbMore {
             Store.Item it = m.item;
             if (it.type == Store.FILE) {
                 Store.FileInfo fi = s.file(it.id);
-                if (fi != null && Batch.isBatch(fi.path)) out.add(new Entry(E_FILE, it.name, it.id, fi.path, null));
+                if (fi != null && Files.isCmdFile(fi.path)) out.add(new Entry(E_FILE, it.name, it.id, fi.path, null));
             } else if (it.type == Store.LIST) out.add(new Entry(E_LIST, it.name, it.id, null, null));
             else if (it.type == Store.SMART) out.add(new Entry(E_SMART, it.name, it.id, null, s.prop(it.id, Store.P_COND)));
         }

@@ -11,7 +11,7 @@ import android.widget.Spinner;
 public final class FnDup extends Func {
 
     /** הסוג בקובץ הראשי (וסעיף ההגדרות של הכלי). */
-    static final String KIND = "כפולים";  // תחביר
+    static final String KIND = Target.KIND_DUP;
 
 
     public FnDup() {
