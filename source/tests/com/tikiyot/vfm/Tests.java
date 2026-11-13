@@ -3110,7 +3110,7 @@ public final class Tests {
         check("131: ועוד", Words.andMore(18).equals("ועוד 18"));
         check("187: שינוי אחד / 3 שינויים (ביומן)", Words.Lib.changes(1).equals("שינוי אחד") && Words.Lib.changes(3).equals("3 שינויים"));
         Batch.Plan p = Batch.plan("RD\n", new File("/x"), Batch.vars(new File("/x"), "/p", null));
-        check("131: שגיאת שימוש — מהמילון", p.steps.size() == 1 && Words.Cmd.usage("RD").equals(p.steps.get(0).error));
+        check("131: שגיאת שימוש — מהמילון", p.steps.size() == 1 && Commands.usage("RD").equals(p.steps.get(0).error));
         // התחביר במקום אחד: התבנית והטופס מבינים זה את זה
         String t = Batch.template();
         check("131: התבנית — המשתנים מהתחביר", t.contains(Batch.var(Batch.V_HERE)) && t.contains(Batch.var(Batch.V_DOWNLOADS)));
@@ -3533,9 +3533,9 @@ public final class Tests {
         }
         check("1.22.5: COPY בלי /רשימה:, COMP בלי /מצב:", Commands.get("COPY").switchFor("/רשימה:x") == null
                 && Commands.get("COMP").switchFor("/מצב:1.1.2026") == null);
-        String u = Words.Cmd.usage("COPY");
+        String u = Commands.usage("COPY");
         check("1.22.5: שימוש עם המתגים עצמם", u.contains(Batch.SW_TAKEN) && u.contains(Batch.SW_JOURNAL) && !u.contains("/MAXAGE"));
-        check("1.22.5: COMP — שתי הצורות", Words.Cmd.usage("COMP").contains(Batch.SW_LIST));
+        check("1.22.5: COMP — שתי הצורות", Commands.usage("COMP").contains(Batch.SW_LIST));
         check("1.22.5: חזור — שימוש משלו", Words.Verb.usage("חזור").contains("חזור") && !Words.Verb.usage("חזור").contains("פתח"));
         check("1.22.5: צור פקודה ופתח תפריט בשימוש", Words.Verb.usage("צור").contains("פקודה") && Words.Verb.usage("פתח").contains("תפריט"));
         check("1.22.5: הדמיה — כותרת", Commands.get("בכאילו") != null && Commands.get("בכאילו").family == Commands.Family.HEADER);
@@ -3543,8 +3543,8 @@ public final class Tests {
         new File(rr, "תיקייה").mkdirs();
         Batch.Plan pr = Batch.plan("REN \"" + new File(rr, "תיקייה").getAbsolutePath() + "\" חדש", rr, new java.util.HashMap<String, String>());
         check("1.22.5: REN על תיקייה — הודעה ברורה", pr.errors == 1 && Words.Cmd.REN_FOLDER.equals(pr.steps.get(0).error));
-        check("1.22.5: שימוש — ערך המתג לפי סוגו", Words.Cmd.usage("COPY").contains(Batch.SW_JOURNAL + Words.Def.V_FILE)
-                && Words.Cmd.usage("COPY").contains(Batch.SW_STATE + Words.Def.V_TIME));
+        check("1.22.5: שימוש — ערך המתג לפי סוגו", Commands.usage("COPY").contains(Batch.SW_JOURNAL + Words.Def.V_FILE)
+                && Commands.usage("COPY").contains(Batch.SW_STATE + Words.Def.V_TIME));
     }
 
     private static void v1220() {

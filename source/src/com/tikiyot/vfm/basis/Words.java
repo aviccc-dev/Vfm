@@ -193,12 +193,6 @@ public final class Words {
         private Cmd() { }
 
 
-        /** איך כותבים אותה — נבנה מההגדרה האחת (1.22.5: עם המתגים עצמם, במקום "[מתגים]"). */
-        public static String usage(String cmd) {
-            Commands.Def d = Commands.get(cmd);
-            return d == null ? "" : d.usage();
-        }
-
         // שגיאות בשורה
         public static final String MISSING_PERCENT = "חסר % סוגר";
         public static final String FOLDER_NOT_EMPTY = "התיקייה לא ריקה — כמו ב-bat, צריך RD /S";

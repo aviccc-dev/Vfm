@@ -590,7 +590,7 @@ final class DbListCmd {
         Work work = null;
         boolean destructive = false;
         if (cmd.equals("MD")) {
-            if (sd.size() != 1) { s.error = Words.Cmd.usage(cmd); return; }
+            if (sd.size() != 1) { s.error = Commands.usage(cmd); return; }
             final ListCmd.Side a = sd.get(0);
             if (a.kind == ListCmd.SMART_LIST) { s.error = Words.ListCmdW.MD_SMART; return; }
             if (a.kind != ListCmd.LIST || a.content || a.filesOf || a.home || a.mask != null) { s.error = Words.ListCmdW.USAGE_MD; return; }
@@ -599,7 +599,7 @@ final class DbListCmd {
                 @Override public Res run(Store t, Finder f) { return md(t, mode, a); }
             };
         } else if (cmd.equals("RD") || cmd.equals("DEL")) {
-            if (sd.size() != 1) { s.error = Words.Cmd.usage(cmd); return; }
+            if (sd.size() != 1) { s.error = Commands.usage(cmd); return; }
             final ListCmd.Side a = sd.get(0);
             if (a.filesOf) {                                                 // הקבצים עצמם — לסל (הביצוע הרגיל)
                 if (cmd.equals("RD")) { s.error = Words.ListCmdW.RD_FILES; return; }

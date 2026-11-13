@@ -1596,7 +1596,7 @@ final class Batch {
         }
         if (s.error != null) return;
         if (cmd.equals("MD")) {
-            if (paths.size() != 1) { s.error = Words.Cmd.usage(cmd); return; }
+            if (paths.size() != 1) { s.error = Commands.usage(cmd); return; }
             File d = new File(paths.get(0));
             if (sim.isDir(d)) {                                                // קיימת — בלי שינוי
                 s.noop = true;
@@ -1614,7 +1614,7 @@ final class Batch {
                 sim.gone.remove(up.getAbsolutePath());
             }
         } else if (cmd.equals("RD")) {
-            if (paths.size() != 1) { s.error = Words.Cmd.usage(cmd); return; }
+            if (paths.size() != 1) { s.error = Commands.usage(cmd); return; }
             File d = new File(paths.get(0));
             if (!sim.isDir(d)) { s.error = Words.FOLDER_NOT_FOUND + ": " + args.get(0); return; }
             if (!s.recursive && (!sim.files(d).isEmpty() || sim.hasSubdirs(d))) {
@@ -1625,7 +1625,7 @@ final class Batch {
             s.describe = Words.Cmd.folderToTrash(Bidi.path(d.getAbsolutePath()));
             sim.wipe(d.getAbsolutePath());
         } else if (cmd.equals("DEL")) {
-            if (paths.size() != 1) { s.error = Words.Cmd.usage(cmd); return; }
+            if (paths.size() != 1) { s.error = Commands.usage(cmd); return; }
             if (s.recursive) { s.error = Words.Cmd.DEL_S; return; }
             match(s, paths.get(0), flt, false, sim);
             if (s.error == null) s.describe = Words.Cmd.toTrash(Words.files(s.files.size())) + filtered(s);
@@ -1655,7 +1655,7 @@ final class Batch {
         } else if ((cmd.equals("COPY") || cmd.equals("MOVE")) && s.recursive) {     // 1.19.0: שמירת מסלול
             keep(s, cmd, args, paths, flt, sim);
         } else if (cmd.equals("COPY") || cmd.equals("MOVE")) {
-            if (paths.size() != 2) { s.error = Words.Cmd.usage(cmd); return; }
+            if (paths.size() != 2) { s.error = Commands.usage(cmd); return; }
             File dest = new File(paths.get(1));
             if (!sim.isDir(dest)) {
                 s.error = Words.Cmd.NO_DEST;
@@ -1693,7 +1693,7 @@ final class Batch {
             s.noop = s.files.isEmpty() && s.dirs.isEmpty() && s.same + s.inPlace > 0;   // הכול כבר במקום — לא שגיאה, ואין מה לעשות
         } else if (cmd.equals("REN")) {
             if (paths.size() != 2 || args.get(1).contains("/") || args.get(1).contains("\\")) {
-                s.error = Words.Cmd.usage(cmd);
+                s.error = Commands.usage(cmd);
                 return;
             }
             File f = new File(paths.get(0));
@@ -1709,7 +1709,7 @@ final class Batch {
             s.describe = Words.Cmd.rename(f.getName(), s.newName);
             sim.move(f.getAbsolutePath(), to, false);
         } else if (cmd.equals("START")) {
-            if (paths.isEmpty()) { s.error = Words.Cmd.usage(cmd); return; }
+            if (paths.isEmpty()) { s.error = Commands.usage(cmd); return; }
             if (paths.get(paths.size() - 1).equals(HOME_MARK)) {      // 1.9.0: START %בית%
                 s.dest = new File(HOME_MARK);
                 s.describe = Words.Cmd.HOME_AT_END;
@@ -1750,7 +1750,7 @@ final class Batch {
      * באותו מסלול (כמו XCOPY /S). היעד נוצר אם אינו קיים. בלי תבנית ובלי סינון — גם תיקיות ריקות (כמו /E).
      */
     private static void keep(Step s, String cmd, List<String> args, List<String> paths, Filter flt, Sim sim) {
-        if (paths.size() != 2) { s.error = Words.Cmd.usage(cmd); return; }
+        if (paths.size() != 2) { s.error = Commands.usage(cmd); return; }
         File dest = new File(paths.get(1));
         if (sim.isFile(dest)) { s.error = Words.Cmd.NO_DEST; return; }
         File src = new File(paths.get(0));
@@ -1809,7 +1809,7 @@ final class Batch {
             compList(s, args, paths, sim);
             return;
         }
-        if (paths.size() != 2) { s.error = Words.Cmd.usage("COMP"); return; }
+        if (paths.size() != 2) { s.error = Commands.usage("COMP"); return; }
         File a = new File(paths.get(0)), b = new File(paths.get(1));
         if (!a.isDirectory()) { s.error = Words.Cmd.compareNoSource(args.get(0)); return; }
         if (!b.isDirectory() && !sim.isDir(b)) { s.error = Words.Cmd.compareNoDest(args.get(1)); return; }
@@ -1824,7 +1824,7 @@ final class Batch {
 
     /** 1.22.0: COMP /רשימה:<שם> <יעד> — כל מה שברשימה, לפי <מפתח כונן>/<מסלול>, מול היעד. */
     private static void compList(Step s, List<String> args, List<String> paths, Sim sim) {
-        if (paths.size() != 1) { s.error = Words.Cmd.usage("COMP"); return; }
+        if (paths.size() != 1) { s.error = Commands.usage("COMP"); return; }
         File b = new File(paths.get(0));
         if (!b.isDirectory() && !sim.isDir(b)) { s.error = Words.Cmd.compareNoDest(args.get(0)); return; }
         if (sim.lib == null || !sim.lib.ready) { s.error = Words.Cmd.NEEDS_INDEX; return; }
@@ -1925,7 +1925,7 @@ final class Batch {
      * או מתיקיית היסטוריה — נכתב ביעד במסלול הלוגי שלו (יחסית לתת־התיקייה שנבחרה). הגיבוי עצמו — לא משתנה.
      */
     private static void restore(Step s, List<String> args, List<String> paths, Filter flt, Sim sim) {
-        if (paths.size() != 2) { s.error = Words.Cmd.usage("COPY"); return; }
+        if (paths.size() != 2) { s.error = Commands.usage("COPY"); return; }
         File src = new File(paths.get(0));
         String mask = null;
         if (src.getName().contains("*") || src.getName().contains("?")) {

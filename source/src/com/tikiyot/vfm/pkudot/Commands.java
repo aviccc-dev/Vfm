@@ -388,6 +388,12 @@ final class Commands {
 
     // ---------- שאילתות ----------
 
+    /** איך כותבים את הפקודה — נבנה מההגדרה האחת (1.22.5: עם המתגים עצמם). מבנה 24: היה במילון (Words.Cmd.usage), והמילון פנה בשבילו לכאן. */
+    static String usage(String cmd) {
+        Def d = get(cmd);
+        return d == null ? "" : d.usage();
+    }
+
     /** הפקודה לפי שם או שם נרדף (אנגלית — בלי תלות באותיות גדולות). null — לא מוכרת. */
     static Def get(String word) {
         if (word == null) return null;
