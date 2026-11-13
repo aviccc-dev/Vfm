@@ -558,7 +558,7 @@ final class Batch {
 
     // ---------- התחביר בעברית — במקום אחד (131). גם העורך לוקח מכאן. ----------
     /** משתנים: %פנימי% %כרטיס% %הורדות% %כאן%. */
-    static final String V_INTERNAL = Sources.INTERNAL, V_CARD = Sources.CARD, V_DOWNLOADS = "הורדות", V_HERE = "כאן";   // תחביר
+    static final String V_INTERNAL = Drive.INTERNAL, V_CARD = Drive.CARD, V_DOWNLOADS = "הורדות", V_HERE = "כאן";   // תחביר
     /**
      * 203: "%שיתוף%" — יעד שאינו תיקייה: מה שמועתק אליו נשלח למכשיר אחר בסוף (חלון תוכנות ההעברה, או היעד הקבוע).
      * המסלול שהוא מקבל — סימן שלא ייתכן בכונן.
@@ -1325,12 +1325,12 @@ final class Batch {
                 continue;
             }
             if (Program.isHeader(line)) continue;                             // 1.13.0: צלמית / שם / למה — כותרת התוכנה
-            if (Lab.isLine(line)) {                                           // מ0.38: הוסף/החלף מעבדה (לפני הפועל "הוסף"); מ0.40: ירדו — שגיאה עם הסבר
+            if (isLabLine(line)) {                                           // מ0.38: הוסף/החלף מעבדה (לפני הפועל "הוסף"); מ0.40: ירדו — שגיאה עם הסבר
                 Step s = new Step();
                 s.line = n + 1;
                 s.text = shown;
                 s.cmd = LAB;
-                Lab.plan(s);
+                planLabLine(s);
                 if (s.error != null) plan.errors++;
                 plan.steps.add(s);
                 continue;
@@ -2495,5 +2495,20 @@ final class Batch {
                 "/" + SW_DATE + "יום  /" + SW_DATE + "<שנה  /" + SW_SIZE + ">10MB",   // תחביר
                 SW_TAKEN + TAKEN_ASK, SW_TAKEN + TAKEN_SKIP,
                 "MOVE \"" + var(V_DOWNLOADS) + "\\*.pdf\" \"" + var(V_INTERNAL) + "\\ספרים\" /" + SW_DATE + "שבוע");   // תחביר
+    }
+
+    // ---------- הפקודות שירדו: "הוסף תוסף" / "החלף תוסף" (מבנה 11: עד כאן ב־Lab; אלה שורות של פקודות, לא ניהול התוספים) ----------
+
+    /** ירדו במ0.40 — שורה כזו היא שגיאה עם הסבר (ולא "הוסף" של הפעלים). */
+    static final String LAB_ADD = "הוסף תוסף", LAB_SWITCH = "החלף תוסף", LAB_OLD_ADD = "הוסף מעבדה", LAB_OLD_SWITCH = "החלף מעבדה";   // תחביר
+
+    static boolean isLabLine(String line) {
+        for (String w : new String[]{LAB_ADD, LAB_SWITCH, LAB_OLD_ADD, LAB_OLD_SWITCH}) if (line.equals(w) || line.startsWith(w + " ")) return true;
+        return false;
+    }
+
+    /** "הוסף תוסף" / "החלף תוסף" (וגם "… מעבדה"): ירדו במ0.40 — שגיאה שאומרת מה במקומן (ולא "הוסף" של הפעלים, שמבלבל). */
+    static void planLabLine(Step s) {
+        s.error = Words.Lab.GONE;
     }
 }

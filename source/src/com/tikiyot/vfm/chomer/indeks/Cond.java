@@ -420,4 +420,57 @@ public final class Cond {
         c.add(field, -amount);
         return c.getTimeInMillis();
     }
+
+    // ---------- המקורות שבתוך תנאי ("מקור:") — מבנה 11: עד כאן ב־Sources (רכיב של המסכים), וגם הרשימות החכמות נזקקו להם ----------
+
+    /** המקורות כתנאי אחד, או "" כשאין. */
+    public static String sourcesCond(List<String> list) {
+        if (list.isEmpty()) return "";
+        StringBuilder sb = new StringBuilder();
+        for (String s : list) sb.append(sb.length() > 0 ? "|" : "").append(s);
+        return "מקור:" + quote(sb.toString());  // תחביר
+    }
+
+    /** המקורות שבתוך תנאי (כולל תחביר ישן: תיקייה:/מסלול, כונן:). */
+    public static List<String> sourcesOf(String cond) {
+        List<String> out = new ArrayList<String>();
+        for (String tok : tokens(cond)) {
+            int c = tok.indexOf(':');
+            if (c < 0) continue;
+            String k = tok.substring(0, c), v = tok.substring(c + 1);
+            if (k.equals("מקור")) {  // תחביר
+                for (String x : v.split("\\|")) if (!x.trim().isEmpty()) out.add(x.trim());
+            } else if ((k.equals("תיקייה") || k.equals("תיקיה")) && oldPath(v)) {  // תחביר
+                for (String x : v.split("\\|")) if (x.startsWith("/")) out.add(x.trim());
+            } else if (k.equals("כונן")) {  // תחביר
+                if (v.contains("פנימי")) out.add(Drive.INTERNAL);  // תחביר
+                else if (v.contains("כרטיס")) out.add(Drive.CARD);  // תחביר
+            }
+        }
+        return out;
+    }
+
+    /**
+     * "תיקייה:/מסלול/מלא" (הצורה שלפני "מקור:") — מקור. אבל "תיקייה:/dcim/camera/" — שם תיקייה בכל מקום
+     * (נגמר ב"/", 1.7.67): נשאר תנאי סינון. בלי זה הדוגמאות "תיקיות בעלות משמעות" הפכו למקור שאינו קיים.
+     */
+    static boolean oldPath(String v) {
+        if (!v.startsWith("/")) return false;
+        for (String x : v.split("\\|")) if (x.trim().endsWith("/")) return false;
+        return true;
+    }
+
+    /** התנאי בלי רכיבי המקורות (מה שנשאר לסינון). */
+    public static String withoutSources(String cond) {
+        StringBuilder sb = new StringBuilder();
+        for (String tok : tokens(cond)) {
+            int c = tok.indexOf(':');
+            String k = c < 0 ? "" : tok.substring(0, c), v = c < 0 ? "" : tok.substring(c + 1);
+            boolean src = k.equals("מקור") || k.equals("כונן")  // תחביר
+                    || ((k.equals("תיקייה") || k.equals("תיקיה")) && oldPath(v));  // תחביר
+            if (src) continue;
+            sb.append(sb.length() > 0 ? " " : "").append(c < 0 ? tok : k + ":" + quote(v));
+        }
+        return sb.toString();
+    }
 }

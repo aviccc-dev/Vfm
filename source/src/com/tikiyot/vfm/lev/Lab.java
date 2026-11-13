@@ -22,8 +22,6 @@ import java.util.regex.Pattern;
 
 final class Lab {
 
-    /** ירדו במ0.40 — שורה כזו היא שגיאה עם הסבר (ולא "הוסף" של הפעלים). */
-    static final String ADD = "הוסף תוסף", SWITCH = "החלף תוסף", OLD_ADD = "הוסף מעבדה", OLD_SWITCH = "החלף מעבדה";   // תחביר
     /** שם קובץ של תוסף שהורד: "תוסף <שם> <גרסה>.html" (או "מעבדה …"; בתוך העמוד — meta, והוא קובע). */
     static final String PREFIX = "תוסף", OLD_PREFIX = "מעבדה";   // תחביר
     static final String DIR = "תוספים", OLD_DIR = "מעבדה", EXT = ".html";   // בכונן
@@ -282,17 +280,5 @@ final class Lab {
             } else c = s.compareTo(t);
             if (c != 0) return c;
         }
-    }
-
-    // ---------- הפקודות שירדו ----------
-
-    static boolean isLine(String line) {
-        for (String w : new String[]{ADD, SWITCH, OLD_ADD, OLD_SWITCH}) if (line.equals(w) || line.startsWith(w + " ")) return true;
-        return false;
-    }
-
-    /** "הוסף תוסף" / "החלף תוסף" (וגם "… מעבדה"): ירדו במ0.40 — שגיאה שאומרת מה במקומן (ולא "הוסף" של הפעלים, שמבלבל). */
-    static void plan(Batch.Step s) {
-        s.error = Words.Lab.GONE;
     }
 }

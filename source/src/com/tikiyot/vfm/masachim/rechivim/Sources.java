@@ -155,55 +155,23 @@ public final class Sources {
         return "📁 " + f.getName() + " · " + drive;
     }
 
-    /** המקורות כתנאי אחד, או "" כשאין. */
+    /** המקורות כתנאי אחד, או "" כשאין. מבנה 11: הפירוק והחיבור עצמם — ב־Cond (תחביר של תנאי, לא של המסך). */
     public static String toCond(List<String> list) {
-        if (list.isEmpty()) return "";
-        StringBuilder sb = new StringBuilder();
-        for (String s : list) sb.append(sb.length() > 0 ? "|" : "").append(s);
-        return "מקור:" + Cond.quote(sb.toString());  // תחביר
+        return Cond.sourcesCond(list);
     }
 
     /** המקורות שבתוך תנאי (כולל תחביר ישן: תיקייה:/מסלול, כונן:). */
     public static List<String> fromCond(String cond) {
-        List<String> out = new ArrayList<String>();
-        for (String tok : Cond.tokens(cond)) {
-            int c = tok.indexOf(':');
-            if (c < 0) continue;
-            String k = tok.substring(0, c), v = tok.substring(c + 1);
-            if (k.equals("מקור")) {  // תחביר
-                for (String x : v.split("\\|")) if (!x.trim().isEmpty()) out.add(x.trim());
-            } else if ((k.equals("תיקייה") || k.equals("תיקיה")) && oldPath(v)) {  // תחביר
-                for (String x : v.split("\\|")) if (x.startsWith("/")) out.add(x.trim());
-            } else if (k.equals("כונן")) {  // תחביר
-                if (v.contains("פנימי")) out.add(INTERNAL);  // תחביר
-                else if (v.contains("כרטיס")) out.add(CARD);  // תחביר
-            }
-        }
-        return out;
+        return Cond.sourcesOf(cond);
     }
 
-    /**
-     * "תיקייה:/מסלול/מלא" (הצורה שלפני "מקור:") — מקור. אבל "תיקייה:/dcim/camera/" — שם תיקייה בכל מקום
-     * (נגמר ב"/", 1.7.67): נשאר תנאי סינון. בלי זה הדוגמאות "תיקיות בעלות משמעות" הפכו למקור שאינו קיים.
-     */
     static boolean oldPath(String v) {
-        if (!v.startsWith("/")) return false;
-        for (String x : v.split("\\|")) if (x.trim().endsWith("/")) return false;
-        return true;
+        return Cond.oldPath(v);
     }
 
     /** התנאי בלי רכיבי המקורות (מה שנשאר לסינון). */
     public static String rest(String cond) {
-        StringBuilder sb = new StringBuilder();
-        for (String tok : Cond.tokens(cond)) {
-            int c = tok.indexOf(':');
-            String k = c < 0 ? "" : tok.substring(0, c), v = c < 0 ? "" : tok.substring(c + 1);
-            boolean src = k.equals("מקור") || k.equals("כונן")  // תחביר
-                    || ((k.equals("תיקייה") || k.equals("תיקיה")) && oldPath(v));  // תחביר
-            if (src) continue;
-            sb.append(sb.length() > 0 ? " " : "").append(c < 0 ? tok : k + ":" + Cond.quote(v));
-        }
-        return sb.toString();
+        return Cond.withoutSources(cond);
     }
 
     /** תיאור במילים של תנאי מקורות, לראש מסך. */

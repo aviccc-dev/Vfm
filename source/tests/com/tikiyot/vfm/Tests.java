@@ -1743,8 +1743,8 @@ public final class Tests {
         check("מ0.40: שם וגרסה של תוסף — מתוך העמוד (vfm-plugin)", a[0].equals("עורך אינטראקטיבי") && a[1].equals("4"));
         a = Lab.nameOf("<p>", "תוסף עורך 2.html");
         check("מ0.40: בלי meta — משם הקובץ שמתחיל ב\"תוסף\"", a[0].equals("עורך") && a[1].equals("2"));
-        check("מ0.40: הפקודות שירדו — מזוהות (כדי לומר מה במקומן)", Lab.isLine("הוסף תוסף") && Lab.isLine("החלף תוסף \"א\" \"1\"") && Lab.isLine("הוסף מעבדה")
-                && !Lab.isLine("הוסף מהכונן"));
+        check("מ0.40: הפקודות שירדו — מזוהות (כדי לומר מה במקומן)", Batch.isLabLine("הוסף תוסף") && Batch.isLabLine("החלף תוסף \"א\" \"1\"") && Batch.isLabLine("הוסף מעבדה")
+                && !Batch.isLabLine("הוסף מהכונן"));
         Verbs.Cmd pc = Verbs.parse("פתח תוסף \"עורך אינטראקטיבי\""), pe = Verbs.parse("פתח תוסף"), ps = Verbs.parse("פתח מסך תוספים");
         check("מ0.40: פתח תוסף \"<שם>\" · פתח תוסף · פתח מסך תוספים", pc.error == null && Verbs.K_SCREEN.equals(pc.kind) && Verbs.S_PLUGINS.equals(pc.arg)
                 && pc.cond.equals("עורך אינטראקטיבי") && pc.ver.isEmpty() && pe.error == null && pe.cond.isEmpty() && ps.error == null && Verbs.S_PLUGINS.equals(ps.arg));

@@ -25,7 +25,7 @@ final class SmartLists {
 
     /** הרשימות המוכנות: שם, תנאי, מיון, כיוון, תצוגה. */
     static final String[][] PRESETS = {
-            {FILE_MANAGER, Sources.toCond(java.util.Arrays.asList(Sources.INTERNAL, Sources.CARD)), Sort.NAME, "", FolderView.ALL},
+            {FILE_MANAGER, Cond.sourcesCond(java.util.Arrays.asList(Drive.INTERNAL, Drive.CARD)), Sort.NAME, "", FolderView.ALL},
             {"אחרונים", DateSize.DATE + "שבוע", Sort.DATE, "", FolderView.FLAT},  // לפי תאריך — החדש קודם בלי "יורד" (שהופך) // תחביר
             {"נוספו השבוע", DateSize.ADDED + "שבוע", Sort.ADDED, "", FolderView.FLAT},          // 189 // תחביר
             {"כל קבצי המדיה", Cond.TYPE + ":תמונות|שמע|וידאו", Sort.DATE, "", FolderView.FLAT},  // תחביר
@@ -92,12 +92,12 @@ final class SmartLists {
      */
     static String[] split(String cond) {
         if (cond == null) cond = "";
-        StringBuilder base = new StringBuilder(Sources.toCond(Sources.fromCond(cond)));
+        StringBuilder base = new StringBuilder(Cond.sourcesCond(Cond.sourcesOf(cond)));
         StringBuilder words = new StringBuilder();
         DateSize ds = new DateSize();
         ds.allowAdded = true;                                                 // 189
         boolean kind = false;
-        for (String token : Cond.tokens(Sources.rest(cond))) {
+        for (String token : Cond.tokens(Cond.withoutSources(cond))) {
             boolean setting = false;
             if (!kind && Cond.keyIs(token, Cond.TYPE)) kind = setting = true;
             else if (ds.take(token) || Cond.isEmptyDirs(token)) setting = true;   // 175: לחלונית ההגדרות
