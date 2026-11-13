@@ -3098,16 +3098,17 @@ public final class Tests {
         // 185 (1.7.82): כל הקבצים, חוץ מהמילון עצמו. תחביר ושמות בכונן — מסומנים בשורה ("// תחביר", "// בכונן")
         // מ0.45: CmdMatrix — קובץ פקודות של בדיקה, כולו תחביר (Diag, שהיה כאן, נמחק במ0.43)
         java.util.Set<String> notYet = new java.util.HashSet<String>(Arrays.asList("Words", "CmdMatrix"));
-        File[] srcs = dir.listFiles();
+        // מבנה 1 (13.11.2026): הקוד מתחלק לתיקיות לפי נושא (החבילה אחת) — הבדיקה עוברת על כל התיקיות, בכל העומק
+        List<File> all = javaFiles(dir);
+        java.util.Map<String, File> byName = new java.util.TreeMap<String, File>();
+        for (File x : all) byName.put(x.getName().replace(".java", ""), x);
         List<String> names = new ArrayList<String>();
-        if (srcs != null) for (File x : srcs)
-            if (x.getName().endsWith(".java") && !notYet.contains(x.getName().replace(".java", ""))) names.add(x.getName().replace(".java", ""));
-        Collections.sort(names);
+        for (String n : byName.keySet()) if (!notYet.contains(n)) names.add(n);
         check("185: הבדיקה עוברת על כל הקבצים (" + names.size() + ")", names.size() > 60);
         for (String name : names) {
             List<String> loose = new ArrayList<String>();
             try {
-                for (String[] l : literals(Files.readUtf8(new File(dir, name + ".java"))))
+                for (String[] l : literals(Files.readUtf8(byName.get(name))))
                     if (hebrew(l[0]) && !l[1].contains("// תחביר") && !l[1].contains("// בכונן") && !l[1].contains("Log."))
                         loose.add(l[0]);
             } catch (Exception e) {
@@ -3119,10 +3120,8 @@ public final class Tests {
         String[] once = {"ביטול", "סגירה", "לא נבחר דבר", "צריך שם", "הרשימה לא נמצאה", "הקובץ לא נמצא במסלול שלו",
                 "לא נוגע בקבצים", "נשמר גיבוי לפני המחיקה, בתיקייה .גיבויים", "טוען את האינדקס…", "המחיקה נכשלה",
                 "שינוי השם נכשל", "ההעתקה נכשלה", "השחזור נכשל", "הדבקה כאן", "קובץ אחד", "תיקייה אחת", "פריט אחד", "רשימה אחת"};
-        File[] all = dir.listFiles();
         for (String w : once) {
             List<String> where = new ArrayList<String>();
-            if (all != null)
                 for (File f : all) {
                     if (!f.getName().endsWith(".java") || f.getName().equals("Words.java")) continue;
                     try {
@@ -3133,6 +3132,17 @@ public final class Tests {
                 }
             check("131: \"" + w + "\" — רק במילון" + (where.isEmpty() ? "" : ": " + where), where.isEmpty());
         }
+    }
+
+    /** כל קובצי הקוד שמתחת לתיקייה, בכל העומק. */
+    private static List<File> javaFiles(File dir) {
+        List<File> out = new ArrayList<File>();
+        File[] k = dir.listFiles();
+        if (k != null) for (File x : k) {
+            if (x.isDirectory()) out.addAll(javaFiles(x));
+            else if (x.getName().endsWith(".java")) out.add(x);
+        }
+        return out;
     }
 
     /** 144: תנאי תאריך וכונן — דרך החיפוש עצמו (השאילתה מנורמלת), לא רק דרך Cond. */
