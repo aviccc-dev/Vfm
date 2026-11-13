@@ -1,6 +1,6 @@
 # פניות "כלפי מעלה": קובץ > קובץ מקומה שמעליו. הקומות, מלמטה למעלה: [basis, chomer, pkudot, lev, masachim]
 # הרשימה רק מתקצרת (MivneTests): פנייה חדשה — הבדיקות נכשלות; פנייה שנפתרה — מורידים את השורה.
-# נכתב מהקוד: 6 זוגות, 21 הופעות.
+# נכתב מהקוד: 5 זוגות, 20 הופעות.
 
 # (basis ← chomer)
 Words > Backups
@@ -12,6 +12,3 @@ Words > Commands
 DbExamples > DbListCmd
 DbExamples > Reserved
 DbMore > DbListCmd
-
-# (chomer ← masachim)
-Sig > DbPicker

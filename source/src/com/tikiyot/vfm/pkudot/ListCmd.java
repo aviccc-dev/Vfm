@@ -183,11 +183,9 @@ final class ListCmd {
         if (s.path.isEmpty() && s.mask == null) s.home = true;
     }
 
-    /** "א\ב" — כמו שהפקודות כותבות דרך לרשימה. */
+    /** "א\ב" — כמו שהפקודות כותבות דרך לרשימה. מבנה 18: הכתיבה עצמה — ב־Names (גם החומר כותב דרך כזו). */
     static String pathText(List<String> path) {
-        StringBuilder sb = new StringBuilder();
-        for (String p : path) sb.append(sb.length() > 0 ? "\\" : "").append(p);
-        return sb.toString();
+        return Names.pathText(path);
     }
 
     /** התנאים — מילה מול מילה: מה רק באחת, מה רק בשנייה. */

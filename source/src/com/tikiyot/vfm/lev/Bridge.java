@@ -31,7 +31,7 @@ final class Bridge {
         /** קובץ הפקודות לפתוח בעורך (מרשימה, מהפס הצף) — פעם אחת; null — אין. */
         String startFile();
 
-        // --- מבנה 15: מה שהגשר מבקש מהמסך — ההודעות, הבוררים, הטופס, ההרצה, השליחה והצבעים. נקראות על חוט המסך (חוץ מ־colors ו־smartLists). ---
+        // --- מבנה 15: מה שהגשר מבקש מהמסך — ההודעות, הבוררים, הטופס, ההרצה, השליחה והצבעים. נקראות על חוט המסך (חוץ מ־colors). ---
 
         /** הודעה קצרה. */
         void toast(String text);
@@ -56,9 +56,6 @@ final class Bridge {
 
         /** הצבעים של התוכנה: שם ← צבע. */
         Map<String, Integer> colors();
-
-        /** שמות הרשימות החכמות של האופן. */
-        List<String> smartLists();
     }
 
     interface Picked {
@@ -354,7 +351,7 @@ final class Bridge {
     public String smartLists() {
         JSONArray a = new JSONArray();
         try {
-            List<String> sm = host.smartLists();
+            List<String> sm = DbLists.names(screen).get("smart");   // מבנה 18: ישר מהחומר (עד כאן — דרך המסך)
             if (sm != null) for (String x : sm) a.put(x);
         } catch (Throwable t) {
             Log.e("Lab.smartLists", t);

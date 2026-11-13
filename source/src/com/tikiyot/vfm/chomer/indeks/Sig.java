@@ -275,7 +275,7 @@ final class Sig {
                     try {
                         for (int i = 0; i < 300 && !lib.ready; i++) Thread.sleep(200);
                         for (int round = 0; round < 20; round++) {           // קובץ שמשתנה כל הזמן — לא לנצח
-                            Status s = status(lib, DbPicker.listsForSig());   // פעם אחת לסבב (מ0.23: במסד — הרשימות של המסד)
+                            Status s = status(lib, DbLists.listsForSig());   // פעם אחת לסבב (מ0.23: במסד — הרשימות של המסד)
                             lastDone = s.done;
                             lastTotal = s.total;
                             if (s.todo.isEmpty()) {

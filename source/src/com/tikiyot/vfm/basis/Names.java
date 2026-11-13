@@ -53,4 +53,11 @@ final class Names {
     static String label(List<String> path) {
         return path == null || path.isEmpty() ? Words.ROOT : path.get(path.size() - 1);
     }
+
+    /** "א\ב" — כמו שהפקודות כותבות דרך לרשימה. */
+    static String pathText(List<String> path) {
+        StringBuilder sb = new StringBuilder();
+        for (String p : path) sb.append(sb.length() > 0 ? "\\" : "").append(p);
+        return sb.toString();
+    }
 }

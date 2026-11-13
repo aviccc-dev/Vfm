@@ -15,7 +15,7 @@ public final class Acts {
 
     /** הוספת קבצים לרשימה, עם בורר יעד. */
     public static void addToList(final Activity a, final List<String> paths) {
-        if (DbPicker.on(a)) {                                                 // מ0.23: עובדים במסד — לרשימה במסד
+        if (DbLists.on(a)) {                                                 // מ0.23: עובדים במסד — לרשימה במסד
             Library.get(a).learn(paths);
             DbPicker.addFiles(a, paths, null);
             return;

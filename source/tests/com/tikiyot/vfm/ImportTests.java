@@ -295,21 +295,21 @@ final class ImportTests {
                 DbFollow.designRenamed(s, "כחול", "ים") == 1 && "ים".equals(s.prop(b, Store.P_DESIGN))
                         && DbFollow.designRenamed(s, "ים", "") == 1 && s.prop(b, Store.P_DESIGN) == null);
 
-        // --- בורר הרשימות של המסד (DbPicker.Snap) ---
+        // --- בורר הרשימות של המסד (DbLists.Snap) ---
         long a2 = s.createList("א", home);                                   // שם כפול באותה רשימה (נוצר לפני התיקון)
         long loose = s.createList("עצמאית", 0);
         long sm = s.createSmart("חכמה-בבית", home), sm2 = s.createSmart("חכמה-בא", a), sm3 = s.createSmart("לבד", 0);
-        DbPicker.Snap snap = DbPicker.Snap.of(s);
+        DbLists.Snap snap = DbLists.Snap.of(s);
         ck("בורר: השורש — הרשימות שבבית, ואחריהן מה שאינו בשום רשימה", snap.kids.get("").equals(Arrays.asList("א", "ג", "א (2)", "עצמאית")));
         ck("בורר: לכל מסלול — הרשימה הנכונה (גם הכפולה)", snap.id(Names.parsePath("א/ב")) == b && snap.id(Names.parsePath("א (2)")) == a2
                 && snap.id(Names.parsePath("עצמאית")) == loose && snap.id(Names.parsePath("אין")) == 0 && snap.home == home);
         ck("בורר: כל המסלולים בצורת הפקודות", snap.paths().equals(Arrays.asList("א", "א\\ב", "ג", "א (2)", "עצמאית")));
         ck("בורר: החכמות בשם שהפקודות מכירות", snap.smarts.equals(Arrays.asList("חכמה-בבית", "לבד", "א\\חכמה-בא")));
         DbFiles.add(s, a2, Arrays.asList(p2), null);
-        java.util.Map<String, List<String>> where = DbPicker.whereListed(s);
+        java.util.Map<String, List<String>> where = DbLists.whereListed(s);
         ck("בורר: איפה כל קובץ — מסלול מלא", where.get(p2) != null && where.get(p2).containsAll(Arrays.asList("א", "א (2)"))
                 && where.get(p2).size() == 2 && where.get(p3) == null);
-        Tree mt = DbPicker.asTree(s);
+        Tree mt = DbLists.asTree(s);
 
         // --- בדיקת השם האחת (REN, הגדרות, ➕) ---
         ck("שם: ➕ רשימה חדשה בשם תפוס — שגיאה, לא כפולה", DbListCmd.newListChecked(s, home, "ג").error != null

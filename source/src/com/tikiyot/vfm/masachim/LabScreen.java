@@ -362,7 +362,5 @@ public final class LabScreen extends Activity {
             o.put("rule", Ui.RULE); o.put("onColor", Ui.ON_COLOR);
             return o;
         }
-
-        @Override public List<String> smartLists() { return DbPicker.names(LabScreen.this).get("smart"); }
     }
 }

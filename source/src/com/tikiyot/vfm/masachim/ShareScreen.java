@@ -120,7 +120,7 @@ public class ShareScreen extends Activity {
         status.setText(Words.ShareIn.ADD_N + files.size() + Words.ShareIn.FILES_TO_LIST + Words.NO_TOUCH
                 + (unresolved > 0 ? "\n(" + unresolved + Words.ShareIn.NOT_IDENTIFIED : ""));
         // 126: הבורר האחד (תיקיות / עץ, חיפוש, תצוגה אחרונה) — במקום שורות משלו
-        if (!DbPicker.on(this)) {                                             // מ0.29: רשימות — רק במסד
+        if (!DbLists.on(this)) {                                             // מ0.29: רשימות — רק במסד
             status.setText(Words.ShareIn.NO_LISTS_YET);
             return;
         }
@@ -129,7 +129,7 @@ public class ShareScreen extends Activity {
     }
 
     private void pick() {
-        if (DbPicker.on(this)) {                                              // מ0.23: עובדים במסד — לרשימה במסד
+        if (DbLists.on(this)) {                                              // מ0.23: עובדים במסד — לרשימה במסד
             DbPicker.choose(this, Words.ADD_TO_LIST, new DbPicker.Picked() {
                 @Override
                 public void ok(String mode, long id, List<String> path) {

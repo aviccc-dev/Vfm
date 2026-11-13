@@ -22,7 +22,7 @@ public final class Adder {
      * הרשימה — נבחרת בבורר היעד.
      */
     public static void many(final Activity a, final List<File> folders, final List<String> files, final Done done) {
-        if (DbPicker.on(a)) {                                                 // מ0.23: עובדים במסד — הרשימות של המסד
+        if (DbLists.on(a)) {                                                 // מ0.23: עובדים במסד — הרשימות של המסד
             manyDb(a, folders, files, done);
             return;
         }
