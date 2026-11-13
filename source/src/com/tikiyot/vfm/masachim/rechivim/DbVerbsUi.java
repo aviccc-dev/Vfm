@@ -214,7 +214,7 @@ final class DbVerbsUi {
     static long write(Activity a, String mode, Job job, List<String> path) {
         SqlStore s = null;
         try {
-            s = SqlStore.open(Db.dbFile(a, mode), new IdCounter(Db.counterFile()));
+            s = Db.open(a, mode);
             return job.run(s, path);
         } catch (Throwable t) {
             Log.e("DbVerbsUi.write", t);
@@ -233,7 +233,7 @@ final class DbVerbsUi {
     private static long read(Activity a, String mode, List<String> path) {
         SqlStore s = null;
         try {
-            s = SqlStore.openReadOnly(Db.dbFile(a, mode));
+            s = Db.openRead(a, mode);
             return DbPaths.find(s, mode, path);
         } catch (Throwable t) {
             Log.e("DbVerbs.read", t);
@@ -246,7 +246,7 @@ final class DbVerbsUi {
     private static long readSmart(Activity a, String mode, String name) {
         SqlStore s = null;
         try {
-            s = SqlStore.openReadOnly(Db.dbFile(a, mode));
+            s = Db.openRead(a, mode);
             return DbPaths.smart(s, name);
         } catch (Throwable t) {
             Log.e("DbVerbs.smart", t);
@@ -260,7 +260,7 @@ final class DbVerbsUi {
     private static void openSmart(Activity a, String mode, long id, String sort) {
         SqlStore s = null;
         try {
-            s = SqlStore.openReadOnly(Db.dbFile(a, mode));
+            s = Db.openRead(a, mode);
             Store.Item it = s.item(id);
             String cond = s.prop(id, Store.P_COND), own = s.prop(id, Store.P_SORT), view = s.prop(id, Store.P_VIEW);
             DbListScreen.openSmart(a, it == null ? "" : it.name, cond, sort != null && !sort.isEmpty() ? sort : own, view);

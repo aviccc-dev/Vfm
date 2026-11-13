@@ -132,7 +132,7 @@ final class DbLists {
     static Snap snap(android.content.Context c, String mode) {
         SqlStore s = null;
         try {
-            s = SqlStore.openReadOnly(Db.dbFile(c, mode));
+            s = Db.openRead(c, mode);
             return Snap.of(s);
         } catch (Throwable t) {
             Log.e("DbLists.snap", t);
@@ -184,7 +184,7 @@ final class DbLists {
     static Map<String, List<String>> whereListed(android.content.Context c) {
         SqlStore s = null;
         try {
-            s = SqlStore.openReadOnly(Db.dbFile(c, mode(c)));
+            s = Db.openRead(c, mode(c));
             return whereListed(s);
         } catch (Throwable t) {
             Log.e("DbLists.whereListed", t);
@@ -220,7 +220,7 @@ final class DbLists {
         }
         SqlStore s = null;
         try {
-            s = SqlStore.openReadOnly(Db.dbFile(c, mode(c)));
+            s = Db.openRead(c, mode(c));
             return asTree(s);
         } catch (Throwable t) {
             Log.e("DbLists.listsForSig", t);

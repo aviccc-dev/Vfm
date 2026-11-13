@@ -27,6 +27,23 @@ final class Db {
 
     private Db() { }
 
+    // --- פתיחת המסד של אופן — המקום האחד (מבנה 20): עד כאן נכתבה אותה שורה ב־11 קבצים ---
+
+    /** המסד של האופן, לקריאה בלבד. הסגירה — אצל הקורא. */
+    static SqlStore openRead(android.content.Context c, String mode) {
+        return SqlStore.openReadOnly(dbFile(c, mode));
+    }
+
+    /** קובץ מסד של אופן (מי שעובר על כל האופנים מחזיק את הקובץ), לקריאה בלבד. */
+    static SqlStore openRead(File db) {
+        return SqlStore.openReadOnly(db);
+    }
+
+    /** המסד של האופן, לכתיבה (עם קובץ המונה). הסגירה — אצל הקורא. */
+    static SqlStore open(android.content.Context c, String mode) throws java.io.IOException {
+        return SqlStore.open(dbFile(c, mode), new IdCounter(counterFile()));
+    }
+
     static File dbFile(android.content.Context c, String mode) {
         return c.getDatabasePath(DB_PREFIX + mode + DB_SUFFIX);
     }
@@ -99,13 +116,13 @@ final class Db {
         SqlStore s = null;
         try {
             if (Db.dbFile(c, mode).isFile()) {                                    // קיים — רק קוראים (לא נוגעים במסד שיש בו בית)
-                s = SqlStore.openReadOnly(Db.dbFile(c, mode));
+                s = Db.openRead(c, mode);
                 long h = DbPaths.home(s);
                 if (h != 0) return h;
                 s.close();
                 s = null;
             }
-            s = SqlStore.open(Db.dbFile(c, mode), new IdCounter(Db.counterFile()));
+            s = Db.open(c, mode);
             setup(c, s, mode);
             return DbPaths.home(s);
         } catch (Throwable t) {
@@ -120,7 +137,7 @@ final class Db {
     static String restoreExamples(android.content.Context c) {
         SqlStore s = null;
         try {
-            s = SqlStore.open(Db.dbFile(c, DbExamples.MODE), new IdCounter(Db.counterFile()));
+            s = Db.open(c, DbExamples.MODE);
             try {
                 Db.backupsOf(c, DbExamples.MODE).before(s, Backups.OP_RESTORE, System.currentTimeMillis());
             } catch (Throwable t) {

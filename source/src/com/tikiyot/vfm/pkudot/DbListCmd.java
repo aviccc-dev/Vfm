@@ -440,7 +440,7 @@ final class DbListCmd {
         if (dest == 0) return Res.err(b.home ? Words.DbCmd.NO_HOME : Words.ListCmdW.noList(b.raw));
         SqlStore src = null;
         try {
-            src = SqlStore.openReadOnly(Db.dbFile(Db.app, srcMode));
+            src = Db.openRead(Db.app, srcMode);
             return copyAcross(src, srcMode, a, t, dest, b.label());
         } finally {
             if (src != null) src.close();
@@ -932,7 +932,7 @@ final class DbListCmd {
             public String run(Library lib) {
                 SqlStore st = null;
                 try {
-                    st = SqlStore.openReadOnly(Db.dbFile(Db.app, mode));
+                    st = Db.openRead(Db.app, mode);
                     String[] f = {""};
                     boolean ok = verify(st, mode, a, e, f);
                     s.verified = ok;
@@ -1073,7 +1073,7 @@ final class DbListCmd {
                 for (String m : Db.dbModes(c)) {
                     SqlStore st = null;
                     try {
-                        st = SqlStore.openReadOnly(Db.dbFile(c, m));
+                        st = Db.openRead(c, m);
                         String chk = st.check();
                         if (chk == null) good++;
                         else bad.add(m + ": " + chk);
@@ -1153,7 +1153,7 @@ final class DbListCmd {
                 boolean kept = false;
                 SqlStore st = null;
                 try {
-                    st = SqlStore.open(f, new IdCounter(Db.counterFile()));
+                    st = Db.open(c, name);
                     long home = DbPaths.home(st);
                     boolean empty = st.lists().isEmpty() && st.smarts().isEmpty() && st.unassigned().isEmpty()
                             && (home == 0 || st.members(home).isEmpty());
@@ -1194,7 +1194,7 @@ final class DbListCmd {
     /** העותק בזיכרון — פעם אחת לכל קובץ פקודות (השורות הבאות רואות מה שהקודמות עשו). */
     private static Store sim(Batch.Sim sim, String mode) {
         if (sim.db != null) return sim.db;
-        SqlStore real = SqlStore.openReadOnly(Db.dbFile(Db.app, mode));
+        SqlStore real = Db.openRead(Db.app, mode);
         try {
             sim.db = copyOf(real);
         } finally {
@@ -1256,7 +1256,7 @@ final class DbListCmd {
     static String backupNow(String mode) {
         SqlStore s = null;
         try {
-            s = SqlStore.open(Db.dbFile(Db.app, mode), new IdCounter(Db.counterFile()));
+            s = Db.open(Db.app, mode);
             List<Backups.Entry> made = Db.backupsOf(Db.app, mode).manual(s, System.currentTimeMillis());
             StringBuilder names = new StringBuilder();
             for (Backups.Entry e : made) names.append(names.length() > 0 ? ", " : "").append(e.name);
@@ -1287,7 +1287,7 @@ final class DbListCmd {
     private static Res realRes(String mode, Work w, boolean before, Library lib) {
         SqlStore s = null;
         try {
-            s = SqlStore.open(Db.dbFile(Db.app, mode), new IdCounter(Db.counterFile()));
+            s = Db.open(Db.app, mode);
             if (before) {
                 try {
                     Db.backupsOf(Db.app, mode).before(s, Backups.OP_DELETE, System.currentTimeMillis());

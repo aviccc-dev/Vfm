@@ -70,7 +70,7 @@ public class DbScreen extends Activity {
         long home = 0;
         SqlStore s = null;
         try {
-            s = SqlStore.openReadOnly(Db.dbFile(a, m));
+            s = Db.openRead(a, m);
             home = DbPaths.home(s);
         } catch (Throwable t) {
             Log.e("DbScreen.openBackups", t);
@@ -195,7 +195,7 @@ public class DbScreen extends Activity {
         if (store == null) {
             damaged = null;
             try {
-                store = SqlStore.open(Db.dbFile(this, mode), new IdCounter(Db.counterFile()));
+                store = Db.open(this, mode);
             } catch (SqlStore.Damaged d) {
                 Log.e("DbScreen.open", d);
                 damaged = String.valueOf(d.getMessage());

@@ -598,7 +598,7 @@ final class Bridge {
                 o.put("mode", m);
                 o.put("kb", f.length() / 1024);
                 try {
-                    s = SqlStore.openReadOnly(f);
+                    s = Db.openRead(screen, m);
                     long home = DbPaths.home(s);
                     o.put("ok", true);
                     o.put("lists", s.lists().size());

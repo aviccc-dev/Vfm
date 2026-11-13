@@ -6,6 +6,7 @@ package com.tikiyot.vfm;
 //   א. כל קובץ יושב באחת מחמש התיקיות (המשתמש: "צריך לבדוק שכל הנושאים נכללו בחמישה האלה").
 //   ב. פנייה "כלפי מעלה" (קובץ שמזכיר קובץ מקומה שמעליו) — רק מה שרשום ב־tests/mivne/lemala.txt. הרשימה רק מתקצרת:
 //      פנייה חדשה — נכשל; פנייה שנפתרה ועדיין רשומה — נכשל, עד שמורידים את השורה.
+//   ג. שער המסד: SqlStore.open / openReadOnly — רק ב־Db (ובמנוע, בגיבויים ובבדיקות המנוע).
 // הספירה — לפי הטקסט: שם של קובץ אחר, אחרי הסרת הערות ומחרוזות; שם שאחרי נקודה (Menus.Tree), שם של מחלקה פנימית
 // של הקובץ עצמו ושם שיובא מבחוץ (import) — לא נספרים.
 // לכתוב את הרשימה מחדש (אחרי שפניות נפתרו): להריץ את הבדיקות עם ‎-Dvfm.mivne.write=1.
@@ -32,6 +33,8 @@ final class MivneTests {
     /** הקומות, מלמטה למעלה. */
     static final List<String> LEVELS = Arrays.asList("basis", "chomer", "pkudot", "lev", "masachim");
     static final String CODE = "src/com/tikiyot/vfm", LIST = "tests/mivne/lemala.txt";
+    /** מי שרשאי לפתוח מסד ישירות: המנוע עצמו, שער המסד, הגיבויים (קובצי גיבוי), ובדיקות המנוע. */
+    static final List<String> GATE = Arrays.asList("SqlStore", "Db", "Backups", "BackupContract", "StoreContract");
 
     private MivneTests() { }
 
@@ -46,6 +49,19 @@ final class MivneTests {
         // א. כל קובץ באחת מחמש התיקיות
         if (homeless.isEmpty() && files.size() > 100) o.passed++;
         else o.failed.add("קובץ שאינו באחת מחמש התיקיות (" + LEVELS + "): " + homeless + " · קבצים: " + files.size());
+
+        // ג. שער המסד (מבנה 20): מסד של אופן נפתח רק דרך Db.open / Db.openRead — מקום אחד, שבו אפשר להוסיף הגנות לכולם
+        List<String> opens = new ArrayList<String>();
+        for (Map.Entry<String, File> e : files.entrySet()) {
+            if (GATE.contains(e.getKey())) continue;
+            try {
+                if (strip(Files.readUtf8(e.getValue())).contains("SqlStore.open")) opens.add(e.getKey());
+            } catch (Exception x) {
+                opens.add(e.getKey() + ": " + x);
+            }
+        }
+        if (opens.isEmpty()) o.passed++;
+        else o.failed.add("מסד נפתח שלא דרך שער המסד (Db.open / Db.openRead): " + opens);
 
         // ב. פניות כלפי מעלה
         Set<String> now = new TreeSet<String>();

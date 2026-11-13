@@ -80,7 +80,7 @@ final class Shortcuts {
         commandFiles(s, paths);
         android.content.Context c = Db.app;
         if (c != null && !Db.MENUS_MODE.equals(mode) && Db.dbFile(c, Db.MENUS_MODE).isFile()) {
-            SqlStore m = SqlStore.openReadOnly(Db.dbFile(c, Db.MENUS_MODE));
+            SqlStore m = Db.openRead(c, Db.MENUS_MODE);
             try {
                 commandFiles(m, paths);
             } finally {

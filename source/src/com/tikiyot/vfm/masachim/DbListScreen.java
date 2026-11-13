@@ -72,7 +72,7 @@ public class DbListScreen extends ListScreen<Store.Member> {
             public void run() {
                 SqlStore s = null;
                 try {
-                    s = SqlStore.open(Db.dbFile(c, m), new IdCounter(Db.counterFile()));
+                    s = Db.open(c, m);
                     Db.backupsOf(c, m).before(s, Backups.OP_EXIT, System.currentTimeMillis());
                 } catch (Throwable t) {
                     Log.e("DbListScreen.exitCopy", t);
@@ -153,7 +153,7 @@ public class DbListScreen extends ListScreen<Store.Member> {
     private boolean homeNow() {
         SqlStore s = null;
         try {
-            s = SqlStore.openReadOnly(Db.dbFile(this, mode));
+            s = Db.openRead(this, mode);
             return "1".equals(s.prop(listId, Store.P_HOME));
         } catch (Throwable t) {
             return false;
@@ -166,7 +166,7 @@ public class DbListScreen extends ListScreen<Store.Member> {
     private boolean openStore() {
         closeStore();
         try {
-            store = SqlStore.openReadOnly(Db.dbFile(this, mode));
+            store = Db.openRead(this, mode);
             return true;
         } catch (Throwable t) {
             Log.e("DbListScreen.open", t);
@@ -229,7 +229,7 @@ public class DbListScreen extends ListScreen<Store.Member> {
                 final java.util.Map<Long, String> out = new java.util.HashMap<Long, String>();
                 SqlStore s = null;
                 try {
-                    s = SqlStore.openReadOnly(db);
+                    s = Db.openRead(db);
                     final ListCount.FromLibrary fl = new ListCount.FromLibrary(lib);
                     DbCount.Index ix = new DbCount.Index() {
                         @Override public long[] cond(String c) { return fl.byCond(c); }
@@ -298,7 +298,7 @@ public class DbListScreen extends ListScreen<Store.Member> {
                 SqlStore s = null;
                 long h = 0;
                 try {
-                    s = SqlStore.openReadOnly(Db.dbFile(DbListScreen.this, m));
+                    s = Db.openRead(DbListScreen.this, m);
                     h = DbPaths.home(s);
                 } catch (Throwable t) {
                     Log.e("DbListScreen.mode", t);

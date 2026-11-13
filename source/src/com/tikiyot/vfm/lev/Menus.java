@@ -355,7 +355,7 @@ final class Menus {
         if (Db.dbFile(c, mode).isFile()) {
             SqlStore s = null;
             try {
-                s = SqlStore.openReadOnly(Db.dbFile(c, mode));
+                s = Db.openRead(c, mode);
                 t = tree(s, mode);
             } catch (Throwable e) {
                 Log.e("Menus.load " + mode, e);
@@ -375,7 +375,7 @@ final class Menus {
         SqlStore s = null;
         try {
             if (Db.dbFile(c, MODE).isFile()) {
-                s = SqlStore.openReadOnly(Db.dbFile(c, MODE));
+                s = Db.openRead(c, MODE);
                 long home = DbPaths.home(s);
                 boolean done = home != 0 && "1".equals(s.prop(home, P_INSTALLED));
                 s.close();
@@ -397,12 +397,12 @@ final class Menus {
     private static void install(Context c) throws Exception {
         String internal = android.os.Environment.getExternalStorageDirectory().getAbsolutePath();
         DbExamples.files(null);                                               // קובצי פקודות המערכת והכלים — בכונן
-        SqlStore s = SqlStore.open(Db.dbFile(c, MODE), new IdCounter(Db.counterFile()));
+        SqlStore s = Db.open(c, MODE);
         try {
             DbMore.Imported d = defaults(s, DbExamples.asset(c, ASSET), internal);
             Log.i("התפריטים: ברירת המחדל — " + d.lists + " רשימות, " + d.files + " פקודות");
             if (Db.dbFile(c, DbExamples.MODE).isFile()) {
-                SqlStore ex = SqlStore.open(Db.dbFile(c, DbExamples.MODE), new IdCounter(Db.counterFile()));
+                SqlStore ex = Db.open(c, DbExamples.MODE);
                 try {
                     if (DbPaths.find(ex, DbExamples.MODE, Reserved.ROOT_PATH) != 0) {
                         Db.backupsOf(c, DbExamples.MODE).before(ex, Backups.OP_DELETE, System.currentTimeMillis());
@@ -607,7 +607,7 @@ final class Menus {
             if (m == null || !Db.dbFile(c, m).isFile()) continue;
             SqlStore s = null;
             try {
-                s = SqlStore.open(Db.dbFile(c, m), new IdCounter(Db.counterFile()));
+                s = Db.open(c, m);
                 long mine = Menus.at(s, Menus.root(s, m), Menus.MINE);
                 if (mine == 0) continue;
                 DbFiles.add(s, mine, Collections.singletonList(f.getAbsolutePath()), null, false);

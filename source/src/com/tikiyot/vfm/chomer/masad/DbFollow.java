@@ -123,8 +123,8 @@ final class DbFollow {
                     times.append(times.length() > 0 ? " · " : "").append(m).append(' ').append(System.currentTimeMillis() - m0);
                     continue;
                 }
-                s = write ? SqlStore.open(Db.dbFile(c, m), new IdCounter(Db.counterFile()))
-                        : SqlStore.openReadOnly(Db.dbFile(c, m));
+                s = write ? Db.open(c, m)
+                        : Db.openRead(c, m);
                 sum += e.run(s);
             } catch (Throwable t) {
                 Log.e("DbFollow." + m, t);
@@ -142,7 +142,7 @@ final class DbFollow {
     static final long SLOW = 300;
 
     private static boolean has(java.io.File db, Collection<String> paths) {
-        SqlStore r = SqlStore.openReadOnly(db);
+        SqlStore r = Db.openRead(db);
         try {
             for (String p : paths) if (p != null && r.findFile(p) != 0) return true;
             return false;
