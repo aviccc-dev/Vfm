@@ -589,7 +589,7 @@ public class DbScreen extends Activity {
                         if (canBackup) labels.add(Words.Db.BACKUP_NOW);
                         for (int i = 0; i < all.size(); i++) {
                             Backups.Entry e = all.get(i);
-                            labels.add(Words.Db.backupEntry(states[i], Words.Db.backupKind(e.kind, e.op, e.text), when(e),
+                            labels.add(Backups.entryLabel(states[i], Backups.kindLabel(e.kind, e.op, e.text), when(e),
                                     e.file.length()));
                         }
                         if (labels.isEmpty()) labels.add(Words.Db.BACKUPS_EMPTY_SUB);
@@ -680,7 +680,7 @@ public class DbScreen extends Activity {
                             return;
                         }
                         SqlStore s = store;
-                        String label = Words.Db.backupKind(e.kind, e.op, e.text) + " · " + when(e);
+                        String label = Backups.kindLabel(e.kind, e.op, e.text) + " · " + when(e);
                         String q = Words.Db.restoreQuestion(label, res.lists, res.items, s == null ? 0 : s.lists().size(),
                                 s == null ? 0 : s.itemCount(), s == null);
                         new AlertDialog.Builder(DbScreen.this).setMessage(q).setCancelable(false)

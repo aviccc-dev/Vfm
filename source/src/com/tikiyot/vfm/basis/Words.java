@@ -2395,17 +2395,21 @@ public final class Words {
             return "גיבויים · " + mode;
         }
 
-        /** שם סוג הגיבוי לתצוגה. */
-        public static String backupKind(String kind, String op, boolean text) {
-            String k = kind.equals(Backups.DAILY) ? "יומי" : kind.equals(Backups.BEFORE) ? "לפני " + op : kind.equals(Backups.MANUAL) ? "ידני"
-                    : kind.equals(Backups.TEXT) ? "טקסט שבועי" : "המסד הפגום";
-            return k + (text && !kind.equals(Backups.TEXT) ? " · טקסט" : "");
+        // סוגי הגיבוי והמצב שלהם — כאן רק המילים; איזה סוג ואיזה מצב — Backups יודע (מבנה 25: המילון אינו פונה למסד)
+        public static final String BK_DAILY = "יומי", BK_MANUAL = "ידני", BK_TEXT = "טקסט שבועי", BK_DAMAGED = "המסד הפגום";
+        public static final String BK_MARK_OK = "✅", BK_MARK_CHANGED = "⚠️", BK_MARK_BAD = "❌", BK_MARK_KEPT = "🗂";
+        public static final String BK_NOTE_CHANGED = " · שונה מאז שנרשם", BK_NOTE_BAD = " · פגום", BK_NOTE_UNRECORDED = " · לא רשום";
+
+        public static String bkBefore(String op) {
+            return "לפני " + op;
         }
 
-        /** שורה ברשימת הגיבויים: מצב · סוג · מתי · גודל. state — Backups.OK וכו'. */
-        public static String backupEntry(int state, String kind, String when, long bytes) {
-            String mark = state == Backups.OK || state == Backups.OK_UNRECORDED ? "✅" : state == Backups.CHANGED ? "⚠️" : state == Backups.BAD ? "❌" : "🗂";
-            String note = state == Backups.CHANGED ? " · שונה מאז שנרשם" : state == Backups.BAD ? " · פגום" : state == Backups.OK_UNRECORDED ? " · לא רשום" : "";
+        public static String bkWithText(String kind) {
+            return kind + " · טקסט";
+        }
+
+        /** שורה ברשימת הגיבויים: מצב · סוג · מתי · גודל, ואחריה הערה אם יש. */
+        public static String backupEntry(String mark, String kind, String when, long bytes, String note) {
             return mark + " " + kind + " · " + when + " · " + kb(bytes) + note;
         }
 

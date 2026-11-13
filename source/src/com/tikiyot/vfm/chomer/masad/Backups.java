@@ -57,6 +57,22 @@ final class Backups {
     /** תוצאת בדיקה של גיבוי. */
     static final int OK = 0, OK_UNRECORDED = 1, CHANGED = 2, BAD = 3, KEPT_DAMAGED = 4;
 
+    /** שם סוג הגיבוי לתצוגה; המילים — מהמילון (מבנה 25: היה במילון, והמילון פנה בשבילו לכאן). */
+    static String kindLabel(String kind, String op, boolean text) {
+        String k = kind.equals(DAILY) ? Words.Db.BK_DAILY : kind.equals(BEFORE) ? Words.Db.bkBefore(op) : kind.equals(MANUAL) ? Words.Db.BK_MANUAL
+                : kind.equals(TEXT) ? Words.Db.BK_TEXT : Words.Db.BK_DAMAGED;
+        return text && !kind.equals(TEXT) ? Words.Db.bkWithText(k) : k;
+    }
+
+    /** שורה ברשימת הגיבויים: מצב · סוג · מתי · גודל. state — OK וכו'; kind — מה ש־kindLabel החזיר. */
+    static String entryLabel(int state, String kind, String when, long bytes) {
+        String mark = state == OK || state == OK_UNRECORDED ? Words.Db.BK_MARK_OK : state == CHANGED ? Words.Db.BK_MARK_CHANGED
+                : state == BAD ? Words.Db.BK_MARK_BAD : Words.Db.BK_MARK_KEPT;
+        String note = state == CHANGED ? Words.Db.BK_NOTE_CHANGED : state == BAD ? Words.Db.BK_NOTE_BAD
+                : state == OK_UNRECORDED ? Words.Db.BK_NOTE_UNRECORDED : "";
+        return Words.Db.backupEntry(mark, kind, when, bytes, note);
+    }
+
     private static final Pattern NAME = Pattern.compile(
             "^(" + DAILY + "|" + BEFORE + " (.+)|" + MANUAL + "|" + TEXT + "|" + DAMAGED + ") "  // בכונן
                     + "(\\d{4}-\\d{2}-\\d{2})(?: (\\d{2})-(\\d{2})-(\\d{2}))?(?: \\((\\d+)\\))?\\.(db|txt)$");
