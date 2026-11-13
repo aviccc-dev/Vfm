@@ -12,11 +12,9 @@ package com.tikiyot.vfm;
 //   חזור · הרץ <קובץ פקודות> · הוסף מהכונן / מחיפוש (במסד — DbVerbs) · צור רשימה.
 // כפתור = שורת פקודה (המשתמש: "יש כמה פקודות שנמצאות בכפתורים בלי פקודות"); גם קובץ פקודות מכיר אותן — כ־START:
 // נפתחות בסוף ההרצה. המסכים: הבית · חיפוש · פקודות · קבצים פיזיים · קבצים וירטואליים · הגדרות · סל.
-// אחראי: לפענח ולבצע את פקודות הפתיחה. אסור לו: לשנות קבצים בכונן (זה Batch, דרך Physical).
+// אחראי: לפענח ולתאר את פקודות הפתיחה. הביצוע על המסך — VerbsUi (מבנה 13). אסור לו: לפתוח מסכים; לשנות קבצים בכונן (זה Batch, דרך Physical).
 
-import android.app.Activity;
 import android.content.Context;
-import android.content.Intent;
 
 import java.io.File;
 import java.util.ArrayList;
@@ -417,73 +415,6 @@ final class Verbs {
         for (Map.Entry<String, String> e : vars.entrySet())
             if (e.getValue() != null && !e.getValue().startsWith("/\u0000")) out = out.replace("%" + e.getKey() + "%", e.getValue());
         return out;
-    }
-
-    // ---------- ביצוע ----------
-
-    /** מבצע שורה; false — אינה פקודת פתיחה (אז היא שורה למנוע הרגיל). here — התיקייה של הקובץ (או null). */
-    static boolean run(Activity a, String line, File here) {
-        if (!isVerb(line)) return false;
-        Map<String, String> vars = BatchUi.vars(a, here != null ? here : Paths.work());
-        Cmd c = parse(withVars(line, vars));
-        if (c.error != null) {
-            Ui.toast(a, c.error);
-            return true;
-        }
-        if (DbVerbs.active() && DbVerbs.run(a, c)) return true;               // מ0.10: במסד — פקודות הרשימות על המסד
-        String host = hostCode(c);
-        if (host != null) {
-            Ui.toast(a, Words.Top.notHere(label(c)));                         // מ0.42: אין עוד מסך שעושה אותן בעצמו (TopRow.Host — נמחק)
-            return true;
-        }
-        if (c.kind.equals(K_BACK)) {                                          // באג (1.17.6): בבית — יציאה מהתוכנה;
-            a.onBackPressed();                                                // בבית של המסד — בחירת אופן (DbListScreen.onBackPressed)
-        }
-        else if (c.kind.equals(K_MENU)) CmdMenu.showList(a, Names.parsePath(c.arg), null);   // 1.17.0
-        else if (c.kind.equals(K_TOOL)) {                                       // מ0.19: הכלי עם הפרמטרים שבשורה
-            Target t = toolTarget(c.arg);
-            Func f = t == null ? null : Func.byKind(t.kind);
-            if (f == null) Ui.toast(a, Words.Verb.NOT_FOUND + c.arg);
-            else f.open(a, t);
-        }
-        else if (c.kind.equals(K_NEW_CMD)) CmdMenu.create(a, here, null);
-        else if (c.kind.equals(K_SCREEN)) screen(a, c);
-        else if (c.kind.equals(K_FOLDER)) {
-            if (new File(c.arg).isDirectory()) DiskScreen.open(a, c.arg);
-            else Ui.toast(a, Words.Verb.NOT_FOUND + c.arg);
-        } else if (c.kind.equals(K_LIST)) {
-            Ui.toast(a, Words.DbCmd.NO_DB);                                   // מ0.26: רשימות — רק במסד (DbVerbs.run, למעלה)
-        } else if (c.kind.equals(K_SMART)) {
-            Ui.toast(a, Words.DbCmd.NO_DB);
-        } else if (c.kind.equals(K_FIND)) {
-            Intent i = new Intent(a, SearchScreen.class);
-            i.putExtra(SearchScreen.EXTRA_QUERY, c.cond);
-            i.putExtra(SearchScreen.EXTRA_FIXED, true);
-            i.putExtra(SearchScreen.EXTRA_TITLE, Words.Verb.FIND + c.cond);
-            i.putExtra(SearchScreen.EXTRA_SORT, c.sort.isEmpty() ? Sort.NAME : c.sort);
-            i.putExtra(SearchScreen.EXTRA_VIEW, FolderView.FLAT);
-            a.startActivity(i);
-        } else if (c.kind.equals(K_RUN)) {
-            File f = new File(c.arg);
-            if (!f.isAbsolute() && here != null) f = new File(here, c.arg);
-            if (f.isFile()) BatchUi.run(a, f); else Ui.toast(a, Words.Verb.NOT_FOUND + f.getName());
-        }
-        return true;
-    }
-
-    private static void screen(Activity a, Cmd c) {
-        String s = c.arg;
-        if (s.equals(S_HOME)) Home.go(a);
-        else if (s.equals(S_SEARCH)) a.startActivity(new Intent(a, SearchScreen.class));
-        else if (s.equals(S_COMMANDS)) CmdMenu.show(a, null);             // 1.16.1: אותו תפריט בכל מקום
-        else if (s.equals(S_DISK)) DiskScreen.open(a, c.cond.isEmpty() ? null : c.cond);
-        else if (s.equals(S_VIRTUAL)) a.startActivity(SearchScreen.fileManager(a, c.cond.isEmpty() ? null : c.cond));
-        else if (s.equals(S_SETTINGS)) a.startActivity(new Intent(a, SettingsScreen.class));
-        else if (s.equals(S_TRASH)) a.startActivity(new Intent(a, TrashScreen.class));
-        else if (s.equals(S_EDITOR)) LabScreen.edit(a, null);                // מ0.45+: העורך האינטראקטיבי (הישן נמחק)
-        else if (s.equals(S_BACKUPS)) DbScreen.openBackups(a);                // מ0.37
-        else if (s.equals(S_DIAG)) LabScreen.open(a, Words.DbCmd.TOOL_DIAG);  // מ0.37: דוח האבחון כפקודה; מ0.43: תוסף האבחון
-        else if (s.equals(S_LAB) || s.equals(S_PLUGINS)) LabScreen.open(a, c.cond, c.ver, null);   // מ0.38: המעבדה; מ0.40: התוספים — רק בפקודה
     }
 
     // ---------- הנתון החי ----------

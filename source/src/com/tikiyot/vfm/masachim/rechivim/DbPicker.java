@@ -198,7 +198,7 @@ final class DbPicker {
                         if (name.trim().isEmpty()) return;
                         final long in = parent.isEmpty() ? snap.home : snap.id(parent);
                         final String[] err = {null};
-                        final long id = DbVerbs.write(act, mode, new DbVerbs.Job() {
+                        final long id = DbVerbsUi.write(act, mode, new DbVerbsUi.Job() {
                             @Override
                             public long run(Store s, List<String> p) {
                                 DbListCmd.Made r = DbListCmd.newListChecked(s, in, name);
@@ -248,7 +248,7 @@ final class DbPicker {
     /** אחרי שנבחרה רשימה: הקבצים אליה (DbFiles.add, עם חתימה), והודעה כמה נכנסו. */
     static void addPicked(Activity a, String mode, final long list, List<String> path, final List<String> paths, Runnable after) {
         final DbFiles.Added[] r = {null};
-        DbVerbs.write(a, mode, new DbVerbs.Job() {
+        DbVerbsUi.write(a, mode, new DbVerbsUi.Job() {
             @Override
             public long run(Store s, List<String> p) {
                 r[0] = DbFiles.add(s, list, paths, null, true);

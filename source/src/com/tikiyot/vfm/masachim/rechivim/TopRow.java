@@ -157,7 +157,7 @@ final class TopRow {
         for (final Buttons.Btn b : Buttons.defaults()) {
             View v = button(b.icon, b.name, Ui.ACCENT);
             v.setOnClickListener(new View.OnClickListener() {
-                @Override public void onClick(View x) { Verbs.run(a, b.act, null); }
+                @Override public void onClick(View x) { VerbsUi.run(a, b.act, null); }
             });
             r.addView(v);
         }
@@ -229,7 +229,7 @@ final class TopRow {
 
     /** פותח את הרשימה של השורה באופן "שמור לתוכנה" (נוצרת אם חסרה). */
     private void arrange(final String ofScreen, final String side, final int n) {
-        long id = DbVerbs.write(a, Menus.MODE, new DbVerbs.Job() {
+        long id = DbVerbsUi.write(a, Menus.MODE, new DbVerbsUi.Job() {
             @Override
             public long run(Store s, List<String> p) {
                 return Menus.ensure(s, DbPaths.ensureHome(s), Menus.rowPath(ofScreen, side, n));

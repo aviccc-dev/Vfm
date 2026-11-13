@@ -60,7 +60,7 @@ final class BatchUi {
      */
     static void run(final Activity a, final File f, final String text, boolean other) {
         String verb = Batch.singleVerb(text);                                  // מ0.41: פקודת פתיחה אחת — מיד (כמו כפתור)
-        if (verb != null && Verbs.run(a, verb, f.getParentFile())) return;
+        if (verb != null && VerbsUi.run(a, verb, f.getParentFile())) return;
         if (Batch.wantsCheck(text)) {                                          // 1.28.0: מסך ההרצה — רק עם "בדיקה"
             File shown = f;
             if (other)
@@ -189,7 +189,7 @@ final class BatchUi {
                                     if (plan.changes() > 0) Ui.toast(a, Words.Cmd.doneShort(report.size()));
                                     openStart(a, plan.start);
                                 }
-                                if (!plan.trouble) DbVerbs.runOpens(a, plan.opens, f.getParentFile());   // 1.13.0; מ0.25: כולן, בסדר
+                                if (!plan.trouble) DbVerbsUi.runOpens(a, plan.opens, f.getParentFile());   // 1.13.0; מ0.25: כולן, בסדר
                                 if (plan.trouble && plan.start != null && !Batch.isHome(plan.start) && plan.start.isFile()) Ui.open(a, plan.start);   // 186
                                 if (!plan.shared.isEmpty()) {                 // 203: כל מה שלשיתוף — שליחה אחת
                                     Ui.toast(a, Words.Cmd.sending(plan.shared.size()));

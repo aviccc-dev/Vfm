@@ -711,10 +711,10 @@ public class DbListScreen extends ListScreen<Store.Member> {
         Ui.options(this, Words.Main.WHAT_TO_ADD, items, new android.content.DialogInterface.OnClickListener() {
             @Override
             public void onClick(android.content.DialogInterface d, int which) {
-                if (which == 0) DbVerbs.newList(DbListScreen.this, mode, listId);
-                else if (which == 1) DbVerbs.newSmart(DbListScreen.this, mode, listId);
-                else if (which == 2) DbVerbs.addCommand(DbListScreen.this, mode, listId);
-                else DbVerbs.addFiles(DbListScreen.this, mode, listId, which == 3 ? DbScreen.DO_FOLDER : DbScreen.DO_SEARCH);
+                if (which == 0) DbVerbsUi.newList(DbListScreen.this, mode, listId);
+                else if (which == 1) DbVerbsUi.newSmart(DbListScreen.this, mode, listId);
+                else if (which == 2) DbVerbsUi.addCommand(DbListScreen.this, mode, listId);
+                else DbVerbsUi.addFiles(DbListScreen.this, mode, listId, which == 3 ? DbScreen.DO_FOLDER : DbScreen.DO_SEARCH);
             }
         });
     }
@@ -758,7 +758,7 @@ public class DbListScreen extends ListScreen<Store.Member> {
                 cur == null || cur.isEmpty() ? "" : null, true, new DesignUi.Done() {
             @Override
             public void chosen(final String name) {
-                DbVerbs.write(DbListScreen.this, mode, new DbVerbs.Job() {
+                DbVerbsUi.write(DbListScreen.this, mode, new DbVerbsUi.Job() {
                     @Override
                     public long run(Store s, java.util.List<String> p) {
                         s.setProp(listId, Store.P_DESIGN, name);              // "" — לרשת (המאפיין נמחק)

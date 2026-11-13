@@ -429,7 +429,7 @@ public class SearchScreen extends Activity implements Clip.Holder {
                 r.sort = s;
                 r.view = w;
                 String mode = Db.currentMode;
-                long id = mode == null ? 0 : DbVerbs.write(SearchScreen.this, mode, new DbVerbs.Job() {
+                long id = mode == null ? 0 : DbVerbsUi.write(SearchScreen.this, mode, new DbVerbsUi.Job() {
                     @Override public long run(Store st, List<String> p) { return DbSmartForm.save(st, 0, DbPaths.home(st), r); }
                 }, null);
                 Ui.toast(SearchScreen.this, id != 0 ? Words.Find.saved(n) : Words.DbCmd.NO_DB);

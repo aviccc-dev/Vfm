@@ -323,14 +323,14 @@ public class RunScreen extends Activity {
             bs.add(btn(Words.Run.open(ListCmd.pathText(open)), new View.OnClickListener() {
                 @Override public void onClick(View v) {
                     String m = openMode;                                               // מ0.32: האופן של השורה שיצרה אותה
-                    if (DbVerbs.active() && m != null) DbVerbs.openPath(RunScreen.this, m, open);
-                    else Verbs.run(RunScreen.this, Verbs.openList(open), here);
+                    if (DbVerbs.active() && m != null) DbVerbsUi.openPath(RunScreen.this, m, open);
+                    else VerbsUi.run(RunScreen.this, Verbs.openList(open), here);
                 }
             }));
         if (plan.open != null && !plan.trouble)                                    // מ0.25: כל פקודות הפתיחה, בסדר
             bs.add(btn("▶ " + Verbs.label(Verbs.parse(plan.open)) + (plan.opens.size() > 1 ? " (+" + (plan.opens.size() - 1) + ")" : ""),
                     new View.OnClickListener() {
-                @Override public void onClick(View v) { DbVerbs.runOpens(RunScreen.this, plan.opens, here); }
+                @Override public void onClick(View v) { DbVerbsUi.runOpens(RunScreen.this, plan.opens, here); }
             }));
         if (plan.start != null)
             bs.add(btn("▶ " + (Batch.isHome(plan.start) ? Words.Cmd.HOME_AT_END : plan.start.getName()), new View.OnClickListener() {
@@ -451,7 +451,7 @@ public class RunScreen extends Activity {
                 String m = plan.modeOf(s);                                      // מ0.32: האופן של השורה, לא האחרון בקובץ
                 if (DbVerbs.active()) {                                         // מ0.23: במסד — קיימת במסד (גם "/" וגם "\\")
                     List<String> p = Names.parsePath(t.replace('\\', '/'));
-                    if (!p.isEmpty() && DbVerbs.exists(this, m != null ? m : Db.currentMode, p)) {
+                    if (!p.isEmpty() && DbVerbsUi.exists(this, m != null ? m : Db.currentMode, p)) {
                         openMode = m;
                         return p;
                     }
