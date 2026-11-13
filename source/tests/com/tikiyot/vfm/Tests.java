@@ -64,6 +64,7 @@ public final class Tests {
         run("מ0.44: קטע — שורה בדוח במקום שלה", new Runnable() { public void run() { m044section(); } });
         run("מ0.45: הסל — שחזר מהסל, רוקן סל, ודא בסל", new Runnable() { public void run() { m045trash(); } });
         run("מ0.45: ודא תקין · מדידה /עד: · השמות בשתי מילים", new Runnable() { public void run() { m045checks(); } });
+        run("מבנה 27: המנהל מאשר — ההחלטה על תכנית, בלי מסך", new Runnable() { public void run() { mivne27manager(); } });
         run("מ0.45: כל הפקודות עם כל המתגים — נבנה מההגדרה", new Runnable() { public void run() { m045matrix(); } });
         run("מ0.41: בטל לא-משויכים, קובץ של פקודת פתיחה אחת, שמות המסכים", new Runnable() { public void run() { m041(); } });
         run("מ0.41: העורך האינטראקטיבי בא עם התוכנה", new Runnable() { public void run() { m041bundled(); } });
@@ -2238,6 +2239,32 @@ public final class Tests {
         for (Trash.Item it : Trash.list(lib)) tmp.append(it.name()).append(" | ");
         check("מבנה 5: הקובץ הזמני של יומן המחיקות — לא פריט בסל (" + tmp + ")", tmp.length() == 0);
         wipe(r);
+    }
+
+    /** מבנה 27: ההחלטות של הרצת קובץ פקודות — אצל המנהל (lev/Manager); שני הרצפים (BatchUi, RunScreen) שואלים אותו. */
+    private static void mivne27manager() {
+        File r = new File(home, "כונן-מבנה27");
+        wipe(r);
+        r.mkdirs();
+        java.util.Map<String, String> v = Batch.vars(r, r.getAbsolutePath(), null);
+        eq("מבנה 27: יש שינוי, בלי שגיאה — מותר להריץ", Manager.GO, Manager.approve(Batch.plan("MD \"א\"\n", r, v)));
+        eq("מבנה 27: בכאילו — רק התוצאה", Manager.AS_IF, Manager.approve(Batch.plan(Batch.AS_IF + "\nMD \"א\"\n", r, v)));
+        eq("מבנה 27: רק ECHO — אין מה לעשות", Manager.NOTHING, Manager.approve(Batch.plan("ECHO שלום\n", r, v)));
+        eq("מבנה 27: קובץ ריק — אין מה לעשות", Manager.NOTHING, Manager.approve(Batch.plan("\n", r, v)));
+        Batch.Plan bad = Batch.plan("MD \"א\"\nCOPY\n", r, v);
+        check("מבנה 27: שורה שגויה לצד שינוי — לא מריצים דבר", bad.errors == 1 && Manager.approve(bad) == Manager.BLOCKED);
+        Batch.Plan onlyBad = Batch.plan("COPY\n", r, v);
+        eq("מבנה 27: רק שורה שגויה — קודם \"אין מה לעשות\" (הסדר שהיה בשני המסכים)", Manager.NOTHING, Manager.approve(onlyBad));
+        Batch.Plan asIfBad = Batch.plan(Batch.AS_IF + "\nMD \"א\"\nCOPY\n", r, v);
+        eq("מבנה 27: בכאילו קודם לכול — גם עם שגיאה", Manager.AS_IF, Manager.approve(asIfBad));
+        Batch.Plan ok = Batch.plan("MD \"א\"\n", r, v);
+        check("מבנה 27: פתיחות הסוף — רק כשההרצה הלכה חלק", Manager.opensAllowed(ok));
+        ok.trouble = true;
+        check("מבנה 27: הייתה תקלה — פתיחות הסוף לא רצות", !Manager.opensAllowed(ok));
+        File code = new File(System.getProperty("vfm.src"), "src/com/tikiyot/vfm");
+        String bu = read(new File(code, "masachim/rechivim/BatchUi.java")), rs = read(new File(code, "masachim/RunScreen.java"));
+        check("מבנה 27: שני הרצפים שואלים את המנהל, ואינם מחליטים בעצמם",
+                bu.contains("Manager.approve(plan)") && rs.contains("Manager.approve(plan)") && !bu.contains("plan.blocked()") && !rs.contains("plan.blocked()"));
     }
 
     private static void m045checks() {

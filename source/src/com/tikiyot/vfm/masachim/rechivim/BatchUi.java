@@ -126,7 +126,8 @@ final class BatchUi {
     }
 
     private static void preview(final Activity a, final File f, final Batch.Plan plan, final Library lib) {
-        if (plan.asIf) {                                                      // 1.10.0: בכאילו — הודעת חובה, ואז רק התוצאה
+        final int verdict = Manager.approve(plan);                           // מבנה 27: ההחלטה — אצל המנהל; כאן רק מציגים ומבצעים
+        if (verdict == Manager.AS_IF) {                                       // 1.10.0: בכאילו — הודעת חובה, ואז רק התוצאה
             Ui.ask(a, Words.AsIf.TITLE, Words.AsIf.ONLY_VIRTUAL, f.getName(), null, Words.AsIf.GO, new Runnable() {
                 @Override
                 public void run() {
@@ -151,7 +152,7 @@ final class BatchUi {
         }
         for (String n : plan.notes) sb.append(n).append("\n");                // 1.25.0: לולאה שנעצרה כבר בתכנון
         if (plan.steps.isEmpty()) sb.append(Words.Cmd.NOTHING_TO_DO);
-        if (plan.changes() == 0 && plan.start == null && plan.open == null) {
+        if (verdict == Manager.NOTHING) {
             show(a, Words.Cmd.preview(f.getName()), sb.toString(), null);
             return;
         }
@@ -189,7 +190,7 @@ final class BatchUi {
                                     if (plan.changes() > 0) Ui.toast(a, Words.Cmd.doneShort(report.size()));
                                     openStart(a, plan.start);
                                 }
-                                if (!plan.trouble) DbVerbsUi.runOpens(a, plan.opens, f.getParentFile());   // 1.13.0; מ0.25: כולן, בסדר
+                                if (Manager.opensAllowed(plan)) DbVerbsUi.runOpens(a, plan.opens, f.getParentFile());   // 1.13.0; מ0.25: כולן, בסדר
                                 if (plan.trouble && plan.start != null && !Batch.isHome(plan.start) && plan.start.isFile()) Ui.open(a, plan.start);   // 186
                                 if (!plan.shared.isEmpty()) {                 // 203: כל מה שלשיתוף — שליחה אחת
                                     Ui.toast(a, Words.Cmd.sending(plan.shared.size()));
@@ -201,7 +202,7 @@ final class BatchUi {
                 }).start();
             }
         };
-        if (plan.blocked()) {                                                  // מ0.30: שגיאה בקובץ — לא מריצים דבר
+        if (verdict == Manager.BLOCKED) {                                      // מ0.30: שגיאה בקובץ — לא מריצים דבר
             show(a, Words.DbCmd.NOT_RUN_TITLE, Words.DbCmd.notRun(plan.errors) + "\n\n" + plan.errorText(), null);
             return;
         }

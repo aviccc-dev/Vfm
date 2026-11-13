@@ -195,19 +195,20 @@ public class RunScreen extends Activity {
         if (plan.errors > 0) row(bodies[1], Words.Run.ERRORS, String.valueOf(plan.errors));
         for (String n : plan.notes) bodies[1].addView(info(n));
         bodies[1].addView(details(Words.Run.DETAILS + plan.steps.size() + Words.Run.LINES, planLines()));
-        if (plan.asIf) {
+        final int verdict = Manager.approve(plan);                           // מבנה 27: ההחלטה — אצל המנהל; כאן רק מציגים ומבצעים
+        if (verdict == Manager.AS_IF) {
             bodies[1].addView(info(Words.Run.AS_IF));
             buttons(btn(Words.Run.SHOW_AS_IF, new View.OnClickListener() {
                 @Override public void onClick(View v) { AsIfScreen.show(RunScreen.this, file, Batch.asIfRows(plan)); }
             }), btn(Words.CLOSE, close()));
             return;
         }
-        if (plan.changes() == 0 && plan.start == null && plan.open == null) {
+        if (verdict == Manager.NOTHING) {
             bodies[1].addView(info(Words.Cmd.NO_CHANGE));
             buttons(btn(Words.CLOSE, close()));
             return;
         }
-        if (plan.blocked()) {                                                  // מ0.30: שגיאה בקובץ — אין "הרץ"
+        if (verdict == Manager.BLOCKED) {                                      // מ0.30: שגיאה בקובץ — אין "הרץ"
             bodies[1].addView(warn(Words.DbCmd.notRun(plan.errors)));
             bodies[1].addView(info(plan.errorText()));
             buttons(btn(Words.CLOSE, close()));
@@ -327,7 +328,7 @@ public class RunScreen extends Activity {
                     else VerbsUi.run(RunScreen.this, Verbs.openList(open), here);
                 }
             }));
-        if (plan.open != null && !plan.trouble)                                    // מ0.25: כל פקודות הפתיחה, בסדר
+        if (plan.open != null && Manager.opensAllowed(plan))                                    // מ0.25: כל פקודות הפתיחה, בסדר
             bs.add(btn("▶ " + Verbs.label(Verbs.parse(plan.open)) + (plan.opens.size() > 1 ? " (+" + (plan.opens.size() - 1) + ")" : ""),
                     new View.OnClickListener() {
                 @Override public void onClick(View v) { DbVerbsUi.runOpens(RunScreen.this, plan.opens, here); }
