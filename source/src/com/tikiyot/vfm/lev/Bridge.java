@@ -280,7 +280,7 @@ final class Bridge {
             Files.writeAtomic(f, text == null ? "" : text);
             if (!was) {
                 Library.get(screen).fileAdded(f);
-                Reserved.addToMine(f);
+                Menus.addToMine(f);
             }
             return "";
         } catch (Throwable t) {

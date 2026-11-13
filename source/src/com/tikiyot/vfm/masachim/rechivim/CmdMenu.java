@@ -133,7 +133,7 @@ final class CmdMenu {
                     Ui.toast(a, Words.SAVE_FAILED);
                     return;
                 }
-                Reserved.addToMine(f);
+                Menus.addToMine(f);
                 BatchUi.edit(a, f);
             }
         });
@@ -161,7 +161,7 @@ final class CmdMenu {
     }
 
     private static void made(Activity a, File f, String name, Picked pick) {
-        Reserved.addToMine(f);
+        Menus.addToMine(f);
         if (pick != null) pick.ok("▶", name, Verbs.run(f.getAbsolutePath()), f);
         BatchUi.edit(a, f);
     }

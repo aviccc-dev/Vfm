@@ -34,11 +34,6 @@ public final class Acts {
     }
 
 
-    /** לשליחה: התיקייה שבה נארזות תיקיות לפני שליחה (בתוך תיקיות המערכת של אופן העבודה). */
-    static File sendDir() {
-        return new File(Paths.system(), Words.ActsW.SEND);
-    }
-
     /** toDevice: "שליחה למכשיר" (117) — רק תוכנות העברה; אחרת "שיתוף" — כל התוכנות. */
     public static void shareMany(final Activity a, List<String> files, final List<String> dirs, final boolean toDevice) {
         final List<File> ready = new ArrayList<File>();
@@ -58,9 +53,9 @@ public final class Acts {
         }
         // 1.10.0: תיקייה — הקבצים כמו שהם (גם מתיקיות המשנה), או ארוזה. המשתמש: "שישלח קבצים כפי שהם".
         final List<File> inside = new ArrayList<File>(ready);
-        for (String d : dirs) inside.addAll(filesIn(new File(d)));
-        if (inside.size() > MAX_SEND) {                                       // חלון השיתוף לא עומד בכמויות גדולות
-            Ui.toast(a, Words.ActsW.tooMany(inside.size(), MAX_SEND));
+        for (String d : dirs) inside.addAll(Files.filesIn(new File(d)));
+        if (inside.size() > Files.MAX_SEND) {                                       // חלון השיתוף לא עומד בכמויות גדולות
+            Ui.toast(a, Words.ActsW.tooMany(inside.size(), Files.MAX_SEND));
             pack(a, ready, dirs, miss, toDevice);
             return;
         }
@@ -76,25 +71,6 @@ public final class Acts {
                 });
     }
 
-    /** 1.10.0: כמה קבצים לכל היותר בשליחה אחת כקבצים; מעבר לזה — ארוזה. */
-    static final int MAX_SEND = 300;
-
-    /** 1.10.0: כל הקבצים שבתיקייה, גם בתיקיות המשנה — בלי מוסתרים (וסל המחזור) ובלי Android/data. */
-    static List<File> filesIn(File dir) {
-        List<File> out = new ArrayList<File>();
-        java.util.ArrayDeque<File> q = new java.util.ArrayDeque<File>();
-        q.add(dir);
-        while (!q.isEmpty()) {
-            File[] all = q.poll().listFiles();
-            if (all == null) continue;
-            java.util.Arrays.sort(all);
-            for (File f : all) {
-                if (Vols.skip(f, false)) continue;
-                if (f.isDirectory()) q.add(f); else out.add(f);
-            }
-        }
-        return out;
-    }
 
     /** 203: מקובץ פקודות — מה שהוכן (עותקים ואריזות): שליחה אחת למכשיר. */
     static void sendReady(Activity a, List<File> ready) {
@@ -119,7 +95,7 @@ public final class Acts {
                 boolean stopped = false;
                 for (String d : dirs) {
                     File dir = new File(d);
-                    File zip = new File(sendDir(), dir.getName() + ".zip");
+                    File zip = new File(Files.sendDir(), dir.getName() + ".zip");
                     Zip.Result r = Zip.pack(dir, zip, busy);
                     if (r.stopped) {
                         stopped = true;
@@ -148,7 +124,7 @@ public final class Acts {
 
     /** מוחק אריזות ישנות (מעל יום) — שהתיקייה לא תגדל. אריזה חדשה נשארת עד שהשליחה נגמרת. */
     private static void clean() {
-        File[] old = sendDir().listFiles();
+        File[] old = Files.sendDir().listFiles();
         if (old != null)
             for (File f : old)
                 if (System.currentTimeMillis() - f.lastModified() > 24L * 3600 * 1000) f.delete();

@@ -544,7 +544,7 @@ public class DupScreen extends Activity {
     }
 
     private static String drive(Library.Hit h) {
-        return Drive.label(h.ix);
+        return Drive.label(Drive.INTERNAL.equals(h.ix.key), h.ix.label);   // כונן של אינדקס: צלמית ושם (מבנה 16: היה Drive.label(Index))
     }
 
     // ---------- תצוגה ----------

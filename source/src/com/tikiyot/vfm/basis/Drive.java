@@ -33,9 +33,4 @@ public final class Drive {
     public static String nameOf(String path) {
         return internalPath(path) ? INTERNAL_NAME : CARD_NAME;
     }
-
-    /** כונן של אינדקס: צלמית ושם. */
-    public static String label(Index ix) {
-        return label(INTERNAL.equals(ix.key), ix.label);
-    }
 }

@@ -2417,8 +2417,8 @@ final class Batch {
         }
         for (String d : s.dirs) {                                          // 1.10.0: תיקייה — הקבצים שבה כמו שהם
             File src = new File(d);
-            List<File> inside = Acts.filesIn(src);
-            if (inside.size() > Acts.MAX_SEND) {                              // יותר מדי לחלון השיתוף — ארוזה בשמה
+            List<File> inside = Files.filesIn(src);
+            if (inside.size() > Files.MAX_SEND) {                              // יותר מדי לחלון השיתוף — ארוזה בשמה
                 File zip = new File(dir, Physical.freeName(dir, src.getName() + ".zip", false));
                 Zip.Result r = Zip.pack(src, zip, progress);
                 if (r.error == null && !r.stopped) {
@@ -2445,7 +2445,7 @@ final class Batch {
     /** תיקייה חדשה לכל הרצה, בתוך תיקיית השליחה; ישנות (מעל יום) נמחקות. */
     private static File stageDir(Plan plan) {
         if (plan.stage != null) return plan.stage;
-        File root = Acts.sendDir();
+        File root = Files.sendDir();
         File[] old = root.listFiles();
         if (old != null)
             for (File f : old)

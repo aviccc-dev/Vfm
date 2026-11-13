@@ -475,7 +475,7 @@ public final class Tests {
             Files.writeAtomic(new File(root, "הורדות/פנימה/.נסתר/ד.pdf"), "x");
         } catch (Exception e) { throw new RuntimeException(e); }
         java.util.List<String> names = new java.util.ArrayList<String>();
-        for (File f : Acts.filesIn(new File(root, "הורדות"))) names.add(f.getName());
+        for (File f : Files.filesIn(new File(root, "הורדות"))) names.add(f.getName());
         eq("1.10.0: שליחת תיקייה — כל הקבצים, גם בתיקיות משנה", "[א.pdf, ב.txt, ג.pdf]", names.toString());
 
         // דוגמאות הפקודות: תיקיית התרגול נבנית, וכל קובץ — בכאילו, בלי שגיאות
@@ -1588,7 +1588,7 @@ public final class Tests {
         check("116: \"פריסת ZIP\" רק לקובץ ZIP אחד", Actions.isZip(P("/x/א.zip")) && Actions.isZip(P("/x/א.ZIP"))
                 && !Actions.isZip(P("/x/א.pdf")) && !Actions.isZip(P("/x/א.zip", "/x/ב.zip")));
         check("116: שליחה — גם כמה קבצים וגם תיקיות", !Actions.SHARE.one && Actions.SHARE.folders);
-        check("116: תיקיית האריזות מוגנת (בתוך תיקיית התוכנה)", Physical.programFile(new File(Acts.sendDir(), "x.zip").getAbsolutePath()) != null);
+        check("116: תיקיית האריזות מוגנת (בתוך תיקיית התוכנה)", Physical.programFile(new File(Files.sendDir(), "x.zip").getAbsolutePath()) != null);
         wipe(root);
     }
 

@@ -237,4 +237,31 @@ public final class Files {
         if (n.getBytes(java.nio.charset.Charset.forName("UTF-8")).length > 255) return Words.Disk.NAME_TOO_LONG;
         return null;
     }
+
+    // --- מבנה 16: עזרי השליחה — עד כאן ב־Acts (מסכים), וגם קובץ הפקודות נזקק להם (יעד %שיתוף%) ---
+
+    /** לשליחה: התיקייה שבה נארזות תיקיות לפני שליחה (בתוך תיקיות המערכת של אופן העבודה). */
+    public static File sendDir() {
+        return new File(Paths.system(), Words.ActsW.SEND);
+    }
+
+    /** 1.10.0: כמה קבצים לכל היותר בשליחה אחת כקבצים; מעבר לזה — ארוזה. */
+    public static final int MAX_SEND = 300;
+
+    /** 1.10.0: כל הקבצים שבתיקייה, גם בתיקיות המשנה — בלי מוסתרים (וסל המחזור) ובלי Android/data. */
+    public static java.util.List<File> filesIn(File dir) {
+        java.util.List<File> out = new java.util.ArrayList<File>();
+        java.util.ArrayDeque<File> q = new java.util.ArrayDeque<File>();
+        q.add(dir);
+        while (!q.isEmpty()) {
+            File[] all = q.poll().listFiles();
+            if (all == null) continue;
+            java.util.Arrays.sort(all);
+            for (File f : all) {
+                if (Vols.skip(f, false)) continue;
+                if (f.isDirectory()) q.add(f); else out.add(f);
+            }
+        }
+        return out;
+    }
 }

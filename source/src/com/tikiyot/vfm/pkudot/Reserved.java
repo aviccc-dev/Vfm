@@ -63,32 +63,6 @@ final class Reserved {
         return isSystem(f) && f.getName().equals(NEW + "." + Batch.EXT);
     }
 
-    /**
-     * פקודה חדשה נכנסת ל"הפקודות שלי": של האופן הפתוח, אם יש לו "שמור לתוכנה" משלו; אחרת — של אופן התפריטים (מ0.41;
-     * עד כאן — של אופן אחר שיש בו, קודם הדוגמאות).
-     */
-    static void addToMine(final File f) {
-        android.content.Context c = Db.app;
-        if (c == null || f == null) return;
-        Menus.ensure(c);
-        for (String m : new String[]{Db.currentMode, Menus.MODE}) {
-            if (m == null || !Db.dbFile(c, m).isFile()) continue;
-            SqlStore s = null;
-            try {
-                s = SqlStore.open(Db.dbFile(c, m), new IdCounter(Db.counterFile()));
-                long mine = Menus.at(s, Menus.root(s, m), Menus.MINE);
-                if (mine == 0) continue;
-                DbFiles.add(s, mine, Collections.singletonList(f.getAbsolutePath()), null, false);
-                return;
-            } catch (Throwable t) {
-                Log.e("Reserved.addToMine", t);
-                return;
-            } finally {
-                if (s != null) s.close();
-            }
-        }
-    }
-
     // ---------- מבנה 12: רשימות פקודות המערכת — עד כאן בתוך התפריטים (CmdMenu.system, DbCmdMenu.dbTools / writeTools) ----------
 
     /** פקודות המערכת — קבוצה 1: פתיחת מסכים (המשתמש: "יוצגו גם בתור טקסט לעריכה"). {צלמית, שם, שורה}. */
