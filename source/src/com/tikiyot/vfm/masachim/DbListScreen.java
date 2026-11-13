@@ -36,10 +36,6 @@ public class DbListScreen extends ListScreen<Store.Member> {
     static boolean goingHome;
     /** כמה מסכים כאלה פתוחים — מסך שנפתח מעליהם ("בית" בו) חוזר לבית של המסד. */
     static int alive;
-    /** מ0.10: האופן של המסד שעובדים בו עכשיו (המסך האחרון שהוצג) — לפקודות (DbVerbs). */
-    static String currentMode;
-    /** מ0.12: ההקשר של התוכנה — לפקודות שרצות במסד (מיקום קובץ המסד). */
-    static android.content.Context app;
     /** מ0.20: כמה מסכי מסד מוצגים עכשיו — יורד ל־0: יוצאים מהמסד → עותק אם השתנה משהו. */
     private static int visible;
 
@@ -90,7 +86,7 @@ public class DbListScreen extends ListScreen<Store.Member> {
     @Override
     protected void onResume() {
         super.onResume();
-        currentMode = mode;
+        Db.currentMode = mode;
         if (!goingHome) return;
         if (atHome) goingHome = false;
         else finish();
@@ -123,12 +119,12 @@ public class DbListScreen extends ListScreen<Store.Member> {
     protected void onCreate(Bundle saved) {
         super.onCreate(saved);
         alive++;
-        app = getApplicationContext();
+        Db.app = getApplicationContext();
         mode = getIntent().getStringExtra(EXTRA_MODE);
         listId = getIntent().getLongExtra(EXTRA_LIST, 0);
         sortBy = getIntent().getStringExtra(EXTRA_SORT);
         if (sortBy == null) sortBy = "";
-        currentMode = mode;                                                   // מ0.41: לפני שהשורות מצוירות — התפריטים של האופן הזה
+        Db.currentMode = mode;                                                   // מ0.41: לפני שהשורות מצוירות — התפריטים של האופן הזה
         atHome = homeNow();                                                   // ...ושל מסך הבית, אם זה הבית
         Menus.ensure(this);                                                   // מ0.41: אופן התפריטים — לפני כל כתיבה אחרת למסדים
         if (Ui.hasFiles(this)) DbCmdMenu.ensureToolsAsync(this, mode);      // מ0.23: יצוא וייבוא ב־⭐

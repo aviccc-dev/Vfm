@@ -39,7 +39,7 @@ final class TopRow {
         this.a = a;
         this.top = top;
         this.bottom = bottom;
-        this.mode = DbListScreen.currentMode;
+        this.mode = Db.currentMode;
     }
 
     /**
@@ -78,7 +78,7 @@ final class TopRow {
             @Override
             public void onWindowFocusChanged(boolean focus) {
                 if (!focus) return;
-                if (!(a instanceof DbListScreen) && t.mode != null) DbListScreen.currentMode = t.mode;
+                if (!(a instanceof DbListScreen) && t.mode != null) Db.currentMode = t.mode;
                 String now = screenOf(a);
                 if (t.built != Menus.version(a) || (now == null ? t.screen != null : !now.equals(t.screen))) t.build();
             }

@@ -30,7 +30,7 @@ final class DbCmdMenu {
             menu(a, rel, newIn, pick, top);
             return true;
         }
-        String mode = DbListScreen.currentMode;
+        String mode = Db.currentMode;
         long id = find(a, mode, path);
         if (id != 0) open(a, mode, id, path, newIn, pick, top);
         else if (m.has(rel)) menu(a, rel, newIn, pick, top);

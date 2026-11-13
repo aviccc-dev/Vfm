@@ -451,7 +451,7 @@ public class RunScreen extends Activity {
                 String m = plan.modeOf(s);                                      // מ0.32: האופן של השורה, לא האחרון בקובץ
                 if (DbVerbs.active()) {                                         // מ0.23: במסד — קיימת במסד (גם "/" וגם "\\")
                     List<String> p = Names.parsePath(t.replace('\\', '/'));
-                    if (!p.isEmpty() && DbVerbs.exists(this, m != null ? m : DbListScreen.currentMode, p)) {
+                    if (!p.isEmpty() && DbVerbs.exists(this, m != null ? m : Db.currentMode, p)) {
                         openMode = m;
                         return p;
                     }

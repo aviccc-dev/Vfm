@@ -15,6 +15,14 @@ final class Db {
     /** מסד לכל אופן עבודה, באחסון הפרטי של התוכנה (לא בתיקייה הגלויה): vfm-m-<אופן>.db. */
     static final String DB_PREFIX = "vfm-m-", DB_SUFFIX = ".db";
 
+    // --- ההקשר (מבנה 7): עד כאן — משתנים של המסך הראשי (Db.currentMode, Db.app) ---
+
+    /** מ0.10: האופן של המסד שעובדים בו עכשיו (המסך האחרון שהוצג) — לפקודות (DbVerbs). */
+    static String currentMode;
+
+    /** מ0.12: ההקשר של התוכנה — לפקודות שרצות במסד (מיקום קובץ המסד). */
+    static android.content.Context app;
+
     private Db() { }
 
     static File dbFile(android.content.Context c, String mode) {

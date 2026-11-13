@@ -215,7 +215,7 @@ final class Batch {
             s.describe = Words.DbCmd.verifyWill(what);
             s.op = new ListCmd.Op() {
                 @Override public String run(Library lib) {
-                    boolean has = Db.dbModes(DbListScreen.app).contains(m);
+                    boolean has = Db.dbModes(Db.app).contains(m);
                     s.verified = has == want;
                     return Words.DbCmd.verifyResult(has == want, what, has ? Words.DbCmd.WORD_EXISTS_M : Words.DbCmd.WORD_MISSING_M);
                 }
@@ -305,7 +305,7 @@ final class Batch {
             if (tk.size() != 1) { s.error = Words.DbCmd.BACKUP_USAGE; return true; }
             if (!DbVerbs.active()) { s.error = Words.DbCmd.VERIFY_DB_ONLY; return true; }
             if (sim.modeError != null) { s.error = sim.modeError; return true; }
-            final String mode = sim.mode != null ? sim.mode : DbListScreen.currentMode;
+            final String mode = sim.mode != null ? sim.mode : Db.currentMode;
             s.describe = Words.DbCmd.backupWill(mode);
             s.op = new ListCmd.Op() {
                 @Override public String run(Library lib) { return DbListCmd.backupNow(mode); }
@@ -956,7 +956,7 @@ final class Batch {
         final java.util.Set<String> dropped = new java.util.HashSet<String>();
 
         boolean hasMode(String m) {
-            return created.contains(m) || (!dropped.contains(m) && Db.dbModes(DbListScreen.app).contains(m));
+            return created.contains(m) || (!dropped.contains(m) && Db.dbModes(Db.app).contains(m));
         }
         /** מ0.15: האופן מ"אופן" בקובץ; null — האופן שפתוח. */
         String mode;
@@ -1410,7 +1410,7 @@ final class Batch {
                 if (m.isEmpty()) s.error = Words.DbCmd.MODE_USAGE;
                 else if (!DbVerbs.active()) s.error = Words.DbCmd.VERIFY_DB_ONLY;
                 else if (!sim.hasMode(m))   // מ0.42: גם מה ש"צור אופן" שלפניו יצר; מ0.45: בלי מה ש"מחק אופן" מחק
-                    s.error = sim.modeError = Words.DbCmd.noMode(m, Db.dbModes(DbListScreen.app));
+                    s.error = sim.modeError = Words.DbCmd.noMode(m, Db.dbModes(Db.app));
                 else {
                     sim.dbs.put(sim.mode == null ? "" : sim.mode, sim.db);          // מ0.32: עותק לכל אופן
                     sim.mode = m;

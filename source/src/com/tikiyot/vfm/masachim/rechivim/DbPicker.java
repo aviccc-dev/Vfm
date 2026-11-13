@@ -30,7 +30,7 @@ final class DbPicker {
 
     /** האופן: של מסך המסד הפתוח, ואם אין — מה שנבחר בפעם הקודמת. */
     static String mode(android.content.Context c) {
-        return DbListScreen.currentMode != null ? DbListScreen.currentMode : DbScreen.savedMode(c);
+        return Db.currentMode != null ? Db.currentMode : DbScreen.savedMode(c);
     }
 
     // ================= הצילום =================
@@ -329,7 +329,7 @@ final class DbPicker {
 
     /** הרשימות שהחתימות עובדות עליהן: במסד — של המסד (האופן הפתוח); אחרת — העץ הישן. */
     static Tree listsForSig() {
-        android.content.Context c = DbListScreen.app;
+        android.content.Context c = Db.app;
         if (c == null || !on(c)) {
             Tree none = Tree.memory();
             none.unreadable = true;                                           // אין מסד — לא מסיקים שום דבר

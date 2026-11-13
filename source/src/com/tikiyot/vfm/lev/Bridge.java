@@ -59,7 +59,7 @@ final class Bridge {
             JSONObject o = new JSONObject();
             o.put("app", screen.getPackageName());
             o.put("version", screen.getPackageManager().getPackageInfo(screen.getPackageName(), 0).versionName);
-            o.put("mode", String.valueOf(DbListScreen.currentMode));
+            o.put("mode", String.valueOf(Db.currentMode));
             o.put("lab", exp);
             o.put("labVersion", page == null ? "" : page.ver);
             String h = page == null ? null : Lab.higher(Lab.root(), page);   // מ0.40: יש גרסה גבוהה יותר בתיקייה

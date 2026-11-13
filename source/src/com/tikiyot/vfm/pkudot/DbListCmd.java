@@ -701,7 +701,7 @@ final class DbListCmd {
         if (dest == 0) return Res.err(b.home ? Words.DbCmd.NO_HOME : Words.ListCmdW.noList(b.raw));
         SqlStore src = null;
         try {
-            src = SqlStore.openReadOnly(Db.dbFile(DbListScreen.app, srcMode));
+            src = SqlStore.openReadOnly(Db.dbFile(Db.app, srcMode));
             return copyAcross(src, srcMode, a, t, dest, b.label());
         } finally {
             if (src != null) src.close();
@@ -813,7 +813,7 @@ final class DbListCmd {
 
     /** האופן שהפקודות עובדות עליו עכשיו (הבית של המסד שפתוח). */
     static String mode() {
-        return DbListScreen.currentMode;
+        return Db.currentMode;
     }
 
     /** מ0.15: האופן של הקובץ — מ"אופן" שבו, אחרת זה שפתוח. */
@@ -891,7 +891,7 @@ final class DbListCmd {
                 a.path = new ArrayList<String>(a.path.subList(1, a.path.size()));
                 if (a.path.isEmpty()) { s.error = Words.DbCmd.USAGE_FROM_MODE; return; }
                 if (!fromMode.equals(mode)) {
-                    if (!Db.dbModes(DbListScreen.app).contains(fromMode)) { s.error = Words.DbCmd.noMode(fromMode, Db.dbModes(DbListScreen.app)); return; }
+                    if (!Db.dbModes(Db.app).contains(fromMode)) { s.error = Words.DbCmd.noMode(fromMode, Db.dbModes(Db.app)); return; }
                     if (a.kind != ListCmd.LIST || a.filesOf || a.mask != null || b.kind != ListCmd.LIST) { s.error = Words.DbCmd.USAGE_FROM_MODE; return; }
                     final String src = fromMode;
                     work = new Work() {
@@ -1193,7 +1193,7 @@ final class DbListCmd {
             public String run(Library lib) {
                 SqlStore st = null;
                 try {
-                    st = SqlStore.openReadOnly(Db.dbFile(DbListScreen.app, mode));
+                    st = SqlStore.openReadOnly(Db.dbFile(Db.app, mode));
                     String[] f = {""};
                     boolean ok = verify(st, mode, a, e, f);
                     s.verified = ok;
@@ -1320,13 +1320,13 @@ final class DbListCmd {
      * על מסדים זמניים בצד), ותקינות המסד של כל אופן (לקריאה בלבד). לא נוגע במסדים — ולכן גם לא בהדמיה.
      */
     static void planVerifyDb(final Batch.Step s) {
-        if (DbListScreen.app == null) { s.error = Words.DbCmd.VERIFY_DB_ONLY; return; }
+        if (Db.app == null) { s.error = Words.DbCmd.VERIFY_DB_ONLY; return; }
         final String what = Words.DbCmd.VERIFY_DB_WHAT;
         s.describe = Words.DbCmd.verifyWill(what);
         s.op = new ListCmd.Op() {
             @Override
             public String run(Library lib) {
-                android.content.Context c = DbListScreen.app;
+                android.content.Context c = Db.app;
                 boolean[] ok = {false};
                 String engine = DbScreen.selfTestText(c, ok).trim().replace("\n", " · ");
                 List<String> bad = new ArrayList<String>();
@@ -1364,7 +1364,7 @@ final class DbListCmd {
         }
         if (!DbVerbs.active()) { s.error = Words.DbCmd.VERIFY_DB_ONLY; return; }
         s.target = name;
-        if (Db.dbModes(DbListScreen.app).contains(name) || sim.created.contains(name)) {
+        if (Db.dbModes(Db.app).contains(name) || sim.created.contains(name)) {
             s.noop = true;
             s.describe = Words.DbCmd.modeExists(name);
             return;
@@ -1377,8 +1377,8 @@ final class DbListCmd {
         s.op = new ListCmd.Op() {
             @Override
             public String run(Library lib) {
-                if (Db.dbModes(DbListScreen.app).contains(name)) return Words.DbCmd.modeExists(name);
-                if (DbScreen.prepare(DbListScreen.app, name) != 0) return Words.DbCmd.modeCreated(name);
+                if (Db.dbModes(Db.app).contains(name)) return Words.DbCmd.modeExists(name);
+                if (DbScreen.prepare(Db.app, name) != 0) return Words.DbCmd.modeCreated(name);
                 lastFailed = true;
                 return Words.DbCmd.modeFailed(name);
             }
@@ -1399,7 +1399,7 @@ final class DbListCmd {
             return;
         }
         if (name.equals(Menus.MODE)) { s.error = Words.DbCmd.dropModeSystem(name); return; }
-        if (name.equals(DbListScreen.currentMode) || name.equals(sim.mode)) { s.error = Words.DbCmd.dropModeOpen(name); return; }
+        if (name.equals(Db.currentMode) || name.equals(sim.mode)) { s.error = Words.DbCmd.dropModeOpen(name); return; }
         sim.created.remove(name);
         sim.dropped.add(name);
         sim.dbs.remove(name);
@@ -1407,10 +1407,10 @@ final class DbListCmd {
         s.op = new ListCmd.Op() {
             @Override
             public String run(Library lib) {
-                android.content.Context c = DbListScreen.app;
+                android.content.Context c = Db.app;
                 File f = Db.dbFile(c, name);
                 if (!f.isFile()) return Words.DbCmd.dropModeNone(name);
-                if (name.equals(DbListScreen.currentMode)) { lastFailed = true; return Words.DbCmd.dropModeOpen(name); }
+                if (name.equals(Db.currentMode)) { lastFailed = true; return Words.DbCmd.dropModeOpen(name); }
                 boolean kept = false;
                 SqlStore st = null;
                 try {
@@ -1455,7 +1455,7 @@ final class DbListCmd {
     /** העותק בזיכרון — פעם אחת לכל קובץ פקודות (השורות הבאות רואות מה שהקודמות עשו). */
     private static Store sim(Batch.Sim sim, String mode) {
         if (sim.db != null) return sim.db;
-        SqlStore real = SqlStore.openReadOnly(Db.dbFile(DbListScreen.app, mode));
+        SqlStore real = SqlStore.openReadOnly(Db.dbFile(Db.app, mode));
         try {
             sim.db = copyOf(real);
         } finally {
@@ -1517,8 +1517,8 @@ final class DbListCmd {
     static String backupNow(String mode) {
         SqlStore s = null;
         try {
-            s = SqlStore.open(Db.dbFile(DbListScreen.app, mode), new IdCounter(Db.counterFile()));
-            List<Backups.Entry> made = Db.backupsOf(DbListScreen.app, mode).manual(s, System.currentTimeMillis());
+            s = SqlStore.open(Db.dbFile(Db.app, mode), new IdCounter(Db.counterFile()));
+            List<Backups.Entry> made = Db.backupsOf(Db.app, mode).manual(s, System.currentTimeMillis());
             StringBuilder names = new StringBuilder();
             for (Backups.Entry e : made) names.append(names.length() > 0 ? ", " : "").append(e.name);
             return Words.DbCmd.backedUp(mode, names.toString());
@@ -1548,10 +1548,10 @@ final class DbListCmd {
     private static Res realRes(String mode, Work w, boolean before, Library lib) {
         SqlStore s = null;
         try {
-            s = SqlStore.open(Db.dbFile(DbListScreen.app, mode), new IdCounter(Db.counterFile()));
+            s = SqlStore.open(Db.dbFile(Db.app, mode), new IdCounter(Db.counterFile()));
             if (before) {
                 try {
-                    Db.backupsOf(DbListScreen.app, mode).before(s, Backups.OP_DELETE, System.currentTimeMillis());
+                    Db.backupsOf(Db.app, mode).before(s, Backups.OP_DELETE, System.currentTimeMillis());
                 } catch (Throwable t) {
                     Log.e("DbListCmd.before", t);
                     return Res.err(Words.DbCmd.beforeFailed(String.valueOf(t.getMessage())));

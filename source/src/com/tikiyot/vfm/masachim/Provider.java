@@ -31,7 +31,7 @@ public class Provider extends ContentProvider {
     @Override
     public boolean onCreate() {
         // מ0.25: ההקשר של התוכנה כבר בעליית התהליך — לפקודות שרצות במסד לפני שמסך המסד הוצג (DbVerbs.active).
-        if (getContext() != null && DbListScreen.app == null) DbListScreen.app = getContext().getApplicationContext();
+        if (getContext() != null && Db.app == null) Db.app = getContext().getApplicationContext();
         return true;
     }
 

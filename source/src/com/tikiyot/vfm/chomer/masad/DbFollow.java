@@ -103,7 +103,7 @@ final class DbFollow {
      * paths — מ0.42: לכתיבה, רק מסד שאחד מהקבצים רשום בו (קודם — לקריאה, בלי בדיקת תקינות חוזרת); עד כאן כל מסד נפתח לכתיבה.
      */
     private static int each(boolean write, Collection<String> paths, Each e) {
-        android.content.Context c = DbListScreen.app;
+        android.content.Context c = Db.app;
         if (c == null) return 0;
         int sum = 0;
         List<String> modes;

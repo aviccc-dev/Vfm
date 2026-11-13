@@ -17,18 +17,18 @@ final class DbVerbs {
     static boolean active() {
         // מ0.25 (מחיקת המנוע הישן, שלב 1): בבניית מ הפקודות תמיד של המסד — גם כשמסך המסד עוד לא הוצג
         // (שיתוף מאפליקציה אחרת, קיצור דרך): האופן — זה שנשמר.
-        if (DbListScreen.currentMode == null && DbListScreen.app != null)
+        if (Db.currentMode == null && Db.app != null)
             try {
-                DbListScreen.currentMode = DbScreen.savedMode(DbListScreen.app);
+                Db.currentMode = DbScreen.savedMode(Db.app);
             } catch (Throwable t) {
                 Log.e("DbVerbs.active", t);
             }
-        return DbListScreen.currentMode != null && DbListScreen.app != null;
+        return Db.currentMode != null && Db.app != null;
     }
 
     /** מבצע את הפקודה במסד; false — אינה פקודת רשימות (ממשיכה כרגיל: מסכים, תיקייה, חיפוש, הרצה). */
     static boolean run(final Activity a, Verbs.Cmd c) {
-        final String mode = DbListScreen.currentMode;
+        final String mode = Db.currentMode;
         if (c.kind.equals(Verbs.K_LIST)) {
             List<String> path = Names.parsePath(c.arg);
             long id = c.verb.equals(Verbs.CREATE) ? write(a, mode, new Job() {

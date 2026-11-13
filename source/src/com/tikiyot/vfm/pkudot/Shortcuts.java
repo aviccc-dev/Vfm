@@ -78,7 +78,7 @@ final class Shortcuts {
         java.util.Set<String> paths = new java.util.LinkedHashSet<String>();
         for (File f : mine()) paths.add(f.getAbsolutePath());
         commandFiles(s, paths);
-        android.content.Context c = DbListScreen.app;
+        android.content.Context c = Db.app;
         if (c != null && !Menus.MODE.equals(mode) && Db.dbFile(c, Menus.MODE).isFile()) {
             SqlStore m = SqlStore.openReadOnly(Db.dbFile(c, Menus.MODE));
             try {

@@ -68,10 +68,10 @@ final class Reserved {
      * עד כאן — של אופן אחר שיש בו, קודם הדוגמאות).
      */
     static void addToMine(final File f) {
-        android.content.Context c = DbListScreen.app;
+        android.content.Context c = Db.app;
         if (c == null || f == null) return;
         Menus.ensure(c);
-        for (String m : new String[]{DbListScreen.currentMode, Menus.MODE}) {
+        for (String m : new String[]{Db.currentMode, Menus.MODE}) {
             if (m == null || !Db.dbFile(c, m).isFile()) continue;
             SqlStore s = null;
             try {

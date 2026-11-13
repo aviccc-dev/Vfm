@@ -326,13 +326,13 @@ final class Menus {
 
     /** חותמת אחת למסך: התפריטים הכלליים ושל האופן שעל המסך — כדי לדעת מתי לצייר מחדש. */
     static long version(Context c) {
-        String cur = DbListScreen.currentMode;
+        String cur = Db.currentMode;
         return stamp(c, MODE) * 1000003L + (cur == null || cur.equals(MODE) ? 0 : stamp(c, cur));
     }
 
     /** התמונה של עכשיו — מהזיכרון, אם המסדים לא השתנו. לא זורקת: תקלה — תמונה ריקה (והמסך מצייר את שורת החירום). */
     static Snap get(Context c) {
-        return of(c, DbListScreen.currentMode);
+        return of(c, Db.currentMode);
     }
 
     /** התמונה לאופן מסוים (הכללי, ואחריו שלו). */

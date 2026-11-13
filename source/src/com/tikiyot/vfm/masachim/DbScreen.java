@@ -79,7 +79,7 @@ public class DbScreen extends Activity {
     /** מ0.25 (באג 30): "בית" — הבית נפתח מחדש וכל שאר המסכים נסגרים (המשימה מתנקה). */
     /** מ0.35: הגיבויים של האופן הנוכחי — מההגדרות (הכניסה עברה לשם מ־⋮ של מסך הרשימות). */
     static void openBackups(Activity a) {
-        String m = DbListScreen.currentMode != null ? DbListScreen.currentMode : savedMode(a);
+        String m = Db.currentMode != null ? Db.currentMode : savedMode(a);
         if (m == null || m.isEmpty()) m = defaultMode(a);
         long home = 0;
         SqlStore s = null;
