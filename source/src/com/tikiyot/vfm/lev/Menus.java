@@ -221,8 +221,8 @@ final class Menus {
         filesUnder(src, id, files, new ArrayList<Long>());
         long parent = DbPaths.home(src);
         if (parent != 0 && !src.listsOf(id).contains(parent)) parent = 0;
-        if (parent != 0) DbListCmd.removeFrom(src, parent, id);
-        else DbListCmd.deleteWhole(src, id);
+        if (parent != 0) Lists.removeFrom(src, parent, id);
+        else Lists.deleteWhole(src, id);
         for (Long f : files) if (src.item(f) != null && src.listsOf(f).isEmpty()) src.purge(f);
         return o.lists + 1;
     }

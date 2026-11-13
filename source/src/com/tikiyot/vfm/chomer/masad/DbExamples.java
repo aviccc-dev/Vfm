@@ -83,7 +83,7 @@ final class DbExamples {
             if (name.equals(MINE) || name.equals(Reserved.ROOT)) continue;
             for (Store.Member m : s.members(home))
                 if (m.item.type == Store.LIST && m.item.name.equals(name)) {
-                    DbListCmd.removeFrom(s, home, m.item.id);
+                    Lists.removeFrom(s, home, m.item.id);
                     replaced++;
                     break;
                 }

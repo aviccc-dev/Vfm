@@ -6,7 +6,7 @@ package com.tikiyot.vfm;
 //   · כל פריט שומר את הפעולה שלו: "ההבדל בין העתק להעביר הוא רק מה קורה למקור". כולם נכנסים ליעד; "העבר" יוצאים
 //     מהמקור ומהלוח, "העתק" נשארים בלוח (להדביק שוב).
 //   · רגיל — הלוח מתחלף; "צירוף" — מוסיף למה שיש (מצב שנשמר — ברירת המחדל).
-//   · "העתקה" — תמיד עותק עצמאי (DbListCmd.copyIds); קישור — רק בפקודות.
+//   · "העתקה" — תמיד עותק עצמאי (Lists.copyIds); קישור — רק בפקודות.
 //   · עולמות נפרדים: הלוח הזה — רק לרשימות; לתוך רשימה אפשר גם קבצים ותיקיות שהועתקו בכונן (Clip, בהעתקה בלבד).
 // אחראי: הלוח וההדבקה, בלי ממשק (נבדק במחשב). הממשק — DbListScreen.
 
@@ -91,20 +91,20 @@ final class DbClip {
      * ההדבקה לתוך dest, בעסקה של מי שקורא (DbListCmd.now): כל פריט לפי הפעולה שלו. פריט שכבר לא קיים — לא נכנס
      * ("המקור כבר לא קיים"). "העבר" שנכנס — יוצא מהלוח; השאר נשארים.
      */
-    static DbListCmd.Copied paste(Store t, long dest) {
-        DbListCmd.Copied all = new DbListCmd.Copied();
+    static Lists.Copied paste(Store t, long dest) {
+        Lists.Copied all = new Lists.Copied();
         List<Item> done = new ArrayList<Item>();
         for (Item it : items()) {
-            DbListCmd.Copied one;
+            Lists.Copied one;
             if (t.item(it.id) == null) {
-                one = new DbListCmd.Copied();
+                one = new Lists.Copied();
                 one.skipped = 1;
                 one.why = Words.DbClipW.GONE;
             } else if (it.how == MOVE) {
-                one = DbListCmd.moveTo(t, java.util.Collections.singletonList(it.id), it.from, dest);
+                one = Lists.moveTo(t, java.util.Collections.singletonList(it.id), it.from, dest);
                 if (one.done == 1) done.add(it);
             } else {
-                one = DbListCmd.copyIds(t, java.util.Collections.singletonList(it.id), dest);
+                one = Lists.copyIds(t, java.util.Collections.singletonList(it.id), dest);
             }
             all.done += one.done;
             all.skipped += one.skipped;

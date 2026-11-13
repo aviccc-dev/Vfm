@@ -99,7 +99,7 @@ final class DbVerbsUi {
                 long id = write(a, mode, new Job() {
                     @Override
                     public long run(Store s, List<String> p) {                // מ0.23: עם בדיקת השם (כמו MD) — לא כפולה
-                        DbListCmd.Made r = DbListCmd.newListChecked(s, in, name);
+                        Lists.Made r = Lists.newListChecked(s, in, name);
                         err[0] = r.error;
                         return r.id;
                     }

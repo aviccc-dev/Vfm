@@ -316,7 +316,7 @@ final class DbMore {
     static int[] attach(Store s, long list, Tree.Node scanned, boolean structure, boolean sign) {
         int[] c = {0, 0};
         if (structure) {
-            long sub = DbListCmd.newList(s, list, freeName(s, list, Store.LIST, scanned.name));
+            long sub = Lists.newList(s, list, freeName(s, list, Store.LIST, scanned.name));
             c[0]++;
             graft(s, sub, scanned, sign, c, 0);
         } else {
@@ -329,7 +329,7 @@ final class DbMore {
         c[1] += files(s, into, n, sign);
         if (depth > 60) return;
         for (Tree.Node ch : n.children) {
-            long sub = DbListCmd.newList(s, into, freeName(s, into, Store.LIST, ch.name));
+            long sub = Lists.newList(s, into, freeName(s, into, Store.LIST, ch.name));
             c[0]++;
             graft(s, sub, ch, sign, c, depth + 1);
         }

@@ -546,7 +546,7 @@ public class DbListScreen extends ListScreen<Store.Member> {
                 done(DbListCmd.now(mode, new DbListCmd.Work() {
                     @Override public DbListCmd.Res run(Store t, DbListCmd.Finder f) {
                         String was = t.item(it.id).name;
-                        String e = DbListCmd.edit(t, it.id, n, i, d, w);              // מ0.23: אותה בדיקת שם כמו REN
+                        String e = Lists.edit(t, it.id, n, i, d, w);              // מ0.23: אותה בדיקת שם כמו REN
                         return e != null ? DbListCmd.Res.err(e) : DbListCmd.Res.ok(Words.DbCmd.saved(t.item(it.id).name))
                                 .renamed(it.id, was, t.item(it.id).name);             // מ0.42: ב8 — קובצי הפקודות שפונים אליה
                     }
@@ -643,7 +643,7 @@ public class DbListScreen extends ListScreen<Store.Member> {
                 final DbListCmd.Res res = DbListCmd.nowRes(m, new DbListCmd.Work() {
                     @Override
                     public DbListCmd.Res run(Store t, DbListCmd.Finder f) {
-                        DbListCmd.Copied c = db ? DbClip.paste(t, dest) : new DbListCmd.Copied();
+                        Lists.Copied c = db ? DbClip.paste(t, dest) : new Lists.Copied();
                         if (!files.isEmpty()) c.done += DbFiles.add(t, dest, files, null, true).added;
                         for (Tree.Node n : scanned) c.done += DbMore.attach(t, dest, n, structure, true)[1];
                         return DbListCmd.Res.ok(Words.VClipW.PASTED + c.done
@@ -693,7 +693,7 @@ public class DbListScreen extends ListScreen<Store.Member> {
                 done(DbListCmd.now(mode, new DbListCmd.Work() {
                     @Override
                     public DbListCmd.Res run(Store t, DbListCmd.Finder f) {
-                        for (Long id : ids) DbListCmd.removeFrom(t, from, id);
+                        for (Long id : ids) Lists.removeFrom(t, from, id);
                         return DbListCmd.Res.ok(Words.DbCmd.removed(Words.DbCmd.items(ids.size())));
                     }
                 }, true));

@@ -2,7 +2,7 @@ package com.tikiyot.vfm;
 
 // מ0.23: בורר רשימה מהמסד — במקום ListPicker (עץ הרשימות הישן) בכל מקום שבוחרים רשימה כשעובדים במסד: "לרשימה" במסכי
 // הקבצים, שיתוף מאפליקציה אחרת, טופס המקומות הפתוחים בפקודות, כפתור בשורה העליונה. אותו חלון בדיוק (PickDialog) —
-// רק המקור אחר (צילום של המסד: מהבית ומטה, רשימות ידניות בלבד), ויצירת רשימה חדשה דרך הליבה (DbListCmd.newList).
+// רק המקור אחר (צילום של המסד: מהבית ומטה, רשימות ידניות בלבד), ויצירת רשימה חדשה דרך הליבה (Lists.newList).
 // מבנה 18: הצילום ושאר הקריאות מהמסד — ב־DbLists (החומר). אחראי: החלון, וההוספה לרשימה שנבחרה. אסור לו: לשנות רשימות חוץ מיצירת רשימה חדשה.
 
 import android.app.Activity;
@@ -71,7 +71,7 @@ final class DbPicker {
                         final long id = DbVerbsUi.write(act, mode, new DbVerbsUi.Job() {
                             @Override
                             public long run(Store s, List<String> p) {
-                                DbListCmd.Made r = DbListCmd.newListChecked(s, in, name);
+                                Lists.Made r = Lists.newListChecked(s, in, name);
                                 err[0] = r.error;
                                 return r.id;
                             }

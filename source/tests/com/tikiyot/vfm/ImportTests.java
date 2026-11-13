@@ -237,7 +237,7 @@ final class ImportTests {
         DbClip.put("x", a, Arrays.asList(s.item(f2)), DbClip.MOVE, true);
         ck("לוח: אופן אחר — אי אפשר להדביק", DbClip.cannot("y") != null && DbClip.cannot("x") == null);
 
-        DbListCmd.Copied r = DbClip.paste(s, b);
+        Lists.Copied r = DbClip.paste(s, b);
         ck("לוח: הדבקה — כולם נכנסים ליעד", r.done == 3 && s.contains(b, f1) && s.contains(b, f2));
         ck("לוח: \"העבר\" — יצא מהמקור; \"העתק\" — נשאר במקור", !s.contains(a, f2) && s.contains(a, f1));
         long subCopy = 0;
@@ -250,7 +250,7 @@ final class ImportTests {
         DbClip.clear();
         long gone = s.createList("זמנית", home);
         DbClip.put("x", home, Arrays.asList(s.item(gone)), DbClip.COPY, false);
-        DbListCmd.removeFrom(s, home, gone);
+        Lists.removeFrom(s, home, gone);
         r = DbClip.paste(s, c);
         ck("לוח: המקור נמחק לפני ההדבקה — לא נכנס, \"המקור כבר לא קיים\"", r.done == 0 && r.skipped == 1
                 && Words.DbClipW.GONE.equals(r.why));
@@ -312,19 +312,19 @@ final class ImportTests {
         Tree mt = DbLists.asTree(s);
 
         // --- בדיקת השם האחת (REN, הגדרות, ➕) ---
-        ck("שם: ➕ רשימה חדשה בשם תפוס — שגיאה, לא כפולה", DbListCmd.newListChecked(s, home, "ג").error != null
-                && DbListCmd.newListChecked(s, home, "ג").id == 0);
-        ck("שם: ➕ עם / — שגיאה (לא נמחק בשקט)", Words.DbCmd.BAD_NAME.equals(DbListCmd.newListChecked(s, home, "ד/ה").error));
-        DbListCmd.Made ok = DbListCmd.newListChecked(s, 0, "ד");
+        ck("שם: ➕ רשימה חדשה בשם תפוס — שגיאה, לא כפולה", Lists.newListChecked(s, home, "ג").error != null
+                && Lists.newListChecked(s, home, "ג").id == 0);
+        ck("שם: ➕ עם / — שגיאה (לא נמחק בשקט)", Words.DbCmd.BAD_NAME.equals(Lists.newListChecked(s, home, "ד/ה").error));
+        Lists.Made ok = Lists.newListChecked(s, 0, "ד");
         ck("שם: ➕ שם פנוי — נוצרת (0 — בבית)", ok.error == null && ok.id != 0 && s.listsOf(ok.id).equals(Arrays.asList(home)));
         ck("שם: הגדרות — שם תפוס באחת הרשימות שהיא בהן — שגיאה, בלי שינוי",
-                DbListCmd.edit(s, c, "ד", "", "", "") != null && s.item(c).name.equals("ג"));
-        ck("שם: הגדרות — עם / — שגיאה", Words.DbCmd.BAD_NAME.equals(DbListCmd.edit(s, c, "ג/ז", "", "", "")));
-        ck("שם: הגדרות — שם פנוי — משתנה, וגם הצלמית", DbListCmd.edit(s, c, "ז", "🌟", "", "") == null && s.item(c).name.equals("ז")
+                Lists.edit(s, c, "ד", "", "", "") != null && s.item(c).name.equals("ג"));
+        ck("שם: הגדרות — עם / — שגיאה", Words.DbCmd.BAD_NAME.equals(Lists.edit(s, c, "ג/ז", "", "", "")));
+        ck("שם: הגדרות — שם פנוי — משתנה, וגם הצלמית", Lists.edit(s, c, "ז", "🌟", "", "") == null && s.item(c).name.equals("ז")
                 && "🌟".equals(s.prop(c, Store.P_ICON)));
-        ck("שם: הגדרות — אותו שם — בלי שגיאה (רק הפרטים)", DbListCmd.edit(s, c, "ז", "📘", "", "") == null && "📘".equals(s.prop(c, Store.P_ICON)));
-        ck("שם: חכמה — אותה בדיקה (תפוס)", DbListCmd.edit(s, sm, "חכמה-בבית", "", "", "") == null
-                && DbListCmd.nameError(s, Arrays.asList(home), 0, Store.SMART, "חכמה-בבית") != null);
+        ck("שם: הגדרות — אותו שם — בלי שגיאה (רק הפרטים)", Lists.edit(s, c, "ז", "📘", "", "") == null && "📘".equals(s.prop(c, Store.P_ICON)));
+        ck("שם: חכמה — אותה בדיקה (תפוס)", Lists.edit(s, sm, "חכמה-בבית", "", "", "") == null
+                && Lists.nameError(s, Arrays.asList(home), 0, Store.SMART, "חכמה-בבית") != null);
 
         // --- תיקייה מהכונן לרשימה (DbMore.liveFolder / attach) ---
         ck("תיקייה: שם פנוי — (2) כשתפוס", DbMore.freeName(s, home, Store.LIST, "ד").equals("ד (2)") && DbMore.freeName(s, home, Store.LIST, "ח").equals("ח"));
@@ -363,7 +363,7 @@ final class ImportTests {
         List<String> added = DbCmdMenu.ensureTools(s, M, Arrays.asList(t1, t2));
         ck("כלים: נכנסים לרשימת הפקודות של המסד", added.equals(Arrays.asList(Words.DbCmd.TOOL_EXPORT, Words.DbCmd.TOOL_IMPORT))
                 && s.count(cmds) == 2);
-        DbListCmd.removeFrom(s, cmds, s.findFile(t1.getAbsolutePath()));
+        Lists.removeFrom(s, cmds, s.findFile(t1.getAbsolutePath()));
         ck("כלים: מה שהמשתמש הוציא — לא חוזר", DbCmdMenu.ensureTools(s, M, Arrays.asList(t1, t2)).isEmpty() && s.count(cmds) == 1);
         ck("כלים: השורות — יצוא ⟵ ידנית וקובץ \"*\"; ייבוא ⟵ קובץ וידנית; המקומות הפתוחים — רשימה ידנית",
                 DbCmdMenu.dbTools().get(0)[2].startsWith("COPY ידנית \"<") && DbCmdMenu.dbTools().get(0)[2].endsWith("קובץ \"*\"")
@@ -490,15 +490,15 @@ final class ImportTests {
         // בחירה מרובה (מ0.16): העתקה / קישור / העברה לפי מספרי זיהוי
         long ta = s.createList("יעד-א", home), tb = s.createList("יעד-ב", home);
         long f1 = s.findFile("/s/a.pdf"), lst = s.createList("פנימית", ta);
-        DbListCmd.Copied lk = DbListCmd.linkInto(s, Arrays.asList(lst, f1), tb);
+        Lists.Copied lk = Lists.linkInto(s, Arrays.asList(lst, f1), tb);
         ck("קישור: אותה רשימה ואותו קובץ גם ביעד", lk.done == 2 && s.contains(tb, lst) && s.listsOf(lst).size() == 2);
-        ck("קישור: שוב — לא נכנס (כבר בה); לתוך עצמו — לא", DbListCmd.linkInto(s, Arrays.asList(lst), tb).skipped == 1
-                && DbListCmd.linkInto(s, Arrays.asList(tb), tb).skipped == 1);
+        ck("קישור: שוב — לא נכנס (כבר בה); לתוך עצמו — לא", Lists.linkInto(s, Arrays.asList(lst), tb).skipped == 1
+                && Lists.linkInto(s, Arrays.asList(tb), tb).skipped == 1);
         long f2 = s.createFile(new Store.FileInfo("/s/m.txt", "פנימי", 1, 0, null));
         s.addMember(ta, f2);
-        DbListCmd.Copied mv = DbListCmd.moveTo(s, Arrays.asList(f2), ta, tb);
+        Lists.Copied mv = Lists.moveTo(s, Arrays.asList(f2), ta, tb);
         ck("העברה: נכנס ליעד ויצא מהמקור", mv.done == 1 && s.listsOf(f2).equals(Arrays.asList(tb)));
-        DbListCmd.Copied cpi = DbListCmd.copyIds(s, Arrays.asList(ta, tb), ta);
+        Lists.Copied cpi = Lists.copyIds(s, Arrays.asList(ta, tb), ta);
         ck("העתקה לפי מספרים: רשימה לא לתוך עצמה (נספרת)", cpi.skipped >= 1 && Words.ListCmdW.INTO_ITSELF.equals(cpi.why));
 
         // קשר / העבר בפקודה (מ0.17)
@@ -634,21 +634,21 @@ final class ImportTests {
         x = sides("RD ידנית \"ספרים\"");
         DbListCmd.remove(c, M, x[0]);
         ck("העותק להדמיה: שינוי בו לא נוגע במסד", at(s, "ספרים") == books && c.lists().size() < lists && s.lists().size() == lists);
-        long nl = DbListCmd.newList(s, 0, "מהמסך");
+        long nl = Lists.newList(s, 0, "מהמסך");
         ck("הליבה (מסכים): רשימה חדשה — בבית", nl != 0 && s.listsOf(nl).equals(Arrays.asList(home)));
         long note = s.addNote(nl, "הערה");
-        DbListCmd.removeFrom(s, nl, note);
+        Lists.removeFrom(s, nl, note);
         ck("הליבה (מסכים): רעיון שהוסר מהרשימה היחידה — לסל", s.members(nl).isEmpty() && "הערה".equals(s.trashed().get(s.trashed().size() - 1).name));
-        DbListCmd.Copied cp = DbListCmd.copyInto(s, Arrays.asList(s.item(books)), nl);
+        Lists.Copied cp = Lists.copyInto(s, Arrays.asList(s.item(books)), nl);
         ck("הליבה (מסכים): העתקה לתוך רשימה — עותק עצמאי", cp.done == 1 && s.members(nl).size() == 1 && s.members(nl).get(0).item.id != books);
-        DbListCmd.edit(s, nl, "מהמסך חדש", "⭐", "תיאור", "");
+        Lists.edit(s, nl, "מהמסך חדש", "⭐", "תיאור", "");
         ck("הליבה (מסכים): עריכה — שם, צלמית, תיאור", s.item(nl).name.equals("מהמסך חדש") && "⭐".equals(s.prop(nl, Store.P_ICON))
                 && "תיאור".equals(s.prop(nl, Store.P_DESC)) && at(s, "מהמסך חדש") == nl);
         long hal2 = at(s, "ספרים"), copyInBooks = s.createList("זמני", hal2);
         s.setOrigin(copyInBooks, DbPaths.originOf(M, "ספרים / זמני"));
-        DbListCmd.edit(s, copyInBooks, "קבוע", "", "", "");
+        Lists.edit(s, copyInBooks, "קבוע", "", "", "");
         ck("שינוי שם: הפקודה מוצאת לפי השם החדש, לא לפי המקור הישן", at(s, "ספרים/קבוע") == copyInBooks && at(s, "ספרים/זמני") == 0);
-        DbListCmd.removeFrom(s, home, nl);
+        Lists.removeFrom(s, home, nl);
         ck("הליבה (מסכים): הסרה מהבית — נמחקת עם מה שרק שלה", s.item(nl) == null && at(s, "ספרים") == books);
         ck("פקודות במסד: המסד תקין", s.check() == null);
     }

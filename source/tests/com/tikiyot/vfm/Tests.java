@@ -2624,7 +2624,7 @@ public final class Tests {
         eq("מ0.30 (40): בכמה רשימות ובלי דרך — צריך דרך מלאה", -1L, DbListCmd.parentOf(s, "x", side, in));
         s.addMember(h, in);
         eq("מ0.30 (40): גם בבית — מהבית", h, DbListCmd.parentOf(s, "x", side, in));
-        DbListCmd.deleteWhole(s, a);
+        Lists.deleteWhole(s, a);
         check("מ0.30 (מ20): מחיקת רשימה מכל מקום — נמחקה, ומה שנשאר במקום אחר נשאר", s.item(a) == null && s.item(in) != null);
     }
 
