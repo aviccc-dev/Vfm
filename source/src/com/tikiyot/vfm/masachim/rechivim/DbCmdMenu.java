@@ -151,41 +151,13 @@ final class DbCmdMenu {
 
     // ================= מ0.23: יצוא וייבוא — קובצי פקודות מוכנים ב־⭐ =================
 
-    /** [צלמית, שם, שורת הפקודה] — המקומות הפתוחים נשאלים בהרצה (הטופס — עם בורר הרשימות של המסד). */
+    /** [צלמית, שם, שורת הפקודה]. מבנה 12: הרשימה עצמה והכתיבה לכונן — ב־Reserved. */
     static List<String[]> dbTools() {
-        List<String[]> out = new ArrayList<String[]>();
-        out.add(new String[]{"📤", Words.DbCmd.TOOL_EXPORT, "COPY " + ListCmd.MANUAL + " \"<" + Words.DbCmd.HOLE_EXPORT + ">\" "
-                + ListCmd.FILE_WORD + " \"*\""});   // תחביר
-        out.add(new String[]{"📥", Words.DbCmd.TOOL_IMPORT, "COPY " + ListCmd.FILE_WORD + " \"<" + Words.DbCmd.HOLE_FILE + ">\" "
-                + ListCmd.MANUAL + " \"<" + Words.DbCmd.HOLE_INTO + ">\""});   // תחביר
-        // מ0.25 (באג 28; המשתמש: "יכולים להישאר בפקודות. ותרשום לך להכניס אותם לשמורים לתוכנה"): הכלים שלא עברו לבית
-        // (סל והגדרות — כבר בפקודות המערכת). כפולים — גם כאן, עם ברירות המחדל.
-        out.add(new String[]{"⧉", Words.DbCmd.TOOL_DUPS, Verbs.toolLine(FnDup.KIND, new java.util.LinkedHashMap<String, String>())});
-        out.add(new String[]{"📌", Words.DbCmd.TOOL_BAR, Verbs.toolLine("פס", new java.util.LinkedHashMap<String, String>())});   // תחביר
-        out.add(new String[]{"🔗", Words.DbCmd.TOOL_APP, Verbs.toolLine("אפליקציה", new java.util.LinkedHashMap<String, String>())});   // תחביר; בלי חבילה — נשאל
-        // מ0.41 (המשתמש, 12.11.2026: "להוסיף כפתור שמריץ אותו. וכך הוא הופך להיות חלק אינטגרלי מהתוכנה"): העורך האינטראקטיבי
-        out.add(new String[]{"📝", Words.DbCmd.TOOL_EDITOR, Verbs.OPEN + " " + Verbs.PLUGIN + " \"" + Words.DbCmd.TOOL_EDITOR + "\""});
-        return out;
+        return Reserved.dbTools();
     }
 
-    /** הקבצים בתיקיית פקודות המערכת (כמו Reserved.writeSystem: מה שהשתנה — נכתב מחדש). */
     static List<File> writeTools() {
-        List<File> out = new ArrayList<File>();
-        File dir = Reserved.sysDir();
-        for (String[] t : dbTools()) {
-            File f = new File(dir, t[1] + "." + Batch.EXT);
-            String text = Program.ICON + " " + t[0] + "\n" + Program.NAME + " " + t[1] + "\n" + t[2] + "\n";
-            try {
-                if (!f.isFile() || !text.equals(Files.readUtf8(f))) {
-                    if (!dir.isDirectory()) dir.mkdirs();
-                    Files.writeAtomic(f, text);
-                }
-                out.add(f);
-            } catch (Throwable e) {
-                Log.e("DbCmdMenu.writeTools", e);
-            }
-        }
-        return out;
+        return Reserved.writeTools();
     }
 
     /**

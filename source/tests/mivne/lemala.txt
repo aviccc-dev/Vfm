@@ -1,6 +1,6 @@
 # פניות "כלפי מעלה": קובץ > קובץ מקומה שמעליו. הקומות, מלמטה למעלה: [basis, chomer, pkudot, lev, masachim]
 # הרשימה רק מתקצרת (MivneTests): פנייה חדשה — הבדיקות נכשלות; פנייה שנפתרה — מורידים את השורה.
-# נכתב מהקוד: 43 זוגות, 154 הופעות.
+# נכתב מהקוד: 39 זוגות, 151 הופעות.
 
 # (basis ← chomer)
 Drive > Index
@@ -16,7 +16,6 @@ DbMore > DbListCmd
 SmartLists > Target
 
 # (chomer ← masachim)
-DbExamples > DbCmdMenu
 Sig > DbPicker
 Sort > Ui
 
@@ -37,7 +36,6 @@ Func > FnDup
 Func > FnSettings
 Func > FnSmart
 Func > FnTrash
-Reserved > CmdMenu
 Verbs > BatchUi
 Verbs > CmdMenu
 Verbs > DbScreen
@@ -56,5 +54,3 @@ Bridge > DbSmartForm
 Bridge > FolderPicker
 Bridge > RunScreen
 Bridge > Ui
-Menus > CmdMenu
-Menus > DbCmdMenu

@@ -36,7 +36,7 @@ final class Reserved {
     /** פקודות המערכת והקובץ "פקודה חדשה" — נכתבים כמו שהם (מה שהשתנה — חוזר). מחזיר את הקבצים, לפי הסדר. */
     static List<File> writeSystem() {
         List<File> out = new ArrayList<File>();
-        List<String[]> all = new ArrayList<String[]>(CmdMenu.system());
+        List<String[]> all = new ArrayList<String[]>(system());
         all.add(new String[]{"➕", NEW, Verbs.CREATE + " " + Verbs.CMD_WORD});
         File dir = sysDir();
         for (String[] s : all) {
@@ -87,5 +87,58 @@ final class Reserved {
                 if (s != null) s.close();
             }
         }
+    }
+
+    // ---------- מבנה 12: רשימות פקודות המערכת — עד כאן בתוך התפריטים (CmdMenu.system, DbCmdMenu.dbTools / writeTools) ----------
+
+    /** פקודות המערכת — קבוצה 1: פתיחת מסכים (המשתמש: "יוצגו גם בתור טקסט לעריכה"). {צלמית, שם, שורה}. */
+    static List<String[]> system() {
+        return Arrays.asList(
+                new String[]{"🏠", Words.Top.HOME, Verbs.openScreen(Verbs.S_HOME)},
+                new String[]{"→", Words.Top.BACK, Verbs.BACK},
+                new String[]{"🔎", Words.Top.SEARCH, Verbs.openScreen(Verbs.S_SEARCH)},
+                new String[]{"⭐", Words.Top.COMMANDS, Verbs.openScreen(Verbs.S_COMMANDS)},
+                new String[]{"📂", Words.Top.FILES, Verbs.openScreen(Verbs.S_DISK)},
+                new String[]{"🗂", Words.Top.VIRTUAL, Verbs.openScreen(Verbs.S_VIRTUAL)},
+                new String[]{"✎", Words.Top.EDITOR, Verbs.OPEN + " " + Verbs.S_EDITOR},       // 1.28.0
+                new String[]{"⚙", Words.Top.SETTINGS, Verbs.openScreen(Verbs.S_SETTINGS)},
+                new String[]{"🗑", Words.Top.TRASH, Verbs.openScreen(Verbs.S_TRASH)});
+    }
+
+    /** [צלמית, שם, שורת הפקודה] — המקומות הפתוחים נשאלים בהרצה (הטופס — עם בורר הרשימות של המסד). */
+    static List<String[]> dbTools() {
+        List<String[]> out = new ArrayList<String[]>();
+        out.add(new String[]{"📤", Words.DbCmd.TOOL_EXPORT, "COPY " + ListCmd.MANUAL + " \"<" + Words.DbCmd.HOLE_EXPORT + ">\" "
+                + ListCmd.FILE_WORD + " \"*\""});   // תחביר
+        out.add(new String[]{"📥", Words.DbCmd.TOOL_IMPORT, "COPY " + ListCmd.FILE_WORD + " \"<" + Words.DbCmd.HOLE_FILE + ">\" "
+                + ListCmd.MANUAL + " \"<" + Words.DbCmd.HOLE_INTO + ">\""});   // תחביר
+        // מ0.25 (באג 28; המשתמש: "יכולים להישאר בפקודות. ותרשום לך להכניס אותם לשמורים לתוכנה"): הכלים שלא עברו לבית
+        // (סל והגדרות — כבר בפקודות המערכת). כפולים — גם כאן, עם ברירות המחדל.
+        out.add(new String[]{"⧉", Words.DbCmd.TOOL_DUPS, Verbs.toolLine(Target.KIND_DUP, new java.util.LinkedHashMap<String, String>())});
+        out.add(new String[]{"📌", Words.DbCmd.TOOL_BAR, Verbs.toolLine("פס", new java.util.LinkedHashMap<String, String>())});   // תחביר
+        out.add(new String[]{"🔗", Words.DbCmd.TOOL_APP, Verbs.toolLine("אפליקציה", new java.util.LinkedHashMap<String, String>())});   // תחביר; בלי חבילה — נשאל
+        // מ0.41 (המשתמש, 12.11.2026: "להוסיף כפתור שמריץ אותו. וכך הוא הופך להיות חלק אינטגרלי מהתוכנה"): העורך האינטראקטיבי
+        out.add(new String[]{"📝", Words.DbCmd.TOOL_EDITOR, Verbs.OPEN + " " + Verbs.PLUGIN + " \"" + Words.DbCmd.TOOL_EDITOR + "\""});
+        return out;
+    }
+
+    /** הקבצים בתיקיית פקודות המערכת (כמו Reserved.writeSystem: מה שהשתנה — נכתב מחדש). */
+    static List<File> writeTools() {
+        List<File> out = new ArrayList<File>();
+        File dir = sysDir();
+        for (String[] t : dbTools()) {
+            File f = new File(dir, t[1] + "." + Batch.EXT);
+            String text = Program.ICON + " " + t[0] + "\n" + Program.NAME + " " + t[1] + "\n" + t[2] + "\n";
+            try {
+                if (!f.isFile() || !text.equals(Files.readUtf8(f))) {
+                    if (!dir.isDirectory()) dir.mkdirs();
+                    Files.writeAtomic(f, text);
+                }
+                out.add(f);
+            } catch (Throwable e) {
+                Log.e("DbCmdMenu.writeTools", e);
+            }
+        }
+        return out;
     }
 }

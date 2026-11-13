@@ -46,7 +46,7 @@ final class DbExamples {
     static void files(String demo) {
         try {
             Reserved.writeSystem();
-            DbCmdMenu.writeTools();
+            Reserved.writeTools();
             if (demo != null) demo(new File(Paths.data(), DEMO), demo);
         } catch (Throwable t) {
             Log.e("DbExamples.files", t);

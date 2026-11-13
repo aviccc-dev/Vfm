@@ -28,18 +28,9 @@ final class CmdMenu {
         void ok(String icon, String name, String line, File file);
     }
 
-    /** פקודות המערכת — קבוצה 1: פתיחת מסכים (המשתמש: "יוצגו גם בתור טקסט לעריכה"). {צלמית, שם, שורה}. */
+    /** פקודות המערכת — קבוצה 1: פתיחת מסכים. מבנה 12: הרשימה עצמה — ב־Reserved (קובצי פקודות המערכת), לא בתפריט. */
     static List<String[]> system() {
-        return Arrays.asList(
-                new String[]{"🏠", Words.Top.HOME, Verbs.openScreen(Verbs.S_HOME)},
-                new String[]{"→", Words.Top.BACK, Verbs.BACK},
-                new String[]{"🔎", Words.Top.SEARCH, Verbs.openScreen(Verbs.S_SEARCH)},
-                new String[]{"⭐", Words.Top.COMMANDS, Verbs.openScreen(Verbs.S_COMMANDS)},
-                new String[]{"📂", Words.Top.FILES, Verbs.openScreen(Verbs.S_DISK)},
-                new String[]{"🗂", Words.Top.VIRTUAL, Verbs.openScreen(Verbs.S_VIRTUAL)},
-                new String[]{"✎", Words.Top.EDITOR, Verbs.OPEN + " " + Verbs.S_EDITOR},       // 1.28.0
-                new String[]{"⚙", Words.Top.SETTINGS, Verbs.openScreen(Verbs.S_SETTINGS)},
-                new String[]{"🗑", Words.Top.TRASH, Verbs.openScreen(Verbs.S_TRASH)});
+        return Reserved.system();
     }
 
     private CmdMenu() { }

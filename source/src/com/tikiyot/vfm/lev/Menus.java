@@ -433,8 +433,8 @@ final class Menus {
     /** שורת פקודה ← הקובץ שלה בין פקודות המערכת והכלים (כדי שכפתור ישן של "בית" יהיה אותו קובץ שבתפריט). */
     static Map<String, File> systemFiles() {
         Map<String, File> out = new HashMap<String, File>();
-        List<String[]> all = new ArrayList<String[]>(CmdMenu.system());
-        all.addAll(DbCmdMenu.dbTools());
+        List<String[]> all = new ArrayList<String[]>(Reserved.system());
+        all.addAll(Reserved.dbTools());
         all.add(new String[]{"➕", Reserved.NEW, Verbs.CREATE + " " + Verbs.CMD_WORD});
         for (String[] x : all) out.put(x[2].trim(), new File(Reserved.sysDir(), x[1] + "." + Batch.EXT));
         return out;
