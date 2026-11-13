@@ -67,11 +67,11 @@ final class Bridge {
             // מ0.42 — לתוסף האבחון: המכשיר, ההרשאה, המקום, היומנים והאינדקס (מה שהיה בראש דוח האבחון ובהגדרות)
             o.put("versionCode", screen.getPackageManager().getPackageInfo(screen.getPackageName(), 0).versionCode);
             o.put("device", Log.device());
-            o.put("access", Ui.hasFiles(screen));
+            o.put("access", Files.hasAccess(screen));
             o.put("freeMb", android.os.Environment.getExternalStorageDirectory().getUsableSpace() / (1024 * 1024));
             o.put("log", Log.file().getAbsolutePath());
             o.put("trial", Trial.file().getAbsolutePath());
-            o.put("savedMode", DbScreen.savedMode(screen));
+            o.put("savedMode", Db.savedMode(screen));
             Library lib = Library.get(screen);
             o.put("indexReady", lib.ready);
             // מ0.43: מה שהיה בראש ההגדרות — האינדקס לכל כונן, ומה הוא עושה עכשיו

@@ -9,6 +9,8 @@ import java.util.List;
 final class Names {
 
     static final String SEP = " / ";
+    /** השם השמור: הרשימה "שמור לתוכנה" שבאופן עבודה (Reserved.ROOT), והאופן של התוכנה באותו שם (Db.MENUS_MODE). מבנה 8: ההגדרה האחת — כאן, למטה. */
+    static final String RESERVED_ROOT = "שמור לתוכנה";  // בכונן
 
     private Names() { }
 

@@ -19,7 +19,7 @@ final class DbVerbs {
         // (שיתוף מאפליקציה אחרת, קיצור דרך): האופן — זה שנשמר.
         if (Db.currentMode == null && Db.app != null)
             try {
-                Db.currentMode = DbScreen.savedMode(Db.app);
+                Db.currentMode = Db.savedMode(Db.app);
             } catch (Throwable t) {
                 Log.e("DbVerbs.active", t);
             }
@@ -56,12 +56,12 @@ final class DbVerbs {
         }
         if (c.kind.equals(Verbs.K_MODE)) {                                       // מ0.42: מכפתור — נוצר (אם אין) ונפתח, כמו "אופן חדש"
             String name = c.arg.trim();
-            long h = DbScreen.prepare(a, name);
+            long h = Db.prepare(a, name);
             if (h == 0) {
                 Ui.toast(a, Words.DbCmd.modeFailed(name));
                 return true;
             }
-            DbScreen.saveMode(a, name);
+            Db.saveMode(a, name);
             DbListScreen.open(a, name, h);
             return true;
         }
@@ -194,7 +194,7 @@ final class DbVerbs {
         long id = read(a, mode, path);
         if (id == 0) Ui.toast(a, Words.Verb.NOT_FOUND + Names.label(path));
         else {
-            DbScreen.saveMode(a, mode);
+            Db.saveMode(a, mode);
             DbListScreen.open(a, mode, id);
         }
     }
@@ -212,7 +212,7 @@ final class DbVerbs {
                 long id = readSmart(a, o[1], c.arg);
                 if (id == 0) Ui.toast(a, Words.Verb.NOT_FOUND + c.arg);
                 else {
-                    DbScreen.saveMode(a, o[1]);
+                    Db.saveMode(a, o[1]);
                     openSmart(a, o[1], id, c.sort);
                 }
             }

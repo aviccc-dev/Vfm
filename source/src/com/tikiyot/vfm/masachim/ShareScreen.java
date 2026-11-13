@@ -61,7 +61,7 @@ public class ShareScreen extends Activity {
         if (getWindow() != null)
             getWindow().setLayout((int) (dm.widthPixels * 0.92), (int) (dm.heightPixels * 0.8));
 
-        if (!Ui.hasFiles(this)) {
+        if (!Files.hasAccess(this)) {
             status.setText(Words.ShareIn.NEED_APP_FIRST);
             return;
         }

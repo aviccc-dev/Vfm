@@ -2351,7 +2351,7 @@ public final class Words {
         }
 
         public static String modeLine(String name, boolean active) {
-            String n = name.equals(Reserved.ROOT) || name.equals(DbCmd.TEST_MODE) ? "⚙ " + name + " · של התוכנה" : name;   // מ0.41
+            String n = name.equals(Names.RESERVED_ROOT) || name.equals(DbCmd.TEST_MODE) ? "⚙ " + name + " · של התוכנה" : name;   // מ0.41
             return active ? n + " (הפעיל)" : n;
         }
 

@@ -127,7 +127,7 @@ public class DbListScreen extends ListScreen<Store.Member> {
         Db.currentMode = mode;                                                   // מ0.41: לפני שהשורות מצוירות — התפריטים של האופן הזה
         atHome = homeNow();                                                   // ...ושל מסך הבית, אם זה הבית
         Menus.ensure(this);                                                   // מ0.41: אופן התפריטים — לפני כל כתיבה אחרת למסדים
-        if (Ui.hasFiles(this)) DbCmdMenu.ensureToolsAsync(this, mode);      // מ0.23: יצוא וייבוא ב־⭐
+        if (Files.hasAccess(this)) DbCmdMenu.ensureToolsAsync(this, mode);      // מ0.23: יצוא וייבוא ב־⭐
         LinearLayout root = build(saved, Words.Db.APP_NAME_M, "db-list");
         modeBox = new TextView(this);                                         // כמו בבית הישן (Home, 105)
         modeBox.setTextSize(16);
@@ -294,7 +294,7 @@ public class DbListScreen extends ListScreen<Store.Member> {
                 if (which == count + 1) { askRestoreExamples(); return; }
                 String m = all.get(which);
                 if (m.equals(mode)) return;
-                DbScreen.saveMode(DbListScreen.this, m);
+                Db.saveMode(DbListScreen.this, m);
                 SqlStore s = null;
                 long h = 0;
                 try {
@@ -333,12 +333,12 @@ public class DbListScreen extends ListScreen<Store.Member> {
 
     /** פותח אופן: המסד נוצר אם אין ומקבל בית (DbScreen.prepare), הבית נפתח, והמסך הזה נסגר. */
     private void openMode(String name) {
-        long h = DbScreen.prepare(this, name);
+        long h = Db.prepare(this, name);
         if (h == 0) {
             Ui.toast(this, Words.Db.NO_HOME);
             return;
         }
-        DbScreen.saveMode(this, name);
+        Db.saveMode(this, name);
         finish();
         open(this, name, h);
     }
@@ -353,7 +353,7 @@ public class DbListScreen extends ListScreen<Store.Member> {
                         new Thread(new Runnable() {
                             @Override
                             public void run() {
-                                final String msg = DbScreen.restoreExamples(getApplicationContext());
+                                final String msg = Db.restoreExamples(getApplicationContext());
                                 runOnUiThread(new Runnable() {
                                     @Override
                                     public void run() {

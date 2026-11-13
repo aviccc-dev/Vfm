@@ -23,7 +23,7 @@ import java.util.Map;
 final class Menus {
 
     /** אופן התפריטים: בא עם התוכנה; בבית שלו — כל התפריטים. */
-    static final String MODE = Reserved.ROOT;
+    static final String MODE = Db.MENUS_MODE;
     static final String ROW_TOP = "שורה למעלה", ROW_BOTTOM = "שורה למטה", SELECT = "בחירה";   // בכונן
     static final int MAX_ROWS = 5;
     /** ברירת המחדל — קובץ יצוא שמצורף לתוכנה (כמו הדוגמאות). */
@@ -370,7 +370,7 @@ final class Menus {
 
     /** אופן התפריטים קיים ויש בו בית — אם לא, מותקן עכשיו (פעם אחת; בהפעלה הראשונה של הגרסה). */
     static synchronized void ensure(Context c) {
-        if (ready || !Ui.hasFiles(c)) return;
+        if (ready || !Files.hasAccess(c)) return;
         ready = true;                                                         // ניסיון אחד בכל הפעלה (נכשל — שורת החירום, ושוב בהפעלה הבאה)
         SqlStore s = null;
         try {

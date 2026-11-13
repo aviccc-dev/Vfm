@@ -30,7 +30,7 @@ final class DbPicker {
 
     /** האופן: של מסך המסד הפתוח, ואם אין — מה שנבחר בפעם הקודמת. */
     static String mode(android.content.Context c) {
-        return Db.currentMode != null ? Db.currentMode : DbScreen.savedMode(c);
+        return Db.currentMode != null ? Db.currentMode : Db.savedMode(c);
     }
 
     // ================= הצילום =================

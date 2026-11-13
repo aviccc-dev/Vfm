@@ -14,7 +14,6 @@ import android.content.Intent;
 import android.graphics.Typeface;
 import android.net.Uri;
 import android.os.Build;
-import android.os.Environment;
 import android.provider.Settings;
 import android.text.SpannableString;
 import android.text.Spanned;
@@ -103,13 +102,6 @@ public final class Ui {
     }
 
     // ---------- הרשאות ----------
-
-    public static boolean hasFiles(Context c) {
-        if (Build.VERSION.SDK_INT >= 30) return Environment.isExternalStorageManager();
-        if (Build.VERSION.SDK_INT >= 23)
-            return c.checkSelfPermission(android.Manifest.permission.WRITE_EXTERNAL_STORAGE) == 0;
-        return true;
-    }
 
     public static void requestFiles(Activity a) {
         try {

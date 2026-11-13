@@ -18,7 +18,7 @@ import java.util.List;
 
 final class Reserved {
 
-    static final String ROOT = "שמור לתוכנה", CMDS = "פקודות", MINE = "הפקודות שלי",  // בכונן
+    static final String ROOT = Names.RESERVED_ROOT, CMDS = "פקודות", MINE = "הפקודות שלי",  // בכונן
             NEW = "פקודה חדשה", SYS_DIR = "פקודות המערכת";  // בכונן
     static final List<String> ROOT_PATH = Collections.singletonList(ROOT);
     static final List<String> CMDS_PATH = Arrays.asList(ROOT, CMDS);

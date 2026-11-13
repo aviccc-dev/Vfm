@@ -93,7 +93,7 @@ public final class LabScreen extends Activity {
         try {
             SharedPreferences p = prefs();
             int vc = getPackageManager().getPackageInfo(getPackageName(), 0).versionCode;
-            if ((p.getInt("bundled", 0) == vc && !force) || !Ui.hasFiles(this)) return;
+            if ((p.getInt("bundled", 0) == vc && !force) || !Files.hasAccess(this)) return;
             String[] names = getAssets().list(Lab.BUNDLED);
             if (names != null) for (String n : names)
                 if (Lab.isHtml(n)) {

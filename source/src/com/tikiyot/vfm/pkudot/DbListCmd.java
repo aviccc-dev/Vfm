@@ -1328,7 +1328,7 @@ final class DbListCmd {
             public String run(Library lib) {
                 android.content.Context c = Db.app;
                 boolean[] ok = {false};
-                String engine = DbScreen.selfTestText(c, ok).trim().replace("\n", " · ");
+                String engine = Db.selfTestText(c, ok).trim().replace("\n", " · ");
                 List<String> bad = new ArrayList<String>();
                 int good = 0;
                 for (String m : Db.dbModes(c)) {
@@ -1378,7 +1378,7 @@ final class DbListCmd {
             @Override
             public String run(Library lib) {
                 if (Db.dbModes(Db.app).contains(name)) return Words.DbCmd.modeExists(name);
-                if (DbScreen.prepare(Db.app, name) != 0) return Words.DbCmd.modeCreated(name);
+                if (Db.prepare(Db.app, name) != 0) return Words.DbCmd.modeCreated(name);
                 lastFailed = true;
                 return Words.DbCmd.modeFailed(name);
             }
@@ -1398,7 +1398,7 @@ final class DbListCmd {
             s.describe = Words.DbCmd.dropModeNone(name);
             return;
         }
-        if (name.equals(Menus.MODE)) { s.error = Words.DbCmd.dropModeSystem(name); return; }
+        if (name.equals(Db.MENUS_MODE)) { s.error = Words.DbCmd.dropModeSystem(name); return; }
         if (name.equals(Db.currentMode) || name.equals(sim.mode)) { s.error = Words.DbCmd.dropModeOpen(name); return; }
         sim.created.remove(name);
         sim.dropped.add(name);
@@ -1433,7 +1433,7 @@ final class DbListCmd {
                     lastFailed = true;
                     return Words.DbCmd.dropModeFailed(name, Words.Db.failed(f.getName()));
                 }
-                if (name.equals(DbScreen.savedMode(c))) DbScreen.saveMode(c, "");   // הפתיחה הבאה — באופן אחר
+                if (name.equals(Db.savedMode(c))) Db.saveMode(c, "");   // הפתיחה הבאה — באופן אחר
                 // מ0.45+ (claude/bitul-ofen.md, המשתמש: "למה להשאיר? בלי אופן היא סתם בלבול"): תיקיית ההגדרות שלו — לסל (לא לצמיתות)
                 boolean folder = false;
                 String note = "";

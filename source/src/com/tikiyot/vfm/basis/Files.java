@@ -205,4 +205,12 @@ public final class Files {
         File root = new File(i > 0 ? path.substring(0, i) : path);
         return !root.exists() || !root.canRead();
     }
+
+    /** יש לתוכנה גישה לקבצים שבכונן (ההרשאה). מבנה 8: עבר מ־Ui (hasFiles) — שאלה על הקבצים, לא על המסך; כך גם מי שמתחת למסכים שואל. */
+    public static boolean hasAccess(android.content.Context c) {
+        if (android.os.Build.VERSION.SDK_INT >= 30) return android.os.Environment.isExternalStorageManager();
+        if (android.os.Build.VERSION.SDK_INT >= 23)
+            return c.checkSelfPermission(android.Manifest.permission.WRITE_EXTERNAL_STORAGE) == 0;
+        return true;
+    }
 }

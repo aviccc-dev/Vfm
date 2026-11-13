@@ -204,7 +204,7 @@ public class SettingsScreen extends Activity {
     protected void onResume() {
         super.onResume();
         labels();
-        if (Ui.hasFiles(this)) lib.start(new Runnable() {
+        if (Files.hasAccess(this)) lib.start(new Runnable() {
             @Override
             public void run() {
                 h.post(new Runnable() {
@@ -217,7 +217,7 @@ public class SettingsScreen extends Activity {
 
     private void show() {
         StringBuilder sb = new StringBuilder();
-        sb.append(Words.Prefs.ACCESS_IS).append(Ui.hasFiles(this) ? "✓" : "✗").append("\n");
+        sb.append(Words.Prefs.ACCESS_IS).append(Files.hasAccess(this) ? "✓" : "✗").append("\n");
         sb.append("\n");
         if (!lib.ready) {
             sb.append(Words.Prefs.INDEX_LOADING);

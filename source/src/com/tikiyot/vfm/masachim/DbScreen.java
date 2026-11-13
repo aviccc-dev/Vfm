@@ -3,7 +3,7 @@ package com.tikiyot.vfm;
 // מ0.8: נגיעה בקובץ פותחת אותו (קובץ פקודות — רץ, כמו בכל התוכנה: Ui.open); הוספת קבצים מתיקייה ומחיפוש לרשימה.
 // מסך מנוע המסד (מ0.1–מ0.8): רשימות, רשימות חכמות ("לא משויכים" כרשימה מיוחדת) ופריטים מעל Store,
 // וגיבוי (מ0.5): עותק יומי ברקע כשנפתח המסד, עותק לפני פעולה מוחקת, "גיבוי עכשיו", שחזור, ומסד פגום שלא נפתח.
-// וגם שירותים לכל התוכנה (מבנה 6: איפה קובץ המסד, המונה, הגיבויים ורשימת האופנים — עברו ל־Db): האופן השמור, ההכנה של אופן (prepare / setup), שחזור הדוגמאות.
+// השירותים לכל התוכנה (איפה המסד, האופן השמור, ההכנה של אופן, שחזור הדוגמאות, בדיקת המנוע) — עברו ל־Db (מבנה 6, 8). נשאר כאן: ההכנה של אופן (prepare / setup), שחזור הדוגמאות.
 // אחראי: להציג ולהפעיל. אסור לו: לדעת איך הנתונים נשמרים (Store, Backups).
 
 import android.app.Activity;
@@ -11,7 +11,6 @@ import android.app.AlertDialog;
 import android.content.DialogInterface;
 import android.graphics.Typeface;
 import android.os.Bundle;
-import android.os.Environment;
 import android.view.View;
 import android.widget.Button;
 import android.widget.LinearLayout;
@@ -32,7 +31,6 @@ public class DbScreen extends Activity {
     private boolean familiarDone;
     /** מ0.20: האופנים שכבר הוצע בהם שחזור למסד ריק (פעם אחת לכל אופן בכל פתיחה של המסך). */
     private final java.util.Set<String> restoreOffered = new java.util.HashSet<String>();
-    private static final String PREFS = "m", PREF_MODE = "mode";
 
     private volatile SqlStore store;
     /** מ0.5: המסד של האופן פגום — לא נפתח. null: לא פגום. */
@@ -50,22 +48,10 @@ public class DbScreen extends Activity {
     /** מספר ההצגה הנוכחית; הערכה של רשימה חכמה שהסתיימה אחרי שעזבו אותה — מתעלמים ממנה. */
     private final android.os.Handler ui = new android.os.Handler(android.os.Looper.getMainLooper());
 
-    /** מ0.29: האופן כשעוד לא נבחר אחד: הראשון שיש לו מסד, ואם אין אף מסד (התקנה חדשה) — הדוגמאות. */
-    static String defaultMode(android.content.Context c) {
-        for (String m : Db.dbModes(c)) if (!m.equals(Menus.MODE)) return m;    // מ0.41: אופן התפריטים אינו אופן עבודה
-        return DbExamples.MODE;
-    }
-
     /** האופן הפתוח: מה שנבחר בפעם הקודמת, ואם אין — האופן הפעיל במנוע הישן. */
     private String loadMode() {
-        String m = getSharedPreferences(PREFS, MODE_PRIVATE).getString(PREF_MODE, "");
-        return m.isEmpty() ? defaultMode(this) : m;
-    }
-
-    /** מ0.23: האופן של המסד בלי מסך פתוח (למשל שיתוף מאפליקציה אחרת): מה שנבחר בפעם הקודמת, ואם אין — הפעיל בישן. */
-    static String savedMode(android.content.Context c) {
-        String m = c.getSharedPreferences(PREFS, MODE_PRIVATE).getString(PREF_MODE, "");
-        return m.isEmpty() ? defaultMode(c) : m;
+        String m = getSharedPreferences(Db.PREFS, MODE_PRIVATE).getString(Db.PREF_MODE, "");
+        return m.isEmpty() ? Db.defaultMode(this) : m;
     }
 
     /**
@@ -79,8 +65,8 @@ public class DbScreen extends Activity {
     /** מ0.25 (באג 30): "בית" — הבית נפתח מחדש וכל שאר המסכים נסגרים (המשימה מתנקה). */
     /** מ0.35: הגיבויים של האופן הנוכחי — מההגדרות (הכניסה עברה לשם מ־⋮ של מסך הרשימות). */
     static void openBackups(Activity a) {
-        String m = Db.currentMode != null ? Db.currentMode : savedMode(a);
-        if (m == null || m.isEmpty()) m = defaultMode(a);
+        String m = Db.currentMode != null ? Db.currentMode : Db.savedMode(a);
+        if (m == null || m.isEmpty()) m = Db.defaultMode(a);
         long home = 0;
         SqlStore s = null;
         try {
@@ -103,22 +89,17 @@ public class DbScreen extends Activity {
     }
 
     private static void start(Activity a, boolean fresh) {
-        String m = a.getSharedPreferences(PREFS, MODE_PRIVATE).getString(PREF_MODE, "");
-        if (m.isEmpty()) m = defaultMode(a);
-        long home = prepare(a, m);                                             // מ0.29: גם התקנה חדשה — ישר לבית (הדוגמאות)
+        String m = a.getSharedPreferences(Db.PREFS, MODE_PRIVATE).getString(Db.PREF_MODE, "");
+        if (m.isEmpty()) m = Db.defaultMode(a);
+        long home = Db.prepare(a, m);                                             // מ0.29: גם התקנה חדשה — ישר לבית (הדוגמאות)
         android.content.Intent i = home != 0 ? DbListScreen.intent(a, m, home, null) : new android.content.Intent(a, DbScreen.class);
         if (fresh) i.addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK | android.content.Intent.FLAG_ACTIVITY_CLEAR_TASK);
         a.startActivity(i);
     }
 
-    /** מ0.9.1: האופן שנבחר — נזכר גם למסך המסד וגם למראה המוכר. */
-    static void saveMode(android.content.Context c, String m) {
-        c.getSharedPreferences(PREFS, MODE_PRIVATE).edit().putString(PREF_MODE, m).apply();
-    }
-
     private void switchMode(String m) {
         mode = m;
-        saveMode(this, m);
+        Db.saveMode(this, m);
         closeStore();
         path.clear();
         refresh();
@@ -200,7 +181,7 @@ public class DbScreen extends Activity {
 
     /** פותח את מסד האופן הנבחר (אם עוד לא פתוח) ומציג. */
     private void refresh() {
-        if (!Ui.hasFiles(this)) {
+        if (!Files.hasAccess(this)) {
             status.setText(Words.Db.NEED_ACCESS);
             rows.removeAllViews();
             buttons.removeAllViews();
@@ -250,67 +231,7 @@ public class DbScreen extends Activity {
      * (עד כאן הן הגיעו מהמנוע הישן). מסד שיש בו בית — לא נוגעים.
      */
     private void firstSetup() {
-        setup(this, store, mode);
-    }
-
-    static void setup(android.content.Context c, Store store, String mode) {
-        try {
-            if (DbPaths.home(store) != 0) return;
-            // שמירה על הנתונים: מסד ריק שיש לאופן שלו גיבויים — אולי המסד אבד; לא ממלאים אותו, כדי שההצעה לשחזר מגיבוי
-            // (offerRestoreIfEmpty, במסך המסד) תופיע ולא תיחסם.
-            if (!Db.backupsOf(c, mode).list().isEmpty()) return;
-            if (mode.equals(DbExamples.MODE)) {
-                DbExamples.files(DbExamples.asset(c, DbExamples.ASSET_DEMO));
-                DbExamples.install(store, DbExamples.asset(c, DbExamples.ASSET), Environment.getExternalStorageDirectory().getAbsolutePath());
-            } else DbPaths.ensureHome(store);
-        } catch (Throwable t) {
-            Log.e("DbScreen.setup", t);
-        }
-    }
-
-    /** מ0.29: המסד של האופן קיים ויש בו בית (נוצר אם צריך — setup). מחזיר את הבית; 0 — לא הצליח (אין גישה לקבצים, מסד פגום). */
-    static long prepare(android.content.Context c, String mode) {
-        if (!Ui.hasFiles(c)) return 0;
-        SqlStore s = null;
-        try {
-            if (Db.dbFile(c, mode).isFile()) {                                    // קיים — רק קוראים (לא נוגעים במסד שיש בו בית)
-                s = SqlStore.openReadOnly(Db.dbFile(c, mode));
-                long h = DbPaths.home(s);
-                if (h != 0) return h;
-                s.close();
-                s = null;
-            }
-            s = SqlStore.open(Db.dbFile(c, mode), new IdCounter(Db.counterFile()));
-            setup(c, s, mode);
-            return DbPaths.home(s);
-        } catch (Throwable t) {
-            Log.e("DbScreen.prepare", t);
-            return 0;
-        } finally {
-            if (s != null) s.close();
-        }
-    }
-
-    /** מ0.29 (באג 1): שחזור הדוגמאות באופן הדוגמאות — גיבוי של המסד לפני, ואז DbExamples.restore. מחזיר הודעה למסך. */
-    static String restoreExamples(android.content.Context c) {
-        SqlStore s = null;
-        try {
-            s = SqlStore.open(Db.dbFile(c, DbExamples.MODE), new IdCounter(Db.counterFile()));
-            try {
-                Db.backupsOf(c, DbExamples.MODE).before(s, Backups.OP_RESTORE, System.currentTimeMillis());
-            } catch (Throwable t) {
-                Log.e("DbScreen.restoreExamples.backup", t);
-                return Words.Db.importBackupFailed(String.valueOf(t.getMessage()));
-            }
-            DbExamples.files(DbExamples.asset(c, DbExamples.ASSET_DEMO));
-            int n = DbExamples.restore(s, DbExamples.asset(c, DbExamples.ASSET), Environment.getExternalStorageDirectory().getAbsolutePath());
-            return Words.Db.examplesRestored(n);
-        } catch (Throwable t) {
-            Log.e("DbScreen.restoreExamples", t);
-            return Words.Db.failed(String.valueOf(t.getMessage()));
-        } finally {
-            if (s != null) s.close();
-        }
+        Db.setup(this, store, mode);
     }
 
     /** מ0.37: המסך נפתח רק כדי להוסיף קבצים לרשימה (מתיקייה או מחיפוש) — מ־➕ שבמסך הרשימות. */
@@ -808,7 +729,7 @@ public class DbScreen extends Activity {
         damaged = null;
         Ui.toast(this, Words.Db.RESTORED_DB);
         // מ0.32 (מ13): אחרי שחזור — הכול נפתח מחדש, כמו כפתור "בית"; מסך שנשאר פתוח היה מציג את המסד הישן, וכתיבה בו נעלמה
-        saveMode(this, mode);
+        Db.saveMode(this, mode);
         startFresh(this);
     }
 
@@ -833,52 +754,4 @@ public class DbScreen extends Activity {
         return new java.text.SimpleDateFormat("dd.MM.yyyy HH:mm", java.util.Locale.US).format(new java.util.Date(e.made > 0 ? e.made : e.when));
     }
 
-    /** אותן בדיקות שרצות במחשב (StoreContract), על SQLite האמיתי של המכשיר, במסד זמני נפרד. ok[0] — האם עברו. */
-    /**
-     * בדיקת המנוע של המסד מול ה־SQLite של המכשיר — על מסדים זמניים בצד. מ0.36: רצה מדוח האבחון (המשתמש, 11.11.2026, על
-     * הכפתור "בדיקה מלאה": "כך נפטרנו מעוד כפתור שלא משמש בשוטף").
-     */
-    static String selfTestText(android.content.Context c, boolean[] ok) {
-        final File dir = new File(c.getCacheDir(), "mselftest");
-        deleteAll(dir);
-        dir.mkdirs();
-        long t0 = System.currentTimeMillis();
-        try {
-            final int[] seq = {0};
-            StoreContract.Result r = StoreContract.run(new StoreContract.Opener() {
-                @Override
-                public Store fresh(File counter) throws Exception {
-                    return SqlStore.open(new File(dir, "t" + (seq[0]++) + ".db"), new IdCounter(counter));
-                }
-            }, dir);
-            String persist = SqlStore.persistenceCheck(dir);
-            if (persist != null) r.failed.add("persistence: " + persist);
-            else r.passed++;
-            StoreContract.Result br = BackupContract.run(new File(dir, "backup"));
-            r.passed += br.passed;
-            for (String f : br.failed) r.failed.add("backup: " + f);
-            String info = "?";
-            SqlStore s = SqlStore.open(new File(dir, "info.db"), new IdCounter(new File(dir, "info-counter.txt")));
-            try {
-                info = s.info();
-            } finally {
-                s.close();
-            }
-            long ms = System.currentTimeMillis() - t0;
-            ok[0] = r.failed.isEmpty();
-            return ok[0] ? Words.Db.selfTestOk(r.passed, ms, info) : Words.Db.selfTestBad(r.passed, r.failed, info);
-        } catch (Throwable t) {
-            Log.e("DbScreen.selfTest", t);
-            ok[0] = false;
-            return Words.Db.failed(String.valueOf(t));
-        } finally {
-            deleteAll(dir);
-        }
-    }
-
-    private static void deleteAll(File f) {
-        File[] kids = f.listFiles();
-        if (kids != null) for (File k : kids) deleteAll(k);
-        f.delete();
-    }
 }
