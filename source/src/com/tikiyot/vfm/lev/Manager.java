@@ -28,6 +28,11 @@ final class Manager {
         return TO_RUN;
     }
 
+    /** פקודת הפתיחה שהטקסט כולו — למי שקיבל TO_VERB. */
+    static String verb(String text) {
+        return Batch.singleVerb(text);
+    }
+
     /** שורות הטקסט — כמו שההרצה מפרקת אותן. */
     static java.util.List<String> lines(String text) {
         return java.util.Arrays.asList(text.replace("\r", "").split("\n"));

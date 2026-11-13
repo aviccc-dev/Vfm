@@ -7,6 +7,7 @@ package com.tikiyot.vfm;
 //   ב. פנייה "כלפי מעלה" (קובץ שמזכיר קובץ מקומה שמעליו) — רק מה שרשום ב־tests/mivne/lemala.txt. הרשימה רק מתקצרת:
 //      פנייה חדשה — נכשל; פנייה שנפתרה ועדיין רשומה — נכשל, עד שמורידים את השורה.
 //   ג. שער המסד: SqlStore.open / openReadOnly — רק ב־Db (ובמנוע, בגיבויים ובבדיקות המנוע).
+//   ד. ההחלטות על הרצת קובץ פקודות — רק במנהל (lev/Manager): המסכים אינם שואלים את Batch בעצמם (מבנה 30).
 // הספירה — לפי הטקסט: שם של קובץ אחר, אחרי הסרת הערות ומחרוזות; שם שאחרי נקודה (Menus.Tree), שם של מחלקה פנימית
 // של הקובץ עצמו ושם שיובא מבחוץ (import) — לא נספרים.
 // לכתוב את הרשימה מחדש (אחרי שפניות נפתרו): להריץ את הבדיקות עם ‎-Dvfm.mivne.write=1.
@@ -34,6 +35,8 @@ final class MivneTests {
     static final List<String> LEVELS = Arrays.asList("basis", "chomer", "pkudot", "lev", "masachim");
     static final String CODE = "src/com/tikiyot/vfm", LIST = "tests/mivne/lemala.txt";
     /** מי שרשאי לפתוח מסד ישירות: המנוע עצמו, שער המסד, הגיבויים (קובצי גיבוי), ובדיקות המנוע. */
+    /** השאלות שרק המנהל שואל (שומר ד). */
+    static final List<String> DECISIONS = Arrays.asList("Batch.singleVerb(", "Batch.wantsCheck(", ".blocked()");
     static final List<String> GATE = Arrays.asList("SqlStore", "Db", "Backups", "BackupContract", "StoreContract");
 
     private MivneTests() { }
@@ -62,6 +65,20 @@ final class MivneTests {
         }
         if (opens.isEmpty()) o.passed++;
         else o.failed.add("מסד נפתח שלא דרך שער המסד (Db.open / Db.openRead): " + opens);
+
+        // ד. המנהל (מבנה 30): "לאן הולך הטקסט" ו"מה עושים עם התכנית" — נשאלים רק ב־Manager; מסך שמחליט בעצמו — נכשל
+        List<String> decide = new ArrayList<String>();
+        for (Map.Entry<String, File> e : files.entrySet()) {
+            if (!e.getValue().getPath().replace('\\', '/').contains("/masachim/")) continue;
+            try {
+                String code = strip(Files.readUtf8(e.getValue()));
+                for (String q : DECISIONS) if (code.contains(q)) decide.add(e.getKey() + ": " + q);
+            } catch (Exception x) {
+                decide.add(e.getKey() + ": " + x);
+            }
+        }
+        if (decide.isEmpty()) o.passed++;
+        else o.failed.add("מסך שמחליט בעצמו על הרצת קובץ פקודות — לשאול את המנהל (Manager): " + decide);
 
         // ב. פניות כלפי מעלה
         Set<String> now = new TreeSet<String>();

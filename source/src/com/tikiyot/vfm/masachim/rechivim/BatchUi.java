@@ -61,7 +61,7 @@ final class BatchUi {
     static void run(final Activity a, final File f, final String text, boolean other) {
         int to = Manager.route(text, false);                                   // מבנה 28: לאן הולך הטקסט — מחליט המנהל; כאן רק מבצעים
         if (to == Manager.TO_VERB) {                                           // מ0.41: פקודת פתיחה אחת — מיד (כמו כפתור)
-            if (VerbsUi.run(a, Batch.singleVerb(text), f.getParentFile())) return;
+            if (VerbsUi.run(a, Manager.verb(text), f.getParentFile())) return;
             to = Manager.route(text, true);                                    // לא בוצעה — ממשיכים כקובץ רגיל
         }
         if (to == Manager.TO_CHECK) {                                          // 1.28.0: מסך ההרצה — רק עם "בדיקה"
