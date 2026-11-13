@@ -39,10 +39,10 @@ final class DbCmdMenu {
     }
 
     private static long find(Activity a, String mode, List<String> path) {
-        if (mode == null || !DbScreen.dbFile(a, mode).isFile()) return 0;
+        if (mode == null || !Db.dbFile(a, mode).isFile()) return 0;
         SqlStore s = null;
         try {
-            s = SqlStore.openReadOnly(DbScreen.dbFile(a, mode));
+            s = SqlStore.openReadOnly(Db.dbFile(a, mode));
             return DbPaths.find(s, mode, path);
         } catch (Throwable t) {
             Log.e("DbCmdMenu.find", t);
@@ -73,7 +73,7 @@ final class DbCmdMenu {
         List<Menus.Item> items = new ArrayList<Menus.Item>();
         SqlStore s = null;
         try {
-            s = SqlStore.openReadOnly(DbScreen.dbFile(a, mode));
+            s = SqlStore.openReadOnly(Db.dbFile(a, mode));
             for (DbMore.Entry e : DbMore.menu(s, id)) items.add(new Menus.Item(e, mode, id, path));
         } catch (Throwable t) {
             Log.e("DbCmdMenu.open", t);
@@ -230,7 +230,7 @@ final class DbCmdMenu {
                 List<String> added = null;
                 try {
                     List<File> fs = writeTools();
-                    s = SqlStore.open(DbScreen.dbFile(a, mode), new IdCounter(DbScreen.counterFile()));
+                    s = SqlStore.open(Db.dbFile(a, mode), new IdCounter(Db.counterFile()));
                     added = ensureTools(s, mode, fs);
                 } catch (Throwable t) {
                     Log.e("DbCmdMenu.ensureTools", t);

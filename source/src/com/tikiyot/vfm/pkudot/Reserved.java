@@ -72,10 +72,10 @@ final class Reserved {
         if (c == null || f == null) return;
         Menus.ensure(c);
         for (String m : new String[]{DbListScreen.currentMode, Menus.MODE}) {
-            if (m == null || !DbScreen.dbFile(c, m).isFile()) continue;
+            if (m == null || !Db.dbFile(c, m).isFile()) continue;
             SqlStore s = null;
             try {
-                s = SqlStore.open(DbScreen.dbFile(c, m), new IdCounter(DbScreen.counterFile()));
+                s = SqlStore.open(Db.dbFile(c, m), new IdCounter(Db.counterFile()));
                 long mine = Menus.at(s, Menus.root(s, m), Menus.MINE);
                 if (mine == 0) continue;
                 DbFiles.add(s, mine, Collections.singletonList(f.getAbsolutePath()), null, false);

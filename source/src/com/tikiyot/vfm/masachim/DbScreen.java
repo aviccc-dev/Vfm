@@ -3,7 +3,7 @@ package com.tikiyot.vfm;
 // מ0.8: נגיעה בקובץ פותחת אותו (קובץ פקודות — רץ, כמו בכל התוכנה: Ui.open); הוספת קבצים מתיקייה ומחיפוש לרשימה.
 // מסך מנוע המסד (מ0.1–מ0.8): רשימות, רשימות חכמות ("לא משויכים" כרשימה מיוחדת) ופריטים מעל Store,
 // וגיבוי (מ0.5): עותק יומי ברקע כשנפתח המסד, עותק לפני פעולה מוחקת, "גיבוי עכשיו", שחזור, ומסד פגום שלא נפתח.
-// וגם שירותים לכל התוכנה: איפה קובץ המסד של אופן, האופן השמור, ההכנה של אופן (prepare / setup), שחזור הדוגמאות.
+// וגם שירותים לכל התוכנה (מבנה 6: איפה קובץ המסד, המונה, הגיבויים ורשימת האופנים — עברו ל־Db): האופן השמור, ההכנה של אופן (prepare / setup), שחזור הדוגמאות.
 // אחראי: להציג ולהפעיל. אסור לו: לדעת איך הנתונים נשמרים (Store, Backups).
 
 import android.app.Activity;
@@ -24,8 +24,6 @@ import java.util.List;
 
 public class DbScreen extends Activity {
 
-    /** מסד לכל אופן עבודה, באחסון הפרטי של התוכנה (לא בתיקייה הגלויה): vfm-m-<אופן>.db. */
-    static final String DB_PREFIX = "vfm-m-", DB_SUFFIX = ".db";
     /** מ0.9: פתיחה מהמראה המוכר — האופן, והרשימה שבה לפתוח (פעולות). בלי EXTRA_AT — נפתח הבית במראה המוכר. */
     static final String EXTRA_MODE = "mode", EXTRA_AT = "at";
     /** מ0.10: מה לעשות מיד ברשימה שנפתחה (פקודה "הוסף מהכונן / מחיפוש" מהמראה המוכר). */
@@ -52,28 +50,10 @@ public class DbScreen extends Activity {
     /** מספר ההצגה הנוכחית; הערכה של רשימה חכמה שהסתיימה אחרי שעזבו אותה — מתעלמים ממנה. */
     private final android.os.Handler ui = new android.os.Handler(android.os.Looper.getMainLooper());
 
-    static File dbFile(android.content.Context c, String mode) {
-        return c.getDatabasePath(DB_PREFIX + mode + DB_SUFFIX);
-    }
-
     /** מ0.29: האופן כשעוד לא נבחר אחד: הראשון שיש לו מסד, ואם אין אף מסד (התקנה חדשה) — הדוגמאות. */
     static String defaultMode(android.content.Context c) {
-        for (String m : dbModes(c)) if (!m.equals(Menus.MODE)) return m;    // מ0.41: אופן התפריטים אינו אופן עבודה
+        for (String m : Db.dbModes(c)) if (!m.equals(Menus.MODE)) return m;    // מ0.41: אופן התפריטים אינו אופן עבודה
         return DbExamples.MODE;
-    }
-
-    /** האופנים שיש להם מסד כבר. */
-    static List<String> dbModes(android.content.Context c) {
-        List<String> out = new ArrayList<String>();
-        File[] k = dbFile(c, "x").getParentFile().listFiles();
-        if (k != null)
-            for (File f : k) {
-                String n = f.getName();
-                if (n.startsWith(DB_PREFIX) && n.endsWith(DB_SUFFIX) && n.length() > DB_PREFIX.length() + DB_SUFFIX.length())
-                    out.add(n.substring(DB_PREFIX.length(), n.length() - DB_SUFFIX.length()));
-            }
-        java.util.Collections.sort(out);
-        return out;
     }
 
     /** האופן הפתוח: מה שנבחר בפעם הקודמת, ואם אין — האופן הפעיל במנוע הישן. */
@@ -104,7 +84,7 @@ public class DbScreen extends Activity {
         long home = 0;
         SqlStore s = null;
         try {
-            s = SqlStore.openReadOnly(dbFile(a, m));
+            s = SqlStore.openReadOnly(Db.dbFile(a, m));
             home = DbPaths.home(s);
         } catch (Throwable t) {
             Log.e("DbScreen.openBackups", t);
@@ -152,7 +132,7 @@ public class DbScreen extends Activity {
     }
 
     private void pickMode() {
-        java.util.TreeSet<String> all = new java.util.TreeSet<String>(dbModes(this));
+        java.util.TreeSet<String> all = new java.util.TreeSet<String>(Db.dbModes(this));
         all.add(mode);
         final List<String> names = new ArrayList<String>(all);
         List<String> labels = new ArrayList<String>();
@@ -163,11 +143,6 @@ public class DbScreen extends Activity {
                 if (!names.get(which).equals(mode)) switchMode(names.get(which));
             }
         });
-    }
-
-    /** קובץ המונה — בתיקיית הנתונים הגלויה, כדי ששחזור המסד מגיבוי ישן לא יחזיר מספר זיהוי. */
-    static File counterFile() {
-        return new File(new File(Paths.dbData(), Paths.SYSTEM), "מונה-מזהים.txt");  // בכונן (מ0.11.2: dbData — לא זז)
     }
 
     @Override
@@ -239,7 +214,7 @@ public class DbScreen extends Activity {
         if (store == null) {
             damaged = null;
             try {
-                store = SqlStore.open(dbFile(this, mode), new IdCounter(counterFile()));
+                store = SqlStore.open(Db.dbFile(this, mode), new IdCounter(Db.counterFile()));
             } catch (SqlStore.Damaged d) {
                 Log.e("DbScreen.open", d);
                 damaged = String.valueOf(d.getMessage());
@@ -283,7 +258,7 @@ public class DbScreen extends Activity {
             if (DbPaths.home(store) != 0) return;
             // שמירה על הנתונים: מסד ריק שיש לאופן שלו גיבויים — אולי המסד אבד; לא ממלאים אותו, כדי שההצעה לשחזר מגיבוי
             // (offerRestoreIfEmpty, במסך המסד) תופיע ולא תיחסם.
-            if (!backupsOf(c, mode).list().isEmpty()) return;
+            if (!Db.backupsOf(c, mode).list().isEmpty()) return;
             if (mode.equals(DbExamples.MODE)) {
                 DbExamples.files(DbExamples.asset(c, DbExamples.ASSET_DEMO));
                 DbExamples.install(store, DbExamples.asset(c, DbExamples.ASSET), Environment.getExternalStorageDirectory().getAbsolutePath());
@@ -298,14 +273,14 @@ public class DbScreen extends Activity {
         if (!Ui.hasFiles(c)) return 0;
         SqlStore s = null;
         try {
-            if (dbFile(c, mode).isFile()) {                                    // קיים — רק קוראים (לא נוגעים במסד שיש בו בית)
-                s = SqlStore.openReadOnly(dbFile(c, mode));
+            if (Db.dbFile(c, mode).isFile()) {                                    // קיים — רק קוראים (לא נוגעים במסד שיש בו בית)
+                s = SqlStore.openReadOnly(Db.dbFile(c, mode));
                 long h = DbPaths.home(s);
                 if (h != 0) return h;
                 s.close();
                 s = null;
             }
-            s = SqlStore.open(dbFile(c, mode), new IdCounter(counterFile()));
+            s = SqlStore.open(Db.dbFile(c, mode), new IdCounter(Db.counterFile()));
             setup(c, s, mode);
             return DbPaths.home(s);
         } catch (Throwable t) {
@@ -320,9 +295,9 @@ public class DbScreen extends Activity {
     static String restoreExamples(android.content.Context c) {
         SqlStore s = null;
         try {
-            s = SqlStore.open(dbFile(c, DbExamples.MODE), new IdCounter(counterFile()));
+            s = SqlStore.open(Db.dbFile(c, DbExamples.MODE), new IdCounter(Db.counterFile()));
             try {
-                backupsOf(c, DbExamples.MODE).before(s, Backups.OP_RESTORE, System.currentTimeMillis());
+                Db.backupsOf(c, DbExamples.MODE).before(s, Backups.OP_RESTORE, System.currentTimeMillis());
             } catch (Throwable t) {
                 Log.e("DbScreen.restoreExamples.backup", t);
                 return Words.Db.importBackupFailed(String.valueOf(t.getMessage()));
@@ -599,12 +574,7 @@ public class DbScreen extends Activity {
 
     /** הגיבויים של האופן: בתיקייה הגלויה של התוכנה; עותקים זמניים — באחסון הפרטי. */
     private Backups backups(String m) {
-        return backupsOf(this, m);
-    }
-
-    /** מ0.12: גם לפקודות שרצות במסד (DbListCmd). */
-    static Backups backupsOf(android.content.Context c, String m) {
-        return new Backups(new File(new File(Paths.dbData(), Backups.DIR), m), new File(c.getCacheDir(), "mbackup"));
+        return Db.backupsOf(this, m);
     }
 
     /** הגיבוי היומי, ברקע: עותק אם יש שינוי (פעם ביום), טקסט פעם בשבוע, ומחיקת ישנים. */
@@ -767,7 +737,7 @@ public class DbScreen extends Activity {
         }
         if (state == Backups.CHANGED) Ui.toast(this, Words.Db.BACKUP_CHANGED_WARN);
         final String m = mode;
-        final File db = dbFile(this, m), built = new File(db.getPath() + ".restore");
+        final File db = Db.dbFile(this, m), built = new File(db.getPath() + ".restore");
         final AlertDialog wait = new AlertDialog.Builder(this).setMessage(Words.Db.RESTORE_BUILDING).setCancelable(false).show();
         new Thread(new Runnable() {
             @Override
@@ -775,7 +745,7 @@ public class DbScreen extends Activity {
                 Backups.Built b = null;
                 String err = null;
                 try {
-                    b = Backups.build(e.file, built, new IdCounter(counterFile()), e.content);
+                    b = Backups.build(e.file, built, new IdCounter(Db.counterFile()), e.content);
                 } catch (Throwable t) {
                     Log.e("DbScreen.restore.build", t);
                     err = String.valueOf(t.getMessage());

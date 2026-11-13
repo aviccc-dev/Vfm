@@ -108,7 +108,7 @@ final class DbFollow {
         int sum = 0;
         List<String> modes;
         try {
-            modes = DbScreen.dbModes(c);
+            modes = Db.dbModes(c);
         } catch (Throwable t) {
             Log.e("DbFollow.modes", t);
             return 0;
@@ -119,12 +119,12 @@ final class DbFollow {
             SqlStore s = null;
             long m0 = System.currentTimeMillis();
             try {
-                if (write && paths != null && !has(DbScreen.dbFile(c, m), paths)) {
+                if (write && paths != null && !has(Db.dbFile(c, m), paths)) {
                     times.append(times.length() > 0 ? " · " : "").append(m).append(' ').append(System.currentTimeMillis() - m0);
                     continue;
                 }
-                s = write ? SqlStore.open(DbScreen.dbFile(c, m), new IdCounter(DbScreen.counterFile()))
-                        : SqlStore.openReadOnly(DbScreen.dbFile(c, m));
+                s = write ? SqlStore.open(Db.dbFile(c, m), new IdCounter(Db.counterFile()))
+                        : SqlStore.openReadOnly(Db.dbFile(c, m));
                 sum += e.run(s);
             } catch (Throwable t) {
                 Log.e("DbFollow." + m, t);

@@ -320,7 +320,7 @@ final class Menus {
     /** חותמת המסד של אופן: הקובץ ויומן ה־WAL (אורך ותאריך). שינוי — התמונה נקראת מחדש. */
     static long stamp(Context c, String mode) {
         if (mode == null) return 0;
-        File db = DbScreen.dbFile(c, mode), wal = new File(db.getPath() + "-wal");
+        File db = Db.dbFile(c, mode), wal = new File(db.getPath() + "-wal");
         return db.lastModified() * 31 + db.length() * 17 + wal.lastModified() * 7 + wal.length();
     }
 
@@ -352,10 +352,10 @@ final class Menus {
         Long was = stamps.get(mode);
         if (had != null && was != null && was == st) return had;
         Tree t = new Tree(mode);
-        if (DbScreen.dbFile(c, mode).isFile()) {
+        if (Db.dbFile(c, mode).isFile()) {
             SqlStore s = null;
             try {
-                s = SqlStore.openReadOnly(DbScreen.dbFile(c, mode));
+                s = SqlStore.openReadOnly(Db.dbFile(c, mode));
                 t = tree(s, mode);
             } catch (Throwable e) {
                 Log.e("Menus.load " + mode, e);
@@ -374,8 +374,8 @@ final class Menus {
         ready = true;                                                         // ניסיון אחד בכל הפעלה (נכשל — שורת החירום, ושוב בהפעלה הבאה)
         SqlStore s = null;
         try {
-            if (DbScreen.dbFile(c, MODE).isFile()) {
-                s = SqlStore.openReadOnly(DbScreen.dbFile(c, MODE));
+            if (Db.dbFile(c, MODE).isFile()) {
+                s = SqlStore.openReadOnly(Db.dbFile(c, MODE));
                 long home = DbPaths.home(s);
                 boolean done = home != 0 && "1".equals(s.prop(home, P_INSTALLED));
                 s.close();
@@ -397,15 +397,15 @@ final class Menus {
     private static void install(Context c) throws Exception {
         String internal = android.os.Environment.getExternalStorageDirectory().getAbsolutePath();
         DbExamples.files(null);                                               // קובצי פקודות המערכת והכלים — בכונן
-        SqlStore s = SqlStore.open(DbScreen.dbFile(c, MODE), new IdCounter(DbScreen.counterFile()));
+        SqlStore s = SqlStore.open(Db.dbFile(c, MODE), new IdCounter(Db.counterFile()));
         try {
             DbMore.Imported d = defaults(s, DbExamples.asset(c, ASSET), internal);
             Log.i("התפריטים: ברירת המחדל — " + d.lists + " רשימות, " + d.files + " פקודות");
-            if (DbScreen.dbFile(c, DbExamples.MODE).isFile()) {
-                SqlStore ex = SqlStore.open(DbScreen.dbFile(c, DbExamples.MODE), new IdCounter(DbScreen.counterFile()));
+            if (Db.dbFile(c, DbExamples.MODE).isFile()) {
+                SqlStore ex = SqlStore.open(Db.dbFile(c, DbExamples.MODE), new IdCounter(Db.counterFile()));
                 try {
                     if (DbPaths.find(ex, DbExamples.MODE, Reserved.ROOT_PATH) != 0) {
-                        DbScreen.backupsOf(c, DbExamples.MODE).before(ex, Backups.OP_DELETE, System.currentTimeMillis());
+                        Db.backupsOf(c, DbExamples.MODE).before(ex, Backups.OP_DELETE, System.currentTimeMillis());
                         Log.i("התפריטים: \"שמור לתוכנה\" עברה מהדוגמאות — " + moveFrom(ex, DbExamples.MODE, s) + " רשימות");
                     }
                 } finally {

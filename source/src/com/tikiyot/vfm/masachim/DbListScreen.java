@@ -76,8 +76,8 @@ public class DbListScreen extends ListScreen<Store.Member> {
             public void run() {
                 SqlStore s = null;
                 try {
-                    s = SqlStore.open(DbScreen.dbFile(c, m), new IdCounter(DbScreen.counterFile()));
-                    DbScreen.backupsOf(c, m).before(s, Backups.OP_EXIT, System.currentTimeMillis());
+                    s = SqlStore.open(Db.dbFile(c, m), new IdCounter(Db.counterFile()));
+                    Db.backupsOf(c, m).before(s, Backups.OP_EXIT, System.currentTimeMillis());
                 } catch (Throwable t) {
                     Log.e("DbListScreen.exitCopy", t);
                 } finally {
@@ -157,7 +157,7 @@ public class DbListScreen extends ListScreen<Store.Member> {
     private boolean homeNow() {
         SqlStore s = null;
         try {
-            s = SqlStore.openReadOnly(DbScreen.dbFile(this, mode));
+            s = SqlStore.openReadOnly(Db.dbFile(this, mode));
             return "1".equals(s.prop(listId, Store.P_HOME));
         } catch (Throwable t) {
             return false;
@@ -170,7 +170,7 @@ public class DbListScreen extends ListScreen<Store.Member> {
     private boolean openStore() {
         closeStore();
         try {
-            store = SqlStore.openReadOnly(DbScreen.dbFile(this, mode));
+            store = SqlStore.openReadOnly(Db.dbFile(this, mode));
             return true;
         } catch (Throwable t) {
             Log.e("DbListScreen.open", t);
@@ -224,7 +224,7 @@ public class DbListScreen extends ListScreen<Store.Member> {
     /** הספירות — ברקע, בחיבור קריאה משלו; כשמוכן — השורות מצוירות שוב. */
     private void countLater() {
         final int mine = ++token;
-        final java.io.File db = DbScreen.dbFile(this, mode);
+        final java.io.File db = Db.dbFile(this, mode);
         final java.util.List<Store.Item> items = new java.util.ArrayList<Store.Item>();
         for (Store.Member m : rows) items.add(m.item);
         new Thread(new Runnable() {
@@ -285,7 +285,7 @@ public class DbListScreen extends ListScreen<Store.Member> {
 
     /** מעבר בין האופנים שיש להם מסד (כמו בבית הישן — לפי השם). */
     private void modeMenu() {
-        final java.util.List<String> all = DbScreen.dbModes(this);
+        final java.util.List<String> all = Db.dbModes(this);
         java.util.List<String> labels = new java.util.ArrayList<String>();
         for (String m : all) labels.add(Words.Db.modeLine(m, m.equals(mode)));
         final int count = all.size();
@@ -302,7 +302,7 @@ public class DbListScreen extends ListScreen<Store.Member> {
                 SqlStore s = null;
                 long h = 0;
                 try {
-                    s = SqlStore.openReadOnly(DbScreen.dbFile(DbListScreen.this, m));
+                    s = SqlStore.openReadOnly(Db.dbFile(DbListScreen.this, m));
                     h = DbPaths.home(s);
                 } catch (Throwable t) {
                     Log.e("DbListScreen.mode", t);
@@ -326,7 +326,7 @@ public class DbListScreen extends ListScreen<Store.Member> {
             public void ok(String raw) {
                 String name = Names.cleanName(raw).replaceAll("[:*?\"<>|\n\t]", " ").trim();
                 if (raw.trim().isEmpty() || name.isEmpty()) return;
-                if (DbScreen.dbModes(DbListScreen.this).contains(name)) {
+                if (Db.dbModes(DbListScreen.this).contains(name)) {
                     Ui.toast(DbListScreen.this, Words.WorkModes.EXISTS);
                     return;
                 }

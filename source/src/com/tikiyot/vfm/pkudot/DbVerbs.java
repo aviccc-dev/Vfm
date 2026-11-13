@@ -227,7 +227,7 @@ final class DbVerbs {
     static long write(Activity a, String mode, Job job, List<String> path) {
         SqlStore s = null;
         try {
-            s = SqlStore.open(DbScreen.dbFile(a, mode), new IdCounter(DbScreen.counterFile()));
+            s = SqlStore.open(Db.dbFile(a, mode), new IdCounter(Db.counterFile()));
             return job.run(s, path);
         } catch (Throwable t) {
             Log.e("DbVerbs.write", t);
@@ -240,13 +240,13 @@ final class DbVerbs {
 
     /** מ0.23: האם יש במסד של האופן רשימה במסלול הזה. */
     static boolean exists(Activity a, String mode, List<String> path) {
-        return mode != null && DbScreen.dbFile(a, mode).isFile() && read(a, mode, path) != 0;
+        return mode != null && Db.dbFile(a, mode).isFile() && read(a, mode, path) != 0;
     }
 
     private static long read(Activity a, String mode, List<String> path) {
         SqlStore s = null;
         try {
-            s = SqlStore.openReadOnly(DbScreen.dbFile(a, mode));
+            s = SqlStore.openReadOnly(Db.dbFile(a, mode));
             return DbPaths.find(s, mode, path);
         } catch (Throwable t) {
             Log.e("DbVerbs.read", t);
@@ -259,7 +259,7 @@ final class DbVerbs {
     private static long readSmart(Activity a, String mode, String name) {
         SqlStore s = null;
         try {
-            s = SqlStore.openReadOnly(DbScreen.dbFile(a, mode));
+            s = SqlStore.openReadOnly(Db.dbFile(a, mode));
             return DbPaths.smart(s, name);
         } catch (Throwable t) {
             Log.e("DbVerbs.smart", t);
@@ -273,7 +273,7 @@ final class DbVerbs {
     private static void openSmart(Activity a, String mode, long id, String sort) {
         SqlStore s = null;
         try {
-            s = SqlStore.openReadOnly(DbScreen.dbFile(a, mode));
+            s = SqlStore.openReadOnly(Db.dbFile(a, mode));
             Store.Item it = s.item(id);
             String cond = s.prop(id, Store.P_COND), own = s.prop(id, Store.P_SORT), view = s.prop(id, Store.P_VIEW);
             DbListScreen.openSmart(a, it == null ? "" : it.name, cond, sort != null && !sort.isEmpty() ? sort : own, view);

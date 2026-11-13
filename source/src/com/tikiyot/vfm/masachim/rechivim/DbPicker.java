@@ -25,7 +25,7 @@ final class DbPicker {
     /** האם בוחרים מהמסד: בבניית מ, לא בצד הישן, ויש מסד לאופן. */
     static boolean on(android.content.Context c) {
         String m = mode(c);
-        return m != null && !m.isEmpty() && DbScreen.dbFile(c, m).isFile();
+        return m != null && !m.isEmpty() && Db.dbFile(c, m).isFile();
     }
 
     /** האופן: של מסך המסד הפתוח, ואם אין — מה שנבחר בפעם הקודמת. */
@@ -139,7 +139,7 @@ final class DbPicker {
     static Snap snap(android.content.Context c, String mode) {
         SqlStore s = null;
         try {
-            s = SqlStore.openReadOnly(DbScreen.dbFile(c, mode));
+            s = SqlStore.openReadOnly(Db.dbFile(c, mode));
             return Snap.of(s);
         } catch (Throwable t) {
             Log.e("DbPicker.snap", t);
@@ -301,7 +301,7 @@ final class DbPicker {
     static Map<String, List<String>> whereListed(android.content.Context c) {
         SqlStore s = null;
         try {
-            s = SqlStore.openReadOnly(DbScreen.dbFile(c, mode(c)));
+            s = SqlStore.openReadOnly(Db.dbFile(c, mode(c)));
             return whereListed(s);
         } catch (Throwable t) {
             Log.e("DbPicker.whereListed", t);
@@ -337,7 +337,7 @@ final class DbPicker {
         }
         SqlStore s = null;
         try {
-            s = SqlStore.openReadOnly(DbScreen.dbFile(c, mode(c)));
+            s = SqlStore.openReadOnly(Db.dbFile(c, mode(c)));
             return asTree(s);
         } catch (Throwable t) {
             Log.e("DbPicker.listsForSig", t);

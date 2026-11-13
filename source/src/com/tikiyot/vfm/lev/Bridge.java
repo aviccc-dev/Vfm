@@ -365,7 +365,7 @@ final class Bridge {
     public String modes() {
         JSONArray a = new JSONArray();
         try {
-            for (String m : DbScreen.dbModes(screen)) a.put(m);
+            for (String m : Db.dbModes(screen)) a.put(m);
         } catch (Throwable t) {
             Log.e("Lab.modes", t);
         }
@@ -573,11 +573,11 @@ final class Bridge {
     @JavascriptInterface
     public String dbStats() {
         JSONArray a = new JSONArray();
-        for (String m : DbScreen.dbModes(screen)) {
+        for (String m : Db.dbModes(screen)) {
             JSONObject o = new JSONObject();
             SqlStore s = null;
             try {
-                File f = DbScreen.dbFile(screen, m);
+                File f = Db.dbFile(screen, m);
                 o.put("mode", m);
                 o.put("kb", f.length() / 1024);
                 try {
@@ -593,7 +593,7 @@ final class Bridge {
                     o.put("error", String.valueOf(t.getMessage()));
                     Log.e("Lab.dbStats " + m, t);
                 }
-                List<Backups.Entry> bk = DbScreen.backupsOf(screen, m).list();
+                List<Backups.Entry> bk = Db.backupsOf(screen, m).list();
                 o.put("backups", bk.size());
                 o.put("lastBackup", bk.isEmpty() ? "" : bk.get(0).name);
             } catch (Throwable t) {
