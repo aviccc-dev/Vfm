@@ -290,7 +290,7 @@ abstract class ListScreen<T> extends Activity {
             return true;
         }
         if (it.getItemId() == MENU_SORT && srt != null) {
-            srt.menu(this, new Runnable() {
+            SortUi.menu(this, srt, new Runnable() {
                 @Override public void run() { refresh(); }
             });
             return true;

@@ -6,8 +6,6 @@ package com.tikiyot.vfm;
 // "הסדר שלי"; סל — "תאריך מחיקה". קיבוץ לפי סוג ההתאמה — רק היכן שיש סוגי התאמה (חיפוש).
 // תיקיות תמיד למעלה. אסור לו: לדעת מאיזה מסך הוא נקרא.
 
-import android.app.Activity;
-import android.content.DialogInterface;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -169,22 +167,7 @@ public final class Sort {
 
     // ---------- התפריט — אחד לכל הכלים ----------
 
-    /** תפריט המיון. אחרי בחירה — נשמר, ו-changed רץ. */
-    public void menu(Activity a, final Runnable changed) {
-        final String[] opts = options();
-        List<String> all = new ArrayList<String>();
-        for (String o : opts) all.add((o.equals(by) ? "✓ " : "") + o);
-        all.add("↕ " + (desc ? Words.SortW.NORMAL_DIR : Words.SortW.REVERSE_DIR));
-        if (groups) all.add((group ? "✓ " : "") + Words.SortW.GROUP_BY_MATCH);
-        Ui.options(a, Words.SortW.SORT_NOW + by + (desc ? " ↑" : " ↓"), all.toArray(new String[0]),
-                new DialogInterface.OnClickListener() {
-                    @Override
-                    public void onClick(DialogInterface d, int w) {
-                        choose(w, opts.length);
-                        changed.run();
-                    }
-                });
-    }
+    // תפריט המיון עצמו (החלון) — SortUi.menu, במסכים (מבנה 17); כאן רק הבחירה.
 
     /** בחירה בתפריט לפי המקום: אפשרות, כיוון, או קיבוץ. */
     void choose(int w, int n) {

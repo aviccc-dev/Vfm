@@ -785,7 +785,7 @@ public class DupScreen extends Activity {
             return true;
         }
         if (item.getItemId() == 2) {
-            srt.menu(this, new Runnable() {
+            SortUi.menu(this, srt, new Runnable() {
                 @Override public void run() { show(); }
             });
             return true;

@@ -956,7 +956,7 @@ public class SearchScreen extends Activity implements Clip.Holder {
             return true;
         }
         if (item.getItemId() == 2) {
-            srt.menu(this, new Runnable() {
+            SortUi.menu(this, srt, new Runnable() {
                 @Override public void run() { search(); }
             });
             return true;
