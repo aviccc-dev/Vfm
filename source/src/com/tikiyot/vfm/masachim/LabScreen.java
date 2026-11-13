@@ -247,16 +247,7 @@ public final class LabScreen extends Activity {
                 return true;
             }
         });
-        web.addJavascriptInterface(new Bridge(this, new Bridge.Host() {
-            @Override public void result(String id, String value) { LabScreen.this.result(id, value); }
-
-            @Override
-            public String startFile() {
-                String p = startCmd;
-                startCmd = null;
-                return p;
-            }
-        }, exp, page, vars), "vfm");
+        web.addJavascriptInterface(new Bridge(this, new PageHost(), exp, page, vars), "vfm");
         root2.addView(web, new LinearLayout.LayoutParams(-1, 0, 1f));
         setContentView(root2);
         web.loadUrl(Uri.fromFile(run).toString());
@@ -293,5 +284,85 @@ public final class LabScreen extends Activity {
 
     private SharedPreferences prefs() {
         return Bridge.prefs(this);
+    }
+
+    // ---------- מה שהגשר מבקש מהמסך (Bridge.Host) — מבנה 15: עד כאן קרא הגשר בעצמו לבוררים, לטופס, למסך ההרצה ולשיתוף ----------
+
+    private final class PageHost implements Bridge.Host {
+
+        @Override public void result(String id, String value) { LabScreen.this.result(id, value); }
+
+        @Override
+        public String startFile() {
+            String p = startCmd;
+            startCmd = null;
+            return p;
+        }
+
+        @Override public void toast(String text) { Ui.toast(LabScreen.this, text); }
+
+        @Override
+        public void run(File f, File here) {
+            if (here == null) RunScreen.start(LabScreen.this, f);
+            else RunScreen.start(LabScreen.this, f, here);
+        }
+
+        @Override
+        public void pickFolder(String title, boolean canCreate, final Bridge.Picked done) {
+            FolderPicker.choose(LabScreen.this, title, canCreate, new FolderPicker.Picked() {
+                @Override public void ok(File folder) { done.ok(folder.getAbsolutePath()); }
+            });
+        }
+
+        @Override
+        public void pickFile(String title, final Bridge.Picked done) {
+            FolderPicker.choose(LabScreen.this, title, false, new FolderPicker.Picked() {
+                @Override
+                public void ok(File folder) {
+                    File[] k = folder.listFiles();
+                    final List<File> fs = new ArrayList<File>();
+                    if (k != null) for (File x : k) if (x.isFile()) fs.add(x);
+                    java.util.Collections.sort(fs);
+                    if (fs.isEmpty()) {
+                        Ui.toast(LabScreen.this, Words.Lab.NO_FILES_HERE);
+                        return;
+                    }
+                    List<String> names = new ArrayList<String>();
+                    for (File x : fs) names.add(x.getName());
+                    Ui.list(LabScreen.this, folder.getName(), names, new DialogInterface.OnClickListener() {
+                        @Override public void onClick(DialogInterface d, int w) { done.ok(fs.get(w).getAbsolutePath()); }
+                    });
+                }
+            });
+        }
+
+        @Override
+        public void pickList(String title, final Bridge.ListPicked done) {
+            DbPicker.choose(LabScreen.this, title, new DbPicker.Picked() {
+                @Override public void ok(String mode, long list, List<String> path) { done.ok(mode, path); }
+            });
+        }
+
+        @Override
+        public void smartForm(String name, String cond, String sort, final Bridge.SmartPicked done) {
+            DbSmartForm.ask(LabScreen.this, name, cond, sort, new DbSmartForm.Done() {
+                @Override public void ok(DbSmartForm.Result r) { done.ok(r.name, r.cond, r.sort, r.view); }
+            });
+        }
+
+        @Override public void send(File f) { Acts.sendReady(LabScreen.this, java.util.Collections.singletonList(f)); }
+
+        /** הצבעים של התוכנה (Ui) — שהעמוד ייראה כמו התוכנה, ולא כמו סקיצה. */
+        @Override
+        public Map<String, Integer> colors() {
+            Map<String, Integer> o = new java.util.LinkedHashMap<String, Integer>();
+            o.put("text", Ui.TEXT); o.put("sub", Ui.SUB); o.put("muted", Ui.MUTED); o.put("red", Ui.RED);
+            o.put("bg", Ui.BG); o.put("bgSoft", Ui.BG_SOFT); o.put("header", Ui.HEADER); o.put("headerSoft", Ui.HEADER_SOFT);
+            o.put("bar", Ui.BAR); o.put("selected", Ui.SELECTED); o.put("accent", Ui.ACCENT); o.put("accentDark", Ui.ACCENT_DARK);
+            o.put("rule", Ui.RULE); o.put("onColor", Ui.ON_COLOR);
+            return o;
+        }
+
+        @Override public List<String> smartLists() { return DbPicker.names(LabScreen.this).get("smart"); }
     }
 }

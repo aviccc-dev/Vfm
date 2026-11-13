@@ -10,7 +10,6 @@ package com.tikiyot.vfm;
 
 import android.app.Activity;
 import android.content.Context;
-import android.content.DialogInterface;
 import android.content.SharedPreferences;
 import android.webkit.JavascriptInterface;
 
@@ -18,7 +17,6 @@ import org.json.JSONArray;
 import org.json.JSONObject;
 
 import java.io.File;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
@@ -32,6 +30,47 @@ final class Bridge {
 
         /** קובץ הפקודות לפתוח בעורך (מרשימה, מהפס הצף) — פעם אחת; null — אין. */
         String startFile();
+
+        // --- מבנה 15: מה שהגשר מבקש מהמסך — ההודעות, הבוררים, הטופס, ההרצה, השליחה והצבעים. נקראות על חוט המסך (חוץ מ־colors ו־smartLists). ---
+
+        /** הודעה קצרה. */
+        void toast(String text);
+
+        /** להריץ קובץ פקודות במסך ההרצה: תצוגה מקדימה, אישור ודוח. here — התיקייה של %כאן% (null — של הקובץ). */
+        void run(File f, File here);
+
+        /** בורר התיקיות; התשובה — המסלול. */
+        void pickFolder(String title, boolean canCreate, Picked done);
+
+        /** קובץ: קודם התיקייה (הבורר הרגיל), ואז הקבצים שבה; התשובה — המסלול. */
+        void pickFile(String title, Picked done);
+
+        /** בורר הרשימות של המסד. */
+        void pickList(String title, ListPicked done);
+
+        /** הטופס המוכר של רשימה חכמה, עם מה שכבר כתוב. */
+        void smartForm(String name, String cond, String sort, SmartPicked done);
+
+        /** שליחת קובץ (חלון השיתוף). */
+        void send(File f);
+
+        /** הצבעים של התוכנה: שם ← צבע. */
+        Map<String, Integer> colors();
+
+        /** שמות הרשימות החכמות של האופן. */
+        List<String> smartLists();
+    }
+
+    interface Picked {
+        void ok(String path);
+    }
+
+    interface ListPicked {
+        void ok(String mode, List<String> path);
+    }
+
+    interface SmartPicked {
+        void ok(String name, String cond, String sort, String view);
     }
 
     /** תשובת saveCommandFile כשיש כבר קובץ — העמוד שואל: להחליף או שם אחר. */
@@ -108,10 +147,7 @@ final class Bridge {
     public String theme() {
         try {
             JSONObject o = new JSONObject();
-            o.put("text", hex(Ui.TEXT)); o.put("sub", hex(Ui.SUB)); o.put("muted", hex(Ui.MUTED)); o.put("red", hex(Ui.RED));
-            o.put("bg", hex(Ui.BG)); o.put("bgSoft", hex(Ui.BG_SOFT)); o.put("header", hex(Ui.HEADER)); o.put("headerSoft", hex(Ui.HEADER_SOFT));
-            o.put("bar", hex(Ui.BAR)); o.put("selected", hex(Ui.SELECTED)); o.put("accent", hex(Ui.ACCENT)); o.put("accentDark", hex(Ui.ACCENT_DARK));
-            o.put("rule", hex(Ui.RULE)); o.put("onColor", hex(Ui.ON_COLOR));
+            for (Map.Entry<String, Integer> e : host.colors().entrySet()) o.put(e.getKey(), hex(e.getValue()));
             return o.toString();
         } catch (Throwable t) {
             return "{}";
@@ -275,10 +311,10 @@ final class Bridge {
                     Files.writeAtomic(f, Batch.AS_IF2 + "\n" + (text == null ? "" : text));
                     // מ0.39: תמיד במסך ההרצה — תצוגה מקדימה, אישור, ודוח (בהרצה הרגילה, בלי "בדיקה", זה רץ מיד ונראית רק
                     // הודעה קצרה; המשתמש: "איפה רואים את התוצאה של הפעולה?")
-                    RunScreen.start(screen, f);
+                    host.run(f, null);
                 } catch (Throwable t) {
                     Log.e("Lab.runCommands", t);
-                    Ui.toast(screen, Words.Db.failed(String.valueOf(t.getMessage())));
+                    host.toast(Words.Db.failed(String.valueOf(t.getMessage())));
                 }
             }
         });
@@ -304,10 +340,10 @@ final class Bridge {
                     File f = new File(dir, name);
                     Files.writeAtomic(f, (real ? "" : Batch.AS_IF2 + "\n") + (text == null ? "" : text));
                     File here = w.startsWith("/") ? new File(w).getParentFile() : Shortcuts.dir();
-                    RunScreen.start(screen, f, here);
+                    host.run(f, here);
                 } catch (Throwable t) {
                     Log.e("Lab.runFile", t);
-                    Ui.toast(screen, Words.Db.failed(String.valueOf(t.getMessage())));
+                    host.toast(Words.Db.failed(String.valueOf(t.getMessage())));
                 }
             }
         });
@@ -318,8 +354,7 @@ final class Bridge {
     public String smartLists() {
         JSONArray a = new JSONArray();
         try {
-            Map<String, List<String>> n = DbPicker.names(screen);
-            List<String> sm = n.get("smart");
+            List<String> sm = host.smartLists();
             if (sm != null) for (String x : sm) a.put(x);
         } catch (Throwable t) {
             Log.e("Lab.smartLists", t);
@@ -337,15 +372,15 @@ final class Bridge {
             @Override
             public void run() {
                 try {
-                    DbSmartForm.ask(screen, name, cond, sort, new DbSmartForm.Done() {
+                    host.smartForm(name, cond, sort, new SmartPicked() {
                         @Override
-                        public void ok(DbSmartForm.Result r) {
+                        public void ok(String rName, String rCond, String rSort, String rView) {
                             try {
                                 JSONObject o = new JSONObject();
-                                o.put("name", r.name);
-                                o.put("cond", r.cond);
-                                o.put("sort", r.sort);
-                                o.put("view", r.view);
+                                o.put("name", rName);
+                                o.put("cond", rCond);
+                                o.put("sort", rSort);
+                                o.put("view", rView);
                                 host.result(id, o.toString());
                             } catch (Throwable t) {
                                 Log.e("Lab.smartForm.result", t);
@@ -354,7 +389,7 @@ final class Bridge {
                     });
                 } catch (Throwable t) {
                     Log.e("Lab.smartForm", t);
-                    Ui.toast(screen, Words.Db.failed(String.valueOf(t.getMessage())));
+                    host.toast(Words.Db.failed(String.valueOf(t.getMessage())));
                 }
             }
         });
@@ -377,8 +412,8 @@ final class Bridge {
         screen.runOnUiThread(new Runnable() {
             @Override
             public void run() {
-                FolderPicker.choose(screen, title == null ? Words.FolderP.PICK_FOLDER : title, canCreate, new FolderPicker.Picked() {
-                    @Override public void ok(File folder) { host.result(id, folder.getAbsolutePath()); }
+                host.pickFolder(title == null ? Words.FolderP.PICK_FOLDER : title, canCreate, new Picked() {
+                    @Override public void ok(String path) { host.result(id, path); }
                 });
             }
         });
@@ -390,23 +425,8 @@ final class Bridge {
         screen.runOnUiThread(new Runnable() {
             @Override
             public void run() {
-                FolderPicker.choose(screen, title == null ? Words.Lab.PICK_FILE : title, false, new FolderPicker.Picked() {
-                    @Override
-                    public void ok(File folder) {
-                        File[] k = folder.listFiles();
-                        final List<File> fs = new ArrayList<File>();
-                        if (k != null) for (File x : k) if (x.isFile()) fs.add(x);
-                        java.util.Collections.sort(fs);
-                        if (fs.isEmpty()) {
-                            Ui.toast(screen, Words.Lab.NO_FILES_HERE);
-                            return;
-                        }
-                        List<String> names = new ArrayList<String>();
-                        for (File x : fs) names.add(x.getName());
-                        Ui.list(screen, folder.getName(), names, new DialogInterface.OnClickListener() {
-                            @Override public void onClick(DialogInterface d, int w) { host.result(id, fs.get(w).getAbsolutePath()); }
-                        });
-                    }
+                host.pickFile(title == null ? Words.Lab.PICK_FILE : title, new Picked() {
+                    @Override public void ok(String path) { host.result(id, path); }
                 });
             }
         });
@@ -418,9 +438,9 @@ final class Bridge {
         screen.runOnUiThread(new Runnable() {
             @Override
             public void run() {
-                DbPicker.choose(screen, title == null ? Words.NEW_LIST : title, new DbPicker.Picked() {
+                host.pickList(title == null ? Words.NEW_LIST : title, new ListPicked() {
                     @Override
-                    public void ok(String mode, long list, List<String> path) {
+                    public void ok(String mode, List<String> path) {
                         try {
                             JSONObject o = new JSONObject();
                             o.put("mode", mode);
@@ -558,10 +578,10 @@ final class Bridge {
             public void run() {
                 File f = resolve(path);
                 if (f == null || !f.isFile()) {
-                    Ui.toast(screen, Words.Verb.NOT_FOUND + path);
+                    host.toast(Words.Verb.NOT_FOUND + path);
                     return;
                 }
-                Acts.sendReady(screen, java.util.Collections.singletonList(f));
+                host.send(f);
             }
         });
     }
@@ -638,7 +658,7 @@ final class Bridge {
     @JavascriptInterface
     public void toast(final String s) {
         screen.runOnUiThread(new Runnable() {
-            @Override public void run() { Ui.toast(screen, s); }
+            @Override public void run() { host.toast(s); }
         });
     }
 

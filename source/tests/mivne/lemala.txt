@@ -1,6 +1,6 @@
 # פניות "כלפי מעלה": קובץ > קובץ מקומה שמעליו. הקומות, מלמטה למעלה: [basis, chomer, pkudot, lev, masachim]
 # הרשימה רק מתקצרת (MivneTests): פנייה חדשה — הבדיקות נכשלות; פנייה שנפתרה — מורידים את השורה.
-# נכתב מהקוד: 17 זוגות, 69 הופעות.
+# נכתב מהקוד: 11 זוגות, 35 הופעות.
 
 # (basis ← chomer)
 Drive > Index
@@ -24,11 +24,3 @@ Reserved > Menus
 
 # (pkudot ← masachim)
 Batch > Acts
-
-# (lev ← masachim)
-Bridge > Acts
-Bridge > DbPicker
-Bridge > DbSmartForm
-Bridge > FolderPicker
-Bridge > RunScreen
-Bridge > Ui
