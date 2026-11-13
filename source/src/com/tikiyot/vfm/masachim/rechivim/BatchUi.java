@@ -187,14 +187,14 @@ final class BatchUi {
                                 if (!plan.echoes.isEmpty()) r.append("\n");
                                 for (String line : report) r.append(line).append("\n");
                                 // 216: הלך חלק — הודעה קצרה, ו־START נפתח מיד; אחרת (או ECHO) — הדוח
-                                if (plan.trouble || !plan.echoes.isEmpty() || plan.measure)   // 1.25.0: מדידה — תמיד הדוח
+                                if (Manager.fullReport(plan))                                 // 1.25.0: מדידה — תמיד הדוח; מבנה 29: ההחלטה — אצל המנהל
                                     show(a, Words.Cmd.done(f.getName()), r.length() == 0 ? Words.Cmd.DONE : r.toString(), plan.start);
                                 else {
                                     if (plan.changes() > 0) Ui.toast(a, Words.Cmd.doneShort(report.size()));
                                     openStart(a, plan.start);
                                 }
                                 if (Manager.opensAllowed(plan)) DbVerbsUi.runOpens(a, plan.opens, f.getParentFile());   // 1.13.0; מ0.25: כולן, בסדר
-                                if (plan.trouble && plan.start != null && !Batch.isHome(plan.start) && plan.start.isFile()) Ui.open(a, plan.start);   // 186
+                                if (Manager.openStartOnTrouble(plan)) Ui.open(a, plan.start);   // 186
                                 if (!plan.shared.isEmpty()) {                 // 203: כל מה שלשיתוף — שליחה אחת
                                     Ui.toast(a, Words.Cmd.sending(plan.shared.size()));
                                     Acts.sendReady(a, plan.shared);

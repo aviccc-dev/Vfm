@@ -2262,6 +2262,22 @@ public final class Tests {
         ok.trouble = true;
         check("מבנה 27: הייתה תקלה — פתיחות הסוף לא רצות", !Manager.opensAllowed(ok));
         File code = new File(System.getProperty("vfm.src"), "src/com/tikiyot/vfm");
+        // מבנה 29: מה קורה בסוף הרצה מיידית
+        Batch.Plan quiet = Batch.plan("MD \"א\"\n", r, v);
+        check("מבנה 29: הלך חלק — הודעה קצרה, לא הדוח", !Manager.fullReport(quiet) && !Manager.openStartOnTrouble(quiet));
+        check("מבנה 29: יש ECHO — הדוח המלא", Manager.fullReport(Batch.plan("ECHO שלום\nMD \"א\"\n", r, v)));
+        check("מבנה 29: מדידה — תמיד הדוח", Manager.fullReport(Batch.plan("מדידה\nMD \"א\"\n", r, v)));
+        quiet.trouble = true;
+        check("מבנה 29: תקלה — הדוח המלא; בלי START אין מה לפתוח", Manager.fullReport(quiet) && !Manager.openStartOnTrouble(quiet));
+        File st = new File(r, "פתיחה.txt");
+        try { new java.io.FileOutputStream(st).close(); } catch (java.io.IOException e) { throw new RuntimeException(e); }
+        quiet.start = st;
+        check("מבנה 29 (186): תקלה ו־START הוא קובץ — נפתח בכל זאת", Manager.openStartOnTrouble(quiet));
+        quiet.start = r;
+        check("מבנה 29: ...תיקייה — לא", !Manager.openStartOnTrouble(quiet));
+        quiet.start = st;
+        quiet.trouble = false;
+        check("מבנה 29: ...בלי תקלה — לא (START נפתח בדרך הרגילה)", !Manager.openStartOnTrouble(quiet));
         // מבנה 28: מכוונת — לאן הולך טקסט של פקודות
         eq("מבנה 28: פקודת פתיחה אחת — מיד", Manager.TO_VERB, Manager.route("צלמית 🏠\nשם בית\nפתח מסך הבית\n", false));
         eq("מבנה 28: ...נוסתה ולא בוצעה — ממשיכים כקובץ רגיל", Manager.TO_RUN, Manager.route("פתח מסך הבית\n", true));
@@ -2274,7 +2290,8 @@ public final class Tests {
         String bu = read(new File(code, "masachim/rechivim/BatchUi.java")), rs = read(new File(code, "masachim/RunScreen.java"));
         check("מבנה 27: שני הרצפים שואלים את המנהל, ואינם מחליטים בעצמם",
                 bu.contains("Manager.approve(plan)") && rs.contains("Manager.approve(plan)") && !bu.contains("plan.blocked()") && !rs.contains("plan.blocked()")
-                        && bu.contains("Manager.route(text, false)") && !bu.contains("Batch.wantsCheck("));
+                        && bu.contains("Manager.route(text, false)") && !bu.contains("Batch.wantsCheck(")
+                        && bu.contains("Manager.fullReport(plan)") && !bu.contains("plan.measure"));
     }
 
     private static void m045checks() {

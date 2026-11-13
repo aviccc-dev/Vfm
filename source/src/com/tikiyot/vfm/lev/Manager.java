@@ -52,8 +52,20 @@ final class Manager {
         return GO;
     }
 
+    // ---------- התוצאה חוזרת: מה קורה בסוף ההרצה ----------
+
     /** פקודות הפתיחה שבסוף הקובץ רצות רק כשההרצה הלכה חלק (1.13.0; מ0.25). */
     static boolean opensAllowed(Batch.Plan plan) {
         return !plan.trouble;
+    }
+
+    /** בהרצה מיידית — הדוח המלא, ולא הודעה קצרה: הייתה תקלה, יש ECHO, או מדידה (216; 1.25.0). מבנה 29. */
+    static boolean fullReport(Batch.Plan plan) {
+        return plan.trouble || !plan.echoes.isEmpty() || plan.measure;
+    }
+
+    /** 186: הייתה תקלה, ו־START הוא קובץ (לא הבית) — נפתח בכל זאת, לצד הדוח. מבנה 29. */
+    static boolean openStartOnTrouble(Batch.Plan plan) {
+        return plan.trouble && plan.start != null && !Batch.isHome(plan.start) && plan.start.isFile();
     }
 }
