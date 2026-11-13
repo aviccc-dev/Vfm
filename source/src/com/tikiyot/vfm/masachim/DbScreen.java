@@ -48,12 +48,6 @@ public class DbScreen extends Activity {
     /** מספר ההצגה הנוכחית; הערכה של רשימה חכמה שהסתיימה אחרי שעזבו אותה — מתעלמים ממנה. */
     private final android.os.Handler ui = new android.os.Handler(android.os.Looper.getMainLooper());
 
-    /** האופן הפתוח: מה שנבחר בפעם הקודמת, ואם אין — האופן הפעיל במנוע הישן. */
-    private String loadMode() {
-        String m = getSharedPreferences(Db.PREFS, MODE_PRIVATE).getString(Db.PREF_MODE, "");
-        return m.isEmpty() ? Db.defaultMode(this) : m;
-    }
-
     /**
      * מ0.11: הפתיחה של בניית מ — הבית של המסד במראה המוכר (האופן שנבחר בפעם הקודמת). אין הרשאה, אין בית, או מסד פגום —
      * מסך המסד (שם מבקשים הרשאה, מעתיקים מהישן, משחזרים).
@@ -190,7 +184,7 @@ public class DbScreen extends Activity {
             }));
             return;
         }
-        if (mode.isEmpty()) mode = loadMode();
+        if (mode.isEmpty()) mode = Db.savedMode(this);                        // מבנה 21: היה loadMode() — אותן שתי שורות בדיוק
         modeButton.setText(Words.Db.modeButton(mode));
         if (store == null) {
             damaged = null;

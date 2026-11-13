@@ -236,7 +236,7 @@ final class DbVerbsUi {
             s = Db.openRead(a, mode);
             return DbPaths.find(s, mode, path);
         } catch (Throwable t) {
-            Log.e("DbVerbs.read", t);
+            Log.e("DbVerbsUi.read", t);
             return 0;
         } finally {
             if (s != null) s.close();
@@ -249,7 +249,7 @@ final class DbVerbsUi {
             s = Db.openRead(a, mode);
             return DbPaths.smart(s, name);
         } catch (Throwable t) {
-            Log.e("DbVerbs.smart", t);
+            Log.e("DbVerbsUi.smart", t);
             return 0;
         } finally {
             if (s != null) s.close();
@@ -265,7 +265,7 @@ final class DbVerbsUi {
             String cond = s.prop(id, Store.P_COND), own = s.prop(id, Store.P_SORT), view = s.prop(id, Store.P_VIEW);
             DbListScreen.openSmart(a, it == null ? "" : it.name, cond, sort != null && !sort.isEmpty() ? sort : own, view);
         } catch (Throwable t) {
-            Log.e("DbVerbs.openSmart", t);
+            Log.e("DbVerbsUi.openSmart", t);
         } finally {
             if (s != null) s.close();
         }

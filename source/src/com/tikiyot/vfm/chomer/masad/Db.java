@@ -106,7 +106,7 @@ final class Db {
                 DbExamples.install(store, DbExamples.asset(c, DbExamples.ASSET), Environment.getExternalStorageDirectory().getAbsolutePath());
             } else DbPaths.ensureHome(store);
         } catch (Throwable t) {
-            Log.e("DbScreen.setup", t);
+            Log.e("Db.setup", t);
         }
     }
 
@@ -126,7 +126,7 @@ final class Db {
             setup(c, s, mode);
             return DbPaths.home(s);
         } catch (Throwable t) {
-            Log.e("DbScreen.prepare", t);
+            Log.e("Db.prepare", t);
             return 0;
         } finally {
             if (s != null) s.close();
@@ -141,14 +141,14 @@ final class Db {
             try {
                 Db.backupsOf(c, DbExamples.MODE).before(s, Backups.OP_RESTORE, System.currentTimeMillis());
             } catch (Throwable t) {
-                Log.e("DbScreen.restoreExamples.backup", t);
+                Log.e("Db.restoreExamples.backup", t);
                 return Words.Db.importBackupFailed(String.valueOf(t.getMessage()));
             }
             DbExamples.files(DbExamples.asset(c, DbExamples.ASSET_DEMO));
             int n = DbExamples.restore(s, DbExamples.asset(c, DbExamples.ASSET), Environment.getExternalStorageDirectory().getAbsolutePath());
             return Words.Db.examplesRestored(n);
         } catch (Throwable t) {
-            Log.e("DbScreen.restoreExamples", t);
+            Log.e("Db.restoreExamples", t);
             return Words.Db.failed(String.valueOf(t.getMessage()));
         } finally {
             if (s != null) s.close();
@@ -190,7 +190,7 @@ final class Db {
             ok[0] = r.failed.isEmpty();
             return ok[0] ? Words.Db.selfTestOk(r.passed, ms, info) : Words.Db.selfTestBad(r.passed, r.failed, info);
         } catch (Throwable t) {
-            Log.e("DbScreen.selfTest", t);
+            Log.e("Db.selfTest", t);
             ok[0] = false;
             return Words.Db.failed(String.valueOf(t));
         } finally {

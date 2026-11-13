@@ -613,7 +613,7 @@ final class Menus {
                 DbFiles.add(s, mine, Collections.singletonList(f.getAbsolutePath()), null, false);
                 return;
             } catch (Throwable t) {
-                Log.e("Reserved.addToMine", t);
+                Log.e("Menus.addToMine", t);
                 return;
             } finally {
                 if (s != null) s.close();

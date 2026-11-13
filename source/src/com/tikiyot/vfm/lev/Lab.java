@@ -86,7 +86,6 @@ final class Lab {
 
     // ---------- שמות ----------
 
-    /** שם שמותר בכונן — כמו בעורך: לא משאירים דבר לא תקין, מתקנים לדומה. */
     /** התוספים שבאים עם התוכנה (בקובץ ההתקנה). */
     static final String BUNDLED = "plugins";
 
@@ -120,6 +119,7 @@ final class Lab {
         }
     }
 
+    /** שם שמותר בכונן — כמו בעורך: לא משאירים דבר לא תקין, מתקנים לדומה. */
     static String safe(String s) {
         String t = s == null ? "" : s.replace('"', '״').replaceAll("[\\\\/:|]", "-").replace('<', '(').replace('>', ')')
                 .replaceAll("[*?\\n\\r\\t]", "").trim();
@@ -267,8 +267,10 @@ final class Lab {
     }
 
     /** השוואת גרסאות: מספרים — כמספרים ("10" אחרי "9", "5.10" אחרי "5.2"), והשאר — כטקסט. */
+    private static final Pattern PARTS = Pattern.compile("\\d+|\\D+");
+
     static int compareVer(String a, String b) {
-        Matcher x = Pattern.compile("\\d+|\\D+").matcher(a), y = Pattern.compile("\\d+|\\D+").matcher(b);
+        Matcher x = PARTS.matcher(a), y = PARTS.matcher(b);
         while (true) {
             boolean hx = x.find(), hy = y.find();
             if (!hx || !hy) return hx ? 1 : hy ? -1 : 0;

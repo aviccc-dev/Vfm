@@ -94,14 +94,15 @@ final class Bridge {
         try {
             JSONObject o = new JSONObject();
             o.put("app", screen.getPackageName());
-            o.put("version", screen.getPackageManager().getPackageInfo(screen.getPackageName(), 0).versionName);
+            android.content.pm.PackageInfo pi = screen.getPackageManager().getPackageInfo(screen.getPackageName(), 0);
+            o.put("version", pi.versionName);
             o.put("mode", String.valueOf(Db.currentMode));
             o.put("lab", exp);
             o.put("labVersion", page == null ? "" : page.ver);
             String h = page == null ? null : Lab.higher(Lab.root(), page);   // מ0.40: יש גרסה גבוהה יותר בתיקייה
             o.put("labNewer", h == null ? "" : h);
             // מ0.42 — לתוסף האבחון: המכשיר, ההרשאה, המקום, היומנים והאינדקס (מה שהיה בראש דוח האבחון ובהגדרות)
-            o.put("versionCode", screen.getPackageManager().getPackageInfo(screen.getPackageName(), 0).versionCode);
+            o.put("versionCode", pi.versionCode);
             o.put("device", Log.device());
             o.put("access", Files.hasAccess(screen));
             o.put("freeMb", android.os.Environment.getExternalStorageDirectory().getUsableSpace() / (1024 * 1024));
@@ -460,10 +461,6 @@ final class Bridge {
         return Lab.dataDir(exp).getAbsolutePath();
     }
 
-    /**
-     * מ0.45: "כל הפקודות" — קובץ פקודות שנבנה מההגדרה האחת (CmdMatrix): כל פקודה, ובכל אחת כל מתג. לפני — הגיבוי הקטן ליד
-     * קובץ ההרצה (ל־/מצב:). null — לא הצליח (ביומן).
-     */
     /** מ0.45+: קובץ הפקודות לפתוח בעורך (מרשימה, מהפס הצף) — פעם אחת; null — אין. */
     @JavascriptInterface
     public String startFile() {
@@ -501,6 +498,10 @@ final class Bridge {
         return CmdTemplates.save(name.trim(), java.util.Arrays.asList(text.replace("\r", "").split("\n"))) != null;
     }
 
+    /**
+     * מ0.45: "כל הפקודות" — קובץ פקודות שנבנה מההגדרה האחת (CmdMatrix): כל פקודה, ובכל אחת כל מתג. לפני — הגיבוי הקטן ליד
+     * קובץ ההרצה (ל־/מצב:). null — לא הצליח (ביומן).
+     */
     @JavascriptInterface
     public String commandMatrix() {
         try {
