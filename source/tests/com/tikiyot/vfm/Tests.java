@@ -103,11 +103,21 @@ public final class Tests {
         run("גרסה 1.22.5 — ההגדרה האחת של שפת הפקודות (Commands)", new Runnable() { public void run() { v1225(); } });
         run("גרסה 1.23.0 — הפקודות הנפוצות", new Runnable() { public void run() { v1230(); } });
         run("מ0.1 — מונה המזהים, שתי הבניות, שכבת האחסון (MemStore, SqlStore)", new Runnable() { public void run() { storeM01(); } });
+        run("מבנה 3: שומרי המבנה — כל קובץ באחת מחמש התיקיות; פניות כלפי מעלה רק מהרשימה", new Runnable() { public void run() { mivne(); } });
         run("מ0.3 — הערכת רשימה חכמה מעל האינדקס (Smarts)", new Runnable() { public void run() { smartsM03(); } });
 
         System.out.println("בדיקות: " + passed + " עברו · " + failed + " נכשלו");
         for (String f : failures) System.out.println("  ✗ " + f);
         System.exit(failed == 0 ? 0 : 1);
+    }
+
+    /** מבנה 3: שומרי המבנה — בקובץ נפרד (MivneTests); כאן רק מצרפים את התוצאה. */
+    private static void mivne() {
+        String src = System.getProperty("vfm.src");
+        if (src == null) return;
+        MivneTests.Out o = MivneTests.run(new File(src));
+        passed += o.passed;
+        for (String f : o.failed) check("מבנה: " + f, false);
     }
 
     /** מ0.1: הבדיקות בקובץ נפרד (StoreTests); כאן רק מצרפים את התוצאה. */
