@@ -13,7 +13,7 @@ import android.widget.LinearLayout;
 public final class FnBar extends Func {
 
     public FnBar() {
-        super("פס", Words.BarT.BAR_NAME, "📌");  // תחביר
+        super(Target.KIND_BAR, Words.BarT.BAR_NAME, "📌");  // תחביר
     }
 
     @Override
@@ -63,7 +63,7 @@ public final class FnBar extends Func {
             @Override
             public void run() {
                 done.ok(nm.getText().toString().trim(),
-                        Target.of("פס", SmartLists.PATHS, paths.isChecked() ? "כן" : "",  // תחביר
+                        Target.of(Target.KIND_BAR, SmartLists.PATHS, paths.isChecked() ? "כן" : "",  // תחביר
                                 SmartLists.LOOSE, loose.isChecked() ? "" : "לא"));  // תחביר
             }
         });

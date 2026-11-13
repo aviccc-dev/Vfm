@@ -13,7 +13,7 @@ import java.util.List;
 public final class FnApp extends Func {
 
     public FnApp() {
-        super("אפליקציה", Words.AppT.APP_REF, "🔗");     // 📱 שמורה לזיכרון הפנימי // תחביר
+        super(Target.KIND_APP, Words.AppT.APP_REF, "🔗");     // 📱 שמורה לזיכרון הפנימי // תחביר
     }
 
     @Override
@@ -52,7 +52,7 @@ public final class FnApp extends Func {
         Ui.list(a, Words.AppT.PICK_APP, labels, new android.content.DialogInterface.OnClickListener() {
             @Override
             public void onClick(android.content.DialogInterface d, int which) {
-                done.ok(labels.get(which), Target.of("אפליקציה", "חבילה", packages.get(which)));  // תחביר
+                done.ok(labels.get(which), Target.of(Target.KIND_APP, "חבילה", packages.get(which)));  // תחביר
             }
         });
     }

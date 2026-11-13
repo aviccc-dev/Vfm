@@ -164,7 +164,7 @@ final class Verbs {
                 c.kind = K_TOOL;
                 c.arg = after(rest, TOOL);
                 List<String> tk = Batch.tokens(c.arg);
-                if (tk.isEmpty() || Func.byKind(tk.get(0)) == null) c.error = Words.Verb.usage(OPEN);
+                if (tk.isEmpty() || !Target.isKind(tk.get(0))) c.error = Words.Verb.usage(OPEN);
             } else if (starts(rest, MENU)) {                                  // 1.17.0
                 c.kind = K_MENU;
                 c.arg = unquote(after(rest, MENU));

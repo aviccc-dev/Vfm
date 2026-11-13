@@ -8,7 +8,7 @@ import android.content.Intent;
 public final class FnSmart extends Func {
 
     /** הסוג בקובץ הראשי. */
-    static final String KIND = "חכמה";  // תחביר
+    static final String KIND = Target.KIND_SMART;
 
     public FnSmart() {
         super(KIND, Words.SMART_LIST, "✨");

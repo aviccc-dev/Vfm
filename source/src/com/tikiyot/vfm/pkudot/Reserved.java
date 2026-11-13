@@ -115,8 +115,8 @@ final class Reserved {
         // מ0.25 (באג 28; המשתמש: "יכולים להישאר בפקודות. ותרשום לך להכניס אותם לשמורים לתוכנה"): הכלים שלא עברו לבית
         // (סל והגדרות — כבר בפקודות המערכת). כפולים — גם כאן, עם ברירות המחדל.
         out.add(new String[]{"⧉", Words.DbCmd.TOOL_DUPS, Verbs.toolLine(Target.KIND_DUP, new java.util.LinkedHashMap<String, String>())});
-        out.add(new String[]{"📌", Words.DbCmd.TOOL_BAR, Verbs.toolLine("פס", new java.util.LinkedHashMap<String, String>())});   // תחביר
-        out.add(new String[]{"🔗", Words.DbCmd.TOOL_APP, Verbs.toolLine("אפליקציה", new java.util.LinkedHashMap<String, String>())});   // תחביר; בלי חבילה — נשאל
+        out.add(new String[]{"📌", Words.DbCmd.TOOL_BAR, Verbs.toolLine(Target.KIND_BAR, new java.util.LinkedHashMap<String, String>())});   // תחביר
+        out.add(new String[]{"🔗", Words.DbCmd.TOOL_APP, Verbs.toolLine(Target.KIND_APP, new java.util.LinkedHashMap<String, String>())});   // תחביר; בלי חבילה — נשאל
         // מ0.41 (המשתמש, 12.11.2026: "להוסיף כפתור שמריץ אותו. וכך הוא הופך להיות חלק אינטגרלי מהתוכנה"): העורך האינטראקטיבי
         out.add(new String[]{"📝", Words.DbCmd.TOOL_EDITOR, Verbs.OPEN + " " + Verbs.PLUGIN + " \"" + Words.DbCmd.TOOL_EDITOR + "\""});
         return out;

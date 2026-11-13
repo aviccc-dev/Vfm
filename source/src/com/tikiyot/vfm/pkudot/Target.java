@@ -7,8 +7,17 @@ import java.util.Map;
 
 public final class Target {
 
-    /** שמות הכלים שגם הפקודות מזכירות (מבנה 9: עד כאן — FnDup.KIND, FnCommand.KIND, בקומת המסכים). */
-    static final String KIND_DUP = "כפולים", KIND_COMMAND = "פקודה";  // תחביר
+    /** שמות הכלים — ההגדרה האחת (מבנה 9, 14: עד כאן היו כתובים בכל כלי, בקומת המסכים, וחלקם פעמיים). */
+    static final String KIND_SMART = "חכמה", KIND_DUP = "כפולים", KIND_TRASH = "סל", KIND_BAR = "פס", KIND_APP = "אפליקציה",   // תחביר
+            KIND_SETTINGS = "הגדרות", KIND_COMMAND = "פקודה";   // תחביר
+    /** כל שמות הכלים, בסדר של רשימת הכלים (Func). כלי חדש — גם כאן; בדיקה שומרת על ההתאמה. */
+    static final java.util.List<String> KINDS = java.util.Arrays.asList(KIND_SMART, KIND_DUP, KIND_TRASH, KIND_BAR, KIND_APP,
+            KIND_SETTINGS, KIND_COMMAND);
+
+    /** יש כלי בשם הזה — בלי להכיר את הכלים עצמם (הם בקומת המסכים). */
+    static boolean isKind(String kind) {
+        return KINDS.contains(kind);
+    }
 
     public final String kind;
     public final Map<String, String> params = new LinkedHashMap<String, String>();

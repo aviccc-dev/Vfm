@@ -10,7 +10,7 @@ import android.widget.LinearLayout;
 public final class FnTrash extends Func {
 
     public FnTrash() {
-        super("סל", Words.BinT.TRASH, "🗑️");  // תחביר
+        super(Target.KIND_TRASH, Words.BinT.TRASH, "🗑️");  // תחביר
     }
 
     @Override
@@ -27,7 +27,7 @@ public final class FnTrash extends Func {
         b.addView(nm);
         Ui.askForm(a, Words.BinT.TRASH, b, new Runnable() {
             @Override
-            public void run() { done.ok(nm.getText().toString().trim(), Target.of("סל")); }  // תחביר
+            public void run() { done.ok(nm.getText().toString().trim(), Target.of(Target.KIND_TRASH)); }  // תחביר
         });
     }
 }

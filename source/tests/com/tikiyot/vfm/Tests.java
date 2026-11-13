@@ -339,6 +339,10 @@ public final class Tests {
                 java.util.Arrays.asList(Sort.NAME, Sort.DATE, Sort.SIZE, Sort.TYPE, Sort.FOLDER, Sort.SPACE)));
         java.util.Set<String> icons = new java.util.HashSet<String>(java.util.Arrays.asList(Drive.INTERNAL_ICON, Drive.CARD_ICON));
         for (Func f : Func.all()) check("צלמית אחת לדבר אחד — " + f.kind, icons.add(f.icon));
+        // מבנה 14: שמות הכלים שהפקודות מכירות (Target.KINDS) — בדיוק הכלים שברשימת הכלים (Func), באותו סדר
+        List<String> kinds = new ArrayList<String>();
+        for (Func f : Func.all()) kinds.add(f.kind);
+        eq("מבנה 14: שמות הכלים — אותה רשימה בפקודות ובכלים", Target.KINDS, kinds);
         // 85: שם דומה
         check("85: סוגריים", Text.similarNames("ספר.pdf", "ספר (1).pdf"));
         check("85: z-library", Text.similarNames("להיות מורה.epub", "להיות מורה (z-library.sk, 1lib.sk, z-lib.sk).epub"));

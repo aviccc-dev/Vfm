@@ -10,7 +10,7 @@ import android.widget.LinearLayout;
 public final class FnSettings extends Func {
 
     public FnSettings() {
-        super("הגדרות", "הגדרות", "⚙️");  // תחביר
+        super(Target.KIND_SETTINGS, "הגדרות", "⚙️");  // תחביר
     }
 
     @Override
@@ -26,7 +26,7 @@ public final class FnSettings extends Func {
         b.addView(nm);
         Ui.askForm(a, Words.SetT.SETTINGS, b, new Runnable() {
             @Override
-            public void run() { done.ok(nm.getText().toString().trim(), Target.of("הגדרות")); }  // תחביר
+            public void run() { done.ok(nm.getText().toString().trim(), Target.of(Target.KIND_SETTINGS)); }  // תחביר
         });
     }
 }
