@@ -2073,6 +2073,11 @@ public final class Words {
             return n + " שורות בדוח";
         }
 
+        /** מבנה 40: שורת סיכום לכישלונות שאינם "ודא" (שורה שנכשלה וההרצה המשיכה). */
+        public static String failsSummary(int n) {
+            return "⚠ כישלונות בהרצה: " + n + " — הפרטים בשורות שלמעלה";
+        }
+
         public static String verifySummary(int ok, int bad) {
             return (bad == 0 ? "✅" : "❌") + " ודא: " + ok + " עברו · " + bad + " נכשלו";
         }

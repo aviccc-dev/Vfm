@@ -2181,6 +2181,11 @@ final class Batch {
     }
 
     static List<String> run(Plan plan, Library lib, Physical.Asker asker, Physical.Progress progress, boolean grey, Listener listen) {
+        if (plan.asIf) {                                                        // מבנה 40 (ממצא 34): הדמיה — גם המנוע עצמו אינו מריץ.
+            List<String> no = new ArrayList<String>(plan.inputs);               // עד כאן רק המסכים שמרו על זה; מי שהיה קורא ל־run — היה מבצע באמת
+            no.add(Words.Run.AS_IF);
+            return no;
+        }
         plan.pulse = plan.measure ? new Pulse() : null;                         // מבנה 38: עם "מדידה" — גם כמה זמן התוכנה לא רצה
         try {
             return run0(plan, lib, asker, progress, grey, listen);
@@ -2237,6 +2242,7 @@ final class Batch {
         Step pending = null;                                                     // מ0.37: "ודא שגיאה"
         int pendingFails = 0;
         int sectionFails = 0;                                                    // מ0.45: "ודא תקין" — הכישלונות מתחילת הקטע
+        boolean stopped = false;                                                 // מבנה 40: ההרצה נעצרה בגלל כישלונות (ואז ההודעה על כך כבר בדוח)
         if (plan.blocked()) {                                                    // מ0.30: שגיאה בקובץ — שום שורה לא רצה
             plan.trouble = true;
             report.add(Words.DbCmd.notRun(plan.errors));
@@ -2277,6 +2283,7 @@ final class Batch {
             }
             if (si == plan.steps.size()) break;
             if (fails > plan.allowErrors) {                                      // מ0.31: יותר כישלונות מהמותר — עוצרים כאן
+                stopped = true;
                 plan.trouble = true;
                 report.add(Words.DbCmd.stoppedAt(plan.steps.get(si).label(), fails, plan.allowErrors));
                 break;
@@ -2388,6 +2395,9 @@ final class Batch {
             report.add(Words.Cmd.line(s.label(), out));
         }
         if (plan.measure) measured(plan, report, (System.nanoTime() - all0) / 1000000);
+        // מבנה 40 (ממצא 25): כישלונות שאינם "ודא" — שורה שנכשלה וההרצה המשיכה ("המשך") — נאמרים גם בסיכום, לא רק בשורה שלהם.
+        // הכלל של המשתמש: "אין מצב שיש שגיאה והקובץ רץ ואף אחד לא יודע". (נ0.1: "צור אופן … לא נוצר" — התגלה רק בהשוואה בין שני דוחות.)
+        if (fails > 0 && !stopped) report.add(Words.DbCmd.failsSummary(fails));
         int ok = 0, bad = 0;                                                     // מ0.14: ודא — כמה עברו וכמה נכשלו
         for (Step s : plan.steps) if (s.verified != null) { if (s.verified) ok++; else bad++; }
         if (ok + bad > 0) report.add(Words.DbCmd.verifySummary(ok, bad));

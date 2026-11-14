@@ -2287,6 +2287,16 @@ public final class Tests {
         eq("מבנה 28: \"בדיקה\" קודמת למקומות הפתוחים (מסך ההרצה שואל עליהם בעצמו)", Manager.TO_CHECK, Manager.route(Batch.CHECK + "\n" + holes, false));
         eq("מבנה 28: קובץ רגיל — הכנה והרצה", Manager.TO_RUN, Manager.route("MD \"א\"\n", false));
         eq("מבנה 28: השורות — בלי \\r", Arrays.asList("א", "ב"), Manager.lines("א\r\nב\r\n"));
+        // מבנה 40: הדמיה — המנוע עצמו אינו מריץ; וכישלון שאינו "ודא" נאמר בסיכום
+        File asIfDir = new File(r, "בהדמיה-לא-נוצרת");
+        List<String> asIfRep = Batch.run(Batch.plan(Batch.AS_IF + "\nMD \"בהדמיה-לא-נוצרת\"\n", r, v), null, null, null);
+        check("מבנה 40: תכנית של הדמיה שנמסרה למנוע — לא בוצעה, והדוח אומר זאת", !asIfDir.exists() && String.valueOf(asIfRep).contains(Words.Run.AS_IF));
+        eq("מבנה 40: נוסח שורת הכישלונות", "⚠ כישלונות בהרצה: 2 — הפרטים בשורות שלמעלה", Words.DbCmd.failsSummary(2));
+        Batch.Plan goOn = Batch.plan("המשך ()\nCOPY\nECHO סוף\n", r, v);
+        List<String> goOnRep = Batch.run(goOn, null, null, null);
+        check("מבנה 40: שורה שנכשלה וההרצה המשיכה — הכישלון כתוב גם בסיכום", !goOn.blocked() && String.valueOf(goOnRep).contains(Words.DbCmd.failsSummary(1)));
+        List<String> cleanRep = Batch.run(Batch.plan("ECHO שלום\n", r, v), null, null, null);
+        check("מבנה 40: הרצה בלי כישלון — בלי שורת כישלונות", !String.valueOf(cleanRep).contains("כישלונות בהרצה"));
         // מבנה 39: העברה בין כוננים — המקור נמחק רק אחרי השוואת חתימה מלאה של העותק
         File ma = new File(r, "מקור39.bin"), mb = new File(r, "יעד39.bin"), mc = new File(r, "אחר39.bin");
         try {
