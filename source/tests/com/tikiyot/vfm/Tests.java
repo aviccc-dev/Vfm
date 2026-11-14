@@ -2061,7 +2061,7 @@ public final class Tests {
                 if (Batch.VERIFY.equals(x.cmd) || "EXPECT".equals(x.cmd)) verifies++;   // גם "ודא שגיאה" נספרת בסיכום
             }
             check("מ0.43: \"הכול\" של התוסף — כל החלקים נכללים (" + sp.steps.size() + " שורות)", calls == 0 && sp.steps.size() > 200);
-            eq("מ0.43: \"הכול\" — כמה \"ודא\" יש בחלקים (הכללית 88, לחץ 19, שני אופנים 4, עומס 4; מ0.45: +14 — אופן חדש והסל)", 115, verifies);
+            eq("מ0.43: \"הכול\" — כמה \"ודא\" יש בחלקים (הכללית 88, לחץ 19, שני אופנים 4, עומס 4; מ0.45: +14 — אופן חדש והסל; מבנה 48: +6 — ממשיך מגיבוי, כתיב אחר)", 121, verifies);
             // מ0.41: הקטע החדש של הכללית — השורות שאינן של המסד מתוכננות בלי שגיאה; "ודא שגיאה" תופס את %נבחרים%
             String m042 = all.substring(all.indexOf(":: מ0.42"), all.indexOf(":: מ0.45 — אופן חדש"));   // נבדק לבד (m042cmds)
             String m045 = all.substring(all.indexOf(":: מ0.45 — אופן חדש"), all.indexOf(":: מ0.41 — הבדיקה מנקה"));   // נבדק לבד (למטה)
@@ -2335,9 +2335,16 @@ public final class Tests {
         boolean linked = link(link42, k42);
         if (linked) {
             Batch.Plan viaLink = Batch.plan("MOVE \"קישור42\\קובץ.txt\" \"ק42\" /Y\n", r, v, lib42);
-            String rep42 = String.valueOf(Batch.run(viaLink, lib42, null, null));
-            check("מבנה 42: העברה של קובץ אל עצמו דרך קישור, עם \"להחליף\" — הקובץ נשאר במקומו ולא נשלח לסל (" + rep42 + ")",
-                    f42.isFile() && "תוכן".equals(read(f42)) && rep42.contains(Words.Disk.ALREADY_HERE));
+            check("מבנה 48: העברה של קובץ אל התיקייה שלו דרך קישור — כבר בתכנון \"כבר במקום\", והשורה לא רצה",
+                    viaLink.errors == 0 && viaLink.steps.get(0).noop && viaLink.steps.get(0).inPlace == 1);
+            Physical.Result self42 = Physical.transfer(lib42, java.util.Collections.singletonList(new File(link42, "קובץ.txt").getAbsolutePath()),
+                    java.util.Collections.<String>emptyList(), k42, false, new Physical.Asker() {
+                        @Override public Physical.Answer ask(File existing, File incoming, String suggested) {
+                            return new Physical.Answer(Physical.Choice.REPLACE, null, true);
+                        }
+                    }, null, false);
+            check("מבנה 42: ...וגם ההעברה עצמה, עם \"להחליף\" — הקובץ נשאר במקומו ולא נשלח לסל (" + self42.note + ")",
+                    f42.isFile() && "תוכן".equals(read(f42)) && self42.failed == 1 && self42.note.contains(Words.Disk.ALREADY_HERE));
             Batch.Plan copyLink = Batch.plan("COPY \"קישור42\\קובץ.txt\" \"ק42\" /Y\n", r, v, lib42);
             Batch.run(copyLink, lib42, null, null);
             check("מבנה 42: העתקה של קובץ אל עצמו דרך קישור — עותק בשם חדש, והמקור שלם", "תוכן".equals(read(f42)) && k42.list().length == 3);
@@ -2364,6 +2371,12 @@ public final class Tests {
         eq("מבנה 43: ...ומשתנה שהוא מסלול — שגיאת שימוש", 1, Batch.plan("REN \"ק42\\קובץ.txt\" \"%תיקייה43%\"\n", r, v43).errors);
         Batch.Plan mj = Batch.plan(Batch.MEASURE + " " + Batch.SW_JOURNAL + "%אין-כזה%\nMD \"ת43-ב\"\n", r, v);
         check("מבנה 43: מדידה עם יומן במסלול שגוי — שגיאה, לא \"בלי יומן\" בשקט", mj.errors == 1 && mj.blocked());
+        // מבנה 48: צור אופן "<שם>" /מגיבוי
+        Verbs.Cmd m48 = Verbs.parse("צור אופן \"ישן\" /מגיבוי");
+        check("מבנה 48: /מגיבוי ב\"צור אופן\" — נקרא, והשם בלי המתג", m48.error == null && m48.fromBackup && Verbs.K_MODE.equals(m48.kind) && "ישן".equals(m48.arg));
+        check("מבנה 48: בלי המתג — כמו קודם", !Verbs.parse("צור אופן \"ישן\"").fromBackup && Verbs.parse("צור אופן \"ישן\"").error == null);
+        eq("מבנה 48: /מגיבוי בפועל אחר — שגיאה", Words.Verb.FROM_BACKUP_ONLY, Verbs.parse("צור רשימה \"א\" /מגיבוי").error);
+        check("מבנה 48: ההודעה בקובץ פקודות אומרת את שתי הדרכים", Words.DbCmd.modeHasBackup("ישן").contains(Verbs.FROM_BACKUP) && Words.DbCmd.modeHasBackup("ישן").contains("בשם אחר"));
         // מבנה 47: התיקייה של תוסף — תמיד בתוך "נתוני תוספים", גם כששם התוסף הוא ".." או ריק
         File base47 = new File(Paths.dbData(), Lab.DATA_DIR);
         check("מבנה 47: תוסף ששמו \"..\" — התיקייה שלו בתוך \"נתוני תוספים\", לא מעליה", base47.equals(Lab.dataDir("..").getParentFile())

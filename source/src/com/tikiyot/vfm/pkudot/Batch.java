@@ -1421,7 +1421,7 @@ final class Batch {
                 s.error = vc.error;
                 s.describe = Verbs.describe(vc);
                 String doneIn = null;
-                if (s.error == null && Verbs.K_MODE.equals(vc.kind)) DbListCmd.planMode(s, vc.arg, sim);   // מ0.42: צור אופן
+                if (s.error == null && Verbs.K_MODE.equals(vc.kind)) DbListCmd.planMode(s, vc.arg, vc.fromBackup, sim);   // מ0.42: צור אופן
                 else if (s.error == null && DbVerbs.active()) doneIn = DbListCmd.planVerb(s, vc, sim);   // מ0.25: החלק הכותב — בסדר השורות
                 // מ0.30 (ממצא 39): "פתח רשימה / רשימה חכמה" אחרי "אופן X" — נפתחת באופן של הקובץ, לא באופן שפתוח במסך
                 if (s.error == null && doneIn == null && sim.mode != null && Verbs.OPEN.equals(vc.verb) && vc.arg != null && !vc.arg.trim().isEmpty()
@@ -1752,16 +1752,19 @@ final class Batch {
                 if (Physical.inside(dest, new File(d))) { s.error = Words.Disk.NOT_INTO_ITSELF; return; }
             // מ0.40: העברה אל התיקייה שהפריט כבר בה — כלום (עד כאן: "קובץ אחד" בתכנון, ו"כבר בתיקייה הזו" ככישלון בהרצה).
             // ובקובץ אחרי קובץ — כדי שקובץ שני זהה לראשון יראה אותו כבר ביעד (לשנות-שם).
+            // מבנה 48: "כבר בתיקייה הזו" — גם כשהיעד הוא אותה תיקייה בכתיב אחר (קישור; אותיות גדולות וקטנות בכונן שאינו מבדיל).
+            // המשפך: השאלה לכונן — פעם אחת לכל תיקיית מקור, ורק בהעברה.
+            Map<String, Boolean> sameDir = new java.util.HashMap<String, Boolean>();
             for (java.util.Iterator<String> it = s.files.iterator(); it.hasNext(); ) {
                 File f = new File(it.next());
-                if (!copy && dest.equals(f.getParentFile())) { it.remove(); s.inPlace++; continue; }
+                if (!copy && here(dest, f.getParentFile(), sameDir)) { it.remove(); s.inPlace++; continue; }
                 File to = new File(dest, f.getName());
                 if (s.drop(sim, f, to)) { it.remove(); continue; }
                 sim.move(f.getAbsolutePath(), s.arrive(sim, to), copy);
             }
             for (java.util.Iterator<String> it = s.dirs.iterator(); it.hasNext(); ) {
                 File d = new File(it.next());
-                if (!copy && dest.equals(d.getParentFile())) { it.remove(); s.inPlace++; continue; }
+                if (!copy && here(dest, d.getParentFile(), sameDir)) { it.remove(); s.inPlace++; continue; }
                 File to = new File(dest, d.getName());
                 if (s.skipTaken && sim.isDir(to)) { it.remove(); s.skipped++; continue; }
                 sim.moveDir(d, s.renameTaken && (sim.isDir(to) || sim.isFile(to)) ? sim.free(to) : to, s.replace);   // מבנה 44
@@ -1826,6 +1829,15 @@ final class Batch {
         } else {
             s.error = Words.Cmd.unknownCommand(cmd) + " (" + join(java.util.Arrays.asList(Commands.fileNames()), " ") + ")";
         }
+    }
+
+    /** מבנה 48: היעד הוא התיקייה שהפריט כבר בה — לפי המסלול, ואם לא — לפי הכונן (Physical.sameFile), פעם אחת לכל תיקייה. */
+    private static boolean here(File dest, File parent, Map<String, Boolean> asked) {
+        if (parent == null) return false;
+        if (dest.equals(parent)) return true;
+        Boolean b = asked.get(parent.getAbsolutePath());
+        if (b == null) asked.put(parent.getAbsolutePath(), b = dest.isDirectory() && parent.isDirectory() && Physical.sameFile(dest, parent));
+        return b;
     }
 
     /**

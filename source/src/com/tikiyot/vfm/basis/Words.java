@@ -462,6 +462,16 @@ public final class Words {
         private WorkModes() { }
 
         public static final String EXISTS = "כבר יש אופן עבודה בשם הזה";
+        /**
+         * מבנה 48 — המשתמש (14.11.2026), על יצירת אופן בשם שנשאר לו גיבוי: "להודיע שקיים גיבוי של אופן באותו שם. האם להמשיך את
+         * האופן הישן מהגיבוי, או לפתוח בשם אחר."
+         */
+        public static final String HAS_BACKUP_TITLE = "קיים גיבוי של אופן בשם הזה", RESUME = "להמשיך מהגיבוי", OTHER_NAME = "שם אחר",
+                RESUMING = "משחזר את האופן מהגיבוי…", NO_GOOD_BACKUP = "אין לאופן הזה גיבוי תקין להמשיך ממנו";
+        public static String hasBackup(String name, String when) {
+            return "לאופן \"" + name + "\" נשאר גיבוי מ־" + when + ".\n\nלהמשיך את האופן הישן מהגיבוי, או לפתוח אופן בשם אחר?";
+        }
+        public static String resumed(String name, String when) { return "האופן \"" + name + "\" ממשיך מהגיבוי של " + when; }
     }
 
     // ---------- אריזה ושליחה (116, 117) ----------
@@ -1565,6 +1575,7 @@ public final class Words {
         public static final String MODE = "אופן: ";   // מ0.42
         public static final String TOOL = "כלי: ";   // מ0.19
         /** מ0.40 */
+        public static final String FROM_BACKUP_ONLY = "/מגיבוי — רק ב\"צור אופן\"";
         public static final String NO_OPEN_ONLY = "/בלי-לפתוח — רק ב\"צור רשימה\", \"צור רשימה חכמה\" ו\"עדכן רשימה חכמה\"";
 
         public static final String SCREEN = "מסך ", LIST = "רשימה: ", SMART = "רשימה חכמה: ", FOLDER = "תיקייה: ",
@@ -2193,7 +2204,20 @@ public final class Words {
         }
 
         public static String modeFailed(String n) {
-            return "האופן \"" + n + "\" לא נוצר (אם היו לו גיבויים — לשחזר ממסך הגיבויים). הפרטים ביומן";
+            return "האופן \"" + n + "\" לא נוצר. הפרטים ביומן";
+        }
+
+        /** מבנה 48: בקובץ פקודות אין את מי לשאול — השורה נכשלת ואומרת את שתי הדרכים. */
+        public static String modeHasBackup(String n) {
+            return "קיים גיבוי של אופן בשם \"" + n + "\". להמשיך אותו מהגיבוי — צור אופן \"" + n + "\" /מגיבוי; אופן חדש — בשם אחר";
+        }
+
+        public static String modeResumeWill(String n) {
+            return "האופן \"" + n + "\" ימשיך מהגיבוי האחרון שלו";
+        }
+
+        public static String modeNoGoodBackup(String n) {
+            return "לאופן \"" + n + "\" אין גיבוי תקין להמשיך ממנו — לא נוצר";
         }
 
         public static final String EDIT = "✎ עריכה", ICON = "צלמית",

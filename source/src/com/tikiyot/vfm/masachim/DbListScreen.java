@@ -319,16 +319,12 @@ public class DbListScreen extends ListScreen<Store.Member> {
 
     /** מ0.29: אופן עבודה חדש — שם, ואז המסד שלו נפתח (נוצר עם בית ריק; "דוגמאות" — עם הדוגמאות). */
     private void newMode() {
-        Ui.askText(this, Words.Db.MODE_NEW, "", Words.Db.MODE_NAME, new Ui.Text1() {
+        DbVerbsUi.askModeName(this, new DbVerbsUi.ModeReady() {              // מבנה 48: יש גיבוי בשם הזה — שואלים (DbVerbsUi.createMode)
             @Override
-            public void ok(String raw) {
-                String name = Names.cleanName(raw).replaceAll("[:*?\"<>|\n\t]", " ").trim();
-                if (raw.trim().isEmpty() || name.isEmpty()) return;
-                if (Db.dbModes(DbListScreen.this).contains(name)) {
-                    Ui.toast(DbListScreen.this, Words.WorkModes.EXISTS);
-                    return;
-                }
-                openMode(name);
+            public void open(String name, long home) {
+                Db.saveMode(DbListScreen.this, name);
+                finish();
+                DbListScreen.open(DbListScreen.this, name, home);
             }
         });
     }

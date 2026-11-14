@@ -1095,7 +1095,7 @@ final class DbListCmd {
      * מ0.42: "צור אופן "<שם>"" — אופן חדש: מסד עם בית (כמו "אופן חדש" בתפריט האופנים). קיים — בלי שינוי. ההדמיה מכירה אותו
      * מהשורה הזו: שורת "אופן" שאחריה עובדת, על מסד ריק בזיכרון. המשתמש (על הבדיקות): "סתם מצטבר שם שאריות".
      */
-    static void planMode(final Batch.Step s, String raw, Batch.Sim sim) {
+    static void planMode(final Batch.Step s, String raw, final boolean fromBackup, Batch.Sim sim) {
         final String name = raw == null ? "" : raw.trim();
         if (name.isEmpty() || !name.equals(Names.cleanName(name).replaceAll("[:*?\"<>|\n\t]", " ").trim())) {
             s.error = Words.DbCmd.modeBadName(name);
@@ -1109,16 +1109,35 @@ final class DbListCmd {
             s.describe = Words.DbCmd.modeExists(name);
             return;
         }
+        // מבנה 48 (המשתמש: "להודיע שקיים גיבוי של אופן באותו שם. האם להמשיך את האופן הישן מהגיבוי, או לפתוח בשם אחר"): בקובץ פקודות
+        // אין את מי לשאול — בלי /מגיבוי השורה היא שגיאה שאומרת את שתי הדרכים. אופן ששורה קודמת מבטלת — הגיבוי שלו ייווצר רק
+        // בהרצה, ולכן שם זה נבדק בהרצה.
+        final boolean has = !sim.dropped.contains(name) && Db.modeState(Db.app, name) == Db.MODE_HAS_BACKUP;
+        if (has && !fromBackup) { s.error = Words.DbCmd.modeHasBackup(name); return; }
         sim.dropped.remove(name);
         sim.created.add(name);
         MemStore m = new MemStore(IdCounter.memory());
         DbPaths.ensureHome(m);
         sim.dbs.put(name, m);
-        s.describe = Words.DbCmd.modeWill(name);
+        s.describe = has ? Words.DbCmd.modeResumeWill(name) : Words.DbCmd.modeWill(name);
         s.op = new ListCmd.Op() {
             @Override
             public String run(Library lib) {
-                if (Db.dbModes(Db.app).contains(name)) return Words.DbCmd.modeExists(name);
+                int st = Db.modeState(Db.app, name);
+                if (st == Db.MODE_EXISTS) return Words.DbCmd.modeExists(name);
+                if (st == Db.MODE_HAS_BACKUP) {
+                    if (!fromBackup) { lastFailed = true; return Words.DbCmd.modeHasBackup(name); }
+                    try {
+                        Backups.Entry e = Db.resume(Db.app, name);
+                        if (e != null) return Words.WorkModes.resumed(name, Db.when(e));
+                        lastFailed = true;
+                        return Words.DbCmd.modeNoGoodBackup(name);
+                    } catch (Throwable t) {
+                        Log.e("DbListCmd.planMode: resume", t);
+                        lastFailed = true;
+                        return Words.Db.failed(String.valueOf(t.getMessage()));
+                    }
+                }
                 if (Db.prepare(Db.app, name, Reserved.FILES) != 0) return Words.DbCmd.modeCreated(name);
                 lastFailed = true;
                 return Words.DbCmd.modeFailed(name);
@@ -1235,6 +1254,7 @@ final class DbListCmd {
     static List<String> removeLists(final List<List<String>> paths, String fileMode) {
         final String mode = fileMode != null ? fileMode : mode();   // מ0.17: האופן של הקובץ ("אופן"), אם נכתב
         final List<String> gone = new ArrayList<String>();
+        if (!Db.dbModes(Db.app).contains(mode)) return gone;        // מבנה 48: האופן בוטל בינתיים — אין מה לנקות, ולא יוצרים לו מסד ריק
         String r = real(mode, new Work() {
             @Override
             public Res run(Store t, Finder f) {

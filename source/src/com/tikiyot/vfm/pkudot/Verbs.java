@@ -49,6 +49,8 @@ final class Verbs {
      * המריץ של תוסף: יוצר את הרשימה החכמה שממנה הוא מעביר, ופותח רק את התוסף.
      */
     static final String NO_OPEN = "/בלי-לפתוח";   // תחביר
+    /** מבנה 48: צור אופן "<שם>" /מגיבוי — יש גיבוי של אופן בשם הזה: ממשיכים ממנו (בלי המתג — השורה נכשלת ואומרת זאת). */
+    static final String FROM_BACKUP = "/מגיבוי";   // תחביר
 
     /** סוגי הפקודה אחרי הפענוח. */
     static final String K_SCREEN = "screen", K_LIST = "list", K_SMART = "smart", K_FOLDER = "folder", K_FIND = "find",
@@ -61,6 +63,8 @@ final class Verbs {
         String ver = "";
         /** מ0.40: /בלי-לפתוח — כותבים, ולא פותחים בסוף. */
         boolean noOpen;
+        /** מבנה 48: /מגיבוי — ב"צור אופן". */
+        boolean fromBackup;
         /** שגיאת תחביר — או null. */
         String error;
     }
@@ -124,6 +128,11 @@ final class Verbs {
         String bare = (" " + rest + " ").replace(" " + NO_OPEN + " ", " ").trim();   // מ0.40: מילה בפני עצמה, בכל מקום בשורה
         if (!bare.equals(rest)) {
             c.noOpen = true;
+            rest = bare;
+        }
+        bare = (" " + rest + " ").replace(" " + FROM_BACKUP + " ", " ").trim();   // מבנה 48
+        if (!bare.equals(rest)) {
+            c.fromBackup = true;
             rest = bare;
         }
         if (c.verb.equals(BACK)) {
@@ -212,6 +221,7 @@ final class Verbs {
         }
         if (c.noOpen && c.error == null && !((c.verb.equals(CREATE) || c.verb.equals(UPDATE)) && (c.kind.equals(K_LIST) || c.kind.equals(K_SMART))))
             c.error = Words.Verb.NO_OPEN_ONLY;                                  // רק לפועל שכותב רשימה
+        if (c.fromBackup && c.error == null && !K_MODE.equals(c.kind)) c.error = Words.Verb.FROM_BACKUP_ONLY;
         return c;
     }
 

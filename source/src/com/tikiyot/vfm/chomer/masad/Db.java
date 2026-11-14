@@ -156,6 +156,51 @@ final class Db {
         }
     }
 
+    // --- מבנה 48: יצירת אופן בשם שנשאר לו גיבוי ---
+    // המשתמש (14.11.2026): "להודיע שקיים גיבוי של אופן באותו שם. האם להמשיך את האופן הישן מהגיבוי, או לפתוח בשם אחר."
+    // עד כאן: prepare יצר קובץ מסד ריק, setup לא מילא אותו (כדי לא להסתיר את הגיבויים), והמשתמש קיבל "לא נוצר" — על אופן
+    // שנוצר. ואופן חדש באותו שם היה מערבב את הגיבויים שלו עם של הישן (תיקיית הגיבויים — לפי שם האופן).
+
+    static final int MODE_NEW = 0, MODE_EXISTS = 1, MODE_HAS_BACKUP = 2;
+
+    /** מה המצב של שם האופן הזה: יש לו מסד · אין מסד ויש גיבויים · אין כלום. זול — רק שמות קבצים. */
+    static int modeState(android.content.Context c, String mode) {
+        if (dbModes(c).contains(mode)) return MODE_EXISTS;
+        return backupsOf(c, mode).list().isEmpty() ? MODE_NEW : MODE_HAS_BACKUP;
+    }
+
+    /** הגיבוי האחרון של האופן — לפי השם בלבד (להודעה: "גיבוי מ־…"); null — אין. */
+    static Backups.Entry lastBackup(android.content.Context c, String mode) {
+        List<Backups.Entry> all = backupsOf(c, mode).list();
+        return all.isEmpty() ? null : all.get(0);
+    }
+
+    /**
+     * ממשיכים אופן מהגיבוי האחרון התקין שלו: נבנה בצד ונבדק (Backups.build — כמו השחזור שבמסך המסד), ורק אז נכנס למקומו.
+     * רק לאופן שאין לו מסד — מסד קיים לא נדרס כאן. מחזיר את הגיבוי שממנו שוחזר; null — אין גיבוי תקין (ושום דבר לא נוצר).
+     * יקר (קורא ובודק גיבויים) — רק כשבאמת ממשיכים.
+     */
+    static Backups.Entry resume(android.content.Context c, String mode) throws java.io.IOException {
+        File db = dbFile(c, mode);
+        if (db.isFile()) throw new java.io.IOException("the mode already has a database");
+        Backups bk = backupsOf(c, mode);
+        for (Backups.Entry e : bk.list()) {
+            int st = bk.verify(e);
+            if (st != Backups.OK && st != Backups.OK_UNRECORDED) continue;
+            File built = new File(db.getPath() + ".restore");
+            Backups.build(e.file, built, new IdCounter(counterFile()), e.content);
+            Backups.swap(built, db);
+            Log.i("אופן ממשיך מגיבוי: " + mode + " ← " + e.name);
+            return e;
+        }
+        return null;
+    }
+
+    /** מתי נעשה גיבוי — לתצוגה. */
+    static String when(Backups.Entry e) {
+        return new java.text.SimpleDateFormat("dd.MM.yyyy HH:mm", java.util.Locale.US).format(new java.util.Date(e.time()));
+    }
+
     /** מ0.29: המסד של האופן קיים ויש בו בית (נוצר אם צריך — setup). מחזיר את הבית; 0 — לא הצליח (אין גישה לקבצים, מסד פגום). */
     static long prepare(android.content.Context c, String mode, Runnable systemFiles) {
         if (!Files.hasAccess(c)) return 0;

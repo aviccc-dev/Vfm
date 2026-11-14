@@ -42,14 +42,13 @@ final class DbVerbsUi {
             return true;
         }
         if (c.kind.equals(Verbs.K_MODE)) {                                       // מ0.42: מכפתור — נוצר (אם אין) ונפתח, כמו "אופן חדש"
-            String name = c.arg.trim();
-            long h = Db.prepare(a, name, Reserved.FILES);
-            if (h == 0) {
-                Ui.toast(a, Words.DbCmd.modeFailed(name));
-                return true;
-            }
-            Db.saveMode(a, name);
-            DbListScreen.open(a, name, h);
+            createMode(a, c.arg.trim(), new ModeReady() {                       // מבנה 48: יש גיבוי בשם הזה — שואלים
+                @Override
+                public void open(String name, long home) {
+                    Db.saveMode(a, name);
+                    DbListScreen.open(a, name, home);
+                }
+            });
             return true;
         }
         if (c.kind.equals(Verbs.K_NOTE) || c.kind.equals(Verbs.K_TITLE)) {      // מ0.37: מכפתור — בלי רשימה = הרשימה שעל המסך
@@ -270,5 +269,91 @@ final class DbVerbsUi {
         } finally {
             if (s != null) s.close();
         }
+    }
+
+    // ---------- מבנה 48: יצירת אופן מהמסך ----------
+
+    /** האופן מוכן (נוצר, או ממשיך מהגיבוי) — המסך פותח אותו בדרכו. */
+    interface ModeReady {
+        void open(String name, long home);
+    }
+
+    /**
+     * יצירת אופן מהמסך. המשתמש (14.11.2026): "להודיע שקיים גיבוי של אופן באותו שם. האם להמשיך את האופן הישן מהגיבוי, או לפתוח
+     * בשם אחר." אין גיבוי — נוצר כרגיל. (עד כאן: נוצר מסד ריק, והמשתמש קיבל "אין בית במסד הזה".)
+     */
+    static void createMode(final Activity a, final String name, final ModeReady ready) {
+        if (Db.modeState(a, name) != Db.MODE_HAS_BACKUP) {
+            long h = Db.prepare(a, name, Reserved.FILES);
+            if (h == 0) Ui.toast(a, Words.DbCmd.modeFailed(name));
+            else ready.open(name, h);
+            return;
+        }
+        Backups.Entry last = Db.lastBackup(a, name);
+        new android.app.AlertDialog.Builder(a).setTitle(Words.WorkModes.HAS_BACKUP_TITLE)
+                .setMessage(Words.WorkModes.hasBackup(name, last == null ? "" : Db.when(last)))
+                .setPositiveButton(Words.WorkModes.RESUME, new android.content.DialogInterface.OnClickListener() {
+                    @Override public void onClick(android.content.DialogInterface d, int w) { resumeMode(a, name, ready); }
+                })
+                .setNegativeButton(Words.WorkModes.OTHER_NAME, new android.content.DialogInterface.OnClickListener() {
+                    @Override public void onClick(android.content.DialogInterface d, int w) { askModeName(a, ready); }
+                })
+                .setNeutralButton(Words.CANCEL, null).show();
+    }
+
+    /** "אופן חדש" / "שם אחר": שואלים שם, ויוצרים. שם של אופן קיים — הודעה. */
+    static void askModeName(final Activity a, final ModeReady ready) {
+        Ui.askText(a, Words.Db.MODE_NEW, "", Words.Db.MODE_NAME, new Ui.Text1() {
+            @Override
+            public void ok(String raw) {
+                String name = Names.cleanName(raw).replaceAll("[:*?\"<>|\n\t]", " ").trim();
+                if (raw.trim().isEmpty() || name.isEmpty()) return;
+                if (Db.dbModes(a).contains(name)) {
+                    Ui.toast(a, Words.WorkModes.EXISTS);
+                    return;
+                }
+                createMode(a, name, ready);
+            }
+        });
+    }
+
+    /** ממשיכים מהגיבוי — ברקע (קריאה ובדיקה של הגיבוי), ואז האופן נפתח. */
+    private static void resumeMode(final Activity a, final String name, final ModeReady ready) {
+        final PhysicalUi.Busy busy = new PhysicalUi.Busy(a, Words.WorkModes.RESUMING);
+        final android.content.Context app = a.getApplicationContext();
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                Backups.Entry got = null;
+                String err = null;
+                long h = 0;
+                try {
+                    got = Db.resume(app, name);
+                    if (got != null) h = Db.read(app, name, new Db.Use<Long>() {
+                        @Override public Long run(SqlStore s) { return DbPaths.home(s); }
+                    });
+                } catch (Throwable t) {
+                    Log.e("DbVerbsUi.resumeMode", t);
+                    err = String.valueOf(t.getMessage());
+                }
+                final Backups.Entry e = got;
+                final String error = err;
+                final long home = h;
+                a.runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        busy.close();
+                        if (a.isFinishing()) return;
+                        if (error != null) Ui.toast(a, Words.Db.failed(error));
+                        else if (e == null) Ui.toast(a, Words.WorkModes.NO_GOOD_BACKUP);
+                        else if (home == 0) Ui.toast(a, Words.Db.NO_HOME);
+                        else {
+                            Ui.toast(a, Words.WorkModes.resumed(name, Db.when(e)));
+                            ready.open(name, home);
+                        }
+                    }
+                });
+            }
+        }).start();
     }
 }
