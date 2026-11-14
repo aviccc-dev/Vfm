@@ -2070,10 +2070,15 @@ final class Batch {
         places.add(new File(root, State.CURRENT));
         File[] hs = new File(root, State.HISTORY).listFiles();
         if (hs != null) for (File h : hs) if (h.isDirectory()) places.add(h);
+        boolean known = prefix.isEmpty();                                       // מבנה 61: המסלול הלוגי קיים בגיבוי — עכשיו או בהיסטוריה
         for (File place : places) {
             File start = prefix.isEmpty() ? place : new File(place, prefix);
             List<String> found = new ArrayList<String>();
-            collect(s, start, mask, found);
+            if (start.exists()) known = true;
+            // מבנה 61 (ממצא 40ב): קובץ אחד בשם מפורש ("<גיבוי>\מסמכים\א.txt") — עד כאן נמצאו 0 קבצים, בלי שגיאה (החיפוש היה רק בתיקייה)
+            if (mask == null && start.isFile()) {
+                if (visible(s, start) && !Physical.isPartial(start.getName())) found.add(start.getAbsolutePath());
+            } else collect(s, start, mask, found);
             for (String f : found) {
                 Library.Hit hit = sim.lib == null ? null : sim.lib.find(f);
                 State.Where w = st.version(f, hit == null || hit.rec == null ? 0 : hit.rec.added);
@@ -2087,10 +2092,11 @@ final class Batch {
                 }
             }
         }
+        if (!known) { s.error = Words.Cmd.notInBackup(args.get(0)); return; }   // מבנה 61: מסלול שלא היה בגיבוי אף פעם — שגיאה, לא "0 קבצים"
         s.dest = dest;
         for (Map.Entry<String, State.Where> e : best.entrySet()) {
             String rel = e.getKey();
-            String sub = prefix.isEmpty() ? rel : rel.substring(prefix.length() + 1);
+            String sub = prefix.isEmpty() ? rel : rel.equals(prefix) ? new File(rel).getName() : rel.substring(prefix.length() + 1);   // קובץ אחד — ישר ליעד
             File to = new File(dest, sub).getParentFile();
             s.files.add(phys.get(rel));
             s.targets.add(to.getAbsolutePath());

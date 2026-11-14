@@ -4037,6 +4037,25 @@ public final class Tests {
         check("1.21.0: שחזור תת־תיקייה", new File(root, "שחזור2/c.txt").isFile() && new File(root, "שחזור2").list().length == 1);
         p = Batch.plan("COPY \"גיבוי\\*.txt\" שחזור3 /מצב:20.10.2026", root, vars, lib);
         eq("1.21.0: שחזור עם תבנית — בכל העומק", 3, p.steps.get(0).files.size());
+        // מבנה 61 (ממצא 40ב): קובץ אחד בשם מפורש — עד כאן נמצאו 0 קבצים, בלי שגיאה
+        p = Batch.plan("COPY \"גיבוי\\a.txt\" שחזור4 /מצב:03.10.2026", root, vars, lib);
+        check("מבנה 61: שחזור של קובץ אחד בשם מפורש — תכנון: קובץ אחד", p.errors == 0 && p.steps.get(0).files.size() == 1);
+        Batch.run(p, lib, null, null);
+        lib.flush(5000);
+        check("מבנה 61: ...הגרסה של אז (מההיסטוריה), ישר בתיקיית היעד", "v1".equals(read(new File(root, "שחזור4/a.txt"))) && new File(root, "שחזור4").list().length == 1);
+        p = Batch.plan("COPY \"גיבוי\\a.txt\" שחזור5 /מצב:20.10.2026", root, vars, lib);
+        Batch.run(p, lib, null, null);
+        lib.flush(5000);
+        check("מבנה 61: ...ובזמן מאוחר — הגרסה הנוכחית", "v3".equals(read(new File(root, "שחזור5/a.txt"))));
+        p = Batch.plan("COPY \"גיבוי\\dir\\c.txt\" שחזור6 /מצב:03.10.2026", root, vars, lib);
+        Batch.run(p, lib, null, null);
+        lib.flush(5000);
+        check("מבנה 61: קובץ אחד מתת־תיקייה — ישר ביעד, בלי התיקייה", "c".equals(read(new File(root, "שחזור6/c.txt"))) && new File(root, "שחזור6").list().length == 1);
+        p = Batch.plan("COPY \"גיבוי\\b.txt\" שחזור7 /מצב:20.10.2026", root, vars, lib);
+        check("מבנה 61: קובץ שהיה בגיבוי ונמחק לפני הזמן שנבחר — 0 קבצים, בלי שגיאה", p.errors == 0 && p.steps.get(0).files.isEmpty());
+        p = Batch.plan("COPY \"גיבוי\\אין-כזה.txt\" שחזור8 /מצב:20.10.2026", root, vars, lib);
+        check("מבנה 61: מסלול שלא היה בגיבוי אף פעם — שגיאה שאומרת זאת (עד כאן: \"0 קבצים\")", p.errors == 1 && String.valueOf(p.steps.get(0).error).contains("לא היה בגיבוי"));
+        check("מבנה 61: וגם תיקייה שלא הייתה, עם תבנית", Batch.plan("COPY \"גיבוי\\אין\\*.txt\" שחזור9 /מצב:20.10.2026", root, vars, lib).errors == 1);
         check("1.21.0: /מצב: ב־MOVE — שגיאה", Batch.plan("MOVE גיבוי ש /מצב:03.10.2026", root, vars).errors == 1);
         check("1.21.0: מקור שאינו גיבוי — שגיאה", Batch.plan("COPY מסמכים ש /מצב:03.10.2026", root, vars).errors == 1);
         check("1.21.0: נוכחי במסלול — שגיאה (מסלול לוגי)", Batch.plan("COPY \"גיבוי\\נוכחי\" ש /מצב:03.10.2026", root, vars).errors == 1);

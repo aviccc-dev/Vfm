@@ -238,6 +238,10 @@ public final class Words {
             return "אינו בתוך גיבוי (אין נוכחי ויומן או היסטוריה): " + p;
         }
 
+        public static String notInBackup(String p) {
+            return "לא היה בגיבוי הזה, לא עכשיו ולא בהיסטוריה: " + p;
+        }
+
         public static String restore(String what, String when, String dest) {
             return "שחזור המצב של " + when + ": " + what + " ← " + dest + " · שומר מסלול";
         }
