@@ -2935,6 +2935,12 @@ public final class Tests {
                     && first.getName().equals("תוסף " + nv[0] + " " + nv[1] + ".html") && Lab.newest(root, nv[0]) != null && Lab.newest(root, nv[0]).ver.equals(nv[1]));
             check("מ0.41: ...פעם שנייה — כבר יש אותה גרסה, לא נכתב שוב", Lab.addBundled(root, html, asset.getName()) == null && root.listFiles().length == 1);
             check("מ0.41: העמוד מכיר את הטופס של רשימה חכמה (smartForm), ורק כשהתוכנה מכירה", html.contains("can('smartForm')") && html.contains("ask('smartForm'"));
+            // מבנה 68 (פתוח 6): העורך 14 מכיר "/מגיבוי" ו"ודא רציף" — ורק כשהתוכנה מצהירה שהיא מכירה (info.features)
+            check("מבנה 68: העורך מכיר את המתג /מגיבוי ואת \"ודא רציף\", ומציע אותם רק לתוכנה שמכירה", html.contains("flag('/מגיבוי'") && html.contains("'ודא רציף':{w:'ודא רציף'")
+                    && html.contains("NEW_N4=['מגיבוי'],NEW_N4_CMDS=['ודא רציף']") && html.contains("indexOf(' steady ')")
+                    && read(new File(src, "src/com/tikiyot/vfm/lev/Bridge.java")).contains("\"steady "));
+            check("מבנה 68: העזרה של \"בטל אופן\" בעורך — כמו בתוכנה (הגיבויים לסל)", html.contains("הגיבויים שלו ותיקיית ההגדרות שלו — לסל")
+                    && Words.DbCmd.W_DROP_MODE.contains("הגיבויים שלו ותיקיית ההגדרות שלו — לסל"));
             // מ0.45: העורך מכיר כל פקודת קבצים שבהגדרה (בשם העברי) — פקודה חדשה בלי העורך: הבדיקה נכשלת
             List<String> unknown = new ArrayList<String>();
             for (Commands.Def d : Commands.ALL)
