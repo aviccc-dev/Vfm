@@ -37,6 +37,8 @@ public class DbScreen extends Activity {
     private String damaged;
     /** סגירת המסד מחכה לגיבוי היומי שרץ ברקע (שלא ייסגר באמצע). */
     private final Object storeLock = new Object();
+    /** מבנה 63: האופן שהמסד הפתוח שייך לו (mode משתנה לפני שהמסד הקודם נסגר). */
+    private String heldMode;
     private String mode = "";
     private Button modeButton;
     private TextView status, crumb, hint;
@@ -101,7 +103,7 @@ public class DbScreen extends Activity {
 
     private void closeStore() {
         synchronized (storeLock) {
-            if (store != null) store.close();
+            if (store != null) Db.closeHeld(store, heldMode);                  // מבנה 63
             store = null;
         }
     }
@@ -189,7 +191,8 @@ public class DbScreen extends Activity {
         if (store == null) {
             damaged = null;
             try {
-                store = Db.open(this, mode);
+                store = Db.openHeld(this, mode);                               // מבנה 63: כל עוד פתוח — "בטל אופן" מסרב לאופן הזה
+                heldMode = mode;
             } catch (SqlStore.Damaged d) {
                 Log.e("DbScreen.open", d);
                 damaged = String.valueOf(d.getMessage());

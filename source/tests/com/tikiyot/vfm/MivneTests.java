@@ -74,7 +74,8 @@ final class MivneTests {
         for (Map.Entry<String, File> e : files.entrySet()) {
             if (WRITE_OPEN.contains(e.getKey())) continue;
             try {
-                if (strip(Files.readUtf8(e.getValue())).contains("Db.open(")) writers.add(e.getKey());
+                String code = strip(Files.readUtf8(e.getValue()));
+                if (code.contains("Db.open(") || code.contains("Db.openHeld(")) writers.add(e.getKey());   // מבנה 63: גם הפתיחה לאורך זמן
             } catch (Exception x) {
                 writers.add(e.getKey() + ": " + x);
             }

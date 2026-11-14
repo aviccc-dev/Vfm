@@ -1177,7 +1177,7 @@ final class DbListCmd {
             return;
         }
         if (name.equals(Db.MENUS_MODE)) { s.error = Words.DbCmd.dropModeSystem(name); return; }
-        if (name.equals(Db.currentMode) || name.equals(sim.mode)) { s.error = Words.DbCmd.dropModeOpen(name); return; }
+        if (Db.inUse(name) || name.equals(sim.mode)) { s.error = Words.DbCmd.dropModeOpen(name); return; }   // מבנה 63: גם אופן שמסך המסד מחזיק
         sim.created.remove(name);
         sim.dropped.add(name);
         sim.dbs.remove(name);
@@ -1192,7 +1192,7 @@ final class DbListCmd {
                     if (left < 0) lastFailed = true;
                     return left == 0 ? Words.DbCmd.dropModeNone(name) : Words.DbCmd.dropModeLeft(name, left > 0);
                 }
-                if (name.equals(Db.currentMode)) { lastFailed = true; return Words.DbCmd.dropModeOpen(name); }
+                if (Db.inUse(name)) { lastFailed = true; return Words.DbCmd.dropModeOpen(name); }
                 boolean kept = false;
                 try {
                     kept = Db.write(c, name, null, new Db.Use<Boolean>() {

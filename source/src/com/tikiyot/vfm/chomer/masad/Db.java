@@ -44,6 +44,45 @@ final class Db {
         return SqlStore.open(dbFile(c, mode), new IdCounter(counterFile()));
     }
 
+    // --- מבנה 63 (ממצא 41, פתוח 12 בסיכום): מסד שמסך מחזיק פתוח לאורך זמן. עד כאן "בטל אופן" בדק רק את האופן שבמסך הראשי
+    //     (currentMode), ומסך המסד שעומד מאחור על אופן אחר נשאר עם מסד שנמחק מתחתיו. ---
+
+    private static final java.util.Map<String, Integer> HELD = new java.util.HashMap<String, Integer>();
+
+    /** מסך המסד: המסד של האופן, לכתיבה, פתוח עד closeHeld. כל עוד הוא פתוח — האופן "בשימוש" (inUse). */
+    static SqlStore openHeld(android.content.Context c, String mode) throws java.io.IOException {
+        SqlStore s = open(c, mode);
+        hold(mode, 1);
+        return s;
+    }
+
+    static void closeHeld(SqlStore s, String mode) {
+        try {
+            s.close();
+        } finally {
+            hold(mode, -1);
+        }
+    }
+
+    /** הספירה עצמה (בלי מסד — נבדקת בבדיקות המחשב). */
+    static void hold(String mode, int by) {
+        if (mode == null) return;
+        synchronized (HELD) {
+            Integer n = HELD.get(mode);
+            int v = (n == null ? 0 : n) + by;
+            if (v <= 0) HELD.remove(mode);
+            else HELD.put(mode, v);
+        }
+    }
+
+    /** האם מסך עובד עכשיו על האופן הזה: האופן שבמסך הראשי, או אופן שמסך מחזיק את המסד שלו פתוח. */
+    static boolean inUse(String mode) {
+        if (mode == null) return false;
+        synchronized (HELD) {
+            return mode.equals(currentMode) || HELD.containsKey(mode);
+        }
+    }
+
     // --- שער המסד, שלב שני (מבנה 33): לא רק פתיחה — פתיחה, פעולה וסגירה, במקום אחד. כל מי שכותב למסד של אופן עובר ב־write;
     //     ההגנות של כולם (תור, גיבוי, עסקה) ייכנסו כאן, ולא בכל קורא. עד כאן נכתבה אותה עטיפה 11 פעמים, כל אחת קצת אחרת. ---
 

@@ -2423,6 +2423,23 @@ public final class Tests {
         long from62b = System.currentTimeMillis();
         String rep62b = String.valueOf(Batch.run(Batch.plan("המתן 1\n", r, v), null, null, null));
         check("מבנה 62: בלי עצירה — ממתין את כל הזמן", System.currentTimeMillis() - from62b >= 1000 && rep62b.contains("המתנה של 1 שניות") && !rep62b.contains("נעצרה"));
+        // מבנה 63 (פתוח 12): אופן שמסך המסד מחזיק את המסד שלו פתוח — "בשימוש", גם כשאינו האופן שבמסך הראשי
+        String was63 = Db.currentMode;
+        Db.currentMode = "ראשי-63";
+        check("מבנה 63: האופן שבמסך הראשי — בשימוש; אופן אחר — לא", Db.inUse("ראשי-63") && !Db.inUse("מאחור-63") && !Db.inUse(null));
+        Db.hold("מאחור-63", 1);
+        Db.hold("מאחור-63", 1);
+        check("מבנה 63: אופן שמסך מחזיק — בשימוש", Db.inUse("מאחור-63"));
+        Db.hold("מאחור-63", -1);
+        check("מבנה 63: שני מסכים החזיקו, אחד סגר — עדיין בשימוש", Db.inUse("מאחור-63"));
+        Db.hold("מאחור-63", -1);
+        Db.hold("מאחור-63", -1);
+        check("מבנה 63: כולם סגרו — לא בשימוש (וסגירה מיותרת לא מקלקלת)", !Db.inUse("מאחור-63"));
+        Db.currentMode = was63;
+        String dlc63 = read(new File(code, "pkudot/DbListCmd.java")), dbs63 = read(new File(code, "masachim/DbScreen.java"));
+        check("מבנה 63: \"בטל אופן\" שואל את השער גם בתכנון וגם בהרצה, ומסך המסד נרשם וסוגר דרכו",
+                dlc63.split("Db\\.inUse\\(name\\)", -1).length == 3 && !dlc63.contains("name.equals(Db.currentMode)")
+                        && dbs63.contains("Db.openHeld(this, mode)") && dbs63.contains("Db.closeHeld(store, heldMode)") && !dbs63.contains("store.close()"));
         // מבנה 55: המכשיר עצר את התוכנה בזמן הרצה — הדוח אומר זאת ואיזו הגדרה פותרת
         List<String> rep55 = new ArrayList<String>();
         Batch.stoppedHint(rep55, 4000);
