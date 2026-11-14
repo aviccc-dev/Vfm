@@ -295,6 +295,16 @@ public final class Physical {
         return target.getAbsolutePath();
     }
 
+    /**
+     * מבנה 46: הגרסה הקודמת של קובץ שעומדים לכתוב מחדש ("כתוב" בלי /הוסף) — אל הסל של אותו כונן, כמו ב"החלף".
+     * המשתמש (14.11.2026), על השאלה אם לשלוח את הישן לסל כמו בשאר התוכנה: "כן". הפריטים שברשימות נשארים — המסלול
+     * אותו מסלול, והקובץ החדש נכתב מיד. מחזיר null כשהצליח, או את הסיבה.
+     */
+    static String oldToTrash(Library lib, File f) {
+        Result r = new Result();
+        return toTrash(lib, f, stamp(), r) != null ? null : r.note;
+    }
+
     /** העברה של קבצים (כמו קודם): שם תפוס ביעד — לא נדרס. */
     public static Result move(Library lib, List<String> paths, File folder) {
         return transfer(lib, paths, java.util.Collections.<String>emptyList(), folder, false, null, null, true);

@@ -2165,8 +2165,9 @@ public final class Tests {
         String f = "\"%כאן%\\סל\\א.txt\"";
         String text = "צור תיקייה \"%כאן%\\סל\"\nכתוב " + f + " \"ראשון\"\nמחק " + f + "\nודא " + f + " חסר\nודא " + f + " /בסל:1\n"
                 + "שחזר מהסל " + f + "\nודא " + f + " מכיל \"ראשון\"\nודא " + f + " /בסל:0\n"
-                + "כתוב " + f + " \"שני\"\nמחק " + f + "\nכתוב " + f + " \"שלישי\"\nמחק " + f + "\nודא " + f + " /בסל:2\n"
-                + "שחזר מהסל " + f + "\nודא " + f + " מכיל \"שלישי\"\nודא " + f + " /בסל:1\n"
+                // מבנה 46: "כתוב שני" נכתב על "ראשון" ששוחזר — והוא עובר לסל; לכן 3 בסל (עד כאן 2), ואחרי השחזור 2 (עד כאן 1)
+                + "כתוב " + f + " \"שני\"\nמחק " + f + "\nכתוב " + f + " \"שלישי\"\nמחק " + f + "\nודא " + f + " /בסל:3\n"
+                + "שחזר מהסל " + f + "\nודא " + f + " מכיל \"שלישי\"\nודא " + f + " /בסל:2\n"
                 + "מחק " + f + "\nרוקן סל " + f + "\nודא " + f + " /בסל:0\nודא " + f + " חסר\n";
         Batch.Plan p = Batch.plan(text, r, v, lib);
         eq("מ0.45: הסל — בלי שגיאות בתכנון (" + p.errorText() + ")", 0, p.errors);
@@ -2363,6 +2364,24 @@ public final class Tests {
         eq("מבנה 43: ...ומשתנה שהוא מסלול — שגיאת שימוש", 1, Batch.plan("REN \"ק42\\קובץ.txt\" \"%תיקייה43%\"\n", r, v43).errors);
         Batch.Plan mj = Batch.plan(Batch.MEASURE + " " + Batch.SW_JOURNAL + "%אין-כזה%\nMD \"ת43-ב\"\n", r, v);
         check("מבנה 43: מדידה עם יומן במסלול שגוי — שגיאה, לא \"בלי יומן\" בשקט", mj.errors == 1 && mj.blocked());
+        // מבנה 46: "כתוב" על קובץ קיים — הקודם לסל
+        new File(r, "ת46").mkdirs();
+        File w46 = new File(r, "ת46/כתוב46.txt");
+        try { java.io.FileOutputStream o = new java.io.FileOutputStream(w46); o.write("ישן".getBytes("UTF-8")); o.close(); } catch (java.io.IOException e) { throw new RuntimeException(e); }
+        Index ix46 = new Index("מבנה46", "מבנה46", r.getAbsolutePath());
+        ix46.scan(null);
+        Library lib46 = Library.forTests(new ArrayList<Index>(java.util.Collections.singletonList(ix46)));
+        int trash46 = Batch.trashed(lib46, w46.getAbsolutePath(), false).size();
+        Batch.Plan pw46 = Batch.plan(Batch.WRITE + " \"ת46\\כתוב46.txt\" \"חדש\"\n" + Batch.WRITE + " \"ת46\\כתוב46-ב.txt\" \"א\"\n" + Batch.WRITE + " \"ת46\\כתוב46-ב.txt\" \"ב\" " + Batch.SW_APPEND + "\n", r, v, lib46);
+        check("מבנה 46: התכנון אומר שהקובץ הקיים יעבור לסל — ורק עליו", pw46.errors == 0 && pw46.steps.get(0).describe.contains(Words.DbCmd.OLD_TO_TRASH_WILL)
+                && !pw46.steps.get(1).describe.contains(Words.DbCmd.OLD_TO_TRASH_WILL) && !pw46.steps.get(2).describe.contains(Words.DbCmd.OLD_TO_TRASH_WILL));
+        String rep46 = String.valueOf(Batch.run(pw46, lib46, null, null));
+        lib46.flush(5000);
+        List<Trash.Item> in46 = Batch.trashed(lib46, w46.getAbsolutePath(), false);
+        check("מבנה 46: \"כתוב\" על קובץ קיים — התוכן החדש נכתב, והקודם בסל עם התוכן שלו (" + rep46 + ")", !pw46.trouble && "חדש".equals(read(w46))
+                && in46.size() == trash46 + 1 && "ישן".equals(read(new File(in46.get(in46.size() - 1).path()))) && rep46.contains(Words.DbCmd.OLD_TO_TRASH));
+        check("מבנה 46: /הוסף — מוסיף, ושום דבר לא עובר לסל", "אב".equals(read(new File(r, "ת46/כתוב46-ב.txt")))
+                && Batch.trashed(lib46, new File(r, "ת46/כתוב46-ב.txt").getAbsolutePath(), false).isEmpty());
         // מבנה 45: קובץ שהמנוע כותב בעצמו — לא על קובץ של התוכנה
         String set45 = app42 + "/" + Paths.SETTINGS + "/x.txt";
         check("מבנה 45: דוח על קובץ של התוכנה — שגיאה", Batch.plan("דוח \"" + set45 + "\"\nMD \"ת45\"\n", r, v).errors == 1);

@@ -2002,7 +2002,7 @@ public final class Words {
                 W_REFRESH = "מרענן את האינדקס, כדי שקבצים חדשים יימצאו. \"רענן עמוק\" — בדיקה מלאה; \"רענן מלא\" — בנייה מחדש",
                 W_REPORT = "היומן של ההרצה נכתב גם לקובץ הזה",
                 P_SECONDS = "שניות", H_SECONDS = "כמה שניות לחכות (עד 600)", H_WRITE_FILE = "הקובץ שייכתב", P_TEXT_IN = "טקסט",
-                H_WRITE_TEXT = "מה לכתוב; \\n — שורה חדשה", P_APPEND = "להוסיף בסוף", H_APPEND = "בלי זה — הטקסט מחליף את מה שבקובץ",
+                H_WRITE_TEXT = "מה לכתוב; \\n — שורה חדשה", P_APPEND = "להוסיף בסוף", H_APPEND = "בלי זה — הטקסט מחליף את מה שבקובץ, והקובץ הקודם עובר לסל",
                 P_DEEP = "עמוק", H_DEEP = "ריק — רענון מהיר; עמוק — בדיקה מלאה; מלא — בנייה מחדש (/קוראים:N — כמה קוראים לכל כונן)", H_REPORT = "הקובץ שאליו נכתב היומן",
                 WAIT_USAGE = "צורה: המתן <שניות> (עד 600)", REPORT_USAGE = "צורה: דוח \"<קובץ>\"", REFRESH_USAGE = "צורה: רענן · רענן עמוק · רענן מלא [/קוראים:N]",
                 BACKUP_USAGE = "צורה: גבה (בלי פרמטרים; אחרי \"אופן\" — של אותו אופן)", WRITE_USAGE = "צורה: כתוב \"<קובץ>\" \"<טקסט>\" [/הוסף]",
@@ -2023,6 +2023,8 @@ public final class Words {
         public static String backupWill(String mode) { return "גיבוי ידני של המסד של האופן \"" + mode + "\""; }
         public static String backedUp(String mode, String names) { return "נעשה גיבוי של האופן \"" + mode + "\": " + names; }
         public static String writeNoFolder(String p) { return "אין תיקייה: " + p; }
+        /** מבנה 46: "כתוב" על קובץ קיים, בלי /הוסף. */
+        public static final String OLD_TO_TRASH_WILL = " · הקובץ הקיים יעבור לסל", OLD_TO_TRASH = " · הקובץ הקודם עבר לסל";
         public static String writeWill(String name, int chars, boolean add) {
             return (add ? "יתווספו ל\"" : "ייכתב הקובץ \"") + name + "\" · " + chars + " תווים";
         }

@@ -342,10 +342,11 @@ final class Batch {
             if (dir == null || !sim.isDir(dir)) { s.error = Words.DbCmd.writeNoFolder(Bidi.path(dir == null ? p : dir.getAbsolutePath())); return true; }
             if (sim.isDir(f)) { s.error = Words.DbCmd.WRITE_IS_FOLDER; return true; }
             final boolean add = append;
+            boolean had = sim.isFile(f) && sim.real(f) != GHOST;                // מבנה 46: קובץ שכבר קיים (לא כזה ששורה קודמת כותבת)
             sim.gone.remove(p);
             if (!sim.isFile(f)) sim.added.put(p, GHOST);
             s.dest = f;
-            s.describe = Words.DbCmd.writeWill(f.getName(), text.length(), add);
+            s.describe = Words.DbCmd.writeWill(f.getName(), text.length(), add) + (!add && had ? Words.DbCmd.OLD_TO_TRASH_WILL : "");
             s.op = new ListCmd.Op() {
                 @Override public String run(Library lib) {
                     try {
@@ -354,8 +355,17 @@ final class Batch {
                             if (why != null) { DbListCmd.lastFailed = true; return why; }
                         }
                         if (f.isDirectory()) { DbListCmd.lastFailed = true; return Words.DbCmd.WRITE_IS_FOLDER; }
-                        boolean was = f.isFile();
+                        boolean was = f.isFile(), toTrash = was && !add && lib != null;
+                        if (toTrash) {                                              // מבנה 46: הקובץ הקודם — לסל, לא נדרס
+                            String why = Physical.oldToTrash(lib, f);
+                            if (why != null) { DbListCmd.lastFailed = true; return why; }
+                        }
                         Files.writeAtomic(f, add && was ? Files.readUtf8(f) + text : text);
+                        if (toTrash) {
+                            lib.fileAdded(f);
+                            lib.flush(5000);
+                            return Words.DbCmd.written(f.getName(), text.length(), false) + Words.DbCmd.OLD_TO_TRASH;
+                        }
                         if (lib != null) {
                             if (was) lib.fileRemoved(f.getAbsolutePath());
                             lib.fileAdded(f);
