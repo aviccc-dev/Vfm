@@ -156,6 +156,8 @@ final class Batch {
         boolean trouble;
         /** 1.25.0: שורת "מדידה" — זמן לכל שורה, סיכום, ויומן (אם נכתב /יומן:). */
         boolean measure;
+        /** מבנה 38: הדופק של ההרצה (רק עם "מדידה"). */
+        Pulse pulse;
         String measureJournal;
         /** מ0.45: "מדידה /עד:<זמן>" — שורה שלקחה יותר מסומנת ❌ (ונספרת עם "ודא" שנכשלו); 0 — בלי. */
         long lineLimit;
@@ -2179,6 +2181,57 @@ final class Batch {
     }
 
     static List<String> run(Plan plan, Library lib, Physical.Asker asker, Physical.Progress progress, boolean grey, Listener listen) {
+        plan.pulse = plan.measure ? new Pulse() : null;                         // מבנה 38: עם "מדידה" — גם כמה זמן התוכנה לא רצה
+        try {
+            return run0(plan, lib, asker, progress, grey, listen);
+        } finally {
+            if (plan.pulse != null) plan.pulse.stop();
+        }
+    }
+
+    /**
+     * מבנה 38: דופק ברקע בזמן הרצה עם "מדידה" — פעימה כל חצי שנייה, לפי השעון הרגיל. פער גדול בין שתי פעימות אומר
+     * שכל התוכנה לא רצה: המכשיר ישן, או שהמערכת עצרה אותה (מסך כבוי). כך שורה איטית מסבירה את עצמה —
+     * אם הדופק המשיך לפעום, השורה עצמה חיכתה למשהו; אם נעצר — לא השורה אשמה. (נ0.2: שורה אחת — 67.8 שניות, ואי אפשר היה לדעת למה.)
+     */
+    static final class Pulse implements Runnable {
+        static final long EVERY = 500, GAP = 2000;
+        private volatile boolean on = true;
+        private volatile long missed;
+        private final Thread thread = new Thread(this, "vfm-pulse");
+
+        Pulse() {
+            thread.setDaemon(true);
+            thread.start();
+        }
+
+        @Override
+        public void run() {
+            long last = System.currentTimeMillis();
+            while (on) {
+                try {
+                    Thread.sleep(EVERY);
+                } catch (InterruptedException e) {
+                    return;
+                }
+                long now = System.currentTimeMillis();
+                if (now - last >= GAP) missed += now - last - EVERY;
+                last = now;
+            }
+        }
+
+        /** כמה זמן (באלפיות) התוכנה לא רצה מאז שהדופק התחיל. */
+        long missed() {
+            return missed;
+        }
+
+        void stop() {
+            on = false;
+            thread.interrupt();
+        }
+    }
+
+    private static List<String> run0(Plan plan, Library lib, Physical.Asker asker, Physical.Progress progress, boolean grey, Listener listen) {
         List<String> report = new ArrayList<String>(plan.inputs);              // 1.27.0: הקלט — בראש
         int fails = 0;                                                           // מ0.31: כישלונות בהרצה — מול המותר ("המשך")
         Step pending = null;                                                     // מ0.37: "ודא שגיאה"
@@ -2371,7 +2424,8 @@ final class Batch {
     private static void measured(Plan plan, List<String> report, long total) {
         Step slow = null;
         for (Step x : plan.steps) if (x.ms >= 0 && (slow == null || x.ms > slow.ms)) slow = x;
-        report.add(Words.Loop.total(total, slow == null ? null : slow.label(), slow == null ? 0 : slow.ms));
+        report.add(Words.Loop.total(total, slow == null ? null : slow.label(), slow == null ? 0 : slow.ms)
+                + Words.Loop.notRunning(plan.pulse == null ? 0 : plan.pulse.missed()));
         if (plan.measureJournal == null) return;
         try {
             File j = new File(plan.measureJournal);

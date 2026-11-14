@@ -278,7 +278,12 @@ public class RunScreen extends Activity {
             public void run() {
                 List<String> rep;
                 try {
-                    rep = Batch.run(plan, lib, new PhysicalUi.DialogAsker(RunScreen.this), progress(null), Acts.deletedStaysGrey(), listen);
+                    android.os.PowerManager.WakeLock awake = Awake.hold(RunScreen.this);   // מבנה 38: ההרצה ממשיכה גם כשהמסך כבוי
+                    try {
+                        rep = Batch.run(plan, lib, new PhysicalUi.DialogAsker(RunScreen.this), progress(null), Acts.deletedStaysGrey(), listen);
+                    } finally {
+                        Awake.release(awake);
+                    }
                 } catch (Throwable t) {
                     Log.e("הרצת קובץ פקודות: " + file, t);
                     rep = new ArrayList<String>();

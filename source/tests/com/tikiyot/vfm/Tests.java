@@ -2287,6 +2287,21 @@ public final class Tests {
         eq("מבנה 28: \"בדיקה\" קודמת למקומות הפתוחים (מסך ההרצה שואל עליהם בעצמו)", Manager.TO_CHECK, Manager.route(Batch.CHECK + "\n" + holes, false));
         eq("מבנה 28: קובץ רגיל — הכנה והרצה", Manager.TO_RUN, Manager.route("MD \"א\"\n", false));
         eq("מבנה 28: השורות — בלי \\r", Arrays.asList("א", "ב"), Manager.lines("א\r\nב\r\n"));
+        // מבנה 38: הדופק — כמה זמן התוכנה לא רצה
+        Batch.Pulse pulse = new Batch.Pulse();
+        try { Thread.sleep(1300); } catch (InterruptedException e) { throw new RuntimeException(e); }
+        check("מבנה 38: התוכנה רצה כרגיל — הדופק לא מדווח על עצירה", pulse.missed() == 0);
+        pulse.stop();
+        eq("מבנה 38: פחות משנייה — אין תוספת לסיכום", "", Words.Loop.notRunning(900));
+        check("מבנה 38: עצירה של דקה — כתובה בסיכום של המדידה", Words.Loop.notRunning(67000).contains("67.0 שניות"));
+        Batch.Plan measuredPlan = Batch.plan("מדידה\nECHO דופק\n", r, v);
+        List<String> pulseReport = Batch.run(measuredPlan, null, null, null);
+        check("מבנה 38: הרצה עם מדידה — יש דופק, והוא נעצר בסוף; בלי עצירה אין תוספת",
+                measuredPlan.pulse != null && String.valueOf(pulseReport).contains("סך הכול") && !String.valueOf(pulseReport).contains("לא רצה"));
+        String bat = read(new File(code, "masachim/rechivim/BatchUi.java")), run2 = read(new File(code, "masachim/RunScreen.java"));
+        check("מבנה 38: שני רצפי ההרצה מחזיקים את המכשיר ער, ומשחררים בסוף",
+                bat.contains("Awake.hold(a)") && bat.contains("Awake.release(awake)") && run2.contains("Awake.hold(RunScreen.this)") && run2.contains("Awake.release(awake)")
+                        && read(new File(System.getProperty("vfm.src"), "AndroidManifest.xml")).contains("android.permission.WAKE_LOCK"));
         String dls = read(new File(code, "masachim/DbListScreen.java"));
         check("מבנה 37: שורה שנעלמה מהמסד מתחת למסך אינה מקריסה אותו (הקריסה ב\"שחזור הדוגמאות\", נ0.2) — הציור עטוף, והמסך נטען מחדש",
                 dls.contains("catch (Store.Failure gone)") && dls.contains("private void bindRow(View v, Store.Member row)") && dls.contains("Words.Db.ROW_GONE"));

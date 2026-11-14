@@ -1765,6 +1765,11 @@ public final class Words {
             return ms < 1000 ? ms + " אלפיות" : String.format(java.util.Locale.ROOT, "%.1f שניות", ms / 1000.0);
         }
 
+        /** מבנה 38: תוספת לשורת הסיכום של "מדידה" — רק כשהתוכנה לא רצה שנייה ומעלה. */
+        public static String notRunning(long ms) {
+            return ms < 1000 ? "" : " · מתוך זה התוכנה לא רצה " + time(ms) + " (המכשיר ישן, או שהמערכת עצרה אותה)";
+        }
+
         public static String total(long ms, String slowLine, long slowMs) {
             return "⏱ סך הכול " + time(ms) + (slowLine != null ? " · האיטית: שורה " + slowLine + " (" + time(slowMs) + ")" : "");
         }

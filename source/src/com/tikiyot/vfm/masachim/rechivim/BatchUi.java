@@ -168,7 +168,12 @@ final class BatchUi {
                     public void run() {
                         List<String> rep;
                         try {
-                            rep = Batch.run(plan, lib, new PhysicalUi.DialogAsker(a), busy, Acts.deletedStaysGrey());
+                            android.os.PowerManager.WakeLock awake = Awake.hold(a);   // מבנה 38: ההרצה ממשיכה גם כשהמסך כבוי
+                            try {
+                                rep = Batch.run(plan, lib, new PhysicalUi.DialogAsker(a), busy, Acts.deletedStaysGrey());
+                            } finally {
+                                Awake.release(awake);
+                            }
                         } catch (Throwable t) {                               // 1.25.4: תקלה בהרצה — דוח עם התקלה
                             Log.e("הרצת קובץ פקודות: " + f, t);
                             rep = new ArrayList<String>();
