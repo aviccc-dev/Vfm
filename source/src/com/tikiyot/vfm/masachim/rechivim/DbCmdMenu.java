@@ -151,10 +151,6 @@ final class DbCmdMenu {
 
     // ================= מ0.23: יצוא וייבוא — קובצי פקודות מוכנים ב־⭐ =================
 
-    /** [צלמית, שם, שורת הפקודה]. מבנה 12: הרשימה עצמה והכתיבה לכונן — ב־Reserved. */
-    static List<String[]> dbTools() {
-        return Reserved.dbTools();
-    }
 
     static List<File> writeTools() {
         return Reserved.writeTools();

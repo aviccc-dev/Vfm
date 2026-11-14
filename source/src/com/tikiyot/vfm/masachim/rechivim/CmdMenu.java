@@ -28,10 +28,6 @@ final class CmdMenu {
         void ok(String icon, String name, String line, File file);
     }
 
-    /** פקודות המערכת — קבוצה 1: פתיחת מסכים. מבנה 12: הרשימה עצמה — ב־Reserved (קובצי פקודות המערכת), לא בתפריט. */
-    static List<String[]> system() {
-        return Reserved.system();
-    }
 
     private CmdMenu() { }
 

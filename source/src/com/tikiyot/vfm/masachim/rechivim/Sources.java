@@ -165,10 +165,6 @@ public final class Sources {
         return Cond.sourcesOf(cond);
     }
 
-    static boolean oldPath(String v) {
-        return Cond.oldPath(v);
-    }
-
     /** התנאי בלי רכיבי המקורות (מה שנשאר לסינון). */
     public static String rest(String cond) {
         return Cond.withoutSources(cond);

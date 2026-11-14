@@ -2439,7 +2439,7 @@ public final class Tests {
         check("מ0.41: \"בדיקה\" או \"הדמיה\" בראש — לא (מסך ההרצה)", Batch.singleVerb("בדיקה\nפתח מסך הבית\n") == null
                 && Batch.singleVerb("הדמיה\nפתח מסך הבית\n") == null);
         check("מ0.41: קובץ ריק — לא", Batch.singleVerb("") == null && Batch.singleVerb("צלמית ▶\n") == null);
-        for (String[] x : CmdMenu.system())
+        for (String[] x : Reserved.system())
             check("מ0.41: פקודת המערכת \"" + x[1] + "\" — פקודת פתיחה אחת", x[2].equals(Batch.singleVerb(Program.ICON + " " + x[0] + "\n" + Program.NAME + " " + x[1] + "\n" + x[2] + "\n")));
         // שמות המסכים של השורות — של "פתח מסך", ועוד שניים
         check("מ0.41: שמות המסכים — \"רשימה\" ו\"רשימה חכמה\" אינם שמות של \"פתח מסך\"", !java.util.Arrays.asList(Verbs.SCREENS).contains(Verbs.S_LIST_SCREEN)
@@ -2576,7 +2576,7 @@ public final class Tests {
     }
 
     private static String toolLine(String name) {
-        for (String[] t : DbCmdMenu.dbTools()) if (t[1].equals(name)) return t[2];
+        for (String[] t : Reserved.dbTools()) if (t[1].equals(name)) return t[2];
         return "";
     }
 

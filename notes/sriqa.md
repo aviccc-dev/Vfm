@@ -6,12 +6,12 @@
 - קטעים שחוזרים: 2 (כ־18 שורות); הגדול: 10 שורות — masachim/IniEditScreen.java:51 ↔ masachim/SearchScreen.java:270
 - קטעים דומים במבנה: 35 (כ־225 שורות); הגדול: 10 שורות — masachim/IniEditScreen.java:51 ↔ masachim/SearchScreen.java:270
 - דפוסים שחוזרים ב־6 מקומות ומעלה: 1; הנפוץ: 7 מקומות ב־2 קבצים
-- בלי פונים: 0 פונקציות (מ־2119), 0 קבועים (מ־1858); רק מהבדיקות: 8
-- פונקציות סטטיות בלי פונים (לפי המחלקה): 1; רק מהבדיקות: 12
+- בלי פונים: 0 פונקציות (מ־2116), 0 קבועים (מ־1858); רק מהבדיקות: 8
+- פונקציות סטטיות בלי פונים (לפי המחלקה): 0; רק מהבדיקות: 10
 - מילים במילון בלי שימוש: 0 (מ־1430)
 - אותו טקסט פעמיים במילון: 35
 - פתיחת מסד בלי סגירה ב־finally: 5
-- קבצים: 136 · שורות: 40905 · פונקציות של 90+ שורות: 16
+- קבצים: 136 · שורות: 40893 · פונקציות של 90+ שורות: 16
 - אזהרות המהדר: deprecation 22, serial 4, rawtypes 1, fallthrough 1
 
 ## 1. קטעי קוד שחוזרים (8 שורות קוד זהות ומעלה, בלי הערות ורווחים)
@@ -56,7 +56,7 @@
 | 6 | `masachim/SearchScreen.java` 452 | `masachim/SettingsScreen.java` 183 |
 | 6 | `masachim/SettingsScreen.java` 41 | `masachim/SettingsScreen.java` 74 |
 | 6 | `masachim/rechivim/Actions.java` 115 | `masachim/rechivim/Actions.java` 147 |
-| 6 | `masachim/rechivim/CmdMenu.java` 100 | `masachim/rechivim/FnCommand.java` 38 |
+| 6 | `masachim/rechivim/CmdMenu.java` 96 | `masachim/rechivim/FnCommand.java` 38 |
 | 6 | `masachim/rechivim/DbCmdMenu.java` 45 | `masachim/rechivim/DbVerbsUi.java` 237 |
 | 6 | `masachim/rechivim/PhysicalUi.java` 471 | `masachim/rechivim/PhysicalUi.java` 510 |
 | 6 | `masachim/rechivim/Select.java` 88 | `masachim/rechivim/Select.java` 103 |
@@ -75,7 +75,7 @@
 
 ## 2. פונקציות וקבועים שאיש לא פונה אליהם
 
-נבדקו 2119 פונקציות ו־1858 קבועים, לפי השם: פונקציה — ששום "שם(" בקוד אינו קריאה אליה; קבוע — ששמו מופיע רק בהגדרה. שם שמשותף לכמה פונקציות נספר יחד; פונקציה של הגשר (JavascriptInterface) ו־Override — לא נספרות.
+נבדקו 2116 פונקציות ו־1858 קבועים, לפי השם: פונקציה — ששום "שם(" בקוד אינו קריאה אליה; קבוע — ששמו מופיע רק בהגדרה. שם שמשותף לכמה פונקציות נספר יחד; פונקציה של הגשר (JavascriptInterface) ו־Override — לא נספרות.
 
 **פונקציות (0):** 
 
@@ -85,9 +85,9 @@
 
 ## 2ב. פונקציות סטטיות שאיש לא פונה אליהן — לפי המחלקה (גם כששם הפונקציה משותף לאחרות)
 
-**בלי פונים (1):** `masachim/rechivim/Sources.java:168 oldPath`
+**בלי פונים (0):** 
 
-**רק הבדיקות פונות (12):** `basis/Modes.java:73 create` · `chomer/indeks/Library.java:57 forTests` · `chomer/indeks/Sig.java:161 forget` · `chomer/konan/Physical.java:280 move` · `masachim/rechivim/Actions.java:218 fitting` · `masachim/rechivim/Actions.java:224 all` · `masachim/rechivim/CmdMenu.java:32 system` · `masachim/rechivim/DbCmdMenu.java:155 dbTools` · `pkudot/CmdMatrix.java:223 needed` · `pkudot/CmdTemplates.java:121 copyToMine` · `pkudot/CmdTemplates.java:126 rename` · `pkudot/Commands.java:292 hebrewText`
+**רק הבדיקות פונות (10):** `basis/Modes.java:73 create` · `chomer/indeks/Library.java:57 forTests` · `chomer/indeks/Sig.java:161 forget` · `chomer/konan/Physical.java:280 move` · `masachim/rechivim/Actions.java:218 fitting` · `masachim/rechivim/Actions.java:224 all` · `pkudot/CmdMatrix.java:223 needed` · `pkudot/CmdTemplates.java:121 copyToMine` · `pkudot/CmdTemplates.java:126 rename` · `pkudot/Commands.java:292 hebrewText`
 
 ## 2ג. מילים במילון שאיש לא משתמש בהן (נבדקו 1430, לפי הקבוצה: Words.<קבוצה>.<מילה>)
 
@@ -139,13 +139,13 @@
 
 ## 5. גדלים
 
-**קבצים:** 136 · **שורות:** 40905
+**קבצים:** 136 · **שורות:** 40893
 
 **הקבצים הגדולים:** `pkudot/Batch.java` 2515 · `basis/Words.java` 2481 · `chomer/indeks/Library.java` 1464 · `pkudot/DbListCmd.java` 1389 · `chomer/indeks/Index.java` 1145 · `chomer/konan/Physical.java` 1082 · `masachim/SearchScreen.java` 977 · `chomer/masad/SqlStore.java` 977 · `masachim/rechivim/Ui.java` 863 · `masachim/DupScreen.java` 796 · `masachim/DbListScreen.java` 777 · `masachim/DbScreen.java` 752 · `masachim/rechivim/SmartForm.java` 720 · `lev/Bridge.java` 702 · `chomer/masad/Backups.java` 664
 
 **פונקציות של 90 שורות ומעלה (16):** `pkudot/Batch.java:1251 plan` 236 · `masachim/rechivim/SmartForm.java:303 show` 222 · `pkudot/Batch.java:1556 plan` 191 · `pkudot/DbListCmd.java:564 plan` 188 · `pkudot/Batch.java:186 small` 175 · `pkudot/Batch.java:2181 run` 163 · `masachim/BarService.java:156 build` 124 · `masachim/DupScreen.java:134 onCreate` 109 · `masachim/rechivim/PickDialog.java:100 open` 105 · `chomer/indeks/Library.java:876 search` 103 · `masachim/itzuv/DesignUi.java:171 form` 102 · `pkudot/Verbs.java:119 parse` 98 · `masachim/rechivim/QuickBar.java:198 edit` 95 · `masachim/rechivim/FilterForm.java:21 build` 93 · `masachim/rechivim/FnDup.java:39 configure` 92 · `masachim/itzuv/Looks.java:166 apply` 91
 
-**לפי קומה:** basis — 12 קבצים, 3937 שורות · chomer — 46 קבצים, 13405 שורות · pkudot — 13 קבצים, 6143 שורות · lev — 4 קבצים, 1700 שורות · masachim — 61 קבצים, 15720 שורות
+**לפי קומה:** basis — 12 קבצים, 3937 שורות · chomer — 46 קבצים, 13405 שורות · pkudot — 13 קבצים, 6143 שורות · lev — 4 קבצים, 1700 שורות · masachim — 61 קבצים, 15708 שורות
 
 ## 6. אזהרות המהדר (javac -Xlint:all)
 
