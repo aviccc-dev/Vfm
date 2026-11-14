@@ -2306,12 +2306,25 @@ final class Batch {
             no.add(Words.Run.AS_IF);
             return no;
         }
-        plan.pulse = plan.measure ? new Pulse() : null;                         // מבנה 38: עם "מדידה" — גם כמה זמן התוכנה לא רצה
+        plan.pulse = new Pulse();                                               // מבנה 38: כמה זמן התוכנה לא רצה. מבנה 55: תמיד, לא רק עם "מדידה"
         try {
-            return run0(plan, lib, asker, progress, grey, listen);
+            List<String> rep = run0(plan, lib, asker, progress, grey, listen);
+            stoppedHint(rep, plan.pulse.missed());
+            return rep;
         } finally {
-            if (plan.pulse != null) plan.pulse.stop();
+            plan.pulse.stop();
         }
+    }
+
+    /**
+     * מבנה 55: המערכת של המכשיר עצרה את התוכנה באמצע הרצה — הדוח אומר זאת, ואיזו הגדרה במכשיר פותרת. נבדק במכשיר של המשתמש
+     * (14.11.2026): עם החזקת המעבד והשירות הקדמי התוכנה עוד נעצרה 58 שניות מתוך 205 כשהמסך כבוי; אחרי "ללא הגבלות" בהגדרות
+     * הסוללה — רצה ברציפות. המשפך: שורה רק כשזה קרה (5 שניות ומעלה).
+     */
+    static final long HINT_MS = 5000;
+
+    static void stoppedHint(List<String> report, long missedMs) {
+        if (missedMs >= HINT_MS) report.add(Words.Loop.stoppedBySystem(missedMs));
     }
 
     /**

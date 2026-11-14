@@ -1785,6 +1785,12 @@ public final class Words {
             return ms < 1000 ? "" : " · מתוך זה התוכנה לא רצה " + time(ms) + " (המכשיר ישן, או שהמערכת עצרה אותה)";
         }
 
+        /** מבנה 55: שורה בסוף הדוח כשהמערכת עצרה את התוכנה בזמן ההרצה. */
+        public static String stoppedBySystem(long ms) {
+            return "⚠ המכשיר עצר את התוכנה למשך " + time(ms) + " בזמן ההרצה (בדרך כלל כשהמסך כבוי). כדי שהרצה תימשך גם אז: "
+                    + "בהגדרות המכשיר ← אפליקציות ← " + Main.APP_NAME + " ← סוללה ← \"ללא הגבלות\"";
+        }
+
         public static String total(long ms, String slowLine, long slowMs) {
             return "⏱ סך הכול " + time(ms) + (slowLine != null ? " · האיטית: שורה " + slowLine + " (" + time(slowMs) + ")" : "");
         }

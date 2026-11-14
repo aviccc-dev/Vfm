@@ -2371,6 +2371,14 @@ public final class Tests {
         eq("מבנה 43: ...ומשתנה שהוא מסלול — שגיאת שימוש", 1, Batch.plan("REN \"ק42\\קובץ.txt\" \"%תיקייה43%\"\n", r, v43).errors);
         Batch.Plan mj = Batch.plan(Batch.MEASURE + " " + Batch.SW_JOURNAL + "%אין-כזה%\nMD \"ת43-ב\"\n", r, v);
         check("מבנה 43: מדידה עם יומן במסלול שגוי — שגיאה, לא \"בלי יומן\" בשקט", mj.errors == 1 && mj.blocked());
+        // מבנה 55: המכשיר עצר את התוכנה בזמן הרצה — הדוח אומר זאת ואיזו הגדרה פותרת
+        List<String> rep55 = new ArrayList<String>();
+        Batch.stoppedHint(rep55, 4000);
+        check("מבנה 55: פחות מ־5 שניות — בלי שורה", rep55.isEmpty());
+        Batch.stoppedHint(rep55, 58400);
+        check("מבנה 55: 58 שניות — שורה אחת, עם הזמן ועם ההגדרה", rep55.size() == 1 && rep55.get(0).contains("58") && rep55.get(0).contains("ללא הגבלות"));
+        Batch.Plan p55 = Batch.plan("ECHO שלום\n", r, v);
+        check("מבנה 55: הרצה רגילה — בלי השורה, והדופק פועל גם בלי \"מדידה\"", !String.valueOf(Batch.run(p55, null, null, null)).contains("עצר את התוכנה") && p55.pulse != null);
         // מבנה 54: מסד בלי בית (גיבוי של אופן מהתקלה הישנה) — בית נוצר, והרשימות שבחוץ נכנסות אליו
         MemStore m54 = new MemStore(IdCounter.memory());
         long out54 = m54.createList("בדיקת מ0.45", 0), in54 = m54.createList("פנימית", out54), res54 = m54.createList(Names.RESERVED_ROOT, 0);
