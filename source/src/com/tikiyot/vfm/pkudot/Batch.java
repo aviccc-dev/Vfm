@@ -168,6 +168,8 @@ final class Batch {
         final List<String> inputs = new ArrayList<String>();
         /** 1.25.4: המשתמש עצר בזמן ההכנה — לא מריצים. */
         boolean stopped;
+        /** מבנה 62: מי ששואלים אם המשתמש ביקש לעצור — בזמן ההרצה (שורה ארוכה, כמו "המתן", שואלת באמצע). */
+        Physical.Progress asked;
         /** 1.25.0: לולאה שנעצרה בתכנון (הסבב עבר את הגבול) — מוצג בתצוגה המקדימה. */
         final List<String> notes = new ArrayList<String>();
 
@@ -284,7 +286,11 @@ final class Batch {
             s.describe = Words.DbCmd.waitFor(n);
             s.op = new ListCmd.Op() {
                 @Override public String run(Library lib) {
-                    try { Thread.sleep(n * 1000L); } catch (InterruptedException e) { Thread.currentThread().interrupt(); }
+                    // מבנה 62 (ממצא 40ה): בחתיכות של רבע שנייה — "עצור" נענה מיד (עד כאן: רק אחרי שכל ההמתנה נגמרה, עד 600 שניות)
+                    for (int left = n * 4; left > 0; left--) {
+                        if (plan.asked != null && plan.asked.stopped()) return Words.DbCmd.waitStopped(n, n - (left + 3) / 4);
+                        try { Thread.sleep(250); } catch (InterruptedException e) { Thread.currentThread().interrupt(); break; }
+                    }
                     return Words.DbCmd.waitFor(n);
                 }
             };
@@ -2383,6 +2389,7 @@ final class Batch {
 
     private static List<String> run0(Plan plan, Library lib, Physical.Asker asker, Physical.Progress progress, boolean grey, Listener listen) {
         List<String> report = new ArrayList<String>(plan.inputs);              // 1.27.0: הקלט — בראש
+        plan.asked = progress;                                                   // מבנה 62
         int fails = 0;                                                           // מ0.31: כישלונות בהרצה — מול המותר ("המשך")
         Step pending = null;                                                     // מ0.37: "ודא שגיאה"
         int pendingFails = 0;

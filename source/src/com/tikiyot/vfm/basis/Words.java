@@ -2037,6 +2037,7 @@ public final class Words {
                 EXPECT_OK_RUN = "✅ נכשלה, כצפוי", EXPECT_BAD = "❌ הייתה צריכה להיכשל — והצליחה",
                 NOTE_NEEDS_LIST = "צריך לכתוב לאיזו רשימה: צור רעיון \"<טקסט>\" \"<רשימה>\"", VERIFY_NOT_CONTAINS = "אינו מכיל";
         public static String waitFor(int n) { return "המתנה של " + n + " שניות"; }
+        public static String waitStopped(int n, int done) { return "המתנה של " + n + " שניות — נעצרה אחרי " + done; }
         public static String reportTo(String p) { return "היומן ייכתב גם לקובץ: " + p; }
         public static String reportWritten(String p) { return "היומן נכתב לקובץ: " + p; }
         public static String reportFailed(String why) { return "⚠ היומן לא נכתב לקובץ: " + why; }

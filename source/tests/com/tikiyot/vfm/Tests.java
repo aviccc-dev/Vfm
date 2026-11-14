@@ -2409,6 +2409,20 @@ public final class Tests {
         } catch (Throwable t) {
             check("מבנה 59: קריאת התוסף (" + t + ")", false);
         }
+        // מבנה 62 (ממצא 40ה): "המתן" נענה ל"עצור" — עד כאן רק אחרי שכל ההמתנה נגמרה
+        final long from62 = System.currentTimeMillis();
+        Physical.Progress stop62 = new Physical.Progress() {
+            @Override public void step(int files, int total, long bytes, long totalBytes) { }
+            @Override public boolean stopped() { return System.currentTimeMillis() - from62 > 600; }
+        };
+        Batch.Plan p62 = Batch.plan("המתן 20\nMD \"אחרי-המתנה\"\n", r, v);
+        String rep62 = String.valueOf(Batch.run(p62, null, null, stop62));
+        long took62 = System.currentTimeMillis() - from62;
+        check("מבנה 62: \"עצור\" באמצע \"המתן 20\" — ההמתנה נפסקת מיד (" + took62 + " אלפיות), ונאמר", took62 < 5000 && rep62.contains("נעצרה אחרי"));
+        check("מבנה 62: ...והשורה שאחריה לא רצה", !new File(r, "אחרי-המתנה").exists() && p62.trouble);
+        long from62b = System.currentTimeMillis();
+        String rep62b = String.valueOf(Batch.run(Batch.plan("המתן 1\n", r, v), null, null, null));
+        check("מבנה 62: בלי עצירה — ממתין את כל הזמן", System.currentTimeMillis() - from62b >= 1000 && rep62b.contains("המתנה של 1 שניות") && !rep62b.contains("נעצרה"));
         // מבנה 55: המכשיר עצר את התוכנה בזמן הרצה — הדוח אומר זאת ואיזו הגדרה פותרת
         List<String> rep55 = new ArrayList<String>();
         Batch.stoppedHint(rep55, 4000);
