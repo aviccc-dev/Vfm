@@ -186,6 +186,19 @@ final class Batch {
      * "ודא שגיאה". מחזיר true אם השורה שלהן (ואז s מוכן: שגיאה, או תיאור ופעולה).
      */
     /**
+     * מבנה 50 — "ודא רציף": בדיקה של "ההרצה ממשיכה כשהמסך כבוי" שמדווחת בעצמה (המשתמש, 14.11.2026: "למה אתה לא מכין פקודות
+     * שבודקות את כל זה"). המסך לא כבה לפחות 10 שניות — הבדיקה לא בדקה דבר, וזה כישלון שאומר מה לעשות; המסך כבה והתוכנה לא רצה
+     * 3 שניות ויותר — כישלון; אחרת — עבר.
+     */
+    static final int STEADY_OK = 0, STEADY_SCREEN_ON = 1, STEADY_STOPPED = 2;
+    static final long STEADY_MIN_OFF = 10000, STEADY_MAX_MISS = 3000;
+
+    static int steady(long screenOffMs, long missedMs) {
+        if (missedMs >= STEADY_MAX_MISS) return STEADY_STOPPED;
+        return screenOffMs < STEADY_MIN_OFF ? STEADY_SCREEN_ON : STEADY_OK;
+    }
+
+    /**
      * מבנה 45: קובץ שהמנוע כותב בעצמו — דוח, יומן, "כתוב" — לא על קובץ של התוכנה (הגדרות, גיבויים, אינדקס), ולא על תיקייה.
      * עד כאן לא נבדק: "דוח" ו"/יומן:" כתבו לכל מסלול שנכתב בשורה. null — מותר.
      */
@@ -213,6 +226,20 @@ final class Batch {
         if (cmd.equals(VERIFY) && tk.size() == 2 && tk.get(1).trim().equals(Words.DbCmd.W_OK_SINCE)) {   // מ0.45: ודא תקין
             s.cmd = OK_SINCE;
             s.describe = Words.DbCmd.verifyWill(Words.DbCmd.OK_SINCE_WHAT);
+            return true;
+        }
+        if (cmd.equals(VERIFY) && tk.size() == 2 && tk.get(1).trim().equals(Words.DbCmd.W_STEADY)) {   // מבנה 50: ודא רציף
+            if (!plan.measure) { s.error = Words.DbCmd.STEADY_NEEDS_MEASURE; return true; }
+            s.describe = Words.DbCmd.verifyWill(Words.DbCmd.STEADY_WHAT);
+            s.op = new ListCmd.Op() {
+                @Override public String run(Library lib) {
+                    Pulse p = plan.pulse;
+                    long off = p == null ? 0 : p.screenOff(), miss = p == null ? 0 : p.missed();
+                    int r = steady(off, miss);
+                    s.verified = r == STEADY_OK;
+                    return Words.DbCmd.steadyResult(r, off, miss);
+                }
+            };
             return true;
         }
         if (cmd.equals(VERIFY) && tk.size() == 4 && tk.get(1).trim().equals(Verbs.MODE_WORD)) {   // מ0.45: ודא אופן "<שם>" קיים / חסר
@@ -2295,7 +2322,7 @@ final class Batch {
     static final class Pulse implements Runnable {
         static final long EVERY = 500, GAP = 2000;
         private volatile boolean on = true;
-        private volatile long missed;
+        private volatile long missed, screenOff;
         private final Thread thread = new Thread(this, "vfm-pulse");
 
         Pulse() {
@@ -2314,8 +2341,14 @@ final class Batch {
                 }
                 long now = System.currentTimeMillis();
                 if (now - last >= GAP) missed += now - last - EVERY;
+                if (!Awake.screenOn(Db.app)) screenOff += Math.min(now - last, GAP);   // מבנה 50: כמה זמן המסך היה כבוי (פעימה שהתעכבה — לא נספרת כולה)
                 last = now;
             }
+        }
+
+        /** מבנה 50: כמה זמן (באלפיות) המסך היה כבוי מאז שהדופק התחיל. */
+        long screenOff() {
+            return screenOff;
         }
 
         /** כמה זמן (באלפיות) התוכנה לא רצה מאז שהדופק התחיל. */

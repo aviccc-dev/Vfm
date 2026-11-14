@@ -2371,6 +2371,17 @@ public final class Tests {
         eq("מבנה 43: ...ומשתנה שהוא מסלול — שגיאת שימוש", 1, Batch.plan("REN \"ק42\\קובץ.txt\" \"%תיקייה43%\"\n", r, v43).errors);
         Batch.Plan mj = Batch.plan(Batch.MEASURE + " " + Batch.SW_JOURNAL + "%אין-כזה%\nMD \"ת43-ב\"\n", r, v);
         check("מבנה 43: מדידה עם יומן במסלול שגוי — שגיאה, לא \"בלי יומן\" בשקט", mj.errors == 1 && mj.blocked());
+        // מבנה 50: "ודא רציף" — בדיקת מסך כבוי שמדווחת בעצמה
+        eq("מבנה 50: המסך היה כבוי והתוכנה רצה — עבר", Batch.STEADY_OK, Batch.steady(60000, 600));
+        eq("מבנה 50: המסך לא כבה — לא נבדק (כישלון שאומר מה לעשות)", Batch.STEADY_SCREEN_ON, Batch.steady(4000, 0));
+        eq("מבנה 50: התוכנה לא רצה — כישלון, גם אם המסך כמעט לא נספר כבוי", Batch.STEADY_STOPPED, Batch.steady(1000, 45000));
+        check("מבנה 50: ודא רציף בלי \"מדידה\" — שגיאה", Words.DbCmd.STEADY_NEEDS_MEASURE.equals(Batch.plan("ודא רציף\n", r, v).steps.get(0).error));
+        Batch.Plan st50 = Batch.plan(Batch.MEASURE + "\nודא רציף\n", r, v);
+        String rep50 = String.valueOf(Batch.run(st50, null, null, null));
+        check("מבנה 50: במחשב אין מסך — הבדיקה אומרת שהמסך לא כבה, ונספרת כ\"ודא\" שנכשל (" + rep50 + ")",
+                st50.errors == 0 && Boolean.FALSE.equals(st50.steps.get(st50.steps.size() - 1).verified) && rep50.contains("המסך לא כבה"));
+        check("מבנה 50: נוסח התוצאות", Words.DbCmd.steadyResult(0, 61000, 0).startsWith("✅") && Words.DbCmd.steadyResult(0, 61000, 0).contains("61 שניות")
+                && Words.DbCmd.steadyResult(2, 61000, 45000).contains("לא רצה 45 שניות"));
         // מבנה 48: צור אופן "<שם>" /מגיבוי
         Verbs.Cmd m48 = Verbs.parse("צור אופן \"ישן\" /מגיבוי");
         check("מבנה 48: /מגיבוי ב\"צור אופן\" — נקרא, והשם בלי המתג", m48.error == null && m48.fromBackup && Verbs.K_MODE.equals(m48.kind) && "ישן".equals(m48.arg));

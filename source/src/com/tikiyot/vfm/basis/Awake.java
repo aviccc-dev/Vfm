@@ -24,6 +24,19 @@ final class Awake {
         }
     }
 
+    /**
+     * מבנה 50: המסך דולק עכשיו? לבדיקה "ודא רציף" — כדי שהיא תדע בעצמה אם המסך באמת כבה בזמן ההרצה. בלי הקשר (בדיקות
+     * המחשב) או בתקלה — "דולק".
+     */
+    static boolean screenOn(android.content.Context c) {
+        if (c == null) return true;
+        try {
+            return ((android.os.PowerManager) c.getApplicationContext().getSystemService(android.content.Context.POWER_SERVICE)).isInteractive();
+        } catch (Throwable t) {
+            return true;
+        }
+    }
+
     static void release(android.os.PowerManager.WakeLock w) {
         try {
             if (w != null && w.isHeld()) w.release();

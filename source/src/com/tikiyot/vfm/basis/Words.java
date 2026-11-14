@@ -2097,6 +2097,14 @@ public final class Words {
             return (bad == 0 ? "✅" : "❌") + " ודא: " + ok + " עברו · " + bad + " נכשלו";
         }
 
+        /** מבנה 50: התוצאה של "ודא רציף" — r לפי Batch.steady. */
+        public static String steadyResult(int r, long screenOffMs, long missedMs) {
+            String off = (screenOffMs / 1000) + " שניות";
+            if (r == 0) return "✅ " + STEADY_WHAT + " (המסך היה כבוי " + off + ")";
+            if (r == 1) return "❌ המסך לא כבה בזמן הבדיקה — לא נבדק. להריץ שוב, ולהניח את המכשיר או לכבות את המסך בכפתור";
+            return "❌ " + STEADY_WHAT + " — בפועל: התוכנה לא רצה " + (missedMs / 1000) + " שניות (המסך היה כבוי " + off + ")";
+        }
+
         public static String verifyWill(String what) {
             return "יבדוק: " + what;
         }
@@ -2127,6 +2135,8 @@ public final class Words {
                 H_PURGE = "המסלול המקורי; ריק — כל הסל", PURGE_USAGE = "צורה: רוקן סל · רוקן סל \"<מסלול מקורי>\"",
                 PURGE_ALL_WILL = "ריקון כל הסל — מחיקה לצמיתות, אין דרך חזרה",
                 W_OK_SINCE = "תקין", OK_SINCE_WHAT = "כל השורות מתחילת הקטע רצו בלי כישלון",   // תחביר
+                W_STEADY = "רציף", STEADY_WHAT = "ההרצה נמשכה ברציפות גם כשהמסך כבוי",   // תחביר
+                STEADY_NEEDS_MEASURE = "ודא רציף — רק בקובץ שיש בראשו שורת \"מדידה\"",
                 SW_IN_TRASH = "/בסל:", W_IN_TRASH = "בסל",   // תחביר
                 SW_READERS = "/קוראים:", READERS_USAGE = "צורה: רענן מלא /קוראים:N (1 עד 16)";   // תחביר
 
