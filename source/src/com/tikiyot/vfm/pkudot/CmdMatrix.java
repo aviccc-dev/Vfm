@@ -156,7 +156,9 @@ final class CmdMatrix {
         } else if (name.equals("COMP")) {                                        // ההשוואה מחושבת בהכנה — מול מה שכבר בכונן
             if (Batch.SW_LIST.equals(key)) {                                     // רשימה ריקה — ההשוואה נעצרת (מ0.45, במכשיר): קובץ בה קודם
                 out.add("העתק \"" + HERE + "\\" + FIXTURE + "\\" + State.CURRENT + "\\א.txt\" ידנית \"" + LIST + "/א\"");
-                out.add(Commands.word(def) + " " + Batch.SW_LIST + "\"" + LIST + "/א\" \"" + HERE + "\"");
+                // מבנה 53 (מהדוח של נ0.4): היעד היה HERE — והקובץ שברשימה נמצא בתוכו, וקובץ שבתוך היעד תמיד מדולג ("הרשימה
+                // ריקה", ❌ אחד בכל הרצה). היעד עכשיו — תיקיית "יומן" של הגיבוי הקטן: קיימת בהכנה, והקובץ אינו בתוכה.
+                out.add(Commands.word(def) + " " + Batch.SW_LIST + "\"" + LIST + "/א\" \"" + HERE + "\\" + FIXTURE + "\\" + State.JOURNAL + "\"");
             }
             else out.add(Commands.word(def) + " \"" + HERE + "\" \"" + d("העתק\\1") + "\"" + sw);
         } else if (name.equals(Batch.LINK)) {
