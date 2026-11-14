@@ -134,6 +134,16 @@ public final class Physical {
         return null;
     }
 
+    /**
+     * מבנה 65 (ממצא 40ח): האם אסור לכתוב קובץ חדש בתיקייה הזו — כמו יעד של העתקה: לא בסל. (קובץ של התוכנה — programFile, על
+     * המסלול של הקובץ עצמו.) שורש הכונן ותיקיות המשתמש שבתיקיית התוכנה — מותרים: עד כאן "כתוב" שאל את forbidden, שהיא השאלה
+     * "מותר למחוק או להעביר את התיקייה הזו", וסירב גם להם. null — מותר.
+     */
+    public static String noWriteInto(Library lib, File dir) {
+        String p = Paths.clean(dir.getAbsolutePath()), root = lib.rootOf(p);
+        return root != null && (p + "/").startsWith(new File(root, Index.TRASH).getAbsolutePath() + "/") ? Words.Disk.IS_TRASH : null;
+    }
+
     /** שורש כונן, או הסל ומה שבתוכו — אסורים תמיד, גם לתוכנה עצמה (deleteOwn). */
     private static String rootOrTrash(Library lib, String p) {
         String root = lib.rootOf(p);

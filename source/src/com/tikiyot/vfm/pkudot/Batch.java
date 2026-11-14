@@ -374,6 +374,7 @@ final class Batch {
             File dir = f.getParentFile();
             if (dir == null || !sim.isDir(dir)) { s.error = Words.DbCmd.writeNoFolder(Bidi.path(dir == null ? p : dir.getAbsolutePath())); return true; }
             if (sim.isDir(f)) { s.error = Words.DbCmd.WRITE_IS_FOLDER; return true; }
+            if (sim.lib != null && Physical.noWriteInto(sim.lib, dir) != null) { s.error = Physical.noWriteInto(sim.lib, dir); return true; }   // מבנה 65: הסל — כבר בתכנון
             final boolean add = append;
             boolean had = sim.isFile(f) && sim.real(f) != GHOST;                // מבנה 46: קובץ שכבר קיים (לא כזה ששורה קודמת כותבת)
             sim.gone.remove(p);
@@ -383,10 +384,10 @@ final class Batch {
             s.op = new ListCmd.Op() {
                 @Override public String run(Library lib) {
                     try {
-                        if (lib != null) {
-                            String why = Physical.forbidden(lib, f.getParentFile());
-                            if (why != null) { DbListCmd.lastFailed = true; return why; }
-                        }
+                        // מבנה 65: מותר בכל מקום שמותר להעתיק אליו — גם בשורש הכונן ובתיקיות המשתמש שבתיקיית התוכנה; לא בסל, ולא קובץ של התוכנה
+                        String why0 = Physical.programFile(f.getAbsolutePath());
+                        if (why0 == null && lib != null) why0 = Physical.noWriteInto(lib, f.getParentFile());
+                        if (why0 != null) { DbListCmd.lastFailed = true; return why0; }
                         if (f.isDirectory()) { DbListCmd.lastFailed = true; return Words.DbCmd.WRITE_IS_FOLDER; }
                         boolean was = f.isFile(), toTrash = was && !add && lib != null;
                         if (toTrash) {                                              // מבנה 46: הקובץ הקודם — לסל, לא נדרס

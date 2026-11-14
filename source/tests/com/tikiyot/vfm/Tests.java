@@ -2498,6 +2498,23 @@ public final class Tests {
             check("מבנה 64: \"דוח\" ו\"כתוב\" לתוך \"גיבוי מסד\" — שגיאה",
                     Batch.plan("דוח \"" + bkCmd + "\\דוח.txt\"\nECHO א\n", ext64, v64, lib64).errors == 1
                             && Batch.plan("כתוב \"" + bkCmd + "\\א.txt\" \"א\"\n", ext64, v64, lib64).errors == 1);
+            // מבנה 65 (ממצא 40ח): "כתוב" — בכל מקום שמותר להעתיק אליו
+            File user65 = new File(Paths.data(), Paths.USER_DIRS[0]);
+            user65.mkdirs();
+            new File(ext64, Index.TRASH).mkdirs();
+            ix64.scan(null);
+            String in65 = "%" + Batch.V_INTERNAL + "%";
+            Batch.Plan w65 = Batch.plan("המשך ()\nכתוב \"" + in65 + "\\שורש-65.txt\" \"א\"\nכתוב \"" + in65 + "\\" + Paths.APP_DIR + "\\" + Paths.USER_DIRS[0] + "\\שלי-65.txt\" \"ב\"\n", ext64, v64, lib64);
+            Batch.run(w65, lib64, null, null);
+            lib64.flush(5000);
+            check("מבנה 65: \"כתוב\" בשורש הכונן — נכתב (עד כאן סורב בהרצה)", w65.errors == 0 && "א".equals(read(new File(ext64, "שורש-65.txt"))));
+            check("מבנה 65: \"כתוב\" בתיקיית משתמש שבתוך תיקיית התוכנה — נכתב", "ב".equals(read(new File(user65, "שלי-65.txt"))));
+            check("מבנה 65: \"כתוב\" לתוך הסל — שגיאה כבר בתכנון",
+                    Batch.plan("כתוב \"" + in65 + "\\" + Index.TRASH + "\\x.txt\" \"א\"\n", ext64, v64, lib64).errors == 1);
+            check("מבנה 65: \"כתוב\" על קובץ הגדרות של התוכנה — שגיאה (כמו קודם)",
+                    Batch.plan("כתוב \"" + in65 + "\\" + Paths.APP_DIR + "\\x.txt\" \"א\"\n", ext64, v64, lib64).errors == 1);
+            new File(ext64, "שורש-65.txt").delete();
+            new File(user65, "שלי-65.txt").delete();
             wipe(bk64);
             wipe(data64);
             new File(plug64, "תוסף-64.html").delete();
