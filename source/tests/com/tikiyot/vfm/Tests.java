@@ -2440,6 +2440,72 @@ public final class Tests {
         check("מבנה 63: \"בטל אופן\" שואל את השער גם בתכנון וגם בהרצה, ומסך המסד נרשם וסוגר דרכו",
                 dlc63.split("Db\\.inUse\\(name\\)", -1).length == 3 && !dlc63.contains("name.equals(Db.currentMode)")
                         && dbs63.contains("Db.openHeld(this, mode)") && dbs63.contains("Db.closeHeld(store, heldMode)") && !dbs63.contains("store.close()"));
+        // מבנה 64 (ממצא 44; המשתמש: "כן" — להגן): התיקייה של המסד בכונן מוגנת כמו תיקיית התוכנה; התוספים ומה שהם כותבים — של המשתמש
+        {
+            File ext64 = Paths.data().getParentFile(), db64 = Paths.dbData();
+            File bk64 = new File(new File(db64, Backups.DIR), "אופן-64"), plug64 = new File(db64, Paths.PLUGINS_DIR),
+                    data64 = new File(new File(db64, Paths.PLUGIN_DATA_DIR), "אבחון-64");
+            bk64.mkdirs();
+            plug64.mkdirs();
+            data64.mkdirs();
+            write(bk64, "לפני מחיקת רשימה 2026-11-14 10-00-00.db", "גיבוי");
+            write(plug64, "תוסף-64.html", "<html>");
+            write(data64, "דוח.txt", "דוח");
+            File md64 = Modes.dirOf("אופן-64");
+            md64.mkdirs();
+            write(md64, "x.txt", "x");
+            Index ix64 = new Index("64", "64", ext64.getAbsolutePath());
+            ix64.scan(null);
+            Library lib64 = Library.forTests(new ArrayList<Index>(java.util.Collections.singletonList(ix64)));
+            String counter64 = new File(new File(db64, Paths.SYSTEM), "מונה-מזהים.txt").getAbsolutePath();
+            check("מבנה 64: התיקייה של המסד, \"גיבוי מסד\" ותיקיית גיבויים של אופן — אסורות למחיקה ולהעברה",
+                    Physical.forbidden(lib64, db64) != null && Physical.forbidden(lib64, bk64.getParentFile()) != null && Physical.forbidden(lib64, bk64) != null
+                            && Physical.forbidden(lib64, new File(db64, Paths.SYSTEM)) != null);
+            check("מבנה 64: התוספים ומה שהם כותבים — של המשתמש", Physical.forbidden(lib64, plug64) == null && Physical.forbidden(lib64, data64) == null
+                    && Physical.programFile(new File(plug64, "תוסף-64.html").getAbsolutePath()) == null
+                    && Physical.programFile(new File(data64, "דוח.txt").getAbsolutePath()) == null);
+            check("מבנה 64: קובץ המונה וקובץ גיבוי — קבצים של התוכנה; גם דרך \"..\" מתיקיית התוספים",
+                    Physical.programFile(counter64) != null && Physical.programFile(new File(bk64, "א.db").getAbsolutePath()) != null
+                            && Physical.programFile(db64.getAbsolutePath()) != null
+                            && Physical.programFile(plug64.getAbsolutePath() + "/../" + Backups.DIR + "/אופן-64/א.db") != null);
+            java.util.Map<String, String> v64 = Batch.vars(ext64, ext64.getAbsolutePath(), null);
+            String bkCmd = "%" + Batch.V_INTERNAL + "%\\" + Paths.DB_DIR + "\\" + Backups.DIR + "\\אופן-64";
+            Batch.Plan del64 = Batch.plan("המשך ()\nמחק תיקייה \"" + bkCmd + "\" /עמוק\nDEL \"" + bkCmd + "\\*.db\"\nMOVE \"" + bkCmd + "\" \"%" + Batch.V_INTERNAL + "%\\יעד-64\"\n", ext64, v64, lib64);
+            Batch.run(del64, lib64, null, null);
+            lib64.flush(5000);
+            check("מבנה 64: בקובץ פקודות — מחיקה, מחיקת קבצים והעברה של תיקיית הגיבויים: לא קורה כלום", bk64.isDirectory() && bk64.list().length == 1
+                    && !new File(ext64, "יעד-64/אופן-64").exists());
+            Physical.Result no64 = Physical.delete(lib64, new ArrayList<String>(), java.util.Collections.singletonList(bk64.getAbsolutePath()), false);
+            check("מבנה 64: המחיקה הרגילה מסרבת לתיקיית הגיבויים", no64.failed == 1 && bk64.isDirectory());
+            Physical.Result own64 = Physical.deleteOwn(lib64, bk64);
+            lib64.flush(5000);
+            check("מבנה 64: התוכנה עצמה (\"בטל אופן\") — כן: התיקייה עוברת לסל", own64.failed == 0 && own64.done.size() == 1 && !bk64.exists()
+                    && Batch.trashed(lib64, bk64.getAbsolutePath(), false).size() == 1);
+            Batch.run(Batch.plan("שחזר מהסל \"" + bkCmd + "\"\n", ext64, v64, lib64), lib64, null, null);
+            lib64.flush(5000);
+            check("מבנה 64: ...ושחזור מהסל מחזיר אותה למקומה (מי שמתחרט על ביטול אופן)", bk64.isDirectory() && bk64.list().length == 1);
+            Physical.Result set64 = Physical.deleteOwn(lib64, md64);
+            lib64.flush(5000);
+            check("מבנה 64 (ממצא 45): תיקיית ההגדרות של אופן שבוטל — עוברת לסל (עד כאן המחיקה סירבה: \"זו תיקיית התוכנה\")",
+                    set64.failed == 0 && set64.done.size() == 1 && !md64.exists());
+            check("מבנה 64: מחיקה של התוכנה אינה עוקפת את שורש הכונן", Physical.deleteOwn(lib64, ext64).failed == 1 && ext64.isDirectory());
+            File plain64 = new File(ext64, "רגילה-64");
+            plain64.mkdirs();
+            ix64.scan(null);
+            check("מבנה 64: ותיקייה רגילה — לפי הכללים הרגילים", Physical.deleteOwn(lib64, plain64).failed == 0 && !plain64.exists());
+            Batch.Plan rep64 = Batch.plan("דוח \"%" + Batch.V_INTERNAL + "%\\" + Paths.DB_DIR + "\\" + Paths.PLUGIN_DATA_DIR + "\\אבחון-64\\תוצאה.txt\"\nECHO א\n", ext64, v64, lib64);
+            check("מבנה 64: \"דוח\" לתיקיית הנתונים של תוסף — מותר (כך תוסף האבחון מקבל את התוצאות)", rep64.errors == 0);
+            check("מבנה 64: \"דוח\" ו\"כתוב\" לתוך \"גיבוי מסד\" — שגיאה",
+                    Batch.plan("דוח \"" + bkCmd + "\\דוח.txt\"\nECHO א\n", ext64, v64, lib64).errors == 1
+                            && Batch.plan("כתוב \"" + bkCmd + "\\א.txt\" \"א\"\n", ext64, v64, lib64).errors == 1);
+            wipe(bk64);
+            wipe(data64);
+            new File(plug64, "תוסף-64.html").delete();
+            lib64.flush(5000);
+            List<Trash.Item> mine64 = new ArrayList<Trash.Item>();                // מה שהבדיקה הזו שלחה לסל — לא נשאר לבדיקות הבאות
+            for (Trash.Item it : Trash.list(lib64)) if (it.original != null && it.original.contains("-64")) mine64.add(it);
+            Physical.deleteForever(lib64, mine64);
+        }
         // מבנה 55: המכשיר עצר את התוכנה בזמן הרצה — הדוח אומר זאת ואיזו הגדרה פותרת
         List<String> rep55 = new ArrayList<String>();
         Batch.stoppedHint(rep55, 4000);

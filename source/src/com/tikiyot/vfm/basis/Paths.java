@@ -24,6 +24,12 @@ public final class Paths {
 
     /** התיקייה של המסד בכונן (קובץ המונה, הגיבויים) — כמו שהייתה מ־מ0.1. */
     public static final String DB_DIR = "מנהל קבצים וירטואלי מ";  // בכונן
+    /**
+     * מבנה 64: התיקיות שבתוך התיקייה של המסד שהתוכן שלהן — של המשתמש: התוספים (קובץ html שמניחים שם הוא תוסף) ומה שהתוספים
+     * כותבים (דוחות, קובצי בדיקה). כל השאר שם — קובץ המונה והגיבויים של המסד — של התוכנה, ומוגן (Physical.programFile).
+     */
+    public static final String PLUGINS_DIR = "תוספים", PLUGINS_OLD_DIR = "מעבדה", PLUGIN_DATA_DIR = "נתוני תוספים";  // בכונן
+    public static final String[] DB_USER_DIRS = {PLUGINS_DIR, PLUGINS_OLD_DIR, PLUGIN_DATA_DIR};
 
     private Paths() { }
 

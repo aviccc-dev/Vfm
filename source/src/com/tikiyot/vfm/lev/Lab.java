@@ -24,7 +24,7 @@ final class Lab {
 
     /** שם קובץ של תוסף שהורד: "תוסף <שם> <גרסה>.html" (או "מעבדה …"; בתוך העמוד — meta, והוא קובע). */
     static final String PREFIX = "תוסף", OLD_PREFIX = "מעבדה";   // תחביר
-    static final String DIR = "תוספים", OLD_DIR = "מעבדה", EXT = ".html";   // בכונן
+    static final String DIR = Paths.PLUGINS_DIR, OLD_DIR = Paths.PLUGINS_OLD_DIR, EXT = ".html";   // מבנה 64: השמות — ב־Paths (גם ההגנה על התיקייה של המסד צריכה אותם)
     static final String META = "vfm-plugin", META_VERSION = "vfm-plugin-version", OLD_META = "vfm-lab", OLD_META_VERSION = "vfm-lab-version";
     /** כמה מתחילת העמוד נקרא כדי למצוא את השם והגרסה (ה־meta בראש העמוד). */
     private static final int HEAD = 8192;
@@ -90,7 +90,7 @@ final class Lab {
     static final String BUNDLED = "plugins";
 
     /** מ0.42: הקבצים שתוסף כותב (קובצי עזר, תוצאות) — תיקייה לכל תוסף, מחוץ לתיקיית התוספים (שם כל html הוא גרסה). */
-    static final String DATA_DIR = "נתוני תוספים";   // בכונן
+    static final String DATA_DIR = Paths.PLUGIN_DATA_DIR;
 
     static File dataDir(String plugin) {
         String n = safe(plugin == null ? "" : plugin);

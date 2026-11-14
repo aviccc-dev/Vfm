@@ -1221,7 +1221,7 @@ final class DbListCmd {
                 String note = "";
                 File dir = Modes.dirOf(name);
                 if (dir.isDirectory() && !name.equals(Modes.current()) && lib != null) {
-                    Physical.Result r = Physical.delete(lib, new ArrayList<String>(), java.util.Collections.singletonList(dir.getAbsolutePath()), false);
+                    Physical.Result r = Physical.deleteOwn(lib, dir);            // מבנה 64 (ממצא 45): עד כאן המחיקה הרגילה סירבה — "זו תיקיית התוכנה"
                     folder = r.failed == 0 && !r.done.isEmpty();
                     if (!folder) {
                         note = Words.DbCmd.DROP_MODE_FOLDER_KEPT;
@@ -1247,7 +1247,7 @@ final class DbListCmd {
             Log.i("ביטול אופן: הגיבויים לא עברו לסל (אין אינדקס) — " + dir);
             return -1;
         }
-        Physical.Result r = Physical.delete(lib, new ArrayList<String>(), java.util.Collections.singletonList(dir.getAbsolutePath()), false);
+        Physical.Result r = Physical.deleteOwn(lib, dir);                         // מבנה 64: התיקייה של המסד מוגנת — זו מחיקה של התוכנה עצמה
         if (r.failed == 0 && !r.done.isEmpty()) return 1;
         Log.i("ביטול אופן: הגיבויים לא עברו לסל — " + dir + " · " + r.note);
         return -1;

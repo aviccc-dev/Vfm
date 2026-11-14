@@ -123,27 +123,42 @@ public final class Physical {
     /** למה אי אפשר למחוק או להעביר את התיקייה הזו, או null אם מותר. */
     public static String forbidden(Library lib, File dir) {
         String p = Paths.clean(dir.getAbsolutePath());                          // מבנה 42: גם "תיקייה/.." הוא השורש
+        String why = rootOrTrash(lib, p);
+        if (why != null) return why;
+        String app = appDir();
+        if (app != null && ((app + "/").startsWith(p + "/") || p.startsWith(app + "/"))) return Words.Disk.IS_APP_FOLDER;
+        // מבנה 64 (ממצא 44; המשתמש, 14.11.2026: "כן" — להגן): גם התיקייה של המסד (קובץ המונה, הגיבויים של כל האופנים) — היא עצמה,
+        // תיקייה שמכילה אותה, ומה שבתוכה; חוץ מהתוספים ומה שהם כותבים (Paths.DB_USER_DIRS) — אלה של המשתמש.
+        String db = dbDir();
+        if (db != null && ((db + "/").startsWith(p + "/") || (p.startsWith(db + "/") && !dbUser(db, p)))) return Words.Disk.IS_APP_FOLDER;
+        return null;
+    }
+
+    /** שורש כונן, או הסל ומה שבתוכו — אסורים תמיד, גם לתוכנה עצמה (deleteOwn). */
+    private static String rootOrTrash(Library lib, String p) {
         String root = lib.rootOf(p);
         if (root != null && (p.equals(root) || (p + "/").equals(root))) return Words.Disk.DRIVE_ROOT;
         for (Index ix : lib.indexes) if (ix.rootPath.equals(p)) return Words.Disk.DRIVE_ROOT;
         if (root != null && (p + "/").startsWith(new File(root, Index.TRASH).getAbsolutePath() + "/"))
             return Words.Disk.IS_TRASH;
-        String app = appDir();
-        if (app != null && ((app + "/").startsWith(p + "/") || p.startsWith(app + "/"))) return Words.Disk.IS_APP_FOLDER;
         return null;
     }
 
     /**
      * 90: קובץ של התוכנה עצמה (קובצי ההגדרות, הגיבויים, האינדקס) — אסור למחוק או להעביר,
-     * ואסור להעביר או להעתיק לתוך התיקייה שלה.
+     * ואסור להעביר או להעתיק לתוך התיקייה שלה. מבנה 64: גם מה שבתיקייה של המסד (קובץ המונה, "גיבוי מסד").
      */
     public static String programFile(String path) {
         path = Paths.clean(path);                                               // מבנה 42
         String app = appDir();
-        if (app == null || !(path.equals(app) || path.startsWith(app + "/"))) return null;
-        for (String u : Paths.USER_DIRS)                                         // 1.25.6: מה שהמשתמש יצר — שלו
-            if (path.startsWith(app + "/" + u + "/")) return null;
-        return Words.Disk.IS_APP_FILE;
+        if (app != null && (path.equals(app) || path.startsWith(app + "/"))) {
+            for (String u : Paths.USER_DIRS)                                     // 1.25.6: מה שהמשתמש יצר — שלו
+                if (path.startsWith(app + "/" + u + "/")) return null;
+            return Words.Disk.IS_APP_FILE;
+        }
+        String db = dbDir();
+        if (db != null && (path.equals(db) || path.startsWith(db + "/"))) return dbUser(db, path) ? null : Words.Disk.IS_APP_FILE;
+        return null;
     }
 
     private static String appDir() {
@@ -152,6 +167,26 @@ public final class Physical {
         } catch (Throwable t) {
             return null;
         }
+    }
+
+    private static String dbDir() {
+        try {
+            return Paths.dbData().getAbsolutePath();
+        } catch (Throwable t) {
+            return null;
+        }
+    }
+
+    /** מבנה 64: p (נקי) הוא אחת מתיקיות המשתמש שבתיקייה של המסד (תוספים, נתוני תוספים), או בתוכה. */
+    private static boolean dbUser(String db, String p) {
+        for (String u : Paths.DB_USER_DIRS) if (p.equals(db + "/" + u) || p.startsWith(db + "/" + u + "/")) return true;
+        return false;
+    }
+
+    /** מבנה 64: p (נקי) בתוך תיקיית התוכנה או בתוך התיקייה של המסד. */
+    private static boolean ours(String p) {
+        String app = appDir(), db = dbDir();
+        return (app != null && p.startsWith(app + "/")) || (db != null && p.startsWith(db + "/"));
     }
 
     /** האם folder היא src עצמה או תיקייה שבתוכה. */
@@ -194,6 +229,20 @@ public final class Physical {
      * תיקייה עוברת כולה, ושחזור מחזיר את כולה (82). grey=false: הפריטים יורדים מהרשימות; true: נשארים באפור (58).
      */
     public static Result delete(Library lib, List<String> paths, List<String> dirs, boolean grey) {
+        return delete(lib, paths, dirs, grey, false);
+    }
+
+    /**
+     * מבנה 64: מחיקה שהתוכנה עצמה מבקשת, של תיקייה שלה (הגיבויים וההגדרות של אופן שבוטל) — לסל, כמו כל מחיקה. ההגנה על
+     * קובצי התוכנה היא מפני המשתמש והפקודות; כאן התוכנה היא שמחליטה. רק תיקייה שבתוך תיקיית התוכנה או התיקייה של המסד —
+     * כל תיקייה אחרת עוברת את הבדיקות הרגילות. שורש כונן והסל — אסורים גם כאן.
+     */
+    public static Result deleteOwn(Library lib, File dir) {
+        List<String> one = java.util.Collections.singletonList(dir.getAbsolutePath());
+        return delete(lib, new ArrayList<String>(), one, false, ours(Paths.clean(dir.getAbsolutePath())));
+    }
+
+    private static Result delete(Library lib, List<String> paths, List<String> dirs, boolean grey, boolean byApp) {
         Result r = new Result();
         String stamp = stamp();
         List<String> gone = new ArrayList<String>();
@@ -230,7 +279,7 @@ public final class Physical {
                 r.fail(Words.Disk.FOLDER_GONE_REFRESH);
                 continue;
             }
-            String why = forbidden(lib, f);
+            String why = byApp ? rootOrTrash(lib, Paths.clean(f.getAbsolutePath())) : forbidden(lib, f);
             if (why != null) {
                 r.fail(why);
                 continue;
