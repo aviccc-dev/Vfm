@@ -761,6 +761,12 @@ final class Batch {
 
     /** מחליף משתנים, "\\" ב-"/", ומסלול יחסי — ביחס לתיקייה של הקובץ. null = משתנה לא מוכר. */
     static String path(String raw, File here, Map<String, String> vars, String[] error) {
+        // מבנה 41 (ממצא 35): מסלול ריק — שגיאה. עד כאן "" פוענח כ"התיקייה של הקובץ", ו־DEL "" מחק את כל הקבצים שבה
+        // (משתנה ריק או מקום פתוח שלא מולא הופכים בדיוק לזה). מי שמתכוון לתיקייה הזו — כותב "." .
+        if (raw == null || raw.trim().isEmpty()) {
+            error[0] = Words.Cmd.EMPTY_PATH;
+            return null;
+        }
         StringBuilder sb = new StringBuilder();
         int i = 0;
         while (i < raw.length()) {
@@ -792,6 +798,10 @@ final class Batch {
             }
         }
         String p = sb.toString();
+        if (p.trim().isEmpty()) {                                               // משתנה שהערך שלו ריק
+            error[0] = Words.Cmd.EMPTY_PATH;
+            return null;
+        }
         while (p.length() > 1 && p.endsWith("/")) p = p.substring(0, p.length() - 1);
         if (!p.startsWith("/")) p = new File(here, p).getAbsolutePath();
         return p;

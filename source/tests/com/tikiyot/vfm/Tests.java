@@ -2287,6 +2287,16 @@ public final class Tests {
         eq("מבנה 28: \"בדיקה\" קודמת למקומות הפתוחים (מסך ההרצה שואל עליהם בעצמו)", Manager.TO_CHECK, Manager.route(Batch.CHECK + "\n" + holes, false));
         eq("מבנה 28: קובץ רגיל — הכנה והרצה", Manager.TO_RUN, Manager.route("MD \"א\"\n", false));
         eq("מבנה 28: השורות — בלי \\r", Arrays.asList("א", "ב"), Manager.lines("א\r\nב\r\n"));
+        // מבנה 41: מסלול ריק — שגיאה, לא "התיקייה הזו"
+        String[] pe = {null};
+        check("מבנה 41: מסלול ריק — שגיאה", Batch.path("", r, v, pe) == null && Words.Cmd.EMPTY_PATH.equals(pe[0]));
+        check("מבנה 41: רק רווחים — שגיאה", Batch.path("   ", r, v, pe) == null);
+        java.util.Map<String, String> v2 = new java.util.HashMap<String, String>(v);
+        v2.put("ריק", "");
+        check("מבנה 41: משתנה שהערך שלו ריק — שגיאה", Batch.path("%ריק%", r, v2, pe) == null && Words.Cmd.EMPTY_PATH.equals(pe[0]));
+        eq("מבנה 41: נקודה — התיקייה של הקובץ, כמו קודם", new File(r, ".").getAbsolutePath(), Batch.path(".", r, v, pe));
+        Batch.Plan delEmpty = Batch.plan("DEL \"\"\n", r, v);
+        check("מבנה 41: DEL \"\" — לא מוחק את כל התיקייה: שגיאה, ושום שורה לא רצה", delEmpty.errors == 1 && delEmpty.blocked());
         // מבנה 40: הדמיה — המנוע עצמו אינו מריץ; וכישלון שאינו "ודא" נאמר בסיכום
         File asIfDir = new File(r, "בהדמיה-לא-נוצרת");
         List<String> asIfRep = Batch.run(Batch.plan(Batch.AS_IF + "\nMD \"בהדמיה-לא-נוצרת\"\n", r, v), null, null, null);

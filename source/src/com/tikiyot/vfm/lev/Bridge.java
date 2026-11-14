@@ -673,8 +673,9 @@ final class Bridge {
     }
 
     private File resolve(String raw) {
+        if (raw == null || raw.trim().isEmpty()) return Shortcuts.dir();       // מבנה 41: לתוסף, ריק = תיקיית הפקודות (כמו שהיה); בקובץ פקודות — שגיאה
         String[] err = {null};
-        String p = Batch.path(raw == null ? "" : raw, Shortcuts.dir(), vars, err);
+        String p = Batch.path(raw, Shortcuts.dir(), vars, err);
         return p == null ? null : new File(p);
     }
 

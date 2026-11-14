@@ -195,6 +195,8 @@ public final class Words {
 
         // שגיאות בשורה
         public static final String MISSING_PERCENT = "חסר % סוגר";
+        /** מבנה 41. */
+        public static final String EMPTY_PATH = "מסלול ריק — צריך לכתוב קובץ או תיקייה (\".\" — התיקייה של הקובץ הזה)";
         public static final String FOLDER_NOT_EMPTY = "התיקייה לא ריקה — כמו ב-bat, צריך RD /S";
         public static final String DEL_S = "DEL /S (גם בתיקיות שבפנים) — לא נתמך עדיין";
         public static final String NO_DEST = "היעד לא קיים או שאינו תיקייה — אפשר ליצור אותו קודם ב-MD";
