@@ -2347,6 +2347,22 @@ public final class Tests {
         check("מבנה 42: קובץ של התוכנה — גם דרך תיקייה של המשתמש ו\"..\"", Physical.programFile(app42 + "/" + Paths.USER_DIRS[0] + "/../" + Paths.SETTINGS + "/x.txt") != null
                 && Physical.programFile(app42 + "/" + Paths.USER_DIRS[0] + "/x.txt") == null);
         check("מבנה 42: \"בתוך\" — גם בכתיב עם נקודות", Physical.inside(new File(k42, "פנים/../פנים"), k42) && !Physical.inside(new File(k42, ".."), k42));
+        // מבנה 43: פערים קטנים בין התכנון להרצה
+        Batch.Plan p43 = Batch.plan("MD \"ת43\\א\"\nMD \"ת43-יעד\"\nMOVE \"ת43\\א\" \"ת43-יעד\"\nRD \"ת43\"\n", r, v);
+        eq("מבנה 43: MD, MOVE של התיקייה החוצה, RD — התיקייה ריקה, בלי שגיאה", 0, p43.errors);
+        new File(r, "ע43/פנים").mkdirs();
+        Batch.Plan self43 = Batch.plan("MOVE \"ע43\" \"ע43\\פנים\"\n", r, v);
+        check("מבנה 43: תיקייה לתוך עצמה — שגיאה כבר בתכנון", self43.errors == 1 && Words.Disk.NOT_INTO_ITSELF.equals(self43.steps.get(0).error));
+        Batch.Plan ren43 = Batch.plan("REN \"ק42\\קובץ.txt\" \"פנים\"\n", r, v);
+        check("מבנה 43: REN לשם של תיקייה קיימת — שגיאה כבר בתכנון", ren43.errors == 1);
+        java.util.Map<String, String> v43 = new java.util.HashMap<String, String>(v);
+        v43.put("שם43", "חדש");
+        Batch.Plan renVar = Batch.plan("REN \"ק42\\קובץ.txt\" \"%שם43%.txt\"\n", r, v43);
+        check("מבנה 43: משתנה בשם החדש של REN — מוחלף", renVar.errors == 0 && "חדש.txt".equals(renVar.steps.get(0).newName));
+        v43.put("תיקייה43", "א/ב");
+        eq("מבנה 43: ...ומשתנה שהוא מסלול — שגיאת שימוש", 1, Batch.plan("REN \"ק42\\קובץ.txt\" \"%תיקייה43%\"\n", r, v43).errors);
+        Batch.Plan mj = Batch.plan(Batch.MEASURE + " " + Batch.SW_JOURNAL + "%אין-כזה%\nMD \"ת43-ב\"\n", r, v);
+        check("מבנה 43: מדידה עם יומן במסלול שגוי — שגיאה, לא \"בלי יומן\" בשקט", mj.errors == 1 && mj.blocked());
         Batch.Plan delEmpty = Batch.plan("DEL \"\"\n", r, v);
         check("מבנה 41: DEL \"\" — לא מוחק את כל התיקייה: שגיאה, ושום שורה לא רצה", delEmpty.errors == 1 && delEmpty.blocked());
         // מבנה 40: הדמיה — המנוע עצמו אינו מריץ; וכישלון שאינו "ודא" נאמר בסיכום

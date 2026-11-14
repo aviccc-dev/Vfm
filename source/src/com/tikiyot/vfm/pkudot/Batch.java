@@ -930,14 +930,7 @@ final class Batch {
         }
 
         boolean hasSubdirs(File d) {
-            String in = d.getAbsolutePath() + "/";
-            for (String x : dirs) if (x.startsWith(in) && x.indexOf('/', in.length()) < 0) return true;
-            File[] k = d.listFiles();
-            if (k != null) for (File x : k) {
-                String p = x.getAbsolutePath();
-                if (x.isDirectory() && !gone.contains(p) && !underWiped(p)) return true;
-            }
-            return false;
+            return !subdirs(d).isEmpty();                                       // מבנה 43: אותה רשימה (עד כאן: תיקייה ש־MD יצר ו־MOVE הוציא עוד נספרה)
         }
 
         /** RD: התיקייה וכל מה שבתוכה — יוצאים מההדמיה. */
@@ -1317,6 +1310,15 @@ final class Batch {
                     if (x.startsWith(SW_JOURNAL)) {
                         String[] err = {null};
                         plan.measureJournal = path(x.substring(SW_JOURNAL.length()).trim(), here, vars, err);
+                        if (plan.measureJournal == null) {                           // מבנה 43: מסלול שגוי — שגיאה, לא "בלי יומן" בשקט
+                            Step s = new Step();
+                            s.line = n + 1;
+                            s.text = shown;
+                            s.cmd = MEASURE;
+                            s.error = err[0];
+                            plan.errors++;
+                            plan.steps.add(s);
+                        }
                     } else if (x.startsWith(SW_LIMIT)) {                         // מ0.45: מגבלת זמן לכל שורה
                         String v = x.substring(SW_LIMIT.length());
                         if (k + 1 < mt.size() && !mt.get(k + 1).isEmpty() && !Character.isDigit(mt.get(k + 1).charAt(0))
@@ -1487,6 +1489,8 @@ final class Batch {
             if (err[0] == null) err[0] = setsMisuse(cmd, paths);            // 1.20.0
             if (err[0] == null) err[0] = shareMisuse(cmd, paths);           // 203
             if (err[0] == null) err[0] = homeMisuse(cmd, paths);            // 1.9.0
+            if (err[0] == null && cmd.equals("REN") && args.size() == 2 && args.get(1).indexOf('%') >= 0)
+                args.set(1, Verbs.withVars(args.get(1), vars));                 // מבנה 43: גם בשם החדש המשתנים מוחלפים (עד כאן: נכתב "%שם%" כלשונו)
             if (err[0] != null) s.error = err[0];
             else plan(s, cmd, args, paths, sw, sim);
             if (s.error != null) plan.errors++;
@@ -1681,6 +1685,8 @@ final class Batch {
                 return;
             }
             boolean copy = cmd.equals("COPY");
+            for (String d : s.dirs)                                             // מבנה 43: תיקייה לתוך עצמה — כבר בתכנון (עד כאן: רק בהרצה)
+                if (Physical.inside(dest, new File(d))) { s.error = Words.Disk.NOT_INTO_ITSELF; return; }
             // מ0.40: העברה אל התיקייה שהפריט כבר בה — כלום (עד כאן: "קובץ אחד" בתכנון, ו"כבר בתיקייה הזו" ככישלון בהרצה).
             // ובקובץ אחרי קובץ — כדי שקובץ שני זהה לראשון יראה אותו כבר ביעד (לשנות-שם).
             for (java.util.Iterator<String> it = s.files.iterator(); it.hasNext(); ) {
@@ -1715,7 +1721,10 @@ final class Batch {
             String bad = Physical.badName(args.get(1));
             if (bad != null) { s.error = bad; return; }
             File to = new File(f.getParentFile(), args.get(1));
-            if (!to.getName().equalsIgnoreCase(f.getName()) && sim.isFile(to)) { s.error = Words.Cmd.alreadyHas(args.get(1)); return; }
+            if (!to.getName().equalsIgnoreCase(f.getName()) && (sim.isFile(to) || sim.isDir(to))) {   // מבנה 43: גם תיקייה בשם הזה
+                s.error = Words.Cmd.alreadyHas(args.get(1));
+                return;
+            }
             s.files.add(f.getAbsolutePath());
             s.newName = args.get(1);
             s.describe = Words.Cmd.rename(f.getName(), s.newName);
