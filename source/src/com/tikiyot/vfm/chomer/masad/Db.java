@@ -203,6 +203,24 @@ final class Db {
         return null;
     }
 
+    /**
+     * מבנה 56: אופן שיש במסד שלו רשימות ואין בו בית (שריד של התקלה הישנה, ממצא 27 — במכשיר של המשתמש נשאר כזה אחרי נ0.4,
+     * והמסך אמר "אין בית במסד הזה") — הבית נוצר, והרשימות נכנסות אליו. מסד ריק — לא נוגעים (אם יש לו גיבויים, ההצעה לשחזר
+     * צריכה להופיע). מחזיר את הבית, או 0.
+     */
+    static long repairHome(android.content.Context c, String mode) {
+        try {
+            return write(c, mode, null, new Use<Long>() {
+                @Override public Long run(SqlStore s) {
+                    return s.lists().isEmpty() && s.smarts().isEmpty() ? 0L : DbPaths.homeWithOrphans(s);
+                }
+            });
+        } catch (Throwable t) {
+            Log.e("Db.repairHome", t);
+            return 0;
+        }
+    }
+
     /** מתי נעשה גיבוי — לתצוגה. */
     static String when(Backups.Entry e) {
         return new java.text.SimpleDateFormat("dd.MM.yyyy HH:mm", java.util.Locale.US).format(new java.util.Date(e.time()));

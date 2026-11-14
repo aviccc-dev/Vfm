@@ -307,6 +307,7 @@ public class DbListScreen extends ListScreen<Store.Member> {
                 } finally {
                     if (s != null) s.close();
                 }
+                if (h == 0) h = Db.repairHome(DbListScreen.this, m);           // מבנה 56: יש רשימות ואין בית — הבית נוצר והן נכנסות אליו
                 if (h == 0) {
                     Ui.toast(DbListScreen.this, Words.Db.NO_HOME);
                     return;
