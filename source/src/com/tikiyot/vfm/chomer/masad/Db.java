@@ -44,6 +44,51 @@ final class Db {
         return SqlStore.open(dbFile(c, mode), new IdCounter(counterFile()));
     }
 
+    // --- שער המסד, שלב שני (מבנה 33): לא רק פתיחה — פתיחה, פעולה וסגירה, במקום אחד. כל מי שכותב למסד של אופן עובר ב־write;
+    //     ההגנות של כולם (תור, גיבוי, עסקה) ייכנסו כאן, ולא בכל קורא. עד כאן נכתבה אותה עטיפה 11 פעמים, כל אחת קצת אחרת. ---
+
+    /** פעולה על מסד פתוח. */
+    interface Use<T> {
+        T run(SqlStore s) throws Exception;
+    }
+
+    /** הגיבוי "לפני הפעולה" נכשל — והפעולה לא רצה. הסיבה — getCause(). */
+    static final class BeforeFailed extends Exception {
+        BeforeFailed(Throwable cause) {
+            super(cause);
+        }
+    }
+
+    /**
+     * כתיבה: המסד של האופן נפתח לכתיבה, הפעולה רצה, והמסד נסגר — תמיד, גם בתקלה.
+     * beforeOp — לא null: קודם נשמר גיבוי "לפני <הפעולה>" (Backups.OP_*); נכשל הגיבוי — הפעולה לא רצה, ונזרק BeforeFailed.
+     */
+    static <T> T write(android.content.Context c, String mode, String beforeOp, Use<T> use) throws Exception {
+        SqlStore s = open(c, mode);
+        try {
+            if (beforeOp != null) {
+                try {
+                    backupsOf(c, mode).before(s, beforeOp, System.currentTimeMillis());
+                } catch (Throwable t) {
+                    throw new BeforeFailed(t);
+                }
+            }
+            return use.run(s);
+        } finally {
+            s.close();
+        }
+    }
+
+    /** קריאה: המסד של האופן נפתח לקריאה בלבד, הפעולה רצה, והמסד נסגר — תמיד. */
+    static <T> T read(android.content.Context c, String mode, Use<T> use) throws Exception {
+        SqlStore s = openRead(c, mode);
+        try {
+            return use.run(s);
+        } finally {
+            s.close();
+        }
+    }
+
     static File dbFile(android.content.Context c, String mode) {
         return c.getDatabasePath(DB_PREFIX + mode + DB_SUFFIX);
     }
@@ -114,45 +159,46 @@ final class Db {
     /** מ0.29: המסד של האופן קיים ויש בו בית (נוצר אם צריך — setup). מחזיר את הבית; 0 — לא הצליח (אין גישה לקבצים, מסד פגום). */
     static long prepare(android.content.Context c, String mode, Runnable systemFiles) {
         if (!Files.hasAccess(c)) return 0;
-        SqlStore s = null;
         try {
             if (Db.dbFile(c, mode).isFile()) {                                    // קיים — רק קוראים (לא נוגעים במסד שיש בו בית)
-                s = Db.openRead(c, mode);
-                long h = DbPaths.home(s);
+                long h = read(c, mode, new Use<Long>() {
+                    @Override
+                    public Long run(SqlStore s) {
+                        return DbPaths.home(s);
+                    }
+                });
                 if (h != 0) return h;
-                s.close();
-                s = null;
             }
-            s = Db.open(c, mode);
-            setup(c, s, mode, systemFiles);
-            return DbPaths.home(s);
+            return write(c, mode, null, new Use<Long>() {
+                @Override
+                public Long run(SqlStore s) {
+                    setup(c, s, mode, systemFiles);
+                    return DbPaths.home(s);
+                }
+            });
         } catch (Throwable t) {
             Log.e("Db.prepare", t);
             return 0;
-        } finally {
-            if (s != null) s.close();
         }
     }
 
     /** מ0.29 (באג 1): שחזור הדוגמאות באופן הדוגמאות — גיבוי של המסד לפני, ואז DbExamples.restore. מחזיר הודעה למסך. */
     static String restoreExamples(android.content.Context c, Runnable systemFiles) {
-        SqlStore s = null;
         try {
-            s = Db.open(c, DbExamples.MODE);
-            try {
-                Db.backupsOf(c, DbExamples.MODE).before(s, Backups.OP_RESTORE, System.currentTimeMillis());
-            } catch (Throwable t) {
-                Log.e("Db.restoreExamples.backup", t);
-                return Words.Db.importBackupFailed(String.valueOf(t.getMessage()));
-            }
-            DbExamples.files(DbExamples.asset(c, DbExamples.ASSET_DEMO), systemFiles);
-            int n = DbExamples.restore(s, DbExamples.asset(c, DbExamples.ASSET), Environment.getExternalStorageDirectory().getAbsolutePath());
-            return Words.Db.examplesRestored(n);
+            return write(c, DbExamples.MODE, Backups.OP_RESTORE, new Use<String>() {
+                @Override
+                public String run(SqlStore s) throws Exception {
+                    DbExamples.files(DbExamples.asset(c, DbExamples.ASSET_DEMO), systemFiles);
+                    int n = DbExamples.restore(s, DbExamples.asset(c, DbExamples.ASSET), Environment.getExternalStorageDirectory().getAbsolutePath());
+                    return Words.Db.examplesRestored(n);
+                }
+            });
+        } catch (BeforeFailed b) {
+            Log.e("Db.restoreExamples.backup", b.getCause());
+            return Words.Db.importBackupFailed(String.valueOf(b.getCause().getMessage()));
         } catch (Throwable t) {
             Log.e("Db.restoreExamples", t);
             return Words.Db.failed(String.valueOf(t.getMessage()));
-        } finally {
-            if (s != null) s.close();
         }
     }
 

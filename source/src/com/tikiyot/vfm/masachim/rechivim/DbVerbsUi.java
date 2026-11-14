@@ -211,17 +211,18 @@ final class DbVerbsUi {
     }
 
     /** פעולה שכותבת: המסד נפתח לכתיבה לרגע (עם קובץ המונה) ונסגר. 0 — נכשל (והודעה). */
-    static long write(Activity a, String mode, Job job, List<String> path) {
-        SqlStore s = null;
+    static long write(Activity a, String mode, final Job job, final List<String> path) {
         try {
-            s = Db.open(a, mode);
-            return job.run(s, path);
+            return Db.write(a, mode, null, new Db.Use<Long>() {                   // מבנה 33: דרך שער המסד
+                @Override
+                public Long run(SqlStore s) {
+                    return job.run(s, path);
+                }
+            });
         } catch (Throwable t) {
             Log.e("DbVerbsUi.write", t);
             Ui.toast(a, Words.Db.failed(String.valueOf(t.getMessage())));
             return 0;
-        } finally {
-            if (s != null) s.close();
         }
     }
 

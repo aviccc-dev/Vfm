@@ -198,16 +198,17 @@ final class DbCmdMenu {
         new Thread(new Runnable() {
             @Override
             public void run() {
-                SqlStore s = null;
                 List<String> added = null;
                 try {
-                    List<File> fs = writeTools();
-                    s = Db.open(a, mode);
-                    added = ensureTools(s, mode, fs);
+                    final List<File> fs = writeTools();
+                    added = Db.write(a, mode, null, new Db.Use<List<String>>() {  // מבנה 33: דרך שער המסד
+                        @Override
+                        public List<String> run(SqlStore s) {
+                            return ensureTools(s, mode, fs);
+                        }
+                    });
                 } catch (Throwable t) {
                     Log.e("DbCmdMenu.ensureTools", t);
-                } finally {
-                    if (s != null) s.close();
                 }
                 final List<String> got = added;
                 if (got != null && !got.isEmpty())

@@ -115,23 +115,27 @@ final class DbFollow {
         }
         long t0 = System.currentTimeMillis();
         StringBuilder times = new StringBuilder();
-        for (String m : modes) {
-            SqlStore s = null;
+        for (final String m : modes) {
+            final boolean[] opened = {false};                                     // המסד נפתח (גם אם הפעולה נכשלה אחר כך)
+            final Db.Use<Integer> use = new Db.Use<Integer>() {
+                @Override
+                public Integer run(SqlStore s) {
+                    opened[0] = true;
+                    return e.run(s);
+                }
+            };
             long m0 = System.currentTimeMillis();
             try {
                 if (write && paths != null && !has(Db.dbFile(c, m), paths)) {
                     times.append(times.length() > 0 ? " · " : "").append(m).append(' ').append(System.currentTimeMillis() - m0);
                     continue;
                 }
-                s = write ? Db.open(c, m)
-                        : Db.openRead(c, m);
-                sum += e.run(s);
+                sum += write ? Db.write(c, m, null, use)                          // מבנה 33: דרך שער המסד
+                        : Db.read(c, m, use);
             } catch (Throwable t) {
                 Log.e("DbFollow." + m, t);
-            } finally {
-                if (s != null) s.close();
             }
-            if (s != null) times.append(times.length() > 0 ? " · " : "").append(m).append(" ✎").append(System.currentTimeMillis() - m0);
+            if (opened[0]) times.append(times.length() > 0 ? " · " : "").append(m).append(" ✎").append(System.currentTimeMillis() - m0);
         }
         long all = System.currentTimeMillis() - t0;
         // מ0.43 (בדיקת המכשיר: העברת קובץ מרשימה לתיקייה — עדיין 1.5 שניות): איטי — ליומן, לכל אופן כמה זמן (✎ — נפתח לכתיבה)

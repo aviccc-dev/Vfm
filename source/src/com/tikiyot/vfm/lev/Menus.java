@@ -394,40 +394,47 @@ final class Menus {
      * ההתקנה: ברירת המחדל מהקובץ שבהתקנה; "שמור לתוכנה" שהייתה באופן הדוגמאות — עוברת (עם גיבוי של המסד שלו לפני);
      * קובץ הכפתורים הישן, אם יש — השורות שבו. הקובץ הישן עצמו נשאר במקומו.
      */
-    private static void install(Context c) throws Exception {
-        String internal = android.os.Environment.getExternalStorageDirectory().getAbsolutePath();
+    private static void install(final Context c) throws Exception {
+        final String internal = android.os.Environment.getExternalStorageDirectory().getAbsolutePath();
         DbExamples.files(null, Reserved.FILES);                                               // קובצי פקודות המערכת והכלים — בכונן
-        SqlStore s = Db.open(c, MODE);
-        try {
-            DbMore.Imported d = defaults(s, DbExamples.asset(c, ASSET), internal);
-            Log.i("התפריטים: ברירת המחדל — " + d.lists + " רשימות, " + d.files + " פקודות");
-            if (Db.dbFile(c, DbExamples.MODE).isFile()) {
-                SqlStore ex = Db.open(c, DbExamples.MODE);
-                try {
+        Db.write(c, MODE, null, new Db.Use<Void>() {                              // מבנה 33: דרך שער המסד
+            @Override
+            public Void run(SqlStore s) throws Exception {
+                installInto(c, s, internal);
+                return null;
+            }
+        });
+    }
+
+    /** ההתקנה עצמה, במסד התפריטים הפתוח. */
+    private static void installInto(final Context c, final SqlStore s, String internal) throws Exception {
+        DbMore.Imported d = defaults(s, DbExamples.asset(c, ASSET), internal);
+        Log.i("התפריטים: ברירת המחדל — " + d.lists + " רשימות, " + d.files + " פקודות");
+        if (Db.dbFile(c, DbExamples.MODE).isFile()) {
+            Db.write(c, DbExamples.MODE, null, new Db.Use<Void>() {    // מבנה 33: דרך שער המסד (כתיבה לשני מסדים — זה בתוך זה)
+                @Override
+                public Void run(SqlStore ex) throws Exception {
                     if (DbPaths.find(ex, DbExamples.MODE, Reserved.ROOT_PATH) != 0) {
                         Db.backupsOf(c, DbExamples.MODE).before(ex, Backups.OP_DELETE, System.currentTimeMillis());
                         Log.i("התפריטים: \"שמור לתוכנה\" עברה מהדוגמאות — " + moveFrom(ex, DbExamples.MODE, s) + " רשימות");
                     }
-                } finally {
-                    ex.close();
+                    return null;
                 }
-            }
-            File old = Buttons.file();
-            if (old.isFile()) {
-                final Map<String, File> system = systemFiles();
-                int n = fromButtons(s, Buttons.parseAll(Files.readUtf8(old)), new Maker() {
-                    @Override
-                    public File file(String icon, String name, String line) {
-                        File f = system.get(line.trim());
-                        return f != null ? f : Shortcuts.write(icon, name, line);
-                    }
-                });
-                Log.i("התפריטים: מקובץ הכפתורים הישן עברו " + n + " כפתורים");
-            }
-            s.setProp(DbPaths.home(s), P_INSTALLED, "1");
-        } finally {
-            s.close();
+            });
         }
+        File old = Buttons.file();
+        if (old.isFile()) {
+            final Map<String, File> system = systemFiles();
+            int n = fromButtons(s, Buttons.parseAll(Files.readUtf8(old)), new Maker() {
+                @Override
+                public File file(String icon, String name, String line) {
+                    File f = system.get(line.trim());
+                    return f != null ? f : Shortcuts.write(icon, name, line);
+                }
+            });
+            Log.i("התפריטים: מקובץ הכפתורים הישן עברו " + n + " כפתורים");
+        }
+        s.setProp(DbPaths.home(s), P_INSTALLED, "1");
     }
 
     /** שורת פקודה ← הקובץ שלה בין פקודות המערכת והכלים (כדי שכפתור ישן של "בית" יהיה אותו קובץ שבתפריט). */
@@ -605,18 +612,21 @@ final class Menus {
         Menus.ensure(c);
         for (String m : new String[]{Db.currentMode, Menus.MODE}) {
             if (m == null || !Db.dbFile(c, m).isFile()) continue;
-            SqlStore s = null;
+            final String mode = m;
             try {
-                s = Db.open(c, m);
-                long mine = Menus.at(s, Menus.root(s, m), Menus.MINE);
-                if (mine == 0) continue;
-                DbFiles.add(s, mine, Collections.singletonList(f.getAbsolutePath()), null, false);
-                return;
+                boolean added = Db.write(c, mode, null, new Db.Use<Boolean>() {  // מבנה 33: דרך שער המסד
+                    @Override
+                    public Boolean run(SqlStore s) {
+                        long mine = Menus.at(s, Menus.root(s, mode), Menus.MINE);
+                        if (mine == 0) return false;
+                        DbFiles.add(s, mine, Collections.singletonList(f.getAbsolutePath()), null, false);
+                        return true;
+                    }
+                });
+                if (added) return;
             } catch (Throwable t) {
                 Log.e("Menus.addToMine", t);
                 return;
-            } finally {
-                if (s != null) s.close();
             }
         }
     }

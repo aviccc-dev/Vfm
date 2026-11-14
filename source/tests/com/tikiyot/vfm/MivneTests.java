@@ -37,6 +37,8 @@ final class MivneTests {
     /** מי שרשאי לפתוח מסד ישירות: המנוע עצמו, שער המסד, הגיבויים (קובצי גיבוי), ובדיקות המנוע. */
     /** השאלות שרק המנהל שואל (שומר ד). */
     static final List<String> DECISIONS = Arrays.asList("Batch.singleVerb(", "Batch.wantsCheck(", ".blocked()");
+    /** מי שרשאי לפתוח מסד לכתיבה בעצמו (שומר ג2). */
+    static final List<String> WRITE_OPEN = Arrays.asList("Db", "DbScreen");
     static final List<String> GATE = Arrays.asList("SqlStore", "Db", "Backups", "BackupContract", "StoreContract");
 
     private MivneTests() { }
@@ -65,6 +67,20 @@ final class MivneTests {
         }
         if (opens.isEmpty()) o.passed++;
         else o.failed.add("מסד נפתח שלא דרך שער המסד (Db.open / Db.openRead): " + opens);
+
+        // ג2. שער המסד, שלב שני (מבנה 33): מי שכותב למסד של אופן — דרך Db.write (פתיחה, פעולה וסגירה במקום אחד, ושם ההגנות).
+        //     Db.open עצמו — רק ב־Db, ובמסך המסד (DbScreen), שמחזיק מסד פתוח לאורך זמן.
+        List<String> writers = new ArrayList<String>();
+        for (Map.Entry<String, File> e : files.entrySet()) {
+            if (WRITE_OPEN.contains(e.getKey())) continue;
+            try {
+                if (strip(Files.readUtf8(e.getValue())).contains("Db.open(")) writers.add(e.getKey());
+            } catch (Exception x) {
+                writers.add(e.getKey() + ": " + x);
+            }
+        }
+        if (writers.isEmpty()) o.passed++;
+        else o.failed.add("מסד נפתח לכתיבה שלא דרך Db.write: " + writers);
 
         // ד. המנהל (מבנה 30): "לאן הולך הטקסט" ו"מה עושים עם התכנית" — נשאלים רק ב־Manager; מסך שמחליט בעצמו — נכשל
         List<String> decide = new ArrayList<String>();

@@ -1151,22 +1151,22 @@ final class DbListCmd {
                 if (!f.isFile()) return Words.DbCmd.dropModeNone(name);
                 if (name.equals(Db.currentMode)) { lastFailed = true; return Words.DbCmd.dropModeOpen(name); }
                 boolean kept = false;
-                SqlStore st = null;
                 try {
-                    st = Db.open(c, name);
-                    long home = DbPaths.home(st);
-                    boolean empty = st.lists().isEmpty() && st.smarts().isEmpty() && st.unassigned().isEmpty()
-                            && (home == 0 || st.members(home).isEmpty());
-                    if (!empty) {
-                        Db.backupsOf(c, name).before(st, Backups.OP_DROP_MODE, System.currentTimeMillis());
-                        kept = true;
-                    }
+                    kept = Db.write(c, name, null, new Db.Use<Boolean>() {
+                        @Override
+                        public Boolean run(SqlStore st) throws Exception {
+                            long home = DbPaths.home(st);
+                            boolean empty = st.lists().isEmpty() && st.smarts().isEmpty() && st.unassigned().isEmpty()
+                                    && (home == 0 || st.members(home).isEmpty());
+                            if (empty) return false;
+                            Db.backupsOf(c, name).before(st, Backups.OP_DROP_MODE, System.currentTimeMillis());   // רק למסד שיש בו משהו
+                            return true;
+                        }
+                    });
                 } catch (Throwable t) {
                     Log.e("DbListCmd.dropMode", t);
                     lastFailed = true;
                     return Words.DbCmd.dropModeFailed(name, Words.DbCmd.DROP_MODE_NO_BACKUP);
-                } finally {
-                    if (st != null) st.close();
                 }
                 if (!android.database.sqlite.SQLiteDatabase.deleteDatabase(f) && f.exists()) {
                     lastFailed = true;
@@ -1253,20 +1253,21 @@ final class DbListCmd {
 
     /** ההרצה: המסד נפתח לרגע; לפני פעולה שמוציאה — גיבוי "לפני פעולה" (נכשל — לא מבצעים). */
     /** מ0.37: "גבה" — גיבוי ידני של המסד של האופן (עותק וגם טקסט); גיבוי ידני לא נמחק לבד. */
-    static String backupNow(String mode) {
-        SqlStore s = null;
+    static String backupNow(final String mode) {
         try {
-            s = Db.open(Db.app, mode);
-            List<Backups.Entry> made = Db.backupsOf(Db.app, mode).manual(s, System.currentTimeMillis());
-            StringBuilder names = new StringBuilder();
-            for (Backups.Entry e : made) names.append(names.length() > 0 ? ", " : "").append(e.name);
-            return Words.DbCmd.backedUp(mode, names.toString());
+            return Db.write(Db.app, mode, null, new Db.Use<String>() {
+                @Override
+                public String run(SqlStore s) throws Exception {
+                    List<Backups.Entry> made = Db.backupsOf(Db.app, mode).manual(s, System.currentTimeMillis());
+                    StringBuilder names = new StringBuilder();
+                    for (Backups.Entry e : made) names.append(names.length() > 0 ? ", " : "").append(e.name);
+                    return Words.DbCmd.backedUp(mode, names.toString());
+                }
+            });
         } catch (Throwable t) {
             Log.e("DbListCmd.backupNow", t);
             lastFailed = true;
             return Words.Db.failed(String.valueOf(t.getMessage()));
-        } finally {
-            if (s != null) s.close();
         }
     }
 
@@ -1284,26 +1285,22 @@ final class DbListCmd {
         return realRes(mode, w, before, null);
     }
 
-    private static Res realRes(String mode, Work w, boolean before, Library lib) {
-        SqlStore s = null;
+    private static Res realRes(final String mode, final Work w, boolean before, final Library lib) {
         try {
-            s = Db.open(Db.app, mode);
-            if (before) {
-                try {
-                    Db.backupsOf(Db.app, mode).before(s, Backups.OP_DELETE, System.currentTimeMillis());
-                } catch (Throwable t) {
-                    Log.e("DbListCmd.before", t);
-                    return Res.err(Words.DbCmd.beforeFailed(String.valueOf(t.getMessage())));
+            return Db.write(Db.app, mode, before ? Backups.OP_DELETE : null, new Db.Use<Res>() {   // מבנה 33: דרך שער המסד
+                @Override
+                public Res run(SqlStore s) {
+                    Res r = w.run(s, over(lib, new HashMap<String, List<String>>()));
+                    if (r.error == null && r.renamed != 0) follow(s, mode, r);
+                    return r;
                 }
-            }
-            Res r = w.run(s, over(lib, new HashMap<String, List<String>>()));
-            if (r.error == null && r.renamed != 0) follow(s, mode, r);
-            return r;
+            });
+        } catch (Db.BeforeFailed b) {
+            Log.e("DbListCmd.before", b.getCause());
+            return Res.err(Words.DbCmd.beforeFailed(String.valueOf(b.getCause().getMessage())));
         } catch (Throwable t) {
             Log.e("DbListCmd.real", t);
             return Res.err(Words.Db.failed(String.valueOf(t.getMessage())));
-        } finally {
-            if (s != null) s.close();
         }
     }
 

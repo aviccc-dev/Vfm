@@ -70,14 +70,16 @@ public class DbListScreen extends ListScreen<Store.Member> {
         new Thread(new Runnable() {
             @Override
             public void run() {
-                SqlStore s = null;
                 try {
-                    s = Db.open(c, m);
-                    Db.backupsOf(c, m).before(s, Backups.OP_EXIT, System.currentTimeMillis());
+                    Db.write(c, m, null, new Db.Use<Void>() {                     // מבנה 33: דרך שער המסד
+                        @Override
+                        public Void run(SqlStore s) throws Exception {
+                            Db.backupsOf(c, m).before(s, Backups.OP_EXIT, System.currentTimeMillis());
+                            return null;
+                        }
+                    });
                 } catch (Throwable t) {
                     Log.e("DbListScreen.exitCopy", t);
-                } finally {
-                    if (s != null) s.close();
                 }
             }
         }).start();
