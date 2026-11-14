@@ -2287,6 +2287,28 @@ public final class Tests {
         eq("מבנה 28: \"בדיקה\" קודמת למקומות הפתוחים (מסך ההרצה שואל עליהם בעצמו)", Manager.TO_CHECK, Manager.route(Batch.CHECK + "\n" + holes, false));
         eq("מבנה 28: קובץ רגיל — הכנה והרצה", Manager.TO_RUN, Manager.route("MD \"א\"\n", false));
         eq("מבנה 28: השורות — בלי \\r", Arrays.asList("א", "ב"), Manager.lines("א\r\nב\r\n"));
+        // מבנה 39: העברה בין כוננים — המקור נמחק רק אחרי השוואת חתימה מלאה של העותק
+        File ma = new File(r, "מקור39.bin"), mb = new File(r, "יעד39.bin"), mc = new File(r, "אחר39.bin");
+        try {
+            java.io.FileOutputStream o = new java.io.FileOutputStream(ma);
+            byte[] big = new byte[300000];
+            for (int i = 0; i < big.length; i++) big[i] = (byte) (i * 31 + i / 7);
+            o.write(big);
+            o.close();
+            big[150000] ^= 1;                                                   // אותו גודל, בית אחד שונה
+            o = new java.io.FileOutputStream(mc);
+            o.write(big);
+            o.close();
+        } catch (java.io.IOException e) {
+            throw new RuntimeException(e);
+        }
+        String da = Physical.digest(ma);
+        check("מבנה 39: חתימה מלאה — בית אחד שונה באותו גודל נתפס", da != null && ma.length() == mc.length() && !da.equals(Physical.digest(mc)));
+        String[] got = new String[1];
+        check("מבנה 39: ההעתקה מוסרת את חתימת המקור בלי קריאה נוספת, והעותק זהה", Physical.copyFile(ma, mb, got) && da.equals(got[0]) && da.equals(Physical.digest(mb)));
+        mb.delete();
+        check("מבנה 39: העברה בין כוננים — העותק נבדק, ורק אז המקור נמחק", Physical.moveFile(ma, mb, false) && !ma.exists() && da.equals(Physical.digest(mb)));
+        check("מבנה 39: קובץ שאינו נקרא — אין חתימה (ולכן אין מחיקה של מקור)", Physical.digest(new File(r, "אין-קובץ-כזה")) == null);
         // מבנה 38: הדופק — כמה זמן התוכנה לא רצה
         Batch.Pulse pulse = new Batch.Pulse();
         try { Thread.sleep(1300); } catch (InterruptedException e) { throw new RuntimeException(e); }

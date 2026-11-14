@@ -614,7 +614,7 @@ public final class Words {
         public static final String NOT_FOUND_REFRESH = "לא נמצא. כדאי לרענן.";
         public static final String NOT_INTO_ITSELF = "אי אפשר לתוך התיקייה עצמה";
         public static final String ALREADY_HERE = "כבר בתיקייה הזו";
-        public static final String CANT_REPLACE_PARENT = "אי אפשר להחליף תיקייה שמכילה את המקור";
+        public static final String CANT_REPLACE_PARENT = "אי אפשר להחליף תיקייה שמכילה את המקור", COPY_DIFFERS = "העותק שונה מהמקור — לא הועבר, והמקור נשאר במקומו: ";
         public static final String NO_DEST_FOLDER = "לא נוצרה תיקייה ביעד";
         public static final String NOT_UNDER_ROOT = "הפריט אינו בתוך תיקיית המקור";
         public static final String TOO_BIG_FOR_DEST = "הקובץ גדול מ־4GB, והיעד (FAT32) אינו מקבל קובץ כזה";
