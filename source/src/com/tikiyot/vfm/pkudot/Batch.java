@@ -945,6 +945,45 @@ final class Batch {
             for (java.util.Iterator<String> it = added.keySet().iterator(); it.hasNext(); ) if (it.next().startsWith(in)) it.remove();
         }
 
+        /**
+         * מבנה 44: העברה של תיקייה שלמה — מה שבתוכה (כמו שההדמיה רואה אותו עכשיו) עובר איתה: במקום הישן אין עוד דבר,
+         * ובחדש — הכול. עד כאן נרשמה רק התיקייה עצמה: שורה שאחריה עוד ראתה את הקבצים במקום הישן (ותכננה למחוק או
+         * להעתיק קובץ שכבר לא יהיה שם), ולא מצאה אותם במקום החדש ("לא נמצא" — והקובץ כולו לא רץ). replace — "להחליף":
+         * מה שהיה ביעד בשם הזה הולך לסל. המחיר: מעבר אחד על התיקייה בזמן התכנון, ורק בשורה שמעבירה תיקייה שלמה.
+         */
+        void moveDir(File from, File to, boolean replace) {
+            List<File> files = new ArrayList<File>(), subs = new ArrayList<File>();
+            tree(from, files, subs);
+            String a = from.getAbsolutePath(), b = to.getAbsolutePath();
+            Map<String, File> src = new LinkedHashMap<String, File>();
+            for (File f : files) src.put(f.getAbsolutePath(), real(f));       // לפני שהמקום הישן נמחק מההדמיה
+            if (replace && isDir(to)) wipe(b);
+            wipe(a);
+            gone.remove(b);
+            dirs.add(b);
+            for (File d : subs) {
+                String p = b + d.getAbsolutePath().substring(a.length());
+                gone.remove(p);
+                dirs.add(p);
+            }
+            Map<String, String> moved = new LinkedHashMap<String, String>();
+            for (Map.Entry<String, File> e : src.entrySet()) {
+                String p = b + e.getKey().substring(a.length());
+                gone.remove(p);
+                added.put(p, e.getValue());
+                moved.put(e.getKey(), p);
+            }
+            if (db != null && !moved.isEmpty()) DbFollow.moved(db, moved);     // כמו בהעברת קובץ: הרשימות במסד עוקבות גם בהדמיה
+        }
+
+        private void tree(File d, List<File> files, List<File> subs) {
+            files.addAll(files(d));
+            for (File k : subdirs(d)) {
+                subs.add(k);
+                tree(k, files, subs);
+            }
+        }
+
         /** קובץ שיהיה ← הקובץ שממנו הוא בא (לגודל ולתאריך). */
         final Map<String, File> added = new LinkedHashMap<String, File>();
         /** 1.20.0: ההשוואה האחרונה (COMP), והאינדקס לחתימות שכבר חושבו (יכול להיות null). */
@@ -1701,8 +1740,7 @@ final class Batch {
                 if (!copy && dest.equals(d.getParentFile())) { it.remove(); s.inPlace++; continue; }
                 File to = new File(dest, d.getName());
                 if (s.skipTaken && sim.isDir(to)) { it.remove(); s.skipped++; continue; }
-                sim.gone.add(d.getAbsolutePath());
-                sim.dirs.add(s.renameTaken && (sim.isDir(to) || sim.isFile(to)) ? sim.free(to).getAbsolutePath() : to.getAbsolutePath());
+                sim.moveDir(d, s.renameTaken && (sim.isDir(to) || sim.isFile(to)) ? sim.free(to) : to, s.replace);   // מבנה 44
             }
             List<String> what = new ArrayList<String>();
             if (!s.files.isEmpty() || s.dirs.isEmpty()) what.add(Words.files(s.files.size()));

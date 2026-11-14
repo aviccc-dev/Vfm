@@ -2363,6 +2363,25 @@ public final class Tests {
         eq("מבנה 43: ...ומשתנה שהוא מסלול — שגיאת שימוש", 1, Batch.plan("REN \"ק42\\קובץ.txt\" \"%תיקייה43%\"\n", r, v43).errors);
         Batch.Plan mj = Batch.plan(Batch.MEASURE + " " + Batch.SW_JOURNAL + "%אין-כזה%\nMD \"ת43-ב\"\n", r, v);
         check("מבנה 43: מדידה עם יומן במסלול שגוי — שגיאה, לא \"בלי יומן\" בשקט", mj.errors == 1 && mj.blocked());
+        // מבנה 44: העברה של תיקייה שלמה — ההדמיה מעבירה גם את מה שבתוכה
+        File d44 = new File(r, "ת44/עמוק");
+        d44.mkdirs();
+        new File(r, "יעד44").mkdirs();
+        new File(r, "אחר44").mkdirs();
+        try {
+            java.io.FileOutputStream o = new java.io.FileOutputStream(new File(r, "ת44/א.txt")); o.write(1); o.close();
+            o = new java.io.FileOutputStream(new File(d44, "ב.txt")); o.write(2); o.close();
+        } catch (java.io.IOException e) { throw new RuntimeException(e); }
+        Batch.Plan old44 = Batch.plan("MOVE \"ת44\" \"יעד44\"\nDEL \"ת44\\א.txt\"\n", r, v);
+        check("מבנה 44: אחרי העברת התיקייה — קובץ במקום הישן כבר לא נמצא (עד כאן תוכנן למחיקה)", old44.errors == 1 && old44.steps.get(1).error != null);
+        Batch.Plan new44 = Batch.plan("MOVE \"ת44\" \"יעד44\"\nCOPY \"יעד44\\ת44\\עמוק\\ב.txt\" \"אחר44\"\nRD \"יעד44\\ת44\\עמוק\"\n", r, v);
+        check("מבנה 44: ...ובמקום החדש הוא נמצא, גם בתת־תיקייה (עד כאן \"לא נמצא\", והקובץ כולו לא רץ)",
+                new44.errors == 1 && new44.steps.get(1).error == null && new44.steps.get(1).files.size() == 1 && Words.Cmd.FOLDER_NOT_EMPTY.equals(new44.steps.get(2).error));
+        Batch.Plan run44 = Batch.plan("MD \"ת44\\חדשה\"\nCOPY \"פתיחה.txt\" \"ת44\\חדשה\"\nMOVE \"ת44\" \"יעד44\"\nCOPY \"יעד44\\ת44\\חדשה\\פתיחה.txt\" \"אחר44\"\nMD \"ת44\"\nRD \"ת44\"\n", r, v, lib42);
+        eq("מבנה 44: גם מה ששורות קודמות יצרו בתיקייה עובר איתה; ותיקייה חדשה בשם הישן — ריקה", 0, run44.errors);
+        String rep44 = String.valueOf(Batch.run(run44, lib42, null, null));
+        check("מבנה 44: ...וההרצה עושה בדיוק את מה שתוכנן (" + rep44 + ")", !run44.trouble && new File(r, "אחר44/פתיחה.txt").isFile()
+                && new File(r, "יעד44/ת44/עמוק/ב.txt").isFile() && !new File(r, "ת44").exists());
         Batch.Plan delEmpty = Batch.plan("DEL \"\"\n", r, v);
         check("מבנה 41: DEL \"\" — לא מוחק את כל התיקייה: שגיאה, ושום שורה לא רצה", delEmpty.errors == 1 && delEmpty.blocked());
         // מבנה 40: הדמיה — המנוע עצמו אינו מריץ; וכישלון שאינו "ודא" נאמר בסיכום
