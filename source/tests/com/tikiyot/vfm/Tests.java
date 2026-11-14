@@ -2363,6 +2363,14 @@ public final class Tests {
         eq("מבנה 43: ...ומשתנה שהוא מסלול — שגיאת שימוש", 1, Batch.plan("REN \"ק42\\קובץ.txt\" \"%תיקייה43%\"\n", r, v43).errors);
         Batch.Plan mj = Batch.plan(Batch.MEASURE + " " + Batch.SW_JOURNAL + "%אין-כזה%\nMD \"ת43-ב\"\n", r, v);
         check("מבנה 43: מדידה עם יומן במסלול שגוי — שגיאה, לא \"בלי יומן\" בשקט", mj.errors == 1 && mj.blocked());
+        // מבנה 45: קובץ שהמנוע כותב בעצמו — לא על קובץ של התוכנה
+        String set45 = app42 + "/" + Paths.SETTINGS + "/x.txt";
+        check("מבנה 45: דוח על קובץ של התוכנה — שגיאה", Batch.plan("דוח \"" + set45 + "\"\nMD \"ת45\"\n", r, v).errors == 1);
+        check("מבנה 45: דוח על תיקייה — שגיאה", Batch.plan("דוח \"ק42\"\nMD \"ת45\"\n", r, v).errors == 1);
+        check("מבנה 45: דוח בתיקייה של המשתמש שבתוך תיקיית התוכנה — מותר", Batch.plan("דוח \"" + app42 + "/" + Paths.USER_DIRS[1] + "/דוח.txt\"\nMD \"ת45\"\n", r, v).errors == 0);
+        check("מבנה 45: /יומן: על קובץ של התוכנה — שגיאה", Batch.plan("COPY \"פתיחה.txt\" \"ק42\" " + Batch.SW_JOURNAL + "\"" + set45 + "\"\n", r, v).errors == 1);
+        check("מבנה 45: מדידה עם יומן על קובץ של התוכנה — שגיאה", Batch.plan(Batch.MEASURE + " " + Batch.SW_JOURNAL + "\"" + set45 + "\"\nMD \"ת45\"\n", r, v).errors == 1);
+        check("מבנה 45: כתוב על קובץ של התוכנה — שגיאה כבר בתכנון", Batch.plan(Batch.WRITE + " \"" + set45 + "\" \"א\"\n", r, v).errors == 1);
         // מבנה 44: העברה של תיקייה שלמה — ההדמיה מעבירה גם את מה שבתוכה
         File d44 = new File(r, "ת44/עמוק");
         d44.mkdirs();

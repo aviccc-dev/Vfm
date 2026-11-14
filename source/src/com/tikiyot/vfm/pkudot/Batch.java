@@ -185,6 +185,16 @@ final class Batch {
      * מ0.37 (המשתמש, 11.11.2026: "אם כבר אז תאסוף כמה קטנות, לא רק את אלה של הבדיקות"): כתוב · המתן · גבה · רענן · דוח ·
      * "ודא שגיאה". מחזיר true אם השורה שלהן (ואז s מוכן: שגיאה, או תיאור ופעולה).
      */
+    /**
+     * מבנה 45: קובץ שהמנוע כותב בעצמו — דוח, יומן, "כתוב" — לא על קובץ של התוכנה (הגדרות, גיבויים, אינדקס), ולא על תיקייה.
+     * עד כאן לא נבדק: "דוח" ו"/יומן:" כתבו לכל מסלול שנכתב בשורה. null — מותר.
+     */
+    static String noWriteHere(String p) {
+        String why = Physical.programFile(p);
+        if (why != null) return why;
+        return new File(p).isDirectory() ? Words.DbCmd.WRITE_IS_FOLDER : null;
+    }
+
     private static boolean small(final Plan plan, final Step s, String cmd, List<String> tk, File here,
                                  Map<String, String> vars, final Sim sim) {
         if (cmd.equals(DROP_MODE)) {                                            // מ0.45: מחק אופן
@@ -257,6 +267,7 @@ final class Batch {
             String[] err = {null};
             String p = tk.size() == 2 ? path(tk.get(1), here, vars, err) : null;
             if (p == null) { s.error = err[0] != null ? err[0] : Words.DbCmd.REPORT_USAGE; return true; }
+            if ((s.error = noWriteHere(p)) != null) return true;                 // מבנה 45
             plan.reportFile = p;
             s.noop = true;
             s.describe = Words.DbCmd.reportTo(Bidi.path(p));
@@ -324,6 +335,7 @@ final class Batch {
             String[] err = {null};
             String p = path(a.get(0), here, vars, err);
             if (p == null) { s.error = err[0]; return true; }
+            if (Physical.programFile(p) != null) { s.error = Physical.programFile(p); return true; }   // מבנה 45
             final File f = new File(p);
             final String text = a.size() == 2 ? Verbs.withVars(a.get(1), vars).replace("\\n", "\n") : "";
             File dir = f.getParentFile();
@@ -1349,6 +1361,7 @@ final class Batch {
                     if (x.startsWith(SW_JOURNAL)) {
                         String[] err = {null};
                         plan.measureJournal = path(x.substring(SW_JOURNAL.length()).trim(), here, vars, err);
+                        if (plan.measureJournal != null && (err[0] = noWriteHere(plan.measureJournal)) != null) plan.measureJournal = null;   // מבנה 45
                         if (plan.measureJournal == null) {                           // מבנה 43: מסלול שגוי — שגיאה, לא "בלי יומן" בשקט
                             Step s = new Step();
                             s.line = n + 1;
@@ -1524,6 +1537,7 @@ final class Batch {
                     }
                     s.journal = path(v, here, vars, err);
                     if (s.journal == null) break;
+                    if ((err[0] = noWriteHere(s.journal)) != null) break;       // מבנה 45
                 }
             if (err[0] == null) err[0] = setsMisuse(cmd, paths);            // 1.20.0
             if (err[0] == null) err[0] = shareMisuse(cmd, paths);           // 203
