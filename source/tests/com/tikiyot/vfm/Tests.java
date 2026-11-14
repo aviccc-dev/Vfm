@@ -2544,7 +2544,15 @@ public final class Tests {
                         && read(new File(System.getProperty("vfm.src"), "AndroidManifest.xml")).contains("android.permission.WAKE_LOCK"));
         String dls = read(new File(code, "masachim/DbListScreen.java"));
         check("מבנה 37: שורה שנעלמה מהמסד מתחת למסך אינה מקריסה אותו (הקריסה ב\"שחזור הדוגמאות\", נ0.2) — הציור עטוף, והמסך נטען מחדש",
-                dls.contains("catch (Store.Failure gone)") && dls.contains("private void bindRow(View v, Store.Member row)") && dls.contains("Words.Db.ROW_GONE"));
+                dls.contains("boolean missing = gone instanceof Store.Failure") && dls.contains("private void bindRow(View v, Store.Member row)") && dls.contains("Words.Db.ROW_GONE"));
+        // מבנה 60: גם הטעינה עצמה עטופה (רשימה שנמחקה בין קריאה לקריאה), שגיאה שאינה של המסד אינה מוסתרת, ועריכה של פריט שנעלם — הודעה
+        check("מבנה 60: הטעינה של מסך הרשימות עטופה — הודעה ורישום ביומן, לא קריסה",
+                dls.contains("private void load()") && dls.contains("Log.e(\"DbListScreen.refresh\", gone)") && dls.indexOf("load();") < dls.indexOf("private void load()"));
+        check("מבנה 60: בציור שורה — רק שגיאות של המסד נתפסות; תקלה אחרת בקוד נזרקת הלאה",
+                dls.contains("if (!(gone instanceof android.database.SQLException) && !(gone instanceof IllegalStateException)) throw gone;")
+                        && dls.contains("if (missing && !stale)"));
+        check("מבנה 60: עריכה של פריט שנמחק בזמן שהטופס פתוח — הודעה ברורה (בשני הטפסים)",
+                dls.split("Words\\.Db\\.ITEM_GONE", -1).length == 3 && Words.Db.ITEM_GONE.contains("לא נשמר"));
         String bu = read(new File(code, "masachim/rechivim/BatchUi.java")), rs = read(new File(code, "masachim/RunScreen.java"));
         check("מבנה 27: שני הרצפים שואלים את המנהל, ואינם מחליטים בעצמם",
                 bu.contains("Manager.approve(plan)") && rs.contains("Manager.approve(plan)") && !bu.contains("plan.blocked()") && !rs.contains("plan.blocked()")

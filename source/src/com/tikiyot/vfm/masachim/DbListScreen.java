@@ -196,6 +196,20 @@ public class DbListScreen extends ListScreen<Store.Member> {
             adapter.notifyDataSetChanged();
             return;
         }
+        // מבנה 60 (פתוח 3 בסיכום; ממצא 32): הטעינה קוראת מהמסד כמה פעמים, ומישהו אחר יכול לכתוב בו באמצע (הרצה ברקע, המעקב
+        // אחרי הכונן, שחזור הדוגמאות) — רשימה שנמחקה בין קריאה לקריאה זרקה שגיאה, והתוכנה נסגרה. עכשיו: הודעה במסך, ונרשם ביומן.
+        dbTrouble = false;
+        try {
+            load();
+        } catch (RuntimeException gone) {
+            Log.e("DbListScreen.refresh", gone);
+            rows.clear();
+            info.setText(gone instanceof Store.Failure ? Words.Db.LIST_GONE : Words.Db.openFailed(String.valueOf(gone.getMessage())));
+            adapter.notifyDataSetChanged();
+        }
+    }
+
+    private void load() {
         Store.Item it = store.item(listId);
         if (it == null || it.type != Store.LIST) {
             info.setText(Words.Db.LIST_GONE);
@@ -419,11 +433,19 @@ public class DbListScreen extends ListScreen<Store.Member> {
     protected void bind(View v, Store.Member row) {
         try {
             bindRow(v, row);
-        } catch (Store.Failure gone) {
+        } catch (RuntimeException gone) {
+            // מבנה 60: גם שגיאה של המסד עצמו (android.database.SQLException) או חיבור שכבר נסגר (IllegalStateException) — אותו טיפול,
+            // ונרשמת ביומן התקלות עם המסלול שלה. כל שגיאה אחרת — תקלה בקוד, ולא מוסתרת.
+            boolean missing = gone instanceof Store.Failure;
+            if (!missing) {
+                if (!(gone instanceof android.database.SQLException) && !(gone instanceof IllegalStateException)) throw gone;
+                if (!dbTrouble) Log.e("DbListScreen.bind", gone);              // פעם אחת לטעינה — לא לכל שורה
+                dbTrouble = true;
+            }
             // מבנה 37 (ממצא 32): השורה כבר אינה במסד — מישהו שינה אותו מתחת למסך (שחזור הדוגמאות, הרצה ברקע, המעקב אחרי הכונן).
             // עד כאן זה הקריס את התוכנה באמצע הציור. עכשיו: השורה מוצגת בשמה בלבד, נרשם ביומן, והמסך נטען מחדש — פעם אחת.
             Ui.bindIcon(v, "", row.item == null || row.item.name == null ? "" : row.item.name, "");
-            if (!stale) {
+            if (missing && !stale) {                                           // תקלה של המסד עצמו — בלי טעינה חוזרת (שלא תחזור בלי סוף)
                 stale = true;
                 Log.i(Words.Db.ROW_GONE);
                 new android.os.Handler(android.os.Looper.getMainLooper()).post(new Runnable() {
@@ -439,6 +461,8 @@ public class DbListScreen extends ListScreen<Store.Member> {
 
     /** שורה שנעלמה כבר זוהתה, והטעינה מחדש בדרך (שלא ייטען פעם לכל שורה). */
     private boolean stale;
+    /** מבנה 60: המסד זרק שגיאה בציור שורה — נרשם ביומן פעם אחת, עד הטעינה הבאה. */
+    private boolean dbTrouble;
 
     private void bindRow(View v, Store.Member row) {
         Store.Item it = row.item;
@@ -518,7 +542,7 @@ public class DbListScreen extends ListScreen<Store.Member> {
     }
 
     private String prop(long id, String k) {
-        String v = store.prop(id, k);
+        String v = store == null ? null : store.prop(id, k);                  // מבנה 60: המסד סגור (המסך ברקע) — כמו "אין"
         return v == null ? "" : v;
     }
 
@@ -534,6 +558,7 @@ public class DbListScreen extends ListScreen<Store.Member> {
                 public void ok(final DbSmartForm.Result r) {
                     done(DbListCmd.nowEdit(mode, new DbListCmd.Work() {                // מבנה 58: גיבוי לפני — התנאי הקודם נדרס
                         @Override public DbListCmd.Res run(Store t, DbListCmd.Finder f) {
+                            if (t.item(it.id) == null) return DbListCmd.Res.err(Words.Db.ITEM_GONE);   // מבנה 60: נמחקה בזמן שהטופס היה פתוח
                             String was = t.item(it.id).name;
                             DbSmartForm.save(t, it.id, 0, r);
                             return DbListCmd.Res.ok(Words.DbCmd.saved(r.name.isEmpty() ? it.name : r.name)).renamed(it.id, was, t.item(it.id).name);   // מ0.42: ב8
@@ -568,6 +593,7 @@ public class DbListScreen extends ListScreen<Store.Member> {
                         w = why.getText().toString();
                 DbListCmd.Work work = new DbListCmd.Work() {
                     @Override public DbListCmd.Res run(Store t, DbListCmd.Finder f) {
+                        if (t.item(it.id) == null) return DbListCmd.Res.err(Words.Db.ITEM_GONE);       // מבנה 60: נמחק בזמן שהטופס היה פתוח
                         String was = t.item(it.id).name;
                         String e = Lists.edit(t, it.id, n, i, d, w);              // מ0.23: אותה בדיקת שם כמו REN
                         return e != null ? DbListCmd.Res.err(e) : DbListCmd.Res.ok(Words.DbCmd.saved(t.item(it.id).name))
