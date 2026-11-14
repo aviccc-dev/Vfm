@@ -279,9 +279,11 @@ public class RunScreen extends Activity {
                 List<String> rep;
                 try {
                     android.os.PowerManager.WakeLock awake = Awake.hold(RunScreen.this);   // מבנה 38: ההרצה ממשיכה גם כשהמסך כבוי
+                    RunService.begin(RunScreen.this);                                      // מבנה 51: וגם המערכת יודעת שהיא פועלת
                     try {
                         rep = Batch.run(plan, lib, new PhysicalUi.DialogAsker(RunScreen.this), progress(null), Acts.deletedStaysGrey(), listen);
                     } finally {
+                        RunService.end(RunScreen.this);
                         Awake.release(awake);
                     }
                 } catch (Throwable t) {

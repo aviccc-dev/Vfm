@@ -74,6 +74,7 @@
         </activity>
 
         <service android:name=".BarService" android:exported="false" />
+        <service android:name=".RunService" android:exported="false" />
         <service android:name=".SigJob" android:exported="false"
             android:permission="android.permission.BIND_JOB_SERVICE" />
 

@@ -169,9 +169,11 @@ final class BatchUi {
                         List<String> rep;
                         try {
                             android.os.PowerManager.WakeLock awake = Awake.hold(a);   // מבנה 38: ההרצה ממשיכה גם כשהמסך כבוי
+                            RunService.begin(a);                                      // מבנה 51
                             try {
                                 rep = Batch.run(plan, lib, new PhysicalUi.DialogAsker(a), busy, Acts.deletedStaysGrey());
                             } finally {
+                                RunService.end(a);
                                 Awake.release(awake);
                             }
                         } catch (Throwable t) {                               // 1.25.4: תקלה בהרצה — דוח עם התקלה

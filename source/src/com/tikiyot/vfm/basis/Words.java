@@ -1698,6 +1698,8 @@ public final class Words {
     public static final class Run {
         private Run() { }
 
+        /** מבנה 51: ההודעה הקבועה בזמן הרצה (שירות קדמי — כדי שההרצה תימשך כשהמסך כבוי). */
+        public static final String SERVICE_CHANNEL = "הרצת פקודות", SERVICE_ACTIVE = "מריץ קובץ פקודות…";
         public static final String TITLE = "הרצה: ", S_FILL = "מילוי", S_WHAT = "מה יקרה", S_RUN = "מריץ", S_SUM = "סיכום",
                 NOTHING_TO_FILL = "אין מה למלא", NEXT = "הלאה — מה יקרה", CHECKING = "בודק את השורות…",
                 WILL_CREATE = "ייווצרו", WILL_CHANGE = "יועתקו / ישתנו", WILL_DELETE = "יימחקו", DISK = "קבצים בכונן",
