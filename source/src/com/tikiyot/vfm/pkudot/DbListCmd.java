@@ -1146,14 +1146,32 @@ final class DbListCmd {
     }
 
     /**
-     * מ0.45: "בטל אופן "<שם>"" (נבנה בשם "מחק אופן", שעדיין נקרא) — המסד של האופן נמחק (עם קובצי היומן שלו). יש בו משהו — גיבוי לפני (לא נשמר — לא נמחק); הגיבויים
-     * נשארים, ו"צור אופן" באותו שם מחזיר אליהם. לא: האופן הפתוח במסך, "שמור לתוכנה", והאופן שהקובץ עובד בו עכשיו. אין אופן כזה —
-     * בלי שינוי (ניקוי שאפשר להריץ שוב). ההדמיה: "אופן" אחריו — שגיאה.
+     * מ0.45: "בטל אופן "<שם>"" (נבנה בשם "מחק אופן", שעדיין נקרא) — המסד של האופן נמחק (עם קובצי היומן שלו). יש בו משהו — גיבוי לפני (לא נשמר — לא נמחק).
+     * לא: האופן הפתוח במסך, "שמור לתוכנה", והאופן שהקובץ עובד בו עכשיו. אין אופן כזה — בלי שינוי (ניקוי שאפשר להריץ שוב).
+     * ההדמיה: "אופן" אחריו — שגיאה.
+     * מבנה 59 (המשתמש, 14.11.2026: "כל עוד האופן קיים יש צורך בגיבוי שלו. כאשר הוא נמחק אין צורך לגיבוי. אם ישתנה בהמשך נראה"):
+     * תיקיית הגיבויים של האופן עוברת לסל (לא לצמיתות — כמו תיקיית ההגדרות שלו), ולכן "צור אופן" באותו שם פותח אופן חדש וריק,
+     * בלי שאלה. מי שמתחרט — משחזר את התיקייה מהסל, ואז "צור אופן" באותו שם מציע להמשיך מהגיבוי (מבנה 48). אופן שכבר אינו
+     * ונשארו ממנו גיבויים (מגרסה קודמת) — "בטל אופן" שולח גם אותם לסל.
      */
     static void planDropMode(final Batch.Step s, final String name, Batch.Sim sim) {
         if (!DbVerbs.active()) { s.error = Words.DbCmd.VERIFY_DB_ONLY; return; }
         s.target = name;
         if (!sim.hasMode(name)) {
+            if (!sim.dropped.contains(name) && !name.equals(Db.MENUS_MODE) && Db.modeState(Db.app, name) == Db.MODE_HAS_BACKUP) {
+                sim.dropped.add(name);                                          // מבנה 59: "צור אופן" שאחריו — נבדק בהרצה (הגיבויים כבר לא יהיו)
+                s.describe = Words.DbCmd.dropModeLeftWill(name);
+                s.op = new ListCmd.Op() {
+                    @Override
+                    public String run(Library lib) {
+                        if (Db.dbFile(Db.app, name).isFile()) return Words.DbCmd.dropModeNone(name);   // נוצר בינתיים — לא נוגעים
+                        int bk = backupsToTrash(lib, name);
+                        if (bk < 0) lastFailed = true;
+                        return bk == 0 ? Words.DbCmd.dropModeNone(name) : Words.DbCmd.dropModeLeft(name, bk > 0);
+                    }
+                };
+                return;
+            }
             s.noop = true;
             s.describe = Words.DbCmd.dropModeNone(name);
             return;
@@ -1169,7 +1187,11 @@ final class DbListCmd {
             public String run(Library lib) {
                 android.content.Context c = Db.app;
                 File f = Db.dbFile(c, name);
-                if (!f.isFile()) return Words.DbCmd.dropModeNone(name);
+                if (!f.isFile()) {                                               // מבנה 59: אין מסד — ואם נשארו גיבויים, לסל
+                    int left = backupsToTrash(lib, name);
+                    if (left < 0) lastFailed = true;
+                    return left == 0 ? Words.DbCmd.dropModeNone(name) : Words.DbCmd.dropModeLeft(name, left > 0);
+                }
                 if (name.equals(Db.currentMode)) { lastFailed = true; return Words.DbCmd.dropModeOpen(name); }
                 boolean kept = false;
                 try {
@@ -1206,10 +1228,29 @@ final class DbListCmd {
                         Log.i("ביטול אופן: תיקיית ההגדרות לא עברה לסל — " + dir + " · " + r.note);
                     }
                 }
-                Log.i("בוטל אופן: " + name + (kept ? " (גיבוי לפני)" : " (ריק)") + (folder ? " · התיקייה לסל" : ""));
-                return Words.DbCmd.dropModeDone(name, kept, folder) + note;
+                int bk = backupsToTrash(lib, name);                              // מבנה 59: אופן שבוטל — אין צורך בגיבויים שלו
+                if (bk < 0) note += Words.DbCmd.DROP_MODE_BACKUPS_KEPT;
+                Log.i("בוטל אופן: " + name + (kept ? " (גיבוי לפני)" : " (ריק)") + (bk > 0 ? " · הגיבויים לסל" : "") + (folder ? " · התיקייה לסל" : ""));
+                return Words.DbCmd.dropModeDone(name, bk > 0, folder) + note;
             }
         };
+    }
+
+    /**
+     * מבנה 59: תיקיית הגיבויים של אופן שבוטל — לסל של הכונן (שחזור מהסל מחזיר את כולה). 0 — אין תיקייה כזו; 1 — עברה;
+     * ‎-1 — לא עברה (נשארת במקומה, ו"צור אופן" באותו שם יגיד שיש גיבוי).
+     */
+    private static int backupsToTrash(Library lib, String name) {
+        File dir = Db.backupsDir(name);
+        if (!dir.isDirectory()) return 0;
+        if (lib == null) {
+            Log.i("ביטול אופן: הגיבויים לא עברו לסל (אין אינדקס) — " + dir);
+            return -1;
+        }
+        Physical.Result r = Physical.delete(lib, new ArrayList<String>(), java.util.Collections.singletonList(dir.getAbsolutePath()), false);
+        if (r.failed == 0 && !r.done.isEmpty()) return 1;
+        Log.i("ביטול אופן: הגיבויים לא עברו לסל — " + dir + " · " + r.note);
+        return -1;
     }
 
     /** העותק בזיכרון — פעם אחת לכל קובץ פקודות (השורות הבאות רואות מה שהקודמות עשו). */

@@ -2061,7 +2061,7 @@ public final class Tests {
                 if (Batch.VERIFY.equals(x.cmd) || "EXPECT".equals(x.cmd)) verifies++;   // גם "ודא שגיאה" נספרת בסיכום
             }
             check("מ0.43: \"הכול\" של התוסף — כל החלקים נכללים (" + sp.steps.size() + " שורות)", calls == 0 && sp.steps.size() > 200);
-            eq("מ0.43: \"הכול\" — כמה \"ודא\" יש בחלקים (הכללית 88, לחץ 19, שני אופנים 4, עומס 4; מ0.45: +14 — אופן חדש והסל; מבנה 48: +6 — ממשיך מגיבוי, כתיב אחר; מבנה 51: +4 — ארבע השורות שצפויות להידחות מסומנות \"ודא שגיאה\")", 125, verifies);
+            eq("מ0.43: \"הכול\" — כמה \"ודא\" יש בחלקים (הכללית 88, לחץ 19, שני אופנים 4, עומס 4; מ0.45: +14 — אופן חדש והסל; מבנה 48: +6 — ממשיך מגיבוי, כתיב אחר; מבנה 51: +4 — ארבע השורות שצפויות להידחות מסומנות \"ודא שגיאה\"; מבנה 59: -2 — \"ממשיך מגיבוי\" עבר לקבוצה משלו בתוסף)", 123, verifies);
             // מ0.41: הקטע החדש של הכללית — השורות שאינן של המסד מתוכננות בלי שגיאה; "ודא שגיאה" תופס את %נבחרים%
             String m042 = all.substring(all.indexOf(":: מ0.42"), all.indexOf(":: מ0.45 — אופן חדש"));   // נבדק לבד (m042cmds)
             String m045 = all.substring(all.indexOf(":: מ0.45 — אופן חדש"), all.indexOf(":: מ0.41 — הבדיקה מנקה"));   // נבדק לבד (למטה)
@@ -2383,6 +2383,32 @@ public final class Tests {
         check("מבנה 58: 10 העותקים שלפני מחיקה — נשארים כולם, גם אחרי 12 עריכות", others58 == 0);
         Backups.Entry p58 = Backups.parse(new File("/x/לפני עריכה 2026-11-14 22-10-05.db"));
         check("מבנה 58: שם של עותק לפני עריכה — נקרא חזרה", p58 != null && Backups.BEFORE.equals(p58.kind) && Backups.OP_EDIT.equals(p58.op));
+        // מבנה 59: אופן שבוטל — הגיבויים שלו לסל. הנוסח אומר זאת; וכל מה שקבוצה בתוסף האבחון "צריכה" — התוכנה מצהירה שהיא יודעת
+        check("מבנה 59: ההודעה אחרי ביטול — הגיבויים בסל, ואיך חוזרים", Words.DbCmd.dropModeDone("א", true, true).contains("הגיבויים שלו — בסל")
+                && Words.DbCmd.dropModeDone("א", true, true).contains("צור אופן") && !Words.DbCmd.dropModeDone("א", false, false).contains("גיבוי"));
+        check("מבנה 59: אופן שכבר אינו — נאמר מה קרה לגיבויים שנשארו", Words.DbCmd.dropModeLeft("א", true).contains("עברו לסל")
+                && Words.DbCmd.dropModeLeft("א", false).contains("לא עברו"));
+        try {
+            File root59 = new File(System.getProperty("vfm.src")).getParentFile();
+            String tpl59 = Files.readUtf8(new File(root59, "lab-pages/avchon.template"));
+            String br59 = Files.readUtf8(new File(System.getProperty("vfm.src"), "src/com/tikiyot/vfm/lev/Bridge.java"));
+            java.util.regex.Matcher f59 = java.util.regex.Pattern.compile("o\\.put\\(\"features\", \"([^\"]*)\"\\)").matcher(br59);
+            String feats59 = f59.find() ? " " + f59.group(1) + " " : "";
+            java.util.regex.Matcher n59 = java.util.regex.Pattern.compile("need:'([^']+)'").matcher(tpl59);
+            String missing59 = "";
+            int needs59 = 0;
+            while (n59.find()) {
+                needs59++;
+                if (!n59.group(1).equals("card") && !feats59.contains(" " + n59.group(1) + " ")) missing59 += n59.group(1) + " ";
+            }
+            check("מבנה 59: כל מה שקבוצה בתוסף האבחון צריכה — התוכנה מצהירה עליו (חסר: " + missing59 + ")", needs59 >= 3 && missing59.isEmpty());
+            check("מבנה 59: הקבוצה \"אופן שבוטל וחוזר\" — בתוסף, והמקום של הגיבויים בא מהתוכנה", tpl59.contains("k:'resume'") && tpl59.contains("info.backupsVar")
+                    && br59.contains("o.put(\"backupsVar\""));
+            String kl59 = Files.readUtf8(new File(root59, "lab-pages/avchon-tests/klali.vbat"));
+            check("מבנה 59: בבדיקה הכללית — אחרי \"בטל אופן\", \"צור אופן\" בלי מתג (אופן חדש וריק)", !kl59.contains("/מגיבוי"));
+        } catch (Throwable t) {
+            check("מבנה 59: קריאת התוסף (" + t + ")", false);
+        }
         // מבנה 55: המכשיר עצר את התוכנה בזמן הרצה — הדוח אומר זאת ואיזו הגדרה פותרת
         List<String> rep55 = new ArrayList<String>();
         Batch.stoppedHint(rep55, 4000);

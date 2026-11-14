@@ -103,7 +103,9 @@ final class Bridge {
             o.put("labNewer", h == null ? "" : h);
             // מ0.42 — לתוסף האבחון: המכשיר, ההרשאה, המקום, היומנים והאינדקס (מה שהיה בראש דוח האבחון ובהגדרות)
             o.put("versionCode", pi.versionCode);
-            o.put("features", "steady");                                        // מבנה 50: מה התוכנה יודעת (לתוסף — במקום לנחש לפי מספר הגרסה)
+            o.put("features", "steady dropclean");                              // מבנה 50: מה התוכנה יודעת (לתוסף — במקום לנחש לפי מספר הגרסה)
+            // מבנה 59: איפה תיקיות הגיבויים של האופנים, בכתיב של קובץ פקודות — לבדיקה "אופן שבוטל וחוזר" (שם התיקייה שונה בין הבניות)
+            o.put("backupsVar", "%" + Drive.INTERNAL + "%\\" + Paths.DB_DIR + "\\" + Backups.DIR);
             o.put("device", Log.device());
             o.put("access", Files.hasAccess(screen));
             o.put("freeMb", android.os.Environment.getExternalStorageDirectory().getUsableSpace() / (1024 * 1024));

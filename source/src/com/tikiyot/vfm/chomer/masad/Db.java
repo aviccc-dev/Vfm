@@ -114,7 +114,17 @@ final class Db {
 
     /** מ0.12: גם לפקודות שרצות במסד (DbListCmd). */
     static Backups backupsOf(android.content.Context c, String m) {
-        return new Backups(new File(new File(Paths.dbData(), Backups.DIR), m), new File(c.getCacheDir(), "mbackup"));
+        return new Backups(backupsDir(m), new File(c.getCacheDir(), "mbackup"));
+    }
+
+    /** מבנה 59: תיקיית הגיבויים של אופן, בכונן — אחת לכל אופן, לפי שמו. */
+    static File backupsDir(String m) {
+        return new File(backupsRoot(), m);
+    }
+
+    /** התיקייה שבה תיקיות הגיבויים של כל האופנים. */
+    static File backupsRoot() {
+        return new File(Paths.dbData(), Backups.DIR);
     }
 
     // --- האופן השמור, ההכנה של אופן, שחזור הדוגמאות, בדיקת המנוע (מבנה 8): עד כאן — במסך הפיתוח (DbScreen) ---
