@@ -473,7 +473,13 @@ final class PhysicalUi {
                         new Thread(new Runnable() {
                             @Override
                             public void run() {
-                                final Zip.Result r = Zip.unpack(zip, dest, busy);
+                                LongOp keep = LongOp.begin(a, Words.Disk.SERVICE_ACTIVE);   // מבנה 57
+                                final Zip.Result r;
+                                try {
+                                    r = Zip.unpack(zip, dest, busy);
+                                } finally {
+                                    keep.end();
+                                }
                                 busy.close();
                                 lib.dirChanged(zip.getParent());           // האינדקס לומד על התיקייה החדשה
                                 Log.i("נפרס בכונן: " + zip + " ← " + dest + " · " + r.files + " קבצים");
@@ -512,7 +518,13 @@ final class PhysicalUi {
                         new Thread(new Runnable() {
                             @Override
                             public void run() {
-                                final Zip.Result r = Zip.pack(dir, zip, busy);
+                                LongOp keep = LongOp.begin(a, Words.Disk.SERVICE_ACTIVE);   // מבנה 57
+                                final Zip.Result r;
+                                try {
+                                    r = Zip.pack(dir, zip, busy);
+                                } finally {
+                                    keep.end();
+                                }
                                 busy.close();
                                 Library.get(a).dirChanged(dir.getParent());
                                 Log.i("נדחס: " + dir + " ← " + zip);
@@ -599,12 +611,15 @@ final class PhysicalUi {
             @Override
             public void run() {
                 final Physical.Result[] r = {null};
+                LongOp keep = LongOp.begin(a, Words.Disk.SERVICE_ACTIVE);     // מבנה 57: גם כשהמסך כבוי
                 try {
                     r[0] = op.go();
                 } catch (Throwable t) {
                     Log.e("פעולה פיזית", t);
                     r[0] = new Physical.Result();
                     r[0].fail(Words.Disk.ERROR);
+                } finally {
+                    keep.end();
                 }
                 Ui.afterIndex(a, new Runnable() {
                     @Override

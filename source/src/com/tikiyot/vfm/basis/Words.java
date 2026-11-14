@@ -610,6 +610,9 @@ public final class Words {
     public static final class Disk {
         private Disk() { }
 
+        /** מבנה 57: ההודעה הקבועה בזמן פעולת כונן ארוכה מהמסך. */
+        public static final String SERVICE_ACTIVE = "פעולה בקבצים — עובד…";
+
         public static final String DRIVE_ROOT = "זה שורש הכונן";
         public static final String IS_TRASH = "זה סל המחזור";
         public static final String IS_APP_FOLDER = "זו תיקיית התוכנה";

@@ -16,15 +16,21 @@ import android.os.IBinder;
 
 public class RunService extends Service {
 
-    private static final String STOP = "stop";
+    private static final String STOP = "stop", TEXT = "text";
     /** כמה הרצות פועלות עכשיו (הרצה בתוך הרצה — השירות נעצר רק כשהאחרונה נגמרה). */
     private static int runs;
 
     /** לפני ההרצה. תקלה — ביומן, וההרצה ממשיכה בלי השירות. */
-    static synchronized void begin(Context c) {
+    static void begin(Context c) {
+        begin(c, null);
+    }
+
+    /** מבנה 57: text — מה כתוב בהודעה (null — "מריץ קובץ פקודות…"); לפעולות כונן ארוכות מהמסך. */
+    static synchronized void begin(Context c, String text) {
         try {
             if (runs++ > 0) return;
             Intent i = new Intent(c.getApplicationContext(), RunService.class);
+            if (text != null) i.putExtra(TEXT, text);
             if (Build.VERSION.SDK_INT >= 26) c.getApplicationContext().startForegroundService(i);
             else c.getApplicationContext().startService(i);
         } catch (Throwable t) {
@@ -56,6 +62,10 @@ public class RunService extends Service {
     @Override
     public void onCreate() {
         super.onCreate();
+        notice(Words.Run.SERVICE_ACTIVE);
+    }
+
+    private void notice(String text) {
         NotificationManager nm = (NotificationManager) getSystemService(NOTIFICATION_SERVICE);
         Notification.Builder b;
         if (Build.VERSION.SDK_INT >= 26) {
@@ -65,7 +75,7 @@ public class RunService extends Service {
         } else {
             b = new Notification.Builder(this);
         }
-        b.setSmallIcon(android.R.drawable.ic_popup_sync).setContentTitle(Words.Main.APP_NAME).setContentText(Words.Run.SERVICE_ACTIVE).setOngoing(true);
+        b.setSmallIcon(android.R.drawable.ic_popup_sync).setContentTitle(Words.Main.APP_NAME).setContentText(text).setOngoing(true);
         startForeground(2, b.build());
     }
 
@@ -74,6 +84,8 @@ public class RunService extends Service {
         if (i == null || STOP.equals(i.getAction())) {          // נגמרה; או שהמערכת הפעילה מחדש בלי הרצה — אין מה להחזיק
             stopForeground(true);
             stopSelf();
+        } else if (i.getStringExtra(TEXT) != null) {
+            notice(i.getStringExtra(TEXT));                        // אותה הודעה, בנוסח של הפעולה
         }
         return START_NOT_STICKY;
     }
