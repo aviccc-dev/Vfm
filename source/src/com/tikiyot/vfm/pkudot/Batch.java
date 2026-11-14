@@ -1032,6 +1032,25 @@ final class Batch {
             if (db != null && !moved.isEmpty()) DbFollow.moved(db, moved);     // כמו בהעברת קובץ: הרשימות במסד עוקבות גם בהדמיה
         }
 
+        /** מבנה 67: העתקה של תיקייה שלמה — מה שבתוכה מופיע גם במקום החדש; המקור נשאר. */
+        void copyDir(File from, File to) {
+            List<File> files = new ArrayList<File>(), subs = new ArrayList<File>();
+            tree(from, files, subs);
+            String a = from.getAbsolutePath(), b = to.getAbsolutePath();
+            gone.remove(b);
+            dirs.add(b);
+            for (File d : subs) {
+                String p = b + d.getAbsolutePath().substring(a.length());
+                gone.remove(p);
+                dirs.add(p);
+            }
+            for (File f : files) {
+                String p = b + f.getAbsolutePath().substring(a.length());
+                gone.remove(p);
+                added.put(p, real(f));
+            }
+        }
+
         private void tree(File d, List<File> files, List<File> subs) {
             files.addAll(files(d));
             for (File k : subdirs(d)) {
@@ -2055,9 +2074,15 @@ final class Batch {
         if (!s.dirs.isEmpty()) what.add(Words.folders(s.dirs.size()));
         s.describe = Words.Cmd.transfer(cmd.equals("COPY"), join(what, Words.Cmd.AND), Bidi.path(dest.getAbsolutePath()))
                 + Words.Cmd.KEEP_PATH + notes(s);
-        for (String d : s.dirs) {
-            if (cmd.equals("MOVE")) sim.gone.add(d);
-            sim.dirs.add(new File(dest, Physical.rel(s.keepRoot, d)).getAbsolutePath());
+        boolean move = cmd.equals("MOVE");
+        for (String d : s.dirs) {                                               // מבנה 67 (ממצא 38): תיקייה שלמה — עם מה שבתוכה (עד כאן: רק התיקייה עצמה)
+            File to = new File(dest, Physical.rel(s.keepRoot, d));
+            if (move) sim.moveDir(new File(d), to, false);
+            else sim.copyDir(new File(d), to);
+        }
+        if (move) {                                                             // מבנה 67 (ממצא 40ו): מה שהועבר כבר אינו "רק במקור" — שורה שנייה
+            (a ? r.onlyA : r.onlyB).removeAll(new java.util.HashSet<String>(s.files));       // על אותה השוואה לא תנסה להעביר אותו שוב
+            (a ? r.onlyADirs : r.onlyBDirs).removeAll(new java.util.HashSet<String>(s.dirs));
         }
     }
 

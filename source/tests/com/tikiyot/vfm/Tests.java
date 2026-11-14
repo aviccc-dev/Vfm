@@ -2530,6 +2530,33 @@ public final class Tests {
         String b66 = read(new File(code, "pkudot/Batch.java")), d66 = read(new File(code, "pkudot/DbListCmd.java"));
         check("מבנה 66: שתי ההודעות שואלות את ההדמיה, לא את המכשיר", !b66.contains("noMode(m, Db.dbModes") && !d66.contains("noMode(fromMode, Db.dbModes")
                 && b66.contains("noMode(m, sim.modes())") && d66.contains("noMode(fromMode, sim.modes())"));
+        // מבנה 67 (ממצאים 38, 40ו): העברה והעתקה מתוך השוואה — תיקייה שלמה עם מה שבתוכה; ו־MOVE שני על אותה השוואה אינו מנסה שוב
+        {
+            File d67 = new File(r, "ניסוי-67");
+            wipe(d67);
+            new File(d67, "א/תת").mkdirs();
+            new File(d67, "ב").mkdirs();
+            write(new File(d67, "א"), "לבד.txt", "1");
+            write(new File(d67, "א/תת"), "x.txt", "x");
+            java.util.Map<String, String> v67 = Batch.vars(d67, d67.getAbsolutePath(), null);
+            Batch.Plan c67 = Batch.plan("COMP א ב\nCOPY %רק-במקור% ב\nDEL \"ב\\תת\\x.txt\"\nDEL \"א\\תת\\x.txt\"\n", d67, v67);
+            check("מבנה 67: אחרי העתקה מהשוואה — קובץ שבתוך תיקייה שהועתקה נראה ביעד, והמקור נשאר (" + c67.errorText() + ")", c67.errors == 0);
+            Batch.Plan m67 = Batch.plan("COMP א ב\nMOVE %רק-במקור% ב\nDEL \"ב\\תת\\x.txt\"\n", d67, v67);
+            check("מבנה 67: אחרי העברה מהשוואה — הקובץ נראה במקום החדש (" + m67.errorText() + ")", m67.errors == 0);
+            check("מבנה 67: ...ובמקום הישן כבר לא", Batch.plan("COMP א ב\nMOVE %רק-במקור% ב\nDEL \"א\\תת\\x.txt\"\n", d67, v67).errors == 1);
+            Index ix67 = new Index("67", "67", d67.getAbsolutePath());
+            ix67.scan(null);
+            Library lib67 = Library.forTests(new ArrayList<Index>(java.util.Collections.singletonList(ix67)));
+            Batch.Plan t67 = Batch.plan("COMP א ב\nMOVE %רק-במקור% ב\nMOVE %רק-במקור% ב\n", d67, v67, lib67);
+            Batch.Step second67 = t67.steps.get(t67.steps.size() - 1);
+            check("מבנה 67: MOVE שני על אותה השוואה — אין מה להעביר (עד כאן: אותם קבצים שוב, וכישלון בהרצה)",
+                    t67.errors == 0 && second67.files.isEmpty() && second67.dirs.isEmpty());
+            String rep67 = String.valueOf(Batch.run(t67, lib67, null, null));
+            lib67.flush(5000);
+            check("מבנה 67: ...וההרצה עוברת בלי כישלון, והכול ביעד (" + rep67 + ")", !t67.trouble && "1".equals(read(new File(d67, "ב/לבד.txt")))
+                    && "x".equals(read(new File(d67, "ב/תת/x.txt"))) && !new File(d67, "א/לבד.txt").exists());
+            wipe(d67);
+        }
         // מבנה 55: המכשיר עצר את התוכנה בזמן הרצה — הדוח אומר זאת ואיזו הגדרה פותרת
         List<String> rep55 = new ArrayList<String>();
         Batch.stoppedHint(rep55, 4000);
