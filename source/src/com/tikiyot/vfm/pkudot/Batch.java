@@ -1057,6 +1057,19 @@ final class Batch {
         boolean hasMode(String m) {
             return created.contains(m) || (!dropped.contains(m) && Db.dbModes(Db.app).contains(m));
         }
+
+        /** מבנה 66 (ממצא 29): האופנים כמו שהקובץ רואה אותם בשורה הזו — להודעה "אין מסד לאופן … — יש: …". */
+        List<String> modes() {
+            return modes(Db.dbModes(Db.app), created, dropped);
+        }
+
+        /** מה שיש במכשיר, בלי מה ששורות קודמות ביטלו, ועם מה שהן יצרו (בסוף, לפי השם). */
+        static List<String> modes(List<String> real, java.util.Set<String> created, java.util.Set<String> dropped) {
+            List<String> out = new ArrayList<String>();
+            for (String m : real) if (!dropped.contains(m) || created.contains(m)) out.add(m);
+            for (String m : new java.util.TreeSet<String>(created)) if (!out.contains(m)) out.add(m);
+            return out;
+        }
         /** מ0.15: האופן מ"אופן" בקובץ; null — האופן שפתוח. */
         String mode;
         /** מ0.17.1: "אופן" שנכשל — כל שורות המסד שאחריו נכשלות (לא לרוץ בטעות על אופן אחר). */
@@ -1519,7 +1532,7 @@ final class Batch {
                 if (m.isEmpty()) s.error = Words.DbCmd.MODE_USAGE;
                 else if (!DbVerbs.active()) s.error = Words.DbCmd.VERIFY_DB_ONLY;
                 else if (!sim.hasMode(m))   // מ0.42: גם מה ש"צור אופן" שלפניו יצר; מ0.45: בלי מה ש"מחק אופן" מחק
-                    s.error = sim.modeError = Words.DbCmd.noMode(m, Db.dbModes(Db.app));
+                    s.error = sim.modeError = Words.DbCmd.noMode(m, sim.modes());   // מבנה 66: עם מה שהקובץ עצמו יצר, בלי מה שביטל
                 else {
                     sim.dbs.put(sim.mode == null ? "" : sim.mode, sim.db);          // מ0.32: עותק לכל אופן
                     sim.mode = m;

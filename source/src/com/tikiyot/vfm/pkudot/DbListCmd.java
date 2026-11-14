@@ -630,7 +630,7 @@ final class DbListCmd {
                 a.path = new ArrayList<String>(a.path.subList(1, a.path.size()));
                 if (a.path.isEmpty()) { s.error = Words.DbCmd.USAGE_FROM_MODE; return; }
                 if (!fromMode.equals(mode)) {
-                    if (!Db.dbModes(Db.app).contains(fromMode)) { s.error = Words.DbCmd.noMode(fromMode, Db.dbModes(Db.app)); return; }
+                    if (!Db.dbModes(Db.app).contains(fromMode)) { s.error = Words.DbCmd.noMode(fromMode, sim.modes()); return; }
                     if (a.kind != ListCmd.LIST || a.filesOf || a.mask != null || b.kind != ListCmd.LIST) { s.error = Words.DbCmd.USAGE_FROM_MODE; return; }
                     final String src = fromMode;
                     work = new Work() {

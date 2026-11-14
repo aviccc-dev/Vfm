@@ -2523,6 +2523,13 @@ public final class Tests {
             for (Trash.Item it : Trash.list(lib64)) if (it.original != null && it.original.contains("-64")) mine64.add(it);
             Physical.deleteForever(lib64, mine64);
         }
+        // מבנה 66 (ממצא 29): ההודעה "אין מסד לאופן … — יש: …" מונה את האופנים כמו שהקובץ רואה אותם
+        java.util.Set<String> made66 = new java.util.HashSet<String>(java.util.Arrays.asList("חדש", "ב")), gone66 = new java.util.HashSet<String>(java.util.Arrays.asList("ב", "ג"));
+        eq("מבנה 66: מה שבמכשיר, בלי מה שהקובץ ביטל, ועם מה שהוא יצר (גם אחרי ביטול)", "[א, ב, חדש]",
+                Batch.Sim.modes(java.util.Arrays.asList("א", "ב", "ג"), made66, gone66).toString());
+        String b66 = read(new File(code, "pkudot/Batch.java")), d66 = read(new File(code, "pkudot/DbListCmd.java"));
+        check("מבנה 66: שתי ההודעות שואלות את ההדמיה, לא את המכשיר", !b66.contains("noMode(m, Db.dbModes") && !d66.contains("noMode(fromMode, Db.dbModes")
+                && b66.contains("noMode(m, sim.modes())") && d66.contains("noMode(fromMode, sim.modes())"));
         // מבנה 55: המכשיר עצר את התוכנה בזמן הרצה — הדוח אומר זאת ואיזו הגדרה פותרת
         List<String> rep55 = new ArrayList<String>();
         Batch.stoppedHint(rep55, 4000);
