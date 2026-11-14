@@ -93,7 +93,9 @@ final class Lab {
     static final String DATA_DIR = "נתוני תוספים";   // בכונן
 
     static File dataDir(String plugin) {
-        File d = new File(new File(Paths.dbData(), DATA_DIR), safe(plugin == null ? "" : plugin));
+        String n = safe(plugin == null ? "" : plugin);
+        if (n.isEmpty() || n.startsWith(".")) n = "_" + n;                     // מבנה 47: שם ריק, "." או ".." — לא התיקייה שמעל (שם כל קובצי התוכנה)
+        File d = new File(new File(Paths.dbData(), DATA_DIR), n);
         d.mkdirs();
         return d;
     }

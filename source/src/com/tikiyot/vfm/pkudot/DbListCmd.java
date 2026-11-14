@@ -1103,11 +1103,13 @@ final class DbListCmd {
         }
         if (!DbVerbs.active()) { s.error = Words.DbCmd.VERIFY_DB_ONLY; return; }
         s.target = name;
-        if (Db.dbModes(Db.app).contains(name) || sim.created.contains(name)) {
+        // מבנה 47: אופן ש"בטל אופן" שלפני ביטל — אינו "קיים" (עד כאן: "צור אופן" אחריו לא עשה דבר, ו"אופן" אחריהם נכשל בתכנון)
+        if ((Db.dbModes(Db.app).contains(name) && !sim.dropped.contains(name)) || sim.created.contains(name)) {
             s.noop = true;
             s.describe = Words.DbCmd.modeExists(name);
             return;
         }
+        sim.dropped.remove(name);
         sim.created.add(name);
         MemStore m = new MemStore(IdCounter.memory());
         DbPaths.ensureHome(m);

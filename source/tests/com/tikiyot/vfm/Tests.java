@@ -2364,6 +2364,11 @@ public final class Tests {
         eq("מבנה 43: ...ומשתנה שהוא מסלול — שגיאת שימוש", 1, Batch.plan("REN \"ק42\\קובץ.txt\" \"%תיקייה43%\"\n", r, v43).errors);
         Batch.Plan mj = Batch.plan(Batch.MEASURE + " " + Batch.SW_JOURNAL + "%אין-כזה%\nMD \"ת43-ב\"\n", r, v);
         check("מבנה 43: מדידה עם יומן במסלול שגוי — שגיאה, לא \"בלי יומן\" בשקט", mj.errors == 1 && mj.blocked());
+        // מבנה 47: התיקייה של תוסף — תמיד בתוך "נתוני תוספים", גם כששם התוסף הוא ".." או ריק
+        File base47 = new File(Paths.dbData(), Lab.DATA_DIR);
+        check("מבנה 47: תוסף ששמו \"..\" — התיקייה שלו בתוך \"נתוני תוספים\", לא מעליה", base47.equals(Lab.dataDir("..").getParentFile())
+                && base47.equals(Lab.dataDir(".").getParentFile()) && base47.equals(Lab.dataDir("").getParentFile()) && base47.equals(Lab.dataDir(null).getParentFile()));
+        eq("מבנה 47: שם רגיל — כמו קודם", new File(base47, "אבחון"), Lab.dataDir("אבחון"));
         // מבנה 46: "כתוב" על קובץ קיים — הקודם לסל
         new File(r, "ת46").mkdirs();
         File w46 = new File(r, "ת46/כתוב46.txt");
