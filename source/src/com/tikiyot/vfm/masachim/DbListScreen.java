@@ -532,13 +532,13 @@ public class DbListScreen extends ListScreen<Store.Member> {
             DbSmartForm.show(this, store, it.id, new DbSmartForm.Done() {
                 @Override
                 public void ok(final DbSmartForm.Result r) {
-                    done(DbListCmd.now(mode, new DbListCmd.Work() {
+                    done(DbListCmd.nowEdit(mode, new DbListCmd.Work() {                // מבנה 58: גיבוי לפני — התנאי הקודם נדרס
                         @Override public DbListCmd.Res run(Store t, DbListCmd.Finder f) {
                             String was = t.item(it.id).name;
                             DbSmartForm.save(t, it.id, 0, r);
                             return DbListCmd.Res.ok(Words.DbCmd.saved(r.name.isEmpty() ? it.name : r.name)).renamed(it.id, was, t.item(it.id).name);   // מ0.42: ב8
                         }
-                    }, false));
+                    }));
                 }
             });
             return;
@@ -566,14 +566,18 @@ public class DbListScreen extends ListScreen<Store.Member> {
             public void run() {
                 final String n = name.getText().toString(), i = icon.getText().toString(), d = desc.getText().toString(),
                         w = why.getText().toString();
-                done(DbListCmd.now(mode, new DbListCmd.Work() {
+                DbListCmd.Work work = new DbListCmd.Work() {
                     @Override public DbListCmd.Res run(Store t, DbListCmd.Finder f) {
                         String was = t.item(it.id).name;
                         String e = Lists.edit(t, it.id, n, i, d, w);              // מ0.23: אותה בדיקת שם כמו REN
                         return e != null ? DbListCmd.Res.err(e) : DbListCmd.Res.ok(Words.DbCmd.saved(t.item(it.id).name))
                                 .renamed(it.id, was, t.item(it.id).name);             // מ0.42: ב8 — קובצי הפקודות שפונים אליה
                     }
-                }, false));
+                };
+                // מבנה 58: מה שהיה כתוב נדרס — גיבוי לפני. לא השתנה דבר — בלי גיבוי (הזול קודם)
+                boolean same = n.equals(it.name) && i.equals(prop(it.id, Store.P_ICON)) && d.equals(prop(it.id, Store.P_DESC))
+                        && w.equals(prop(it.id, Store.P_WHY));
+                done(same ? DbListCmd.now(mode, work, false) : DbListCmd.nowEdit(mode, work));
             }
         });
     }

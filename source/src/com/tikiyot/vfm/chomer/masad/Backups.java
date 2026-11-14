@@ -49,10 +49,16 @@ final class Backups {
     /** הפעולות שלפניהן נעשה עותק — חלק משם הקובץ. */
     static final String OP_IMPORT = "העתקה מהישן", OP_DELETE = "מחיקת רשימה", OP_RESTORE = "שחזור";  // בכונן
     static final String OP_DROP_MODE = "מחיקת האופן";  // בכונן — מ0.45
+    /**
+     * מבנה 58: עותק לפני עריכה מהמסך שדורסת את מה שהיה — רשימה (שם, סמל, תיאור, "למה") ורשימה חכמה (התנאי, המיון, התצוגה).
+     * המשתמש (14.11.2026): "כל עוד האופן קיים יש צורך בגיבוי שלו". נספרים בנפרד (KEEP_EDIT) — כדי שכמה עריכות רצופות לא ידחקו
+     * החוצה את העותקים שלפני מחיקה.
+     */
+    static final String OP_EDIT = "עריכה";  // בכונן
     /** מ0.20: עותק ביציאה מהתוכנה (רק אם השתנה משהו מאז העותק האחרון). */
     static final String OP_EXIT = "יציאה";  // בכונן
 
-    static final int KEEP_DAILY = 7, KEEP_WEEKS = 4, KEEP_BEFORE = 10, KEEP_TEXT = 5, TEXT_EVERY_DAYS = 7;
+    static final int KEEP_DAILY = 7, KEEP_WEEKS = 4, KEEP_BEFORE = 10, KEEP_EDIT = 5, KEEP_TEXT = 5, TEXT_EVERY_DAYS = 7;
 
     /** תוצאת בדיקה של גיבוי. */
     static final int OK = 0, OK_UNRECORDED = 1, CHANGED = 2, BAD = 3, KEPT_DAMAGED = 4;
@@ -369,14 +375,14 @@ final class Backups {
     }
 
     /**
-     * מה למחוק (פונקציה טהורה): יומיים — מעבר ל־7 האחרונים, חוץ מהאחרון בכל אחד מ־4 השבועות שלפניהם; "לפני" — מעבר ל־10;
+     * מה למחוק (פונקציה טהורה): יומיים — מעבר ל־7 האחרונים, חוץ מהאחרון בכל אחד מ־4 השבועות שלפניהם; "לפני" — מעבר ל־10 (לפני עריכה — בנפרד, מעבר ל־5);
      * טקסט — מעבר ל־5. ידניים ופגומים — לעולם לא.
      */
     static List<Entry> toDelete(List<Entry> all) {
         List<Entry> sorted = new ArrayList<Entry>(all);
         Collections.sort(sorted, NEWEST_FIRST);
         List<Entry> out = new ArrayList<Entry>();
-        int daily = 0, before = 0, text = 0;
+        int daily = 0, before = 0, edit = 0, text = 0;
         Set<Long> weeks = new HashSet<Long>();
         for (Entry e : sorted) {
             if (e.kind.equals(DAILY)) {
@@ -389,7 +395,9 @@ final class Backups {
                 }
                 out.add(e);
             } else if (e.kind.equals(BEFORE)) {
-                if (++before > KEEP_BEFORE) out.add(e);
+                if (OP_EDIT.equals(e.op)) {                                      // מבנה 58: לפני עריכה — מכסה משלהם
+                    if (++edit > KEEP_EDIT) out.add(e);
+                } else if (++before > KEEP_BEFORE) out.add(e);
             } else if (e.kind.equals(TEXT)) {
                 if (++text > KEEP_TEXT) out.add(e);
             }

@@ -1250,6 +1250,13 @@ final class DbListCmd {
         return real(mode, w, before, null);
     }
 
+    /** מבנה 58: עריכה מהמסך שדורסת את מה שהיה (שם, תיאור, תנאי של רשימה חכמה) — גיבוי "לפני עריכה", ואז הפעולה. */
+    static String nowEdit(String mode, Work w) {
+        Res r = realRes(mode, w, Backups.OP_EDIT, null);
+        if (r.error != null) lastFailed = true;
+        return r.error != null ? r.error : Words.DbCmd.inDb(r.text);
+    }
+
     /** "ניקוי" שבסוף ההרצה (RunScreen): הרשימות שההרצה יצרה — יוצאות מהמסד (גיבוי לפני). מחזיר את מה שיצא. */
     static List<String> removeLists(final List<List<String>> paths, String fileMode) {
         final String mode = fileMode != null ? fileMode : mode();   // מ0.17: האופן של הקובץ ("אופן"), אם נכתב
@@ -1307,9 +1314,13 @@ final class DbListCmd {
         return realRes(mode, w, before, null);
     }
 
-    private static Res realRes(final String mode, final Work w, boolean before, final Library lib) {
+    private static Res realRes(String mode, Work w, boolean before, Library lib) {
+        return realRes(mode, w, before ? Backups.OP_DELETE : null, lib);
+    }
+
+    private static Res realRes(final String mode, final Work w, String beforeOp, final Library lib) {
         try {
-            return Db.write(Db.app, mode, before ? Backups.OP_DELETE : null, new Db.Use<Res>() {   // מבנה 33: דרך שער המסד
+            return Db.write(Db.app, mode, beforeOp, new Db.Use<Res>() {   // מבנה 33: דרך שער המסד
                 @Override
                 public Res run(SqlStore s) {
                     Res r = w.run(s, over(lib, new HashMap<String, List<String>>()));

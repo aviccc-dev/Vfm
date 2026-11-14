@@ -2371,6 +2371,18 @@ public final class Tests {
         eq("מבנה 43: ...ומשתנה שהוא מסלול — שגיאת שימוש", 1, Batch.plan("REN \"ק42\\קובץ.txt\" \"%תיקייה43%\"\n", r, v43).errors);
         Batch.Plan mj = Batch.plan(Batch.MEASURE + " " + Batch.SW_JOURNAL + "%אין-כזה%\nMD \"ת43-ב\"\n", r, v);
         check("מבנה 43: מדידה עם יומן במסלול שגוי — שגיאה, לא \"בלי יומן\" בשקט", mj.errors == 1 && mj.blocked());
+        // מבנה 58: גיבוי לפני עריכה — מכסה משלו (5), ולא דוחק את העותקים שלפני מחיקה (10)
+        List<Backups.Entry> all58 = new ArrayList<Backups.Entry>();
+        long now58 = 1800000000000L;
+        for (int i = 0; i < 12; i++) all58.add(new Backups.Entry(new File("/x/e" + i + ".db"), Backups.BEFORE, Backups.OP_EDIT, false, now58 - i * 60000L));
+        for (int i = 0; i < 10; i++) all58.add(new Backups.Entry(new File("/x/d" + i + ".db"), Backups.BEFORE, Backups.OP_DELETE, false, now58 - 86400000L - i * 60000L));
+        List<Backups.Entry> del58 = Backups.toDelete(all58);
+        int edits58 = 0, others58 = 0;
+        for (Backups.Entry e : del58) { if (Backups.OP_EDIT.equals(e.op)) edits58++; else others58++; }
+        check("מבנה 58: 12 עותקים לפני עריכה — 5 נשארים, והישנים נמחקים", edits58 == 7 && del58.get(0).when <= now58 - 5 * 60000L);
+        check("מבנה 58: 10 העותקים שלפני מחיקה — נשארים כולם, גם אחרי 12 עריכות", others58 == 0);
+        Backups.Entry p58 = Backups.parse(new File("/x/לפני עריכה 2026-11-14 22-10-05.db"));
+        check("מבנה 58: שם של עותק לפני עריכה — נקרא חזרה", p58 != null && Backups.BEFORE.equals(p58.kind) && Backups.OP_EDIT.equals(p58.op));
         // מבנה 55: המכשיר עצר את התוכנה בזמן הרצה — הדוח אומר זאת ואיזו הגדרה פותרת
         List<String> rep55 = new ArrayList<String>();
         Batch.stoppedHint(rep55, 4000);
