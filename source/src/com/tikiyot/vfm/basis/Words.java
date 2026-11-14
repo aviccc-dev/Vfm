@@ -2295,7 +2295,7 @@ public final class Words {
         public static final String APP_NAME_M = "מנהל קבצים וירטואלי · מ";
         public static final String TITLE = "מסד נתונים";
         /** מ0.9: המראה המוכר. */
-        public static final String LIST_GONE = "הרשימה הזו כבר לא קיימת במסד",
+        public static final String LIST_GONE = "הרשימה הזו כבר לא קיימת במסד", ROW_GONE = "המסך הציג שורה שכבר אינה במסד — נטען מחדש",
                 FAMILIAR = "🏠 בית", ADD_IN_LIST = "הוספת קבצים — מתוך רשימה", NO_HOME = "אין בית במסד הזה";
 
         /** מ0.8: קבצים מהכונן לרשימה. */

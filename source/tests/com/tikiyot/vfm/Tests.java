@@ -2287,6 +2287,9 @@ public final class Tests {
         eq("מבנה 28: \"בדיקה\" קודמת למקומות הפתוחים (מסך ההרצה שואל עליהם בעצמו)", Manager.TO_CHECK, Manager.route(Batch.CHECK + "\n" + holes, false));
         eq("מבנה 28: קובץ רגיל — הכנה והרצה", Manager.TO_RUN, Manager.route("MD \"א\"\n", false));
         eq("מבנה 28: השורות — בלי \\r", Arrays.asList("א", "ב"), Manager.lines("א\r\nב\r\n"));
+        String dls = read(new File(code, "masachim/DbListScreen.java"));
+        check("מבנה 37: שורה שנעלמה מהמסד מתחת למסך אינה מקריסה אותו (הקריסה ב\"שחזור הדוגמאות\", נ0.2) — הציור עטוף, והמסך נטען מחדש",
+                dls.contains("catch (Store.Failure gone)") && dls.contains("private void bindRow(View v, Store.Member row)") && dls.contains("Words.Db.ROW_GONE"));
         String bu = read(new File(code, "masachim/rechivim/BatchUi.java")), rs = read(new File(code, "masachim/RunScreen.java"));
         check("מבנה 27: שני הרצפים שואלים את המנהל, ואינם מחליטים בעצמם",
                 bu.contains("Manager.approve(plan)") && rs.contains("Manager.approve(plan)") && !bu.contains("plan.blocked()") && !rs.contains("plan.blocked()")

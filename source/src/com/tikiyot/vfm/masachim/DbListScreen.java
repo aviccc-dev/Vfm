@@ -420,6 +420,30 @@ public class DbListScreen extends ListScreen<Store.Member> {
 
     @Override
     protected void bind(View v, Store.Member row) {
+        try {
+            bindRow(v, row);
+        } catch (Store.Failure gone) {
+            // מבנה 37 (ממצא 32): השורה כבר אינה במסד — מישהו שינה אותו מתחת למסך (שחזור הדוגמאות, הרצה ברקע, המעקב אחרי הכונן).
+            // עד כאן זה הקריס את התוכנה באמצע הציור. עכשיו: השורה מוצגת בשמה בלבד, נרשם ביומן, והמסך נטען מחדש — פעם אחת.
+            Ui.bindIcon(v, "", row.item == null || row.item.name == null ? "" : row.item.name, "");
+            if (!stale) {
+                stale = true;
+                Log.i(Words.Db.ROW_GONE);
+                new android.os.Handler(android.os.Looper.getMainLooper()).post(new Runnable() {
+                    @Override
+                    public void run() {
+                        stale = false;
+                        if (!isFinishing()) reload();
+                    }
+                });
+            }
+        }
+    }
+
+    /** שורה שנעלמה כבר זוהתה, והטעינה מחדש בדרך (שלא ייטען פעם לכל שורה). */
+    private boolean stale;
+
+    private void bindRow(View v, Store.Member row) {
         Store.Item it = row.item;
         if (row == PLUS) {
             Ui.bindIcon(v, "➕", Words.Main.ADD, "");
