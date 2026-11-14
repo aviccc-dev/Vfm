@@ -2222,6 +2222,10 @@ public final class Tests {
         for (String x : rep) if (x.contains("❌") || x.contains("⚠") || x.contains("⛔")) bad.append(x).append(" | ");
         check("מ0.45: ...ובהרצה — \"ודא תקין\" עובר, ושום ❌ (" + bad + ")", bad.length() == 0
                 && rep.toString().contains("✅ " + Words.DbCmd.OK_SINCE_WHAT));
+        // מבנה 70 (מהדוח של נ0.6): "העבר %רק-במקור%" של הבדיקה לא מרוקן את התיקייה של קובץ ההרצה (הגיבוי הקטן, הדוחות של התוסף)
+        check("מבנה 70: אחרי \"כל הפקודות\" — קובץ ההרצה והגיבוי הקטן עדיין במקומם", new File(here, "הרצה.vbat").isFile()
+                && new File(here, CmdMatrix.FIXTURE + "/" + State.CURRENT + "/א.txt").isFile());
+        check("מבנה 70: ההשוואה שלפני \"/עד:\" — מול תיקייה משלה", text.contains(CmdMatrix.COMPARE) && new File(here, CmdMatrix.COMPARE).isDirectory());
         StringBuilder left = new StringBuilder();
         for (Trash.Item it : Trash.list(lib)) left.append(it.name()).append(" ← ").append(it.original).append(" | ");
         check("מ0.45: ...והתיקייה הזמנית — לא בכונן ולא בסל (" + left + ")", !new File(r, "בדיקת כל הפקודות (אפשר למחוק)").exists() && left.length() == 0);

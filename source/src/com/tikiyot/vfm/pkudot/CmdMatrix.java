@@ -89,8 +89,20 @@ final class CmdMatrix {
             Files.writeAtomic(a, "גיבוי");
             if (lib != null) lib.fileAdded(a);
         }
+        // מבנה 70 (מהדוח של נ0.6): מקור משלה להשוואה שלפני "/עד:" — עד כאן המקור היה התיקייה של קובץ ההרצה כולה, ו"העבר
+        // %רק-במקור%" העביר ממנה הכול: גם את הגיבוי הקטן הזה (והשורות שאחריו לא מצאו אותו) וגם את הדוחות הקודמים של התוסף.
+        File cmp = new File(here, COMPARE);
+        if (!cmp.isDirectory() && !cmp.mkdirs()) throw new java.io.IOException(cmp.getPath());
+        File b = new File(cmp, "להשוואה.txt");
+        if (!b.isFile()) {
+            Files.writeAtomic(b, "להשוואה");
+            if (lib != null) lib.fileAdded(b);
+        }
         if (lib != null) lib.flush(5000);
     }
+
+    /** מבנה 70: תיקייה קטנה ליד קובץ ההרצה — המקור של ההשוואה שלפני "/עד:" (קיימת בהכנה; "העבר" מרוקן אותה, ו־fixtures ממלא שוב). */
+    static final String COMPARE = "להשוואה (בדיקה)";   // בכונן
 
     /** תיקייה שכבר קיימת בהכנה (ההשוואה מחושבת בהכנה): התיקייה של קובץ ההרצה — בתוסף, תיקיית הנתונים שלו. */
     static final String HERE = "%" + Batch.V_HERE + "%";
@@ -134,7 +146,7 @@ final class CmdMatrix {
             if (Batch.SW_STATE.equals(key)) src = HERE + "\\" + FIXTURE;          // גיבוי נבדק בהכנה — מול הכונן
             if ("/S".equals(key)) src = copy ? d("מקור") : d("להעברה\\" + k);
             if (Batch.SW_LIMIT.equals(key)) {                                    // אחרי השוואה בלבד
-                out.add("השווה \"" + HERE + "\" \"" + dst + "\"");
+                out.add("השווה \"" + HERE + "\\" + COMPARE + "\" \"" + dst + "\"");   // מבנה 70: לא התיקייה של קובץ ההרצה כולה
                 out.add(word + " %" + Batch.V_ONLY_A + "% \"" + dst + "\"" + sw);
                 return true;
             }

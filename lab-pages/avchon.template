@@ -232,6 +232,8 @@ function writeFiles(real){
 
 function run(){
   if(!ready){say('התוסף צריך את מ0.42 של התוכנה ומעלה',true);return;}
+  // אבחון 11 (מהדוח של נ0.6): מי שנמצא באחד מאופני הבדיקה — "בטל אופן" שלו מסורב (נכון), ויוצאים שישה ❌ בלי הסבר. אומרים מראש
+  loadInfo();if([TEST_MODE,'בדיקת אופן חדש',BK_MODE].indexOf(String(info.mode||''))>=0){say('אתה עכשיו באופן "'+info.mode+'", שהבדיקות יוצרות ומבטלות. לעבור לאופן הרגיל שלך, ואז להריץ',true);return;}
   const all=GROUPS.filter(g=>sel.indexOf(g.k)>=0&&usable(g));
   if(!all.length){say('לא סומנה אף בדיקה');return;}
   const gs=all.filter(g=>!g.own),own=all.filter(g=>g.own).map(g=>g.k);
