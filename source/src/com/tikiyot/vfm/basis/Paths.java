@@ -70,6 +70,33 @@ public final class Paths {
         return new File(system(), "נקודה-" + volumeKey + ".txt");  // בכונן
     }
 
+    /**
+     * מבנה 42: מסלול בצורה אחת — בלי "." ו"..", בלי לוכסן כפול ובלי לוכסן בסוף. לפי הכתוב בלבד, בלי לגשת לכונן.
+     * בלי זה אותה תיקייה נכתבת בכמה צורות, וכל מי שמשווה מסלולים — ההגנות על שורש הכונן ועל תיקיית התוכנה,
+     * "כבר במקום", ההדמיה של קובץ הפקודות — רואה תיקיות שונות. המשפך: מסלול נקי (כמעט כולם) חוזר כמו שהוא.
+     */
+    public static String clean(String path) {
+        if (path == null || path.startsWith("/\u0000")) return path;          // סימנים פנימיים של מנוע הפקודות
+        if (path.indexOf("/.") < 0 && path.indexOf("//") < 0 && !path.startsWith(".") && !(path.length() > 1 && path.endsWith("/"))) return path;
+        boolean abs = path.startsWith("/");
+        java.util.ArrayList<String> out = new java.util.ArrayList<String>();
+        for (String seg : path.split("/")) {
+            if (seg.isEmpty() || seg.equals(".")) continue;
+            if (seg.equals("..")) {
+                if (!out.isEmpty() && !out.get(out.size() - 1).equals("..")) out.remove(out.size() - 1);
+                else if (!abs) out.add("..");
+                continue;
+            }
+            out.add(seg);
+        }
+        StringBuilder sb = new StringBuilder(abs ? "/" : "");
+        for (int i = 0; i < out.size(); i++) {
+            if (i > 0) sb.append('/');
+            sb.append(out.get(i));
+        }
+        return sb.length() == 0 ? "." : sb.toString();
+    }
+
     public static String relative(File f) {
         String base = settings().getAbsolutePath() + "/";
         String p = f.getAbsolutePath();

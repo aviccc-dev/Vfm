@@ -2242,6 +2242,23 @@ public final class Tests {
     }
 
     /** מבנה 27: ההחלטות של הרצת קובץ פקודות — אצל המנהל (lev/Manager); שני הרצפים (BatchUi, RunScreen) שואלים אותו. */
+    private static boolean link(File link, File target) {
+        try {
+            java.nio.file.Files.createSymbolicLink(link.toPath(), target.toPath());
+            return true;
+        } catch (Throwable t) {
+            return false;
+        }
+    }
+
+    private static boolean sameViaLink(File f) {
+        File l = new File(f.getParentFile().getParentFile(), "קישור-לבדיקה");
+        if (!link(l, f.getParentFile())) return true;                          // אין קישורים במערכת הזו — אין מה לבדוק
+        boolean same = Physical.sameFile(f, new File(l, f.getName()));
+        l.delete();
+        return same;
+    }
+
     private static void mivne27manager() {
         File r = new File(home, "כונן-מבנה27");
         wipe(r);
@@ -2294,7 +2311,42 @@ public final class Tests {
         java.util.Map<String, String> v2 = new java.util.HashMap<String, String>(v);
         v2.put("ריק", "");
         check("מבנה 41: משתנה שהערך שלו ריק — שגיאה", Batch.path("%ריק%", r, v2, pe) == null && Words.Cmd.EMPTY_PATH.equals(pe[0]));
-        eq("מבנה 41: נקודה — התיקייה של הקובץ, כמו קודם", new File(r, ".").getAbsolutePath(), Batch.path(".", r, v, pe));
+        eq("מבנה 41: נקודה — התיקייה של הקובץ, כמו קודם (מבנה 42: בלי הנקודה בסוף)", r.getAbsolutePath(), Batch.path(".", r, v, pe));
+        // מבנה 42: מסלול בצורה אחת
+        eq("מבנה 42: נקודות ולוכסנים כפולים יורדים", "/a/c", Paths.clean("/a/./b/..//c/"));
+        eq("מבנה 42: מעל השורש — נשארים בשורש", "/", Paths.clean("/../.."));
+        eq("מבנה 42: מסלול נקי — כמו שהוא", "/a/.נסתר/b", Paths.clean("/a/.נסתר/b"));
+        eq("מבנה 42: סימן פנימי של המנוע — לא נוגעים", Batch.SHARE_MARK, Paths.clean(Batch.SHARE_MARK));
+        eq("מבנה 42: מסלול יחסי", "../x", Paths.clean("a/../../x"));
+        eq("מבנה 42: בקובץ פקודות — \"תיקייה\\..\" היא התיקייה שמעל", r.getAbsolutePath(), Batch.path("א\\..\\.", r, v, pe));
+        File k42 = new File(r, "ק42");
+        new File(k42, "פנים").mkdirs();
+        File f42 = new File(k42, "קובץ.txt");
+        try { java.io.FileOutputStream o = new java.io.FileOutputStream(f42); o.write("תוכן".getBytes("UTF-8")); o.close(); } catch (java.io.IOException e) { throw new RuntimeException(e); }
+        Index ix42 = new Index("מבנה42", "מבנה42", r.getAbsolutePath());
+        ix42.scan(null);
+        Library lib42 = Library.forTests(new ArrayList<Index>(java.util.Collections.singletonList(ix42)));
+        Batch.Plan here42 = Batch.plan("MOVE \"ק42\\קובץ.txt\" \"ק42\\פנים\\..\" /Y\n", r, v, lib42);
+        check("מבנה 42: העברה אל התיקייה שהקובץ כבר בה, בכתיב עם נקודות — \"כבר במקום\", לא העברה", here42.errors == 0 && here42.steps.get(0).noop);
+        check("מבנה 42: אותו קובץ בשני מסלולים (קישור) — מזוהה", sameViaLink(f42));
+        check("מבנה 42: שני קבצים שונים — לא אותו קובץ", !Physical.sameFile(f42, new File(r, "פתיחה.txt")));
+        File link42 = new File(r, "קישור42");
+        boolean linked = link(link42, k42);
+        if (linked) {
+            Batch.Plan viaLink = Batch.plan("MOVE \"קישור42\\קובץ.txt\" \"ק42\" /Y\n", r, v, lib42);
+            String rep42 = String.valueOf(Batch.run(viaLink, lib42, null, null));
+            check("מבנה 42: העברה של קובץ אל עצמו דרך קישור, עם \"להחליף\" — הקובץ נשאר במקומו ולא נשלח לסל (" + rep42 + ")",
+                    f42.isFile() && "תוכן".equals(read(f42)) && rep42.contains(Words.Disk.ALREADY_HERE));
+            Batch.Plan copyLink = Batch.plan("COPY \"קישור42\\קובץ.txt\" \"ק42\" /Y\n", r, v, lib42);
+            Batch.run(copyLink, lib42, null, null);
+            check("מבנה 42: העתקה של קובץ אל עצמו דרך קישור — עותק בשם חדש, והמקור שלם", "תוכן".equals(read(f42)) && k42.list().length == 3);
+        }
+        check("מבנה 42: ההגנה על שורש הכונן — גם בכתיב \"תיקייה/..\"", Words.Disk.DRIVE_ROOT.equals(Physical.forbidden(lib42, new File(k42, ".."))));
+        check("מבנה 42: ההגנה על הסל — גם בכתיב עם נקודות", Words.Disk.IS_TRASH.equals(Physical.forbidden(lib42, new File(k42, "../" + Index.TRASH + "/x"))));
+        String app42 = Paths.data().getAbsolutePath();
+        check("מבנה 42: קובץ של התוכנה — גם דרך תיקייה של המשתמש ו\"..\"", Physical.programFile(app42 + "/" + Paths.USER_DIRS[0] + "/../" + Paths.SETTINGS + "/x.txt") != null
+                && Physical.programFile(app42 + "/" + Paths.USER_DIRS[0] + "/x.txt") == null);
+        check("מבנה 42: \"בתוך\" — גם בכתיב עם נקודות", Physical.inside(new File(k42, "פנים/../פנים"), k42) && !Physical.inside(new File(k42, ".."), k42));
         Batch.Plan delEmpty = Batch.plan("DEL \"\"\n", r, v);
         check("מבנה 41: DEL \"\" — לא מוחק את כל התיקייה: שגיאה, ושום שורה לא רצה", delEmpty.errors == 1 && delEmpty.blocked());
         // מבנה 40: הדמיה — המנוע עצמו אינו מריץ; וכישלון שאינו "ודא" נאמר בסיכום

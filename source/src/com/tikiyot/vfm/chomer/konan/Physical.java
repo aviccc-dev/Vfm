@@ -122,7 +122,7 @@ public final class Physical {
 
     /** למה אי אפשר למחוק או להעביר את התיקייה הזו, או null אם מותר. */
     public static String forbidden(Library lib, File dir) {
-        String p = dir.getAbsolutePath();
+        String p = Paths.clean(dir.getAbsolutePath());                          // מבנה 42: גם "תיקייה/.." הוא השורש
         String root = lib.rootOf(p);
         if (root != null && (p.equals(root) || (p + "/").equals(root))) return Words.Disk.DRIVE_ROOT;
         for (Index ix : lib.indexes) if (ix.rootPath.equals(p)) return Words.Disk.DRIVE_ROOT;
@@ -138,6 +138,7 @@ public final class Physical {
      * ואסור להעביר או להעתיק לתוך התיקייה שלה.
      */
     public static String programFile(String path) {
+        path = Paths.clean(path);                                               // מבנה 42
         String app = appDir();
         if (app == null || !(path.equals(app) || path.startsWith(app + "/"))) return null;
         for (String u : Paths.USER_DIRS)                                         // 1.25.6: מה שהמשתמש יצר — שלו
@@ -155,8 +156,26 @@ public final class Physical {
 
     /** האם folder היא src עצמה או תיקייה שבתוכה. */
     static boolean inside(File folder, File src) {
-        String f = folder.getAbsolutePath() + "/", s = src.getAbsolutePath() + "/";
+        String f = Paths.clean(folder.getAbsolutePath()) + "/", s = Paths.clean(src.getAbsolutePath()) + "/";   // מבנה 42
         return f.startsWith(s);
+    }
+
+    /**
+     * מבנה 42: אותו קובץ בכונן, גם כשהמסלולים כתובים אחרת — קישור (‎/sdcard), או אותיות גדולות וקטנות בכונן שאינו מבדיל
+     * ביניהן. נשאל רק כשהשם ביעד תפוס (המשפך), לפני שמחליפים: "להחליף" קובץ בעצמו שלח אותו לסל, וההעברה נכשלה.
+     */
+    static boolean sameFile(File a, File b) {
+        if (a.equals(b)) return true;
+        try {
+            if (a.getCanonicalFile().equals(b.getCanonicalFile())) return true;
+        } catch (java.io.IOException e) {
+            Log.e("Physical.sameFile", e);
+        }
+        try {
+            return java.nio.file.Files.isSameFile(a.toPath(), b.toPath());      // אנדרואיד 8 ומעלה; לפניו — לפי המסלול בלבד
+        } catch (Throwable t) {
+            return false;
+        }
     }
 
     // ================= הביצוע (בלי מסכים — נבדק בבדיקות) =================
@@ -604,7 +623,12 @@ public final class Physical {
             if (stop()) return null;
             boolean isDir = src.isDirectory();
             File dst = new File(dir, src.getName());
-            if (dst.equals(src)) {                             // העתקה לאותה תיקייה: עותק בשם חדש, בלי לשאול
+            boolean self = dst.equals(src) || (dst.exists() && sameFile(src, dst));   // מבנה 42: אותו קובץ, גם בכתיב אחר
+            if (self && !copy) {                               // העברה אל המקום שהוא כבר בו — לא "להחליף" אותו בעצמו
+                r.fail(Words.Disk.ALREADY_HERE);
+                return null;
+            }
+            if (self) {                                        // העתקה לאותה תיקייה: עותק בשם חדש, בלי לשאול
                 dst = new File(dir, freeName(dir, src.getName(), isDir));
             } else if (keep && isDir && dst.isDirectory()) {     // 1.19.0: התיקייה כבר קיימת ביעד — ממזגים
                 merge(src, dst);

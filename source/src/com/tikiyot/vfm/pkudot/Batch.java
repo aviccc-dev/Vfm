@@ -804,7 +804,7 @@ final class Batch {
         }
         while (p.length() > 1 && p.endsWith("/")) p = p.substring(0, p.length() - 1);
         if (!p.startsWith("/")) p = new File(here, p).getAbsolutePath();
-        return p;
+        return Paths.clean(p);                                                  // מבנה 42: צורה אחת — בלי "." ו".."
     }
 
     /** תבנית שם בסגנון bat: * ו-? (בלי הבדל בין גדולות לקטנות). */
