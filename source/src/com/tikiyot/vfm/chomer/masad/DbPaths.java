@@ -128,6 +128,22 @@ final class DbPaths {
         return 0;
     }
 
+    /**
+     * מבנה 54: מסד שיש בו רשימות ואין בו בית — נוצר בית, ורשימות (וחכמות) שאינן בתוך שום רשימה נכנסות אליו. מסד שיש בו
+     * בית — לא נוגעים בו. מאיפה מסד כזה: "צור אופן" של פעם, בשם שהיו לו גיבויים, השאיר מסד ריק בלי בית (ממצא 27), ופקודת
+     * רשימות יצרה בו רשימה "בראש" — מחוץ לבית. גיבוי שלו ממשיך את המצב הזה, והמסך אמר "אין בית במסד הזה" (בדיקת נ0.4).
+     */
+    static long homeWithOrphans(Store s) {
+        long had = home(s);
+        if (had != 0) return had;
+        final long h = ensureHome(s);
+        List<Store.Item> roots = new ArrayList<Store.Item>(s.lists());
+        roots.addAll(s.smarts());
+        for (Store.Item it : roots)
+            if (it.id != h && !Names.RESERVED_ROOT.equals(it.name) && s.listsOf(it.id).isEmpty()) s.addMember(h, it.id);
+        return h;
+    }
+
     /** רשימת הבית; אין — נוצרת (מסד חדש). */
     static long ensureHome(Store s) {
         long h = home(s);

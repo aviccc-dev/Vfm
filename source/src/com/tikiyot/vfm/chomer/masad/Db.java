@@ -191,6 +191,13 @@ final class Db {
             Backups.build(e.file, built, new IdCounter(counterFile()), e.content);
             Backups.swap(built, db);
             Log.i("אופן ממשיך מגיבוי: " + mode + " ← " + e.name);
+            try {                                                               // מבנה 54: גיבוי של מסד בלי בית — הבית נוצר, ומה שהיה מחוצה לו נכנס אליו
+                write(c, mode, null, new Use<Long>() {
+                    @Override public Long run(SqlStore s) { return DbPaths.homeWithOrphans(s); }
+                });
+            } catch (Throwable t) {
+                Log.e("Db.resume: home", t);
+            }
             return e;
         }
         return null;

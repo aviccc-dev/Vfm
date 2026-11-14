@@ -2371,6 +2371,15 @@ public final class Tests {
         eq("מבנה 43: ...ומשתנה שהוא מסלול — שגיאת שימוש", 1, Batch.plan("REN \"ק42\\קובץ.txt\" \"%תיקייה43%\"\n", r, v43).errors);
         Batch.Plan mj = Batch.plan(Batch.MEASURE + " " + Batch.SW_JOURNAL + "%אין-כזה%\nMD \"ת43-ב\"\n", r, v);
         check("מבנה 43: מדידה עם יומן במסלול שגוי — שגיאה, לא \"בלי יומן\" בשקט", mj.errors == 1 && mj.blocked());
+        // מבנה 54: מסד בלי בית (גיבוי של אופן מהתקלה הישנה) — בית נוצר, והרשימות שבחוץ נכנסות אליו
+        MemStore m54 = new MemStore(IdCounter.memory());
+        long out54 = m54.createList("בדיקת מ0.45", 0), in54 = m54.createList("פנימית", out54), res54 = m54.createList(Names.RESERVED_ROOT, 0);
+        check("מבנה 54: לפני — אין בית", DbPaths.home(m54) == 0);
+        long h54 = DbPaths.homeWithOrphans(m54);
+        check("מבנה 54: נוצר בית, והרשימה שהייתה מחוץ לו — בתוכו; רשימה פנימית ו\"שמור לתוכנה\" — במקומן",
+                h54 != 0 && DbPaths.home(m54) == h54 && m54.listsOf(out54).contains(h54) && m54.listsOf(in54).size() == 1 && !m54.listsOf(res54).contains(h54));
+        int members54 = m54.members(h54).size();
+        check("מבנה 54: מסד שיש בו בית — לא נוגעים בו (קריאה שנייה לא משנה דבר)", DbPaths.homeWithOrphans(m54) == h54 && m54.members(h54).size() == members54);
         // מבנה 50: "ודא רציף" — בדיקת מסך כבוי שמדווחת בעצמה
         eq("מבנה 50: המסך היה כבוי והתוכנה רצה — עבר", Batch.STEADY_OK, Batch.steady(60000, 600));
         eq("מבנה 50: המסך לא כבה — לא נבדק (כישלון שאומר מה לעשות)", Batch.STEADY_SCREEN_ON, Batch.steady(4000, 0));
