@@ -22,7 +22,7 @@ public final class Permit {
             MAKE_FOLDER = Words.PermitW.MAKE_FOLDER, RESTORE = Words.PermitW.RESTORE, FOREVER = Words.PermitW.FOREVER;
 
     /** הפעולות שכבר עוברות כולן דרך שכבת הניהול: בלי היתר — מסורבות. */
-    private static final java.util.Set<String> STRICT = new java.util.HashSet<String>(java.util.Arrays.asList(DELETE, TRANSFER, RENAME));   // מבנה 77: גם העתקה והעברה · 78: שינוי שם
+    private static final java.util.Set<String> STRICT = new java.util.HashSet<String>(java.util.Arrays.asList(DELETE, TRANSFER, RENAME, MAKE_FOLDER));   // מבנה 77: גם העתקה והעברה · 78: שינוי שם · 79: תיקייה חדשה
 
     private static final ThreadLocal<int[]> DEPTH = new ThreadLocal<int[]>() {
         @Override protected int[] initialValue() { return new int[1]; }

@@ -551,9 +551,12 @@ final class PhysicalUi {
 
     /** יצירת תיקייה בכונן, עם חלון אישור בתבנית של הפעולות הפיזיות. onMade — אחרי שנוצרה. */
     public static void askMakeFolder(final Activity a, final File parent, final String name, final Runnable onMade) {
-        String bad = Physical.badName(name);
-        if (bad != null) {
-            Ui.toast(a, bad);
+        final Library lib = Library.get(a);
+        // מבנה 79: התיקייה החדשה מהמסך — דרך הפקודה "צור תיקייה "%יעד%\%שם-חדש%"" (המנהל). הסירובים (שם לא תקין, תיקיית התוכנה, שם
+        // שכבר קיים) באים מהתכנון שלה — עכשיו לפני חלון האישור, ולא אחריו; כאן נשארים חלון האישור וההודעה.
+        final Manager.Act act = Manager.onMakeFolder(parent, name, Paths.data(), BatchUi.vars(a, Paths.data()), lib);
+        if (act.error() != null) {
+            Ui.toast(a, act.error());
             return;
         }
         final String n = name.trim();
@@ -561,13 +564,23 @@ final class PhysicalUi {
                 Words.Disk.INSIDE + parent.getAbsolutePath(), Words.Disk.CAN_DELETE_IT_FEM, Words.Disk.CREATE, new Runnable() {
                     @Override
                     public void run() {
-                        String why = Physical.makeFolder(Library.get(a), parent, n);
-                        if (why != null) {
-                            Ui.toast(a, why);
-                            return;
-                        }
-                        Ui.toast(a, Words.Disk.FOLDER_CREATED + n + "\"");
-                        onMade.run();
+                        new Thread(new Runnable() {
+                            @Override
+                            public void run() {
+                                final Physical.Result r = act.run(lib, null, null, false);
+                                Ui.afterIndex(a, new Runnable() {
+                                    @Override
+                                    public void run() {
+                                        if (r.failed > 0) {
+                                            Ui.toast(a, r.note);
+                                            return;
+                                        }
+                                        Ui.toast(a, Words.Disk.FOLDER_CREATED + n + "\"");
+                                        onMade.run();
+                                    }
+                                });
+                            }
+                        }).start();
                     }
                 });
     }

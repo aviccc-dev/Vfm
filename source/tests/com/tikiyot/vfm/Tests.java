@@ -2709,9 +2709,9 @@ public final class Tests {
                 Batch.Plan p76 = Batch.plan("DEL \"א.txt\"\n", d76, v76, lib76);
                 Batch.run(p76, lib76, null, null);
                 check("מבנה 76: גם המנוע, כשמריצים אותו שלא דרך המנהל — לא מוחק, והשורה נכשלת", new File(d76, "א.txt").isFile() && p76.trouble);
-                check("מבנה 76: פעולה שעוד במעבר (תיקייה חדשה; שינוי השם עבר בצעד 78) — נעשית בינתיים, ונרשמת ביומן",
-                        Physical.makeFolder(lib76, d76, "תיקייה-76") == null && new File(d76, "תיקייה-76").isDirectory()
-                                && !Permit.strict(Permit.MAKE_FOLDER) && Permit.strict(Permit.DELETE));
+                check("מבנה 76: פעולה שעוד במעבר (מחיקה לצמיתות — של רשימה ריקה; שינוי השם והתיקייה החדשה עברו בצעדים 78–79) — אינה מסורבת, ונרשמת ביומן",
+                        Physical.deleteForever(lib76, new ArrayList<Trash.Item>()).failed == 0
+                                && !Permit.strict(Permit.FOREVER) && Permit.strict(Permit.DELETE));
                 Manager.Act act76 = Manager.onSelected("DEL", a76, new ArrayList<String>(), d76, v76, lib76);
                 Physical.Result yes76 = act76.run(lib76, null, null, false);
                 lib76.flush(5000);
@@ -2898,6 +2898,55 @@ public final class Tests {
                     && read(new File(code, "masachim/rechivim/PhysicalUi.java")).contains("Manager.onRename(path, name"));
             new File(Paths.data(), "הגדרה-78.ini").delete();
             wipe(d78);
+        }
+        // מבנה 79: תיקייה חדשה מהמסך — דרך המנהל, כפקודה "צור תיקייה "%יעד%\%שם-חדש%""
+        {
+            File ext79 = Paths.data().getParentFile(), d79 = new File(ext79, "ניסוי-79");
+            wipe(d79);
+            new File(d79, "קיימת").mkdirs();
+            write(d79, "קובץ", "1");
+            Paths.data().mkdirs();
+            Index ix79 = new Index("79", "79", ext79.getAbsolutePath());
+            ix79.scan(null);
+            Library lib79 = Library.forTests(new ArrayList<Index>(java.util.Collections.singletonList(ix79)));
+            java.util.Map<String, String> v79 = Batch.vars(Paths.data(), ext79.getAbsolutePath(), null);
+            Manager.Act act79 = Manager.onMakeFolder(d79, "  חדשה 100% %תאריך% ", Paths.data(), v79, lib79);
+            check("מבנה 79: הפקודה שהמסך מריץ — \"צור תיקייה \"%יעד%\\%שם-חדש%\"\", בלי סירוב (" + act79.error() + ")", act79.error() == null
+                    && act79.text.trim().equals("צור תיקייה \"%יעד%\\%שם-חדש%\"") && act79.plan.steps.size() == 1
+                    && new File(d79, "חדשה 100% %תאריך%").equals(act79.plan.steps.get(0).dest));
+            check("מבנה 79: שם שכבר קיים (תיקייה או קובץ) — סירוב מהתכנון, בנוסח של המסך",
+                    (Words.Disk.ALREADY_HERE_NAME + "קיימת\"").equals(Manager.onMakeFolder(d79, "קיימת", Paths.data(), v79, lib79).error())
+                            && (Words.Disk.ALREADY_HERE_NAME + "קובץ\"").equals(Manager.onMakeFolder(d79, "קובץ", Paths.data(), v79, lib79).error()));
+            check("מבנה 79: שם לא תקין — אותו סירוב של הכונן; גם שם ריק", Physical.badName("א/ב") != null
+                    && Physical.badName("א/ב").equals(Manager.onMakeFolder(d79, "א/ב", Paths.data(), v79, lib79).error())
+                    && Manager.onMakeFolder(d79, " ", Paths.data(), v79, lib79).error() != null);
+            check("מבנה 79: בתוך תיקיית התוכנה — סירוב מהתכנון", Words.Disk.NO_FOLDER_IN_APP.equals(
+                    Manager.onMakeFolder(Paths.data(), "חדשה-79", Paths.data(), v79, lib79).error()));
+            check("מבנה 79: במנוע — %שם-חדש% בלי בחירה אינו מוכר; ו\"צור תיקייה\" כתובה — כמו שהייתה (קיימת = בלי שינוי)",
+                    Batch.plan("צור תיקייה \"%יעד%\\%שם-חדש%\"\n", d79, v79, lib79).errors == 1
+                            && Batch.plan("צור תיקייה \"קיימת\"\n", d79, v79, lib79).steps.get(0).noop);
+            Permit.close();
+            try {
+                String no79 = Physical.makeFolder(lib79, d79, "עוקפת");
+                check("מבנה 79: תיקייה חדשה בלי היתר — מסורבת, ולא נוצרה (" + no79 + ")", no79 != null && no79.contains(Words.PermitW.BYPASS)
+                        && !new File(d79, "עוקפת").exists() && Permit.strict(Permit.MAKE_FOLDER));
+                Physical.Result r79 = act79.run(lib79, null, null, false);
+                check("מבנה 79: דרך המנהל — נוצרה, בשם שהוקלד כלשונו (עם % ועם טקסט שנראה כמו משתנה)", r79.failed == 0 && r79.done.size() == 1
+                        && new File(d79, "חדשה 100% %תאריך%").isDirectory());
+                Physical.Result again79 = act79.run(lib79, null, null, false);
+                check("מבנה 79: הרצה שנייה (כבר קיימת) — כישלון שמדווח, בנוסח של הכונן (" + again79.note + ")", again79.failed == 1
+                        && again79.note.startsWith(Words.Disk.ALREADY_HERE_NAME));
+                check("מבנה 79: ההיתר נסגר אחרי כל הרצה", !Permit.held());
+            } finally {
+                Permit.open();
+            }
+            int direct79 = 0;
+            List<File> all79 = new ArrayList<File>();
+            collect76(new File(code, "masachim"), all79);
+            for (File f : all79) if (read(f).contains("Physical.makeFolder")) direct79++;
+            check("מבנה 79: במסכים — אין עוד יצירת תיקייה ישירה בכונן (" + direct79 + "); רק דרך המנהל", direct79 == 0
+                    && read(new File(code, "masachim/rechivim/PhysicalUi.java")).contains("Manager.onMakeFolder(parent, name"));
+            wipe(d79);
         }
         // מבנה 55: המכשיר עצר את התוכנה בזמן הרצה — הדוח אומר זאת ואיזו הגדרה פותרת
         List<String> rep55 = new ArrayList<String>();

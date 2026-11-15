@@ -142,6 +142,13 @@ final class Manager {
                 java.util.Collections.<String>emptyList(), null, name)), null);
     }
 
+    /** מבנה 79: תיקייה חדשה, מהמסך — בתיקייה parent, בשם שהוקלד: "צור תיקייה "%יעד%\%שם-חדש%"". */
+    static Act onMakeFolder(java.io.File parent, String name, java.io.File here, java.util.Map<String, String> vars, Library lib) {
+        String text = Commands.word(Commands.get("MD")) + " \"%" + Batch.V_DEST + "%\\%" + Batch.V_NEW_NAME + "%\"\n";
+        return new Act(text, Batch.plan(text, here, vars, lib, null, new Batch.Selection(java.util.Collections.<String>emptyList(),
+                java.util.Collections.<String>emptyList(), parent, name)), parent);
+    }
+
     // ---------- התוצאה חוזרת: מה קורה בסוף ההרצה ----------
 
     /** פקודות הפתיחה שבסוף הקובץ רצות רק כשההרצה הלכה חלק (1.13.0; מ0.25). */

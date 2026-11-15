@@ -1423,7 +1423,7 @@ final class Batch {
      * מבנה 78: השם שהוקלד במסך. נמסר כסימן, והשם עצמו נלקח מהבחירה — כך הוא אינו מפוענח בכלל: שם של קובץ יכול להכיל % ,
      * ואפילו טקסט שנראה כמו משתנה ("%תאריך%"), ובשורה כתובה המשתנים שבשם החדש מוחלפים (מבנה 43).
      */
-    static final String V_NEW_NAME = "שם-חדש", NAME_MARK = "/\u0000name";   // תחביר
+    static final String V_NEW_NAME = "שם-חדש", NAME_TOKEN = "\u0000name", NAME_MARK = "/" + NAME_TOKEN;   // תחביר
 
     static Plan plan(String text, File here, Map<String, String> vars, Library lib, Physical.Progress progress, Selection selected) {
         Plan plan = new Plan();
@@ -1795,6 +1795,10 @@ final class Batch {
         if (cmd.equals("MD")) {
             if (paths.size() != 1) { s.error = Commands.usage(cmd); return; }
             File d = new File(paths.get(0));
+            if (d.getName().equals(NAME_TOKEN)) {                               // מבנה 79: "%יעד%\%שם-חדש%" — תיקייה חדשה מהמסך
+                makeSelected(s, cmd, d, sim);
+                return;
+            }
             if (sim.isDir(d)) {                                                // קיימת — בלי שינוי
                 s.noop = true;
                 s.dest = d;
@@ -2343,6 +2347,29 @@ final class Batch {
     }
 
     /**
+     * מבנה 79: תיקייה חדשה מהמסך — בתיקייה שנבחרה (%יעד%), בשם שהוקלד (%שם-חדש%, נלקח מהבחירה ואינו מפוענח). שלא כמו
+     * "צור תיקייה" כתובה (שבה תיקייה קיימת היא "בלי שינוי", ומסלול יוצר גם את מה שמעליו) — כאן, כמו שהמסך עשה: שם אחד,
+     * ושם שכבר קיים הוא סירוב. הסירובים (שם לא תקין, תיקיית התוכנה, כבר קיים) — בתכנון ובנוסח של המסך.
+     */
+    private static void makeSelected(Step s, String cmd, File d, Sim sim) {
+        Selection sel = sim.selected;
+        File parent = d.getParentFile();
+        if (sel == null || sel.name == null || sel.dest == null || parent == null || !parent.getAbsolutePath().equals(Paths.clean(sel.dest))) {
+            s.error = Commands.usage(cmd);
+            return;
+        }
+        String bad = Physical.badName(sel.name);
+        if (bad != null) { s.error = bad; return; }
+        File made = new File(parent, sel.name.trim());
+        if (Physical.programFile(made.getAbsolutePath()) != null) { s.error = Words.Disk.NO_FOLDER_IN_APP; return; }
+        if (sim.isDir(made) || sim.isFile(made)) { s.error = Words.Disk.ALREADY_HERE_NAME + made.getName() + "\""; return; }
+        s.dest = made;
+        s.describe = Words.Cmd.newFolder(Bidi.path(made.getAbsolutePath()));
+        sim.dirs.add(made.getAbsolutePath());
+        sim.gone.remove(made.getAbsolutePath());
+    }
+
+    /**
      * מבנה 78: שינוי שם של הקובץ שנבחר במסך, לשם שהוקלד בו. אותה הרצה כמו בשורה כתובה; הסירובים של המסך (קובץ של התוכנה, הקובץ
      * כבר איננו, שם לא תקין, שם תפוס) נאמרים בתכנון ובנוסח של המסך. שם זהה לקיים — תקין, ואין מה לעשות: כך המסך שואל
      * "מותר לשנות לקובץ הזה שם?" עוד לפני שהמשתמש מקליד.
@@ -2701,6 +2728,9 @@ final class Batch {
             if (s.cmd.equals("MD")) {
                 String why = Physical.makeFolder(lib, s.dest.getParentFile(), s.dest.getName());
                 out = why == null ? Words.Cmd.created(s.dest.getName()) : why;
+                s.result = new Physical.Result();                               // מבנה 79
+                if (why == null) s.result.done.add(s.dest.getAbsolutePath());
+                else s.result.fail(why);
                 if (why != null) { plan.trouble = true; fails++; }
             } else if (s.cmd.equals("RD") || s.cmd.equals("DEL")) {
                 if (s.files.isEmpty() && s.dirs.isEmpty()) out = Words.Cmd.NO_FILES;
