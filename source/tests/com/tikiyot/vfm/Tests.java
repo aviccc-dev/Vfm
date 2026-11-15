@@ -1254,7 +1254,9 @@ public final class Tests {
     };
 
     private static final class Mem implements Sort.Store {
-        final Map<String, String> m = new java.util.HashMap<String, String>();
+        // מבנה 133: השמירה של המיון נעשית ברקע, בתהליכון לכל שמירה — שתי שמירות רצופות כותבות יחד. מפה רגילה אינה בטוחה
+        // לכך, ורשומה אחת יכלה ללכת לאיבוד (כך נכשלה "79: הבחירה נשמרת" פעם בכמה הרצות). בתוכנה המקום הוא Conf, והוא מסונכרן.
+        final Map<String, String> m = new java.util.concurrent.ConcurrentHashMap<String, String>();
         public String get(String k, String d) { String v = m.get(k); return v == null ? d : v; }
         public void set(String k, String v) { m.put(k, v); }
     }
@@ -3143,9 +3145,11 @@ public final class Tests {
                     new132 = Manager.saveFile(f132, body132, false, lib80);
                     again132 = Manager.saveFile(f132, "אחר", false, lib80);
                     String first132 = read(f132);
-                    trash132 = Trash.list(lib80).size();
+                    lib80.flush(5000);
                     repl132 = Manager.saveFile(f132, "גרסה שנייה", true, lib80);
-                    trash132 = Trash.list(lib80).size() - trash132;
+                    lib80.flush(5000);                                              // הסל נקרא מהאינדקס — מחכים שיתעדכן (כמו בבדיקה של מבנה 110)
+                    List<Trash.Item> tr132 = Batch.trashed(lib80, f132.getAbsolutePath(), false);
+                    trash132 = tr132.size() == 1 && body132.equals(read(new File(tr132.get(0).path()))) ? 1 : -tr132.size();
                     prog132 = Manager.saveFile(Conf.file(), "x", true, lib80);
                     File sc132 = new File(Shortcuts.dir(), "קיצור 132.vbat");
                     check("מבנה 132: \"כתוב\" אינה כותבת בתוך תיקיית התוכנה (הקיצורים) — ולכן שם הגשר כותב כמו שהיה, ורק קובץ פקודות",
@@ -3155,7 +3159,7 @@ public final class Tests {
                 } finally {
                     Permit.open();
                 }
-                check("מבנה 132: עם \"להחליף\" — התוכן החדש, והקודם עבר לסל (" + repl132 + " · " + trash132 + ")", repl132 == null && "גרסה שנייה".equals(read(f132)) && trash132 == 1);
+                check("מבנה 132: עם \"להחליף\" — התוכן החדש, והקודם עבר לסל עם התוכן שלו (" + repl132 + " · " + trash132 + ")", repl132 == null && "גרסה שנייה".equals(read(f132)) && trash132 == 1);
                 lib80.flush(5000);
                 Batch.run(Batch.plan("רוקן סל \"" + f132.getAbsolutePath() + "\"\n", d80, v80, lib80), lib80, null, null);   // הסל — נקי לבדיקות שאחרי
                 lib80.flush(5000);
