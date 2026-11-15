@@ -20,7 +20,9 @@ public final class Permit {
     /** שמות הפעולות — כמו שהם נאמרים בסירוב וביומן. */
     public static final String DELETE = Words.PermitW.DELETE, TRANSFER = Words.PermitW.TRANSFER, RENAME = Words.PermitW.RENAME,
             MAKE_FOLDER = Words.PermitW.MAKE_FOLDER, RESTORE = Words.PermitW.RESTORE, FOREVER = Words.PermitW.FOREVER,
-            WRITE = Words.PermitW.WRITE;
+            WRITE = Words.PermitW.WRITE,
+            /** מבנה 84: כתיבה למסד (רשימות, אופנים). עוד במעבר — נרשמת ביומן ואינה מסורבת, עד שכל מי שכותב למסד עובר דרך המנהל. */
+            DB = Words.PermitW.DB;
 
     /** הפעולות שכבר עוברות כולן דרך שכבת הניהול: בלי היתר — מסורבות. */
     private static final java.util.Set<String> STRICT = new java.util.HashSet<String>(java.util.Arrays.asList(DELETE, TRANSFER, RENAME, MAKE_FOLDER, WRITE, RESTORE, FOREVER));   // מבנה 77: גם העתקה והעברה · 78: שינוי שם · 79: תיקייה חדשה · 80: כתיבת קובץ · 81: הסל — כל פעולות הכונן
@@ -54,8 +56,18 @@ public final class Permit {
      * נשאל בתחילת כל פעולה שמשנה. null — מותר להמשיך. אחרת — הסירוב (הפעולה לא נעשית, וזה מה שנאמר למי שביקש).
      */
     public static String check(String action) {
+        return check(action, NO_WRAPPERS);
+    }
+
+    private static final String[] NO_WRAPPERS = {};
+
+    /**
+     * מבנה 84: כמו check, ו־wrappers — מחלקות של עטיפות שדרכן מגיעים לפעולה ("DbListCmd", "DbVerbsUi"): ביומן נרשם מי שקרא
+     * להן, לא הן עצמן — כך כל מקום שעוקף מופיע בשמו, והיומן הוא הרשימה של מה שנשאר להעביר.
+     */
+    public static String check(String action, String... wrappers) {
         if (held()) return null;
-        String from = caller();
+        String from = caller(wrappers);
         if (STRICT.contains(action)) {
             Log.i("⚠ " + Words.PermitW.bypass(action, from) + " — " + Words.PermitW.REFUSED);
             return Words.PermitW.refused(action);
@@ -65,18 +77,20 @@ public final class Permit {
     }
 
     /** מי ביקש: המקום הראשון בשרשרת הקריאות שאינו הפעולה עצמה ואינו כאן ("PhysicalUi.askRename"). */
-    private static String caller() {
+    private static String caller(String[] wrappers) {
         StackTraceElement[] st = new Throwable().getStackTrace();
         String first = null;
         for (StackTraceElement e : st) {
             String c = e.getClassName();
             c = c.substring(c.lastIndexOf('.') + 1);
             int inner = c.indexOf('$');
-            if (inner > 0) c = c.substring(0, inner);
+            boolean nested = inner > 0;
+            if (nested) c = c.substring(0, inner);
             if (c.equals("Permit")) continue;
             if (first == null) { first = c; continue; }           // הפעולה עצמה (Physical…)
-            if (c.equals(first)) continue;
-            return c + "." + e.getMethodName();
+            if (c.equals(first) || java.util.Arrays.asList(wrappers).contains(c)) continue;
+            // בתוך מחלקה פנימית השם של הפונקציה הוא "run" או "onClick" — מספר השורה אומר איזו
+            return c + "." + e.getMethodName() + (nested && e.getLineNumber() > 0 ? ":" + e.getLineNumber() : "");
         }
         return first == null ? "?" : first;
     }

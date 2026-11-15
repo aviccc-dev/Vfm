@@ -2564,7 +2564,7 @@ public final class Words {
                 STILL_MOVING = "עוד לא הועברה לשכבת הניהול; נעשתה";
         /** שמות הפעולות — כמו שהם נאמרים בסירוב וביומן. */
         public static final String DELETE = "מחיקה", TRANSFER = "העתקה או העברה", RENAME = "שינוי שם", MAKE_FOLDER = "תיקייה חדשה",
-                RESTORE = "שחזור מהסל", FOREVER = "מחיקה לצמיתות", WRITE = "כתיבת קובץ";
+                RESTORE = "שחזור מהסל", FOREVER = "מחיקה לצמיתות", WRITE = "כתיבת קובץ", DB = "כתיבה למסד";
 
         private PermitW() { }
 

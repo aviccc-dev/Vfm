@@ -51,6 +51,8 @@ final class Db {
 
     /** מסך המסד: המסד של האופן, לכתיבה, פתוח עד closeHeld. כל עוד הוא פתוח — האופן "בשימוש" (inUse). */
     static SqlStore openHeld(android.content.Context c, String mode) throws java.io.IOException {
+        String no = Permit.check(Permit.DB);                                    // מבנה 84
+        if (no != null) throw new java.io.IOException(no);
         SqlStore s = open(c, mode);
         hold(mode, 1);
         return s;
@@ -103,6 +105,9 @@ final class Db {
      * beforeOp — לא null: קודם נשמר גיבוי "לפני <הפעולה>" (Backups.OP_*); נכשל הגיבוי — הפעולה לא רצה, ונזרק BeforeFailed.
      */
     static <T> T write(android.content.Context c, String mode, String beforeOp, Use<T> use) throws Exception {
+        // מבנה 84: כל כתיבה למסד שואלת את ההיתר של שכבת הניהול. עוד במעבר: בלי היתר — נרשם ביומן (פעם אחת לכל מקום) והכתיבה נעשית.
+        String no = Permit.check(Permit.DB, PERMIT_WRAPPERS);
+        if (no != null) throw new java.io.IOException(no);
         SqlStore s = open(c, mode);
         try {
             if (beforeOp != null) {
@@ -117,6 +122,9 @@ final class Db {
             s.close();
         }
     }
+
+    /** מבנה 84: העטיפות שדרכן מגיעים לשער — ביומן של ההיתר נרשם מי שקרא להן. */
+    private static final String[] PERMIT_WRAPPERS = {"DbListCmd", "DbVerbsUi", "DbFollow"};
 
     /** קריאה: המסד של האופן נפתח לקריאה בלבד, הפעולה רצה, והמסד נסגר — תמיד. */
     static <T> T read(android.content.Context c, String mode, Use<T> use) throws Exception {

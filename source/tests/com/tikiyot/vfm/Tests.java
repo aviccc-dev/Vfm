@@ -3099,6 +3099,19 @@ public final class Tests {
                     .equals(ix83.dirPath(ix83.dirId(new File(d83, "בסיס/חדשה 29").getAbsolutePath()))));
             wipe(d83);
         }
+        // מבנה 84: גם הכתיבה למסד שואלת את ההיתר — עוד במעבר (נרשמת, לא מסורבת)
+        {
+            String db84 = read(new File(code, "chomer/masad/Db.java"));
+            check("מבנה 84: שער הכתיבה למסד (Db.write) ומסד שמוחזק פתוח (openHeld) שואלים את ההיתר",
+                    db84.contains("Permit.check(Permit.DB, PERMIT_WRAPPERS)") && db84.contains("Permit.check(Permit.DB);"));
+            Permit.close();
+            try {
+                check("מבנה 84: כתיבה למסד בלי היתר — עוד במעבר: אינה מסורבת", Permit.check(Permit.DB) == null && !Permit.strict(Permit.DB));
+            } finally {
+                Permit.open();
+            }
+            check("מבנה 84: ...ופעולות הכונן — מסורבות כולן (לא חזרו אחורה)", Permit.strict(Permit.DELETE) && Permit.strict(Permit.WRITE));
+        }
         // מבנה 55: המכשיר עצר את התוכנה בזמן הרצה — הדוח אומר זאת ואיזו הגדרה פותרת
         List<String> rep55 = new ArrayList<String>();
         Batch.stoppedHint(rep55, 4000);
