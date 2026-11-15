@@ -2572,6 +2572,51 @@ public final class Tests {
                     && "x".equals(read(new File(d67, "ב/תת/x.txt"))) && !new File(d67, "א/לבד.txt").exists());
             wipe(d67);
         }
+        // מבנה 73 (שלב ב — כל פעולה של מסך דרך פקודה): מה שנבחר במסך נמסר כיחידה, ו"מחק %נבחרים%" הוא שורה אחת
+        {
+            File d73 = new File(r, "ניסוי-73");
+            wipe(d73);
+            new File(d73, "תת/עמוק").mkdirs();
+            write(d73, "א.txt", "1");
+            write(d73, "ב.txt", "2");
+            write(d73, "נשאר.txt", "3");
+            write(new File(d73, "תת"), "ג.txt", "4");
+            write(new File(d73, "תת/עמוק"), "ד.txt", "5");
+            Index ix73 = new Index("73", "73", d73.getAbsolutePath());
+            ix73.scan(null);
+            Library lib73 = Library.forTests(new ArrayList<Index>(java.util.Collections.singletonList(ix73)));
+            java.util.Map<String, String> v73 = Batch.vars(d73, d73.getAbsolutePath(), null);
+            Batch.Selection sel73 = new Batch.Selection(java.util.Arrays.asList(new File(d73, "א.txt").getAbsolutePath(), new File(d73, "ב.txt").getAbsolutePath()),
+                    java.util.Collections.singletonList(new File(d73, "תת").getAbsolutePath()));
+            Batch.Plan p73 = Batch.plan("מחק %נבחרים%\n", d73, v73, lib73, null, sel73);
+            Batch.Step s73 = p73.steps.isEmpty() ? null : p73.steps.get(0);
+            check("מבנה 73: \"מחק %נבחרים%\" — שורה אחת, עם שני הקבצים והתיקייה (" + p73.errorText() + ")", p73.errors == 0 && p73.steps.size() == 1
+                    && s73.files.size() == 2 && s73.dirs.size() == 1 && s73.describe.contains("2") && s73.describe.contains(Words.folders(1)));
+            check("מבנה 73: בהדמיה — מה שבתוך התיקייה שנבחרה כבר איננו; מה שלא נבחר נשאר",
+                    Batch.plan("מחק %נבחרים%\nDEL \"תת\\ג.txt\"\n", d73, v73, lib73, null, sel73).errors == 1
+                            && Batch.plan("מחק %נבחרים%\nDEL \"נשאר.txt\"\n", d73, v73, lib73, null, sel73).errors == 0);
+            check("מבנה 73: בלי בחירה — %נבחרים% אינו מוכר (כמו שהיה)", Batch.plan("מחק %נבחרים%\n", d73, v73, lib73).errors == 1);
+            check("מבנה 73: %נבחרים% — רק לבדו, ורק ב\"מחק\" (בינתיים)",
+                    String.valueOf(Batch.plan("העתק %נבחרים% \"תת\"\n", d73, v73, lib73, null, sel73).errorText()).contains("לבדו")
+                            && Batch.plan("מחק \"%נבחרים%\\x.txt\"\n", d73, v73, lib73, null, sel73).errors == 1);
+            check("מבנה 73: סינון עם תיקייה שנבחרה — שגיאה; עם קבצים בלבד — עובד",
+                    Batch.plan("מחק %נבחרים% /MINAGE:1\n", d73, v73, lib73, null, sel73).errors == 1
+                            && Batch.plan("מחק %נבחרים% /MINAGE:1\n", d73, v73, lib73, null,
+                            new Batch.Selection(sel73.files, new ArrayList<String>())).steps.get(0).files.isEmpty());
+            check("מבנה 73: קובץ שנבחר וכבר איננו — שגיאה, ולא מחיקה של השאר", Batch.plan("מחק %נבחרים%\n", d73, v73, lib73, null,
+                    new Batch.Selection(java.util.Arrays.asList(new File(d73, "א.txt").getAbsolutePath(), new File(d73, "אין.txt").getAbsolutePath()), new ArrayList<String>())).errors == 1);
+            check("מבנה 73: בחירה ריקה — שגיאה", Batch.plan("מחק %נבחרים%\n", d73, v73, lib73, null,
+                    new Batch.Selection(new ArrayList<String>(), new ArrayList<String>())).errors == 1);
+            List<String> rep73 = Batch.run(p73, lib73, null, null);
+            lib73.flush(5000);
+            check("מבנה 73: בהרצה — הקבצים והתיקייה בסל, מה שלא נבחר במקומו (" + rep73 + ")", !p73.trouble && !new File(d73, "א.txt").exists()
+                    && !new File(d73, "ב.txt").exists() && !new File(d73, "תת").exists() && new File(d73, "נשאר.txt").isFile());
+            check("מבנה 73: ...ובסל שלושה פריטים — שני קבצים ותיקייה אחת שלמה (שחזור מחזיר אותה כולה)", Trash.list(lib73).size() == 3);
+            Batch.run(Batch.plan("שחזר מהסל \"תת\"\n", d73, v73, lib73), lib73, null, null);
+            lib73.flush(5000);
+            check("מבנה 73: ...והתיקייה חוזרת עם מה שבתוכה", "5".equals(read(new File(d73, "תת/עמוק/ד.txt"))));
+            wipe(d73);
+        }
         // מבנה 55: המכשיר עצר את התוכנה בזמן הרצה — הדוח אומר זאת ואיזו הגדרה פותרת
         List<String> rep55 = new ArrayList<String>();
         Batch.stoppedHint(rep55, 4000);

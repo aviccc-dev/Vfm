@@ -1063,6 +1063,8 @@ final class Batch {
         final Map<String, File> added = new LinkedHashMap<String, File>();
         /** 1.20.0: ההשוואה האחרונה (COMP), והאינדקס לחתימות שכבר חושבו (יכול להיות null). */
         Compare.Result compare;
+        /** מבנה 73: מה שנבחר במסך (null — הקובץ לא הורץ על בחירה). */
+        Selection selected;
         Library lib;
         /** מ0.12: כשעובדים במסד — עותק של המסד בזיכרון (DbListCmd), והקבצים לכל תנאי; null — עוד לא נטען. לא נשמר. */
         Store db;
@@ -1381,9 +1383,34 @@ final class Batch {
 
     /** 1.25.4: עם עצירה — ההכנה עצמה יכולה לקחת זמן (לולאות, השוואות של רשימות גדולות). */
     static Plan plan(String text, File here, Map<String, String> vars, Library lib, Physical.Progress progress) {
+        return plan(text, here, vars, lib, progress, null);
+    }
+
+    /**
+     * מבנה 73 (שלב ב: "כל פעולה של מסך עוברת דרך פקודה"): מה שנבחר במסך — קבצים ותיקיות — נמסר לקובץ כיחידה אחת, ו־%נבחרים%
+     * הוא כולו: "מחק %נבחרים%" הוא שורה אחת שמוחקת את כל מה שנבחר (פעולה אחת בכונן, מעבר אחד על הרשימות), כמו שהמסך עושה.
+     * (ברשימת "בחירה" של המשתמש %נבחרים% עדיין נפרש לשורה לכל קובץ — Menus.expand; שם אין selected, והשורות מגיעות לכאן כבר פרושות.)
+     */
+    static final class Selection {
+        final List<String> files, dirs;
+
+        Selection(List<String> files, List<String> dirs) {
+            this.files = new ArrayList<String>(files);
+            this.dirs = new ArrayList<String>(dirs);
+        }
+    }
+
+    static final String V_SELECTED = "נבחרים", SELECTED_MARK = "/\u0000selected";   // תחביר
+
+    static Plan plan(String text, File here, Map<String, String> vars, Library lib, Physical.Progress progress, Selection selected) {
         Plan plan = new Plan();
         Sim sim = new Sim();
         sim.lib = lib;
+        sim.selected = selected;
+        if (selected != null) {
+            vars = new LinkedHashMap<String, String>(vars);
+            vars.put(V_SELECTED, SELECTED_MARK);
+        }
         plan.sim = sim;
         String[] lines = Bidi.strip(text).replace("\r", "").split("\n");          // 204
         lines = calls(lines, here, vars, 0, new java.util.HashSet<String>());  // מ0.15: CALL — השורות של הקובץ במקומה
@@ -1772,8 +1799,18 @@ final class Batch {
         } else if (cmd.equals("DEL")) {
             if (paths.size() != 1) { s.error = Commands.usage(cmd); return; }
             if (s.recursive) { s.error = Words.Cmd.DEL_S; return; }
-            match(s, paths.get(0), flt, false, sim);
-            if (s.error == null) s.describe = Words.Cmd.toTrash(Words.files(s.files.size())) + filtered(s);
+            if (paths.get(0).equals(SELECTED_MARK)) {                           // מבנה 73: מה שנבחר במסך — קבצים, וגם תיקיות שלמות
+                selected(s, flt, sim);
+                if (s.error != null) return;
+                List<String> what = new ArrayList<String>();
+                if (!s.files.isEmpty() || s.dirs.isEmpty()) what.add(Words.files(s.files.size()));
+                if (!s.dirs.isEmpty()) what.add(Words.folders(s.dirs.size()));
+                s.describe = Words.Cmd.toTrash(join(what, Words.Cmd.AND)) + filtered(s);
+                for (String d : s.dirs) sim.wipe(d);
+            } else {
+                match(s, paths.get(0), flt, false, sim);
+                if (s.error == null) s.describe = Words.Cmd.toTrash(Words.files(s.files.size())) + filtered(s);
+            }
             for (String f : s.files) {
                 sim.gone.add(f);
                 sim.added.remove(f);
@@ -2187,6 +2224,10 @@ final class Batch {
     private static String setsMisuse(String cmd, List<String> paths) {
         for (int i = 0; i < paths.size(); i++) {
             String p = paths.get(i);
+            if (p.startsWith(SELECTED_MARK)) {                                  // מבנה 73: %נבחרים% כיחידה — רק לבדו, כמקור של "מחק" (בינתיים)
+                if (!cmd.equals("DEL") || i != 0 || !p.equals(SELECTED_MARK)) return Words.Cmd.SELECTED_ONLY_SOURCE;
+                continue;
+            }
             if (!p.startsWith(ONLY_A_MARK) && !p.startsWith(ONLY_B_MARK)) continue;
             if (!(cmd.equals("COPY") || cmd.equals("MOVE")) || i != 0 || !(p.equals(ONLY_A_MARK) || p.equals(ONLY_B_MARK)))
                 return Words.Cmd.SETS_ONLY_SOURCE;
@@ -2258,6 +2299,27 @@ final class Batch {
             return;
         }
         s.error = Words.Cmd.notFound(src);
+    }
+
+    /**
+     * מבנה 73: המקור הוא מה שנבחר במסך. קובץ או תיקייה שכבר אינם — שגיאה (המסך הראה משהו שאיננו); סינון (גיל, גודל…) חל
+     * על הקבצים; תיקייה — שלמה, ולכן סינון עם תיקייה שנבחרה הוא שגיאה, כמו בתיקייה שנכתבת במפורש (121).
+     */
+    private static void selected(Step s, Filter flt, Sim sim) {
+        Selection sel = sim.selected;
+        if (sel == null || (sel.files.isEmpty() && sel.dirs.isEmpty())) { s.error = Words.Cmd.NOTHING_SELECTED; return; }
+        if (!sel.dirs.isEmpty() && !flt.none()) { s.error = Words.Cmd.SELECTED_FILTER_FOLDER; return; }
+        for (String p : sel.files) {
+            File x = new File(p);
+            if (!sim.isFile(x)) { s.error = Words.Cmd.notFound(p); return; }
+            s.total++;
+            if (flt.ok(sim.real(x))) s.files.add(x.getAbsolutePath());
+        }
+        for (String d : sel.dirs) {
+            File x = new File(d);
+            if (!sim.isDir(x)) { s.error = Words.FOLDER_NOT_FOUND + ": " + d; return; }
+            s.dirs.add(x.getAbsolutePath());
+        }
     }
 
     private static String filtered(Step s) {
