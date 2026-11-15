@@ -2075,7 +2075,9 @@ final class Batch {
                 return;
             }
             s.dest = dest;
-            match(s, paths.get(0), flt, cmd.equals("MOVE"), sim);
+            // מבנה 112 (ה7, המשתמש: "כמו במסך"): שם של תיקייה הוא התיקייה עצמה — גם בהעתקה (עד כאן: בהעתקה — הקבצים שבתוכה;
+            // בהעברה ומהמסך — התיקייה). מה שבתוכה בלבד: "תיקייה\*".
+            match(s, paths.get(0), flt, true, sim);
             if (s.error != null) return;
             if (!s.dirs.isEmpty() && !flt.none()) {            // 121: סינון לא חל על תיקייה שלמה
                 s.error = Words.Cmd.filterOnFolder(cmd + " \"" + args.get(0) + "\\*.*\" …");
