@@ -363,16 +363,11 @@ public class DbScreen extends Activity {
 
     /** הוספה בעסקה אחת, והודעה כמה נוספו וכמה כבר היו. */
     private void addFiles(long list, List<String> paths, List<Long> sizes) {
-        try {
-            DbFiles.Added a = DbFiles.add(store, list, paths, sizes, true);
-            Ui.toast(this, Words.Db.filesAdded(a.added, a.already));
-            if (addingFiles) {                                                  // מ0.37: נוספו — חוזרים לרשימה
-                finish();
-                return;
-            }
-        } catch (Throwable t) {
-            Log.e("DbScreen.addFiles", t);
-            Ui.toast(this, Words.Db.failed(String.valueOf(t.getMessage())));
+        // מבנה 117: דרך המנהל, כפקודה ("העתק %נבחרים% ידנית %נבחרים%", מבנה 114) — גם מכאן (➕ ← "קבצים מתיקייה / מחיפוש")
+        boolean ok = DbVerbsUi.addToList(this, mode, list, paths, true);
+        if (ok && addingFiles) {                                                // מ0.37: נוספו — חוזרים לרשימה
+            finish();
+            return;
         }
         show();
     }

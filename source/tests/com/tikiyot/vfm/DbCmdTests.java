@@ -1044,6 +1044,22 @@ final class DbCmdTests {
                                         && !scr116.contains("DbClip.paste(") && !scr116.contains("DbListCmd.nowRes(") && !scr116.contains("DbMore.attach(")
                                         && !scr116.contains("DbFiles.add(") && scr116.contains("Manager.onListPaste("));
                     }
+                    // מבנה 117–118: ➕ קבצים ממסך המסד, ו"אופן חדש" / "להמשיך מהגיבוי" — דרך המנהל
+                    {
+                        Manager.Act n118 = Manager.onVerbLine("צור אופן \"בדיקת 118\"", here, vars, lib);
+                        boolean w118 = n118.error() == null && n118.writes();
+                        String s118 = n118.error() != null ? n118.error() : n118.say(lib);
+                        boolean made118 = Db.dbModes(Db.app).contains("בדיקת 118");
+                        Manager.Act again118 = Manager.onVerbLine("צור אופן \"בדיקת 118\"", here, vars, lib);
+                        boolean noWrite118 = again118.error() == null && !again118.writes();
+                        go("בטל אופן \"בדיקת 118\"\n", here, vars, lib);
+                        String ui118 = Files.readUtf8(new File(src, "src/com/tikiyot/vfm/masachim/rechivim/DbVerbsUi.java"));
+                        String ds117 = Files.readUtf8(new File(src, "src/com/tikiyot/vfm/masachim/DbScreen.java"));
+                        o.check("מבנה 118: \"אופן חדש\" מהמסך — השורה \"צור אופן\" דרך המנהל: נוצר (" + s118 + "); קיים — בלי כתיבה; השומר — המסך אינו יוצר אופן ואינו ממשיך מגיבוי בעצמו",
+                                w118 && !n118.failed && made118 && noWrite118 && !ui118.contains("Db.prepare(") && !ui118.contains("Db.resume("));
+                        o.check("מבנה 117: ➕ ← \"קבצים מתיקייה / מחיפוש\" (מסך המסד) — דרך המנהל, לא כתיבה ישירה",
+                                !ds117.contains("DbFiles.add(") && ds117.contains("DbVerbsUi.addToList("));
+                    }
                     Manager.Act gone99 = Manager.onSmartEdit(m91, 987654321L, "x", "סוג:pdf", new java.util.HashMap<String, String>(), here, vars, lib);
                     String saidGone99 = gone99.say(lib);
                     o.check("מבנה 99: רשימה שנמחקה בזמן שהטופס היה פתוח — \"" + Words.Db.ITEM_GONE + "\" (" + saidGone99 + ")",

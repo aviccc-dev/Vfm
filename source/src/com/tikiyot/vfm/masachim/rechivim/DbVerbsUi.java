@@ -384,7 +384,21 @@ final class DbVerbsUi {
      */
     static void createMode(final Activity a, final String name, final ModeReady ready) {
         if (Db.modeState(a, name) != Db.MODE_HAS_BACKUP) {
-            long h = Db.prepare(a, name, Reserved.FILES);
+            // מבנה 118: דרך המנהל — השורה "צור אופן "<שם>"", כמו בקובץ פקודות. אופן שכבר קיים — בלי כתיבה, ונפתח.
+            Library lib = Library.get(a);
+            Manager.Act act = modeAct(a, name, false, lib);
+            if (act.error() != null) {
+                Ui.toast(a, act.error());
+                return;
+            }
+            if (act.writes()) {
+                String said = act.say(lib);
+                if (act.failed) {
+                    Ui.toast(a, said);
+                    return;
+                }
+            }
+            long h = homeOf(a, name);
             if (h == 0) Ui.toast(a, Words.DbCmd.modeFailed(name));
             else ready.open(name, h);
             return;
@@ -399,6 +413,24 @@ final class DbVerbsUi {
                     @Override public void onClick(android.content.DialogInterface d, int w) { askModeName(a, ready); }
                 })
                 .setNeutralButton(Words.CANCEL, null).show();
+    }
+
+    /** מבנה 118: "צור אופן "<שם>"" (ועם /מגיבוי) — השורה, דרך המנהל. */
+    private static Manager.Act modeAct(Activity a, String name, boolean fromBackup, Library lib) {
+        String line = Verbs.CREATE + " " + Verbs.MODE_WORD + " \"" + name + "\"" + (fromBackup ? " " + Verbs.FROM_BACKUP : "");
+        return Manager.onVerbLine(line, Paths.work(), BatchUi.vars(a, Paths.work()), lib);
+    }
+
+    private static long homeOf(android.content.Context c, String mode) {
+        try {
+            if (!Db.dbFile(c, mode).isFile()) return 0;
+            return Db.read(c, mode, new Db.Use<Long>() {
+                @Override public Long run(SqlStore s) { return DbPaths.home(s); }
+            });
+        } catch (Throwable t) {
+            Log.e("DbVerbsUi.homeOf", t);
+            return 0;
+        }
     }
 
     /** "אופן חדש" / "שם אחר": שואלים שם, ויוצרים. שם של אופן קיים — הודעה. */
@@ -419,36 +451,29 @@ final class DbVerbsUi {
 
     /** ממשיכים מהגיבוי — ברקע (קריאה ובדיקה של הגיבוי), ואז האופן נפתח. */
     private static void resumeMode(final Activity a, final String name, final ModeReady ready) {
+        // מבנה 118: דרך המנהל — "צור אופן "<שם>" /מגיבוי", כמו בקובץ פקודות. כאן נשארים חלון ההמתנה וההודעה.
+        final Library lib = Library.get(a);
+        final Manager.Act act = modeAct(a, name, true, lib);
+        if (act.error() != null) {
+            Ui.toast(a, act.error());
+            return;
+        }
         final PhysicalUi.Busy busy = new PhysicalUi.Busy(a, Words.WorkModes.RESUMING);
         final android.content.Context app = a.getApplicationContext();
         new Thread(new Runnable() {
             @Override
             public void run() {
-                Backups.Entry got = null;
-                String err = null;
-                long h = 0;
-                try {
-                    got = Db.resume(app, name);
-                    if (got != null) h = Db.read(app, name, new Db.Use<Long>() {
-                        @Override public Long run(SqlStore s) { return DbPaths.home(s); }
-                    });
-                } catch (Throwable t) {
-                    Log.e("DbVerbsUi.resumeMode", t);
-                    err = String.valueOf(t.getMessage());
-                }
-                final Backups.Entry e = got;
-                final String error = err;
-                final long home = h;
+                final String said = act.writes() ? act.say(lib) : null;
+                final long home = act.failed ? 0 : homeOf(app, name);
                 a.runOnUiThread(new Runnable() {
                     @Override
                     public void run() {
                         busy.close();
                         if (a.isFinishing()) return;
-                        if (error != null) Ui.toast(a, Words.Db.failed(error));
-                        else if (e == null) Ui.toast(a, Words.WorkModes.NO_GOOD_BACKUP);
+                        if (act.failed) Ui.toast(a, said);
                         else if (home == 0) Ui.toast(a, Words.Db.NO_HOME);
                         else {
-                            Ui.toast(a, Words.WorkModes.resumed(name, Db.when(e)));
+                            if (said != null) Ui.toast(a, said);
                             ready.open(name, home);
                         }
                     }
