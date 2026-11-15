@@ -51,11 +51,13 @@ final class PhysicalUi {
     public static void askDelete(final Activity a, final List<String> paths, final List<String> dirs,
                                  String warning, final Physical.Done done) {
         final Library lib = Library.get(a);
-        for (String p : paths)
-            if (Physical.programFile(p) != null) {                             // 90
-                Ui.toast(a, Words.Disk.CANT_DELETE + new File(p).getName() + "\": " + Physical.programFile(p));
-                return;
-            }
+        // מבנה 74: המחיקה מהמסך — דרך הפקודה "מחק %נבחרים%" (המנהל). הסירובים (קובץ של התוכנה, תיקייה אסורה) באים מהתכנון שלה,
+        // ולא מבדיקות משלו של המסך; כאן נשארים רק חלון האישור וההודעה.
+        final Manager.Act act = Manager.onSelected("DEL", paths, dirs, Paths.data(), BatchUi.vars(a, Paths.data()), lib);
+        if (act.error() != null) {
+            Ui.toast(a, act.error());
+            return;
+        }
         long size = 0;
         int known = 0, inner = 0;
         List<String> all = new ArrayList<String>(paths);
@@ -67,11 +69,6 @@ final class PhysicalUi {
             }
         }
         for (String d : dirs) {
-            String why = Physical.forbidden(lib, new File(d));
-            if (why != null) {
-                Ui.toast(a, Words.Disk.CANT_DELETE + new File(d).getName() + "\": " + why);
-                return;
-            }
             long[] st = lib.treeStats(d);
             inner += st[0];
             size += st[1];
@@ -97,7 +94,7 @@ final class PhysicalUi {
                     @Override
                     public void run() {
                         perform(a, Words.Disk.DELETED, Words.Disk.REMOVED, done, new Op() {
-                            @Override public Physical.Result go() { return Physical.delete(lib, paths, dirs, grey); }
+                            @Override public Physical.Result go() { return act.run(lib, null, null, grey); }
                         });
                     }
                 });

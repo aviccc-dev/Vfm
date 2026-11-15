@@ -36,6 +36,8 @@ final class Batch {
         /** 1.13.0: פקודת פתיחה — השורה, אחרי המשתנים. */
         String open;
         boolean replace, skipTaken, recursive, hidden;
+        /** מבנה 74: מה שיצא מהפעולה בכונן (מחיקה) — למי שהריץ את השורה מהמסך וצריך את הפרטים, לא רק את שורת הדוח. */
+        Physical.Result result;
         /** מ0.37: "ודא שגיאה" — השורה הזו צריכה להיכשל בהרצה (בתכנון היא תקינה). */
         boolean expectFail;
         /** 1.19.0: COPY/MOVE /S — שמירת מסלול: השורש שממנו נמדד המסלול; files — כל הקבצים, dirs — תיקיות ריקות. */
@@ -2312,12 +2314,16 @@ final class Batch {
         for (String p : sel.files) {
             File x = new File(p);
             if (!sim.isFile(x)) { s.error = Words.Cmd.notFound(p); return; }
+            String own = Physical.programFile(p);                               // מבנה 74: כבר בתכנון — המסך אומר זאת לפני חלון האישור
+            if (own != null) { s.error = Words.Disk.CANT_DELETE + x.getName() + "\": " + own; return; }
             s.total++;
             if (flt.ok(sim.real(x))) s.files.add(x.getAbsolutePath());
         }
         for (String d : sel.dirs) {
             File x = new File(d);
             if (!sim.isDir(x)) { s.error = Words.FOLDER_NOT_FOUND + ": " + d; return; }
+            String why = sim.lib == null ? null : Physical.forbidden(sim.lib, x);
+            if (why != null) { s.error = Words.Disk.CANT_DELETE + x.getName() + "\": " + why; return; }
             s.dirs.add(x.getAbsolutePath());
         }
     }
@@ -2604,6 +2610,7 @@ final class Batch {
                 else {
                     known(lib, s.files);
                     Physical.Result r = Physical.delete(lib, s.files, s.dirs, grey);
+                    s.result = r;
                     out = result(r, Words.Cmd.TRASHED);
                     if (r.failed > 0) { plan.trouble = true; fails += r.failed; }
                 }

@@ -57,6 +57,52 @@ final class Manager {
         return GO;
     }
 
+    // ---------- פעולה של מסך — כפקודה (מבנה 74; שלב ב: "כל פעולה של מסך עוברת דרך פקודה") ----------
+    // המסך אינו עושה את הפעולה בעצמו: הוא מוסר מה נבחר ואיזו פקודה, ומקבל תכנית (ובה גם הסירוב, אם יש) ותוצאה.
+    // אותה פקודה, אותן בדיקות ואותו מסלול כמו בקובץ פקודות — ולכן מה שנבדק בפקודות נבדק גם למסך.
+
+    /** פעולה של מסך על מה שנבחר בו: הפקודה, התכנית שלה, והרצה שמחזירה את מה שיצא. */
+    static final class Act {
+        final String text;
+        final Batch.Plan plan;
+
+        Act(String text, Batch.Plan plan) {
+            this.text = text;
+            this.plan = plan;
+        }
+
+        /** למה אי אפשר — מהתכנון (קובץ של התוכנה, תיקייה אסורה, פריט שכבר איננו); null — אפשר. */
+        String error() {
+            for (Batch.Step s : plan.steps) if (s.error != null) return s.error;
+            return plan.errors > 0 || plan.steps.isEmpty() ? plan.errorText() : null;
+        }
+
+        /** ההרצה. מחזירה את התוצאה של הפעולה בכונן; תקלה — תוצאה עם כישלון, לא חריגה. */
+        Physical.Result run(Library lib, Physical.Asker asker, Physical.Progress progress, boolean grey) {
+            java.util.List<String> report = null;
+            Physical.Result r = null;
+            try {
+                report = Batch.run(plan, lib, asker, progress, grey);
+                for (Batch.Step s : plan.steps) if (s.result != null) r = s.result;
+            } catch (Throwable t) {
+                Log.e("פעולת מסך: " + text.trim(), t);
+            }
+            if (r == null) {
+                r = new Physical.Result();
+                r.fail(Words.Disk.ERROR);
+            }
+            Log.i("פעולת מסך: " + text.trim() + " · " + (report == null ? Words.Disk.ERROR : Batch.logLine(report)));
+            return r;
+        }
+    }
+
+    /** הפקודה cmd (השם שבהגדרת הפקודות: "DEL"…) על מה שנבחר במסך. here — רק למשתנים; הבחירה במסלולים מלאים. */
+    static Act onSelected(String cmd, java.util.List<String> files, java.util.List<String> dirs, java.io.File here,
+                          java.util.Map<String, String> vars, Library lib) {
+        String text = Commands.word(Commands.get(cmd)) + " %" + Batch.V_SELECTED + "%\n";
+        return new Act(text, Batch.plan(text, here, vars, lib, null, new Batch.Selection(files, dirs)));
+    }
+
     // ---------- התוצאה חוזרת: מה קורה בסוף ההרצה ----------
 
     /** פקודות הפתיחה שבסוף הקובץ רצות רק כשההרצה הלכה חלק (1.13.0; מ0.25). */

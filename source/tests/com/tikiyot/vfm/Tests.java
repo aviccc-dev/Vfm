@@ -2617,6 +2617,43 @@ public final class Tests {
             check("מבנה 73: ...והתיקייה חוזרת עם מה שבתוכה", "5".equals(read(new File(d73, "תת/עמוק/ד.txt"))));
             wipe(d73);
         }
+        // מבנה 74: המחיקה מהמסך — דרך המנהל, כפקודה "מחק %נבחרים%"
+        {
+            File ext74 = Paths.data().getParentFile(), d74 = new File(ext74, "ניסוי-74");
+            wipe(d74);
+            new File(d74, "תיקייה").mkdirs();
+            write(d74, "א.txt", "1");
+            write(new File(d74, "תיקייה"), "ב.txt", "2");
+            Paths.data().mkdirs();
+            write(Paths.data(), "הגדרה-74.ini", "x");
+            Index ix74 = new Index("74", "74", ext74.getAbsolutePath());
+            ix74.scan(null);
+            Library lib74 = Library.forTests(new ArrayList<Index>(java.util.Collections.singletonList(ix74)));
+            java.util.Map<String, String> v74 = Batch.vars(Paths.data(), ext74.getAbsolutePath(), null);
+            List<String> f74 = java.util.Collections.singletonList(new File(d74, "א.txt").getAbsolutePath()),
+                    dirs74 = java.util.Collections.singletonList(new File(d74, "תיקייה").getAbsolutePath()), none74 = new ArrayList<String>();
+            Manager.Act own74 = Manager.onSelected("DEL", java.util.Collections.singletonList(new File(Paths.data(), "הגדרה-74.ini").getAbsolutePath()), none74, Paths.data(), v74, lib74);
+            check("מבנה 74: קובץ של התוכנה — הסירוב בא מהתכנון, בנוסח של המסך (" + own74.error() + ")", own74.error() != null
+                    && own74.error().startsWith(Words.Disk.CANT_DELETE + "הגדרה-74.ini") && new File(Paths.data(), "הגדרה-74.ini").isFile());
+            Manager.Act app74 = Manager.onSelected("DEL", none74, java.util.Collections.singletonList(Paths.data().getAbsolutePath()), Paths.data(), v74, lib74);
+            check("מבנה 74: תיקיית התוכנה — סירוב מהתכנון", app74.error() != null && app74.error().contains(Paths.data().getName()));
+            Manager.Act act74 = Manager.onSelected("DEL", f74, dirs74, Paths.data(), v74, lib74);
+            check("מבנה 74: הפקודה שהמסך מריץ — \"מחק %נבחרים%\", בלי סירוב", act74.error() == null && act74.text.trim().equals("מחק %נבחרים%"));
+            Physical.Result r74 = act74.run(lib74, null, null, false);
+            lib74.flush(5000);
+            check("מבנה 74: ההרצה מחזירה למסך את מה שיצא — שני פריטים, בלי כישלון", r74.failed == 0 && r74.done.size() == 2
+                    && !new File(d74, "א.txt").exists() && !new File(d74, "תיקייה").exists());
+            check("מבנה 74: הודעת המסך נבנית מאותה תוצאה", Physical.message(Words.Disk.DELETED, Words.Disk.REMOVED, r74).contains(Words.folders(1)) && r74.dirs == 1);
+            Physical.Result again74 = act74.run(lib74, null, null, false);
+            check("מבנה 74: הרצה שנייה של אותה פעולה (הקבצים כבר אינם) — כישלון שמדווח, לא חריגה", again74.failed > 0 || again74.done.isEmpty());
+            String pui74 = read(new File(code, "masachim/rechivim/PhysicalUi.java"));
+            check("מבנה 74: במסכים — אין עוד מחיקה ישירה מהכונן; רק דרך המנהל", !pui74.contains("Physical.delete(") && pui74.contains("Manager.onSelected(\"DEL\""));
+            List<Trash.Item> mine74 = new ArrayList<Trash.Item>();
+            for (Trash.Item it : Trash.list(lib74)) if (it.original != null && it.original.contains("-74")) mine74.add(it);
+            Physical.deleteForever(lib74, mine74);
+            new File(Paths.data(), "הגדרה-74.ini").delete();
+            wipe(d74);
+        }
         // מבנה 55: המכשיר עצר את התוכנה בזמן הרצה — הדוח אומר זאת ואיזו הגדרה פותרת
         List<String> rep55 = new ArrayList<String>();
         Batch.stoppedHint(rep55, 4000);
