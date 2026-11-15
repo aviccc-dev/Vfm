@@ -270,6 +270,12 @@ final class DbListCmd {
         return in.isEmpty() ? 0 : in.size() == 1 ? in.get(0) : -1;
     }
 
+    /** מבנה 114: הכלל האחד של "קבצים מהכונן אל רשימה" — לשורה הכתובה ולמסך (הבורר, ➕, קובץ פקודות לרשימה). */
+    private static Res addFiles(Store s, long dest, List<String> ps, String what, String label) {
+        DbFiles.Added r = DbFiles.add(s, dest, ps, null, !(s instanceof MemStore));   // מ0.15: חתימה — בהרצה, לא בהדמיה
+        return Res.ok(what + " — " + Words.ListCmdW.copied(r.added, ps.size() - r.added, ps.size() > r.added ? Words.DbCmd.ALREADY : null, label) + nowIn(s, dest));
+    }
+
     /** COPY: לרשימה ידנית (או לבית). fsFiles — קבצים מהכונן (כשהמקור אינו רשימה); הקבצים עצמם לתיקייה — ב-plan. */
     static Res copy(Store s, String mode, ListCmd.Side a, ListCmd.Side b, final List<String> fsFiles, Finder f) {
         final long dest = b.home ? DbPaths.home(s) : b.mask != null ? 0 : DbPaths.find(s, mode, b.path);
@@ -283,9 +289,7 @@ final class DbListCmd {
                 if (paths == null) return Res.err(err[0]);
                 what = Words.ListCmdW.filesOf(Words.files(paths.size()), a.label());
             }
-            final List<String> ps = paths;
-            DbFiles.Added r = DbFiles.add(s, dest, ps, null, !(s instanceof MemStore));   // מ0.15: חתימה — בהרצה, לא בהדמיה
-            return Res.ok(what + " — " + Words.ListCmdW.copied(r.added, ps.size() - r.added, ps.size() > r.added ? Words.DbCmd.ALREADY : null, b.label()) + nowIn(s, dest));
+            return addFiles(s, dest, paths, what, b.label());
         }
         final List<Store.Item> what = new ArrayList<Store.Item>();
         final List<String> self = new ArrayList<String>();
@@ -610,7 +614,7 @@ final class DbListCmd {
         if (sim.modeError != null) { s.error = sim.modeError; return; }      // מ0.17.1: "אופן" שנכשל — לא לרוץ על אופן אחר
         for (ListCmd.Side x : p.sides)
             if (x.picked) {                                                    // מבנה 85: מה שנבחר במסך הרשימות
-                planPicked(s, cmd, p, sw, sim);
+                planPicked(s, cmd, p, sw, sim, fsFiles);
                 return;
             }
         final String mode = mode(sim);
@@ -805,11 +809,14 @@ final class DbListCmd {
      * **בלי הדמיה:** התכנון של פקודת רשימה כתובה מעתיק את כל המסד לזיכרון כדי שהשורות הבאות יראו את התוצאה; כאן שורה אחת,
      * והמסך כבר הציג את חלון האישור שלו — העתקה של כל המסד בכל לחיצה הייתה עבודה יקרה לחינם (המשפך).
      */
-    private static void planPicked(final Batch.Step s, String cmd, ListCmd.Parsed p, List<String> sw, Batch.Sim sim) {
+    private static void planPicked(final Batch.Step s, String cmd, ListCmd.Parsed p, List<String> sw, Batch.Sim sim, List<String> fsFiles) {
         final Batch.Selection sel = sim.selected;
         ListCmd.Side a = p.sides.get(0);
         boolean make = cmd.equals("MD") && p.sides.size() == 1 && sw.isEmpty() && a.kind == ListCmd.LIST && !a.content && !a.filesOf;
-        if (sel == null || sel.ids == null || sel.mode == null || (make ? sel.name == null : sel.ids.isEmpty())) {
+        final ListCmd.Side to = p.sides.size() == 2 ? p.sides.get(1) : null;
+        // מבנה 114: "העתק %נבחרים% ידנית %נבחרים%" — הקבצים שנבחרו (מסלולים), אל הרשימה שנבחרה (המספר שלה; 0 — הבית)
+        boolean add = cmd.equals("COPY") && to != null && sw.isEmpty() && !a.list() && to.picked && to.kind == ListCmd.LIST && !to.content && !to.filesOf;
+        if (sel == null || sel.ids == null || sel.mode == null || (make ? sel.name == null : add ? fsFiles == null || fsFiles.isEmpty() : sel.ids.isEmpty())) {
             s.error = Words.Cmd.NOTHING_SELECTED;
             return;
         }
@@ -832,6 +839,30 @@ final class DbListCmd {
                             if (m.error != null) return Res.err(m.error);
                             Res ok = Res.ok(Words.ListCmdW.created(Names.cleanName(name)));
                             ok.made = m.id;
+                            return ok;
+                        }
+                    }, false, lib);
+                    if (r.error != null) lastFailed = true;
+                    s.made = r.made;
+                    return r.error != null ? r.error : Words.DbCmd.inDb(r.text);
+                }
+            };
+            return;
+        }
+        if (add) {
+            // אותו כלל כמו "העתק "<קובץ>" ידנית "<רשימה>"" כתובה (addFiles); מה שנובע מהמקום: הרשימה — לפי המספר. רק מוסיפה — בלי גיבוי לפני.
+            final long into = sel.in;
+            final List<String> ps = new ArrayList<String>(fsFiles);
+            s.describe = Words.DbCmd.inDb(Words.files(ps.size()) + " — " + Words.ListCmdW.copied(ps.size(), 0, null, Words.DbCmd.HERE_LIST));
+            s.op = new ListCmd.Op() {
+                @Override public String run(Library lib) {
+                    Res r = realRes(mode, new Work() {
+                        @Override public Res run(Store t, Finder f) {
+                            long dest = into != 0 ? into : DbPaths.home(t);
+                            Store.Item li = dest == 0 ? null : t.item(dest);
+                            if (li == null || li.type != Store.LIST) return Res.err(Words.Db.LIST_GONE);
+                            Res ok = addFiles(t, dest, ps, Words.files(ps.size()), li.name);
+                            ok.made = dest;
                             return ok;
                         }
                     }, false, lib);

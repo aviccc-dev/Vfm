@@ -105,15 +105,7 @@ final class DbPicker {
 
     /** אחרי שנבחרה רשימה: הקבצים אליה (DbFiles.add, עם חתימה), והודעה כמה נכנסו. */
     static void addPicked(Activity a, String mode, final long list, List<String> path, final List<String> paths, Runnable after) {
-        final DbFiles.Added[] r = {null};
-        DbVerbsUi.write(a, mode, new DbVerbsUi.Job() {
-            @Override
-            public long run(Store s, List<String> p) {
-                r[0] = DbFiles.add(s, list, paths, null, true);
-                return list;
-            }
-        }, null);
-        if (r[0] != null) Ui.toast(a, Words.Db.addedTo(r[0].added, r[0].already, Names.fullLabel(path)));
+        DbVerbsUi.addToList(a, mode, list, paths, true);                         // מבנה 114: דרך המנהל, כפקודה
         if (after != null) after.run();
     }
 

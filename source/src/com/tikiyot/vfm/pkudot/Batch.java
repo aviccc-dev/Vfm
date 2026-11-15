@@ -1898,6 +1898,16 @@ final class Batch {
             String[] err = {null};
             String p = path(x.raw, here, vars, err);
             if (p == null) { s.error = err[0]; return; }
+            if (p.equals(SELECTED_MARK)) {                                      // מבנה 114: הקבצים שנבחרו במסך — אל רשימה
+                Selection sel = sim.selected;
+                if (i != 0 || sel == null || (sel.files.isEmpty() && sel.dirs.isEmpty())) { s.error = Words.Cmd.NOTHING_SELECTED; return; }
+                if (!sel.dirs.isEmpty()) { s.error = Words.ListCmdW.FOLDER_TO_LIST; return; }
+                for (String f : sel.files) {
+                    if (!sim.isFile(new File(f))) { s.error = Words.Cmd.notFound(f); return; }
+                    fsFiles.add(new File(f).getAbsolutePath());
+                }
+                continue;
+            }
             if (i == lp.sides.size() - 1 && i > 0) fsDest = new File(p);
             else {
                 Filter flt = filter(sw);

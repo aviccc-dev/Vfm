@@ -269,6 +269,17 @@ final class Manager {
     }
 
     /**
+     * מבנה 114: קבצים מהכונן אל רשימה (הבורר "לרשימה", ➕, קובץ פקודות שנכנס לרשימה) — "העתק %נבחרים% ידנית %נבחרים%".
+     * list — הרשימה (מספר במסד; 0 — הבית); paths — הקבצים, במסלולים מלאים.
+     */
+    static Act onListAdd(String mode, long list, java.util.List<String> paths, java.io.File here, java.util.Map<String, String> vars, Library lib) {
+        String text = Commands.word(Commands.get("COPY")) + " %" + Batch.V_SELECTED + "% " + ListCmd.MANUAL + " %" + Batch.V_SELECTED + "%\n";
+        Batch.Selection sel = new Batch.Selection(mode, list, new java.util.ArrayList<Long>());
+        sel.files.addAll(paths);
+        return new Act(text, Batch.plan(text, here, vars, lib, null, sel), null);
+    }
+
+    /**
      * מבנה 113: עריכה של רשימה בטופס שלה (שם, צלמית, תיאור, "למה"; לרעיון ולכותרת — הטקסט) — "עדכן רשימה %נבחרים%".
      * id — הפריט (מספר במסד); name — השם בטופס (ריק — בלי שינוי); props — צלמית, תיאור ו"למה", כלשונם.
      */

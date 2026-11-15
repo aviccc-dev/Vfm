@@ -225,15 +225,22 @@ final class DbVerbsUi {
             Ui.toast(a, Words.SAVE_FAILED);
             return;
         }
-        write(a, mode, new Job() {
-            @Override
-            public long run(Store s, List<String> p) {
-                DbFiles.add(s, in != 0 ? in : DbPaths.home(s), java.util.Collections.singletonList(file.getAbsolutePath()), null, true);
-                return in;
-            }
-        }, null);
+        addToList(a, mode, in, java.util.Collections.singletonList(file.getAbsolutePath()), false);   // מבנה 114
         if (a instanceof DbListScreen) ((DbListScreen) a).reload();
         f.open(a, t);
+    }
+
+    /**
+     * מבנה 114: קבצים מהכונן אל רשימה (list — המספר שלה; 0 — הבית) — דרך המנהל, כפקודה ("העתק %נבחרים% ידנית %נבחרים%"): אותו
+     * כלל כמו בשורה כתובה. tell — להציג גם את ההודעה כשהצליח (כישלון מוצג תמיד). false — לא נוסף.
+     */
+    static boolean addToList(Activity a, String mode, long list, List<String> paths, boolean tell) {
+        Library lib = Library.get(a);
+        Manager.Act act = Manager.onListAdd(mode, list, paths, Paths.data(), BatchUi.vars(a, Paths.data()), lib);
+        String said = act.error() != null ? act.error() : act.say(lib);
+        boolean ok = act.error() == null && !act.failed;
+        if (tell || !ok) Ui.toast(a, said);
+        return ok;
     }
 
     /** פקודה (מתפריט הפקודות האחד) — קובץ הפקודות נכנס לרשימה. */
@@ -242,13 +249,7 @@ final class DbVerbsUi {
             @Override
             public void ok(String icon, String name, String line, java.io.File file) {
                 final java.io.File f = file != null ? file : Shortcuts.write(icon, name, line);
-                write(a, mode, new Job() {
-                    @Override
-                    public long run(Store s, List<String> p) {
-                        DbFiles.add(s, in, java.util.Collections.singletonList(f.getAbsolutePath()), null, true);
-                        return in;
-                    }
-                }, null);
+                addToList(a, mode, in, java.util.Collections.singletonList(f.getAbsolutePath()), false);   // מבנה 114
                 if (a instanceof DbListScreen) ((DbListScreen) a).reload();
             }
         });

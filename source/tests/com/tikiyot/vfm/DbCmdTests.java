@@ -924,6 +924,42 @@ final class DbCmdTests {
                                 u113.blocked() && e113.blocked() && x113.blocked() && x113.errorText().contains("תפוס") && m113.blocked()
                                         && !scr113.contains("Lists.edit(") && !scr113.contains("DbListCmd.nowEdit(") && scr113.contains("Manager.onListEdit("));
                     }
+                    // מבנה 114: קבצים מהכונן אל רשימה — מהמסך (דרך המנהל) ובשורה כתובה: אותו כלל, ושתי הרשימות שוות
+                    {
+                        final List<String> f114 = new ArrayList<String>();
+                        StringBuilder line114 = new StringBuilder("אופן \"" + m91 + "\"\n");
+                        for (int i = 1; i <= 3; i++) {
+                            File x = new File(here, "ק114-" + i + ".txt");
+                            Files.writeAtomic(x, "תוכן " + i);
+                            f114.add(x.getAbsolutePath());
+                            line114.append("העתק \"").append(x.getAbsolutePath()).append("\" ידנית \"כתוב 114\"\n");
+                        }
+                        go("אופן \"" + m91 + "\"\nMD ידנית \"מסך 114\"\nMD ידנית \"כתוב 114\"\n", here, vars, lib);
+                        final long[] id114 = {0};
+                        Db.read(Db.app, m91, new Db.Use<Void>() {
+                            @Override public Void run(SqlStore st) { id114[0] = DbPaths.find(st, m91, java.util.Arrays.asList("מסך 114")); return null; }
+                        });
+                        Manager.Act a114 = Manager.onListAdd(m91, id114[0], f114.subList(0, 2), here, vars, lib);
+                        String s114 = a114.error() != null ? a114.error() : a114.say(lib);
+                        Manager.Act b114 = Manager.onListAdd(m91, id114[0], f114.subList(1, 3), here, vars, lib);
+                        String t114 = b114.error() != null ? b114.error() : b114.say(lib);
+                        List<String> w114 = go(line114 + "ודא תוכן ידנית \"מסך 114\" שווה תוכן ידנית \"כתוב 114\"\nודא ידנית \"מסך 114\" /פריטים:3\n", here, vars, lib);
+                        o.check("מבנה 114: קבצים אל רשימה — מהמסך (" + s114 + " · " + t114 + ") ובשורה כתובה: אותה תוצאה, והרשימות שוות " + w114,
+                                !a114.failed && !b114.failed && a114.made == id114[0] && t114.contains(Words.DbCmd.ALREADY) && bad(w114).isEmpty());
+                        Manager.Act g114 = Manager.onListAdd(m91, 987654321L, f114, here, vars, lib);
+                        String gone114 = g114.error() != null ? g114.error() : g114.say(lib);
+                        List<String> dir114 = new ArrayList<String>(f114);
+                        Batch.Selection sel114 = new Batch.Selection(m91, id114[0], new ArrayList<Long>());
+                        sel114.dirs.add(here.getAbsolutePath());
+                        String scr114 = Files.readUtf8(new File(src, "src/com/tikiyot/vfm/masachim/rechivim/DbPicker.java"))
+                                + Files.readUtf8(new File(src, "src/com/tikiyot/vfm/masachim/rechivim/DbVerbsUi.java"));
+                        o.check("מבנה 114: רשימה שנמחקה — \"" + gone114 + "\"; קובץ שאיננו, תיקייה, בחירה ריקה — שגיאה בתכנון; השומר — הבורר וה־➕ אינם מוסיפים בעצמם",
+                                g114.failed && gone114.equals(Words.Db.LIST_GONE)
+                                        && Manager.onListAdd(m91, id114[0], java.util.Arrays.asList(new File(here, "אין-114.txt").getAbsolutePath()), here, vars, lib).error() != null
+                                        && Manager.onListAdd(m91, id114[0], new ArrayList<String>(), here, vars, lib).error() != null
+                                        && Words.ListCmdW.FOLDER_TO_LIST.equals(Batch.plan("העתק %נבחרים% ידנית %נבחרים%\n", here, vars, lib, null, sel114).steps.get(0).error)
+                                        && !scr114.contains("DbFiles.add(") && scr114.contains("Manager.onListAdd("));
+                    }
                     Manager.Act gone99 = Manager.onSmartEdit(m91, 987654321L, "x", "סוג:pdf", new java.util.HashMap<String, String>(), here, vars, lib);
                     String saidGone99 = gone99.say(lib);
                     o.check("מבנה 99: רשימה שנמחקה בזמן שהטופס היה פתוח — \"" + Words.Db.ITEM_GONE + "\" (" + saidGone99 + ")",
