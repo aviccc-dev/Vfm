@@ -556,14 +556,11 @@ public class DbListScreen extends ListScreen<Store.Member> {
             DbSmartForm.show(this, store, it.id, new DbSmartForm.Done() {
                 @Override
                 public void ok(final DbSmartForm.Result r) {
-                    done(DbListCmd.nowEdit(mode, new DbListCmd.Work() {                // מבנה 58: גיבוי לפני — התנאי הקודם נדרס
-                        @Override public DbListCmd.Res run(Store t, DbListCmd.Finder f) {
-                            if (t.item(it.id) == null) return DbListCmd.Res.err(Words.Db.ITEM_GONE);   // מבנה 60: נמחקה בזמן שהטופס היה פתוח
-                            String was = t.item(it.id).name;
-                            DbSmartForm.save(t, it.id, 0, r);
-                            return DbListCmd.Res.ok(Words.DbCmd.saved(r.name.isEmpty() ? it.name : r.name)).renamed(it.id, was, t.item(it.id).name);   // מ0.42: ב8
-                        }
-                    }));
+                    // מבנה 99: דרך המנהל, כפקודה ("עדכן רשימה חכמה %נבחרים% %תוכן%") — עם גיבוי "לפני עריכה" ועם עדכון קובצי הפקודות
+                    Library lib = Library.get(DbListScreen.this);
+                    Manager.Act act = Manager.onSmartEdit(mode, it.id, r.name, r.cond, DbSmartForm.props(r), Paths.data(),
+                            BatchUi.vars(DbListScreen.this, Paths.data()), lib);
+                    done(act.error() != null ? act.error() : act.say(lib));
                 }
             });
             return;

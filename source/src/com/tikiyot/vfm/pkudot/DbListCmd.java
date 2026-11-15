@@ -867,6 +867,46 @@ final class DbListCmd {
     }
 
     /**
+     * מבנה 99: עריכה של רשימה חכמה בטופס שלה — "עדכן רשימה חכמה %נבחרים% %תוכן%". הרשימה — לפי המספר שלה (הבחירה); השם החדש
+     * (ריק — בלי שינוי), התנאי ושאר מה שבטופס — מהבחירה, ואינם מפוענחים. שלא כמו השורה הכתובה (לפי שם; רק התנאי והמיון) — כאן
+     * כמו שהמסך עשה: כל הטופס, בעסקה אחת; **גיבוי "לפני עריכה" לפני** (מבנה 58 — התנאי הקודם נדרס); ושם שהשתנה — קובצי הפקודות
+     * שפונים אליה מתעדכנים (מ0.42, ב8). רשימה שנמחקה בזמן שהטופס היה פתוח — "הפריט הזה כבר לא קיים במסד — לא נשמר" (מבנה 60).
+     */
+    private static String planPickedSmartEdit(final Batch.Step s, final Verbs.Cmd c, Batch.Sim sim) {
+        final Batch.Selection sel = sim.selected;
+        if (sel == null || sel.props == null || sel.mode == null || sel.ids == null || sel.ids.size() != 1 || sel.name == null || sel.content == null) {
+            s.error = Words.Cmd.NOTHING_SELECTED;
+            return null;
+        }
+        final String mode = sel.mode;
+        if (!Db.dbFile(Db.app, mode).isFile()) { s.error = Words.DbCmd.noMode(mode, sim.modes()); return null; }
+        c.noOpen = true;
+        final long id = sel.ids.get(0);
+        final String name = sel.name.trim(), cond = sel.content;
+        final java.util.Map<String, String> props = sel.props;
+        s.describe = Words.DbCmd.inDb(Words.DbCmd.saved(name.isEmpty() ? Words.DbCmd.HERE_LIST : name));
+        s.op = new ListCmd.Op() {
+            @Override public String run(Library lib) {
+                Res r = realRes(mode, new Work() {
+                    @Override public Res run(Store t, Finder f) {
+                        Store.Item it = t.item(id);
+                        if (it == null || it.type != Store.SMART) return Res.err(Words.Db.ITEM_GONE);
+                        String was = it.name;
+                        Lists.saveSmart(t, id, 0, name, cond, props);
+                        Res ok = Res.ok(Words.DbCmd.saved(name.isEmpty() ? was : name)).renamed(id, was, t.item(id).name);
+                        ok.made = id;
+                        return ok;
+                    }
+                }, Backups.OP_EDIT, lib);
+                if (r.error != null) lastFailed = true;
+                s.made = r.made;
+                return r.error != null ? r.error : Words.DbCmd.inDb(r.text);
+            }
+        };
+        return mode;
+    }
+
+    /**
      * מבנה 93: רעיון או כותרת מהמסך — "צור רעיון %נבחרים%" · "צור כותרת %נבחרים% "דרך"". הטקסט הוא מה שהוקלד (מהבחירה, אינו
      * מפוענח); הרשימה — זו שמוצגת במסך (המספר שלה), או הדרך שנכתבה אחרי. בלי הדמיה (כמו כל פעולה של %נבחרים% ברשימות), ובלי
      * גיבוי לפני (רק מוסיפה) — כמו שהמסך עשה. הסירובים — בנוסח של המסך.
@@ -918,6 +958,7 @@ final class DbListCmd {
         if (!list && !smartNew && !smartUpd && !note && !title) return null;
         if ((note || title) && Batch.var(Batch.V_SELECTED).equals(c.arg)) return planPickedNote(s, c, title, sim);   // מבנה 93: מהמסך
         if (smartNew && Batch.var(Batch.V_NEW_NAME).equals(c.arg)) return planPickedSmart(s, c, sim);                // מבנה 97: מהטופס
+        if (smartUpd && Batch.var(Batch.V_SELECTED).equals(c.arg)) return planPickedSmartEdit(s, c, sim);            // מבנה 99: מהטופס
         if (sim.modeError != null) { s.error = sim.modeError; return null; }
         final String mode = mode(sim);
         final Store db;

@@ -230,6 +230,18 @@ final class Manager {
         return new Act(text, Batch.plan(text, here, vars, lib, null, new Batch.Selection(mode, in, name, cond, props)), null);
     }
 
+    /**
+     * מבנה 99: עריכה של רשימה חכמה בטופס שלה — "עדכן רשימה חכמה %נבחרים% %תוכן%". id — הרשימה (מספר במסד); name — השם בטופס
+     * (ריק — בלי שינוי); cond, props — מה שבטופס, כלשונו.
+     */
+    static Act onSmartEdit(String mode, long id, String name, String cond, java.util.Map<String, String> props, java.io.File here,
+                           java.util.Map<String, String> vars, Library lib) {
+        String text = Verbs.UPDATE + " " + Verbs.LIST + " " + Verbs.SMART_WORD + " %" + Batch.V_SELECTED + "% %" + Batch.V_CONTENT + "%\n";
+        Batch.Selection sel = new Batch.Selection(mode, 0, name, cond, props);
+        sel.ids.add(id);
+        return new Act(text, Batch.plan(text, here, vars, lib, null, sel), null);
+    }
+
     // ---------- התוצאה חוזרת: מה קורה בסוף ההרצה ----------
 
     /** פקודות הפתיחה שבסוף הקובץ רצות רק כשההרצה הלכה חלק (1.13.0; מ0.25). */

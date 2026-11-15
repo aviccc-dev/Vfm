@@ -3301,8 +3301,13 @@ public final class Tests {
         check("מבנה 60: בציור שורה — רק שגיאות של המסד נתפסות; תקלה אחרת בקוד נזרקת הלאה",
                 dls.contains("if (!(gone instanceof android.database.SQLException) && !(gone instanceof IllegalStateException)) throw gone;")
                         && dls.contains("if (missing && !stale)"));
-        check("מבנה 60: עריכה של פריט שנמחק בזמן שהטופס פתוח — הודעה ברורה (בשני הטפסים)",
-                dls.split("Words\\.Db\\.ITEM_GONE", -1).length == 3 && Words.Db.ITEM_GONE.contains("לא נשמר"));
+        // מבנה 99: הטופס של הרשימה החכמה עבר לפקודה — ההגנה עברה איתו (planPickedSmartEdit), ונבדקת שם גם בהרצה (DbCmdTests, מבנה 99)
+        String dlc60 = read(new File(code, "pkudot/DbListCmd.java"));
+        int at60 = dlc60.indexOf("private static String planPickedSmartEdit(");
+        check("מבנה 60: עריכה של פריט שנמחק בזמן שהטופס פתוח — הודעה ברורה (בשני הטפסים: הרשימה — במסך; החכמה — בפקודה, מבנה 99)",
+                dls.split("Words\\.Db\\.ITEM_GONE", -1).length == 2 && at60 > 0
+                        && dlc60.indexOf("Words.Db.ITEM_GONE", at60) > at60 && dlc60.indexOf("Words.Db.ITEM_GONE", at60) < dlc60.indexOf("\n    }\n", at60)
+                        && Words.Db.ITEM_GONE.contains("לא נשמר"));
         String bu = read(new File(code, "masachim/rechivim/BatchUi.java")), rs = read(new File(code, "masachim/RunScreen.java"));
         check("מבנה 27: שני הרצפים שואלים את המנהל, ואינם מחליטים בעצמם",
                 bu.contains("Manager.approve(plan)") && rs.contains("Manager.approve(plan)") && !bu.contains("plan.blocked()") && !rs.contains("plan.blocked()")

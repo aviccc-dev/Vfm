@@ -628,6 +628,69 @@ final class DbCmdTests {
                     o.check("מבנה 97: ה־➕ ומסך החיפוש אינם יוצרים עוד רשימה חכמה בעצמם — דרך המנהל",
                             !ui97.contains("DbSmartForm.save(") && ui97.contains("Manager.onSmartNew(") && ui97.contains("DbVerbsUi.makeSmart("));
                 }
+                // מבנה 99: עריכה של רשימה חכמה בטופס — דרך המנהל; מול הדרך הישנה (המסך שמר בעצמו, עם גיבוי לפני ועדכון קובצי פקודות)
+                {
+                    final String[][] e99 = {   // {הרשימה (שם בתוך "ישן"/"חדש"), שם חדש, תנאי, מיון, תצוגה, צלמית, תיאור, למה}
+                            {"חכמה רגילה", "", "סוג:pdf|epub", "גודל", "תיקיות", "📗", "חדש", "כי"},          // בלי שינוי בשם
+                            {"רשימה חכמה", "אחרי שינוי", "גודל:>1MB", "", "", "", "", ""},                // שם חדש
+                            {"בפנים", "בפנים", "100% «שתי מילים» \"מירכאות\"", "", "", "", "", ""}};          // אותו שם, תנאי עם תווים
+                    final String[] old99 = new String[e99.length], new99 = new String[e99.length];
+                    int before99 = edits99(m91);
+                    for (int i = 0; i < e99.length; i++) {
+                        final int k = i;
+                        final DbSmartForm.Result f = new DbSmartForm.Result();
+                        f.name = e99[i][1];
+                        f.cond = e99[i][2];
+                        f.sort = e99[i][3];
+                        f.view = e99[i][4];
+                        f.icon = e99[i][5];
+                        f.desc = e99[i][6];
+                        f.why = e99[i][7];
+                        final long[] ids = {0, 0};
+                        Db.write(Db.app, m91, null, new Db.Use<Void>() {
+                            @Override public Void run(SqlStore st) {
+                                for (int side = 0; side < 2; side++)
+                                    for (Store.Member m : st.members(DbPaths.find(st, m91, java.util.Arrays.asList(side == 0 ? "ישן" : "חדש"))))
+                                        if (m.item.type == Store.SMART && m.item.name.equals(e99[k][0]) && ids[side] == 0) ids[side] = m.item.id;
+                                return null;
+                            }
+                        });
+                        old99[i] = DbListCmd.nowEdit(m91, new DbListCmd.Work() {           // הדרך הישנה — בדיוק מה שהמסך עשה
+                            @Override public DbListCmd.Res run(Store t, DbListCmd.Finder fd) {
+                                if (t.item(ids[0]) == null) return DbListCmd.Res.err(Words.Db.ITEM_GONE);
+                                String was = t.item(ids[0]).name;
+                                DbSmartForm.save(t, ids[0], 0, f);
+                                return DbListCmd.Res.ok(Words.DbCmd.saved(f.name.isEmpty() ? was : f.name)).renamed(ids[0], was, t.item(ids[0]).name);
+                            }
+                        });
+                        Manager.Act act = Manager.onSmartEdit(m91, ids[1], f.name, f.cond, DbSmartForm.props(f), here, vars, lib);
+                        Permit.close();
+                        try {
+                            new99[i] = act.error() != null ? "תכנון: " + act.error() : act.say(lib);
+                            if (Permit.held()) new99[i] += " (ההיתר נשאר פתוח)";
+                            if (!act.plan.opens.isEmpty()) new99[i] += " (נפתחת בסוף)";
+                        } finally {
+                            Permit.open();
+                        }
+                    }
+                    o.check("מבנה 99: עריכה של רשימה חכמה בשלושה מצבים (בלי שינוי בשם, שם חדש, תנאי עם תווים) — ההודעה של הפקודה כמו של המסך "
+                                    + java.util.Arrays.toString(old99) + " " + java.util.Arrays.toString(new99),
+                            java.util.Arrays.equals(old99, new99));
+                    List<String> v99 = go("המשך ()\nאופן \"" + m91 + "\"\nודא תוכן ידנית \"ישן\" שווה תוכן ידנית \"חדש\"\n"
+                            + "השווה תוכן ידנית \"ישן\" תוכן ידנית \"חדש\" /הבדלים\n", here, vars, lib);
+                    o.check("מבנה 99: אחרי שלוש העריכות — שתי הרשימות שוות עד הסוף " + v99, bad(v99).isEmpty() && String.valueOf(v99).contains("אין הבדלים"));
+                    int after99 = edits99(m91);
+                    o.check("מבנה 99: לפני כל עריכה — גיבוי \"לפני עריכה\", גם בפקודה (" + before99 + " ← " + after99 + ")", after99 > before99);
+                    Manager.Act gone99 = Manager.onSmartEdit(m91, 987654321L, "x", "סוג:pdf", new java.util.HashMap<String, String>(), here, vars, lib);
+                    String saidGone99 = gone99.say(lib);
+                    o.check("מבנה 99: רשימה שנמחקה בזמן שהטופס היה פתוח — \"" + Words.Db.ITEM_GONE + "\" (" + saidGone99 + ")",
+                            gone99.failed && saidGone99.equals(Words.Db.ITEM_GONE));
+                    List<String> w99 = go("המשך ()\nאופן \"" + m91 + "\"\nעדכן רשימה חכמה \"מקובץ 97\" סוג:epub\nודא שגיאה\nעדכן רשימה חכמה %נבחרים% %תוכן%\n", here, vars, lib);
+                    o.check("מבנה 99: \"עדכן רשימה חכמה\" כתובה לא השתנתה; %נבחרים% בלי טופס — שגיאה " + w99, bad(w99).isEmpty());
+                    String scr99 = Files.readUtf8(new File(src, "src/com/tikiyot/vfm/masachim/DbListScreen.java"));
+                    o.check("מבנה 99: מסך הרשימות אינו שומר עוד רשימה חכמה בעצמו — דרך המנהל",
+                            !scr99.contains("DbSmartForm.save(") && scr99.contains("Manager.onSmartEdit("));
+                }
                 List<String> e92 = go("המשך ()\nאופן \"" + m91 + "\"\nודא שגיאה\nשנה ידנית \"חדש/בפנים\" \"  \"\nודא ידנית \"חדש/בפנים\" קיימת\n"
                         + "ודא ידנית \"חדש/ללא שם\" חסרה\n", here, vars, lib);
                 o.check("מבנה 92: שם שכולו רווחים — סירוב, גם בשינוי שם בפקודה (עד כאן הרשימה קיבלה את השם \"ללא שם\") " + e92, bad(e92).isEmpty());
@@ -641,6 +704,14 @@ final class DbCmdTests {
             Db.currentMode = wasMode;
         }
         return o;
+    }
+
+    /** מבנה 99: כמה גיבויים "לפני עריכה" יש לאופן. */
+    private static int edits99(String mode) {
+        File[] bk = Db.backupsDir(mode).listFiles();
+        int n = 0;
+        if (bk != null) for (File f : bk) if (f.getName().contains(Backups.OP_EDIT)) n++;
+        return n;
     }
 
     /** מבנה 97: כמה רשימות חכמות בשם הזה יש במסד של האופן. */
