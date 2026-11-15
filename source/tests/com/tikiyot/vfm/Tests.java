@@ -3071,6 +3071,34 @@ public final class Tests {
             Physical.deleteForever(lib81, Trash.list(lib81));
             wipe(d81);
         }
+        // מבנה 83 (מהיומן של המכשיר): רענון אחרי רענון, כל אחד על עותק של האינדקס ועם תיקייה חדשה — מערך המסלולים אינו מתנפח
+        {
+            File d83 = new File(r, "ניסוי-83");
+            wipe(d83);
+            new File(d83, "בסיס").mkdirs();
+            write(new File(d83, "בסיס"), "א.txt", "1");
+            Index ix83 = new Index("83", "83", d83.getAbsolutePath());
+            ix83.scan(null);
+            ix83.dirPath(0);
+            boolean found83 = true;
+            for (int k = 0; k < 30; k++) {                                        // כמו Library.refresh: התאריכים, עותק, עדכון העותק
+                new File(d83, "בסיס/חדשה " + k).mkdirs();
+                new File(d83, "בסיס").setLastModified(1700000000000L + k * 60000L);   // השעון של הכונן גס — מוודאים שהתאריך זז
+                long[] t83 = ix83.times(1);
+                Index c83 = ix83.copy();
+                c83.apply(t83);
+                ix83 = c83;
+            }
+            int dirs83 = 0;
+            for (Index.Dir d : ix83.dirs) if (!d.gone) dirs83++;
+            for (int k = 0; k < 30; k++) if (ix83.dirId(new File(d83, "בסיס/חדשה " + k).getAbsolutePath()) < 0) found83 = false;
+            check("מבנה 83: אחרי 30 רענונים שכל אחד מצא תיקייה חדשה — כל התיקיות באינדקס (" + dirs83 + ")", found83 && dirs83 >= 31);
+            check("מבנה 83: ...ומערך המסלולים בגודל סביר: " + ix83.pathsCapacity() + " תאים ל־" + dirs83 + " תיקיות (לפני התיקון — פי 1.5 בכל רענון)",
+                    ix83.pathsCapacity() <= dirs83 * 2 + 64);
+            check("מבנה 83: ...והמסלול של התיקייה האחרונה נכון", new File(d83, "בסיס/חדשה 29").getAbsolutePath()
+                    .equals(ix83.dirPath(ix83.dirId(new File(d83, "בסיס/חדשה 29").getAbsolutePath()))));
+            wipe(d83);
+        }
         // מבנה 55: המכשיר עצר את התוכנה בזמן הרצה — הדוח אומר זאת ואיזו הגדרה פותרת
         List<String> rep55 = new ArrayList<String>();
         Batch.stoppedHint(rep55, 4000);

@@ -131,7 +131,10 @@ public final class Index {
         int from = 0;
         if (p != null && p.root == rootPath) {                  // נוספו תיקיות בסוף: ממשיכים מאיפה שנעצרנו
             from = p.count;
-            raw = n <= p.raw.length && p.owner == this ? p.raw : java.util.Arrays.copyOf(p.raw, Math.max(n, p.raw.length + p.raw.length / 2));
+            // מבנה 83 (מהיומן של המכשיר, 15.11.2026 — OutOfMemoryError, הקצאה של 166MB): הגודל החדש — לפי מספר התיקיות, לא לפי האורך
+            // הקודם. עד כאן, עותק של האינדקס (כל רענון שמצא שינוי עובד על עותק — copy()) הגדיל את המערך פי 1.5 בכל פעם שנוספה
+            // תיקייה, גם כשהיה בו מקום: אחרי כ־25 רענונים כאלה בלי שהתוכנה נסגרה — עשרות מיליוני תאים ריקים, והרענון נכשל.
+            raw = n <= p.raw.length && p.owner == this ? p.raw : java.util.Arrays.copyOf(p.raw, n + n / 2 + 16);
         } else {
             raw = new String[n];
         }
@@ -142,6 +145,12 @@ public final class Index {
         p = new Paths2(rootPath, raw, n, this);
         paths = p;
         return p;
+    }
+
+    /** מבנה 83: כמה תאים מוקצים למסלולי התיקיות — לבדיקה שהמערך אינו מתנפח. */
+    int pathsCapacity() {
+        Paths2 p = paths;
+        return p == null ? 0 : p.raw.length;
     }
 
     private String slowPath(int id) {
