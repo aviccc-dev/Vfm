@@ -57,6 +57,7 @@ final class Zip {
      */
     static Result pack(File dir, File zip, Physical.Progress p) {
         Result r = new Result();
+        if ((r.error = Permit.check(Permit.ZIP)) != null) return r;             // מבנה 122: רק דרך שכבת הניהול
         long[] total = measure(dir);
         File tmp = new File(zip.getParentFile(), zip.getName() + ".tmp");
         ZipOutputStream out = null;
@@ -157,6 +158,7 @@ final class Zip {
      */
     static Result unpack(File zip, File dest, Physical.Progress p) {
         Result r = new Result();
+        if ((r.error = Permit.check(Permit.ZIP)) != null) return r;             // מבנה 122: רק דרך שכבת הניהול
         ZipFile z = null;
         try {
             z = new ZipFile(zip);

@@ -359,6 +359,21 @@ public final class Words {
 
         public static final String WRITE_TAKEN_ONLY = "ב\"כתוב\" — /תפוס:להחליף, /תפוס:לדלג או /תפוס:לשנות-שם; בלי מתג — קובץ קיים עוצר";
 
+        // מבנה 122: אריזה ופריסה של zip — כפקודות
+        public static final String N_PACK = "ארוז", N_UNPACK = "פרוס",
+                W_PACK = "אורז תיקייה לקובץ zip לידה (התיקייה נשארת; שם תפוס — \"(2)\")",
+                W_UNPACK = "פורס קובץ zip לתיקייה חדשה לידו (הקובץ נשאר; שם תפוס — \"(2)\")",
+                H_PACK = "התיקייה שאורזים", H_UNPACK = "קובץ ה־zip שפורסים",
+                PACK_USAGE = "צורה: ארוז \"<תיקייה>\"", UNPACK_USAGE = "צורה: פרוס \"<קובץ zip>\"";
+
+        public static String packWill(String dir, String zip) { return "אריזה: \"" + dir + "\" ← \"" + zip + "\""; }
+
+        public static String unpackWill(String zip, String dir) { return "פריסה: \"" + zip + "\" ← \"" + dir + "\""; }
+
+        public static String packed(String zip, int files) { return "נארז: \"" + zip + "\" · " + files(files); }
+
+        public static String noRoom(String need, String free) { return "אין מספיק מקום בכונן — צריך " + need + ", פנוי " + free; }
+
         public static final String MD_TAKEN_ONLY = "ב\"צור תיקייה\" — /תפוס:לדלג (קיימת: ממשיכים) או /תפוס:לשנות-שם (בשם אחר); בלי מתג — שם קיים עוצר";
 
         /** מבנה 109: /תפוס:לדלג — "אם קיימת ספריה זאת, המשך לשורה הבאה". */
@@ -2760,7 +2775,8 @@ public final class Words {
                 STILL_MOVING = "עוד לא הועברה לשכבת הניהול; נעשתה";
         /** שמות הפעולות — כמו שהם נאמרים בסירוב וביומן. */
         public static final String DELETE = "מחיקה", TRANSFER = "העתקה או העברה", RENAME = "שינוי שם", MAKE_FOLDER = "תיקייה חדשה",
-                RESTORE = "שחזור מהסל", FOREVER = "מחיקה לצמיתות", WRITE = "כתיבת קובץ", DB = "כתיבה למסד";
+                RESTORE = "שחזור מהסל", FOREVER = "מחיקה לצמיתות", WRITE = "כתיבת קובץ", DB = "כתיבה למסד",
+                ZIP = "אריזה או פריסה של zip";
 
         private PermitW() { }
 

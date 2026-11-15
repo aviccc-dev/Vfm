@@ -101,6 +101,12 @@ final class Manager {
             return false;
         }
 
+        /** מבנה 122: מה שהפעולה תיצור (קובץ ה־zip, התיקייה שנפרסת) — לחלון האישור; null — אין. */
+        java.io.File target() {
+            for (Batch.Step s : plan.steps) if (s.dest != null) return s.dest;
+            return null;
+        }
+
         /** למה אי אפשר — מהתכנון (קובץ של התוכנה, תיקייה אסורה, פריט שכבר איננו); null — אפשר. */
         String error() {
             for (Batch.Step s : plan.steps) if (s.error != null) return s.error;
@@ -112,10 +118,15 @@ final class Manager {
          * תקלה — הודעת כישלון, לא חריגה.
          */
         String say(Library lib) {
+            return say(lib, null);
+        }
+
+        /** מבנה 122: ...עם התקדמות ו"עצור" (אריזה ופריסה של zip). */
+        String say(Library lib, Physical.Progress progress) {
             java.util.List<String> report = null;
             String said = null;
             try {
-                report = Manager.run(plan, lib, null, null, false, null);
+                report = Manager.run(plan, lib, null, progress, false, null);
                 for (Batch.Step s : plan.steps) if (s.said != null) {
                     said = s.said;
                     made = s.made;
@@ -207,6 +218,13 @@ final class Manager {
     static Act onTrash(boolean restore, java.util.List<String> items, java.io.File here, java.util.Map<String, String> vars, Library lib) {
         String text = Commands.word(Commands.get(restore ? Batch.UNTRASH : Batch.PURGE)) + " %" + Batch.V_SELECTED + "%\n";
         return new Act(text, Batch.plan(text, here, vars, lib, null, new Batch.Selection(items, java.util.Collections.<String>emptyList())), null);
+    }
+
+    /** מבנה 122: אריזה של תיקייה ("ארוז %נבחרים%") או פריסה של קובץ zip ("פרוס %נבחרים%"), מהמסך. path — מה שנבחר. */
+    static Act onZip(boolean pack, String path, java.io.File here, java.util.Map<String, String> vars, Library lib) {
+        String text = Commands.word(Commands.get(pack ? Batch.PACK : Batch.UNPACK)) + " %" + Batch.V_SELECTED + "%\n";
+        java.util.List<String> one = java.util.Collections.singletonList(path), none = java.util.Collections.<String>emptyList();
+        return new Act(text, Batch.plan(text, here, vars, lib, null, new Batch.Selection(pack ? none : one, pack ? one : none)), null);
     }
 
     /**

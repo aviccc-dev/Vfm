@@ -305,6 +305,63 @@ final class Batch {
             };
             return true;
         }
+        if (cmd.equals(PACK) || cmd.equals(UNPACK)) {                           // מבנה 122: מה שהמסך עשה בעצמו (PhysicalUi.askZip / askUnzip)
+            final boolean pack = cmd.equals(PACK);
+            String[] err = {null};
+            String p = tk.size() == 2 ? path(tk.get(1), here, vars, err) : null;
+            if (p == null) { s.error = err[0] != null ? err[0] : pack ? Words.Cmd.PACK_USAGE : Words.Cmd.UNPACK_USAGE; return true; }
+            if (p.equals(SELECTED_MARK)) {                                      // מהמסך: התיקייה / הקובץ שנבחרו
+                Selection sel = sim.selected;
+                List<String> one = sel == null ? null : pack ? sel.dirs : sel.files;
+                if (one == null || one.size() != 1) { s.error = Words.Cmd.NOTHING_SELECTED; return true; }
+                p = one.get(0);
+            }
+            final File src = new File(p), parent = src.getParentFile();
+            if (pack ? !sim.isDir(src) : !sim.isFile(src)) { s.error = (pack ? Words.FOLDER_NOT_FOUND : Words.FILE_NOT_FOUND) + ": " + tk.get(1); return true; }
+            if (parent == null) { s.error = Words.Cmd.NO_DEST; return true; }
+            String stem = src.getName();
+            if (!pack && stem.toLowerCase(Locale.ROOT).endsWith(".zip")) stem = stem.substring(0, stem.length() - 4);
+            if (!pack && stem.trim().isEmpty()) stem = Words.Send.UNPACK_DIR;
+            File out0 = new File(parent, pack ? src.getName() + ".zip" : stem);
+            for (int i = 2; sim.isFile(out0) || sim.isDir(out0); i++) out0 = new File(parent, pack ? src.getName() + " (" + i + ").zip" : stem + " (" + i + ")");
+            final File out = out0;
+            String own = Physical.programFile(pack ? src.getAbsolutePath() : out.getAbsolutePath());
+            if (own != null) { s.error = pack ? Words.Disk.NO_FILE_IN_APP : Words.Disk.NO_UNPACK_IN_APP; return true; }
+            if (sim.lib != null && Physical.noWriteInto(sim.lib, parent) != null) { s.error = Physical.noWriteInto(sim.lib, parent); return true; }
+            if (!pack && src.isFile() && Zip.contents(src) == null) { s.error = Words.Disk.BAD_ZIP; return true; }
+            if (pack) sim.added.put(out.getAbsolutePath(), GHOST);
+            else sim.dirs.add(out.getAbsolutePath());                            // מה שבתוכה — נודע רק בהרצה
+            sim.gone.remove(out.getAbsolutePath());
+            s.dest = out;
+            s.describe = pack ? Words.Cmd.packWill(src.getName(), out.getName()) : Words.Cmd.unpackWill(src.getName(), out.getName());
+            s.op = new ListCmd.Op() {
+                @Override public String run(Library lib) {
+                    try {
+                        if (out.exists()) { DbListCmd.lastFailed = true; return Words.Disk.ALREADY_NAME + out.getName() + "\""; }
+                        if (!pack) {
+                            long[] c = Zip.contents(src);
+                            if (c == null) { DbListCmd.lastFailed = true; return Words.Disk.BAD_ZIP; }
+                            long free = Physical.free(parent);
+                            if (c[1] > 0 && free < c[1]) { DbListCmd.lastFailed = true; return Words.Cmd.noRoom(Files.size(c[1]), Files.size(free)); }
+                        }
+                        Zip.Result r = pack ? Zip.pack(src, out, plan.asked) : Zip.unpack(src, out, plan.asked);
+                        if (lib != null) {
+                            lib.dirChanged(parent.getAbsolutePath());          // האינדקס לומד על מה שנוצר
+                            lib.flush(5000);
+                        }
+                        if (r.error != null) { DbListCmd.lastFailed = true; return r.error; }
+                        return (pack ? Words.Cmd.packed(out.getName(), r.files)
+                                : Words.Disk.UNPACKED + Words.files(r.files) + Words.Disk.TO_QUOTE + out.getName() + "\""
+                                + (r.skipped > 0 ? " · " + r.skipped + Words.Disk.SKIPPED : "")) + (r.stopped ? Words.Disk.STOPPED_SUFFIX : "");
+                    } catch (Throwable t) {
+                        Log.e("Batch.zip", t);
+                        DbListCmd.lastFailed = true;
+                        return Words.Db.failed(String.valueOf(t.getMessage()));
+                    }
+                }
+            };
+            return true;
+        }
         if (cmd.equals(REPORT)) {
             String[] err = {null};
             String p = tk.size() == 2 ? path(tk.get(1), here, vars, err) : null;
@@ -775,6 +832,8 @@ final class Batch {
     static final String MODE = "MODE", CALL = "CALL", CONT = "CONTINUE";
     /** מ0.37 — הפקודות הקטנות: כתוב לקובץ · המתן · גבה (המסד) · רענן (האינדקס) · דוח (היומן לקובץ). */
     static final String WRITE = "WRITE", WAIT = "WAIT", BACKUP = "BACKUP", REFRESH = "REFRESH", REPORT = "REPORT", LAB = "LAB";
+    /** מבנה 122: אריזה ופריסה של zip. */
+    static final String PACK = "PACK", UNPACK = "UNPACK";
     /**
      * מ0.44: "קטע "<שם>"" — שורה בדוח, במקום שלה בהרצה ("▸ <שם>"). ההודעות (ECHO) עולות לראש הדוח; הקטע מחלק את הדוח לפי הסדר —
      * תוסף האבחון יודע כך איזו בדיקה עברה ואיזו נכשלה, כשמריצים כמה ביחד. לא משנה דבר.

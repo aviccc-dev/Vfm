@@ -426,16 +426,18 @@ final class PhysicalUi {
         });
     }
 
-    /** פריסה של קובץ ZIP לתיקייה חדשה לידו — שינוי בכונן, עם חלון האישור בתבנית (5). */
+    /**
+     * פריסה של קובץ ZIP לתיקייה חדשה לידו — שינוי בכונן, עם חלון האישור בתבנית (5).
+     * מבנה 122: הפריסה עצמה — דרך המנהל, כפקודה ("פרוס %נבחרים%"); הסירובים באים מהתכנון שלה. כאן נשארים חלון האישור,
+     * ההתקדמות וההודעה.
+     */
     public static void askUnzip(final Activity a, final String path, final Physical.Done done) {
         final File zip = new File(path);
-        if (!zip.isFile()) {
-            Ui.toast(a, Words.FILE_NOT_AT_PATH);
-            return;
-        }
-        final File dest = Zip.target(zip);
-        if (Physical.programFile(dest.getAbsolutePath()) != null) {
-            Ui.toast(a, Words.Disk.NO_UNPACK_IN_APP);
+        final Library lib = Library.get(a);
+        final Manager.Act act = Manager.onZip(false, path, Paths.data(), BatchUi.vars(a, Paths.data()), lib);
+        final File dest = act.target();
+        if (act.error() != null || dest == null) {
+            Ui.toast(a, act.error() != null ? act.error() : Words.Disk.ERROR);
             return;
         }
         long[] c = Zip.contents(zip);
@@ -451,7 +453,6 @@ final class PhysicalUi {
                     });
             return;
         }
-        final Library lib = Library.get(a);
         Ui.ask(a, Words.Disk.UNPACK_TITLE + zip.getName(), Words.Disk.UNPACK_CREATES,
                 Words.files(c[0]) + " · " + Files.size(c[1]) + Words.Disk.TO_LINE + dest.getAbsolutePath(),
                 Words.Disk.ZIP_STAYS, Words.Disk.UNPACK, new Runnable() {
@@ -462,23 +463,17 @@ final class PhysicalUi {
                             @Override
                             public void run() {
                                 LongOp keep = LongOp.begin(a, Words.Disk.SERVICE_ACTIVE);   // מבנה 57
-                                final Zip.Result r;
+                                final String said;
                                 try {
-                                    r = Zip.unpack(zip, dest, busy);
+                                    said = act.say(lib, busy);
                                 } finally {
                                     keep.end();
                                 }
                                 busy.close();
-                                lib.dirChanged(zip.getParent());           // האינדקס לומד על התיקייה החדשה
-                                Log.i("נפרס בכונן: " + zip + " ← " + dest + " · " + r.files + " קבצים");
                                 Ui.afterIndex(a, new Runnable() {
                                     @Override
                                     public void run() {
-                                        String msg = r.error != null ? r.error
-                                                : Words.Disk.UNPACKED + Words.files(r.files) + Words.Disk.TO_QUOTE + dest.getName() + "\""
-                                                + (r.skipped > 0 ? " · " + r.skipped + Words.Disk.SKIPPED : "")
-                                                + (r.stopped ? Words.Disk.STOPPED_SUFFIX : "");
-                                        Ui.toast(a, msg);
+                                        Ui.toast(a, said);
                                         if (done != null) done.done(new Physical.Result());
                                     }
                                 });
@@ -488,14 +483,19 @@ final class PhysicalUi {
                 });
     }
 
-    /** 1.11.0: דחיסת תיקייה ל־ZIP לידה (שם פנוי), עם חלון אישור; התיקייה נשארת. */
+    /**
+     * 1.11.0: דחיסת תיקייה ל־ZIP לידה (שם פנוי), עם חלון אישור; התיקייה נשארת.
+     * מבנה 122: האריזה עצמה — דרך המנהל, כפקודה ("ארוז %נבחרים%").
+     */
     public static void askZip(final Activity a, final File dir, final Runnable after) {
         if (!dir.isDirectory()) return;
-        if (Physical.programFile(dir.getAbsolutePath()) != null) {
-            Ui.toast(a, Words.Disk.NO_FILE_IN_APP);
+        final Library lib = Library.get(a);
+        final Manager.Act act = Manager.onZip(true, dir.getAbsolutePath(), Paths.data(), BatchUi.vars(a, Paths.data()), lib);
+        final File zip = act.target();
+        if (act.error() != null || zip == null) {
+            Ui.toast(a, act.error() != null ? act.error() : Words.Disk.ERROR);
             return;
         }
-        final File zip = new File(dir.getParentFile(), Physical.freeName(dir.getParentFile(), dir.getName() + ".zip", false));
         long[] m = Zip.measure(dir);
         Ui.ask(a, Words.DiskW.ZIP_TITLE + dir.getName(), Words.DiskW.ZIP_CREATES,
                 Words.files(m[0]) + " · " + Files.size(m[1]) + Words.Disk.TO_LINE + zip.getAbsolutePath(),
@@ -507,19 +507,17 @@ final class PhysicalUi {
                             @Override
                             public void run() {
                                 LongOp keep = LongOp.begin(a, Words.Disk.SERVICE_ACTIVE);   // מבנה 57
-                                final Zip.Result r;
+                                final String said;
                                 try {
-                                    r = Zip.pack(dir, zip, busy);
+                                    said = act.say(lib, busy);
                                 } finally {
                                     keep.end();
                                 }
                                 busy.close();
-                                Library.get(a).dirChanged(dir.getParent());
-                                Log.i("נדחס: " + dir + " ← " + zip);
                                 a.runOnUiThread(new Runnable() {
                                     @Override
                                     public void run() {
-                                        Ui.toast(a, r.error != null ? r.error : Words.DiskW.ZIPPED + zip.getName());
+                                        Ui.toast(a, said);
                                         if (after != null) after.run();
                                     }
                                 });

@@ -20,12 +20,12 @@ public final class Permit {
     /** שמות הפעולות — כמו שהם נאמרים בסירוב וביומן. */
     public static final String DELETE = Words.PermitW.DELETE, TRANSFER = Words.PermitW.TRANSFER, RENAME = Words.PermitW.RENAME,
             MAKE_FOLDER = Words.PermitW.MAKE_FOLDER, RESTORE = Words.PermitW.RESTORE, FOREVER = Words.PermitW.FOREVER,
-            WRITE = Words.PermitW.WRITE,
+            WRITE = Words.PermitW.WRITE, ZIP = Words.PermitW.ZIP,
             /** מבנה 84: כתיבה למסד (רשימות, אופנים). עוד במעבר — נרשמת ביומן ואינה מסורבת, עד שכל מי שכותב למסד עובר דרך המנהל. */
             DB = Words.PermitW.DB;
 
     /** הפעולות שכבר עוברות כולן דרך שכבת הניהול: בלי היתר — מסורבות. */
-    private static final java.util.Set<String> STRICT = new java.util.HashSet<String>(java.util.Arrays.asList(DELETE, TRANSFER, RENAME, MAKE_FOLDER, WRITE, RESTORE, FOREVER));   // מבנה 77: גם העתקה והעברה · 78: שינוי שם · 79: תיקייה חדשה · 80: כתיבת קובץ · 81: הסל — כל פעולות הכונן
+    private static final java.util.Set<String> STRICT = new java.util.HashSet<String>(java.util.Arrays.asList(DELETE, TRANSFER, RENAME, MAKE_FOLDER, WRITE, RESTORE, FOREVER, ZIP));   // מבנה 77: גם העתקה והעברה · 78: שינוי שם · 79: תיקייה חדשה · 80: כתיבת קובץ · 81: הסל — כל פעולות הכונן
 
     private static final ThreadLocal<int[]> DEPTH = new ThreadLocal<int[]>() {
         @Override protected int[] initialValue() { return new int[1]; }

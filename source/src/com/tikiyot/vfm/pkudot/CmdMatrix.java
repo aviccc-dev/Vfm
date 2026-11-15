@@ -181,6 +181,18 @@ final class CmdMatrix {
             if (db) out.add(Commands.word(def) + " ידנית \"" + LIST + "/א\" קיימת");
         } else if (name.equals(Batch.WRITE)) {
             out.add(Commands.word(def) + " \"" + d("כתוב " + k + ".txt") + "\" \"שורה\"" + sw);
+        } else if (name.equals(Batch.PACK)) {                                   // מבנה 122
+            out.add("צור תיקייה \"" + d("לארוז " + k) + "\" /תפוס:לדלג");
+            out.add("כתוב \"" + d("לארוז " + k + "\\א.txt") + "\" \"x\" /תפוס:להחליף");
+            out.add(Commands.word(def) + " \"" + d("לארוז " + k) + "\"" + sw);
+            out.add("ודא \"" + d("לארוז " + k + ".zip") + "\" קיים");
+        } else if (name.equals(Batch.UNPACK)) {
+            out.add("צור תיקייה \"" + d("לפרוס " + k) + "\" /תפוס:לדלג");
+            out.add("כתוב \"" + d("לפרוס " + k + "\\א.txt") + "\" \"x\" /תפוס:להחליף");
+            out.add("ארוז \"" + d("לפרוס " + k) + "\"");
+            out.add("מחק תיקייה \"" + d("לפרוס " + k) + "\" /עמוק");
+            out.add(Commands.word(def) + " \"" + d("לפרוס " + k + ".zip") + "\"" + sw);
+            out.add("ודא \"" + d("לפרוס " + k + "\\א.txt") + "\" קיים");
         } else if (name.equals(Batch.WAIT)) {
             out.add(Commands.word(def) + " 0" + sw);
         } else if (name.equals(Batch.REFRESH)) {

@@ -3079,6 +3079,34 @@ public final class Tests {
                         && Batch.plan("כתוב \"%יעד%\\%שם-חדש%\" \"%תוכן%\"\n", d80, v80, lib80, null, new Batch.Selection(new ArrayList<String>(),
                                 new ArrayList<String>(), new File(d80, "אין-111"), "א.txt", "y")).errors == 1
                         && Physical.newFile(lib80, new File(d80, "אין-111/א.txt"), "x") != null && !new File(d80, "אין-111").exists());
+                // מבנה 122: אריזה ופריסה של zip — כפקודות ("ארוז", "פרוס"), והמסך דרך המנהל
+                File z122 = new File(d80, "לארוז 122");
+                new File(z122, "תת").mkdirs();
+                write(z122, "א.txt", "אחת");
+                write(new File(z122, "תת"), "ב.txt", "שתיים");
+                lib80.dirChanged(d80.getAbsolutePath());
+                lib80.flush(5000);
+                Zip.Result by122 = Zip.pack(z122, new File(d80, "עוקף.zip"), null);
+                check("מבנה 122: אריזה בלי היתר — מסורבת, ולא נוצר קובץ (" + by122.error + ")", by122.error != null && by122.error.contains(Words.PermitW.BYPASS)
+                        && !new File(d80, "עוקף.zip").exists() && Permit.strict(Permit.ZIP));
+                Manager.Act pk122 = Manager.onZip(true, z122.getAbsolutePath(), Paths.data(), v80, lib80);
+                String sp122 = pk122.error() != null ? pk122.error() : pk122.say(lib80);
+                File zip122 = new File(d80, "לארוז 122.zip");
+                Manager.Act un122 = Manager.onZip(false, zip122.getAbsolutePath(), Paths.data(), v80, lib80);
+                String su122 = un122.error() != null ? un122.error() : un122.say(lib80);
+                check("מבנה 122: מהמסך, דרך המנהל — \"ארוז %נבחרים%\" (" + sp122 + ") ו\"פרוס %נבחרים%\" (" + su122 + "): הקובץ נוצר ליד התיקייה, ונפרס לתיקייה בשם פנוי, עם התוכן",
+                        !pk122.failed && zip122.isFile() && zip122.equals(pk122.target()) && !un122.failed && new File(d80, "לארוז 122 (2)").equals(un122.target())
+                        && "שתיים".equals(read(new File(d80, "לארוז 122 (2)/תת/ב.txt"))) && pk122.text.trim().equals("ארוז %נבחרים%"));
+                Batch.Plan w122 = Batch.plan("ארוז \"לארוז 122\"\nודא \"לארוז 122 (2).zip\" קיים\nפרוס \"לארוז 122 (2).zip\"\nודא \"לארוז 122 (2) (2)\\לארוז 122\\א.txt\" קיים\n", d80, v80, lib80);
+                String r122 = w122.errors == 0 ? String.valueOf(Manager.run(w122, lib80, null, null, false, null)) : w122.errorText();
+                check("מבנה 122: בקובץ פקודות — שם תפוס: \"(2)\"; מה שנוצר נראה לשורות שאחריו " + r122,
+                        w122.errors == 0 && !w122.trouble && new File(d80, "לארוז 122 (2).zip").isFile() && "אחת".equals(read(new File(d80, "לארוז 122 (2) (2)/לארוז 122/א.txt"))));
+                check("מבנה 122: תיקייה שאין, קובץ שאינו zip, קובץ של התוכנה — שגיאה בתכנון",
+                        Batch.plan("ארוז \"אין 122\"\n", d80, v80, lib80).errors == 1 && Batch.plan("פרוס \"לארוז 122\\א.txt\"\n", d80, v80, lib80).errors == 1
+                                && Batch.plan("ארוז\n", d80, v80, lib80).errors == 1);
+                String pui122 = read(new File(code, "masachim/rechivim/PhysicalUi.java"));
+                check("מבנה 122: המסך אינו אורז ואינו פורס בעצמו — רק דרך המנהל", !pui122.contains("Zip.pack(") && !pui122.contains("Zip.unpack(")
+                        && pui122.contains("Manager.onZip(true") && pui122.contains("Manager.onZip(false"));
                 check("מבנה 80: ההיתר נסגר אחרי כל הרצה", !Permit.held());
             } finally {
                 Permit.open();
@@ -4641,7 +4669,7 @@ public final class Tests {
     /** 1.22.5: ההגדרה האחת — שלמה, תואמת למנוע, וכל פרמטר עם שם והסבר. */
     private static void v1225() {
         check("1.22.5: פקודות הקבצים — אותן ובאותו סדר (מ0.14: ודא)",
-                java.util.Arrays.equals(Commands.fileNames(), new String[]{"COPY", "MOVE", "DEL", "REN", "MD", "RD", "COMP", "LINK", "VERIFY", "MODE", "CONTINUE", "WRITE", "WAIT", "BACKUP", "REFRESH", "REPORT", "CALL", "START", "ECHO", "REM", "SECTION", "DROPMODE", "UNTRASH", "PURGE"}));   // מ0.44: קטע; מ0.45: מחק אופן, שחזר מהסל, רוקן סל
+                java.util.Arrays.equals(Commands.fileNames(), new String[]{"COPY", "MOVE", "DEL", "REN", "MD", "RD", "COMP", "LINK", "VERIFY", "MODE", "CONTINUE", "WRITE", "WAIT", "BACKUP", "REFRESH", "REPORT", "CALL", "START", "ECHO", "REM", "SECTION", "DROPMODE", "UNTRASH", "PURGE", "PACK", "UNPACK"}));   // מ0.44: קטע; מ0.45: מחק אופן, שחזר מהסל, רוקן סל; מבנה 122: ארוז, פרוס
         check("1.22.5: שמות נרדפים", Commands.canonical("MKDIR").equals("MD") && Commands.canonical("rmdir").equals("RD")
                 && Commands.canonical("ERASE").equals("DEL") && Commands.canonical("RENAME").equals("REN")
                 && Commands.canonical("copy").equals("COPY") && Commands.canonical("FORMAT").equals("FORMAT")

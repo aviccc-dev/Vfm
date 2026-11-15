@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="vfm-plugin" content="עורך אינטראקטיבי">
-<meta name="vfm-plugin-version" content="14">
+<meta name="vfm-plugin-version" content="15">
 <meta name="vfm-lab" content="עורך אינטראקטיבי">
 <meta name="vfm-lab-version" content="8">
 <title>עורך אינטראקטיבי</title>
@@ -127,7 +127,8 @@ button:focus-visible,.fi:focus-visible{outline:2px solid var(--accent);outline-o
 window.VfmEditorModel=(function(){
 "use strict";
 // מ0.40 התוכנה מכירה "תוסף" (הוסף תוסף, פתח תוסף…); הגרסה הקודמת — "מעבדה". העמוד בודק בהתחלה, וכותב מה שהמנוע המותקן מכיר
-const compat={plugins:true,v45:true,n4:true};   // v45 — מ0.45 ומעלה (מחק אופן, הסל, ודא תקין…); n4 — גרסה 14: התוכנה מכירה "/מגיבוי" ו"ודא רציף"
+const compat={plugins:true,v45:true,n4:true,n15:true};   // n15 — גרסה 15: התוכנה מכירה "ארוז" ו"פרוס" (info.features: zip)
+//   // v45 — מ0.45 ומעלה (מחק אופן, הסל, ודא תקין…); n4 — גרסה 14: התוכנה מכירה "/מגיבוי" ו"ודא רציף"
 const q=s=>'"'+s+'"';
 const qv=v=>/[\s"]/.test(v)||v===''?q(v):v;
 // מילות הסוג של מנוע הרשימות
@@ -192,6 +193,8 @@ const NEW040=['אם תפוס לשנות-שם','מכיל בקובץ','בלי לפ
 const NEW045=['קוראים','בסל','כמה בסל','עד זמן לשורה'],NEW045_CMDS=['בטל אופן','שחזר מהסל','רוקן סל','ודא תקין','ודא אופן','קטע'];
 // גרסה 14: מה שרק תוכנה חדשה יותר מכירה (info.features: steady)
 const NEW_N4=['מגיבוי'],NEW_N4_CMDS=['ודא רציף'];
+// גרסה 15: ארוז · פרוס (info.features: zip)
+const NEW_N15_CMDS=['ארוז','פרוס'];
 const DATES=['מהיום','מהשבוע','מהחודש','מהשנה','תאריך אחר'];
 const TRANSFER=['הכל','נסתרים'].concat(TAKEN,DATES,['גודל','מכיל בקובץ','עד אחוז','יומן']);
 
@@ -306,6 +309,11 @@ const CMDS={
     slots:[{link:'את',kind:'pick',pk:['file','folder']}],det:[]},
   'רוקן סל':{w:'רוקן סל',en:'PURGE',read:['PURGE'],what:'מחיקה לצמיתות מהסל: מה שנמחק מהמסלול הזה (או מתוך התיקייה). בלי מסלול — כל הסל',
     slots:[{link:'של',kind:'pick',pk:['file','folder'],opt:true}],det:[]},
+  // גרסה 15: ארוז · פרוס
+  'ארוז':{w:'ארוז',en:'PACK',read:['PACK'],what:'אורז תיקייה לקובץ zip לידה (התיקייה נשארת; שם תפוס — "(2)")',
+    slots:[{link:'את',kind:'pick',pk:['folder']}],det:[]},
+  'פרוס':{w:'פרוס',en:'UNPACK',read:['UNPACK'],what:'פורס קובץ zip לתיקייה חדשה לידו (הקובץ נשאר; שם תפוס — "(2)")',
+    slots:[{link:'את',kind:'pick',pk:['file']}],det:[]},
   'ודא תקין':{w:'ודא תקין',en:'VERIFY תקין',form:'fixed',what:'כל השורות מתחילת הקטע (או הקובץ) רצו בלי כישלון',slots:[],det:[]},
   // גרסה 14: ודא רציף
   'ודא רציף':{w:'ודא רציף',en:'VERIFY רציף',form:'fixed',what:'ההרצה נמשכה ברציפות גם כשהמסך היה כבוי (רק בקובץ שיש בראשו "מדידה"; אחרי "המתן")',slots:[],det:[]},
@@ -332,7 +340,7 @@ const CMDS={
 };
 Object.keys(CMDS).forEach(k=>{const d=CMDS[k];d.id=k;if(!d.read)d.read=[];if(!d.slots)d.slots=[];if(!d.det)d.det=[];});
 const MENU=[
-  ['קבצים ותיקיות',['העתק','העבר','מחק','שנה','צור תיקייה','מחק תיקייה','השווה','הפעל','שחזר מהסל','רוקן סל']],
+  ['קבצים ותיקיות',['העתק','העבר','מחק','שנה','צור תיקייה','מחק תיקייה','השווה','הפעל','שחזר מהסל','רוקן סל','ארוז','פרוס']],
   ['רשימות',['צור רשימה','צור רשימה חכמה','עדכן רשימה חכמה','העתק','העבר','שנה','בטל','בטל לא-משויכים','קשר','צור רעיון','צור כותרת']],
   ['פתיחה בסוף ההרצה',['פתח מסך','פתח רשימה','פתח רשימה חכמה','פתח תיקייה','פתח תפריט','פתח כלי','פתח תוסף','מצא','חזרה','הרץ','הוסף','צור פקודה']],
   ['הודעות וכתיבה',['הודעה','הערה','כתוב','דוח']],
@@ -341,7 +349,7 @@ const MENU=[
   ['המסד והתוספים',['אופן','צור אופן','גבה','רענן','הוסף תוסף','החלף תוסף']]   // גרסה 9: "אופן" — כאן (המשתמש לא מצא אותה ב"רשימות")
 ];
 // מ0.40: "הוסף תוסף" ו"החלף תוסף" ירדו (העמודים עוברים ב"העבר"); בגרסה הקודמת — עדיין בתפריט
-function menu(){return MENU.map(([g,ks])=>[g,(compat.plugins?ks.filter(k=>k!=='הוסף תוסף'&&k!=='החלף תוסף'):ks).filter(k=>compat.v45||NEW045_CMDS.indexOf(k)<0).filter(k=>compat.n4||NEW_N4_CMDS.indexOf(k)<0)]);}
+function menu(){return MENU.map(([g,ks])=>[g,(compat.plugins?ks.filter(k=>k!=='הוסף תוסף'&&k!=='החלף תוסף'):ks).filter(k=>compat.v45||NEW045_CMDS.indexOf(k)<0).filter(k=>compat.n4||NEW_N4_CMDS.indexOf(k)<0).filter(k=>compat.n15||NEW_N15_CMDS.indexOf(k)<0)]);}
 
 // הצורות שנקראות: מילים ← הפקודה (הארוכה קודם)
 const READS=[];
@@ -660,6 +668,7 @@ const V=window.vfm||demoBridge();
 const can=n=>typeof V[n]==='function';
 Mo.compat.plugins=can('runFile');            // מ0.40 ומעלה
 Mo.compat.v45=can('commandMatrix');          // מ0.45 ומעלה
+Mo.compat.n15=(function(){try{return (' '+(JSON.parse(can('info')?V.info():'{}').features||'')+' ').indexOf(' zip ')>=0;}catch(e){return false;}})();   // גרסה 15: "ארוז", "פרוס"
 Mo.compat.n4=(function(){try{return (' '+(JSON.parse(can('info')?V.info():'{}').features||'')+' ').indexOf(' steady ')>=0;}catch(e){return false;}})();   // גרסה 14: "/מגיבוי", "ודא רציף"
 function ask(method,args,cb){const id='r'+(++seq);pending[id]=cb;V[method].apply(V,[id].concat(args));}
 function J(s,d){try{return s==null?d:JSON.parse(s);}catch(e){return d;}}
