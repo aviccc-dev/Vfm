@@ -1888,6 +1888,8 @@ final class Batch {
             if (x.equals(ListCmd.SW_CONDS) || x.equals(ListCmd.SW_DIFF)) { if (cmd.equals("COMP")) continue; return Words.Cmd.switchNotHere(x, null); }
             boolean take = u.equals("/S") || x.equals(SW_KEEP) || u.equals("/Y") || u.equals("/-Y") || x.startsWith(SW_TAKEN);
             if (take && toFolder) continue;
+            if (cmd.equals("MD") && (x.equals(SW_TAKEN + TAKEN_SKIP) || x.equals(SW_TAKEN + TAKEN_RENAME) || x.equals(SW_TAKEN + TAKEN_STOP)))
+                continue;                                                       // מבנה 109: "צור תיקייה ידנית … /תפוס:לדלג"
             return Words.Cmd.switchNotHere(Commands.switchWord(x), null);
         }
         return null;
@@ -1942,10 +1944,23 @@ final class Batch {
                 makeSelected(s, cmd, d, sim);
                 return;
             }
-            if (sim.isDir(d)) {                                                // קיימת — בלי שינוי
-                s.noop = true;
-                s.dest = d;
-                s.describe = Words.Cmd.folderExists(d.getName());
+            for (String x : sw)                                                 // מבנה 109: "להחליף" / "לשאול" — לא לתיקייה; לא בולעים בשקט
+                if (x.toUpperCase(Locale.ROOT).equals("/Y") || x.equals(SW_TAKEN + TAKEN_REPLACE) || x.equals(SW_TAKEN + TAKEN_ASK)) {
+                    s.error = Words.Cmd.MD_TAKEN_ONLY;
+                    return;
+                }
+            if (sim.isDir(d) && s.renameTaken) {                               // מבנה 109: /תפוס:לשנות-שם — בשם פנוי "(2)"
+                File free = d;
+                for (int k = 2; sim.isDir(free) || sim.isFile(free); k++) free = new File(d.getParentFile(), d.getName() + " (" + k + ")");
+                d = free;
+            } else if (sim.isDir(d)) {
+                if (s.skipTaken) {                                              // מבנה 109: /תפוס:לדלג — "המשך לשורה הבאה"
+                    s.noop = true;
+                    s.dest = d;
+                    s.describe = Words.Cmd.folderSkipped(d.getName());
+                    return;
+                }
+                s.error = Words.Cmd.folderTaken(d.getName());                  // מבנה 109 (המשתמש): "סירוב, אלא אם כן יש הוראה להמשיך"
                 return;
             }
             if (sim.isFile(d)) { s.error = Words.Cmd.exists(d.getName()); return; }

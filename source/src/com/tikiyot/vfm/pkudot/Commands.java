@@ -172,6 +172,12 @@ final class Commands {
         return sw("/A:H", new String[]{"/A", "/A:"}, Type.FLAG, Words.Def.P_HIDDEN, Words.Def.H_HIDDEN);
     }
 
+    /** מבנה 109: "צור תיקייה" (ובשורת רשימות — "צור תיקייה ידנית") בשם קיים: לעצור (בלי מתג) · לדלג · לשנות-שם. */
+    private static Param takenNew() {
+        return sw(Batch.SW_TAKEN, null, Type.CHOICE, Words.Def.P_TAKEN, Words.Def.H_TAKEN_NEW,
+                Batch.TAKEN_STOP, Batch.TAKEN_SKIP, Batch.TAKEN_RENAME);
+    }
+
     private static Param taken() {
         return sw(Batch.SW_TAKEN, new String[]{"/Y", "/-Y"}, Type.CHOICE, Words.Def.P_TAKEN, Words.Def.H_TAKEN,
                 Batch.TAKEN_ASK, Batch.TAKEN_SKIP, Batch.TAKEN_REPLACE, Batch.TAKEN_STOP, Batch.TAKEN_RENAME);
@@ -321,7 +327,7 @@ final class Commands {
                     pos(Type.PATH, Words.Def.P_FILE, Words.Def.H_REN_SRC),
                     pos(Type.NAME, Words.Def.P_NEW_NAME, Words.Def.H_NEW_NAME)), null),
             new Def("MD", Words.Def.N_MD, new String[]{"MKDIR"}, Family.FILE, Words.Def.W_MD,
-                    list(pos(Type.PATH, Words.Def.P_FOLDER, Words.Def.H_MD)), null),
+                    list(pos(Type.PATH, Words.Def.P_FOLDER, Words.Def.H_MD), takenNew()), null),
             new Def("RD", Words.Def.N_RD, new String[]{"RMDIR", HE_UNLIST}, Family.FILE, Words.Def.W_RD, list(
                     pos(Type.PATH, Words.Def.P_FOLDER, Words.Def.H_RD),
                     sw("/S", null, Type.FLAG, Words.Def.P_NOT_EMPTY, Words.Def.H_NOT_EMPTY)), null),

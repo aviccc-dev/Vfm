@@ -176,11 +176,28 @@ final class DbListCmd {
     /** MD ידנית "א\ב": קיימת — בלי שינוי; חסרה — נוצרת בכל הדרך (חלק ראשון — בבית). */
     /** מבנה 102: "צור תיקייה ידנית" — הכלל האחד של רשימה חדשה (Lists.newListAt): שם קיים — סירוב (עד כאן: "בלי שינוי"). */
     static Res md(Store s, String mode, ListCmd.Side a) {
-        Lists.Made m = Lists.newListAt(s, mode, a.path);
+        return md(s, mode, a, Lists.TAKEN_STOP);
+    }
+
+    /** מבנה 109: taken — `/תפוס:לדלג` (קיימת: ממשיכים), `/תפוס:לשנות-שם` ("(2)"); בלי — סירוב. */
+    static Res md(Store s, String mode, ListCmd.Side a, int taken) {
+        Lists.Made m = Lists.newListAt(s, mode, a.path, taken);
+        return listMade(m, a.label());
+    }
+
+    /** מבנה 109: ההודעה לפי מה שקרה ברשימה חדשה. */
+    static Res listMade(Lists.Made m, String label) {
         if (m.error != null) return Res.err(m.error);
-        Res ok = Res.ok(Words.ListCmdW.created(a.label()));
+        if (m.skipped) return Res.same(Words.ListCmdW.listSkipped(label));
+        Res ok = Res.ok(Words.ListCmdW.created(m.renamed ? m.name : label));
         ok.made = m.id;
         return ok;
+    }
+
+    /** מבנה 109: "/תפוס:<ערך>" מתוך המתגים של השורה. */
+    static int takenOf(List<String> sw) {
+        for (String x : sw) if (x.startsWith(Batch.SW_TAKEN)) return taken(x.substring(Batch.SW_TAKEN.length()));
+        return Lists.TAKEN_STOP;
     }
 
     /** RD / DEL על רשימה: רשימה, חכמה, תוכן, או קבצים לפי תבנית — יוצאים מהרשימות (הקבצים בכונן לא נוגעים). */
@@ -615,8 +632,9 @@ final class DbListCmd {
             if (a.kind == ListCmd.SMART_LIST) { s.error = Words.ListCmdW.MD_SMART; return; }
             if (a.kind != ListCmd.LIST || a.content || a.filesOf || a.home || a.mask != null) { s.error = Words.ListCmdW.USAGE_MD; return; }
             s.listPath = a.path;
+            final int taken = takenOf(sw);                                       // מבנה 109
             work = new Work() {
-                @Override public Res run(Store t, Finder f) { return md(t, mode, a); }
+                @Override public Res run(Store t, Finder f) { return md(t, mode, a, taken); }
             };
         } else if (cmd.equals("RD") || cmd.equals("DEL")) {
             if (sd.size() != 1) { s.error = Commands.usage(cmd); return; }
@@ -1044,11 +1062,7 @@ final class DbListCmd {
                 // מבנה 100: המספר של מה שנוצר / עודכן חוזר (Res.made ← Step.made) — כפתור שמריץ את השורה פותח בדיוק אותו
                 if (list) {                                                      // מבנה 102: "צור רשימה" — הכלל האחד; שם קיים — סירוב
                     if (path == null || path.isEmpty()) return Res.err(Words.Verb.NOT_FOUND + c.arg);
-                    Lists.Made m = Lists.newListAt(t, mode, path);
-                    if (m.error != null) return Res.err(m.error);
-                    Res ok = Res.ok(Words.ListCmdW.created(Names.label(path)));
-                    ok.made = m.id;
-                    return ok;
+                    return listMade(Lists.newListAt(t, mode, path, taken(c.taken)), Names.label(path));   // מבנה 109: /תפוס:
                 }
                 if (smartNew) {                                                  // מבנה 103–104: הכלל האחד (Lists.newSmart) — בבית
                     java.util.Map<String, String> props = new java.util.HashMap<String, String>();

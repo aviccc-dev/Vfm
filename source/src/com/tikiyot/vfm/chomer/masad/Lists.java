@@ -300,13 +300,34 @@ final class Lists {
      * שם היא "תפוס". ה־➕, הבורר, הכפתור "צור רשימה" ושתי השורות הכתובות ("צור רשימה", "צור תיקייה ידנית") — כולם כאן.
      */
     static Made newListChecked(Store s, long parent, String name) {
+        return newListChecked(s, parent, name, TAKEN_STOP);
+    }
+
+    /** מבנה 109: taken — כשהשם קיים: TAKEN_STOP (סירוב), TAKEN_SKIP (הקיימת, בלי שינוי), TAKEN_RENAME (בשם פנוי "(2)"). */
+    static Made newListChecked(Store s, long parent, String name, int taken) {
         Made r = new Made();
+        long into0 = parent != 0 ? parent : DbPaths.home(s);
+        String clean = Names.cleanName(name);
+        long had = into0 != 0 ? DbPaths.child(s, into0, clean) : DbPaths.standalone(s, clean);
+        if (had != 0 && taken == TAKEN_SKIP) {
+            r.id = had;
+            r.skipped = true;
+            r.name = clean;
+            return r;
+        }
+        if (had != 0 && taken == TAKEN_RENAME) {
+            String free = clean;
+            for (int k = 2; (into0 != 0 ? DbPaths.child(s, into0, free) : DbPaths.standalone(s, free)) != 0; k++) free = clean + " (" + k + ")";
+            name = free;
+            r.renamed = true;
+        }
         long into = parent != 0 ? parent : DbPaths.home(s);
         List<Long> ps = new ArrayList<Long>();
         ps.add(into);
         r.error = nameError(s, ps, 0, Store.LIST, name);
         if (r.error == null && into == 0 && DbPaths.standalone(s, Names.cleanName(name)) != 0) r.error = Words.DbCmd.nameTaken(Names.cleanName(name));
         if (r.error == null) r.id = newList(s, into, name);
+        r.name = Names.cleanName(name);
         return r;
     }
 
@@ -315,6 +336,10 @@ final class Lists {
      * שהפקודות מוצאות אותו (DbPaths.find), וחסר — נוצר. שם לא תקין בחלק האחרון — סירוב לפני שנוצר משהו בדרך.
      */
     static Made newListAt(Store s, String mode, List<String> path) {
+        return newListAt(s, mode, path, TAKEN_STOP);
+    }
+
+    static Made newListAt(Store s, String mode, List<String> path, int taken) {
         Made r = new Made();
         if (path == null || path.isEmpty()) {
             r.error = Words.DbCmd.BAD_NAME;
@@ -338,7 +363,7 @@ final class Lists {
                 return r;
             }
         }
-        return newListChecked(s, parent, last);
+        return newListChecked(s, parent, last, taken);
     }
 
 

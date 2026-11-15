@@ -2971,9 +2971,10 @@ public final class Tests {
                     && Manager.onMakeFolder(d79, " ", Paths.data(), v79, lib79).error() != null);
             check("מבנה 79: בתוך תיקיית התוכנה — סירוב מהתכנון", Words.Disk.NO_FOLDER_IN_APP.equals(
                     Manager.onMakeFolder(Paths.data(), "חדשה-79", Paths.data(), v79, lib79).error()));
-            check("מבנה 79: במנוע — %שם-חדש% בלי בחירה אינו מוכר; ו\"צור תיקייה\" כתובה — כמו שהייתה (קיימת = בלי שינוי)",
+            check("מבנה 79: במנוע — %שם-חדש% בלי בחירה אינו מוכר; מבנה 109: \"צור תיקייה\" כתובה, קיימת — סירוב; עם /תפוס:לדלג — בלי שינוי",
                     Batch.plan("צור תיקייה \"%יעד%\\%שם-חדש%\"\n", d79, v79, lib79).errors == 1
-                            && Batch.plan("צור תיקייה \"קיימת\"\n", d79, v79, lib79).steps.get(0).noop);
+                            && Batch.plan("צור תיקייה \"קיימת\"\n", d79, v79, lib79).errors == 1
+                            && Batch.plan("צור תיקייה \"קיימת\" /תפוס:לדלג\n", d79, v79, lib79).steps.get(0).noop);
             Permit.close();
             try {
                 String no79 = Physical.makeFolder(lib79, d79, "עוקפת");
@@ -3919,8 +3920,15 @@ public final class Tests {
         // ניקוי השיתוף (1.9.0): MD לתיקייה שכבר קיימת — בלי שגיאה; קובץ פקודות — רק בסיומת vbat
         File land2 = new File(root, "נחתו190");
         land2.mkdirs();
-        Batch.Plan again = Batch.plan("MD \"%כאן%\\לשלוח\"\nMD \"%כאן%\\לשלוח\"", land2, Batch.vars(land2, root.getAbsolutePath(), null));
-        check("MD לתיקייה שתיווצר/קיימת — בלי שגיאה", again.errors == 0 && again.changes() == 1);
+        Batch.Plan again = Batch.plan("MD \"%כאן%\\לשלוח\"\nMD \"%כאן%\\לשלוח\" /תפוס:לדלג", land2, Batch.vars(land2, root.getAbsolutePath(), null));
+        check("MD לתיקייה שתיווצר/קיימת — עם /תפוס:לדלג: בלי שגיאה (מבנה 109)", again.errors == 0 && again.changes() == 1);
+        // מבנה 109 (המשתמש): "סירוב, אלא אם כן יש הוראה להמשיך… אם קיימת ספריה זאת המשך לשורה הבאה, אחרת עוצר"
+        Batch.Plan stop109 = Batch.plan("MD \"%כאן%\\לשלוח\"\nMD \"%כאן%\\לשלוח\"", land2, Batch.vars(land2, root.getAbsolutePath(), null));
+        Batch.Plan ren109 = Batch.plan("MD \"%כאן%\\לשלוח\"\nMD \"%כאן%\\לשלוח\" /תפוס:לשנות-שם", land2, Batch.vars(land2, root.getAbsolutePath(), null));
+        Batch.Plan bad109 = Batch.plan("MD \"%כאן%\\לשלוח\" /תפוס:להחליף", land2, Batch.vars(land2, root.getAbsolutePath(), null));
+        check("מבנה 109: תיקייה קיימת בלי מתג — שגיאה (\"שם קיים\"), והקובץ אינו רץ; /תפוס:לשנות-שם — \"(2)\"; /תפוס:להחליף — לא קיים לתיקייה",
+                stop109.blocked() && stop109.errorText().contains(Words.Cmd.folderTaken("לשלוח")) && ren109.errors == 0 && ren109.changes() == 2
+                        && ren109.steps.get(1).dest.getName().equals("לשלוח (2)") && bad109.errors == 1);
         check("1.9.0: קובץ פקודות — רק vbat", Batch.isBatch("א.VBAT") && !Batch.isBatch("סידור — לשלוח.vbat.txt")
                 && !Batch.isBatch("הערות.txt"));
         check("1.9.0: /חתימה: — מתג לא מוכר", Batch.plan("COPY %כאן%\\א.pdf %כאן% /חתימה:2:abc", land2, Batch.vars(land2, root.getAbsolutePath(), null)).errors == 1);
@@ -4644,7 +4652,8 @@ public final class Tests {
         tf.delete();
         try {
 
-            String text = "MD \"גיבוי\\נוכחי\"\n"
+            String text = "MD \"גיבוי\\נוכחי\" /תפוס:לדלג\n"   // מבנה 109: כמו בתבנית — גיבוי שרץ שוב ושוב
+            + ""
                     + "COMP /רשימה:\"המסמכים שלי\" \"גיבוי\\נוכחי\"\n"
                     + "MOVE %רק-ביעד% \"גיבוי\\היסטוריה\\%תאריך%\" /עד:50%\n"
                     + "COPY %רק-במקור% \"גיבוי\\נוכחי\" /תפוס:לעצור /יומן:\"גיבוי\\יומן\\%תאריך%.txt\"\n";
@@ -4729,7 +4738,8 @@ public final class Tests {
         Library lib = Library.forTests(new ArrayList<Index>(Collections.singletonList(ix)));
         File tf = new File(home, "מבנה-מצב.txt");
         tf.delete();
-        String text = "MD \"גיבוי\\נוכחי\"\n"
+        String text = "MD \"גיבוי\\נוכחי\" /תפוס:לדלג\n"   // מבנה 109: כמו בתבנית — גיבוי שרץ שוב ושוב
+            + ""
                 + "COMP מסמכים \"גיבוי\\נוכחי\"\n"
                 + "MOVE %רק-ביעד% \"גיבוי\\היסטוריה\\%תאריך%\"\n"
                 + "COPY %רק-במקור% \"גיבוי\\נוכחי\" /תפוס:לעצור /יומן:\"גיבוי\\יומן\\%תאריך%.txt\"\n";
@@ -4897,7 +4907,8 @@ public final class Tests {
                 && cr.onlyBDirs.contains(new File(root, "פ2/b").getAbsolutePath()));
 
         // 2. גיבוי ראשון — יעד ריק (נוצר ב־MD)
-        String text = "MD \"גיבוי\\נוכחי\"\n"
+        String text = "MD \"גיבוי\\נוכחי\" /תפוס:לדלג\n"   // מבנה 109: כמו בתבנית — גיבוי שרץ שוב ושוב
+            + ""
                 + "COMP מסמכים \"גיבוי\\נוכחי\"\n"
                 + "MOVE %רק-ביעד% \"גיבוי\\היסטוריה\\%תאריך%\" /עד:50%\n"
                 + "COPY %רק-במקור% \"גיבוי\\נוכחי\" /תפוס:לעצור /יומן:\"גיבוי\\יומן\\%תאריך%.txt\"\n";

@@ -474,8 +474,13 @@ final class DbCmdTests {
                                 && vb102.errorText().contains(Words.DbCmd.nameTaken("בפנים")));
                 List<String> md91 = go("אופן \"" + m91 + "\"\nודא שגיאה\nMD ידנית \"חדש/בפנים\"\nודא ידנית \"חדש/בפנים\" קיימת\n", here, vars, lib);
                 o.check("מבנה 102: עם \"ודא שגיאה\" (הוראה מפורשת) — ממשיך, והרשימה הקיימת לא נגעה " + md91, bad(md91).isEmpty());
+                // מבנה 109: אותו מתג ברשימה — "צור תיקייה ידנית" ו"צור רשימה" קיימת: /תפוס:לדלג ממשיך, /תפוס:לשנות-שם — "(2)"
+                List<String> sk109 = go("המשך ()\nצור אופן \"בדיקת-109\"\nאופן \"בדיקת-109\"\nMD ידנית \"חדש/בפנים\"\nMD ידנית \"חדש/בפנים\" /תפוס:לדלג\nצור רשימה \"חדש/בפנים\" /תפוס:לדלג /בלי-לפתוח\n"
+                        + "MD ידנית \"חדש/בפנים\" /תפוס:לשנות-שם\nודא ידנית \"חדש/בפנים (2)\" קיימת\n", here, vars, lib);
+                o.check("מבנה 109: רשימה קיימת — /תפוס:לדלג: ממשיכים (ונאמר), /תפוס:לשנות-שם: \"(2)\" " + sk109,
+                        bad(sk109).isEmpty() && String.valueOf(sk109).contains(Words.ListCmdW.listSkipped("\"חדש/בפנים\"")));
                 String dlc102 = Files.readUtf8(new File(src, "src/com/tikiyot/vfm/pkudot/DbListCmd.java"));
-                int md102at = dlc102.indexOf("static Res md(Store s");
+                int md102at = dlc102.indexOf("static Res md(Store s, String mode, ListCmd.Side a, int taken)");   // מבנה 109: עם המתג
                 o.check("מבנה 102: שומר — הכלל האחד: \"צור תיקייה ידנית\" ו\"צור רשימה\" — דרך Lists.newListAt; ה־➕ — דרך Lists.newListChecked; ואין עוד \"כבר קיימת — בלי שינוי\" לרשימה",
                         md102at > 0 && dlc102.indexOf("Lists.newListAt(", md102at) > md102at && dlc102.indexOf("Lists.newListAt(", md102at) < dlc102.indexOf("\n    }\n", md102at)
                                 && dlc102.split("Lists\\.newListAt\\(", -1).length == 3 && dlc102.contains("Lists.newListChecked(")
