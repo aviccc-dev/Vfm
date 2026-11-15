@@ -3317,6 +3317,36 @@ public final class Tests {
                 Conf.set(Conf.GENERAL, Conf.EXCLUDED, ex127);
                 Conf.set(Conf.GENERAL, Conf.PERIODIC, "0");
             }
+            // מבנה 128: השלד נסגר — מי שעוד כותב או מוחק קובץ ישירות, בלב ובמסכים, הוא רשימה סגורה שרק מתקצרת
+            {
+                String[][] known128 = {
+                        {"lev/Bridge.java", "8", "הדלת לתוספים: קובץ פקודות וטקסט שתוסף שומר, ניקוי הנתונים שלו"},
+                        {"lev/Lab.java", "10", "תיקיית התוספים: מעבר מהשם הישן, תוסף שבא עם התוכנה"},
+                        {"masachim/IniEditScreen.java", "1", "עורך קובצי ההגדרות"},
+                        {"masachim/LabScreen.java", "2", "עותק פרטי של עמוד התוסף שרץ"},
+                        {"masachim/itzuv/Design.java", "12", "קובצי העיצוב"},
+                        {"masachim/rechivim/Acts.java", "1", "ניקוי עותקים ישנים בתיקיית השליחה של התוכנה"},
+                        {"masachim/rechivim/BatchUi.java", "2", "עותק פרטי להצגה"},
+                };
+                java.util.regex.Pattern w128 = java.util.regex.Pattern.compile(
+                        "Files\\.writeAtomic\\(|\\.delete\\(\\)|\\.renameTo\\(|\\.mkdirs\\(\\)|new FileOutputStream|new FileWriter|saveQuiet\\(\\)|Files\\.(copy|write|append)[A-Za-z]*\\(");
+                StringBuilder bad128 = new StringBuilder(), now128 = new StringBuilder();
+                String root128 = code.getPath().replace('\\', '/');
+                for (File f : javaFiles(code)) {
+                    String rel = f.getPath().replace('\\', '/').substring(root128.length() + 1);
+                    if (!rel.startsWith("lev/") && !rel.startsWith("masachim/")) continue;
+                    int n = 0;
+                    java.util.regex.Matcher m128 = w128.matcher(read(f));
+                    while (m128.find()) n++;
+                    if (n == 0) continue;
+                    now128.append(rel).append('=').append(n).append(' ');
+                    int allowed = 0;
+                    for (String[] k : known128) if (k[0].equals(rel)) allowed = Integer.parseInt(k[1]);
+                    if (n > allowed) bad128.append(rel).append(" (").append(n).append(" > ").append(allowed).append(") ");
+                }
+                check("מבנה 128: בלב ובמסכים — כתיבה או מחיקה ישירה של קובץ רק במקומות הידועים, ולא יותר ממה שנרשם (" + bad128.toString().trim() + ") [" + now128.toString().trim() + "]",
+                        bad128.length() == 0);
+            }
             check("מבנה 84: ...ופעולות הכונן — מסורבות כולן (לא חזרו אחורה)", Permit.strict(Permit.DELETE) && Permit.strict(Permit.WRITE));
         }
         // מבנה 55: המכשיר עצר את התוכנה בזמן הרצה — הדוח אומר זאת ואיזו הגדרה פותרת
