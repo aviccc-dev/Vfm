@@ -69,3 +69,6 @@ cp final.apk $OUT
 cd $S; rm -rf out gen bld
 [ "$S" != "$DIR" ] && rm -rf $S
 ls -la $OUT
+# מבנה 136: מדד הגודל — שני המספרים בכל בנייה (המשתמש, 15.11.2026: "בגרסאות הקודמות הקובץ הלך וקטן, וכעת הוא הולך וגדל").
+# לרשום אותם ביומן (notes/mivne-nisui.md, "מדד הגודל") ליד הבנייה.
+echo "מדד הגודל: קוד — $(find $DIR/src -name '*.java' | xargs cat | wc -l) שורות · קובץ ההתקנה — $(stat -c %s $OUT) בתים"
