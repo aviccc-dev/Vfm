@@ -6,7 +6,7 @@ def rep(a,b,n=1):
     assert s.count(a)==n,(s.count(a),a[:70]); s=s.replace(a,b)
 NAME='עורך — בדיקת תפריטים'
 rep('<meta name="vfm-plugin" content="עורך אינטראקטיבי">','<meta name="vfm-plugin" content="%s">'%NAME)
-rep('<meta name="vfm-plugin-version" content="16">','<meta name="vfm-plugin-version" content="3">')
+rep('<meta name="vfm-plugin-version" content="16">','<meta name="vfm-plugin-version" content="4">')
 rep('<meta name="vfm-lab" content="עורך אינטראקטיבי">','<meta name="vfm-lab" content="%s">'%NAME)
 rep('<title>עורך אינטראקטיבי</title>','<title>%s</title>'%NAME)
 # ---- CSS
@@ -61,7 +61,7 @@ rep("  sheetIn.appendChild(E('div','grp','הפקודות שלי'));\n  const lis
     box.textContent='';
     sheetIn.appendChild(E('div','grp','תיקיות שיש בהן קובצי פקודות'));
     const dl=E('div','items');
-    dirs.forEach(d=>dl.appendChild(B('it',[E('span',null,'📁 '+d.name),E('span','k',String(d.count))],()=>{sh={kind:'files',dir:d};drawSheet();},{title:d.path})));
+    dirs.forEach(d=>dl.appendChild(B('it',[(()=>{const w=E('span',null,'📁 '+d.name),up=d.path.split('/').filter(Boolean).slice(-3,-1).join(' / ');if(up){w.append(E('br'));const sm=E('small',null,up);sm.style.color='var(--muted)';w.append(sm);}return w;})(),E('span','k',String(d.count))],()=>{sh={kind:'files',dir:d};drawSheet();},{title:d.path})));
     if(!dirs.length)dl.appendChild(E('div','it','אין'));
     sheetIn.appendChild(dl);
     box.appendChild(B('it',[E('span',null,'תיקייה אחרת…'),E('span','k','')],()=>pickTyped('קובץ פקודות',VBAT,'קובצי פקודות',p=>openFile({name:p.split('/').pop(),path:p}))));
@@ -134,7 +134,7 @@ const A={
   asif:{t:'הרצה בכאילו',s:'▶ בכאילו',f:()=>{real=false;run();},on:()=>!!file},
   real:{t:'הרצה אמיתית…',s:'▶ אמיתית',f:()=>{real=true;run();},on:()=>!!file,cls:'real'},
   cmds:{t:'רשימת הפקודות',f:()=>{if(view==='inter'&&file&&act<0)newLineAfter();openSheet({kind:'cmd'});},on:()=>view==='inter'&&!!file},
-  about:{t:'על העורך',f:()=>toast('עורך — בדיקת תפריטים 3 · על בסיס העורך האינטראקטיבי 16')}
+  about:{t:'על העורך',f:()=>toast('עורך — בדיקת תפריטים 4 · על בסיס העורך האינטראקטיבי 16')}
 };
 const MENUS={file:['new','open','-','save','saveas','savetpl','-','close'],
   edit:['undo','redo','-','cut','copy','paste','del','-','line','dup','up','down','-','find'],
@@ -201,5 +201,5 @@ function drawTbEdit(){
 }
 '''
 rep("// ---------- שמירה ----------\nfunction save(then){", NEW+"\n// ---------- שמירה ----------\nfunction save(then){")
-out='lab-pages/תוסף עורך בדיקת תפריטים 3.html'
+out='lab-pages/תוסף עורך בדיקת תפריטים 4.html'
 io.open(out,'w',encoding='utf-8').write(s); print(out,len(s.encode('utf-8')))
