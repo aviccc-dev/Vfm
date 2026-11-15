@@ -193,8 +193,8 @@ public class SearchScreen extends Activity implements Clip.Holder {
         root.addView(input);
         quick = new QuickBar(this, new QuickBar.Host() {                       // 181: כפתורי תצוגה מהירה
             @Override public String base() { return query(); }
-            @Override public int count(String c) { return lib.search(c, paths, loose).total; }
-            @Override public List<Library.Hit> hits(String c) { return lib.search(c, paths, loose).hits; }
+            @Override public int count(String c) { return find(c).total; }
+            @Override public List<Library.Hit> hits(String c) { return find(c).hits; }
             @Override public String loadState() {
                 String v = setting(Quick.STATE, "");
                 return v.isEmpty() ? null : v;
@@ -569,6 +569,14 @@ public class SearchScreen extends Activity implements Clip.Holder {
     private QuickBar quick;
 
     /** 181: מה שמחפשים — התנאי, ועוד הכפתורים הדולקים (רק כשיש מה לחפש; הכפתורים לבד אינם חיפוש). */
+    /**
+     * מבנה 94: רשימה חכמה שנפתחה כאן (fixed) — רק מה שעונה על התנאי במלואו, כמו הספירה שלידה ופקודות על הקבצים שלה. חיפוש רגיל —
+     * כמו שהיה, עם הקבוצות של "אולי התכוונת" (בלי אות השימוש, כתיב חסר, חלק מהמילים) והכותרות שלהן.
+     */
+    private Library.Result find(String q) {
+        return fixed ? lib.list(q) : lib.search(q, paths, loose);
+    }
+
     private String searchQuery() {
         String q = query();
         return q.trim().isEmpty() || quick == null ? q : SmartLists.join(q, quick.cond());
@@ -621,7 +629,7 @@ public class SearchScreen extends Activity implements Clip.Holder {
                     + Files.when(lib.lastBuilt()));
             return;
         }
-        Library.Result r = lib.search(q, paths, loose);
+        Library.Result r = find(q);
         emptyMode = Cond.parse(r.query).emptyDirs;                          // 175: תיקיות ריקות — תמיד ברצף
         queryNorm = r.query;
         out.clear();                                                          // חיפוש מחדש = רענון: האפורים יורדים
@@ -694,7 +702,7 @@ public class SearchScreen extends Activity implements Clip.Holder {
             search();
             return;
         }
-        Library.Result r = lib.search(q, paths, loose);
+        Library.Result r = find(q);
         java.util.Map<String, Library.Hit> now = new java.util.LinkedHashMap<String, Library.Hit>();
         for (Library.Hit hit : r.hits) now.put(hit.path(), hit);
         Set<String> shown = new java.util.HashSet<String>();

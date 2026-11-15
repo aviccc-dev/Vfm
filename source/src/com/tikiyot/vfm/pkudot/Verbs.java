@@ -444,7 +444,7 @@ final class Verbs {
             }
             if (cond == null || cond.isEmpty()) return null;
             List<String> out = new ArrayList<String>();
-            for (Library.Hit h : lib.search(cond, false, false).hits) if (h.rec != null) out.add(h.path());
+            for (Library.Hit h : lib.list(cond).hits) if (h.rec != null) out.add(h.path());   // מבנה 94
             return out;
         } catch (Throwable t) {
             Log.e("פקודה — נתון חי", t);

@@ -874,6 +874,22 @@ public final class Library {
     }
 
     public Result search(String query, boolean paths, boolean loose) {
+        return search(query, paths, loose, false);
+    }
+
+    /**
+     * מבנה 94 (המשתמש, 15.11.2026: "ברשימה החכמה מצאתי באגים פשוטים — שהיא לא מסננת מה שאמורה לסנן"): רשימה חכמה — רק מה
+     * שעונה על התנאי במלואו. החיפוש מוסיף לתוצאות שלוש קבוצות של "אולי התכוונת": מה שנמצא רק בלי אות השימוש (78), כתיב חסר כשיש
+     * פחות מעשר תוצאות (78), ומה שמתאים **רק לחלק מהמילים** (עד 150). במסך החיפוש הן מוצגות בנפרד, עם כותרת; אבל הרשימה החכמה
+     * לקחה את כל התוצאות — ולכן "חשבון חשמל" הכילה גם כל קובץ שיש בו רק "חשבון" או רק "חשמל"; במיון לפי שם (ברירת המחדל של
+     * רשימה חכמה) ובתצוגת תיקיות — בלי שום סימן. וגם הספירה שליד הרשימה, ופקודות על "קבצי חכמה" (העתקה, מחיקה) — על כולם.
+     * strict — רק ההתאמה המלאה: אותן מילים, אותם תנאים. תיקייה ששמה עונה על המילים — נשארת (כמו בחיפוש).
+     */
+    public Result list(String query) {
+        return search(query, false, false, true);
+    }
+
+    private Result search(String query, boolean paths, boolean loose, boolean strict) {
         if (query != null && query.indexOf(SmartLists.HERE_VAR) >= 0)          // 1.11.0: ברירת מחדל — תיקיית אופן העבודה
             query = SmartLists.withHere(query, Paths.work().getAbsolutePath());
         Result res = new Result();
@@ -922,7 +938,7 @@ public final class Library {
             for (Index.Rec r : ix.files) {
                 if (r.gone || hide(ix, r, cond) || !cond.matches(ix, r)) continue;
                 int m = onlyFilters ? 1 : match(terms, r.norm, ix, r.dir, paths);
-                if (m == 0) continue;
+                if (m == 0 || (strict && m == 2)) continue;                 // מבנה 94: רשימה — בלי "רק בלי אות השימוש"
                 res.total++;
                 if (multi || res.total <= 10) seen.add(r);           // 184: נחוץ רק לכתיב חסר (פחות מ־10) ולכמה מילים
                 if (m == 2) {
@@ -949,7 +965,7 @@ public final class Library {
                     if (d.gone || onlyFilters || d.trash || d.hidden) continue;
                     if (cond.hasNot() && !cond.matchesDir(ix, i)) continue;            // 181: "לא" — גם על תיקיות
                     int m = match(terms, d.norm, ix, d.parent, paths);
-                    if (m == 0) continue;
+                    if (m == 0 || (strict && m == 2)) continue;
                     res.total++;
                     Hit h = new Hit();
                     h.ix = ix;
@@ -970,8 +986,8 @@ public final class Library {
         for (int i = 0; i < 4; i++) res.hits.addAll(buckets[i]);
         res.hits.addAll(noPrefix);
 
-        if (loose && res.total < 10 && !terms.isEmpty()) addLoose(res, cond, terms, seen, snap);
-        if (terms.size() > 1) addPartial(res, cond, terms, seen, snap);
+        if (!strict && loose && res.total < 10 && !terms.isEmpty()) addLoose(res, cond, terms, seen, snap);
+        if (!strict && terms.size() > 1) addPartial(res, cond, terms, seen, snap);   // מבנה 94: רשימה — בלי "רק חלק מהמילים"
 
         res.ms = (System.nanoTime() - t0) / 1_000_000.0;
         return res;

@@ -397,6 +397,34 @@ public final class Tests {
         check("54: הסל לא בתוצאות", !names(lib.search("נמחק", false, true)).contains("נמחק.pdf"));
         check("55: הסל מוצג כשמבקשים", names(lib.search("תיקייה:נמחקו", false, true)).contains("נמחק.pdf"));
         check("סינון בלבד: סוג:epub", names(lib.search("סוג:epub", false, true)).contains("ספר מוגה.epub"));
+        // מבנה 94: רשימה חכמה — רק מה שעונה על התנאי במלואו (המשתמש: "היא לא מסננת מה שאמורה לסנן")
+        Library.Result two94 = lib.search("ספר מוגה", false, true), list94 = lib.list("ספר מוגה");
+        List<String> l94 = names(list94);
+        check("מבנה 94: החיפוש מוסיף גם \"רק חלק מהמילים\" — 'מוגה.pdf' אין בו 'ספר' (כך התגלה)",
+                names(two94).contains("מוגה.pdf") && two94.counts[Library.PARTIAL] >= 1);
+        check("מבנה 94: הרשימה — רק מה שיש בו את שתי המילים " + l94, l94.contains("ספר מוגה.epub") && !l94.contains("מוגה.pdf")
+                && !l94.contains("הספר.pdf") && list94.total == list94.hits.size());
+        check("מבנה 94: הרשימה — בלי \"רק בלי אות השימוש\" ('מספר' אינו 'ספר מוגה')", !names(lib.list("מספר")).contains("ספר מוגה.epub"));
+        check("מבנה 94: הרשימה — בלי כתיב חסר ('הגיון' אינו 'היגיון'), ובלי הסל והמוסתרים",
+                !names(lib.list("הגיון")).contains("היגיון.txt") && !names(lib.list("נמחק")).contains("נמחק.pdf") && !names(lib.list("סוד")).contains(".סוד.txt"));
+        boolean same94 = true;
+        for (String q94 : new String[]{"ספר מוגה", "מספר", "הגיון", "ספר", "מוגה", "סוג:epub", "סוג:pdf ספר", "ספר -מוגה", "תיקייה:נמחקו"}) {
+            List<String> full = new ArrayList<String>();
+            for (Library.Hit x : lib.search(q94, false, true).hits) if (x.section == Library.FULL) full.add(x.path());
+            List<String> strict = new ArrayList<String>();
+            for (Library.Hit x : lib.list(q94).hits) strict.add(x.path());
+            if (!full.equals(strict)) same94 = false;
+        }
+        check("מבנה 94: בכל תנאי — הרשימה היא בדיוק ההתאמה המלאה של החיפוש (תשעה תנאים)", same94);
+        Smarts.Result sm94 = Smarts.over(lib).find("ספר מוגה", "", 100);
+        check("מבנה 94: הספירה של הרשימה החכמה ושורותיה — לפי ההתאמה המלאה (" + sm94.count + ")", sm94.count == list94.hits.size());
+        String src94 = read(new File(System.getProperty("vfm.src"), "src/com/tikiyot/vfm/chomer/indeks/Smarts.java"))
+                + read(new File(System.getProperty("vfm.src"), "src/com/tikiyot/vfm/chomer/masad/ListCount.java"))
+                + read(new File(System.getProperty("vfm.src"), "src/com/tikiyot/vfm/pkudot/DbListCmd.java"))
+                + read(new File(System.getProperty("vfm.src"), "src/com/tikiyot/vfm/pkudot/Verbs.java"));
+        String scr94 = read(new File(System.getProperty("vfm.src"), "src/com/tikiyot/vfm/masachim/SearchScreen.java"));
+        check("מבנה 94: שומר — מי שמחשב רשימה חכמה (הספירה, הקבצים לפקודות, המסך כשהיא פתוחה) — דרך lib.list, לא דרך החיפוש",
+                !src94.contains("lib.search(") && scr94.contains("fixed ? lib.list(q)"));
 
         String dl = new File(root, "Download").getAbsolutePath();
         eq("73: חיפוש עם מקור (תיקייה באותיות גדולות)", 4, lib.search("מקור:" + dl, false, true).total);

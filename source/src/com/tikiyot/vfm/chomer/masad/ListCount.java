@@ -41,7 +41,7 @@ final class ListCount {
             if (lib == null || !lib.ready || c == null) return null;
             long[] v = cache.get(c);
             if (v != null) return v;
-            Library.Result r = lib.search(c, false, true);
+            Library.Result r = lib.list(c);                                 // מבנה 94
             searches++;
             long s = 0;
             Map<String, Long> m = new HashMap<String, Long>();

@@ -62,7 +62,7 @@ final class Smarts {
             @Override
             public Result find(String cond, String sort, int limit) {
                 if (lib == null || !lib.ready || cond == null || cond.trim().isEmpty()) return Result.notReady();
-                Library.Result r = lib.search(cond, false, true);
+                Library.Result r = lib.list(cond);                             // מבנה 94: רק מה שעונה במלואו
                 List<Library.Hit> hits = new ArrayList<Library.Hit>(r.hits);
                 long total = 0;
                 for (Library.Hit h : hits) if (h.rec != null) total += h.rec.size;

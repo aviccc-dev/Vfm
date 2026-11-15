@@ -1519,7 +1519,7 @@ final class DbListCmd {
                 List<String> had = cache.get(cond);
                 if (had != null) return had;
                 List<String> out = new ArrayList<String>();
-                for (Library.Hit h : lib.search(cond, false, true).hits) if (h.rec != null) out.add(h.path());
+                for (Library.Hit h : lib.list(cond).hits) if (h.rec != null) out.add(h.path());   // מבנה 94: "קבצי חכמה" — רק מה שעונה במלואו
                 cache.put(cond, out);
                 return out;
             }
