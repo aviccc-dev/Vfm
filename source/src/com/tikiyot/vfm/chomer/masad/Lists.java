@@ -152,7 +152,8 @@ final class Lists {
      * מ0.13.1: עריכה — שם (ריק — בלי שינוי), צלמית, תיאור, "למה"; בעסקה אחת. רעיון/כותרת — השם הוא הטקסט.
      * מ0.23: לרשימה ולחכמה — שם חדש עובר את nameError (כמו REN); שגיאה — שום שינוי, ומוחזרת. אחרת — null.
      */
-    static String edit(Store s, final long id, final String name, final String icon, final String desc, final String why) {
+    static String edit(Store s, final long id, final String name0, final String icon, final String desc, final String why) {
+        final String name = name0 == null ? "" : name0;                          // מבנה 113: null — בלי שינוי (גם בצלמית, בתיאור וב"למה")
         Store.Item cur = s.item(id);
         if (cur == null) return null;
         if ((cur.type == Store.LIST || cur.type == Store.SMART) && !name.trim().isEmpty()) {
@@ -166,12 +167,13 @@ final class Lists {
             @Override public void run(Store t) {
                 Store.Item it = t.item(id);
                 if (it == null) return;
-                String n = it.type == Store.LIST ? Names.cleanName(name) : name.trim();
+                // מבנה 113: שם ריק — בלי שינוי בשם (עד כאן, לרשימה, הניקוי הפך שם ריק ל"ללא שם" — והרשימה קיבלה את השם הזה)
+                String n = name.trim().isEmpty() ? "" : it.type == Store.LIST ? Names.cleanName(name) : name.trim();
                 if (!n.isEmpty() && !n.equals(it.name)) t.rename(id, n);
                 if (it.type == Store.NOTE || it.type == Store.TITLE || it.type == Store.FILE) return;
-                t.setProp(id, Store.P_ICON, icon.trim());
-                t.setProp(id, Store.P_DESC, desc.trim().replace('\n', ' '));
-                t.setProp(id, Store.P_WHY, why.trim().replace('\n', ' '));
+                if (icon != null) t.setProp(id, Store.P_ICON, icon.trim());
+                if (desc != null) t.setProp(id, Store.P_DESC, desc.trim().replace('\n', ' '));
+                if (why != null) t.setProp(id, Store.P_WHY, why.trim().replace('\n', ' '));
             }
         }, true);
         return null;

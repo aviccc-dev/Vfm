@@ -668,19 +668,19 @@ public class DbListScreen extends ListScreen<Store.Member> {
             public void run() {
                 final String n = name.getText().toString(), i = icon.getText().toString(), d = desc.getText().toString(),
                         w = why.getText().toString();
-                DbListCmd.Work work = new DbListCmd.Work() {
-                    @Override public DbListCmd.Res run(Store t, DbListCmd.Finder f) {
-                        if (t.item(it.id) == null) return DbListCmd.Res.err(Words.Db.ITEM_GONE);       // מבנה 60: נמחק בזמן שהטופס היה פתוח
-                        String was = t.item(it.id).name;
-                        String e = Lists.edit(t, it.id, n, i, d, w);              // מ0.23: אותה בדיקת שם כמו REN
-                        return e != null ? DbListCmd.Res.err(e) : DbListCmd.Res.ok(Words.DbCmd.saved(t.item(it.id).name))
-                                .renamed(it.id, was, t.item(it.id).name);             // מ0.42: ב8 — קובצי הפקודות שפונים אליה
-                    }
-                };
-                // מבנה 58: מה שהיה כתוב נדרס — גיבוי לפני. לא השתנה דבר — בלי גיבוי (הזול קודם)
+                // לא השתנה דבר בטופס — אין מה לשמור (הזול קודם)
                 boolean same = n.equals(it.name) && i.equals(prop(it.id, Store.P_ICON)) && d.equals(prop(it.id, Store.P_DESC))
                         && w.equals(prop(it.id, Store.P_WHY));
-                done(same ? DbListCmd.now(mode, work, false) : DbListCmd.nowEdit(mode, work));
+                if (same) { done(Words.DbCmd.saved(it.name)); return; }
+                // מבנה 113: השמירה — דרך המנהל, כפקודה ("עדכן רשימה %נבחרים%"): אותו כלל כמו בשורה כתובה, עם גיבוי "לפני עריכה"
+                // (מבנה 58), עם עדכון קובצי הפקודות שפונים אליה (מ0.42), ועם "הפריט כבר לא קיים" (מבנה 60).
+                java.util.Map<String, String> props = new java.util.HashMap<String, String>();
+                props.put(Store.P_ICON, i);
+                props.put(Store.P_DESC, d);
+                props.put(Store.P_WHY, w);
+                Library lib = Library.get(DbListScreen.this);
+                Manager.Act act = Manager.onListEdit(mode, it.id, n, props, Paths.data(), BatchUi.vars(DbListScreen.this, Paths.data()), lib);
+                done(act.error() != null ? act.error() : act.say(lib));
             }
         });
     }

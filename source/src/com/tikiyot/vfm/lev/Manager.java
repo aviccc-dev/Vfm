@@ -269,6 +269,18 @@ final class Manager {
     }
 
     /**
+     * מבנה 113: עריכה של רשימה בטופס שלה (שם, צלמית, תיאור, "למה"; לרעיון ולכותרת — הטקסט) — "עדכן רשימה %נבחרים%".
+     * id — הפריט (מספר במסד); name — השם בטופס (ריק — בלי שינוי); props — צלמית, תיאור ו"למה", כלשונם.
+     */
+    static Act onListEdit(String mode, long id, String name, java.util.Map<String, String> props, java.io.File here,
+                          java.util.Map<String, String> vars, Library lib) {
+        String text = Verbs.UPDATE + " " + Verbs.LIST + " %" + Batch.V_SELECTED + "%\n";
+        Batch.Selection sel = new Batch.Selection(mode, 0, name, "", props);
+        sel.ids.add(id);
+        return new Act(text, Batch.plan(text, here, vars, lib, null, sel), null);
+    }
+
+    /**
      * מבנה 100: כפתור (בתפריט, בשורה העליונה) שהפעולה שלו היא שורה של פקודה שכותבת — "צור רשימה", "צור רשימה חכמה", "עדכן
      * רשימה חכמה". עד כאן המסך ביצע אותה בעצמו (DbVerbsUi); עכשיו — אותה שורה בדיוק, כמו בקובץ פקודות. line — כמו שהכפתור כתוב.
      */

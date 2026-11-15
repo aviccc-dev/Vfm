@@ -67,9 +67,15 @@ final class Verbs {
         boolean fromBackup;
         /** מבנה 104: /תפוס:<ערך> — ב"צור רשימה חכמה": מה עושים כשיש כבר רשימה חכמה בשם הזה ("" — לעצור). */
         String taken = "";
+        /** מבנה 113: "עדכן רשימה" — מה שנכתב לשינוי (E_NAME, Store.P_ICON, P_DESC, P_WHY); מה שאינו כאן — נשאר. */
+        java.util.Map<String, String> edit;
         /** שגיאת תחביר — או null. */
         String error;
     }
+
+    /** מבנה 113: "עדכן רשימה "<דרך>" /שם:… /צלמית:… /תיאור:… /למה:…" — המתגים. */
+    static final String SW_NAME = "/שם:", SW_ICON = "/צלמית:", SW_DESC = "/תיאור:", SW_WHY = "/למה:";   // תחביר
+    static final String E_NAME = "name";
 
     private Verbs() { }
 
@@ -205,6 +211,19 @@ final class Verbs {
                 c.arg = nr[0];
                 c.cond = nr[1];
                 if (c.arg.isEmpty() || c.cond.isEmpty()) c.error = Words.Verb.usage(c.verb);
+            } else if (c.verb.equals(UPDATE) && starts(rest, LIST)) {         // מבנה 113: עדכן רשימה "<דרך>" /שם: /צלמית: /תיאור: /למה:
+                c.kind = K_LIST;
+                c.edit = new java.util.LinkedHashMap<String, String>();
+                for (String w : Batch.tokens(after(rest, LIST))) {
+                    String key = w.startsWith(SW_NAME) ? E_NAME : w.startsWith(SW_ICON) ? Store.P_ICON : w.startsWith(SW_DESC) ? Store.P_DESC
+                            : w.startsWith(SW_WHY) ? Store.P_WHY : null;
+                    if (key != null) c.edit.put(key, w.substring(w.indexOf(':') + 1));
+                    else if (w.startsWith("/") || !c.arg.isEmpty()) c.error = Words.Verb.usage(UPDATE);
+                    else c.arg = unquote(w);
+                }
+                boolean picked = Batch.var(Batch.V_SELECTED).equals(c.arg);     // מהמסך — מה שבטופס, מהבחירה
+                if (c.arg.isEmpty() || (c.edit.isEmpty() && !picked) || (c.edit.containsKey(E_NAME) && c.edit.get(E_NAME).trim().isEmpty()))
+                    c.error = Words.Verb.usage(UPDATE);                          // שם ריק בשורה — שגיאה (ה4)
             } else if (c.verb.equals(CREATE) && starts(rest, MODE_WORD)) {    // מ0.42
                 c.kind = K_MODE;
                 c.arg = unquote(after(rest, MODE_WORD));

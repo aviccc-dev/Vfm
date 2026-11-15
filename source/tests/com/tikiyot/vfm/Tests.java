@@ -3351,9 +3351,13 @@ public final class Tests {
         // מבנה 99: הטופס של הרשימה החכמה עבר לפקודה — ההגנה עברה איתו (planPickedSmartEdit), ונבדקת שם גם בהרצה (DbCmdTests, מבנה 99)
         String dlc60 = read(new File(code, "pkudot/DbListCmd.java"));
         int at60 = dlc60.indexOf("private static String planPickedSmartEdit(");
-        check("מבנה 60: עריכה של פריט שנמחק בזמן שהטופס פתוח — הודעה ברורה (בשני הטפסים: הרשימה — במסך; החכמה — בפקודה, מבנה 99)",
-                dls.split("Words\\.Db\\.ITEM_GONE", -1).length == 2 && at60 > 0
+        // מבנה 113: גם הטופס של הרשימה עבר לפקודה — ההגנה עברה איתו (edited, שגם השורה הכתובה עוברת בו), ונבדקת בהרצה (DbCmdTests, מבנה 113)
+        int ed60 = dlc60.indexOf("private static Res edited(");
+        check("מבנה 60: עריכה של פריט שנמחק בזמן שהטופס פתוח — הודעה ברורה (בשני הטפסים, שניהם בפקודה: הרשימה — מבנה 113; החכמה — מבנה 99)",
+                at60 > 0 && ed60 > 0
                         && dlc60.indexOf("Words.Db.ITEM_GONE", at60) > at60 && dlc60.indexOf("Words.Db.ITEM_GONE", at60) < dlc60.indexOf("\n    }\n", at60)
+                        && dlc60.indexOf("Words.Db.ITEM_GONE", ed60) > ed60 && dlc60.indexOf("Words.Db.ITEM_GONE", ed60) < dlc60.indexOf("\n    }\n", ed60)
+                        && dls.contains("Manager.onListEdit(") && dls.contains("Manager.onSmartEdit(")
                         && Words.Db.ITEM_GONE.contains("לא נשמר"));
         String bu = read(new File(code, "masachim/rechivim/BatchUi.java")), rs = read(new File(code, "masachim/RunScreen.java"));
         check("מבנה 27: שני הרצפים שואלים את המנהל, ואינם מחליטים בעצמם",

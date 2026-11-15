@@ -984,6 +984,54 @@ final class DbListCmd {
     }
 
     /**
+     * מבנה 113: הכלל האחד של עריכת רשימה (שם, צלמית, תיאור, "למה") — Lists.edit, לשורה הכתובה ולטופס שבמסך. null — בלי שינוי.
+     * פריט שנמחק בינתיים — "הפריט הזה כבר לא קיים במסד — לא נשמר" (מבנה 60). דורס את מה שהיה — ולכן replaced (גיבוי "לפני עריכה").
+     */
+    private static Res edited(Store t, long id, String name, String icon, String desc, String why) {
+        Store.Item it = t.item(id);
+        if (it == null) return Res.err(Words.Db.ITEM_GONE);
+        String was = it.name;
+        String e = Lists.edit(t, id, name, icon, desc, why);
+        if (e != null) return Res.err(e);
+        Res ok = Res.ok(Words.DbCmd.saved(t.item(id).name)).renamed(id, was, t.item(id).name);   // מ0.42: קובצי הפקודות שפונים אליה
+        ok.made = id;
+        ok.replaced = true;
+        return ok;
+    }
+
+    /**
+     * מבנה 113: הטופס של עריכת רשימה במסך — "עדכן רשימה %נבחרים%". הפריט — לפי המספר שלו (הבחירה); השם, הצלמית, התיאור וה"למה" —
+     * מהבחירה, ואינם מפוענחים. אותו כלל כמו בשורה הכתובה (edited). מה שנובע מהמקום: במסך — כל הטופס, ושדה שם ריק פירושו "בלי
+     * שינוי בשם"; ורעיון / כותרת (שאין להם דרך של שמות) — רק מכאן, והטקסט שלהם הוא ה"שם".
+     */
+    private static String planPickedEdit(final Batch.Step s, final Verbs.Cmd c, Batch.Sim sim) {
+        final Batch.Selection sel = sim.selected;
+        if (sel == null || sel.props == null || sel.mode == null || sel.ids == null || sel.ids.size() != 1 || sel.name == null) {
+            s.error = Words.Cmd.NOTHING_SELECTED;
+            return null;
+        }
+        final String mode = sel.mode;
+        if (!Db.dbFile(Db.app, mode).isFile()) { s.error = Words.DbCmd.noMode(mode, sim.modes()); return null; }
+        final long id = sel.ids.get(0);
+        s.describe = Words.DbCmd.inDb(Words.DbCmd.saved(sel.name.trim().isEmpty() ? Words.DbCmd.HERE_LIST : sel.name.trim()));
+        s.op = new ListCmd.Op() {
+            @Override public String run(Library lib) {
+                Res r = realRes(mode, new Work() {
+                    @Override public Res run(Store t, Finder f) {
+                        Store.Item it = t.item(id);
+                        if (it != null && (it.type == Store.SMART || it.type == Store.FILE)) return Res.err(Words.DbCmd.FILE_NO_EDIT);
+                        return edited(t, id, sel.name, sel.props.get(Store.P_ICON), sel.props.get(Store.P_DESC), sel.props.get(Store.P_WHY));
+                    }
+                }, Backups.OP_EDIT, lib);
+                if (r.error != null) lastFailed = true;
+                s.made = r.made;
+                return r.error != null ? r.error : Words.DbCmd.inDb(r.text);
+            }
+        };
+        return mode;
+    }
+
+    /**
      * מבנה 93: רעיון או כותרת מהמסך — "צור רעיון %נבחרים%" · "צור כותרת %נבחרים% "דרך"". הטקסט הוא מה שהוקלד (מהבחירה, אינו
      * מפוענח); הרשימה — זו שמוצגת במסך (המספר שלה), או הדרך שנכתבה אחרי. בלי הדמיה (כמו כל פעולה של %נבחרים% ברשימות), ובלי
      * גיבוי לפני (רק מוסיפה) — כמו שהמסך עשה. הסירובים — בנוסח של המסך.
@@ -1032,7 +1080,10 @@ final class DbListCmd {
         final boolean smartNew = c.kind.equals(Verbs.K_SMART) && c.verb.equals(Verbs.CREATE);
         final boolean smartUpd = c.kind.equals(Verbs.K_SMART) && c.verb.equals(Verbs.UPDATE);
         final boolean note = c.kind.equals(Verbs.K_NOTE), title = c.kind.equals(Verbs.K_TITLE);   // מ0.37
-        if (!list && !smartNew && !smartUpd && !note && !title) return null;
+        final boolean listUpd = c.kind.equals(Verbs.K_LIST) && c.verb.equals(Verbs.UPDATE);   // מבנה 113: עדכן רשימה
+        if (!list && !smartNew && !smartUpd && !note && !title && !listUpd) return null;
+        if (listUpd) c.noOpen = true;                                           // השם יכול להשתנות — לא פותחים בסוף
+        if (listUpd && Batch.var(Batch.V_SELECTED).equals(c.arg)) return planPickedEdit(s, c, sim);                  // מבנה 113: מהטופס
         if ((note || title) && Batch.var(Batch.V_SELECTED).equals(c.arg)) return planPickedNote(s, c, title, sim);   // מבנה 93: מהמסך
         if (smartNew && Batch.var(Batch.V_NEW_NAME).equals(c.arg)) return planPickedSmart(s, c, sim);                // מבנה 97: מהטופס
         if (smartUpd && Batch.var(Batch.V_SELECTED).equals(c.arg)) return planPickedSmartEdit(s, c, sim);            // מבנה 99: מהטופס
@@ -1058,6 +1109,12 @@ final class DbListCmd {
                     if (title) t.addTitle(in, c.arg);
                     else t.addNote(in, c.arg);
                     return Res.ok(Words.DbCmd.noteAdded(title, c.arg, Names.label(path)));
+                }
+                if (listUpd) {                                                   // מבנה 113: הרשימה — לפי הדרך (מבנה 107); רק מה שנכתב משתנה
+                    List<String> at = Names.parsePath(c.arg);
+                    DbPaths.Found u = DbPaths.listAt(t, mode, at);
+                    if (u.error != null || u.id == 0) return Res.err(u.ambiguous ? u.error : Words.ListCmdW.noList(Names.label(at)));
+                    return edited(t, u.id, c.edit.get(Verbs.E_NAME), c.edit.get(Store.P_ICON), c.edit.get(Store.P_DESC), c.edit.get(Store.P_WHY));
                 }
                 // מבנה 100: המספר של מה שנוצר / עודכן חוזר (Res.made ← Step.made) — כפתור שמריץ את השורה פותח בדיוק אותו
                 if (list) {                                                      // מבנה 102: "צור רשימה" — הכלל האחד; שם קיים — סירוב

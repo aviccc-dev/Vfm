@@ -19,6 +19,10 @@ final class DbVerbsUi {
         if (c.kind.equals(Verbs.K_LIST)) {
             List<String> path = Names.parsePath(c.arg);
             long id;
+            if (c.verb.equals(Verbs.UPDATE)) {                                   // מבנה 113: כפתור "עדכן רשימה …" — השורה עצמה, דרך המנהל
+                if (verbLine(a, line, dir) != null) Ui.toast(a, Words.DbCmd.saved(c.arg));
+                return true;
+            }
             if (c.verb.equals(Verbs.CREATE)) {                                   // מבנה 100: דרך המנהל — השורה עצמה, כמו בקובץ פקודות
                 long[] made = verbLine(a, line, dir);
                 if (made == null) return true;

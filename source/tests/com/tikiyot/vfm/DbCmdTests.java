@@ -867,6 +867,63 @@ final class DbCmdTests {
                         o.check("מבנה 108: \"שנה ידנית\" בקובץ — השם השתנה, ולפני כן נעשה גיבוי \"לפני עריכה\" " + r108,
                                 bad(r108).isEmpty() && !b108.containsAll(editNames(m91)));
                     }
+                    // מבנה 113: "עדכן רשימה" — בשורה כתובה ומהטופס שבמסך: אותו כלל (שם, צלמית, תיאור, "למה"), גיבוי לפני
+                    {
+                        go("אופן \"" + m91 + "\"\nMD ידנית \"עריכה 113\"\nMD ידנית \"תפוס 113\"\nMD ידנית \"מסך 113\"\nצור רעיון \"רעיון 113\" \"מסך 113\"\n", here, vars, lib);
+                        java.util.Set<String> b113 = editNames(m91);
+                        List<String> w113 = go("אופן \"" + m91 + "\"\nעדכן רשימה \"עריכה 113\" /צלמית:📚 /תיאור:\"שתי מילים\"\n"
+                                + "עדכן רשימה \"עריכה 113\" /שם:\"נערכה 113\" /למה:\"כי כך\"\nודא ידנית \"נערכה 113\" קיימת\nודא ידנית \"עריכה 113\" חסרה\n", here, vars, lib);
+                        final long[] id113 = {0, 0, 0};
+                        final String[] p113 = new String[3];
+                        Db.read(Db.app, m91, new Db.Use<Void>() {
+                            @Override public Void run(SqlStore st) {
+                                id113[0] = DbPaths.find(st, m91, java.util.Arrays.asList("נערכה 113"));
+                                id113[1] = DbPaths.find(st, m91, java.util.Arrays.asList("מסך 113"));
+                                for (Store.Member x : st.members(id113[1])) if (x.item.type == Store.NOTE) id113[2] = x.item.id;
+                                p113[0] = st.prop(id113[0], Store.P_ICON) + "|" + st.prop(id113[0], Store.P_DESC) + "|" + st.prop(id113[0], Store.P_WHY);
+                                return null;
+                            }
+                        });
+                        o.check("מבנה 113: \"עדכן רשימה\" בקובץ — רק מה שנכתב משתנה (צלמית ותיאור; אחר כך שם ו\"למה\"), וגיבוי \"לפני עריכה\" (" + p113[0] + ") " + w113,
+                                bad(w113).isEmpty() && "📚|שתי מילים|כי כך".equals(p113[0]) && !b113.containsAll(editNames(m91)));
+                        java.util.Map<String, String> f113 = new java.util.HashMap<String, String>();
+                        f113.put(Store.P_ICON, "🖥");
+                        f113.put(Store.P_DESC, "מהמסך");
+                        f113.put(Store.P_WHY, "");
+                        java.util.Set<String> c113 = editNames(m91);
+                        Manager.Act s113 = Manager.onListEdit(m91, id113[1], "מסך נערך 113", f113, here, vars, lib);
+                        String said113 = s113.error() != null ? s113.error() : s113.say(lib);
+                        Manager.Act t113 = Manager.onListEdit(m91, id113[1], "תפוס 113", f113, here, vars, lib);
+                        String taken113 = t113.error() != null ? t113.error() : t113.say(lib);
+                        Manager.Act n113 = Manager.onListEdit(m91, id113[2], "רעיון שנערך 113", f113, here, vars, lib);
+                        String note113 = n113.error() != null ? n113.error() : n113.say(lib);
+                        Manager.Act k113 = Manager.onListEdit(m91, id113[0], "  ", f113, here, vars, lib);   // שדה שם ריק — בלי שינוי בשם
+                        k113.say(lib);
+                        Manager.Act g113 = Manager.onListEdit(m91, 987654321L, "x", f113, here, vars, lib);
+                        String gone113 = g113.say(lib);
+                        Db.read(Db.app, m91, new Db.Use<Void>() {
+                            @Override public Void run(SqlStore st) {
+                                Store.Item x = st.item(id113[1]), nt = st.item(id113[2]);
+                                p113[1] = x.name + "|" + st.prop(id113[1], Store.P_ICON) + "|" + st.prop(id113[1], Store.P_DESC) + "|" + st.prop(id113[1], Store.P_WHY);
+                                p113[2] = nt.name;
+                                p113[0] = st.item(id113[0]).name;
+                                return null;
+                            }
+                        });
+                        o.check("מבנה 113: מהטופס שבמסך — דרך המנהל: נשמר (" + said113 + " · " + p113[1] + "), גיבוי לפני; שם תפוס — סירוב (" + taken113 + "); רעיון — הטקסט ("
+                                        + note113 + "); פריט שנמחק — \"" + gone113 + "\"",
+                                !s113.failed && "מסך נערך 113|🖥|מהמסך|null".equals(p113[1]) && !c113.containsAll(editNames(m91))
+                                        && t113.failed && taken113.contains("תפוס") && !n113.failed && "רעיון שנערך 113".equals(p113[2]) && !k113.failed && "נערכה 113".equals(p113[0])
+                                        && g113.failed && gone113.equals(Words.Db.ITEM_GONE));
+                        Batch.Plan u113 = Batch.plan("אופן \"" + m91 + "\"\nעדכן רשימה \"נערכה 113\"\n", here, vars, lib);
+                        Batch.Plan e113 = Batch.plan("אופן \"" + m91 + "\"\nעדכן רשימה \"נערכה 113\" /שם:\"\"\n", here, vars, lib);
+                        Batch.Plan x113 = Batch.plan("אופן \"" + m91 + "\"\nעדכן רשימה \"נערכה 113\" /שם:\"תפוס 113\"\n", here, vars, lib);
+                        Batch.Plan m113 = Batch.plan("אופן \"" + m91 + "\"\nעדכן רשימה \"אין כזו 113\" /צלמית:x\n", here, vars, lib);
+                        String scr113 = Files.readUtf8(new File(src, "src/com/tikiyot/vfm/masachim/DbListScreen.java"));
+                        o.check("מבנה 113: בלי מה לשנות, שם ריק, שם תפוס, רשימה שאין — שגיאה בתכנון; והשומר — המסך אינו עורך רשימה בעצמו",
+                                u113.blocked() && e113.blocked() && x113.blocked() && x113.errorText().contains("תפוס") && m113.blocked()
+                                        && !scr113.contains("Lists.edit(") && !scr113.contains("DbListCmd.nowEdit(") && scr113.contains("Manager.onListEdit("));
+                    }
                     Manager.Act gone99 = Manager.onSmartEdit(m91, 987654321L, "x", "סוג:pdf", new java.util.HashMap<String, String>(), here, vars, lib);
                     String saidGone99 = gone99.say(lib);
                     o.check("מבנה 99: רשימה שנמחקה בזמן שהטופס היה פתוח — \"" + Words.Db.ITEM_GONE + "\" (" + saidGone99 + ")",
