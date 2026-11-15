@@ -3171,6 +3171,22 @@ public final class Tests {
                                 && br132.contains("Manager.saveFile(f, text, was, lib)") && br132.contains("if (at.startsWith(root + \"/\")) Files.writeAtomic(")
                                 && br132.contains("if (!Batch.isBatch(f.getName())) return Words.Lab.ONLY_COMMANDS;"));
             }
+            {   // מבנה 138 (המשתמש: "הכל יוכל, אבל דרך שכבת הניהול"): תוסף קורא קובץ ושואל מה בתיקייה — דרך המנהל
+                File d138 = new File(home, "תוסף138");
+                wipe(d138);
+                File f138 = mk(d138, "לקריאה.txt", 12);
+                File[] in138 = Manager.pluginList(d138);
+                check("מבנה 138: קריאה דרך המנהל — הקובץ כלשונו; גם קובץ של התוכנה נקרא; אין קובץ — null",
+                        read(f138).equals(Manager.pluginRead(f138)) && Manager.pluginRead(new File(d138, "אין.txt")) == null && Manager.pluginRead(null) == null
+                                && (!Conf.file().isFile() || Manager.pluginRead(Conf.file()) != null));
+                check("מבנה 138: מה שבתיקייה — דרך המנהל; אין תיקייה — null", in138 != null && in138.length == 1 && in138[0].getName().equals("לקריאה.txt")
+                        && Manager.pluginList(new File(d138, "אין")) == null && Manager.pluginList(null) == null);
+                String br138 = read(new File(code, "lev/Bridge.java"));
+                check("מבנה 138: השומר — הגשר אינו קורא קובץ בעצמו, ואינו סורק תיקייה מלבד התיקייה של התוסף (הניקוי)",
+                        !br138.contains("Files.readUtf8(") && br138.contains("Manager.pluginRead(resolve(path))") && br138.contains("Manager.pluginList(resolve(path))")
+                                && br138.split("listFiles\\(", -1).length - 1 == 1);
+                wipe(d138);
+            }
             String pui80 = read(new File(code, "masachim/rechivim/PhysicalUi.java"));
             check("מבנה 80: המסך של הפעולות בכונן אינו כותב עוד קובץ בעצמו; רק דרך המנהל", !pui80.contains("writeAtomic")
                     && pui80.contains("Manager.onNewFile(f, content"));

@@ -353,9 +353,7 @@ final class Bridge {
     @JavascriptInterface
     public String readText(String path) {
         try {
-            File f = resolve(path);
-            if (f == null || !f.isFile() || f.length() > 2L * 1024 * 1024) return null;
-            return Files.readUtf8(f);
+            return Manager.pluginRead(resolve(path));                           // מבנה 138: דרך המנהל
         } catch (Throwable t) {
             return null;
         }
@@ -365,8 +363,7 @@ final class Bridge {
     @JavascriptInterface
     public String listDir(String path) {
         try {
-            File d = resolve(path);
-            File[] fs = d == null ? null : d.listFiles();
+            File[] fs = Manager.pluginList(resolve(path));                      // מבנה 138: דרך המנהל
             if (fs == null) return null;
             JSONArray a = new JSONArray();
             for (File f : fs) {

@@ -278,6 +278,29 @@ final class Manager {
                 java.util.Collections.<String>emptyList(), f.getParentFile(), f.getName(), content)), f.getParentFile());
     }
 
+    /** מבנה 138: הגודל הגדול ביותר של קובץ שתוסף קורא כטקסט. */
+    static final long PLUGIN_READ_MAX = 2L * 1024 * 1024;
+
+    /**
+     * מבנה 138 (המשתמש, 15.11.2026, על מה שמותר לתוסף: "הכל יוכל, אבל דרך שכבת הניהול"): תוסף קורא קובץ — כאן. מותר כל
+     * קובץ, גם של התוכנה; קריאה אינה משנה דבר, ולכן אין לה היתר — אבל היא עוברת במקום אחד. null — אין קובץ כזה, גדול מדי,
+     * או שהקריאה נכשלה (נרשם ביומן).
+     */
+    static String pluginRead(java.io.File f) {
+        if (f == null || !f.isFile() || f.length() > PLUGIN_READ_MAX) return null;
+        try {
+            return Files.readUtf8(f);
+        } catch (Throwable t) {
+            Log.e("תוסף: קריאת קובץ " + f.getAbsolutePath(), t);
+            return null;
+        }
+    }
+
+    /** מבנה 138: תוסף שואל מה יש בתיקייה — כאן. null — אין תיקייה כזו, או שאי אפשר לקרוא אותה. */
+    static java.io.File[] pluginList(java.io.File d) {
+        return d == null ? null : d.listFiles();
+    }
+
     /**
      * מבנה 132 (הדלת לתוספים — "מחברת"): קובץ של המשתמש שתוסף שומר — קובץ פקודות, או דוח לתיקיית ההורדות — נכתב כפקודה
      * "כתוב", כמו מכל מקום אחר: קובץ של התוכנה — מסורב; קובץ קיים — רק עם replace, והקודם עובר לסל (הוראות, סעיף 4).
