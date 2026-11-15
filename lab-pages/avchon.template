@@ -414,7 +414,17 @@ function header(){
     +'הרשאת גישה לכל הקבצים: '+(info.access?'✓':'✗')+' · מקום פנוי: '+(info.freeMb!=null?info.freeMb+'MB':'?')+'\n'
     +'האופן השמור: '+(info.savedMode||'?')+' · האופנים: '+ms.join(', ')+'\n'
     +'האינדקס: '+(info.indexReady?'מוכן':'נטען')+'\n'
-    +(info.door!=null?'הדלת לתוספים: גרסה '+info.door+' · המרשם: '+(info.registry||'—')+'\n':'')+doorCheck();
+    +(info.door!=null?'הדלת לתוספים: גרסה '+info.door+' · המרשם: '+(info.registry||'—')+'\n':'')+doorCheck()+foldersLine();
+}
+
+// אבחון 14 (מבנה 151): התיקיות שיש בהן קובצי פקודות — מה שהעורך מציג ב"פתיחה"; כאן בדוח, בלי לפתוח את העורך.
+function foldersLine(){
+  try{
+    if(!can('commandFolders'))return '';
+    const l=J(V.commandFolders(),null);
+    if(!l)return 'תיקיות של קובצי פקודות: ⚠ האינדקס עוד לא מוכן\n';
+    return 'תיקיות של קובצי פקודות: '+l.length+(l.length?' — '+l.map(d=>d.name+' ('+d.count+')').join(' · '):'')+'\n';
+  }catch(e){return 'תיקיות של קובצי פקודות: ❌ '+e.message+'\n';}
 }
 
 // אבחון 13 (מבנה 138–142): הדלת בודקת את עצמה בכל דוח, בלי התערבות — כתיבה לתיקייה של התוסף, קריאה חזרה, ורשימת התיקייה.
