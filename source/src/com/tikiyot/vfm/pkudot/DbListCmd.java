@@ -700,6 +700,10 @@ final class DbListCmd {
             if (sd.size() != 2) { s.error = Words.ListCmdW.USAGE_COMP; return; }
             final ListCmd.Side a = sd.get(0), b = sd.get(1);
             if (!a.list() || !b.list()) { s.error = Words.ListCmdW.COMP_FS; return; }
+            if (sw.contains(ListCmd.SW_DIFF)) {                                  // מבנה 90: כל ההבדלים בין שתי רשימות ידניות
+                planDiff(s, a, b, sw, mode);
+                return;
+            }
             if (a.content || b.content) { s.error = Words.ListCmdW.USAGE_COMP; return; }
             final boolean conds = sw.contains(ListCmd.SW_CONDS);
             if (conds && (a.kind != ListCmd.SMART_LIST || b.kind != ListCmd.SMART_LIST || a.filesOf || b.filesOf)) {
@@ -985,6 +989,50 @@ final class DbListCmd {
                 }
             }
         };
+    }
+
+    /**
+     * מבנה 90: השווה ידנית "א" ידנית "ב" /הבדלים — הדוח המלא (DbDiff): רק ב"א", רק ב"ב", מקום אחר, שם אחר, מאפיין שונה, קישור
+     * שונה. עם "תוכן" בשני הצדדים — רק מה שבתוכן. מחושב **בהרצה**, על המסד עצמו (ולא בתכנון, על העותק): כך הוא רואה את מה
+     * שהשורות שלפניו עשו באמת. אינו ✅ / ❌ — זה דוח; מי שרוצה בדיקה כותב "ודא … שווה …".
+     */
+    private static void planDiff(final Batch.Step s, final ListCmd.Side a, final ListCmd.Side b, List<String> sw, final String mode) {
+        for (ListCmd.Side x : new ListCmd.Side[]{a, b})
+            if (x.kind != ListCmd.LIST || x.filesOf || x.mask != null) { s.error = Words.ListCmdW.USAGE_DIFF; return; }
+        if (a.content != b.content || sw.size() != 1) { s.error = Words.ListCmdW.USAGE_DIFF; return; }
+        s.target = a.label();
+        s.describe = Words.DbCmd.inDb(Words.DbCmd.diffWill(a.label(), b.label()));
+        s.op = new ListCmd.Op() {
+            @Override
+            public String run(Library lib) {
+                SqlStore st = null;
+                try {
+                    st = Db.openRead(Db.app, mode);
+                    return Words.DbCmd.inDb(diffText(st, mode, a, b));
+                } catch (Throwable t) {
+                    lastFailed = true;
+                    return Words.Db.failed(String.valueOf(t.getMessage()));
+                } finally {
+                    if (st != null) st.close();
+                }
+            }
+        };
+    }
+
+    /** הדוח כטקסט: שורת סיכום, ואחריה שורה לכל הבדל. רשימה שאיננה — כישלון. */
+    static String diffText(Store s, String mode, ListCmd.Side a, ListCmd.Side b) {
+        long x = list(s, mode, a), y = list(s, mode, b);
+        if (x == 0 || y == 0) {
+            ListCmd.Side gone = x == 0 ? a : b;
+            lastFailed = true;
+            return gone.home ? Words.DbCmd.NO_HOME : Words.ListCmdW.noList(gone.raw);
+        }
+        DbDiff.Out o = DbDiff.of(s, x, y, a.label(), b.label(), !a.content);
+        String relation = x == y ? Words.DbCmd.REL_SAME : a.content ? Words.DbCmd.REL_CONTENT_EQUAL : Words.DbCmd.REL_EQUAL;
+        StringBuilder sb = new StringBuilder(Words.DbCmd.diffSummary(a.label(), b.label(), o.total(), o.onlyA, o.onlyB, o.moved, o.renamed,
+                o.props, o.links, o.sizes, o.other, o.lines.size(), relation));
+        for (String l : o.lines) sb.append("\n   · ").append(l);
+        return sb.toString();
     }
 
     /**

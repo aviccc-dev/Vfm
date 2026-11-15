@@ -267,6 +267,94 @@ final class DbCmdTests {
                         bad(x87).isEmpty() && count(x87, "✅") == 2);
                 go("המשך ()\nמחק תיקייה \"" + dir87 + "\" /S\nבטל אופן \"" + m87 + "\"\n", here, vars, lib);
             }
+            // מבנה 90: "השווה ידנית א ידנית ב /הבדלים" — כל ההבדלים בין שתי רשימות
+            {
+                final String m90 = "בדיקת-90";
+                String dir90 = "%" + Batch.V_INTERNAL + "%\\בדיקת 90 (אפשר למחוק)";
+                StringBuilder t90 = new StringBuilder("המשך ()\nצור אופן \"" + m90 + "\"\nאופן \"" + m90 + "\"\nMD \"" + dir90 + "\"\n"
+                        + "כתוב \"" + dir90 + "\\ק1.txt\" \"אחת\"\nכתוב \"" + dir90 + "\\ק2.txt\" \"שתיים\"\nכתוב \"" + dir90 + "\\ק3.txt\" \"שלוש\"\n");
+                // א, ב — אותו מבנה. כל אחת מהאחרות שונה מ"א" בדבר אחד בלבד:
+                // ג — הכותרת לפני הקובץ · ד — עותק במקום קישור · ה — קובץ נוסף בעומק · ו — "ספרים" בשם אחר · ז — בלי "ריקה"
+                final String[] roots90 = {"א", "ב", "ג", "ד", "ה", "ו", "ז"};
+                for (String r : roots90) {
+                    String bk = r.equals("ו") ? "ספרים חדשים" : "ספרים";
+                    t90.append("MD ידנית \"").append(r).append("/").append(bk).append("/עמוק/עמוק יותר\"\n");
+                    if (!r.equals("ז")) t90.append("MD ידנית \"").append(r).append("/ריקה\"\n");
+                    if (r.equals("ג")) t90.append("צור כותרת \"כותרת\" \"").append(r).append("\"\n");
+                    t90.append("העתק \"").append(dir90).append("\\ק1.txt\" ידנית \"").append(r).append("/").append(bk).append("\"\n");
+                    t90.append("העתק \"").append(dir90).append("\\ק2.txt\" ידנית \"").append(r).append("/").append(bk).append("/עמוק\"\n");
+                    t90.append("העתק \"").append(dir90).append("\\ק1.txt\" ידנית \"").append(r).append("\"\n");
+                    t90.append("צור רעיון \"רעיון ראשון\" \"").append(r).append("/").append(bk).append("\"\n");
+                    if (!r.equals("ג")) t90.append("צור כותרת \"כותרת\" \"").append(r).append("\"\n");
+                    if (r.equals("ה")) t90.append("העתק \"").append(dir90).append("\\ק3.txt\" ידנית \"").append(r).append("/").append(bk).append("/עמוק/עמוק יותר\"\n");
+                    if (!r.equals("ז")) t90.append(r.equals("ד") ? "העתק" : "קשר").append(" ידנית \"").append(r).append("/").append(bk)
+                            .append("/עמוק\" ידנית \"").append(r).append("/ריקה\"\n");
+                }
+                for (String r : roots90) t90.append("השווה תוכן ידנית \"א\" תוכן ידנית \"").append(r).append("\" /הבדלים\n");
+                t90.append("השווה ידנית \"א\" ידנית \"ב\" /הבדלים\nהשווה ידנית \"א/ספרים/עמוק\" ידנית \"א/ריקה/עמוק\" /הבדלים\n");
+                List<String> r90 = go(t90.toString(), here, vars, lib);
+                String a90 = "";
+                for (String l : r90) a90 += l + "\n";
+                o.check("מבנה 90: ההכנה והדוחות רצו בלי כישלון (" + bad(r90) + ")", bad(r90).isEmpty());
+                o.check("מבנה 90: רשימה מול עצמה — \"אין הבדלים\"; מול רשימה שנבנתה באותן פקודות — \"אין הבדלים … התוכן שווה\"",
+                        a90.contains("אין הבדלים בין \"א\" ל־\"א\" — " + Words.DbCmd.REL_SAME)
+                                && a90.contains("אין הבדלים בין \"א\" ל־\"ב\" — " + Words.DbCmd.REL_CONTENT_EQUAL));
+                o.check("מבנה 90: הכותרת לפני הקובץ — הבדל אחד: \"מקום אחר\" " + pick(r90, "\"ג\""),
+                        a90.contains("הבדלים בין \"א\" ל־\"ג\": 1 — מקום אחר: 1") && a90.contains("   · מקום אחר: "));
+                o.check("מבנה 90: עותק במקום קישור — הבדל אחד: \"קישור שונה\", במקום המדויק, ובלי לחזור עליו לכל רשימה שבפנים " + pick(r90, "\"ד\""),
+                        a90.contains("הבדלים בין \"א\" ל־\"ד\": 1 — קישורים: 1")
+                                && a90.contains("   · " + Words.DbCmd.diffLink("ריקה" + Names.SEP + "עמוק", "\"א\"", "ספרים" + Names.SEP + "עמוק", "\"ד\"")));
+                o.check("מבנה 90: קובץ נוסף בעומק — הבדל אחד: \"רק ב־ה\", עם הדרך המלאה; ופעם אחת, אף שהרשימה שלו נמצאת בשני מקומות " + pick(r90, "\"ה\""),
+                        a90.contains("הבדלים בין \"א\" ל־\"ה\": 1 — רק ב־\"ה\": 1") && a90.contains("   · רק ב־\"ה\": ספרים" + Names.SEP + "עמוק" + Names.SEP + "עמוק יותר" + Names.SEP + "ק3.txt (קובץ · /")
+                                && a90.contains("/ק3.txt)"));
+                o.check("מבנה 90: רשימה באותו תוכן ובשם אחר — הבדל אחד: \"שם אחר\" (ולא \"נעלמה אחת ונוספה אחרת\") " + pick(r90, "\"ו\""),
+                        a90.contains("הבדלים בין \"א\" ל־\"ו\": 1 — שם אחר: 1")
+                                && a90.contains("   · " + Words.DbCmd.diffRenamed("\"א\"", "ספרים", "\"ו\"", "ספרים חדשים")));
+                o.check("מבנה 90: רשימה שחסרה בצד אחד — הבדל אחד: \"רק ב־א\", עם מה שבתוכה " + pick(r90, "\"ז\""),
+                        a90.contains("הבדלים בין \"א\" ל־\"ז\": 1 — רק ב־\"א\": 1")
+                                && a90.contains("   · " + Words.DbCmd.diffOnly("\"א\"", "ריקה", "רשימה" + Words.DbCmd.diffInside(2, 1))));
+                o.check("מבנה 90: בלי \"תוכן\" — גם השם של הרשימה עצמה נבדק; ושתי דרכים לאותה רשימה — \"זהות\"",
+                        a90.contains("   · " + Words.DbCmd.diffRenamed("\"א\"", "א", "\"ב\"", "ב"))
+                                && a90.contains("אין הבדלים בין \"א/ספרים/עמוק\" ל־\"א/ריקה/עמוק\" — " + Words.DbCmd.REL_SAME));
+                // הכלל ששומר על הכלי: הדוח ריק אם ורק אם התוכן שווה לפי תמונת המצב — בכל זוג מהשבע, לשני הכיוונים; ואין "הבדל שלא סווג"
+                final int[] agree90 = {0, 0, 0};
+                Db.write(Db.app, m90, null, new Db.Use<Void>() {
+                    @Override public Void run(SqlStore st) {
+                        st.setProp(DbPaths.find(st, m90, java.util.Arrays.asList("ב", "ספרים", "עמוק")), Store.P_ICON, "📚");
+                        return null;
+                    }
+                });
+                Db.read(Db.app, m90, new Db.Use<Void>() {
+                    @Override public Void run(SqlStore st) {
+                        for (String x : roots90) for (String y : roots90) {
+                            long ix = DbPaths.find(st, m90, java.util.Arrays.asList(x)), iy = DbPaths.find(st, m90, java.util.Arrays.asList(y));
+                            List<String> sx = DbSnap.of(st, ix), sy = DbSnap.of(st, iy);
+                            boolean equal = DbSnap.diff(sx.subList(1, sx.size()), sy.subList(1, sy.size())) == null;
+                            DbDiff.Out d = DbDiff.of(st, ix, iy, x, y, false);
+                            agree90[0]++;
+                            if (equal == (d.total() == 0)) agree90[1]++;
+                            agree90[2] += d.other;
+                        }
+                        return null;
+                    }
+                });
+                o.check("מבנה 90: בכל 49 הזוגות — הדוח ריק בדיוק כשהתוכן שווה (" + agree90[1] + " מ־" + agree90[0] + "), ואין הבדל שלא סווג (" + agree90[2] + ")",
+                        agree90[0] == 49 && agree90[1] == 49 && agree90[2] == 0);
+                List<String> p90 = go("המשך ()\nאופן \"" + m90 + "\"\nהשווה תוכן ידנית \"א\" תוכן ידנית \"ב\" /הבדלים\n"
+                        + "השווה ידנית \"א\" ידנית \"אין כזו\" /הבדלים\n", here, vars, lib);
+                String p90s = String.valueOf(p90);
+                o.check("מבנה 90: צלמית שונה לרשימה בעומק — \"מאפיין שונה\" עם שני הערכים; רשימה שאיננה — כישלון שנאמר " + p90s,
+                        p90s.contains("מאפיינים: 1") && p90s.contains(Words.DbCmd.diffProp("ספרים" + Names.SEP + "עמוק", "צלמית", "", "📚"))
+                                && p90s.contains(Words.ListCmdW.noList("אין כזו")) && p90s.contains("כישלונות בהרצה: 1"));
+                o.check("מבנה 90: צורה שגויה — שגיאה כבר בתכנון",
+                        Batch.plan("אופן \"" + m90 + "\"\nהשווה תוכן ידנית \"א\" ידנית \"ב\" /הבדלים\n", here, vars, lib).errors == 1
+                                && Batch.plan("אופן \"" + m90 + "\"\nהשווה חכמה \"א\" חכמה \"ב\" /הבדלים\n", here, vars, lib).errors == 1
+                                && Batch.plan("אופן \"" + m90 + "\"\nהעתק ידנית \"א\" ידנית \"ב\" /הבדלים\n", here, vars, lib).errors == 1);
+                boolean[] k90 = DbDiff.keptOrder(new int[]{2, 0, 1}), k90b = DbDiff.keptOrder(new int[]{0, -1, 1, 2});
+                o.check("מבנה 90: \"מקום אחר\" — רק מי שיצא מהסדר: מתוך ג־א־ב זז אחד; ומי שאין לו בן זוג אינו נספר",
+                        !k90[0] && k90[1] && k90[2] && k90b[0] && k90b[1] && k90b[2] && k90b[3]);
+                go("המשך ()\nמחק תיקייה \"" + dir90 + "\" /S\nבטל אופן \"" + m90 + "\"\n", here, vars, lib);
+            }
         } catch (Throwable t) {
             t.printStackTrace();
             o.check("מבנה 71: חריגה — " + t, false);
@@ -275,6 +363,13 @@ final class DbCmdTests {
             Db.currentMode = wasMode;
         }
         return o;
+    }
+
+    /** השורות של הדוח שמזכירות את what, ומה שמתחתן (לשם הבדיקה, כשהיא נכשלת). */
+    private static String pick(List<String> rep, String what) {
+        StringBuilder sb = new StringBuilder();
+        for (String l : rep) if (l.contains("ל־" + what)) sb.append("[").append(l).append("] ");
+        return sb.toString();
     }
 
     private static List<String> go(String text, File here, Map<String, String> vars, Library lib) {

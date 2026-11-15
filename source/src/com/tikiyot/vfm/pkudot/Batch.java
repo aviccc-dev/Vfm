@@ -1863,7 +1863,7 @@ final class Batch {
             if (u.equals("/Q") || u.equals("/F")) continue;
             if (x.startsWith("/" + SW_DATE) || x.startsWith("/" + SW_SIZE)) return Words.ListCmdW.NO_FILTER;
             if (x.startsWith("/" + SW_CONTAINS)) { if (toFolder || fromDisk) continue; return Words.ListCmdW.NO_FILTER; }
-            if (x.equals(ListCmd.SW_CONDS)) { if (cmd.equals("COMP")) continue; return Words.Cmd.switchNotHere(x, null); }
+            if (x.equals(ListCmd.SW_CONDS) || x.equals(ListCmd.SW_DIFF)) { if (cmd.equals("COMP")) continue; return Words.Cmd.switchNotHere(x, null); }
             boolean take = u.equals("/S") || x.equals(SW_KEEP) || u.equals("/Y") || u.equals("/-Y") || x.startsWith(SW_TAKEN);
             if (take && toFolder) continue;
             return Words.Cmd.switchNotHere(Commands.switchWord(x), null);

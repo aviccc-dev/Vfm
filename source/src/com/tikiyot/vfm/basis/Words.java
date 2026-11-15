@@ -1839,7 +1839,9 @@ public final class Words {
                 INDEX_NOT_READY = "האינדקס עוד לא מוכן (או שחלק מהרשימה לא ידוע) — אי אפשר לדעת אילו קבצים ברשימה",
                 FOLDER_TO_LIST = "תיקייה שלמה לרשימה — עדיין לא; לקבצים שבה: \"תיקייה\\*.*\"",
                 FROM_DISK = " — הקבצים עצמם, מהכונן",
-                USAGE_COMP = "צורה: COMP ידנית \"א\" ידנית \"ב\" · COMP חכמה \"א\" חכמה \"ב\" [/תנאים] · COMP קבצי חכמה \"א\" ידנית \"ב\"",
+                USAGE_DIFF = "צורה: השווה ידנית \"א\" ידנית \"ב\" /הבדלים (כל ההבדלים, עד הסוף) · השווה תוכן ידנית \"א\" תוכן ידנית \"ב\" /הבדלים "
+                        + "(רק מה שבתוכן)",
+                USAGE_COMP = "צורה: COMP ידנית \"א\" ידנית \"ב\" [/הבדלים] · COMP חכמה \"א\" חכמה \"ב\" [/תנאים] · COMP קבצי חכמה \"א\" ידנית \"ב\"",
                 COMP_FS = "השוואה בין רשימה לתיקייה — עדיין לא; בינתיים: COMP /רשימה:\"שם\" \"תיקייה\"",
                 CONDS_SMART = "/תנאים — רק בין שתי רשימות חכמות",
                 SAME_CONDS = "התנאים זהים";
@@ -2140,6 +2142,74 @@ public final class Words {
         /** מבנה 88: "ודא … שווה …" — content: רק מה שבתוך הרשימות. */
         public static String verifyEqual(String a, String b, boolean content) {
             return content ? "התוכן של " + a + " שווה לתוכן של " + b : a + " שווה ל־" + b;
+        }
+
+        // ---------- מבנה 90: דוח ההבדלים בין שתי רשימות (DbDiff) ----------
+
+        public static final String DIFF_ITSELF = "הרשימה עצמה", DIFF_EMPTY = " ריקה";
+
+        public static String kindName(int type) {
+            return type == 1 ? "רשימה" : type == 2 ? "רעיון" : type == 3 ? "קובץ" : type == 4 ? "רשימה חכמה" : type == 5 ? "כותרת" : "פריט";
+        }
+
+        public static String propName(String key) {
+            return key.equals("icon") ? "צלמית" : key.equals("desc") ? "תיאור" : key.equals("design") ? "עיצוב" : key.equals("why") ? "למה"
+                    : key.equals("group") ? "חבורה" : key.equals("cond") ? "תנאי" : key.equals("sort") ? "מיון" : key.equals("dir") ? "כיוון"
+                    : key.equals("view") ? "תצוגה" : key;
+        }
+
+        public static String diffInside(int lists, int items) {
+            return " · בתוכה: " + lists + " רשימות, " + items + " פריטים";
+        }
+
+        public static String diffOnly(String side, String path, String what) {
+            return "רק ב־" + side + ": " + path + " (" + what + ")";
+        }
+
+        public static String diffRenamed(String sa, String a, String sb, String b) {
+            return "שם אחר: ב־" + sa + " «" + a + "», ב־" + sb + " «" + b + "»";
+        }
+
+        public static String diffMoved(String path, String sa, int ia, String sb, int ib) {
+            return "מקום אחר: " + path + " — ב־" + sa + " מקום " + ia + ", ב־" + sb + " מקום " + ib;
+        }
+
+        public static String diffProp(String path, String prop, String a, String b) {
+            return "מאפיין שונה: " + path + " · " + prop + ": «" + a + "» מול «" + b + "»";
+        }
+
+        public static String diffSize(String path, long a, long b) {
+            return "גודל שונה: " + path + " · " + (a < 0 ? "?" : String.valueOf(a)) + " מול " + (b < 0 ? "?" : String.valueOf(b));
+        }
+
+        /** linked — הצד שבו זה אותו פריט ממש בשני מקומות; separate — הצד שבו אלה שני פריטים נפרדים. */
+        public static String diffLink(String path, String linked, String otherPath, String separate) {
+            return "קישור שונה: " + path + " — ב־" + linked + " זה אותו פריט ממש שנמצא גם ב«" + otherPath + "» (זהה); ב־" + separate + " — פריט נפרד";
+        }
+
+        public static String diffOther(String what) {
+            return "הבדל שלא סווג: " + what;
+        }
+
+        public static String diffWill(String a, String b) {
+            return "דוח הבדלים בין " + a + " ל־" + b + " — יחושב בהרצה";
+        }
+
+        /** שורת הסיכום של הדוח. relation — כשאין הבדלים: מה היחס (זהות / שוות / התוכן שווה). */
+        public static String diffSummary(String a, String b, int total, int onlyA, int onlyB, int moved, int renamed, int props, int links,
+                                         int sizes, int other, int shown, String relation) {
+            if (total == 0) return "אין הבדלים בין " + a + " ל־" + b + " — " + relation;
+            StringBuilder sb = new StringBuilder("הבדלים בין " + a + " ל־" + b + ": " + total);
+            String[] names = {"רק ב־" + a, "רק ב־" + b, "מקום אחר", "שם אחר", "מאפיינים", "קישורים", "גודל", "לא סווגו"};
+            int[] n = {onlyA, onlyB, moved, renamed, props, links, sizes, other};
+            String sep = " — ";
+            for (int i = 0; i < n.length; i++) {
+                if (n[i] == 0) continue;
+                sb.append(sep).append(names[i]).append(": ").append(n[i]);
+                sep = " · ";
+            }
+            if (shown < total) sb.append(" (מוצגים ").append(shown).append(" הראשונים)");
+            return sb.toString();
         }
 
         public static String relNames(String a, String b) {
