@@ -31,6 +31,9 @@ public final class Tests {
     }
 
     public static void main(String[] args) throws Exception {
+        // מבנה 76: הבדיקות קוראות לפעולות הכונן ולמנוע ישירות, אלפי פעמים — כאן הן עצמן "שכבת הניהול", וההיתר פתוח לכל אורכן.
+        // הסירוב עצמו (בלי היתר) נבדק בבדיקה משלו, שסוגרת את ההיתר לרגע.
+        Permit.open();
         home = new File(System.getProperty("vfm.home"));
         run("טקסט", new Runnable() { public void run() { text(); } });
         run("תנאים", new Runnable() { public void run() { cond(); } });
@@ -112,6 +115,15 @@ public final class Tests {
         System.out.println("בדיקות: " + passed + " עברו · " + failed + " נכשלו");
         for (String f : failures) System.out.println("  ✗ " + f);
         System.exit(failed == 0 ? 0 : 1);
+    }
+
+    private static void collect76(File dir, List<File> out) {
+        File[] k = dir.listFiles();
+        if (k == null) return;
+        for (File f : k) {
+            if (f.isDirectory()) collect76(f, out);
+            else if (f.getName().endsWith(".java")) out.add(f);
+        }
     }
 
     /** מבנה 71: פקודות הרשימות במסד אמיתי — בקובץ נפרד (DbCmdTests); כאן רק מצרפים את התוצאה. */
@@ -2653,6 +2665,76 @@ public final class Tests {
             Physical.deleteForever(lib74, mine74);
             new File(Paths.data(), "הגדרה-74.ini").delete();
             wipe(d74);
+        }
+        // מבנה 75 (המשתמש, 15.11.2026: "צריך לרשום בתור הוראות תכנות וסדר. לכל מי שמשנה גרסה. ושיופיע במקום מרכזי ובולט"):
+        // ההוראות בשורש המאגר — קיימות, שלמות, ודף הפתיחה מפנה אליהן. מי שמוחק או מרוקן אותן — הבנייה נעצרת.
+        {
+            File root75 = new File(System.getProperty("vfm.src")).getParentFile();
+            File rules75 = new File(root75, "CLAUDE.md");
+            String t75 = rules75.isFile() ? read(rules75) : "";
+            boolean floors75 = true;
+            for (String f : MivneTests.LEVELS) floors75 &= t75.contains("`" + f + "`");
+            check("מבנה 75: הוראות התכנות והסדר — בשורש המאגר (CLAUDE.md), עם חמש הקומות", rules75.isFile() && floors75);
+            check("מבנה 75: ...ועם הכללים: כל צעד דרך השכבה הדקה, השערים, השומרים, סדר העבודה",
+                    t75.contains("מסך אינו משנה דבר בעצמו") && t75.contains("Db.write") && t75.contains("לא מוחקים, לא מחלישים ולא עוקפים שומר")
+                            && t75.contains("בניית גרסה — רק בהוראה מפורשת של המשתמש") && t75.contains("רק באישור המשתמש"));
+            check("מבנה 76: ההוראות כוללות את ההיתר, בנוסח של המשתמש — ואותו נוסח בתוכנה", t75.contains(Words.PermitW.BYPASS + ". " + Words.PermitW.REFUSED)
+                    && t75.contains("basis/Permit"));
+            check("מבנה 75: דף הפתיחה של המאגר מפנה אליהן בראשו", read(new File(root75, "README.md")).indexOf("CLAUDE.md") >= 0
+                    && read(new File(root75, "README.md")).indexOf("CLAUDE.md") < 300);
+            check("מבנה 75: הרצת הבדיקות מזכירה אותן", read(new File(root75, "source/build/test.sh")).contains("CLAUDE.md"));
+        }
+        // מבנה 76 (המשתמש, 15.11.2026: "פעולה מנסה לעקוף את שכבת הניהול. פעולה זו לא חוקית ואסורה. כל פעולה חייבת לעבור דרך
+        // שכבת הניהול"): ההיתר — בלי היתר, מחיקה מסורבת; דרך המנהל — נעשית
+        {
+            File d76 = new File(r, "ניסוי-76");
+            wipe(d76);
+            d76.mkdirs();
+            write(d76, "א.txt", "1");
+            write(d76, "ב.txt", "2");
+            Index ix76 = new Index("76", "76", d76.getAbsolutePath());
+            ix76.scan(null);
+            Library lib76 = Library.forTests(new ArrayList<Index>(java.util.Collections.singletonList(ix76)));
+            java.util.Map<String, String> v76 = Batch.vars(d76, d76.getAbsolutePath(), null);
+            List<String> a76 = java.util.Collections.singletonList(new File(d76, "א.txt").getAbsolutePath());
+            check("מבנה 76: בבדיקות ההיתר פתוח (הן קוראות לפעולות ישירות)", Permit.held());
+            Permit.close();                                                     // מכאן — כמו בתוכנה: אין היתר, אלא אם המנהל פותח
+            try {
+                check("מבנה 76: עכשיו אין היתר", !Permit.held());
+                Physical.Result no76 = Physical.delete(lib76, a76, false);
+                check("מבנה 76: מחיקה בלי היתר — מסורבת, והקובץ במקומו", no76.failed == 1 && no76.done.isEmpty() && new File(d76, "א.txt").isFile());
+                check("מבנה 76: ...בנוסח של המשתמש (" + no76.note + ")", no76.note.contains("פעולה מנסה לעקוף את שכבת הניהול")
+                        && no76.note.contains("פעולה זו לא חוקית ואסורה. כל פעולה חייבת לעבור דרך שכבת הניהול."));
+                Batch.Plan p76 = Batch.plan("DEL \"א.txt\"\n", d76, v76, lib76);
+                Batch.run(p76, lib76, null, null);
+                check("מבנה 76: גם המנוע, כשמריצים אותו שלא דרך המנהל — לא מוחק, והשורה נכשלת", new File(d76, "א.txt").isFile() && p76.trouble);
+                check("מבנה 76: פעולה שעוד במעבר (שינוי שם) — נעשית בינתיים, ונרשמת ביומן",
+                        Physical.rename(lib76, new File(d76, "ב.txt").getAbsolutePath(), "ג.txt").failed == 0 && new File(d76, "ג.txt").isFile()
+                                && !Permit.strict(Permit.RENAME) && Permit.strict(Permit.DELETE));
+                Manager.Act act76 = Manager.onSelected("DEL", a76, new ArrayList<String>(), d76, v76, lib76);
+                Physical.Result yes76 = act76.run(lib76, null, null, false);
+                lib76.flush(5000);
+                check("מבנה 76: דרך המנהל — המחיקה נעשית", yes76.failed == 0 && yes76.done.size() == 1 && !new File(d76, "א.txt").exists());
+                check("מבנה 76: ...וההיתר נסגר אחריה", !Permit.held());
+                Batch.Plan q76 = Batch.plan("DEL \"ג.txt\"\n", d76, v76, lib76);
+                Manager.run(q76, lib76, null, null, false, null);
+                lib76.flush(5000);
+                check("מבנה 76: קובץ פקודות שהמנהל מריץ — מוחק", !new File(d76, "ג.txt").exists() && !q76.trouble);
+            } finally {
+                Permit.open();
+            }
+            String man76 = read(new File(code, "lev/Manager.java"));
+            int opens76 = 0, runs76 = 0;
+            List<File> all76 = new ArrayList<File>();
+            collect76(code, all76);
+            for (File f : all76) {
+                String t = read(f), n = f.getName();
+                if (t.contains("Permit.open(") && !n.equals("Manager.java") && !n.equals("Permit.java")) opens76++;
+                if (t.contains("Batch.run(") && !n.equals("Manager.java") && !n.equals("Batch.java")) runs76++;
+            }
+            check("מבנה 76: רק המנהל פותח היתר (" + opens76 + " מקומות אחרים)", opens76 == 0 && man76.contains("Permit.open();") && man76.contains("Permit.close();"));
+            check("מבנה 76: רק המנהל מריץ את המנוע (" + runs76 + " מקומות אחרים)", runs76 == 0);
+            wipe(d76);
         }
         // מבנה 55: המכשיר עצר את התוכנה בזמן הרצה — הדוח אומר זאת ואיזו הגדרה פותרת
         List<String> rep55 = new ArrayList<String>();

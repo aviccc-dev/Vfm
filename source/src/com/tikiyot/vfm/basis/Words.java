@@ -2548,4 +2548,21 @@ public final class Words {
         /** שורה בבחירת הגרסה: הגרסה, ומתי הקובץ הגיע (שתי גרסאות באותו מספר — לפי התאריך). */
         public static String versionRow(String ver, String when, boolean open) { return "גרסה " + ver + " · " + when + (open ? " ✓" : ""); }
     }
+    /** מבנה 76: ההיתר של שכבת הניהול (Permit). הנוסח — של המשתמש (15.11.2026). */
+    public static final class PermitW {
+        public static final String BYPASS = "פעולה מנסה לעקוף את שכבת הניהול",
+                REFUSED = "פעולה זו לא חוקית ואסורה. כל פעולה חייבת לעבור דרך שכבת הניהול.",
+                STILL_MOVING = "עוד לא הועברה לשכבת הניהול; נעשתה";
+        /** שמות הפעולות — כמו שהם נאמרים בסירוב וביומן. */
+        public static final String DELETE = "מחיקה", TRANSFER = "העתקה או העברה", RENAME = "שינוי שם", MAKE_FOLDER = "תיקייה חדשה",
+                RESTORE = "שחזור מהסל", FOREVER = "מחיקה לצמיתות";
+
+        private PermitW() { }
+
+        /** מה שנאמר למי שביקש את הפעולה. */
+        public static String refused(String action) { return BYPASS + " (" + action + "). " + REFUSED; }
+
+        /** ליומן: איזו פעולה, ומאיפה ביקשו אותה. */
+        public static String bypass(String action, String from) { return BYPASS + ": " + action + " (" + from + ")"; }
+    }
 }

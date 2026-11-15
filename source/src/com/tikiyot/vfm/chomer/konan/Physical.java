@@ -229,6 +229,13 @@ public final class Physical {
         return new java.text.SimpleDateFormat("yyyy-MM-dd_HH-mm-ss", java.util.Locale.US).format(new java.util.Date());
     }
 
+    /** מבנה 76: פעולה שביקשו בלי ההיתר של שכבת הניהול — לא נעשתה; התוצאה אומרת למה. */
+    private static Result refused(String why) {
+        Result r = new Result();
+        r.fail(why);
+        return r;
+    }
+
     /** מחיקה מהכונן של קבצים בלבד (כמו קודם). */
     public static Result delete(Library lib, List<String> paths, boolean grey) {
         return delete(lib, paths, java.util.Collections.<String>emptyList(), grey);
@@ -254,6 +261,11 @@ public final class Physical {
 
     private static Result delete(Library lib, List<String> paths, List<String> dirs, boolean grey, boolean byApp) {
         Result r = new Result();
+        String no = Permit.check(Permit.DELETE);                               // מבנה 76: רק דרך שכבת הניהול
+        if (no != null) {
+            r.fail(no);
+            return r;
+        }
         String stamp = stamp();
         List<String> gone = new ArrayList<String>();
         for (String p : paths) {
@@ -383,6 +395,8 @@ public final class Physical {
     /** 1.19.0: עם יומן — כל קובץ שהגיע ליעד נרשם בו (null — בלי). */
     public static Result transfer(Library lib, List<String> files, List<String> dirs, File folder, boolean copy,
                                   Asker asker, Progress progress, boolean grey, Journal journal) {
+        String no = Permit.check(Permit.TRANSFER);                             // מבנה 76
+        if (no != null) return refused(no);
         Run run = new Run(lib, copy, asker, progress, grey);
         run.journal = journal;
         run.journalRoot = folder;
@@ -408,6 +422,8 @@ public final class Physical {
     public static Result transferKeep(Library lib, String root, List<String> files, List<String> dirs, File destRoot,
                                       boolean copy, Asker asker, Progress progress, boolean grey, Journal journal,
                                       boolean pruneEmpty) {
+        String no = Permit.check(Permit.TRANSFER);                             // מבנה 76
+        if (no != null) return refused(no);
         Run run = new Run(lib, copy, asker, progress, grey);
         run.keep = true;
         run.journal = journal;
@@ -439,6 +455,8 @@ public final class Physical {
     /** 1.21.0: כל קובץ אל התיקייה שלו (folders[i]) — לשחזור, כשהקבצים באים מכמה שורשים. */
     public static Result transferTo(Library lib, List<String> files, List<String> folders, File checkFolder, boolean copy,
                                     Asker asker, Progress progress, boolean grey, Journal journal) {
+        String no = Permit.check(Permit.TRANSFER);                             // מבנה 76
+        if (no != null) return refused(no);
         Run run = new Run(lib, copy, asker, progress, grey);
         run.keep = true;
         run.journal = journal;
@@ -949,6 +967,8 @@ public final class Physical {
     /** שחזור מהסל למקום המקורי. שם תפוס → "(משוחזר)", והרשימות עוקבות (65). לא מחזיר לרשימות — החלטה;
      * המשתמש (11.11.2026): "כך הסברה הפשוטה. למה שנחזיר לרשימה אם הוא נמחק לגמרי". (במ0.32 נבנתה החזרה בטעות, ובמ0.34 הוסרה.) */
     public static Result restore(Library lib, List<Trash.Item> items) {
+        String no = Permit.check(Permit.RESTORE);                              // מבנה 76
+        if (no != null) return refused(no);
         Result r = new Result();
         for (Trash.Item it : items) {
             if (it.original == null) {
@@ -973,6 +993,8 @@ public final class Physical {
 
     /** מחיקה לצמיתות מהסל. פריטים שנשארו באפור ברשימות יורדים מהן. */
     public static Result deleteForever(Library lib, List<Trash.Item> items) {
+        String no = Permit.check(Permit.FOREVER);                              // מבנה 76
+        if (no != null) return refused(no);
         Result r = new Result();
         List<String> origs = new ArrayList<String>();
         int n = Trash.empty(lib, items, origs);
@@ -1072,6 +1094,8 @@ public final class Physical {
      * לא מחליף קובץ קיים — שם תפוס נדחה.
      */
     public static Result rename(Library lib, String path, String newName) {
+        String no = Permit.check(Permit.RENAME);                               // מבנה 76
+        if (no != null) return refused(no);
         Result r = new Result();
         String own = programFile(path);
         if (own != null) {
@@ -1123,6 +1147,8 @@ public final class Physical {
 
     /** יצירת תיקייה ריקה בכונן. null = הצליח; אחרת ההסבר. */
     public static String makeFolder(Library lib, File parent, String name) {
+        String no = Permit.check(Permit.MAKE_FOLDER);                          // מבנה 76
+        if (no != null) return no;
         String bad = badName(name);
         if (bad != null) return bad;
         if (programFile(new File(parent, name.trim()).getAbsolutePath()) != null) return Words.Disk.NO_FOLDER_IN_APP;

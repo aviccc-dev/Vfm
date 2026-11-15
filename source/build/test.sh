@@ -2,6 +2,7 @@
 # בדיקות על המחשב (80). יוצא בכישלון אם בדיקה אחת נכשלה — ואז build.sh לא בונה.
 set -e
 DIR=$1
+echo "הוראות תכנות וסדר — CLAUDE.md בשורש המאגר. מחייבות כל מי שמשנה את הקוד."
 T=/home/claude/tools
 W=$(mktemp -d)
 mkdir -p $W/stubs $W/out $W/home

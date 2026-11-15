@@ -57,6 +57,22 @@ final class Manager {
         return GO;
     }
 
+    // ---------- ההרצה — רק מכאן (מבנה 76) ----------
+
+    /**
+     * מריץ תכנית. זה המקום היחיד שפותח את ההיתר של שכבת הניהול (Permit): מה שהתכנית עושה בכונן נעשה רק בתוכו.
+     * המסכים ושאר הקוד אינם קוראים ל־Batch.run בעצמם (שומר בבדיקות המבנה).
+     */
+    static java.util.List<String> run(Batch.Plan plan, Library lib, Physical.Asker asker, Physical.Progress progress, boolean grey,
+                                      Batch.Listener listen) {
+        Permit.open();
+        try {
+            return Batch.run(plan, lib, asker, progress, grey, listen);
+        } finally {
+            Permit.close();
+        }
+    }
+
     // ---------- פעולה של מסך — כפקודה (מבנה 74; שלב ב: "כל פעולה של מסך עוברת דרך פקודה") ----------
     // המסך אינו עושה את הפעולה בעצמו: הוא מוסר מה נבחר ואיזו פקודה, ומקבל תכנית (ובה גם הסירוב, אם יש) ותוצאה.
     // אותה פקודה, אותן בדיקות ואותו מסלול כמו בקובץ פקודות — ולכן מה שנבדק בפקודות נבדק גם למסך.
@@ -82,7 +98,7 @@ final class Manager {
             java.util.List<String> report = null;
             Physical.Result r = null;
             try {
-                report = Batch.run(plan, lib, asker, progress, grey);
+                report = Manager.run(plan, lib, asker, progress, grey, null);
                 for (Batch.Step s : plan.steps) if (s.result != null) r = s.result;
             } catch (Throwable t) {
                 Log.e("פעולת מסך: " + text.trim(), t);

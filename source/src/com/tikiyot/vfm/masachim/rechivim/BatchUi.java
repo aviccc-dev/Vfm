@@ -171,7 +171,7 @@ final class BatchUi {
                             android.os.PowerManager.WakeLock awake = Awake.hold(a);   // מבנה 38: ההרצה ממשיכה גם כשהמסך כבוי
                             RunService.begin(a);                                      // מבנה 51
                             try {
-                                rep = Batch.run(plan, lib, new PhysicalUi.DialogAsker(a), busy, Acts.deletedStaysGrey());
+                                rep = Manager.run(plan, lib, new PhysicalUi.DialogAsker(a), busy, Acts.deletedStaysGrey(), null);   // מבנה 76: ההרצה — דרך שכבת הניהול
                             } finally {
                                 RunService.end(a);
                                 Awake.release(awake);
