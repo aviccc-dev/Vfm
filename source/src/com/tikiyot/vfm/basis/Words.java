@@ -2786,6 +2786,12 @@ public final class Words {
         public static final String DELETE = "מחיקה", TRANSFER = "העתקה או העברה", RENAME = "שינוי שם", MAKE_FOLDER = "תיקייה חדשה",
                 RESTORE = "שחזור מהסל", FOREVER = "מחיקה לצמיתות", WRITE = "כתיבת קובץ", DB = "כתיבה למסד",
                 ZIP = "אריזה או פריסה של zip";
+        /** מבנה 124: הפעולות שהתוכנה עושה לבד — בשם שבו המנהל רושם אותן (וכך הן נאמרות ביומן). */
+        public static final String SYS_MENUS = "התקנת התפריטים", SYS_MINE = "הפקודות שלי", SYS_FOLLOW = "המעקב אחרי הכונן",
+                SYS_TOOLS = "הכלים שנוספים לרשימה", SYS_EXIT = "עותק ביציאה", SYS_START = "הכנת האופן בפתיחה",
+                SYS_TOP_ROW = "הרשימה של השורה העליונה", SYS_DEV = "מסך המסד (פיתוח)";
+
+        public static String notRegistered(String name) { return "פעולה של המערכת שאינה רשומה אצל שכבת הניהול: " + name; }
 
         private PermitW() { }
 

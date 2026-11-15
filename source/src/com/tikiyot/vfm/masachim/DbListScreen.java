@@ -70,6 +70,7 @@ public class DbListScreen extends ListScreen<Store.Member> {
         new Thread(new Runnable() {
             @Override
             public void run() {
+                boolean sys = Permit.systemOpen(Permit.SYS_EXIT);                // מבנה 124: פעולה של המערכת, רשומה אצל המנהל
                 try {
                     Db.write(c, m, null, new Db.Use<Void>() {                     // מבנה 33: דרך שער המסד
                         @Override
@@ -80,6 +81,8 @@ public class DbListScreen extends ListScreen<Store.Member> {
                     });
                 } catch (Throwable t) {
                     Log.e("DbListScreen.exitCopy", t);
+                } finally {
+                    Permit.systemClose(sys);
                 }
             }
         }).start();
@@ -122,6 +125,7 @@ public class DbListScreen extends ListScreen<Store.Member> {
         super.onCreate(saved);
         alive++;
         Db.app = getApplicationContext();
+        Manager.boot();                                                        // מבנה 124: הרישום של פעולות המערכת — לפני כל פעולה כזו
         mode = getIntent().getStringExtra(EXTRA_MODE);
         listId = getIntent().getLongExtra(EXTRA_LIST, 0);
         sortBy = getIntent().getStringExtra(EXTRA_SORT);

@@ -59,6 +59,16 @@ final class Manager {
 
     // ---------- ההרצה — רק מכאן (מבנה 76) ----------
 
+    // ---------- מבנה 124: הפעולות שהתוכנה עושה לבד — מוכרות כאן, בשמן; מה שאינו ברשימה אינו מקבל היתר ----------
+    static {
+        for (String name : new String[]{Permit.SYS_MENUS, Permit.SYS_MINE, Permit.SYS_FOLLOW, Permit.SYS_TOOLS, Permit.SYS_EXIT, Permit.SYS_START,
+                Permit.SYS_TOP_ROW, Permit.SYS_DEV})
+            Permit.allowSystem(name);
+    }
+
+    /** נקרא בכניסה לתוכנה (מסך, שירות, ספק) — כדי שהרישום שלמעלה ייעשה לפני כל פעולה של המערכת. */
+    static void boot() { }
+
     /**
      * מריץ תכנית. זה המקום היחיד שפותח את ההיתר של שכבת הניהול (Permit): מה שהתכנית עושה בכונן נעשה רק בתוכו.
      * המסכים ושאר הקוד אינם קוראים ל־Batch.run בעצמם (שומר בבדיקות המבנה).

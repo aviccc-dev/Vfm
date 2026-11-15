@@ -130,8 +130,13 @@ final class DbFollow {
                     times.append(times.length() > 0 ? " · " : "").append(m).append(' ').append(System.currentTimeMillis() - m0);
                     continue;
                 }
-                sum += write ? Db.write(c, m, null, use)                          // מבנה 33: דרך שער המסד
-                        : Db.read(c, m, use);
+                boolean sys = write && Permit.systemOpen(Permit.SYS_FOLLOW);     // מבנה 124: פעולה של המערכת, רשומה אצל המנהל
+                try {
+                    sum += write ? Db.write(c, m, null, use)                      // מבנה 33: דרך שער המסד
+                            : Db.read(c, m, use);
+                } finally {
+                    Permit.systemClose(sys);
+                }
             } catch (Throwable t) {
                 Log.e("DbFollow." + m, t);
             }

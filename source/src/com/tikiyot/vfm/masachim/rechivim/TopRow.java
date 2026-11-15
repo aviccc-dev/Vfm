@@ -229,12 +229,18 @@ final class TopRow {
 
     /** פותח את הרשימה של השורה באופן "שמור לתוכנה" (נוצרת אם חסרה). */
     private void arrange(final String ofScreen, final String side, final int n) {
-        long id = DbVerbsUi.write(a, Menus.MODE, new DbVerbsUi.Job() {
-            @Override
-            public long run(Store s, List<String> p) {
-                return Menus.ensure(s, DbPaths.ensureHome(s), Menus.rowPath(ofScreen, side, n));
-            }
-        }, null);
+        long id;
+        boolean sys = Permit.systemOpen(Permit.SYS_TOP_ROW);                      // מבנה 124: פעולה של המערכת (התפריטים), רשומה אצל המנהל
+        try {
+            id = DbVerbsUi.write(a, Menus.MODE, new DbVerbsUi.Job() {
+                @Override
+                public long run(Store s, List<String> p) {
+                    return Menus.ensure(s, DbPaths.ensureHome(s), Menus.rowPath(ofScreen, side, n));
+                }
+            }, null);
+        } finally {
+            Permit.systemClose(sys);
+        }
         if (id == 0) return;
         Ui.toast(a, Words.Top.ROW_HINT);
         DbListScreen.open(a, Menus.MODE, id);

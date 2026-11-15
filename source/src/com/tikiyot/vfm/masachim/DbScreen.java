@@ -87,7 +87,14 @@ public class DbScreen extends Activity {
     private static void start(Activity a, boolean fresh) {
         String m = a.getSharedPreferences(Db.PREFS, MODE_PRIVATE).getString(Db.PREF_MODE, "");
         if (m.isEmpty()) m = Db.defaultMode(a);
-        long home = Db.prepare(a, m, Reserved.FILES);                                             // מ0.29: גם התקנה חדשה — ישר לבית (הדוגמאות)
+        Manager.boot();                                                        // מבנה 124: הרישום של פעולות המערכת
+        long home;
+        boolean sys = Permit.systemOpen(Permit.SYS_START);                       // מבנה 124: פעולה של המערכת, רשומה אצל המנהל
+        try {
+            home = Db.prepare(a, m, Reserved.FILES);                             // מ0.29: גם התקנה חדשה — ישר לבית (הדוגמאות)
+        } finally {
+            Permit.systemClose(sys);
+        }
         android.content.Intent i = home != 0 ? DbListScreen.intent(a, m, home, null) : new android.content.Intent(a, DbScreen.class);
         if (fresh) i.addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK | android.content.Intent.FLAG_ACTIVITY_CLEAR_TASK);
         a.startActivity(i);
@@ -190,6 +197,7 @@ public class DbScreen extends Activity {
         modeButton.setText(Words.Db.modeButton(mode));
         if (store == null) {
             damaged = null;
+            boolean sys = Permit.systemOpen(Permit.SYS_DEV);                    // מבנה 124: מסך הפיתוח — רשום אצל המנהל כמי שמחזיק מסד פתוח
             try {
                 store = Db.openHeld(this, mode);                               // מבנה 63: כל עוד פתוח — "בטל אופן" מסרב לאופן הזה
                 heldMode = mode;
@@ -202,6 +210,8 @@ public class DbScreen extends Activity {
                 Log.e("DbScreen.open", t);
                 status.setText(Words.Db.openFailed(String.valueOf(t.getMessage())));
                 return;
+            } finally {
+                Permit.systemClose(sys);
             }
             startDaily();
             offerRestoreIfEmpty();

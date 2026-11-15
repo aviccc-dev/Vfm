@@ -3107,6 +3107,27 @@ public final class Tests {
                 String pui122 = read(new File(code, "masachim/rechivim/PhysicalUi.java"));
                 check("מבנה 122: המסך אינו אורז ואינו פורס בעצמו — רק דרך המנהל", !pui122.contains("Zip.pack(") && !pui122.contains("Zip.unpack(")
                         && pui122.contains("Manager.onZip(true") && pui122.contains("Manager.onZip(false"));
+                // מבנה 124: פעולות של המערכת — רק מה שהמנהל רשם בשמו מקבל היתר
+                Manager.boot();
+                boolean in124 = Permit.systemOpen(Permit.SYS_FOLLOW);
+                boolean held124 = Permit.held();
+                Permit.systemClose(in124);
+                boolean no124 = Permit.systemOpen("פעולה שאיש לא רשם 124");
+                boolean heldNo124 = Permit.held();
+                Permit.systemClose(no124);
+                check("מבנה 124: פעולה של המערכת שהמנהל רשם — מקבלת היתר לזמן שהיא רצה, והוא נסגר; שאינה רשומה — בלי היתר",
+                        in124 && held124 && !no124 && !heldNo124 && !Permit.held() && Permit.isSystem(Permit.SYS_MENUS) && Permit.isSystem(Permit.SYS_DEV));
+                int allow124 = 0, sys124 = 0;
+                StringBuilder who124 = new StringBuilder();
+                for (File f : javaFiles(code)) {
+                    String t = read(f), n = f.getName();
+                    if (t.contains("Permit.allowSystem(") && !n.equals("Manager.java") && !n.equals("Permit.java")) allow124++;
+                    if (t.contains("Permit.systemOpen(") && !n.equals("Permit.java")) { sys124++; who124.append(n).append(' '); }
+                }
+                check("מבנה 124: רק המנהל רושם פעולות של המערכת (" + allow124 + " מקומות אחרים); ומי שמשתמש בהן — רק המקומות הידועים (" + who124.toString().trim() + ")",
+                        allow124 == 0 && sys124 == 6 && who124.toString().contains("Menus.java") && who124.toString().contains("DbFollow.java")
+                                && who124.toString().contains("DbListScreen.java") && who124.toString().contains("DbCmdMenu.java")
+                                && who124.toString().contains("TopRow.java") && who124.toString().contains("DbScreen.java"));
                 check("מבנה 80: ההיתר נסגר אחרי כל הרצה", !Permit.held());
             } finally {
                 Permit.open();

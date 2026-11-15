@@ -382,7 +382,12 @@ final class Menus {
                 s = null;
                 if (done) return;
             }
-            install(c);
+            boolean sys = Permit.systemOpen(Permit.SYS_MENUS);                // מבנה 124: פעולה של המערכת, רשומה אצל המנהל
+            try {
+                install(c);
+            } finally {
+                Permit.systemClose(sys);
+            }
         } catch (Throwable t) {
             Log.e("Menus.ensure", t);
         } finally {
@@ -613,6 +618,7 @@ final class Menus {
         for (String m : new String[]{Db.currentMode, Menus.MODE}) {
             if (m == null || !Db.dbFile(c, m).isFile()) continue;
             final String mode = m;
+            boolean sys = Permit.systemOpen(Permit.SYS_MINE);                    // מבנה 124
             try {
                 boolean added = Db.write(c, mode, null, new Db.Use<Boolean>() {  // מבנה 33: דרך שער המסד
                     @Override
@@ -627,6 +633,8 @@ final class Menus {
             } catch (Throwable t) {
                 Log.e("Menus.addToMine", t);
                 return;
+            } finally {
+                Permit.systemClose(sys);
             }
         }
     }

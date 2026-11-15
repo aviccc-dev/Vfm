@@ -195,6 +195,7 @@ final class DbCmdMenu {
             @Override
             public void run() {
                 List<String> added = null;
+                boolean sys = Permit.systemOpen(Permit.SYS_TOOLS);               // מבנה 124: פעולה של המערכת, רשומה אצל המנהל
                 try {
                     final List<File> fs = writeTools();
                     added = Db.write(a, mode, null, new Db.Use<List<String>>() {  // מבנה 33: דרך שער המסד
@@ -205,6 +206,8 @@ final class DbCmdMenu {
                     });
                 } catch (Throwable t) {
                     Log.e("DbCmdMenu.ensureTools", t);
+                } finally {
+                    Permit.systemClose(sys);
                 }
                 final List<String> got = added;
                 if (got != null && !got.isEmpty())

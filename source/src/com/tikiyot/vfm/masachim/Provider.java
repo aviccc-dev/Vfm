@@ -32,6 +32,7 @@ public class Provider extends ContentProvider {
     public boolean onCreate() {
         // מ0.25: ההקשר של התוכנה כבר בעליית התהליך — לפקודות שרצות במסד לפני שמסך המסד הוצג (DbVerbs.active).
         if (getContext() != null && Db.app == null) Db.app = getContext().getApplicationContext();
+        Manager.boot();                                                        // מבנה 124: הספק עולה עם התהליך — כאן נרשמות פעולות המערכת אצל המנהל
         return true;
     }
 

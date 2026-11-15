@@ -44,6 +44,43 @@ public final class Permit {
         if (d[0] > 0) d[0]--;
     }
 
+    // ---------- מבנה 124: פעולות שהתוכנה עושה לבד (לא פעולה של המשתמש ולא קובץ פקודות) ----------
+    // המשתמש: "כל שכבה צריכה להיות מוכרת על ידה אחרת לא תעבוד". שכבת הניהול רושמת, בשמן, את הפעולות האוטומטיות המותרות
+    // (Manager — המקום היחיד שרושם; שומר בבדיקות המבנה). פעולה רשומה מקבלת היתר לזמן שהיא רצה; שאינה רשומה — בלי היתר:
+    // נרשמת ביומן, ומה שהיא מנסה לשנות נבדק כמו כל פעולה שעוקפת.
+
+    public static final String SYS_MENUS = Words.PermitW.SYS_MENUS, SYS_MINE = Words.PermitW.SYS_MINE, SYS_FOLLOW = Words.PermitW.SYS_FOLLOW,
+            SYS_TOOLS = Words.PermitW.SYS_TOOLS, SYS_EXIT = Words.PermitW.SYS_EXIT, SYS_START = Words.PermitW.SYS_START,
+            SYS_TOP_ROW = Words.PermitW.SYS_TOP_ROW, SYS_DEV = Words.PermitW.SYS_DEV;
+
+    private static final java.util.Set<String> SYSTEM = java.util.Collections.synchronizedSet(new java.util.HashSet<String>());
+
+    /** רק שכבת הניהול: רושמת פעולה של המערכת, בשמה. */
+    public static void allowSystem(String name) {
+        SYSTEM.add(name);
+    }
+
+    public static boolean isSystem(String name) {
+        return SYSTEM.contains(name);
+    }
+
+    /**
+     * תחילת פעולה של המערכת. רשומה — ההיתר נפתח בתהליכון הזה (true), ומי שקרא סוגר ב־systemClose, ב־finally. לא רשומה —
+     * false: בלי היתר, ונרשם ביומן (פעם אחת לכל שם).
+     */
+    public static boolean systemOpen(String name) {
+        if (SYSTEM.contains(name)) {
+            open();
+            return true;
+        }
+        if (warned.add("system|" + name)) Log.i("⚠ " + Words.PermitW.notRegistered(name));
+        return false;
+    }
+
+    public static void systemClose(boolean opened) {
+        if (opened) close();
+    }
+
     public static boolean held() {
         return DEPTH.get()[0] > 0;
     }
