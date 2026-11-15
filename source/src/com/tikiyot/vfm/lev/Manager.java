@@ -96,6 +96,23 @@ final class Manager {
             return plan.errors > 0 || plan.steps.isEmpty() ? plan.errorText() : null;
         }
 
+        /**
+         * מבנה 85: הרצה של פעולה במסד (רשימות). מחזירה את מה שהפעולה אמרה — ההודעה שהמסך מציג, כמו שהעטיפה הישנה החזירה;
+         * תקלה — הודעת כישלון, לא חריגה.
+         */
+        String say(Library lib) {
+            java.util.List<String> report = null;
+            String said = null;
+            try {
+                report = Manager.run(plan, lib, null, null, false, null);
+                for (Batch.Step s : plan.steps) if (s.said != null) said = s.said;
+            } catch (Throwable t) {
+                Log.e("פעולת מסך: " + text.trim(), t);
+            }
+            Log.i("פעולת מסך: " + text.trim() + " · " + (report == null ? Words.Disk.ERROR : Batch.logLine(report)));
+            return said != null ? said : Words.Db.failed(Words.Disk.ERROR);
+        }
+
         /** ההרצה. מחזירה את התוצאה של הפעולה בכונן; תקלה — תוצאה עם כישלון, לא חריגה. */
         Physical.Result run(Library lib, Physical.Asker asker, Physical.Progress progress, boolean grey) {
             java.util.List<String> report = null;
@@ -163,6 +180,15 @@ final class Manager {
     static Act onTrash(boolean restore, java.util.List<String> items, java.io.File here, java.util.Map<String, String> vars, Library lib) {
         String text = Commands.word(Commands.get(restore ? Batch.UNTRASH : Batch.PURGE)) + " %" + Batch.V_SELECTED + "%\n";
         return new Act(text, Batch.plan(text, here, vars, lib, null, new Batch.Selection(items, java.util.Collections.<String>emptyList())), null);
+    }
+
+    /**
+     * מבנה 85: "הסרה מכאן" במסך הרשימות — "בטל ידנית %נבחרים%". mode — האופן של המסך; in — הרשימה שמוצגת; ids — הפריטים שנבחרו
+     * (מספרים במסד).
+     */
+    static Act onListRemove(String mode, long in, java.util.List<Long> ids, java.io.File here, java.util.Map<String, String> vars, Library lib) {
+        String text = Commands.HE_UNLIST + " " + ListCmd.MANUAL + " %" + Batch.V_SELECTED + "%\n";
+        return new Act(text, Batch.plan(text, here, vars, lib, null, new Batch.Selection(mode, in, ids)), null);
     }
 
     // ---------- התוצאה חוזרת: מה קורה בסוף ההרצה ----------

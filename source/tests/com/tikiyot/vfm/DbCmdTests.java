@@ -111,6 +111,60 @@ final class DbCmdTests {
                 o.check("מבנה 71: \"" + g.name + "\" של תוסף האבחון — במחשב: " + ok + " \"ודא\" עברו, בלי כישלון (" + bad(r) + ")", bad(r).isEmpty() && ok > 0);
             }
             o.check("מבנה 71: בסך הכול — " + ran + " קבוצות ולפחות 135 \"ודא\" של תוסף האבחון עוברים במחשב (" + all + ")", ran >= 7 && all >= 135);
+            // מבנה 85: "הסרה מכאן" של מסך הרשימות — דרך המנהל, כפקודה "בטל ידנית %נבחרים%", על מסד אמיתי
+            {
+                final String m85 = "בדיקת-85";
+                List<String> r85 = go("המשך ()\nצור אופן \"" + m85 + "\"\nאופן \"" + m85 + "\"\nMD ידנית \"ראש\\א\"\nMD ידנית \"ראש\\ב\"\n"
+                        + "MD ידנית \"ראש\\ג\"\nודא ידנית \"ראש\" /רשימות:3\n", here, vars, lib);
+                final long[] id85 = new long[4];
+                Db.read(Db.app, m85, new Db.Use<Void>() {
+                    @Override public Void run(SqlStore s) {
+                        id85[0] = DbPaths.find(s, m85, java.util.Arrays.asList("ראש"));
+                        id85[1] = DbPaths.find(s, m85, java.util.Arrays.asList("ראש", "א"));
+                        id85[2] = DbPaths.find(s, m85, java.util.Arrays.asList("ראש", "ב"));
+                        id85[3] = DbPaths.find(s, m85, java.util.Arrays.asList("ראש", "ג"));
+                        return null;
+                    }
+                });
+                o.check("מבנה 85: ההכנה — רשימה ובה שלוש (" + bad(r85) + ")", bad(r85).isEmpty() && id85[0] != 0 && id85[1] != 0 && id85[2] != 0 && id85[3] != 0);
+                List<Long> two85 = java.util.Arrays.asList(id85[1], id85[2]);
+                Manager.Act act85 = Manager.onListRemove(m85, id85[0], two85, here, vars, lib);
+                o.check("מבנה 85: הפקודה שהמסך מריץ — \"בטל ידנית %נבחרים%\", בלי סירוב (" + act85.error() + ")", act85.error() == null
+                        && act85.text.trim().equals("בטל ידנית %נבחרים%") && act85.plan.steps.size() == 1);
+                o.check("מבנה 85: בחירה ריקה, אופן שאין לו מסד, ופקודת רשימות אחרת עם %נבחרים% — סירוב מהתכנון",
+                        Manager.onListRemove(m85, id85[0], new ArrayList<Long>(), here, vars, lib).error() != null
+                                && Manager.onListRemove("אין-אופן-כזה-85", id85[0], two85, here, vars, lib).error() != null
+                                && !Db.dbFile(Db.app, "אין-אופן-כזה-85").exists()
+                                && Batch.plan("העתק ידנית %נבחרים% ידנית \"ראש\"\n", here, vars, lib, null, new Batch.Selection(m85, id85[0], two85)).errors == 1
+                                && Batch.plan("בטל ידנית %נבחרים%\n", here, vars, lib).errors == 1);
+                String said85;
+                Permit.close();                                                 // כמו בתוכנה: אין היתר, אלא אם המנהל פותח
+                try {
+                    said85 = act85.say(lib);
+                    o.check("מבנה 85: ההיתר נסגר אחרי ההרצה", !Permit.held());
+                } finally {
+                    Permit.open();
+                }
+                final long[] after85 = new long[3];
+                final int[] backups85 = {0};
+                Db.read(Db.app, m85, new Db.Use<Void>() {
+                    @Override public Void run(SqlStore s) {
+                        after85[0] = DbPaths.find(s, m85, java.util.Arrays.asList("ראש", "א"));
+                        after85[1] = DbPaths.find(s, m85, java.util.Arrays.asList("ראש", "ב"));
+                        after85[2] = DbPaths.find(s, m85, java.util.Arrays.asList("ראש", "ג"));
+                        return null;
+                    }
+                });
+                File[] bk85 = Db.backupsDir(m85).listFiles();
+                if (bk85 != null) for (File f : bk85) if (f.getName().contains(Backups.OP_DELETE)) backups85[0]++;
+                o.check("מבנה 85: דרך המנהל — שתי הרשימות שנבחרו יצאו, השלישית נשארה; ההודעה — כמו שהמסך אמר (" + said85 + ")",
+                        after85[0] == 0 && after85[1] == 0 && after85[2] == id85[3]
+                                && said85.equals(Words.DbCmd.inDb(Words.DbCmd.removed(Words.DbCmd.items(2)))));
+                o.check("מבנה 85: ...ולפני ההסרה נעשה גיבוי של המסד (" + backups85[0] + ")", backups85[0] >= 1);
+                String scr85 = Files.readUtf8(new File(src, "src/com/tikiyot/vfm/masachim/DbListScreen.java"));
+                o.check("מבנה 85: מסך הרשימות אינו מסיר עוד בעצמו; רק דרך המנהל", !scr85.contains("Lists.removeFrom(") && scr85.contains("Manager.onListRemove("));
+                go("המשך ()\nבטל אופן \"" + m85 + "\"\n", here, vars, lib);
+            }
         } catch (Throwable t) {
             t.printStackTrace();
             o.check("מבנה 71: חריגה — " + t, false);

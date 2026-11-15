@@ -740,16 +740,17 @@ public class DbListScreen extends ListScreen<Store.Member> {
         final List<Long> ids = chosenIds();
         if (ids.isEmpty()) return;
         final long from = here();
+        // מבנה 85: "הסרה מכאן" — דרך הפקודה "בטל ידנית %נבחרים%" (המנהל); כאן נשארים חלון האישור וההודעה.
+        final Library lib = Library.get(this);
+        final Manager.Act act = Manager.onListRemove(mode, from, ids, Paths.data(), BatchUi.vars(this, Paths.data()), lib);
+        if (act.error() != null) {
+            Ui.toast(this, act.error());
+            return;
+        }
         Ui.confirm(this, Words.DbCmd.REMOVE_HERE, Words.DbCmd.removeQuestionN(ids.size()), Words.DbCmd.REMOVE_YES, new Runnable() {
             @Override
             public void run() {
-                done(DbListCmd.now(mode, new DbListCmd.Work() {
-                    @Override
-                    public DbListCmd.Res run(Store t, DbListCmd.Finder f) {
-                        for (Long id : ids) Lists.removeFrom(t, from, id);
-                        return DbListCmd.Res.ok(Words.DbCmd.removed(Words.DbCmd.items(ids.size())));
-                    }
-                }, true));
+                done(act.say(lib));
             }
         });
     }

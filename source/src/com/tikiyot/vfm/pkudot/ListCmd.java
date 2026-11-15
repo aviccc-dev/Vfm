@@ -35,6 +35,8 @@ final class ListCmd {
         List<String> path;
         boolean home;
         String mask;
+        /** מבנה 85: הצד הוא %נבחרים% — מה שנבחר במסך הרשימות (מספרי הפריטים, מתוך הבחירה שנמסרה לתכנון), ולא דרך של שמות. */
+        boolean picked;
 
         boolean list() {
             return kind != FS || content || filesOf;

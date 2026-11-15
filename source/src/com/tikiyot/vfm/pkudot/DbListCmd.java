@@ -576,6 +576,11 @@ final class DbListCmd {
                 return;
             }
         if (sim.modeError != null) { s.error = sim.modeError; return; }      // מ0.17.1: "אופן" שנכשל — לא לרוץ על אופן אחר
+        for (ListCmd.Side x : p.sides)
+            if (x.picked) {                                                    // מבנה 85: מה שנבחר במסך הרשימות
+                planPicked(s, cmd, p, sw, sim);
+                return;
+            }
         final String mode = mode(sim);
         final Store db;
         try {
@@ -748,6 +753,37 @@ final class DbListCmd {
         final boolean before = destructive;
         s.op = new ListCmd.Op() {
             @Override public String run(Library lib) { return real(mode, w, before, lib); }
+        };
+    }
+
+    /**
+     * מבנה 85: פעולה של מסך הרשימות על הפריטים שנבחרו בו — "בטל ידנית %נבחרים%" ("הסרה מכאן"). הבחירה היא מספרי הפריטים במסד
+     * והרשימה שהם מוצגים בה (Batch.Selection), לא דרך של שמות: כך בוחרים במסך, ושני פריטים באותו שם אינם מתבלבלים.
+     * הפעולה עצמה — אותה פעולה של החומר (Lists) שהמסך קרא לה עד כאן, דרך אותה עטיפה של הפקודות (real: שער המסד, גיבוי לפני).
+     * **בלי הדמיה:** התכנון של פקודת רשימה כתובה מעתיק את כל המסד לזיכרון כדי שהשורות הבאות יראו את התוצאה; כאן שורה אחת,
+     * והמסך כבר הציג את חלון האישור שלו — העתקה של כל המסד בכל לחיצה הייתה עבודה יקרה לחינם (המשפך).
+     */
+    private static void planPicked(final Batch.Step s, String cmd, ListCmd.Parsed p, List<String> sw, Batch.Sim sim) {
+        final Batch.Selection sel = sim.selected;
+        if (sel == null || sel.ids == null || sel.ids.isEmpty() || sel.mode == null) { s.error = Words.Cmd.NOTHING_SELECTED; return; }
+        final String mode = sel.mode;
+        if (!Db.dbFile(Db.app, mode).isFile()) { s.error = Words.DbCmd.noMode(mode, sim.modes()); return; }
+        ListCmd.Side a = p.sides.get(0);
+        boolean remove = (cmd.equals("RD") || cmd.equals("DEL")) && p.sides.size() == 1 && sw.isEmpty()
+                && a.kind == ListCmd.LIST && !a.content && !a.filesOf;
+        if (!remove) { s.error = Words.Cmd.SELECTED_IN_LIST; return; }
+        final long in = sel.in;
+        final List<Long> ids = new ArrayList<Long>(sel.ids);
+        final Work w = new Work() {
+            @Override public Res run(Store t, Finder f) {
+                for (Long id : ids) Lists.removeFrom(t, in, id);
+                return Res.ok(Words.DbCmd.removed(Words.DbCmd.items(ids.size())));
+            }
+        };
+        s.target = a.label();
+        s.describe = Words.DbCmd.inDb(Words.DbCmd.removed(Words.DbCmd.items(ids.size())));
+        s.op = new ListCmd.Op() {
+            @Override public String run(Library lib) { return real(mode, w, true, lib); }
         };
     }
 

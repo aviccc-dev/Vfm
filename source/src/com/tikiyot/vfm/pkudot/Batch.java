@@ -38,6 +38,9 @@ final class Batch {
         boolean replace, skipTaken, recursive, hidden;
         /** מבנה 74: מה שיצא מהפעולה בכונן (מחיקה) — למי שהריץ את השורה מהמסך וצריך את הפרטים, לא רק את שורת הדוח. */
         Physical.Result result;
+        /** מבנה 85: מה שפעולה של רשימות או של המסד אמרה בהרצה (ההודעה), והאם נכשלה — למסך שהריץ את השורה. */
+        String said;
+        boolean saidFailed;
         /** מ0.37: "ודא שגיאה" — השורה הזו צריכה להיכשל בהרצה (בתכנון היא תקינה). */
         boolean expectFail;
         /** 1.19.0: COPY/MOVE /S — שמירת מסלול: השורש שממנו נמדד המסלול; files — כל הקבצים, dirs — תיקיות ריקות. */
@@ -1483,6 +1486,20 @@ final class Batch {
         final String name;
         /** מבנה 80: התוכן של קובץ חדש — %תוכן%; null — אין. */
         final String content;
+        /**
+         * מבנה 85: בחירה במסך הרשימות — במסד פריט מזוהה במספר שלו, לא במסלול: האופן, הרשימה שהפריטים מוצגים בה (0 — אין), והמספרים.
+         * ids == null — הבחירה היא של הכונן (files, dirs).
+         */
+        String mode;
+        long in;
+        List<Long> ids;
+
+        Selection(String mode, long in, List<Long> ids) {
+            this(new ArrayList<String>(), new ArrayList<String>(), null, null, null);
+            this.mode = mode;
+            this.in = in;
+            this.ids = new ArrayList<Long>(ids);
+        }
 
         Selection(List<String> files, List<String> dirs) {
             this(files, dirs, null, null);
@@ -1799,7 +1816,8 @@ final class Batch {
         for (int i = 0; i < lp.sides.size(); i++) {
             ListCmd.Side x = lp.sides.get(i);
             if (x.list()) {
-                ListCmd.resolve(x, vars);
+                if (var(V_SELECTED).equals(x.raw)) x.picked = true;             // מבנה 85: מה שנבחר במסך הרשימות — מספרים, לא דרך של שמות
+                else ListCmd.resolve(x, vars);
                 continue;
             }
             String[] err = {null};
@@ -2807,6 +2825,8 @@ final class Batch {
             if (s.op != null) {                                                // 1.24.0: רשימות
                 DbListCmd.lastFailed = false;
                 String got = s.op.run(lib);
+                s.said = got;                                                   // מבנה 85
+                s.saidFailed = DbListCmd.lastFailed;
                 report.add(Words.Cmd.line(s.label(), got));
                 if (s.cmd.equals(WRITE) && s.dest != null) {                    // מבנה 80: מה שיצא — גם למסך שהריץ את השורה
                     s.result = new Physical.Result();
