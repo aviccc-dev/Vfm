@@ -754,6 +754,61 @@ final class DbCmdTests {
                     Db.write(Db.app, m91, null, new Db.Use<Void>() {
                         @Override public Void run(SqlStore st) { Lists.removeFrom(st, DbPaths.find(st, m91, java.util.Arrays.asList("חדש")), two104[1]); return null; }
                     });
+                    // מבנה 105: כפולות שכבר קיימות — אותה שאלה כמו ביצירה; התשובות — בפקודות שהמסך מריץ (עריכה, הסרה מכאן)
+                    {
+                        final long[] t105 = {0, 0, 0, 0, 0};                       // רשימה, ראשונה, שנייה, (לשם אחר:) ראשונה, שנייה
+                        java.util.Map<String, String> p105 = new java.util.HashMap<String, String>();
+                        p105.put(Store.P_SORT, "גודל");
+                        p105.put(Store.P_ICON, "🔁");
+                        final java.util.Map<String, String> pp105 = p105;
+                        Db.write(Db.app, m91, null, new Db.Use<Void>() {           // כמו שהיה לפני צעד 104: שתיים באותו שם באותה רשימה
+                            @Override public Void run(SqlStore st) {
+                                t105[0] = Lists.newListChecked(st, 0, "כפולות 105").id;
+                                t105[1] = Lists.saveSmart(st, 0, t105[0], "תאומה", "סוג:pdf", null);
+                                t105[2] = Lists.saveSmart(st, 0, t105[0], "תאומה", "סוג:epub", pp105);
+                                t105[3] = Lists.saveSmart(st, 0, t105[0], "שנייה", "סוג:txt", null);
+                                t105[4] = Lists.saveSmart(st, 0, t105[0], "שנייה", "סוג:doc", null);
+                                return null;
+                            }
+                        });
+                        final long[][] found105 = new long[1][];
+                        final java.util.Map<String, String>[] got105 = new java.util.Map[1];
+                        Db.read(Db.app, m91, new Db.Use<Void>() {
+                            @Override public Void run(SqlStore st) {
+                                found105[0] = Lists.smartTwin(st, t105[0]);
+                                got105[0] = Lists.smartProps(st, t105[2]);
+                                return null;
+                            }
+                        });
+                        o.check("מבנה 105: הזוג הראשון של כפולות נמצא — הראשונה והשנייה לפי המקום",
+                                found105[0] != null && found105[0][0] == t105[1] && found105[0][1] == t105[2]);
+                        // "לדרוס": הראשונה מקבלת את ההגדרות של השנייה, והשנייה יוצאת
+                        Manager.Act e105 = Manager.onSmartEdit(m91, t105[1], "תאומה", "סוג:epub", got105[0], here, vars, lib);
+                        String se105 = e105.error() != null ? e105.error() : e105.say(lib);
+                        Manager.Act r105 = Manager.onListRemove(m91, t105[0], java.util.Collections.singletonList(t105[2]), here, vars, lib);
+                        String sr105 = r105.error() != null ? r105.error() : r105.say(lib);
+                        // "שם אחר": לשנייה — שם חדש; ושם קיים — שוב השאלה
+                        Manager.Act taken105 = Manager.onSmartEdit(m91, t105[4], "תאומה", "סוג:doc", new java.util.HashMap<String, String>(), here, vars, lib);
+                        Manager.Act n105 = Manager.onSmartEdit(m91, t105[4], "שנייה אחרת", "סוג:doc", new java.util.HashMap<String, String>(), here, vars, lib);
+                        String sn105 = n105.error() != null ? n105.error() : n105.say(lib);
+                        final String[] after105 = {""};
+                        final boolean[] none105 = {false};
+                        Db.read(Db.app, m91, new Db.Use<Void>() {
+                            @Override public Void run(SqlStore st) {
+                                for (Store.Member m : st.members(t105[0]))
+                                    after105[0] += m.item.name + "=" + st.prop(m.item.id, Store.P_COND) + "/" + st.prop(m.item.id, Store.P_SORT) + "/" + st.prop(m.item.id, Store.P_ICON) + ";";
+                                none105[0] = Lists.smartTwin(st, t105[0]) == null && st.item(t105[2]) == null;
+                                return null;
+                            }
+                        });
+                        o.check("מבנה 105: \"לדרוס\" — הראשונה קיבלה את ההגדרות של השנייה (תנאי, מיון, צלמית), והשנייה יצאה; \"שם אחר\" — שם קיים: שוב \"שם קיים\"; "
+                                        + "שם פנוי — נשמר; ואין עוד כפולות (" + after105[0] + ") " + se105 + " · " + sr105 + " · " + sn105,
+                                after105[0].equals("תאומה=סוג:epub/גודל/🔁;שנייה=סוג:txt/null/null;שנייה אחרת=סוג:doc/null/null;") && none105[0]
+                                        && Words.ListCmdW.smartTaken("תאומה").equals(taken105.error()));
+                        String scr105 = Files.readUtf8(new File(src, "src/com/tikiyot/vfm/masachim/DbListScreen.java"));
+                        o.check("מבנה 105: מסך הרשימות שואל על כפולות כשנפתח, ועונה דרך המנהל בלבד",
+                                scr105.contains("Lists.smartTwin(store, listId)") && scr105.contains("askTwin();") && scr105.contains("Manager.onListRemove(mode, listId, java.util.Collections.singletonList(twin[1])"));
+                    }
                     Manager.Act gone99 = Manager.onSmartEdit(m91, 987654321L, "x", "סוג:pdf", new java.util.HashMap<String, String>(), here, vars, lib);
                     String saidGone99 = gone99.say(lib);
                     o.check("מבנה 99: רשימה שנמחקה בזמן שהטופס היה פתוח — \"" + Words.Db.ITEM_GONE + "\" (" + saidGone99 + ")",

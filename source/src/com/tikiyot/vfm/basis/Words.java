@@ -1886,6 +1886,13 @@ public final class Words {
         /** מבנה 104: השאלה כשיש כבר רשימה חכמה בשם הזה — כמו בקובץ עם שם תפוס: לדרוס · שם אחר · לעצור. */
         public static final String SMART_TAKEN_TITLE = "שם קיים", SMART_REPLACE = "לדרוס", OTHER_NAME = "שם אחר", SMART_STOP = "לעצור";
 
+        /** מבנה 105: כפולה שכבר קיימת — אותה שאלה כמו ביצירה בשם קיים. */
+        public static String smartTwin(String name, String condFirst, String condSecond) {
+            return "ברשימה הזו יש שתי רשימות חכמות בשם \"" + name + "\":\n· הראשונה: " + (condFirst == null ? "" : condFirst)
+                    + "\n· השנייה: " + (condSecond == null ? "" : condSecond)
+                    + "\n\nכמו ביצירה בשם קיים: לדרוס — הראשונה מקבלת את ההגדרות של השנייה, והשנייה יוצאת · שם אחר — לשנייה · לעצור — בלי שינוי";
+        }
+
         public static String smartReplaced(String name) {
             return "הרשימה החכמה \"" + name + "\" נדרסה — קיבלה את ההגדרות החדשות (גיבוי לפני)";
         }

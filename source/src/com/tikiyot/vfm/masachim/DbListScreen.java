@@ -231,6 +231,60 @@ public class DbListScreen extends ListScreen<Store.Member> {
         look(designOf(home));
         adapter.notifyDataSetChanged();
         countLater();
+        askTwin();
+    }
+
+    /** מבנה 105: על אילו זוגות כבר נשאל במסך הזה ("לעצור" — לא שואלים שוב עד שפותחים את הרשימה מחדש). */
+    private final java.util.Set<String> askedTwins = new java.util.HashSet<String>();
+
+    /**
+     * מבנה 105: רשימות חכמות כפולות שכבר קיימות — אותה שאלה כמו ביצירה בשם קיים (המשתמש: "כמו כאשר מנסים ליצור רשימה חדשה
+     * עם אותו שם"). כל תשובה — דרך המנהל, בפקודות שכבר קיימות: "לדרוס" — עריכה של הראשונה (ההגדרות של השנייה) ואז "הסרה
+     * מכאן" של השנייה, כל אחת עם גיבוי לפני; "שם אחר" — עריכה של השנייה (שם חדש; שם קיים — שוב השאלה).
+     */
+    private void askTwin() {
+        final long[] twin = Lists.smartTwin(store, listId);
+        if (twin == null || !askedTwins.add(twin[0] + ":" + twin[1])) return;
+        final String name = store.item(twin[1]).name, cond0 = prop(twin[0], Store.P_COND), cond1 = prop(twin[1], Store.P_COND);
+        final java.util.Map<String, String> props1 = Lists.smartProps(store, twin[1]);
+        new android.app.AlertDialog.Builder(this).setTitle(Words.ListCmdW.SMART_TAKEN_TITLE).setMessage(Words.ListCmdW.smartTwin(name, cond0, cond1))
+                .setPositiveButton(Words.ListCmdW.SMART_REPLACE, new android.content.DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(android.content.DialogInterface d, int w) {
+                        Library lib = Library.get(DbListScreen.this);
+                        Manager.Act edit = Manager.onSmartEdit(mode, twin[0], name, cond1, props1, Paths.data(), BatchUi.vars(DbListScreen.this, Paths.data()), lib);
+                        String said = edit.error() != null ? edit.error() : edit.say(lib);
+                        if (edit.error() != null || edit.failed) {
+                            done(said);
+                            return;
+                        }
+                        Manager.Act out = Manager.onListRemove(mode, listId, java.util.Collections.singletonList(twin[1]), Paths.data(),
+                                BatchUi.vars(DbListScreen.this, Paths.data()), lib);
+                        done(out.error() != null ? out.error() : out.say(lib));
+                    }
+                })
+                .setNegativeButton(Words.ListCmdW.OTHER_NAME, new android.content.DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(android.content.DialogInterface d, int w) {
+                        final DbSmartForm.Result r = new DbSmartForm.Result();
+                        r.name = name;
+                        r.cond = cond1;
+                        r.sort = props1.get(Store.P_SORT) == null ? "" : props1.get(Store.P_SORT);
+                        r.view = props1.get(Store.P_VIEW) == null ? "" : props1.get(Store.P_VIEW);
+                        r.icon = props1.get(Store.P_ICON) == null ? "" : props1.get(Store.P_ICON);
+                        r.desc = props1.get(Store.P_DESC) == null ? "" : props1.get(Store.P_DESC);
+                        r.why = props1.get(Store.P_WHY) == null ? "" : props1.get(Store.P_WHY);
+                        Ui.askText(DbListScreen.this, Words.ListCmdW.OTHER_NAME, name, Words.Short.NAME_HINT, new Ui.Text1() {
+                            @Override
+                            public void ok(String value) {
+                                if (value.trim().isEmpty()) return;
+                                r.name = value.trim();
+                                saveSmart(store.item(twin[1]), r);
+                            }
+                        });
+                    }
+                })
+                .setNeutralButton(Words.ListCmdW.SMART_STOP, null).show();
     }
 
     /** הספירות — ברקע, בחיבור קריאה משלו; כשמוכן — השורות מצוירות שוב. */

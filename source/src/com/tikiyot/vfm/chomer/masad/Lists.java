@@ -236,6 +236,29 @@ final class Lists {
         return r;
     }
 
+    /**
+     * מבנה 105: רשימות חכמות כפולות שכבר קיימות (משלפני צעד 104) — הזוג הראשון ברשימה list: {הראשונה, השנייה} לפי המקום, או
+     * null. המשתמש: "ולא לאפשר גם רשימות שהיו — להקפיץ את אותה שאלה" · "כמו כאשר מנסים ליצור רשימה חדשה עם אותו שם": השנייה
+     * היא "החדשה", והראשונה — "הקיימת".
+     */
+    static long[] smartTwin(Store s, long list) {
+        java.util.Map<String, Long> seen = new java.util.HashMap<String, Long>();
+        for (Store.Member m : s.members(list)) {
+            if (m.item.type != Store.SMART) continue;
+            Long had = seen.get(m.item.name);
+            if (had != null) return new long[]{had, m.item.id};
+            seen.put(m.item.name, m.item.id);
+        }
+        return null;
+    }
+
+    /** מבנה 105: מה שבטופס של רשימה חכמה קיימת — לפי SMART_FORM (כדי לתת לאחרת את ההגדרות שלה). */
+    static java.util.Map<String, String> smartProps(Store s, long id) {
+        java.util.Map<String, String> m = new java.util.HashMap<String, String>();
+        for (String k : SMART_FORM) m.put(k, s.prop(id, k));
+        return m;
+    }
+
     /** מבנה 104: הרשימה החכמה בשם name שב־in (in = 0 — מסד בלי בית: שעומדת לעצמה), או 0. */
     static long smartIn(Store s, long in, String name) {
         if (in != 0) {
