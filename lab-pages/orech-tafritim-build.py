@@ -6,7 +6,7 @@ def rep(a,b,n=1):
     assert s.count(a)==n,(s.count(a),a[:70]); s=s.replace(a,b)
 NAME='עורך — בדיקת תפריטים'
 rep('<meta name="vfm-plugin" content="עורך אינטראקטיבי">','<meta name="vfm-plugin" content="%s">'%NAME)
-rep('<meta name="vfm-plugin-version" content="16">','<meta name="vfm-plugin-version" content="2">')
+rep('<meta name="vfm-plugin-version" content="16">','<meta name="vfm-plugin-version" content="3">')
 rep('<meta name="vfm-lab" content="עורך אינטראקטיבי">','<meta name="vfm-lab" content="%s">'%NAME)
 rep('<title>עורך אינטראקטיבי</title>','<title>%s</title>'%NAME)
 # ---- CSS
@@ -54,6 +54,28 @@ rep("top('קובצי הפקודות');\n  const fs=myFiles()","top('פתיחה')
 rep("  box.appendChild(B('it',[E('span',null,'+ קובץ חדש'),E('span','k','')],()=>{sh={kind:'newfile'};drawSheet();}));\n",'')
 a=s.index("  if(file)box.appendChild(B('it',[E('span',null,'שמירה בשם…')"); b=s.index("  sheetIn.appendChild(box);\n  if(fs.length>10){")
 s=s[:a]+s[b:]
+# גרסה 3 (המשתמש: "צריך שיביא את כל התיקיות המכילות קבצי פקודות. אין עניין שיביא את כל התיקיות הקיימות"):
+# בחלון "פתיחה" — התיקיות שיש בהן קובצי פקודות (מהאינדקס, info.features: cmdfolders); בתוכנה שעוד לא מכירה — הבורר הרגיל.
+rep("  sheetIn.appendChild(E('div','grp','הפקודות שלי'));\n  const list=E('div','items');\n  fs.forEach(","""  const dirs=can('commandFolders')?J(V.commandFolders(),null):null;
+  if(dirs&&!sh.dir){
+    box.textContent='';
+    sheetIn.appendChild(E('div','grp','תיקיות שיש בהן קובצי פקודות'));
+    const dl=E('div','items');
+    dirs.forEach(d=>dl.appendChild(B('it',[E('span',null,'📁 '+d.name),E('span','k',String(d.count))],()=>{sh={kind:'files',dir:d};drawSheet();},{title:d.path})));
+    if(!dirs.length)dl.appendChild(E('div','it','אין'));
+    sheetIn.appendChild(dl);
+    box.appendChild(B('it',[E('span',null,'תיקייה אחרת…'),E('span','k','')],()=>pickTyped('קובץ פקודות',VBAT,'קובצי פקודות',p=>openFile({name:p.split('/').pop(),path:p}))));
+  }
+  if(sh.dir){
+    sheetIn.textContent='';top('📁 '+sh.dir.name);
+    sheetIn.appendChild(E('div','grp',sh.dir.path));
+    const fl=E('div','items'),base=sh.dir.path.replace(/\\/$/,'');
+    fl.appendChild(B('it',[E('span',null,'‹ כל התיקיות'),E('span','k','')],()=>{sh={kind:'files'};drawSheet();}));
+    (J(V.listDir(sh.dir.path),[])||[]).filter(f=>!f.dir&&VBAT.test(f.name)).sort((a,b)=>b.time-a.time)
+      .forEach(f=>fl.appendChild(B('it',[E('span',null,f.name.replace(/\\.vbat$/,'')),E('span','k',file&&file.path===base+'/'+f.name?'✓':'')],()=>openFile({name:f.name,path:base+'/'+f.name}))));
+    sheetIn.appendChild(fl);return;
+  }
+  sheetIn.appendChild(E('div','grp','הפקודות שלי'));\n  const list=E('div','items');\n  fs.forEach(""")
 rep("B('primary','קובצי הפקודות',()=>openSheet({kind:'files'}))","B('primary','פתיחה…',()=>openSheet({kind:'files'}))")
 rep("'בחר קובץ פקודות, או צור חדש'","'אין קובץ פתוח. קובץ ← פתיחה, או קובץ ← חדש'")
 NEW=r'''
@@ -112,7 +134,7 @@ const A={
   asif:{t:'הרצה בכאילו',s:'▶ בכאילו',f:()=>{real=false;run();},on:()=>!!file},
   real:{t:'הרצה אמיתית…',s:'▶ אמיתית',f:()=>{real=true;run();},on:()=>!!file,cls:'real'},
   cmds:{t:'רשימת הפקודות',f:()=>{if(view==='inter'&&file&&act<0)newLineAfter();openSheet({kind:'cmd'});},on:()=>view==='inter'&&!!file},
-  about:{t:'על העורך',f:()=>toast('עורך — בדיקת תפריטים 2 · על בסיס העורך האינטראקטיבי 16')}
+  about:{t:'על העורך',f:()=>toast('עורך — בדיקת תפריטים 3 · על בסיס העורך האינטראקטיבי 16')}
 };
 const MENUS={file:['new','open','-','save','saveas','savetpl','-','close'],
   edit:['undo','redo','-','cut','copy','paste','del','-','line','dup','up','down','-','find'],
@@ -179,5 +201,5 @@ function drawTbEdit(){
 }
 '''
 rep("// ---------- שמירה ----------\nfunction save(then){", NEW+"\n// ---------- שמירה ----------\nfunction save(then){")
-out='lab-pages/תוסף עורך בדיקת תפריטים 2.html'
+out='lab-pages/תוסף עורך בדיקת תפריטים 3.html'
 io.open(out,'w',encoding='utf-8').write(s); print(out,len(s.encode('utf-8')))

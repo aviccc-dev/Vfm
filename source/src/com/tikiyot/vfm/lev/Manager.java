@@ -414,6 +414,23 @@ final class Manager {
         return p.startsWith(z + "/");
     }
 
+    /**
+     * מבנה 151 (המשתמש, 15.11.2026, על "פתיחה" בעורך: "צריך שיביא את כל התיקיות המכילות קבצי פקודות. אין עניין שיביא את כל
+     * התיקיות הקיימות"): התיקיות שיש בהן קובצי פקודות, מהאינדקס — תיקייה ← כמה קבצים בה, לפי המסלול. null — האינדקס עוד לא מוכן.
+     */
+    static java.util.Map<String, Integer> commandFolders(Library lib) {
+        if (lib == null || !lib.ready) return null;
+        java.util.Map<String, Integer> out = new java.util.TreeMap<String, Integer>();
+        for (Library.Hit h : lib.list(Cond.TYPE + ":" + Batch.EXT).hits) {
+            if (h.rec == null) continue;
+            java.io.File f = new java.io.File(h.path());
+            if (!Batch.isBatch(f.getName()) || f.getParent() == null) continue;
+            Integer n = out.get(f.getParent());
+            out.put(f.getParent(), n == null ? 1 : n + 1);
+        }
+        return out;
+    }
+
     /** מבנה 138: הגודל הגדול ביותר של קובץ שתוסף קורא כטקסט. */
     static final long PLUGIN_READ_MAX = 2L * 1024 * 1024;
 

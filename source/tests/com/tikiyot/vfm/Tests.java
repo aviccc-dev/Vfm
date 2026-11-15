@@ -3232,9 +3232,9 @@ public final class Tests {
                 StringBuilder door141 = new StringBuilder();
                 java.util.regex.Matcher m141 = java.util.regex.Pattern.compile("@JavascriptInterface\\s+public \\S+ (\\w+)\\(").matcher(br141);
                 while (m141.find()) door141.append(m141.group(1)).append(' ');
-                check("מבנה 141: הדלת, גרסה 1 — 35 הפונקציות, לפי הקבוצות (מידע · קריאה · כתיבה · הרצה · חלונות); התוכנה מוסרת את המספר (info.door) [" + door141.toString().trim() + "]",
+                check("מבנה 141: הדלת, גרסה 1 — 36 הפונקציות (35, ועוד commandFolders — מבנה 151; תוספת אינה מעלה את המספר), לפי הקבוצות (מידע · קריאה · כתיבה · הרצה · חלונות); התוכנה מוסרת את המספר (info.door) [" + door141.toString().trim() + "]",
                         Bridge.DOOR == 1 && br141.contains("o.put(\"door\", DOOR);")
-                                && door141.toString().trim().equals("info theme places modes dataDir startFile dbStats pathInfo commandMatrix smartLists commandFiles myCommands templates readText listDir toVar expand saveCommandFile writeCommandFile saveTemplate saveText cleanData setReaders load save runCommands runFile pickFolder pickFile pickList smartForm send toast log close"));
+                                && door141.toString().trim().equals("info theme places modes dataDir startFile dbStats pathInfo commandMatrix smartLists commandFiles commandFolders myCommands templates readText listDir toVar expand saveCommandFile writeCommandFile saveTemplate saveText cleanData setReaders load save runCommands runFile pickFolder pickFile pickList smartForm send toast log close"));
                 // מבנה 145: המעבר מהמבנה הישן נבדק פעם אחת בהפעלה, ולא בכל קריאה
                 Lab.recheck();
                 File r145 = Lab.root(), old145 = new File(Paths.dbData(), Lab.OLD_DIR);
@@ -3264,6 +3264,22 @@ public final class Tests {
                                 && !m146.contains("new HashMap<String, String[]>()") && m146.split("new Once<", -1).length - 1 == 1
                                 && read(new File(code, "pkudot/Choice.java")).split("new Once<", -1).length - 1 == 2 && !m146.contains("static String expand(")
                                 && "".equals(Choice.textOf(mk(d138, "ריק146.vbat", 0))) && Menus.look(f146).length == 2);
+                // מבנה 151: התיקיות שיש בהן קובצי פקודות — מהאינדקס, דרך המנהל
+                File r151 = new File(home, "כונן151");
+                wipe(r151);
+                mk(new File(r151, "א"), "אחד.vbat", 3);
+                mk(new File(r151, "א"), "שניים.vbat", 3);
+                mk(new File(r151, "א"), "לא פקודה.txt", 3);
+                mk(new File(r151, "ב/עמוק"), "שלוש.vbat", 3);
+                mk(new File(r151, "ג"), "רק טקסט.txt", 3);
+                Index ix151 = new Index("151", "151", r151.getAbsolutePath());
+                ix151.scan(null);
+                Library lib151 = Library.forTests(new ArrayList<Index>(java.util.Collections.singletonList(ix151)));
+                Map<String, Integer> cf151 = Manager.commandFolders(lib151);
+                check("מבנה 151: רק תיקיות שיש בהן קובצי פקודות, וכמה בכל אחת (" + cf151 + "); בלי אינדקס — null",
+                        cf151 != null && cf151.size() == 2 && Integer.valueOf(2).equals(cf151.get(new File(r151, "א").getAbsolutePath()))
+                                && Integer.valueOf(1).equals(cf151.get(new File(r151, "ב/עמוק").getAbsolutePath())) && Manager.commandFolders(null) == null);
+                wipe(r151);
                 wipe(d138);
             }
             String pui80 = read(new File(code, "masachim/rechivim/PhysicalUi.java"));

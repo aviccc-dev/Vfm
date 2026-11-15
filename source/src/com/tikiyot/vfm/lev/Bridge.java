@@ -114,7 +114,7 @@ final class Bridge {
             o.put("versionCode", pi.versionCode);
             o.put("registry", Manager.registryLine());                                  // מבנה 142: מה התוכנה מכירה, בשורה
             o.put("door", DOOR);                                                        // מבנה 141
-            o.put("features", "steady dropclean zip set");                              // מבנה 50: מה התוכנה יודעת (לתוסף — במקום לנחש לפי מספר הגרסה)
+            o.put("features", "steady dropclean zip set cmdfolders");                              // מבנה 50: מה התוכנה יודעת (לתוסף — במקום לנחש לפי מספר הגרסה)
             // מבנה 59: איפה תיקיות הגיבויים של האופנים, בכתיב של קובץ פקודות — לבדיקה "אופן שבוטל וחוזר" (שם התיקייה שונה בין הבניות)
             o.put("backupsVar", "%" + Drive.INTERNAL + "%\\" + Paths.DB_DIR + "\\" + Backups.DIR);
             o.put("device", Log.device());
@@ -318,6 +318,27 @@ final class Bridge {
      * מ0.40: קובצי הפקודות כמו ב"הפקודות שלי" שבתפריט (מהמסד — גם מאופן אחר, כמו התפריט), ועוד מה שבתיקיית
      * הקיצורים: [{name, path, time}]. (commandFiles — רק התיקייה; ככה עמוד המעבדה לא ראה את הפקודות של המשתמש.)
      */
+    @JavascriptInterface
+    public String commandFolders() {
+        try {
+            java.util.Map<String, Integer> m = Manager.commandFolders(Library.get(screen));   // מבנה 151: דרך המנהל, מהאינדקס
+            if (m == null) return null;
+            JSONArray a = new JSONArray();
+            for (Map.Entry<String, Integer> e : m.entrySet()) {
+                JSONObject o = new JSONObject();
+                o.put("path", e.getKey());
+                o.put("name", new File(e.getKey()).getName());
+                o.put("count", e.getValue());
+                a.put(o);
+            }
+            return a.toString();
+        } catch (Throwable t) {
+            Log.e("Lab.commandFolders", t);
+            return null;
+        }
+    }
+
+    /** מ0.41: "הפקודות שלי" — מהתפריטים (הכללי ושל האופן), ומתיקיית הקיצורים. */
     @JavascriptInterface
     public String myCommands() {
         JSONArray a = new JSONArray();
