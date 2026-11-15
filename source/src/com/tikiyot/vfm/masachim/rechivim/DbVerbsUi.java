@@ -116,17 +116,31 @@ final class DbVerbsUi {
         return act.made;
     }
 
+    /**
+     * מבנה 97: רשימה חכמה חדשה ממה שבטופס, בתוך in (0 — הבית) — דרך המנהל, כפקודה ("צור רשימה חכמה %שם-חדש% %תוכן%"). מחזיר את
+     * המספר שלה; 0 — לא נוצרה, וההודעה כבר הוצגה.
+     */
+    static long makeSmart(Activity a, String mode, long in, DbSmartForm.Result r) {
+        Library lib = Library.get(a);
+        Manager.Act act = Manager.onSmartNew(mode, in, r.name, r.cond, DbSmartForm.props(r), Paths.data(), BatchUi.vars(a, Paths.data()), lib);
+        if (act.error() != null) {
+            Ui.toast(a, act.error());
+            return 0;
+        }
+        String said = act.say(lib);
+        if (act.failed || act.made == 0) {
+            Ui.toast(a, said);
+            return 0;
+        }
+        return act.made;
+    }
+
     /** רשימה חכמה חדשה — בטופס המוכר — בתוך in (0 — בתוך הבית, אם יש). */
     static void newSmart(final Activity a, final String mode, final long in) {
         DbSmartForm.showNew(a, new DbSmartForm.Done() {
             @Override
             public void ok(final DbSmartForm.Result r) {
-                write(a, mode, new Job() {
-                    @Override
-                    public long run(Store s, List<String> p) {
-                        return DbSmartForm.save(s, 0, in != 0 ? in : DbPaths.home(s), r);
-                    }
-                }, null);
+                makeSmart(a, mode, in, r);                                       // מבנה 97: דרך המנהל, כפקודה
                 if (a instanceof DbListScreen) ((DbListScreen) a).reload();
             }
         }, new Func.Done() {

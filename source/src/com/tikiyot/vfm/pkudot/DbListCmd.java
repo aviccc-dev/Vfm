@@ -829,6 +829,44 @@ final class DbListCmd {
     }
 
     /**
+     * מבנה 97: רשימה חכמה חדשה מהטופס — "צור רשימה חכמה %שם-חדש% %תוכן%". השם, התנאי ושאר מה שבטופס — מהבחירה, ואינם
+     * מפוענחים. שלא כמו השורה הכתובה (שם תפוס עם תנאי זהה — אותה רשימה; עם תנאי אחר — שם חדש "(2)"; נוצרת לעצמה, לא בתוך
+     * רשימה) — כאן כמו שהמסך עשה: תמיד חדשה, בתוך הרשימה שמוצגת (0 — הבית), בשם שהוקלד (ריק — "רשימה חכמה"). בלי הדמיה ובלי
+     * גיבוי לפני (רק מוסיפה). לא נפתחת בסוף ההרצה — המסך מחליט.
+     */
+    private static String planPickedSmart(final Batch.Step s, final Verbs.Cmd c, Batch.Sim sim) {
+        final Batch.Selection sel = sim.selected;
+        if (sel == null || sel.props == null || sel.mode == null || sel.name == null || sel.content == null) {
+            s.error = Words.Cmd.NOTHING_SELECTED;
+            return null;
+        }
+        final String mode = sel.mode;
+        if (!Db.dbFile(Db.app, mode).isFile()) { s.error = Words.DbCmd.noMode(mode, sim.modes()); return null; }
+        c.noOpen = true;
+        final long into = sel.in;
+        final String name = sel.name.trim(), cond = sel.content;
+        final java.util.Map<String, String> props = sel.props;
+        final String shown = name.isEmpty() ? Words.SMART_LIST : name;
+        s.describe = Words.DbCmd.inDb(Words.ListCmdW.created(shown));
+        s.op = new ListCmd.Op() {
+            @Override public String run(Library lib) {
+                Res r = realRes(mode, new Work() {
+                    @Override public Res run(Store t, Finder f) {
+                        if (into != 0 && (t.item(into) == null || t.item(into).type != Store.LIST)) return Res.err(Words.Db.LIST_GONE);
+                        Res ok = Res.ok(Words.ListCmdW.created(shown));
+                        ok.made = Lists.saveSmart(t, 0, into, name, cond, props);
+                        return ok;
+                    }
+                }, false, lib);
+                if (r.error != null) lastFailed = true;
+                s.made = r.made;
+                return r.error != null ? r.error : Words.DbCmd.inDb(r.text);
+            }
+        };
+        return mode;
+    }
+
+    /**
      * מבנה 93: רעיון או כותרת מהמסך — "צור רעיון %נבחרים%" · "צור כותרת %נבחרים% "דרך"". הטקסט הוא מה שהוקלד (מהבחירה, אינו
      * מפוענח); הרשימה — זו שמוצגת במסך (המספר שלה), או הדרך שנכתבה אחרי. בלי הדמיה (כמו כל פעולה של %נבחרים% ברשימות), ובלי
      * גיבוי לפני (רק מוסיפה) — כמו שהמסך עשה. הסירובים — בנוסח של המסך.
@@ -879,6 +917,7 @@ final class DbListCmd {
         final boolean note = c.kind.equals(Verbs.K_NOTE), title = c.kind.equals(Verbs.K_TITLE);   // מ0.37
         if (!list && !smartNew && !smartUpd && !note && !title) return null;
         if ((note || title) && Batch.var(Batch.V_SELECTED).equals(c.arg)) return planPickedNote(s, c, title, sim);   // מבנה 93: מהמסך
+        if (smartNew && Batch.var(Batch.V_NEW_NAME).equals(c.arg)) return planPickedSmart(s, c, sim);                // מבנה 97: מהטופס
         if (sim.modeError != null) { s.error = sim.modeError; return null; }
         final String mode = mode(sim);
         final Store db;

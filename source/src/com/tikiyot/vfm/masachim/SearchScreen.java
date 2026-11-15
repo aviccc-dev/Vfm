@@ -429,10 +429,12 @@ public class SearchScreen extends Activity implements Clip.Holder {
                 r.sort = s;
                 r.view = w;
                 String mode = Db.currentMode;
-                long id = mode == null ? 0 : DbVerbsUi.write(SearchScreen.this, mode, new DbVerbsUi.Job() {
-                    @Override public long run(Store st, List<String> p) { return DbSmartForm.save(st, 0, DbPaths.home(st), r); }
-                }, null);
-                Ui.toast(SearchScreen.this, id != 0 ? Words.Find.saved(n) : Words.DbCmd.NO_DB);
+                if (mode == null) {
+                    Ui.toast(SearchScreen.this, Words.DbCmd.NO_DB);
+                    return;
+                }
+                long id = DbVerbsUi.makeSmart(SearchScreen.this, mode, 0, r);   // מבנה 97: דרך המנהל, כפקודה; בבית
+                if (id != 0) Ui.toast(SearchScreen.this, Words.Find.saved(n));
             }
         });
     }

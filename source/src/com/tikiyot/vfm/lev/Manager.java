@@ -220,6 +220,16 @@ final class Manager {
         return new Act(line, Batch.plan(line, here, vars, lib, null, new Batch.Selection(mode, named ? 0 : in, text)), null);
     }
 
+    /**
+     * מבנה 97: רשימה חכמה חדשה מהטופס (➕ במסך הרשימות, "שמירה כרשימה חכמה" במסך החיפוש) — "צור רשימה חכמה %שם-חדש% %תוכן%".
+     * in — הרשימה שבתוכה יוצרים (0 — הבית); name, cond, props — מה שבטופס, כלשונו.
+     */
+    static Act onSmartNew(String mode, long in, String name, String cond, java.util.Map<String, String> props, java.io.File here,
+                          java.util.Map<String, String> vars, Library lib) {
+        String text = Verbs.CREATE + " " + Verbs.LIST + " " + Verbs.SMART_WORD + " %" + Batch.V_NEW_NAME + "% %" + Batch.V_CONTENT + "%\n";
+        return new Act(text, Batch.plan(text, here, vars, lib, null, new Batch.Selection(mode, in, name, cond, props)), null);
+    }
+
     // ---------- התוצאה חוזרת: מה קורה בסוף ההרצה ----------
 
     /** פקודות הפתיחה שבסוף הקובץ רצות רק כשההרצה הלכה חלק (1.13.0; מ0.25). */

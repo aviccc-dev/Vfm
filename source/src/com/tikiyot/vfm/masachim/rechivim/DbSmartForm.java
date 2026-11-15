@@ -86,23 +86,23 @@ final class DbSmartForm {
         return r;
     }
 
-    /** שומר בעסקה אחת: smart = 0 — נוצרת (בתוך into, אם לא 0). מחזיר את מספר הזיהוי. */
+    /**
+     * שומר בעסקה אחת: smart = 0 — נוצרת (בתוך into, אם לא 0). מחזיר את מספר הזיהוי. מבנה 97: השמירה עצמה — בחומר
+     * (Lists.saveSmart); כאן נשארה רק עריכה של רשימה קיימת, עד שגם היא תעבור.
+     */
     static long save(Store s, final long smart, final long into, final Result r) {
-        final long[] out = {smart};
-        s.atomic(new Store.Work() {
-            @Override
-            public void run(Store t) {
-                if (out[0] == 0) out[0] = t.createSmart(r.name.isEmpty() ? Words.SMART_LIST : r.name, into);
-                else if (!r.name.isEmpty()) t.rename(out[0], r.name);
-                t.setProp(out[0], Store.P_COND, r.cond);
-                t.setProp(out[0], Store.P_SORT, r.sort);
-                t.setProp(out[0], Store.P_VIEW, r.view);
-                t.setProp(out[0], Store.P_ICON, r.icon);
-                t.setProp(out[0], Store.P_DESC, r.desc);
-                t.setProp(out[0], Store.P_WHY, r.why);
-            }
-        }, true);
-        return out[0];
+        return Lists.saveSmart(s, smart, into, r.name, r.cond, props(r));
+    }
+
+    /** מבנה 97: מה שבטופס, מלבד השם והתנאי — לפי Lists.SMART_FORM. */
+    static java.util.Map<String, String> props(Result r) {
+        java.util.Map<String, String> m = new java.util.HashMap<String, String>();
+        m.put(Store.P_SORT, r.sort);
+        m.put(Store.P_VIEW, r.view);
+        m.put(Store.P_ICON, r.icon);
+        m.put(Store.P_DESC, r.desc);
+        m.put(Store.P_WHY, r.why);
+        return m;
     }
 
     private static final String DESC = "תיאור";  // תחביר (המפתח בטופס, כמו SmartForm.detailKeys)

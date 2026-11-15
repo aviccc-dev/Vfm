@@ -177,6 +177,29 @@ final class Lists {
         return null;
     }
 
+    /** מבנה 97: המאפיינים שטופס הרשימה החכמה שומר, מלבד השם והתנאי — בסדר קבוע. */
+    static final String[] SMART_FORM = {Store.P_SORT, Store.P_VIEW, Store.P_ICON, Store.P_DESC, Store.P_WHY};
+
+    /**
+     * מבנה 97: שמירה של טופס הרשימה החכמה — בעסקה אחת. smart = 0 — נוצרת בתוך into (0 — הבית, אם יש; אין בית — עומדת לעצמה);
+     * אחרת — מתעדכנת (שם ריק — בלי שינוי בשם). props — לפי SMART_FORM; מה שחסר — נמחק (כמו בטופס). מחזיר את מספר הזיהוי.
+     * עד כאן ישב במסך (DbSmartForm.save) — אותן שורות.
+     */
+    static long saveSmart(Store s, final long smart, long into, final String name, final String cond, final java.util.Map<String, String> props) {
+        final long in = into != 0 ? into : DbPaths.home(s);
+        final long[] out = {smart};
+        s.atomic(new Store.Work() {
+            @Override
+            public void run(Store t) {
+                if (out[0] == 0) out[0] = t.createSmart(name.isEmpty() ? Words.SMART_LIST : name, in);
+                else if (!name.isEmpty()) t.rename(out[0], name);
+                t.setProp(out[0], Store.P_COND, cond);
+                for (String k : SMART_FORM) t.setProp(out[0], k, props == null ? null : props.get(k));
+            }
+        }, true);
+        return out[0];
+    }
+
     /** רשימה ידנית חדשה בתוך parent (0 — בבית, אם יש). בלי בדיקת שם — למי שכבר בדק (ייבוא, העתקה). */
     static long newList(Store s, final long parent, final String name) {
         final long into = parent != 0 ? parent : DbPaths.home(s);

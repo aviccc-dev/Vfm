@@ -546,10 +546,85 @@ final class DbCmdTests {
                             Words.DbCmd.NOTE_NEEDS_LIST.equals(none93.error()) && empty93.error() != null
                                     && saidLost93.equals(Words.Verb.NOT_FOUND + "אין/כזו") && lost93.failed && lost93.made == 0
                                     && saidGone93.equals(Words.Db.LIST_GONE) && gone93.failed);
-                    List<String> w93 = go("המשך ()\nאופן \"" + m91 + "\"\nצור רעיון \"מקובץ\" \"חדש/בפנים\"\nודא שגיאה\nצור רעיון %נבחרים% \"חדש\"\n", here, vars, lib);
+                    List<String> w93 = go("המשך ()\nאופן \"" + m91 + "\"\nצור רעיון \"מקובץ\" \"חדש/בפנים\"\nצור רעיון \"מקובץ\" \"ישן/בפנים\"\nודא שגיאה\nצור רעיון %נבחרים% \"חדש\"\n", here, vars, lib);
                     o.check("מבנה 93: \"צור רעיון\" כתובה לא השתנתה; ו־%נבחרים% בלי בחירה של מסך — שגיאה " + w93, bad(w93).isEmpty());
                     String ui93 = Files.readUtf8(new File(src, "src/com/tikiyot/vfm/masachim/rechivim/DbVerbsUi.java"));
                     o.check("מבנה 93: המסך אינו כותב עוד רעיון או כותרת בעצמו", !ui93.contains(".addNote(") && !ui93.contains(".addTitle(") && ui93.contains("Manager.onListNote("));
+                }
+                // מבנה 97: רשימה חכמה חדשה מהטופס — דרך המנהל; מול הדרך הישנה (המסך שמר בעצמו), על אותן שתי רשימות
+                {
+                    final String[][] c97 = {   // {בתוך מה, שם, תנאי, מיון, תצוגה, צלמית, תיאור, למה}
+                            {"", "חכמה רגילה", "סוג:pdf", "", "", "", "", ""},
+                            {"בפנים/עמוק", "בעומק", "סוג:pdf כללים|הלכות", "שם", "תיקיות", "📚", "תיאור", "למה כך"},
+                            {"משותפת", "ברשימה משותפת", "תאריך:שבוע", "תאריך", "", "", "", ""},
+                            {"", "חכמה רגילה", "סוג:epub", "", "", "", "", ""},                         // אותו שם — שוב (כמו במסך: נוצרת)
+                            {"", "", "גודל:>10MB", "", "", "", "", ""},                                 // בלי שם — "רשימה חכמה"
+                            {"", "  רווחים  ", "100% %תאריך% \"מירכאות\" מקור:«/storage/emulated/0/ספרים חדשים»", "", "", "", "", ""},
+                            {"בפנים", "בפנים", "סוג:txt", "", "", "", "שורה\nשנייה", ""}};             // אותו שם כמו רשימה ידנית
+                    final String[] old97 = new String[c97.length], new97 = new String[c97.length];
+                    for (int i = 0; i < c97.length; i++) {
+                        final int k = i;
+                        final DbSmartForm.Result f97 = new DbSmartForm.Result();
+                        f97.name = c97[i][1];
+                        f97.cond = c97[i][2];
+                        f97.sort = c97[i][3];
+                        f97.view = c97[i][4];
+                        f97.icon = c97[i][5];
+                        f97.desc = c97[i][6];
+                        f97.why = c97[i][7];
+                        final List<String> po = new ArrayList<String>(), pn = new ArrayList<String>();
+                        po.add("ישן");
+                        pn.add("חדש");
+                        for (String x : c97[i][0].split("/")) if (!x.isEmpty()) { po.add(x); pn.add(x); }
+                        final long[] in = {0};
+                        Db.write(Db.app, m91, null, new Db.Use<Void>() {
+                            @Override public Void run(SqlStore st) {
+                                in[0] = DbPaths.find(st, m91, pn);
+                                old97[k] = DbSmartForm.save(st, 0, DbPaths.find(st, m91, po), f97) != 0 ? "נוצרה" : "לא";   // הדרך הישנה
+                                return null;
+                            }
+                        });
+                        Manager.Act act = Manager.onSmartNew(m91, in[0], f97.name, f97.cond, DbSmartForm.props(f97), here, vars, lib);
+                        if (act.error() != null) new97[i] = "תכנון: " + act.error();
+                        else {
+                            Permit.close();
+                            try {
+                                act.say(lib);
+                                new97[i] = act.failed ? "נכשל" : act.made != 0 ? "נוצרה" : "לא";
+                                if (Permit.held()) new97[i] += " (ההיתר נשאר פתוח)";
+                                if (!act.plan.opens.isEmpty()) new97[i] += " (נפתחת בסוף)";
+                            } finally {
+                                Permit.open();
+                            }
+                        }
+                    }
+                    o.check("מבנה 97: רשימה חכמה חדשה בשבעה מצבים (בבית, בעומק, ברשימה משותפת, אותו שם שוב, בלי שם, תווים מיוחדים ו«», שם של רשימה ידנית) — "
+                                    + "הפקודה עונה כמו המסך " + java.util.Arrays.toString(old97) + " " + java.util.Arrays.toString(new97),
+                            java.util.Arrays.equals(old97, new97) && new97[0].equals("נוצרה"));
+                    List<String> v97 = go("המשך ()\nאופן \"" + m91 + "\"\nודא תוכן ידנית \"ישן\" שווה תוכן ידנית \"חדש\"\n"
+                            + "השווה תוכן ידנית \"ישן\" תוכן ידנית \"חדש\" /הבדלים\n", here, vars, lib);
+                    o.check("מבנה 97: אחרי שבע הפעולות — שתי הרשימות שוות עד הסוף, כולל התנאי, המיון, התצוגה, הצלמית, התיאור וה\"למה\" " + v97,
+                            bad(v97).isEmpty() && String.valueOf(v97).contains("אין הבדלים"));
+                    final String[] cond97 = {""};
+                    Db.read(Db.app, m91, new Db.Use<Void>() {
+                        @Override public Void run(SqlStore st) {
+                            for (Store.Member m : st.members(DbPaths.find(st, m91, java.util.Arrays.asList("חדש"))))
+                                if (m.item.type == Store.SMART && m.item.name.equals("רווחים")) cond97[0] = st.prop(m.item.id, Store.P_COND);
+                            return null;
+                        }
+                    });
+                    o.check("מבנה 97: התנאי נשמר כלשונו — % ומירכאות ו«» אינם מפוענחים («" + cond97[0] + "»)", cond97[0].equals(c97[5][2]));
+                    Manager.Act gone97 = Manager.onSmartNew(m91, 987654321L, "לשום מקום", "סוג:pdf", new java.util.HashMap<String, String>(), here, vars, lib);
+                    String said97 = gone97.say(lib);
+                    List<String> w97 = go("המשך ()\nאופן \"" + m91 + "\"\nצור רשימה חכמה \"מקובץ 97\" סוג:pdf\nצור רשימה חכמה \"מקובץ 97\" סוג:pdf\n"
+                            + "ודא שגיאה\nצור רשימה חכמה %שם-חדש% %תוכן%\n", here, vars, lib);
+                    o.check("מבנה 97: רשימה שנמחקה — סירוב שנאמר; \"צור רשימה חכמה\" כתובה לא השתנתה (פעמיים — אותה רשימה); %שם-חדש% בלי טופס — שגיאה "
+                                    + said97 + " " + w97,
+                            gone97.failed && said97.equals(Words.Db.LIST_GONE) && bad(w97).isEmpty() && smarts97(m91, "מקובץ 97") == 1);
+                    String ui97 = Files.readUtf8(new File(src, "src/com/tikiyot/vfm/masachim/rechivim/DbVerbsUi.java"))
+                            + Files.readUtf8(new File(src, "src/com/tikiyot/vfm/masachim/SearchScreen.java"));
+                    o.check("מבנה 97: ה־➕ ומסך החיפוש אינם יוצרים עוד רשימה חכמה בעצמם — דרך המנהל",
+                            !ui97.contains("DbSmartForm.save(") && ui97.contains("Manager.onSmartNew(") && ui97.contains("DbVerbsUi.makeSmart("));
                 }
                 List<String> e92 = go("המשך ()\nאופן \"" + m91 + "\"\nודא שגיאה\nשנה ידנית \"חדש/בפנים\" \"  \"\nודא ידנית \"חדש/בפנים\" קיימת\n"
                         + "ודא ידנית \"חדש/ללא שם\" חסרה\n", here, vars, lib);
@@ -564,6 +639,18 @@ final class DbCmdTests {
             Db.currentMode = wasMode;
         }
         return o;
+    }
+
+    /** מבנה 97: כמה רשימות חכמות בשם הזה יש במסד של האופן. */
+    private static int smarts97(final String mode, final String name) throws Exception {
+        final int[] n = {0};
+        Db.read(Db.app, mode, new Db.Use<Void>() {
+            @Override public Void run(SqlStore st) {
+                for (Store.Item it : st.smarts()) if (it.name.equals(name)) n[0]++;
+                return null;
+            }
+        });
+        return n[0];
     }
 
     /** השורות של הדוח שמזכירות את what, ומה שמתחתן (לשם הבדיקה, כשהיא נכשלת). */

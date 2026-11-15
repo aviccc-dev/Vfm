@@ -1503,6 +1503,18 @@ final class Batch {
             this.ids = new ArrayList<Long>(ids);
         }
 
+        /** מבנה 97: מה שבטופס (רשימה חכמה): מיון, תצוגה, צלמית, תיאור, "למה" — לפי Lists.SMART_FORM; null — אין טופס. */
+        java.util.Map<String, String> props;
+
+        /** מבנה 97: רשימה חכמה חדשה מהטופס — השם (%שם-חדש%), התנאי (%תוכן%) ושאר מה שבטופס; כלום מהם אינו מפוענח. */
+        Selection(String mode, long in, String name, String cond, java.util.Map<String, String> props) {
+            this(new ArrayList<String>(), new ArrayList<String>(), null, name, cond);
+            this.mode = mode;
+            this.in = in;
+            this.ids = new ArrayList<Long>();
+            this.props = props == null ? new java.util.HashMap<String, String>() : new java.util.HashMap<String, String>(props);
+        }
+
         /** מבנה 91: יצירה במסך הרשימות — האופן, הרשימה שבתוכה יוצרים (0 — הבית), והשם שהוקלד (אינו מפוענח). */
         Selection(String mode, long in, String name) {
             this(new ArrayList<String>(), new ArrayList<String>(), null, name, null);
