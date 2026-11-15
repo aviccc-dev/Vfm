@@ -2608,8 +2608,9 @@ public final class Tests {
                     Batch.plan("מחק %נבחרים%\nDEL \"תת\\ג.txt\"\n", d73, v73, lib73, null, sel73).errors == 1
                             && Batch.plan("מחק %נבחרים%\nDEL \"נשאר.txt\"\n", d73, v73, lib73, null, sel73).errors == 0);
             check("מבנה 73: בלי בחירה — %נבחרים% אינו מוכר (כמו שהיה)", Batch.plan("מחק %נבחרים%\n", d73, v73, lib73).errors == 1);
-            check("מבנה 73: %נבחרים% — רק לבדו, ורק ב\"מחק\" (בינתיים)",
-                    String.valueOf(Batch.plan("העתק %נבחרים% \"תת\"\n", d73, v73, lib73, null, sel73).errorText()).contains("לבדו")
+            check("מבנה 73: %נבחרים% — רק לבדו, ורק כמקור של \"מחק\", \"העתק\", \"העבר\" (מבנה 77)",
+                    String.valueOf(Batch.plan("REN %נבחרים% \"x.txt\"\n", d73, v73, lib73, null, sel73).errorText()).contains("לבדו")
+                            && String.valueOf(Batch.plan("העתק \"א.txt\" %נבחרים%\n", d73, v73, lib73, null, sel73).errorText()).contains("לבדו")
                             && Batch.plan("מחק \"%נבחרים%\\x.txt\"\n", d73, v73, lib73, null, sel73).errors == 1);
             check("מבנה 73: סינון עם תיקייה שנבחרה — שגיאה; עם קבצים בלבד — עובד",
                     Batch.plan("מחק %נבחרים% /MINAGE:1\n", d73, v73, lib73, null, sel73).errors == 1
@@ -2735,6 +2736,103 @@ public final class Tests {
             check("מבנה 76: רק המנהל פותח היתר (" + opens76 + " מקומות אחרים)", opens76 == 0 && man76.contains("Permit.open();") && man76.contains("Permit.close();"));
             check("מבנה 76: רק המנהל מריץ את המנוע (" + runs76 + " מקומות אחרים)", runs76 == 0);
             wipe(d76);
+        }
+        // מבנה 77: ההעתקה וההעברה מהמסך — דרך המנהל, כפקודה "העתק / העבר %נבחרים% "%יעד%""
+        {
+            File ext77 = Paths.data().getParentFile(), d77 = new File(ext77, "ניסוי-77");
+            wipe(d77);
+            new File(d77, "תיקייה/פנים").mkdirs();
+            File to77 = new File(d77, "יעד"), pc77 = new File(d77, "יעד 100% מלא"), trash77 = new File(ext77, Index.TRASH);
+            to77.mkdirs();
+            pc77.mkdirs();
+            trash77.mkdirs();
+            write(d77, "א.txt", "1");
+            write(d77, "ב.txt", "2");
+            write(new File(d77, "תיקייה"), "ג.txt", "3");
+            Paths.data().mkdirs();
+            write(Paths.data(), "הגדרה-77.ini", "x");
+            Index ix77 = new Index("77", "77", ext77.getAbsolutePath());
+            ix77.scan(null);
+            Library lib77 = Library.forTests(new ArrayList<Index>(java.util.Collections.singletonList(ix77)));
+            java.util.Map<String, String> v77 = Batch.vars(Paths.data(), ext77.getAbsolutePath(), null);
+            String a77 = new File(d77, "א.txt").getAbsolutePath(), b77 = new File(d77, "ב.txt").getAbsolutePath(),
+                    dir77 = new File(d77, "תיקייה").getAbsolutePath(), own77 = new File(Paths.data(), "הגדרה-77.ini").getAbsolutePath();
+            List<String> f77 = java.util.Arrays.asList(a77, b77), dirs77 = java.util.Collections.singletonList(dir77), none77 = new ArrayList<String>();
+            // המנוע
+            Batch.Selection sel77 = new Batch.Selection(f77, dirs77, to77);
+            Batch.Plan p77 = Batch.plan("העתק %נבחרים% \"%יעד%\"\n", d77, v77, lib77, null, sel77);
+            Batch.Step s77 = p77.steps.isEmpty() ? null : p77.steps.get(0);
+            check("מבנה 77: \"העתק %נבחרים% %יעד%\" — שורה אחת: שני קבצים, והתיקייה שלמה גם בהעתקה (" + p77.errorText() + ")",
+                    p77.errors == 0 && p77.steps.size() == 1 && s77.files.size() == 2 && s77.dirs.size() == 1 && to77.equals(s77.dest));
+            check("מבנה 77: בהדמיה — התיקייה ביעד עם מה שבתוכה, והמקור במקומו", p77.sim.isFile(new File(to77, "תיקייה/ג.txt"))
+                    && p77.sim.isDir(new File(to77, "תיקייה/פנים")) && p77.sim.isFile(new File(dir77, "ג.txt")) && p77.sim.isFile(new File(to77, "א.txt")));
+            Batch.Plan m77 = Batch.plan("העבר %נבחרים% \"%יעד%\"\n", d77, v77, lib77, null, sel77);
+            check("מבנה 77: בהעברה, בהדמיה — המקור כבר איננו", m77.errors == 0 && !m77.sim.isFile(new File(a77)) && !m77.sim.isDir(new File(dir77))
+                    && m77.sim.isFile(new File(to77, "תיקייה/ג.txt")));
+            check("מבנה 77: %נבחרים% — לא עם /S ולא לשיתוף",
+                    String.valueOf(Batch.plan("העתק %נבחרים% \"%יעד%\" /S\n", d77, v77, lib77, null, sel77).errorText()).contains(Words.Cmd.SELECTED_PLAIN)
+                            && String.valueOf(Batch.plan("העתק %נבחרים% %שיתוף%\n", d77, v77, lib77, null, sel77).errorText()).contains(Words.Cmd.SELECTED_PLAIN));
+            check("מבנה 77: בלי יעד בבחירה — %יעד% אינו מוכר", Batch.plan("העתק %נבחרים% \"%יעד%\"\n", d77, v77, lib77, null, new Batch.Selection(f77, dirs77)).errors == 1);
+            // הסירובים — מהתכנון, בנוסח של המסך
+            Manager.Act app77 = Manager.onSelected("COPY", f77, none77, Paths.data(), Paths.data(), v77, lib77);
+            check("מבנה 77: יעד בתיקיית התוכנה — סירוב מהתכנון (" + app77.error() + ")", Words.Disk.DEST_APP_NOT.equals(app77.error()));
+            Manager.Act tr77 = Manager.onSelected("MOVE", f77, none77, trash77, Paths.data(), v77, lib77);
+            check("מבנה 77: יעד בסל — סירוב מהתכנון (" + tr77.error() + ")", Words.Disk.DEST_TRASH_NOT.equals(tr77.error()));
+            Manager.Act in77 = Manager.onSelected("MOVE", none77, dirs77, new File(dir77, "פנים"), Paths.data(), v77, lib77);
+            check("מבנה 77: תיקייה לתוך עצמה — סירוב מהתכנון (" + in77.error() + ")",
+                    (Words.Disk.CANT + Words.Disk.TO_MOVE + Words.Disk.FOLDER_INTO_ITSELF).equals(in77.error()));
+            Manager.Act mo77 = Manager.onSelected("MOVE", java.util.Collections.singletonList(own77), none77, to77, Paths.data(), v77, lib77);
+            check("מבנה 77: להעביר קובץ של התוכנה — סירוב מהתכנון (" + mo77.error() + ")", mo77.error() != null
+                    && mo77.error().startsWith(Words.Disk.CANT_MOVE + "הגדרה-77.ini"));
+            check("מבנה 77: ...אותו נוסח שהמסך אמר עד כאן", mo77.error().equals(Physical.cannotMove(lib77, java.util.Collections.singletonList(own77), none77)));
+            check("מבנה 77: להעתיק קובץ של התוכנה — מותר", Manager.onSelected("COPY", java.util.Collections.singletonList(own77), none77, to77, Paths.data(), v77, lib77).error() == null);
+            check("מבנה 77: פריט שנבחר וכבר איננו — סירוב מהתכנון", Manager.onSelected("COPY", java.util.Collections.singletonList(new File(d77, "אין.txt").getAbsolutePath()),
+                    none77, to77, Paths.data(), v77, lib77).error() != null);
+            // ההרצה, בלי היתר פתוח מבחוץ — כמו בתוכנה
+            Permit.close();
+            try {
+                Physical.Result no77 = Physical.transfer(lib77, f77, none77, to77, true, null, null, false);
+                check("מבנה 77: העתקה בלי היתר — מסורבת, ודבר לא הגיע ליעד (" + no77.note + ")", no77.failed > 0 && no77.done.isEmpty()
+                        && !new File(to77, "א.txt").exists() && no77.note.contains(Words.PermitW.BYPASS) && Permit.strict(Permit.TRANSFER));
+                Manager.Act c77 = Manager.onSelected("COPY", f77, dirs77, to77, Paths.data(), v77, lib77);
+                check("מבנה 77: הפקודה שהמסך מריץ — \"העתק %נבחרים% \"%יעד%\"\", בלי סירוב (" + c77.error() + ")",
+                        c77.error() == null && c77.text.trim().equals("העתק %נבחרים% \"%יעד%\""));
+                Physical.Result rc77 = c77.run(lib77, null, null, false);
+                lib77.flush(5000);
+                check("מבנה 77: ההעתקה נעשית — שלושה פריטים, התיקייה שלמה, והמקור במקומו (" + rc77.note + ")", rc77.failed == 0 && rc77.done.size() == 3
+                        && "1".equals(read(new File(to77, "א.txt"))) && "3".equals(read(new File(to77, "תיקייה/ג.txt")))
+                        && new File(to77, "תיקייה/פנים").isDirectory() && new File(a77).isFile() && new File(dir77, "ג.txt").isFile());
+                check("מבנה 77: הודעת המסך נבנית מאותה תוצאה", rc77.dirs == 1 && Physical.message(Words.Disk.COPIED, Words.Disk.REMOVED, rc77).contains(Words.folders(1)));
+                Physical.Result again77 = Manager.onSelected("COPY", java.util.Collections.singletonList(a77), none77, to77, Paths.data(), v77, lib77).run(lib77, null, null, false);
+                check("מבנה 77: שם תפוס, ואין את מי לשאול — כישלון שמדווח, והקובץ שביעד לא נדרס", again77.failed == 1 && again77.done.isEmpty()
+                        && "1".equals(read(new File(to77, "א.txt"))));
+                Manager.Act mv77 = Manager.onSelected("MOVE", f77, dirs77, pc77, Paths.data(), v77, lib77);
+                Physical.Result rm77 = mv77.run(lib77, null, null, false);
+                lib77.flush(5000);
+                check("מבנה 77: העברה אל תיקייה ששמה מכיל % — נעשית (" + mv77.error() + " · " + rm77.note + ")", mv77.error() == null && rm77.failed == 0
+                        && rm77.done.size() == 3 && "2".equals(read(new File(pc77, "ב.txt"))) && "3".equals(read(new File(pc77, "תיקייה/ג.txt")))
+                        && !new File(a77).exists() && !new File(dir77).exists());
+                check("מבנה 77: ...והתוצאה אומרת לאן כל פריט הגיע", new File(pc77, "א.txt").getAbsolutePath().equals(rm77.to.get(a77)));
+                write(d77, "חדש.txt", "9");
+                ix77.scan(null);
+                Physical.Result here77 = Manager.onSelected("MOVE", java.util.Arrays.asList(new File(pc77, "א.txt").getAbsolutePath(), new File(d77, "חדש.txt").getAbsolutePath()),
+                        none77, pc77, Paths.data(), v77, lib77).run(lib77, null, null, false);
+                lib77.flush(5000);
+                check("מבנה 77: פריט שכבר בתיקיית היעד — \"כבר בתיקייה הזו\", כמו שהמסך אמר; השאר עובר (" + here77.note + ")", here77.failed == 1
+                        && here77.done.size() == 1 && Words.Disk.ALREADY_HERE.equals(here77.note) && new File(pc77, "חדש.txt").isFile() && new File(pc77, "א.txt").isFile());
+                check("מבנה 77: ההיתר נסגר אחרי כל הרצה", !Permit.held());
+            } finally {
+                Permit.open();
+            }
+            String pui77 = read(new File(code, "masachim/rechivim/PhysicalUi.java"));
+            int direct77 = 0;
+            List<File> all77 = new ArrayList<File>();
+            collect76(new File(code, "masachim"), all77);
+            for (File f : all77) if (read(f).contains("Physical.transfer")) direct77++;
+            check("מבנה 77: במסכים — אין עוד העתקה או העברה ישירה בכונן (" + direct77 + "); רק דרך המנהל", direct77 == 0
+                    && pui77.contains("Manager.onSelected(copy ? \"COPY\" : \"MOVE\"") && pui77.contains("act.run(lib, new DialogAsker(a), busy, grey)"));
+            new File(Paths.data(), "הגדרה-77.ini").delete();
+            wipe(d77);
         }
         // מבנה 55: המכשיר עצר את התוכנה בזמן הרצה — הדוח אומר זאת ואיזו הגדרה פותרת
         List<String> rep55 = new ArrayList<String>();

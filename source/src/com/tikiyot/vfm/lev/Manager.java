@@ -81,10 +81,13 @@ final class Manager {
     static final class Act {
         final String text;
         final Batch.Plan plan;
+        /** מבנה 77: היעד (ליומן — בפקודה הוא משתנה); null — אין. */
+        final java.io.File dest;
 
-        Act(String text, Batch.Plan plan) {
+        Act(String text, Batch.Plan plan, java.io.File dest) {
             this.text = text;
             this.plan = plan;
+            this.dest = dest;
         }
 
         /** למה אי אפשר — מהתכנון (קובץ של התוכנה, תיקייה אסורה, פריט שכבר איננו); null — אפשר. */
@@ -107,7 +110,10 @@ final class Manager {
                 r = new Physical.Result();
                 r.fail(Words.Disk.ERROR);
             }
-            Log.i("פעולת מסך: " + text.trim() + " · " + (report == null ? Words.Disk.ERROR : Batch.logLine(report)));
+            // מבנה 77: מה שכבר היה בתיקיית היעד — בפקודה "לא נעשה דבר"; למסך זה נמסר כמו שהיה אצלו: "כבר בתיקייה הזו", לכל פריט.
+            for (Batch.Step s : plan.steps) for (int k = 0; k < s.inPlace; k++) r.fail(Words.Disk.ALREADY_HERE);
+            Log.i("פעולת מסך: " + text.trim() + (dest == null ? "" : " [" + dest.getAbsolutePath() + "]") + " · "
+                    + (report == null ? Words.Disk.ERROR : Batch.logLine(report)));
             return r;
         }
     }
@@ -115,8 +121,15 @@ final class Manager {
     /** הפקודה cmd (השם שבהגדרת הפקודות: "DEL"…) על מה שנבחר במסך. here — רק למשתנים; הבחירה במסלולים מלאים. */
     static Act onSelected(String cmd, java.util.List<String> files, java.util.List<String> dirs, java.io.File here,
                           java.util.Map<String, String> vars, Library lib) {
-        String text = Commands.word(Commands.get(cmd)) + " %" + Batch.V_SELECTED + "%\n";
-        return new Act(text, Batch.plan(text, here, vars, lib, null, new Batch.Selection(files, dirs)));
+        return onSelected(cmd, files, dirs, null, here, vars, lib);
+    }
+
+    /** מבנה 77: ...אל התיקייה dest ("COPY", "MOVE"): "העתק %נבחרים% "%יעד%"". dest == null — פקודה בלי יעד. */
+    static Act onSelected(String cmd, java.util.List<String> files, java.util.List<String> dirs, java.io.File dest, java.io.File here,
+                          java.util.Map<String, String> vars, Library lib) {
+        String text = Commands.word(Commands.get(cmd)) + " %" + Batch.V_SELECTED + "%"
+                + (dest == null ? "" : " \"%" + Batch.V_DEST + "%\"") + "\n";
+        return new Act(text, Batch.plan(text, here, vars, lib, null, new Batch.Selection(files, dirs, dest)), dest);
     }
 
     // ---------- התוצאה חוזרת: מה קורה בסוף ההרצה ----------

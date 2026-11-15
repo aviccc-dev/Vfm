@@ -1395,14 +1395,23 @@ final class Batch {
      */
     static final class Selection {
         final List<String> files, dirs;
+        /** מבנה 77: התיקייה שנבחרה כיעד (העתקה, העברה) — %יעד%; null — אין. */
+        final String dest;
 
         Selection(List<String> files, List<String> dirs) {
+            this(files, dirs, null);
+        }
+
+        Selection(List<String> files, List<String> dirs, File dest) {
             this.files = new ArrayList<String>(files);
             this.dirs = new ArrayList<String>(dirs);
+            this.dest = dest == null ? null : dest.getAbsolutePath();
         }
     }
 
     static final String V_SELECTED = "נבחרים", SELECTED_MARK = "/\u0000selected";   // תחביר
+    /** מבנה 77: היעד שנבחר במסך. נמסר כמשתנה ולא ככתוב — שם של תיקייה יכול להכיל % , והערך של משתנה אינו נפתח שוב. */
+    static final String V_DEST = "יעד";   // תחביר
 
     static Plan plan(String text, File here, Map<String, String> vars, Library lib, Physical.Progress progress, Selection selected) {
         Plan plan = new Plan();
@@ -1412,6 +1421,7 @@ final class Batch {
         if (selected != null) {
             vars = new LinkedHashMap<String, String>(vars);
             vars.put(V_SELECTED, SELECTED_MARK);
+            if (selected.dest != null) vars.put(V_DEST, selected.dest);
         }
         plan.sim = sim;
         String[] lines = Bidi.strip(text).replace("\r", "").split("\n");          // 204
@@ -1802,7 +1812,7 @@ final class Batch {
             if (paths.size() != 1) { s.error = Commands.usage(cmd); return; }
             if (s.recursive) { s.error = Words.Cmd.DEL_S; return; }
             if (paths.get(0).equals(SELECTED_MARK)) {                           // מבנה 73: מה שנבחר במסך — קבצים, וגם תיקיות שלמות
-                selected(s, flt, sim);
+                selected(s, flt, sim, cmd);
                 if (s.error != null) return;
                 List<String> what = new ArrayList<String>();
                 if (!s.files.isEmpty() || s.dirs.isEmpty()) what.add(Words.files(s.files.size()));
@@ -1817,6 +1827,8 @@ final class Batch {
                 sim.gone.add(f);
                 sim.added.remove(f);
             }
+        } else if ((cmd.equals("COPY") || cmd.equals("MOVE")) && !paths.isEmpty() && paths.get(0).equals(SELECTED_MARK)) {
+            fromSelected(s, cmd, paths, flt, sim);                               // מבנה 77: מה שנבחר במסך — אל תיקייה
         } else if (cmd.equals("COPY") && paths.size() == 2 && paths.get(1).equals(SHARE_MARK)) {   // 203: לשיתוף
             s.share = true;
             match(s, paths.get(0), flt, true, sim);                          // תיקייה — כמו שהיא (תיארז בשמה)
@@ -1852,33 +1864,9 @@ final class Batch {
                 s.error = Words.Cmd.filterOnFolder(cmd + " \"" + args.get(0) + "\\*.*\" …");
                 return;
             }
-            boolean copy = cmd.equals("COPY");
             for (String d : s.dirs)                                             // מבנה 43: תיקייה לתוך עצמה — כבר בתכנון (עד כאן: רק בהרצה)
                 if (Physical.inside(dest, new File(d))) { s.error = Words.Disk.NOT_INTO_ITSELF; return; }
-            // מ0.40: העברה אל התיקייה שהפריט כבר בה — כלום (עד כאן: "קובץ אחד" בתכנון, ו"כבר בתיקייה הזו" ככישלון בהרצה).
-            // ובקובץ אחרי קובץ — כדי שקובץ שני זהה לראשון יראה אותו כבר ביעד (לשנות-שם).
-            // מבנה 48: "כבר בתיקייה הזו" — גם כשהיעד הוא אותה תיקייה בכתיב אחר (קישור; אותיות גדולות וקטנות בכונן שאינו מבדיל).
-            // המשפך: השאלה לכונן — פעם אחת לכל תיקיית מקור, ורק בהעברה.
-            Map<String, Boolean> sameDir = new java.util.HashMap<String, Boolean>();
-            for (java.util.Iterator<String> it = s.files.iterator(); it.hasNext(); ) {
-                File f = new File(it.next());
-                if (!copy && here(dest, f.getParentFile(), sameDir)) { it.remove(); s.inPlace++; continue; }
-                File to = new File(dest, f.getName());
-                if (s.drop(sim, f, to)) { it.remove(); continue; }
-                sim.move(f.getAbsolutePath(), s.arrive(sim, to), copy);
-            }
-            for (java.util.Iterator<String> it = s.dirs.iterator(); it.hasNext(); ) {
-                File d = new File(it.next());
-                if (!copy && here(dest, d.getParentFile(), sameDir)) { it.remove(); s.inPlace++; continue; }
-                File to = new File(dest, d.getName());
-                if (s.skipTaken && sim.isDir(to)) { it.remove(); s.skipped++; continue; }
-                sim.moveDir(d, s.renameTaken && (sim.isDir(to) || sim.isFile(to)) ? sim.free(to) : to, s.replace);   // מבנה 44
-            }
-            List<String> what = new ArrayList<String>();
-            if (!s.files.isEmpty() || s.dirs.isEmpty()) what.add(Words.files(s.files.size()));
-            if (!s.dirs.isEmpty()) what.add(Words.folders(s.dirs.size()));
-            s.describe = Words.Cmd.transfer(copy, join(what, Words.Cmd.AND), Bidi.path(dest.getAbsolutePath())) + filtered(s);
-            s.noop = s.files.isEmpty() && s.dirs.isEmpty() && s.same + s.inPlace > 0;   // הכול כבר במקום — לא שגיאה, ואין מה לעשות
+            arrange(s, cmd.equals("COPY"), dest, sim);
         } else if (cmd.equals("REN")) {
             if (paths.size() != 2 || args.get(1).contains("/") || args.get(1).contains("\\")) {
                 s.error = Commands.usage(cmd);
@@ -2226,8 +2214,9 @@ final class Batch {
     private static String setsMisuse(String cmd, List<String> paths) {
         for (int i = 0; i < paths.size(); i++) {
             String p = paths.get(i);
-            if (p.startsWith(SELECTED_MARK)) {                                  // מבנה 73: %נבחרים% כיחידה — רק לבדו, כמקור של "מחק" (בינתיים)
-                if (!cmd.equals("DEL") || i != 0 || !p.equals(SELECTED_MARK)) return Words.Cmd.SELECTED_ONLY_SOURCE;
+            if (p.startsWith(SELECTED_MARK)) {                                  // מבנה 73, 77: %נבחרים% כיחידה — רק לבדו, כמקור של "מחק", "העתק", "העבר"
+                if (!(cmd.equals("DEL") || cmd.equals("COPY") || cmd.equals("MOVE")) || i != 0 || !p.equals(SELECTED_MARK))
+                    return Words.Cmd.SELECTED_ONLY_SOURCE;
                 continue;
             }
             if (!p.startsWith(ONLY_A_MARK) && !p.startsWith(ONLY_B_MARK)) continue;
@@ -2304,26 +2293,85 @@ final class Batch {
     }
 
     /**
+     * מבנה 77: סוף התכנון של העתקה או העברה אל תיקייה — מה יוצא מהשורה (כבר במקום, /תפוס:), ההדמיה, והתיאור. מקום אחד לשורה
+     * כתובה ול"נבחרים" של המסך.
+     */
+    private static void arrange(Step s, boolean copy, File dest, Sim sim) {
+        // מ0.40: העברה אל התיקייה שהפריט כבר בה — כלום (עד כאן: "קובץ אחד" בתכנון, ו"כבר בתיקייה הזו" ככישלון בהרצה).
+        // ובקובץ אחרי קובץ — כדי שקובץ שני זהה לראשון יראה אותו כבר ביעד (לשנות-שם).
+        // מבנה 48: "כבר בתיקייה הזו" — גם כשהיעד הוא אותה תיקייה בכתיב אחר (קישור; אותיות גדולות וקטנות בכונן שאינו מבדיל).
+        // המשפך: השאלה לכונן — פעם אחת לכל תיקיית מקור, ורק בהעברה.
+        Map<String, Boolean> sameDir = new java.util.HashMap<String, Boolean>();
+        for (java.util.Iterator<String> it = s.files.iterator(); it.hasNext(); ) {
+            File f = new File(it.next());
+            if (!copy && here(dest, f.getParentFile(), sameDir)) { it.remove(); s.inPlace++; continue; }
+            File to = new File(dest, f.getName());
+            if (s.drop(sim, f, to)) { it.remove(); continue; }
+            sim.move(f.getAbsolutePath(), s.arrive(sim, to), copy);
+        }
+        for (java.util.Iterator<String> it = s.dirs.iterator(); it.hasNext(); ) {
+            File d = new File(it.next());
+            if (!copy && here(dest, d.getParentFile(), sameDir)) { it.remove(); s.inPlace++; continue; }
+            File to = new File(dest, d.getName());
+            if (s.skipTaken && sim.isDir(to)) { it.remove(); s.skipped++; continue; }
+            File at = s.renameTaken && (sim.isDir(to) || sim.isFile(to)) ? sim.free(to) : to;
+            if (copy) sim.copyDir(d, at);                                        // מבנה 77: תיקייה שלמה בהעתקה — רק מ"נבחרים"
+            else sim.moveDir(d, at, s.replace);                                  // מבנה 44
+        }
+        List<String> what = new ArrayList<String>();
+        if (!s.files.isEmpty() || s.dirs.isEmpty()) what.add(Words.files(s.files.size()));
+        if (!s.dirs.isEmpty()) what.add(Words.folders(s.dirs.size()));
+        s.describe = Words.Cmd.transfer(copy, join(what, Words.Cmd.AND), Bidi.path(dest.getAbsolutePath())) + filtered(s);
+        s.noop = s.files.isEmpty() && s.dirs.isEmpty() && s.same + s.inPlace > 0;   // הכול כבר במקום — לא שגיאה, ואין מה לעשות
+    }
+
+    /**
+     * מבנה 77: העתקה או העברה של מה שנבחר במסך אל תיקייה. אותה הדמיה ואותה הרצה כמו בשורה כתובה, חוץ משני דברים: תיקייה שנבחרה
+     * עוברת שלמה גם בהעתקה (בשורה כתובה, "העתק <תיקייה>" פירושו הקבצים שבה), והסירובים של המסך — יעד בתיקיית התוכנה או בסל,
+     * תיקייה לתוך עצמה, קובץ של התוכנה בהעברה — נאמרים כבר בתכנון ובנוסח של המסך, כלומר לפני חלון האישור.
+     */
+    private static void fromSelected(Step s, String cmd, List<String> paths, Filter flt, Sim sim) {
+        boolean copy = cmd.equals("COPY");
+        if (paths.size() != 2) { s.error = Commands.usage(cmd); return; }
+        if (s.recursive || s.stateWhen != Long.MIN_VALUE || paths.get(1).equals(SHARE_MARK)) { s.error = Words.Cmd.SELECTED_PLAIN; return; }
+        File dest = new File(paths.get(1));
+        if (!sim.isDir(dest)) { s.error = Words.Cmd.NO_DEST; return; }
+        String no = sim.lib == null ? null : Physical.noDest(sim.lib, dest);
+        if (no != null) { s.error = no; return; }
+        s.dest = dest;
+        selected(s, flt, sim, cmd);
+        if (s.error != null) return;
+        for (String d : s.dirs)
+            if (Physical.inside(dest, new File(d))) {
+                s.error = Words.Disk.CANT + (copy ? Words.Disk.TO_COPY : Words.Disk.TO_MOVE) + Words.Disk.FOLDER_INTO_ITSELF;
+                return;
+            }
+        arrange(s, copy, dest, sim);
+    }
+
+    /**
      * מבנה 73: המקור הוא מה שנבחר במסך. קובץ או תיקייה שכבר אינם — שגיאה (המסך הראה משהו שאיננו); סינון (גיל, גודל…) חל
      * על הקבצים; תיקייה — שלמה, ולכן סינון עם תיקייה שנבחרה הוא שגיאה, כמו בתיקייה שנכתבת במפורש (121).
      */
-    private static void selected(Step s, Filter flt, Sim sim) {
+    private static void selected(Step s, Filter flt, Sim sim, String cmd) {
+        // מבנה 77: מה שאסור למחוק אסור גם להעביר; להעתיק — מותר (המקור אינו משתנה).
+        String cant = cmd.equals("DEL") ? Words.Disk.CANT_DELETE : cmd.equals("MOVE") ? Words.Disk.CANT_MOVE : null;
         Selection sel = sim.selected;
         if (sel == null || (sel.files.isEmpty() && sel.dirs.isEmpty())) { s.error = Words.Cmd.NOTHING_SELECTED; return; }
         if (!sel.dirs.isEmpty() && !flt.none()) { s.error = Words.Cmd.SELECTED_FILTER_FOLDER; return; }
         for (String p : sel.files) {
             File x = new File(p);
             if (!sim.isFile(x)) { s.error = Words.Cmd.notFound(p); return; }
-            String own = Physical.programFile(p);                               // מבנה 74: כבר בתכנון — המסך אומר זאת לפני חלון האישור
-            if (own != null) { s.error = Words.Disk.CANT_DELETE + x.getName() + "\": " + own; return; }
+            String own = cant == null ? null : Physical.programFile(p);         // מבנה 74: כבר בתכנון — המסך אומר זאת לפני חלון האישור
+            if (own != null) { s.error = cant + x.getName() + "\": " + own; return; }
             s.total++;
             if (flt.ok(sim.real(x))) s.files.add(x.getAbsolutePath());
         }
         for (String d : sel.dirs) {
             File x = new File(d);
             if (!sim.isDir(x)) { s.error = Words.FOLDER_NOT_FOUND + ": " + d; return; }
-            String why = sim.lib == null ? null : Physical.forbidden(sim.lib, x);
-            if (why != null) { s.error = Words.Disk.CANT_DELETE + x.getName() + "\": " + why; return; }
+            String why = cant == null || sim.lib == null ? null : Physical.forbidden(sim.lib, x);
+            if (why != null) { s.error = cant + x.getName() + "\": " + why; return; }
             s.dirs.add(x.getAbsolutePath());
         }
     }
@@ -2619,8 +2667,10 @@ final class Batch {
                 else out = stage(plan, s, progress);
             } else if (s.cmd.equals("COPY") || s.cmd.equals("MOVE")) {
                 if (s.renameTaken) sameAtRun(s);                                // מ0.40: "יש כבר זהה" — שוב, מול הכונן של עכשיו
-                if (s.files.isEmpty() && s.dirs.isEmpty()) out = notes(s).isEmpty() ? Words.Cmd.NO_FILES : notes(s).substring(3);
-                else {
+                if (s.files.isEmpty() && s.dirs.isEmpty()) {
+                    out = notes(s).isEmpty() ? Words.Cmd.NO_FILES : notes(s).substring(3);
+                    s.result = new Physical.Result();                           // מבנה 77: לא נעשה דבר — וזו התוצאה, לא תקלה
+                } else {
                     boolean copy = s.cmd.equals("COPY");
                     Physical.Journal j = s.journal == null ? null : new Physical.Journal(new File(s.journal), s.text);   // 1.19.0
                     Physical.Asker ask = s.replace ? REPLACE_ALL : s.renameTaken ? RENAME_ALL   // מ0.40: /תפוס:לשנות-שם
@@ -2631,6 +2681,7 @@ final class Batch {
                             ? Physical.transferKeep(lib, s.keepRoot, s.files, s.dirs, s.dest, copy, ask, progress, grey, j,
                                     !s.fromCompare)
                             : Physical.transfer(lib, s.files, s.dirs, s.dest, copy, ask, progress, grey, j);
+                    s.result = r;                                               // מבנה 77
                     out = result(r, copy ? Words.Cmd.COPIED : Words.Cmd.MOVED);
                     out += notes(s);
                     if (j != null) {

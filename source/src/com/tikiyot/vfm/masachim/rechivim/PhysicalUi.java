@@ -25,13 +25,6 @@ final class PhysicalUi {
             return;
         }
         final boolean copy = Clip.isCopy();
-        if (!copy) {
-            String no = Physical.cannotMove(Library.get(a), Clip.files(), Clip.dirs());
-            if (no != null) {
-                Ui.toast(a, no);
-                return;
-            }
-        }
         askTransferInto(a, new ArrayList<String>(Clip.files()), new ArrayList<String>(Clip.dirs()), dir, copy, Clip.warning(),
                 new Physical.Done() {
                     @Override
@@ -107,20 +100,13 @@ final class PhysicalUi {
     public static void askTransferInto(final Activity a, final List<String> paths, final List<String> dirs,
                                        final File folder, final boolean copy, final String warning, final Physical.Done done) {
         final Library lib = Library.get(a);
-        if (Physical.programFile(folder.getAbsolutePath()) != null) {      // 90
-            Ui.toast(a, Words.Disk.DEST_APP_NOT);
+        // מבנה 77: ההעתקה וההעברה מהמסך — דרך הפקודה "העתק / העבר %נבחרים% "%יעד%"" (המנהל). הסירובים (יעד בתיקיית התוכנה או בסל,
+        // תיקייה לתוך עצמה, קובץ של התוכנה בהעברה, פריט שכבר איננו) באים מהתכנון שלה; כאן נשארים המקום הפנוי, חלון האישור וההודעה.
+        final Manager.Act act = Manager.onSelected(copy ? "COPY" : "MOVE", paths, dirs, folder, Paths.data(), BatchUi.vars(a, Paths.data()), lib);
+        if (act.error() != null) {
+            Ui.toast(a, act.error());
             return;
         }
-        String droot = lib.rootOf(folder.getAbsolutePath());
-        if (droot != null && Physical.inside(folder, new File(droot, Index.TRASH))) {
-            Ui.toast(a, Words.Disk.DEST_TRASH_NOT);
-            return;
-        }
-        for (String d : dirs)
-            if (Physical.inside(folder, new File(d))) {
-                Ui.toast(a, Words.Disk.CANT + (copy ? Words.Disk.TO_COPY : Words.Disk.TO_MOVE) + Words.Disk.FOLDER_INTO_ITSELF);
-                return;
-            }
         long size = 0;
         int inner = 0;
         List<String> all = new ArrayList<String>(paths);
@@ -167,7 +153,7 @@ final class PhysicalUi {
                             @Override
                             public Physical.Result go() {
                                 try {
-                                    return Physical.transfer(lib, paths, dirs, folder, copy, new DialogAsker(a), busy, grey);
+                                    return act.run(lib, new DialogAsker(a), busy, grey);
                                 } finally {
                                     busy.close();
                                 }

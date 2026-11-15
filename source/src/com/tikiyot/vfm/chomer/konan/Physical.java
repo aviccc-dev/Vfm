@@ -1071,6 +1071,13 @@ public final class Physical {
         return sb.toString();
     }
 
+    /** מבנה 77: למה אי אפשר לבחור את התיקייה הזו כיעד של העתקה או העברה (תיקיית התוכנה, הסל) — בנוסח של המסך; null — אפשר. */
+    public static String noDest(Library lib, File folder) {
+        if (programFile(folder.getAbsolutePath()) != null) return Words.Disk.DEST_APP_NOT;
+        String droot = lib.rootOf(folder.getAbsolutePath());
+        return droot != null && inside(folder, new File(droot, Index.TRASH)) ? Words.Disk.DEST_TRASH_NOT : null;
+    }
+
     /** 142: האם אפשר להעביר את המקורות האלה (קובצי התוכנה, שורש, סל). null = אפשר; אחרת ההסבר. */
     public static String cannotMove(Library lib, List<String> paths, List<String> dirs) {
         for (String p : paths)

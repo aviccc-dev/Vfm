@@ -246,7 +246,8 @@ public final class Words {
             return "שחזור המצב של " + when + ": " + what + " ← " + dest + " · שומר מסלול";
         }
         public static final String SETS_ONLY_SOURCE = "%רק-במקור% ו־%רק-ביעד% — רק לבדם, כמקור של COPY או MOVE";
-        public static final String SELECTED_ONLY_SOURCE = "%נבחרים% — כאן רק לבדו, כמה שהפקודה \"מחק\" עובדת עליו",
+        public static final String SELECTED_ONLY_SOURCE = "%נבחרים% — כאן רק לבדו, כמה שהפקודות \"מחק\", \"העתק\" ו\"העבר\" עובדות עליו",
+                SELECTED_PLAIN = "%נבחרים% — רק בהעתקה או העברה רגילה אל תיקייה (בלי /S, בלי /מצב:, ולא לשיתוף)",
                 NOTHING_SELECTED = "לא נבחר דבר", SELECTED_FILTER_FOLDER = "נבחרה תיקייה — אי אפשר לסנן (גיל, גודל…) תיקייה שלמה";
 
         public static String compareNoSource(String p) {
