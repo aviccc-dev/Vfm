@@ -1965,11 +1965,6 @@ final class DbListCmd {
         };
     }
 
-    /** מ0.13: פעולה מהמסך — דרך אותה הליבה; לפני הסרה — גיבוי. מחזיר את ההודעה. */
-    static String now(String mode, Work w, boolean before) {
-        return real(mode, w, before, null);
-    }
-
     /** מבנה 58: עריכה מהמסך שדורסת את מה שהיה (שם, תיאור, תנאי של רשימה חכמה) — גיבוי "לפני עריכה", ואז הפעולה. */
     static String nowEdit(String mode, Work w) {
         Res r = realRes(mode, w, Backups.OP_EDIT, null);
@@ -2004,11 +1999,6 @@ final class DbListCmd {
         Res r = realRes(mode, w, before, lib);
         if (r.error != null) lastFailed = true;
         return r.error != null ? r.error : Words.DbCmd.inDb(r.text);
-    }
-
-    /** מ0.23: כמו now, אבל התוצאה עצמה — כדי לדעת אם נכשל (מסכים שמראים הודעה משלהם). */
-    static Res nowRes(String mode, Work w, boolean before) {
-        return realRes(mode, w, before, null);
     }
 
     private static Res realRes(String mode, Work w, boolean before, Library lib) {

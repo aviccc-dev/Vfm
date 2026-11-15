@@ -337,10 +337,6 @@ public final class Words {
             return "✓ בוצע" + (lines > 1 ? " (" + lines + " שורות)" : "");
         }
 
-        public static String folderExists(String name) {
-            return "התיקייה \"" + name + "\" כבר קיימת — בלי שינוי";
-        }
-
         /** מבנה 109: תיקייה קיימת — סירוב (המשתמש: "סירוב, אלא אם כן יש הוראה להמשיך"). */
         public static String folderTaken(String name) {
             return "התיקייה \"" + name + "\" כבר קיימת — שם קיים (להמשיך כשהיא קיימת: /תפוס:לדלג)";
@@ -546,7 +542,7 @@ public final class Words {
          * האופן הישן מהגיבוי, או לפתוח בשם אחר."
          */
         public static final String HAS_BACKUP_TITLE = "קיים גיבוי של אופן בשם הזה", RESUME = "להמשיך מהגיבוי", OTHER_NAME = "שם אחר",
-                RESUMING = "משחזר את האופן מהגיבוי…", NO_GOOD_BACKUP = "אין לאופן הזה גיבוי תקין להמשיך ממנו";
+                RESUMING = "משחזר את האופן מהגיבוי…";
         public static String hasBackup(String name, String when) {
             return "לאופן \"" + name + "\" נשאר גיבוי מ־" + when + ".\n\nלהמשיך את האופן הישן מהגיבוי, או לפתוח אופן בשם אחר?";
         }
@@ -884,11 +880,7 @@ public final class Words {
         public static final String UPDATED_AT = "עודכן: ";
         public static final String FILES_LINE = " קבצים\n";
         public static final String SCANNING = "סורק את ";
-        public static final String INDEX_BUILT = "האינדקס נבנה";
-        public static final String CHANGES_DOT = " שינויים · ";
-        public static final String MS = " מ\"ש";
         public static final String DEEP_RUNNING = "רענון מעמיק… (כמה שניות)";
-        public static final String SECONDS = " שניות";
     }
 
     /** המסך הראשי (Home): אופני עבודה, כלים, הוספה */
@@ -995,8 +987,6 @@ public final class Words {
         public static final String ADDED = "נוסף";
         public static final String ADDED_UNKNOWN = "נוסף: לא ידוע";
         public static final String REFRESHING = "מרענן את האינדקס…";
-        public static final String INDEX_UP_TO_DATE = "האינדקס מעודכן";
-        public static final String FOLDERS_REFRESHED = " תיקיות רועננו";
         public static final String FILES_IN_INDEX = " קבצים באינדקס · עודכן ";
         public static final String STILL_LOADING = " · האינדקס עדיין נטען";
         public static final String MS_FORMAT = " · %.1f מ\"ש";
@@ -1194,8 +1184,6 @@ public final class Words {
     public static final class AddW {
         private AddW() { }
 
-        public static final String ADDED_N = "נוספו ";
-        public static final String ITEMS_DOT = " פריטים · ";
         public static final String THE_FOLDER = "התיקייה \"";
         public static final String FOLDERS_SUFFIX = " תיקיות";
         public static final String AND = " ו־";
@@ -1207,9 +1195,7 @@ public final class Words {
         public static final String AS_SUBLIST = "📸 צילום: כרשימת-משנה, עם המבנה (לא מתעדכן)";
         public static final String EACH_AS_SUBLIST = "📸 צילום: כל תיקייה כרשימת-משנה, עם המבנה (לא מתעדכן)";
         public static final String FILES_ONLY = "📸 צילום: הקבצים בלבד, בלי המבנה (לא מתעדכן)";
-        public static final String LIVE_ADDED = " רשימות חכמות של תיקיות · ";
         public static final String ADDING = "מוסיף…";
-        public static final String LISTS_AND = " רשימות ו-";
     }
 
     /** עד מ0.29 — תפריט הכלי (ToolMenu, נמחק); נשאר השם בטופס הרשימה (DbListScreen) */
@@ -1544,7 +1530,6 @@ public final class Words {
         public static final String ZIP_TITLE = "דחיסה ל־ZIP: ";
         public static final String ZIP_CREATES = "נוצר קובץ ZIP חדש ליד התיקייה; התיקייה עצמה נשארת";
         public static final String ZIPPING = "דוחס…";
-        public static final String ZIPPED = "נוצר: ";
     }
 
     /** 1.9.0: שורת הכפתורים העליונה */
@@ -2000,10 +1985,6 @@ public final class Words {
         /** מבנה 98: עד כאן גם רשימה חכמה חדשה נאמרה "רשימה ידנית חדשה". */
         public static String createdSmart(String label) {
             return "רשימה חכמה חדשה: " + label;
-        }
-
-        public static String exists(String label) {
-            return "הרשימה " + label + " כבר קיימת — בלי שינוי";
         }
 
         public static String copy(String what, String to) {
@@ -2541,8 +2522,7 @@ public final class Words {
         private VClipW() { }
 
         public static final String COPY = "🔗 קישור", MOVE = "✂ העברה", DUPLICATE = "📋 העתקה", DUPLICATE_SHORT = "העתקה", COPY_SHORT = "קישור",
-                SETTINGS = "⚙ הגדרות",
-                PASTED = "הודבקו: ", SKIPPED = " · לא הודבקו: ";
+                SETTINGS = "⚙ הגדרות";
     }
 
     /** מ0.24: הלוח של המסד (DbClip, DbListScreen) */
@@ -2607,10 +2587,6 @@ public final class Words {
         public static final String PICK_NOT_HOME = "בוחרים רשימה שבתוך הבית",
                 NO_DB_HERE = "אין מסד לאופן הזה";
 
-        public static String addedTo(int added, int already, String list) {
-            return "נוספו ל\"" + list + "\": " + added + (already > 0 ? " · כבר היו בה: " + already : "") + " · הקבצים עצמם לא זזו";
-        }
-
         public static final String APP_NAME_M = "מנהל קבצים וירטואלי · מ";
         public static final String TITLE = "מסד נתונים";
         /** מ0.9: המראה המוכר. */
@@ -2625,10 +2601,6 @@ public final class Words {
                 SEARCH_TITLE = "חיפוש קבצים להוספה", SEARCH_HINT = "שם או תנאי, כמו ברשימה חכמה (למשל: סוג:ספרים)",
                 SEARCHING = "מחפש…", SEARCH_NONE = "לא נמצאו קבצים",
                 ADD_CHOSEN = "הוספה", ADD_ALL = "הוספת הכול", NOTHING_CHOSEN = "לא נבחר דבר";
-
-        public static String filesAdded(int added, int already) {
-            return "נוספו " + added + (already > 0 ? " · " + already + " כבר היו ברשימה" : "");
-        }
 
         public static String firstOf(int shown, int total) {
             return "(" + shown + " ראשונים מתוך " + total + ")";
@@ -2736,10 +2708,6 @@ public final class Words {
 
         public static String kb(long bytes) {
             return ((bytes + 1023) / 1024) + " ק״ב";
-        }
-
-        public static String backupSaved(String names, String dir) {
-            return "נשמר גיבוי:\n" + names + "\nבתיקייה: " + dir;
         }
 
         public static String restoreQuestion(String label, int bl, long bi, int cl, long ci, boolean damaged) {
