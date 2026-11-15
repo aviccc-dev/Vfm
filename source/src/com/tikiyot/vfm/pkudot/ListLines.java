@@ -85,7 +85,7 @@ final class ListLines {
             else {
                 Filter flt = Filter.of(sw);
                 if (flt.error != null) { s.error = flt.error; return; }
-                Batch.match(s, p, flt, false, sim);
+                FileCmds.match(s, p, flt, false, sim);
                 if (s.error != null) return;
                 if (!s.dirs.isEmpty()) { s.error = Words.ListCmdW.FOLDER_TO_LIST; return; }
                 fsFiles.addAll(s.files);
