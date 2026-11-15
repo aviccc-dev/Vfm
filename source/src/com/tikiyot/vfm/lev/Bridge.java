@@ -89,6 +89,8 @@ final class Bridge {
         this.vars = vars;
     }
 
+    // ---------- מידע — מה התוכנה יודעת, ומה יש בה (אינן משנות דבר) ----------
+
     @JavascriptInterface
     public String info() {
         try {
@@ -175,235 +177,6 @@ final class Bridge {
         return a.toString();
     }
 
-    /** מסלול מלא ← הצורה שבקובצי הפקודות (%הורדות%\…). */
-    @JavascriptInterface
-    public String toVar(String abs) {
-        return Batch.toVar(abs == null ? "" : abs, vars);
-    }
-
-    /** הצורה שבקובצי הפקודות ← מסלול מלא (null — משתנה לא מוכר). */
-    @JavascriptInterface
-    public String expand(String raw) {
-        File f = resolve(raw);
-        return f == null ? null : f.getAbsolutePath();
-    }
-
-    /** קובצי הפקודות שלי: [{name, path, time}]. */
-    @JavascriptInterface
-    public String commandFiles() {
-        JSONArray a = new JSONArray();
-        try {
-            for (File f : Shortcuts.mine()) {
-                JSONObject o = new JSONObject();
-                o.put("name", f.getName());
-                o.put("path", f.getAbsolutePath());
-                o.put("time", f.lastModified());
-                a.put(o);
-            }
-        } catch (Throwable t) {
-            Log.e("Lab.commandFiles", t);
-        }
-        return a.toString();
-    }
-
-    /** קריאה בלבד: תוכן קובץ (עד 2MB), או null. */
-    @JavascriptInterface
-    public String readText(String path) {
-        try {
-            File f = resolve(path);
-            if (f == null || !f.isFile() || f.length() > 2L * 1024 * 1024) return null;
-            return Files.readUtf8(f);
-        } catch (Throwable t) {
-            return null;
-        }
-    }
-
-    /** קריאה בלבד: מה בתיקייה — [{name, dir, size, time}], או null. */
-    @JavascriptInterface
-    public String listDir(String path) {
-        try {
-            File d = resolve(path);
-            File[] fs = d == null ? null : d.listFiles();
-            if (fs == null) return null;
-            JSONArray a = new JSONArray();
-            for (File f : fs) {
-                JSONObject o = new JSONObject();
-                o.put("name", f.getName());
-                o.put("dir", f.isDirectory());
-                o.put("size", f.length());
-                o.put("time", f.lastModified());
-                a.put(o);
-            }
-            return a.toString();
-        } catch (Throwable t) {
-            return null;
-        }
-    }
-
-    /**
-     * מ0.40: קובצי הפקודות כמו ב"הפקודות שלי" שבתפריט (מהמסד — גם מאופן אחר, כמו התפריט), ועוד מה שבתיקיית
-     * הקיצורים: [{name, path, time}]. (commandFiles — רק התיקייה; ככה עמוד המעבדה לא ראה את הפקודות של המשתמש.)
-     */
-    @JavascriptInterface
-    public String myCommands() {
-        JSONArray a = new JSONArray();
-        java.util.Set<String> seen = new java.util.HashSet<String>();
-        try {
-            for (Menus.Item it : Menus.get(screen).at(Menus.MINE))            // מ0.41: מהתפריטים — הכללי ושל האופן
-                if (it.e.kind == DbMore.E_FILE && new File(it.e.path).isFile() && seen.add(it.e.path)) a.put(entry(new File(it.e.path)));
-            for (File f : Shortcuts.mine()) if (seen.add(f.getAbsolutePath())) a.put(entry(f));
-        } catch (Throwable t) {
-            Log.e("Lab.myCommands", t);
-        }
-        return a.toString();
-    }
-
-    /**
-     * מ0.40 — שמירת קובץ פקודות. path — הקובץ שנפתח (גם מחוץ לתיקיית הקיצורים), או שם — קובץ חדש בתיקיית הקיצורים
-     * (ונכנס ל"הפקודות שלי"). קובץ שכבר קיים — רק עם replace; בלי — חוזר "קיים", והעמוד שואל. המשתמש: "שתודיע שיש קובץ
-     * בשם הזה, ואני אחליט אם למחוק או לשנות שם." "" — נשמר; אחרת השגיאה.
-     */
-    @JavascriptInterface
-    public String saveCommandFile(String pathOrName, String text, boolean replace) {
-        try {
-            String raw = pathOrName == null ? "" : pathOrName.trim();
-            File f;
-            if (raw.startsWith("/")) f = new File(raw);
-            else {
-                String n = Lab.safe(new File(raw).getName());
-                if (n.isEmpty()) return Words.Lab.ONLY_COMMANDS;
-                if (!Batch.isBatch(n)) n = n + "." + Batch.EXT;
-                f = new File(Shortcuts.dir(), n);
-            }
-            if (!Batch.isBatch(f.getName())) return Words.Lab.ONLY_COMMANDS;
-            boolean was = f.isFile();
-            if (was && !replace) return EXISTS;
-            // מבנה 132: קובץ בתיקיות של המשתמש — דרך המנהל, כפקודה "כתוב": התיקייה של המסד וקובצי התוכנה מסורבים (ממצא 41),
-            // והקובץ הקודם עובר לסל (הוראות, סעיף 4). בתוך תיקיית התוכנה (הקיצורים, פקודות המערכת — האזור שהתוכנה מנהלת,
-            // ו"כתוב" אינה כותבת בו) — כמו שהיה: רק קובץ פקודות, נכתב ישר.
-            String root = Paths.clean(Paths.data().getAbsolutePath()), at = Paths.clean(f.getAbsolutePath());
-            if (at.startsWith(root + "/")) Files.writeAtomic(f, text == null ? "" : text);
-            else {
-                String no = Manager.saveFile(f, text, was, Library.get(screen));
-                if (no != null) return no;
-            }
-            if (!was) {
-                Library.get(screen).fileAdded(f);
-                Menus.addToMine(f);
-            }
-            return "";
-        } catch (Throwable t) {
-            Log.e("Lab.saveCommandFile", t);
-            return Words.Db.failed(String.valueOf(t.getMessage()));
-        }
-    }
-
-    /** הישנה (עמודים עד "עורך 3"): בלי להחליף קובץ קיים — כמו saveCommandFile בלי replace. */
-    @JavascriptInterface
-    public String writeCommandFile(String name, String text) {
-        String r = saveCommandFile(name, text, false);
-        return EXISTS.equals(r) ? Words.Lab.EXISTS_OLD : r;
-    }
-
-    /** הרצה דרך ההרצה הרגילה — תצוגה מקדימה ואישור, כמו כל קובץ פקודות. */
-    @JavascriptInterface
-    public void runCommands(final String text) {
-        screen.runOnUiThread(new Runnable() {
-            @Override
-            public void run() {
-                try {
-                    File dir = new File(screen.getCacheDir(), "lab");
-                    dir.mkdirs();
-                    File f = new File(dir, Words.Lab.RUN_FILE + "." + Batch.EXT);
-                    // מ0.40 — המשתמש: "למה ההעברה בוצעה בפועל? הרי זה אמור לעבוד רק בכאילו." מהמעבדה — תמיד הדמיה:
-                    // שורת "הדמיה" בראש, ומסך ההרצה מראה מה היה קורה, בלי כפתור הרצה. שום דבר בכונן או במסד לא משתנה.
-                    Files.writeAtomic(f, Batch.AS_IF2 + "\n" + (text == null ? "" : text));
-                    // מ0.39: תמיד במסך ההרצה — תצוגה מקדימה, אישור, ודוח (בהרצה הרגילה, בלי "בדיקה", זה רץ מיד ונראית רק
-                    // הודעה קצרה; המשתמש: "איפה רואים את התוצאה של הפעולה?")
-                    host.run(f, null);
-                } catch (Throwable t) {
-                    Log.e("Lab.runCommands", t);
-                    host.toast(Words.Db.failed(String.valueOf(t.getMessage())));
-                }
-            }
-        });
-    }
-
-    /**
-     * מ0.40 — הרצה מהעורך. המשתמש: "ריצה אמיתית או בכאילו" (מתג בעמוד). בכאילו — שורת "הדמיה" בראש; אמיתית — כמו כל קובץ
-     * פקודות: תצוגה מקדימה, ורק באישור (כלל ההקפדה: שינוי בכונן — תצוגה מקדימה ואישור). where — הקובץ שבעורך: שמו בכותרת
-     * מסך ההרצה (המשתמש: "הכותרת 'הרצה מהמעבדה' — לשים את שם הקובץ"), והתיקייה שלו היא %כאן% (ושל כלול).
-     */
-    @JavascriptInterface
-    public void runFile(final String text, final String where, final boolean real) {
-        screen.runOnUiThread(new Runnable() {
-            @Override
-            public void run() {
-                try {
-                    File dir = new File(screen.getCacheDir(), "lab");
-                    dir.mkdirs();
-                    String w = where == null ? "" : where.trim();
-                    String name = Lab.safe(new File(w).getName());
-                    if (name.isEmpty()) name = Words.Lab.RUN_FILE + "." + Batch.EXT;
-                    if (!Batch.isBatch(name)) name = name + "." + Batch.EXT;
-                    File f = new File(dir, name);
-                    Files.writeAtomic(f, (real ? "" : Batch.AS_IF2 + "\n") + (text == null ? "" : text));
-                    File here = w.startsWith("/") ? new File(w).getParentFile() : Shortcuts.dir();
-                    host.run(f, here);
-                } catch (Throwable t) {
-                    Log.e("Lab.runFile", t);
-                    host.toast(Words.Db.failed(String.valueOf(t.getMessage())));
-                }
-            }
-        });
-    }
-
-    /** מ0.40: שמות הרשימות החכמות של האופן (לבורר שבעורך): ["חדשים", "ספרים\\פדף"…]. */
-    @JavascriptInterface
-    public String smartLists() {
-        JSONArray a = new JSONArray();
-        try {
-            List<String> sm = DbLists.names(screen).get("smart");   // מבנה 18: ישר מהחומר (עד כאן — דרך המסך)
-            if (sm != null) for (String x : sm) a.put(x);
-        } catch (Throwable t) {
-            Log.e("Lab.smartLists", t);
-        }
-        return a.toString();
-    }
-
-    /**
-     * מ0.41: הטופס המוכר של רשימה חכמה — עם מה שכתוב בשורה שבעורך; חוזר ב־vfmResult: {name, cond, sort, view}.
-     * (העורך כותב לשורה שם, תנאי ומיון — מה שהפקודה נושאת.)
-     */
-    @JavascriptInterface
-    public void smartForm(final String id, final String name, final String cond, final String sort) {
-        screen.runOnUiThread(new Runnable() {
-            @Override
-            public void run() {
-                try {
-                    host.smartForm(name, cond, sort, new SmartPicked() {
-                        @Override
-                        public void ok(String rName, String rCond, String rSort, String rView) {
-                            try {
-                                JSONObject o = new JSONObject();
-                                o.put("name", rName);
-                                o.put("cond", rCond);
-                                o.put("sort", rSort);
-                                o.put("view", rView);
-                                host.result(id, o.toString());
-                            } catch (Throwable t) {
-                                Log.e("Lab.smartForm.result", t);
-                            }
-                        }
-                    });
-                } catch (Throwable t) {
-                    Log.e("Lab.smartForm", t);
-                    host.toast(Words.Db.failed(String.valueOf(t.getMessage())));
-                }
-            }
-        });
-    }
-
     /** מ0.40: אופני העבודה שיש להם מסד (לפקודה "אופן"). */
     @JavascriptInterface
     public String modes() {
@@ -416,56 +189,6 @@ final class Bridge {
         return a.toString();
     }
 
-    @JavascriptInterface
-    public void pickFolder(final String id, final String title, final boolean canCreate) {
-        screen.runOnUiThread(new Runnable() {
-            @Override
-            public void run() {
-                host.pickFolder(title == null ? Words.FolderP.PICK_FOLDER : title, canCreate, new Picked() {
-                    @Override public void ok(String path) { host.result(id, path); }
-                });
-            }
-        });
-    }
-
-    /** קובץ: קודם התיקייה (הבורר הרגיל), ואז הקבצים שבה. */
-    @JavascriptInterface
-    public void pickFile(final String id, final String title) {
-        screen.runOnUiThread(new Runnable() {
-            @Override
-            public void run() {
-                host.pickFile(title == null ? Words.Lab.PICK_FILE : title, new Picked() {
-                    @Override public void ok(String path) { host.result(id, path); }
-                });
-            }
-        });
-    }
-
-    /** רשימה מהמסד: {mode, path} — path בשמות, מופרד ב־\. */
-    @JavascriptInterface
-    public void pickList(final String id, final String title) {
-        screen.runOnUiThread(new Runnable() {
-            @Override
-            public void run() {
-                host.pickList(title == null ? Words.NEW_LIST : title, new ListPicked() {
-                    @Override
-                    public void ok(String mode, List<String> path) {
-                        try {
-                            JSONObject o = new JSONObject();
-                            o.put("mode", mode);
-                            StringBuilder sb = new StringBuilder();
-                            for (String p : path) sb.append(sb.length() > 0 ? "\\" : "").append(p);
-                            o.put("path", sb.toString());
-                            host.result(id, o.toString());
-                        } catch (Throwable t) {
-                            Log.e("Lab.pickList", t);
-                        }
-                    }
-                });
-            }
-        });
-    }
-
     /** מ0.42: התיקייה של התוסף לקבצים שהוא כותב (קובצי עזר לבדיקות, תוצאות, דוחות). */
     @JavascriptInterface
     public String dataDir() {
@@ -476,131 +199,6 @@ final class Bridge {
     @JavascriptInterface
     public String startFile() {
         return host.startFile();
-    }
-
-    /** מ0.45+: הפקודות הנפוצות — של התוכנה ושלי (מה שהיה בעורך הישן): [{name, mine, lines}]. */
-    @JavascriptInterface
-    public String templates() {
-        try {
-            org.json.JSONArray a = new org.json.JSONArray();
-            for (CmdTemplates.Tpl t : CmdTemplates.system(screen)) a.put(tpl(t, false));
-            for (CmdTemplates.Tpl t : CmdTemplates.mine()) a.put(tpl(t, true));
-            return a.toString();
-        } catch (Throwable t) {
-            Log.e("Lab.templates", t);
-            return "[]";
-        }
-    }
-
-    private org.json.JSONObject tpl(CmdTemplates.Tpl t, boolean mine) throws org.json.JSONException {
-        org.json.JSONObject o = new org.json.JSONObject();
-        o.put("name", t.name);
-        o.put("mine", mine);
-        org.json.JSONArray l = new org.json.JSONArray();
-        for (String x : t.lines) l.put(x);
-        o.put("lines", l);
-        return o;
-    }
-
-    /** מ0.45+: לשמור כפקודה נפוצה שלי. */
-    @JavascriptInterface
-    public boolean saveTemplate(String name, String text) {
-        if (name == null || name.trim().isEmpty() || text == null) return false;
-        return CmdTemplates.save(name.trim(), java.util.Arrays.asList(text.replace("\r", "").split("\n"))) != null;
-    }
-
-    /**
-     * מ0.45: "כל הפקודות" — קובץ פקודות שנבנה מההגדרה האחת (CmdMatrix): כל פקודה, ובכל אחת כל מתג. לפני — הגיבוי הקטן ליד
-     * קובץ ההרצה (ל־/מצב:). null — לא הצליח (ביומן).
-     */
-    @JavascriptInterface
-    public String commandMatrix() {
-        try {
-            CmdMatrix.fixtures(Lab.dataDir(exp), Library.get(screen));
-            return CmdMatrix.text(true);
-        } catch (Throwable t) {
-            Log.e("Lab.commandMatrix", t);
-            return null;
-        }
-    }
-
-    /** מ0.45 (ב9): כמה קוראים לכל כונן בבנייה — מה שהיה בהגדרות; התוסף מודד וקובע. 1 עד 16. */
-    @JavascriptInterface
-    public boolean setReaders(int n) {
-        if (n < 1 || n > 16) return false;
-        String no = Manager.setting(Conf.READERS, String.valueOf(n));               // מבנה 127: דרך המנהל, כפקודה "הגדר"
-        Log.i("קוראים לכל כונן: " + n + " (מתוסף האבחון)" + (no == null ? "" : " — " + no));
-        return no == null;
-    }
-
-    /**
-     * מ0.45: מחיקת הקבצים שבתת־תיקייה של תיקיית התוסף (רק שם, ורק קבצים): התוצאות של הרצות ישנות. מחזיר כמה נמחקו; -1 — שם
-     * לא תקין.
-     */
-    @JavascriptInterface
-    public int cleanData(String sub) {
-        String n = Lab.safe(sub == null ? "" : sub);
-        if (n.isEmpty() || !n.equals(sub) || n.contains("/") || n.startsWith(".")) return -1;
-        File d = new File(Lab.dataDir(exp), n);
-        File[] k = d.listFiles();
-        int c = 0;
-        Library lib = Library.get(screen);
-        if (k != null)
-            for (File f : k)
-                if (f.isFile() && f.delete()) {
-                    lib.fileRemoved(f.getAbsolutePath());
-                    c++;
-                }
-        return c;
-    }
-
-    /**
-     * מ0.42: כתיבת קובץ טקסט — בתיקייה של התוסף, או (downloads) בתיקיית ההורדות. רק שם: לא כתיבה לכל מקום. מחזיר את המסלול
-     * המלא, או null (והתקלה — ביומן).
-     */
-    @JavascriptInterface
-    public String saveText(String name, String text, boolean downloads) {
-        try {
-            String n = Lab.safe(new File(name == null ? "" : name).getName());
-            if (n.isEmpty()) return null;
-            File dir = downloads ? android.os.Environment.getExternalStoragePublicDirectory(android.os.Environment.DIRECTORY_DOWNLOADS)
-                    : Lab.dataDir(exp);
-            File f = new File(dir, n);
-            boolean was = f.isFile();
-            Library lib = Library.get(screen);
-            if (downloads) {                                                    // מבנה 132: תיקייה של המשתמש — דרך המנהל, כפקודה "כתוב" (הקודם לסל)
-                String no = Manager.saveFile(f, text, was, lib);
-                if (no != null) {
-                    Log.i("Lab.saveText: " + no);
-                    return null;
-                }
-                return f.getAbsolutePath();
-            }
-            if (!dir.isDirectory()) dir.mkdirs();                               // התיקייה של התוסף עצמו — שלו
-            Files.writeAtomic(f, text == null ? "" : text);
-            if (was) lib.fileRemoved(f.getAbsolutePath());
-            lib.fileAdded(f);
-            return f.getAbsolutePath();
-        } catch (Throwable t) {
-            Log.e("Lab.saveText", t);
-            return null;
-        }
-    }
-
-    /** מ0.42: שליחת קובץ (דוח, יומן) — כמו "שליחה" של דוח האבחון. */
-    @JavascriptInterface
-    public void send(final String path) {
-        screen.runOnUiThread(new Runnable() {
-            @Override
-            public void run() {
-                File f = resolve(path);
-                if (f == null || !f.isFile()) {
-                    host.toast(Words.Verb.NOT_FOUND + path);
-                    return;
-                }
-                host.send(f);
-            }
-        });
     }
 
     /**
@@ -661,6 +259,262 @@ final class Bridge {
         }
     }
 
+    /**
+     * מ0.45: "כל הפקודות" — קובץ פקודות שנבנה מההגדרה האחת (CmdMatrix): כל פקודה, ובכל אחת כל מתג. לפני — הגיבוי הקטן ליד
+     * קובץ ההרצה (ל־/מצב:). null — לא הצליח (ביומן).
+     */
+    @JavascriptInterface
+    public String commandMatrix() {
+        try {
+            CmdMatrix.fixtures(Lab.dataDir(exp), Library.get(screen));
+            return CmdMatrix.text(true);
+        } catch (Throwable t) {
+            Log.e("Lab.commandMatrix", t);
+            return null;
+        }
+    }
+
+    /** מ0.40: שמות הרשימות החכמות של האופן (לבורר שבעורך): ["חדשים", "ספרים\\פדף"…]. */
+    @JavascriptInterface
+    public String smartLists() {
+        JSONArray a = new JSONArray();
+        try {
+            List<String> sm = DbLists.names(screen).get("smart");   // מבנה 18: ישר מהחומר (עד כאן — דרך המסך)
+            if (sm != null) for (String x : sm) a.put(x);
+        } catch (Throwable t) {
+            Log.e("Lab.smartLists", t);
+        }
+        return a.toString();
+    }
+
+    /** קובצי הפקודות שלי: [{name, path, time}]. */
+    @JavascriptInterface
+    public String commandFiles() {
+        JSONArray a = new JSONArray();
+        try {
+            for (File f : Shortcuts.mine()) {
+                JSONObject o = new JSONObject();
+                o.put("name", f.getName());
+                o.put("path", f.getAbsolutePath());
+                o.put("time", f.lastModified());
+                a.put(o);
+            }
+        } catch (Throwable t) {
+            Log.e("Lab.commandFiles", t);
+        }
+        return a.toString();
+    }
+
+    /**
+     * מ0.40: קובצי הפקודות כמו ב"הפקודות שלי" שבתפריט (מהמסד — גם מאופן אחר, כמו התפריט), ועוד מה שבתיקיית
+     * הקיצורים: [{name, path, time}]. (commandFiles — רק התיקייה; ככה עמוד המעבדה לא ראה את הפקודות של המשתמש.)
+     */
+    @JavascriptInterface
+    public String myCommands() {
+        JSONArray a = new JSONArray();
+        java.util.Set<String> seen = new java.util.HashSet<String>();
+        try {
+            for (Menus.Item it : Menus.get(screen).at(Menus.MINE))            // מ0.41: מהתפריטים — הכללי ושל האופן
+                if (it.e.kind == DbMore.E_FILE && new File(it.e.path).isFile() && seen.add(it.e.path)) a.put(entry(new File(it.e.path)));
+            for (File f : Shortcuts.mine()) if (seen.add(f.getAbsolutePath())) a.put(entry(f));
+        } catch (Throwable t) {
+            Log.e("Lab.myCommands", t);
+        }
+        return a.toString();
+    }
+
+    /** מ0.45+: הפקודות הנפוצות — של התוכנה ושלי (מה שהיה בעורך הישן): [{name, mine, lines}]. */
+    @JavascriptInterface
+    public String templates() {
+        try {
+            org.json.JSONArray a = new org.json.JSONArray();
+            for (CmdTemplates.Tpl t : CmdTemplates.system(screen)) a.put(tpl(t, false));
+            for (CmdTemplates.Tpl t : CmdTemplates.mine()) a.put(tpl(t, true));
+            return a.toString();
+        } catch (Throwable t) {
+            Log.e("Lab.templates", t);
+            return "[]";
+        }
+    }
+
+    private org.json.JSONObject tpl(CmdTemplates.Tpl t, boolean mine) throws org.json.JSONException {
+        org.json.JSONObject o = new org.json.JSONObject();
+        o.put("name", t.name);
+        o.put("mine", mine);
+        org.json.JSONArray l = new org.json.JSONArray();
+        for (String x : t.lines) l.put(x);
+        o.put("lines", l);
+        return o;
+    }
+
+    // ---------- קריאה — קבצים ומסלולים ----------
+
+    /** קריאה בלבד: תוכן קובץ (עד 2MB), או null. */
+    @JavascriptInterface
+    public String readText(String path) {
+        try {
+            File f = resolve(path);
+            if (f == null || !f.isFile() || f.length() > 2L * 1024 * 1024) return null;
+            return Files.readUtf8(f);
+        } catch (Throwable t) {
+            return null;
+        }
+    }
+
+    /** קריאה בלבד: מה בתיקייה — [{name, dir, size, time}], או null. */
+    @JavascriptInterface
+    public String listDir(String path) {
+        try {
+            File d = resolve(path);
+            File[] fs = d == null ? null : d.listFiles();
+            if (fs == null) return null;
+            JSONArray a = new JSONArray();
+            for (File f : fs) {
+                JSONObject o = new JSONObject();
+                o.put("name", f.getName());
+                o.put("dir", f.isDirectory());
+                o.put("size", f.length());
+                o.put("time", f.lastModified());
+                a.put(o);
+            }
+            return a.toString();
+        } catch (Throwable t) {
+            return null;
+        }
+    }
+
+    /** מסלול מלא ← הצורה שבקובצי הפקודות (%הורדות%\…). */
+    @JavascriptInterface
+    public String toVar(String abs) {
+        return Batch.toVar(abs == null ? "" : abs, vars);
+    }
+
+    /** הצורה שבקובצי הפקודות ← מסלול מלא (null — משתנה לא מוכר). */
+    @JavascriptInterface
+    public String expand(String raw) {
+        File f = resolve(raw);
+        return f == null ? null : f.getAbsolutePath();
+    }
+
+    // ---------- כתיבה — קובץ של המשתמש דרך המנהל ("כתוב"); האזור של התוכנה ושל התוסף — ישיר (מבנה 132) ----------
+
+    /**
+     * מ0.40 — שמירת קובץ פקודות. path — הקובץ שנפתח (גם מחוץ לתיקיית הקיצורים), או שם — קובץ חדש בתיקיית הקיצורים
+     * (ונכנס ל"הפקודות שלי"). קובץ שכבר קיים — רק עם replace; בלי — חוזר "קיים", והעמוד שואל. המשתמש: "שתודיע שיש קובץ
+     * בשם הזה, ואני אחליט אם למחוק או לשנות שם." "" — נשמר; אחרת השגיאה.
+     */
+    @JavascriptInterface
+    public String saveCommandFile(String pathOrName, String text, boolean replace) {
+        try {
+            String raw = pathOrName == null ? "" : pathOrName.trim();
+            File f;
+            if (raw.startsWith("/")) f = new File(raw);
+            else {
+                String n = Lab.safe(new File(raw).getName());
+                if (n.isEmpty()) return Words.Lab.ONLY_COMMANDS;
+                if (!Batch.isBatch(n)) n = n + "." + Batch.EXT;
+                f = new File(Shortcuts.dir(), n);
+            }
+            if (!Batch.isBatch(f.getName())) return Words.Lab.ONLY_COMMANDS;
+            boolean was = f.isFile();
+            if (was && !replace) return EXISTS;
+            // מבנה 132: קובץ בתיקיות של המשתמש — דרך המנהל, כפקודה "כתוב": התיקייה של המסד וקובצי התוכנה מסורבים (ממצא 41),
+            // והקובץ הקודם עובר לסל (הוראות, סעיף 4). בתוך תיקיית התוכנה (הקיצורים, פקודות המערכת — האזור שהתוכנה מנהלת,
+            // ו"כתוב" אינה כותבת בו) — כמו שהיה: רק קובץ פקודות, נכתב ישר.
+            String root = Paths.clean(Paths.data().getAbsolutePath()), at = Paths.clean(f.getAbsolutePath());
+            if (at.startsWith(root + "/")) Files.writeAtomic(f, text == null ? "" : text);
+            else {
+                String no = Manager.saveFile(f, text, was, Library.get(screen));
+                if (no != null) return no;
+            }
+            if (!was) {
+                Library.get(screen).fileAdded(f);
+                Menus.addToMine(f);
+            }
+            return "";
+        } catch (Throwable t) {
+            Log.e("Lab.saveCommandFile", t);
+            return Words.Db.failed(String.valueOf(t.getMessage()));
+        }
+    }
+
+    /** הישנה (עמודים עד "עורך 3"): בלי להחליף קובץ קיים — כמו saveCommandFile בלי replace. */
+    @JavascriptInterface
+    public String writeCommandFile(String name, String text) {
+        String r = saveCommandFile(name, text, false);
+        return EXISTS.equals(r) ? Words.Lab.EXISTS_OLD : r;
+    }
+
+    /** מ0.45+: לשמור כפקודה נפוצה שלי. */
+    @JavascriptInterface
+    public boolean saveTemplate(String name, String text) {
+        if (name == null || name.trim().isEmpty() || text == null) return false;
+        return CmdTemplates.save(name.trim(), java.util.Arrays.asList(text.replace("\r", "").split("\n"))) != null;
+    }
+
+    /**
+     * מ0.42: כתיבת קובץ טקסט — בתיקייה של התוסף, או (downloads) בתיקיית ההורדות. רק שם: לא כתיבה לכל מקום. מחזיר את המסלול
+     * המלא, או null (והתקלה — ביומן).
+     */
+    @JavascriptInterface
+    public String saveText(String name, String text, boolean downloads) {
+        try {
+            String n = Lab.safe(new File(name == null ? "" : name).getName());
+            if (n.isEmpty()) return null;
+            File dir = downloads ? android.os.Environment.getExternalStoragePublicDirectory(android.os.Environment.DIRECTORY_DOWNLOADS)
+                    : Lab.dataDir(exp);
+            File f = new File(dir, n);
+            boolean was = f.isFile();
+            Library lib = Library.get(screen);
+            if (downloads) {                                                    // מבנה 132: תיקייה של המשתמש — דרך המנהל, כפקודה "כתוב" (הקודם לסל)
+                String no = Manager.saveFile(f, text, was, lib);
+                if (no != null) {
+                    Log.i("Lab.saveText: " + no);
+                    return null;
+                }
+                return f.getAbsolutePath();
+            }
+            if (!dir.isDirectory()) dir.mkdirs();                               // התיקייה של התוסף עצמו — שלו
+            Files.writeAtomic(f, text == null ? "" : text);
+            if (was) lib.fileRemoved(f.getAbsolutePath());
+            lib.fileAdded(f);
+            return f.getAbsolutePath();
+        } catch (Throwable t) {
+            Log.e("Lab.saveText", t);
+            return null;
+        }
+    }
+
+    /**
+     * מ0.45: מחיקת הקבצים שבתת־תיקייה של תיקיית התוסף (רק שם, ורק קבצים): התוצאות של הרצות ישנות. מחזיר כמה נמחקו; -1 — שם
+     * לא תקין.
+     */
+    @JavascriptInterface
+    public int cleanData(String sub) {
+        String n = Lab.safe(sub == null ? "" : sub);
+        if (n.isEmpty() || !n.equals(sub) || n.contains("/") || n.startsWith(".")) return -1;
+        File d = new File(Lab.dataDir(exp), n);
+        File[] k = d.listFiles();
+        int c = 0;
+        Library lib = Library.get(screen);
+        if (k != null)
+            for (File f : k)
+                if (f.isFile() && f.delete()) {
+                    lib.fileRemoved(f.getAbsolutePath());
+                    c++;
+                }
+        return c;
+    }
+
+    /** מ0.45 (ב9): כמה קוראים לכל כונן בבנייה — מה שהיה בהגדרות; התוסף מודד וקובע. 1 עד 16. */
+    @JavascriptInterface
+    public boolean setReaders(int n) {
+        if (n < 1 || n > 16) return false;
+        String no = Manager.setting(Conf.READERS, String.valueOf(n));               // מבנה 127: דרך המנהל, כפקודה "הגדר"
+        Log.i("קוראים לכל כונן: " + n + " (מתוסף האבחון)" + (no == null ? "" : " — " + no));
+        return no == null;
+    }
+
     /** זיכרון קטן לכל ניסוי (נשאר בין פתיחות). */
     @JavascriptInterface
     public String load(String key) {
@@ -670,6 +524,162 @@ final class Bridge {
     @JavascriptInterface
     public void save(String key, String value) {
         prefs().edit().putString(exp + "\u0001" + key, value).apply();
+    }
+
+    // ---------- הרצה — תמיד דרך המסך המארח והמנהל ----------
+
+    /** הרצה דרך ההרצה הרגילה — תצוגה מקדימה ואישור, כמו כל קובץ פקודות. */
+    @JavascriptInterface
+    public void runCommands(final String text) {
+        screen.runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    File dir = new File(screen.getCacheDir(), "lab");
+                    dir.mkdirs();
+                    File f = new File(dir, Words.Lab.RUN_FILE + "." + Batch.EXT);
+                    // מ0.40 — המשתמש: "למה ההעברה בוצעה בפועל? הרי זה אמור לעבוד רק בכאילו." מהמעבדה — תמיד הדמיה:
+                    // שורת "הדמיה" בראש, ומסך ההרצה מראה מה היה קורה, בלי כפתור הרצה. שום דבר בכונן או במסד לא משתנה.
+                    Files.writeAtomic(f, Batch.AS_IF2 + "\n" + (text == null ? "" : text));
+                    // מ0.39: תמיד במסך ההרצה — תצוגה מקדימה, אישור, ודוח (בהרצה הרגילה, בלי "בדיקה", זה רץ מיד ונראית רק
+                    // הודעה קצרה; המשתמש: "איפה רואים את התוצאה של הפעולה?")
+                    host.run(f, null);
+                } catch (Throwable t) {
+                    Log.e("Lab.runCommands", t);
+                    host.toast(Words.Db.failed(String.valueOf(t.getMessage())));
+                }
+            }
+        });
+    }
+
+    /**
+     * מ0.40 — הרצה מהעורך. המשתמש: "ריצה אמיתית או בכאילו" (מתג בעמוד). בכאילו — שורת "הדמיה" בראש; אמיתית — כמו כל קובץ
+     * פקודות: תצוגה מקדימה, ורק באישור (כלל ההקפדה: שינוי בכונן — תצוגה מקדימה ואישור). where — הקובץ שבעורך: שמו בכותרת
+     * מסך ההרצה (המשתמש: "הכותרת 'הרצה מהמעבדה' — לשים את שם הקובץ"), והתיקייה שלו היא %כאן% (ושל כלול).
+     */
+    @JavascriptInterface
+    public void runFile(final String text, final String where, final boolean real) {
+        screen.runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    File dir = new File(screen.getCacheDir(), "lab");
+                    dir.mkdirs();
+                    String w = where == null ? "" : where.trim();
+                    String name = Lab.safe(new File(w).getName());
+                    if (name.isEmpty()) name = Words.Lab.RUN_FILE + "." + Batch.EXT;
+                    if (!Batch.isBatch(name)) name = name + "." + Batch.EXT;
+                    File f = new File(dir, name);
+                    Files.writeAtomic(f, (real ? "" : Batch.AS_IF2 + "\n") + (text == null ? "" : text));
+                    File here = w.startsWith("/") ? new File(w).getParentFile() : Shortcuts.dir();
+                    host.run(f, here);
+                } catch (Throwable t) {
+                    Log.e("Lab.runFile", t);
+                    host.toast(Words.Db.failed(String.valueOf(t.getMessage())));
+                }
+            }
+        });
+    }
+
+    // ---------- חלונות ומסך — בוררים, טופס, הודעה, שליחה, סגירה ----------
+
+    @JavascriptInterface
+    public void pickFolder(final String id, final String title, final boolean canCreate) {
+        screen.runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                host.pickFolder(title == null ? Words.FolderP.PICK_FOLDER : title, canCreate, new Picked() {
+                    @Override public void ok(String path) { host.result(id, path); }
+                });
+            }
+        });
+    }
+
+    /** קובץ: קודם התיקייה (הבורר הרגיל), ואז הקבצים שבה. */
+    @JavascriptInterface
+    public void pickFile(final String id, final String title) {
+        screen.runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                host.pickFile(title == null ? Words.Lab.PICK_FILE : title, new Picked() {
+                    @Override public void ok(String path) { host.result(id, path); }
+                });
+            }
+        });
+    }
+
+    /** רשימה מהמסד: {mode, path} — path בשמות, מופרד ב־\. */
+    @JavascriptInterface
+    public void pickList(final String id, final String title) {
+        screen.runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                host.pickList(title == null ? Words.NEW_LIST : title, new ListPicked() {
+                    @Override
+                    public void ok(String mode, List<String> path) {
+                        try {
+                            JSONObject o = new JSONObject();
+                            o.put("mode", mode);
+                            StringBuilder sb = new StringBuilder();
+                            for (String p : path) sb.append(sb.length() > 0 ? "\\" : "").append(p);
+                            o.put("path", sb.toString());
+                            host.result(id, o.toString());
+                        } catch (Throwable t) {
+                            Log.e("Lab.pickList", t);
+                        }
+                    }
+                });
+            }
+        });
+    }
+
+    /**
+     * מ0.41: הטופס המוכר של רשימה חכמה — עם מה שכתוב בשורה שבעורך; חוזר ב־vfmResult: {name, cond, sort, view}.
+     * (העורך כותב לשורה שם, תנאי ומיון — מה שהפקודה נושאת.)
+     */
+    @JavascriptInterface
+    public void smartForm(final String id, final String name, final String cond, final String sort) {
+        screen.runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    host.smartForm(name, cond, sort, new SmartPicked() {
+                        @Override
+                        public void ok(String rName, String rCond, String rSort, String rView) {
+                            try {
+                                JSONObject o = new JSONObject();
+                                o.put("name", rName);
+                                o.put("cond", rCond);
+                                o.put("sort", rSort);
+                                o.put("view", rView);
+                                host.result(id, o.toString());
+                            } catch (Throwable t) {
+                                Log.e("Lab.smartForm.result", t);
+                            }
+                        }
+                    });
+                } catch (Throwable t) {
+                    Log.e("Lab.smartForm", t);
+                    host.toast(Words.Db.failed(String.valueOf(t.getMessage())));
+                }
+            }
+        });
+    }
+
+    /** מ0.42: שליחת קובץ (דוח, יומן) — כמו "שליחה" של דוח האבחון. */
+    @JavascriptInterface
+    public void send(final String path) {
+        screen.runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                File f = resolve(path);
+                if (f == null || !f.isFile()) {
+                    host.toast(Words.Verb.NOT_FOUND + path);
+                    return;
+                }
+                host.send(f);
+            }
+        });
     }
 
     @JavascriptInterface
@@ -690,6 +700,7 @@ final class Bridge {
             @Override public void run() { screen.finish(); }
         });
     }
+
 
     private File resolve(String raw) {
         if (raw == null || raw.trim().isEmpty()) return Shortcuts.dir();       // מבנה 41: לתוסף, ריק = תיקיית הפקודות (כמו שהיה); בקובץ פקודות — שגיאה
