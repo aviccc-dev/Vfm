@@ -38,6 +38,63 @@ final class Manager {
         return java.util.Arrays.asList(text.replace("\r", "").split("\n"));
     }
 
+    // ---------- מכירה ומכוונת: פקודת פתיחה (מבנה 131) ----------
+    // ההגדרה של המשתמש: "כל שכבה צריכה להיות מוכרת על ידה אחרת לא תעבוד." מי שיודע לפתוח משהו — מסך, כלי, תפריט, תיקייה —
+    // נרשם אצל המנהל בשם של מה שהוא פותח (register). פקודת פתיחה מגיעה למנהל (open): הוא מפענח, בודק שהיעד רשום אצלו,
+    // ומכוון אליו. יעד שאינו רשום — אינו נפתח, ונאמר. המסכים אינם מחליטים בעצמם איזה מסך נפתח (שומר בבדיקות המבנה).
+
+    /** מי שפותח: מקבל את הפקודה המפוענחת. true — טיפל בה. */
+    interface Opener {
+        boolean open(android.app.Activity a, Verbs.Cmd c, String full, java.io.File here);
+    }
+
+    /** מי שמטפל קודם בפקודות הרשימות כשהמסד פעיל (פתיחת רשימה, ושורות שכותבות — דרך onVerbLine). */
+    static final String OPEN_DB = "db";
+
+    private static final java.util.Map<String, Opener> OPENERS =
+            java.util.Collections.synchronizedMap(new java.util.LinkedHashMap<String, Opener>());
+
+    /** רישום: what — סוג הפקודה (Verbs.K_*), ולמסך — screenKey של המסך. */
+    static Opener register(String what, Opener o) {
+        return o == null ? OPENERS.remove(what) : OPENERS.put(what, o);          // null — מוציא מהמרשם; מחזיר את מי שהיה רשום
+    }
+
+    static boolean registered(String what) {
+        return OPENERS.containsKey(what);
+    }
+
+    /** השם שבו היעד של הפקודה רשום: מסך — בשמו; כל השאר — לפי סוג הפקודה. */
+    static String openKey(Verbs.Cmd c) {
+        return Verbs.K_SCREEN.equals(c.kind) ? screenKey(c.arg) : c.kind;
+    }
+
+    static String screenKey(String screen) {
+        return Verbs.K_SCREEN + ":" + screen;
+    }
+
+    /**
+     * פקודת פתיחה. null — אינה פקודת פתיחה (שורה למנוע הרגיל). "" — כוונה ליעד הרשום. אחרת — מה לומר למשתמש: שגיאה
+     * בשורה, או יעד שאינו רשום אצל שכבת הניהול.
+     */
+    static String open(android.app.Activity a, String line, java.io.File here, java.util.Map<String, String> vars) {
+        if (!Verbs.isVerb(line)) return null;
+        String full = Verbs.withVars(line, vars);
+        Verbs.Cmd c = Verbs.parse(full);
+        if (c.error != null) return c.error;
+        if (DbVerbs.active()) {                                                 // מ0.10: במסד — פקודות הרשימות על המסד
+            Opener db = OPENERS.get(OPEN_DB);
+            if (db != null && db.open(a, c, full, here)) return "";
+        }
+        if (Verbs.hostCode(c) != null) return Words.Top.notHere(Verbs.label(c));   // מ0.42: אין עוד מסך שעושה אותן בעצמו
+        Opener o = OPENERS.get(openKey(c));
+        if (o == null) {
+            Log.i("⚠ " + Words.PermitW.notKnown(openKey(c)));
+            return Words.PermitW.notKnown(Verbs.label(c));
+        }
+        o.open(a, c, full, here);
+        return "";
+    }
+
     // ---------- מאשרת: מה עושים עם תכנית מוכנה ----------
 
     /** בכאילו — רק התוצאה, בלי ביצוע (1.10.0). */

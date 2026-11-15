@@ -3317,6 +3317,50 @@ public final class Tests {
                 Conf.set(Conf.GENERAL, Conf.EXCLUDED, ex127);
                 Conf.set(Conf.GENERAL, Conf.PERIODIC, "0");
             }
+            // מבנה 131: מכירה ומכוונת — מי שפותח נרשם אצל המנהל; פקודת פתיחה שהיעד שלה אינו רשום — אינה נפתחת
+            {
+                String vu131 = read(new File(code, "masachim/rechivim/VerbsUi.java"));
+                check("מבנה 131: המסכים אינם מפענחים ואינם מחליטים איזה מסך נפתח — רק רושמים את הפותחים ושואלים את המנהל",
+                        !vu131.contains("Verbs.parse(") && !vu131.contains("Verbs.isVerb(") && vu131.contains("Manager.open(") && vu131.contains("Manager.register("));
+                boolean loaded131 = true;
+                try {
+                    Class.forName("com.tikiyot.vfm.VerbsUi");
+                } catch (Throwable t) {
+                    loaded131 = false;
+                }
+                StringBuilder miss131 = new StringBuilder();
+                for (String sc : new String[]{Verbs.S_HOME, Verbs.S_SEARCH, Verbs.S_COMMANDS, Verbs.S_DISK, Verbs.S_VIRTUAL, Verbs.S_SETTINGS, Verbs.S_TRASH,
+                        Verbs.S_EDITOR, Verbs.S_BACKUPS, Verbs.S_DIAG, Verbs.S_LAB, Verbs.S_PLUGINS})
+                    if (!Manager.registered(Manager.screenKey(sc))) miss131.append(sc).append(' ');
+                for (String k : new String[]{Verbs.K_LIST, Verbs.K_SMART, Verbs.K_FOLDER, Verbs.K_FIND, Verbs.K_BACK, Verbs.K_RUN, Verbs.K_NEW_LIST, Verbs.K_ADD,
+                        Verbs.K_MENU, Verbs.K_NEW_CMD, Verbs.K_TOOL, Verbs.K_NOTE, Verbs.K_TITLE, Verbs.K_MODE, Manager.OPEN_DB})
+                    if (!Manager.registered(k)) miss131.append(k).append(' ');
+                check("מבנה 131: כל מסך וכל סוג של פקודת פתיחה רשומים אצל המנהל (" + miss131.toString().trim() + ")", loaded131 && miss131.length() == 0);
+                String line131 = "פתח מסך " + Verbs.S_SETTINGS, key131 = Manager.screenKey(Verbs.S_SETTINGS);
+                final int[] called131 = {0};
+                Manager.Opener db131 = Manager.register(Manager.OPEN_DB, null);   // בלי פקודות הרשימות: בבדיקה אין מסך
+                Manager.Opener was131 = Manager.register(key131, null);
+                String none131, done131;
+                try {
+                    none131 = Manager.open(null, line131, r, v);
+                    Manager.register(key131, new Manager.Opener() {
+                        @Override public boolean open(android.app.Activity a, Verbs.Cmd c, String full, File here) {
+                            called131[0]++;
+                            return true;
+                        }
+                    });
+                    done131 = Manager.open(null, line131, r, v);
+                } finally {
+                    Manager.register(key131, was131);
+                    Manager.register(Manager.OPEN_DB, db131);
+                }
+                check("מבנה 131: יעד שאינו רשום — אינו נפתח, ונאמר (" + none131 + "); רשום — המנהל מכוון אליו, פעם אחת",
+                        none131 != null && none131.contains(Words.PermitW.notKnown("")) && "".equals(done131) && called131[0] == 1
+                                && Manager.registered(key131) == (was131 != null));
+                check("מבנה 131: שורה שאינה פקודת פתיחה — לא של המנהל הזה (null); שורה שגויה — השגיאה שלה",
+                        Manager.open(null, "העתק \"א\" \"ב\"", r, v) == null && Manager.open(null, "פתח מסך אין-מסך-כזה-131", r, v) != null
+                                && !Manager.open(null, "פתח מסך אין-מסך-כזה-131", r, v).isEmpty());
+            }
             // מבנה 128: השלד נסגר — מי שעוד כותב או מוחק קובץ ישירות, בלב ובמסכים, הוא רשימה סגורה שרק מתקצרת
             {
                 String[][] known128 = {

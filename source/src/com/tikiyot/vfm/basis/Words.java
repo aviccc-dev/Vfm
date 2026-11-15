@@ -2812,6 +2812,9 @@ public final class Words {
                 SYS_TOOLS = "הכלים שנוספים לרשימה", SYS_EXIT = "עותק ביציאה", SYS_START = "הכנת האופן בפתיחה",
                 SYS_TOP_ROW = "הרשימה של השורה העליונה", SYS_DEV = "מסך המסד (פיתוח)";
 
+        /** מבנה 131: פקודת פתיחה שהיעד שלה אינו רשום אצל המנהל. */
+        public static String notKnown(String what) { return "אינו רשום אצל שכבת הניהול — לא נפתח: " + what; }
+
         public static String notRegistered(String name) { return "פעולה של המערכת שאינה רשומה אצל שכבת הניהול: " + name; }
 
         private PermitW() { }
