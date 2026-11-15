@@ -3261,8 +3261,9 @@ public final class Tests {
                 String m146 = read(new File(code, "lev/Menus.java"));
                 check("מבנה 146: Once — אין לפני; נזכר (גם כמה ערכים לקובץ); קובץ שהשתנה — נשכח; מלא — מתרוקן; והתפריטים אינם מחזיקים מטמון משלהם",
                         none146 && kept146 && changed146 && o146.had(f146, "") == null && "3".equals(o146.had(f146, "ג"))
-                                && !m146.contains("new HashMap<String, String[]>()") && m146.split("new Once<", -1).length - 1 == 3
-                                && "".equals(Menus.textOf(mk(d138, "ריק146.vbat", 0))) && Menus.look(f146).length == 2);
+                                && !m146.contains("new HashMap<String, String[]>()") && m146.split("new Once<", -1).length - 1 == 1
+                                && read(new File(code, "pkudot/Choice.java")).split("new Once<", -1).length - 1 == 2 && !m146.contains("static String expand(")
+                                && "".equals(Choice.textOf(mk(d138, "ריק146.vbat", 0))) && Menus.look(f146).length == 2);
                 wipe(d138);
             }
             String pui80 = read(new File(code, "masachim/rechivim/PhysicalUi.java"));
@@ -3885,34 +3886,34 @@ public final class Tests {
         String a = new File(d, "א.txt").getAbsolutePath(), b = new File(d, "ב.txt").getAbsolutePath();
         java.util.List<String> one = java.util.Arrays.asList(a), two = java.util.Arrays.asList(a, b);
         eq("מ0.41: %נבחרים% — שורה לכל קובץ, במרכאות; שאר השורות כמו שהן", "צלמית 🗑\nמחק \"" + a + "\"\nמחק \"" + b + "\"\nהודעה סוף\n",
-                Menus.expand("צלמית 🗑\nמחק %נבחרים%\nהודעה סוף\n", two));
-        eq("מ0.41: %נבחרים% שכבר במרכאות — בלי מרכאות כפולות", "שנה \"" + a + "\" \"<שם>\"\n", Menus.expand("שנה \"%נבחרים%\" \"<שם>\"", one));
-        eq("מ0.41: כמה קבצים — מקור של העתק, העבר, מחק", 2, Menus.arity("העתק %נבחרים% \"%הורדות%\"\n"));
-        eq("מ0.41: ...גם לרשימה", 2, Menus.arity("העתק %נבחרים% ידנית \"מועדפים\"\n"));
-        eq("מ0.41: ...וגם באנגלית, עם מתג", 2, Menus.arity("DEL \"%נבחרים%\" /תאריך:שבוע\n"));
-        eq("מ0.41: קובץ אחד — שנה", 1, Menus.arity("צלמית ✏\nשנה %נבחרים% \"<שם>\"\n"));
-        eq("מ0.41: קובץ אחד — %נבחרים% כיעד", 1, Menus.arity("העתק \"%הורדות%\\א.txt\" %נבחרים%\n"));
-        eq("מ0.41: קובץ אחד — פקודת פתיחה", 1, Menus.arity("פתח תיקייה %נבחרים%\n"));
-        eq("מ0.41: שורה אחת מקבלת כמה ואחרת אחד — אחד", 1, Menus.arity("מחק %נבחרים%\nהפעל %נבחרים%\n"));
-        eq("מ0.41: בלי %נבחרים% (גם בהערה) — 0", 0, Menus.arity("הערה %נבחרים%\nפתח מסך הבית\n"));
+                Choice.expand("צלמית 🗑\nמחק %נבחרים%\nהודעה סוף\n", two));
+        eq("מ0.41: %נבחרים% שכבר במרכאות — בלי מרכאות כפולות", "שנה \"" + a + "\" \"<שם>\"\n", Choice.expand("שנה \"%נבחרים%\" \"<שם>\"", one));
+        eq("מ0.41: כמה קבצים — מקור של העתק, העבר, מחק", 2, Choice.arity("העתק %נבחרים% \"%הורדות%\"\n"));
+        eq("מ0.41: ...גם לרשימה", 2, Choice.arity("העתק %נבחרים% ידנית \"מועדפים\"\n"));
+        eq("מ0.41: ...וגם באנגלית, עם מתג", 2, Choice.arity("DEL \"%נבחרים%\" /תאריך:שבוע\n"));
+        eq("מ0.41: קובץ אחד — שנה", 1, Choice.arity("צלמית ✏\nשנה %נבחרים% \"<שם>\"\n"));
+        eq("מ0.41: קובץ אחד — %נבחרים% כיעד", 1, Choice.arity("העתק \"%הורדות%\\א.txt\" %נבחרים%\n"));
+        eq("מ0.41: קובץ אחד — פקודת פתיחה", 1, Choice.arity("פתח תיקייה %נבחרים%\n"));
+        eq("מ0.41: שורה אחת מקבלת כמה ואחרת אחד — אחד", 1, Choice.arity("מחק %נבחרים%\nהפעל %נבחרים%\n"));
+        eq("מ0.41: בלי %נבחרים% (גם בהערה) — 0", 0, Choice.arity("הערה %נבחרים%\nפתח מסך הבית\n"));
         java.util.Map<String, String> v = Batch.vars(d, r.getAbsolutePath(), null);
         Index ix = new Index("041ב", "041ב", r.getAbsolutePath());
         ix.scan(null);
         Library lib = Library.forTests(new ArrayList<Index>(java.util.Collections.singletonList(ix)));
-        eq("מ0.41: התכנון קובע — שם קבוע לקובץ אחד: מתאימה", Boolean.TRUE, Menus.planned(Menus.expand("שנה %נבחרים% \"חדש.txt\"", one), d, v, lib));
-        eq("מ0.41: ...לשני קבצים — לא (השני נתקל בראשון)", Boolean.FALSE, Menus.planned(Menus.expand("שנה %נבחרים% \"חדש.txt\"", two), d, v, lib));
-        eq("מ0.41: מחק — מתאימה לשניים", Boolean.TRUE, Menus.planned(Menus.expand("מחק %נבחרים%", two), d, v, lib));
-        eq("מ0.41: מתג שלא שייך — לא מתאימה", Boolean.FALSE, Menus.planned(Menus.expand("מחק %נבחרים% /מסלול", one), d, v, lib));
-        check("מ0.41: מקום פתוח — לא מתכננים כאן (נשאל בהרצה)", Menus.planned(Menus.expand("שנה %נבחרים% \"<שם>\"", one), d, v, lib) == null);
-        check("מ0.41: שורה של רשימה, או פקודת פתיחה — לא מתכננים כאן", Menus.planned(Menus.expand("העתק %נבחרים% ידנית \"א\"", one), d, v, lib) == null
-                && Menus.planned(Menus.expand("פתח תיקייה %נבחרים%", one), d, v, lib) == null);
+        eq("מ0.41: התכנון קובע — שם קבוע לקובץ אחד: מתאימה", Boolean.TRUE, Choice.planned(Choice.expand("שנה %נבחרים% \"חדש.txt\"", one), d, v, lib));
+        eq("מ0.41: ...לשני קבצים — לא (השני נתקל בראשון)", Boolean.FALSE, Choice.planned(Choice.expand("שנה %נבחרים% \"חדש.txt\"", two), d, v, lib));
+        eq("מ0.41: מחק — מתאימה לשניים", Boolean.TRUE, Choice.planned(Choice.expand("מחק %נבחרים%", two), d, v, lib));
+        eq("מ0.41: מתג שלא שייך — לא מתאימה", Boolean.FALSE, Choice.planned(Choice.expand("מחק %נבחרים% /מסלול", one), d, v, lib));
+        check("מ0.41: מקום פתוח — לא מתכננים כאן (נשאל בהרצה)", Choice.planned(Choice.expand("שנה %נבחרים% \"<שם>\"", one), d, v, lib) == null);
+        check("מ0.41: שורה של רשימה, או פקודת פתיחה — לא מתכננים כאן", Choice.planned(Choice.expand("העתק %נבחרים% ידנית \"א\"", one), d, v, lib) == null
+                && Choice.planned(Choice.expand("פתח תיקייה %נבחרים%", one), d, v, lib) == null);
         check("מ0.41: שום דבר לא השתנה בכונן מהתכנון", new File(a).isFile() && new File(b).isFile() && !new File(d, "חדש.txt").exists());
         Batch.Plan direct = Batch.plan("מחק %נבחרים%\n", d, v, lib);
         check("מ0.41: %נבחרים% בהרצה רגילה (לא מבחירה) — שגיאה, לא ריצה בשקט", direct.errors == 1);
         // ההרצה עצמה: הטקסט שהתקבל — קובץ פקודות רגיל
-        Batch.Plan p = Batch.plan(Menus.expand("העתק %נבחרים% \"" + new File(r, "יעד").getAbsolutePath() + "\"\n", two), d, v, lib);
+        Batch.Plan p = Batch.plan(Choice.expand("העתק %נבחרים% \"" + new File(r, "יעד").getAbsolutePath() + "\"\n", two), d, v, lib);
         new File(r, "יעד").mkdirs();
-        p = Batch.plan(Menus.expand("העתק %נבחרים% \"" + new File(r, "יעד").getAbsolutePath() + "\"\n", two), d, v, lib);
+        p = Batch.plan(Choice.expand("העתק %נבחרים% \"" + new File(r, "יעד").getAbsolutePath() + "\"\n", two), d, v, lib);
         Batch.run(p, lib, null, null);
         check("מ0.41: פקודת בחירה שרצה — שני הקבצים הועתקו", p.errors == 0 && new File(r, "יעד/א.txt").isFile() && new File(r, "יעד/ב.txt").isFile());
     }
@@ -3984,17 +3985,17 @@ public final class Tests {
                     && "הפעל".equals(Program.read(start).name));
             String ct = Files.readUtf8(copy), st = Files.readUtf8(start);
             check("מ0.41: ...%נבחרים% נשאר כמו שהוא, ו־%הורדות% הוחלף במסלול", ct.contains("%נבחרים%") && !ct.contains("%הורדות%") && ct.contains("/Download"));
-            eq("מ0.41: \"העתק להורדות\" — לכמה קבצים", 2, Menus.arity(ct));
-            eq("מ0.41: \"הפעל\" — לקובץ אחד", 1, Menus.arity(st));
+            eq("מ0.41: \"העתק להורדות\" — לכמה קבצים", 2, Choice.arity(ct));
+            eq("מ0.41: \"הפעל\" — לקובץ אחד", 1, Choice.arity(st));
             File a = new File(r, "א.txt"), b = new File(r, "ב.txt");
             Files.writeAtomic(a, "אחת");
             Files.writeAtomic(b, "שתיים");
             java.util.List<String> two = java.util.Arrays.asList(a.getAbsolutePath(), b.getAbsolutePath());
-            eq("מ0.41: \"העתק להורדות\" על שני קבצים — התכנון עובר", Boolean.TRUE, Menus.planned(Menus.expand(ct, two), dir, v, lib));
-            Batch.Plan run = Batch.plan(Menus.expand(ct, two), dir, v, lib);
+            eq("מ0.41: \"העתק להורדות\" על שני קבצים — התכנון עובר", Boolean.TRUE, Choice.planned(Choice.expand(ct, two), dir, v, lib));
+            Batch.Plan run = Batch.plan(Choice.expand(ct, two), dir, v, lib);
             Batch.run(run, lib, null, null);
             check("מ0.41: ...והקבצים הועתקו להורדות", run.errors == 0 && new File(r, "Download/א.txt").isFile() && new File(r, "Download/ב.txt").isFile() && a.isFile());
-            eq("מ0.41: \"הפעל\" על קובץ אחד — התכנון עובר", Boolean.TRUE, Menus.planned(Menus.expand(st, two.subList(0, 1)), dir, v, lib));
+            eq("מ0.41: \"הפעל\" על קובץ אחד — התכנון עובר", Boolean.TRUE, Choice.planned(Choice.expand(st, two.subList(0, 1)), dir, v, lib));
         } catch (Exception e) {
             check("מ0.41: קובץ הדוגמה — " + e, false);
         }

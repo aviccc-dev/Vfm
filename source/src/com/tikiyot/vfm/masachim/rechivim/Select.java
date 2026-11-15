@@ -158,15 +158,15 @@ public final class Select {
                     if (it.e.kind != DbMore.E_FILE) continue;
                     final java.io.File f = new java.io.File(it.e.path);
                     if (!f.isFile()) continue;
-                    final String text = Menus.textOf(f);
+                    final String text = Choice.textOf(f);
                     if (text == null) continue;
-                    if (!Menus.fits(a, f, text, new ArrayList<String>(files), new ArrayList<String>(dirs), lists.size())) continue;
+                    if (!Choice.fits(a, f, text, new ArrayList<String>(files), new ArrayList<String>(dirs), lists.size())) continue;
                     String[] look = Menus.look(f);
                     labels.add(look[0] + "  " + look[1]);
                     actions.add(new Runnable() {
                         @Override
                         public void run() {
-                            BatchUi.run(a, f, Menus.expand(text, paths), true);
+                            BatchUi.run(a, f, Choice.expand(text, paths), true);
                             stop();
                             if (after != null) after.run();
                         }
