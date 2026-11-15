@@ -546,6 +546,36 @@ public class DbListScreen extends ListScreen<Store.Member> {
         return v == null ? "" : v;
     }
 
+    /**
+     * מבנה 99: שמירת הטופס של רשימה חכמה — דרך המנהל, כפקודה ("עדכן רשימה חכמה %נבחרים% %תוכן%"), עם גיבוי "לפני עריכה" ועם
+     * עדכון קובצי הפקודות. מבנה 104: שם חדש שכבר קיים — אותה שאלה כמו ביצירה, בלי "לדרוס" (דריסה כאן הייתה מוחקת רשימה
+     * אחרת): "שם אחר" / "לעצור".
+     */
+    private void saveSmart(final Store.Item it, final DbSmartForm.Result r) {
+        Library lib = Library.get(this);
+        Manager.Act act = Manager.onSmartEdit(mode, it.id, r.name, r.cond, DbSmartForm.props(r), Paths.data(), BatchUi.vars(this, Paths.data()), lib);
+        String why = act.error();
+        if (why != null && why.equals(Words.ListCmdW.smartTaken(r.name.trim()))) {
+            new android.app.AlertDialog.Builder(this).setTitle(Words.ListCmdW.SMART_TAKEN_TITLE).setMessage(why)
+                    .setPositiveButton(Words.ListCmdW.OTHER_NAME, new android.content.DialogInterface.OnClickListener() {
+                        @Override
+                        public void onClick(android.content.DialogInterface d, int w) {
+                            Ui.askText(DbListScreen.this, Words.ListCmdW.OTHER_NAME, r.name, Words.Short.NAME_HINT, new Ui.Text1() {
+                                @Override
+                                public void ok(String value) {
+                                    if (value.trim().isEmpty()) return;
+                                    r.name = value.trim();
+                                    saveSmart(it, r);
+                                }
+                            });
+                        }
+                    })
+                    .setNeutralButton(Words.ListCmdW.SMART_STOP, null).show();
+            return;
+        }
+        done(why != null ? why : act.say(lib));
+    }
+
     /** מ0.13.1: עריכה — רשימה חכמה בטופס שלה; רשימה: שם, צלמית, תיאור, "למה"; רעיון/כותרת — הטקסט. דרך הליבה. */
     private void edit(final Store.Item it) {
         if (it.type == Store.FILE) {
@@ -556,11 +586,7 @@ public class DbListScreen extends ListScreen<Store.Member> {
             DbSmartForm.show(this, store, it.id, new DbSmartForm.Done() {
                 @Override
                 public void ok(final DbSmartForm.Result r) {
-                    // מבנה 99: דרך המנהל, כפקודה ("עדכן רשימה חכמה %נבחרים% %תוכן%") — עם גיבוי "לפני עריכה" ועם עדכון קובצי הפקודות
-                    Library lib = Library.get(DbListScreen.this);
-                    Manager.Act act = Manager.onSmartEdit(mode, it.id, r.name, r.cond, DbSmartForm.props(r), Paths.data(),
-                            BatchUi.vars(DbListScreen.this, Paths.data()), lib);
-                    done(act.error() != null ? act.error() : act.say(lib));
+                    saveSmart(it, r);
                 }
             });
             return;

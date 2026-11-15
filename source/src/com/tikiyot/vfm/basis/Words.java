@@ -1883,9 +1883,20 @@ public final class Words {
             return "כבר יש כאן רשימה חכמה בשם \"" + name + "\" — שם קיים";
         }
 
-        public static final String SMART_TAKEN_TITLE = "שם קיים", SMART_ANYWAY = "ליצור בכל זאת", OTHER_NAME = "שם אחר";
-        /** מבנה 103: נוצרה למרות שם קיים — כי נכתב "המשך" לפני השורה, או שהמשתמש אישר במסך. */
-        public static final String SMART_DESPITE = " (שם קיים — נוצרה בכל זאת)";
+        /** מבנה 104: השאלה כשיש כבר רשימה חכמה בשם הזה — כמו בקובץ עם שם תפוס: לדרוס · שם אחר · לעצור. */
+        public static final String SMART_TAKEN_TITLE = "שם קיים", SMART_REPLACE = "לדרוס", OTHER_NAME = "שם אחר", SMART_STOP = "לעצור";
+
+        public static String smartReplaced(String name) {
+            return "הרשימה החכמה \"" + name + "\" נדרסה — קיבלה את ההגדרות החדשות (גיבוי לפני)";
+        }
+
+        public static String smartRenamed(String name) {
+            return "רשימה חכמה חדשה: " + name + " (השם היה קיים — בשם אחר)";
+        }
+
+        public static String smartSkipped(String name) {
+            return "כבר יש כאן רשימה חכמה בשם \"" + name + "\" — דילגתי, בלי שינוי";
+        }
 
         /** מבנה 98: עד כאן גם רשימה חכמה חדשה נאמרה "רשימה ידנית חדשה". */
         public static String createdSmart(String label) {

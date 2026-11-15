@@ -163,15 +163,21 @@ final class ImportTests {
         // מבנה 103: הכלל האחד של רשימה חכמה חדשה (Lists.newSmart) — בבית; שם קיים — שגיאה, אלא אם "בכל זאת"
         java.util.Map<String, String> sp = new java.util.HashMap<String, String>();
         sp.put(Store.P_SORT, "תאריך");
-        Lists.Made m1 = Lists.newSmart(s, 0, "חדשים", "תאריך:שבוע", sp, false);
+        Lists.Made m1 = Lists.newSmart(s, 0, "חדשים", "תאריך:שבוע", sp, Lists.TAKEN_STOP);
         long sm = m1.id;
         ck("פקודות: צור רשימה חכמה — נוצרת בבית, עם התנאי והמיון", sm != 0 && s.item(sm).type == Store.SMART && "תאריך:שבוע".equals(s.prop(sm, Store.P_COND))
                 && "תאריך".equals(s.prop(sm, Store.P_SORT)) && DbPaths.smart(s, "חדשים") == sm && s.listsOf(sm).equals(Arrays.asList(home)));
-        Lists.Made m2 = Lists.newSmart(s, 0, "חדשים", "תאריך:שבוע", sp, false), m3 = Lists.newSmart(s, 0, "חדשים", "תאריך:חודש", sp, false);
+        Lists.Made m2 = Lists.newSmart(s, 0, "חדשים", "תאריך:שבוע", sp, Lists.TAKEN_STOP), m3 = Lists.newSmart(s, 0, "חדשים", "תאריך:חודש", sp, Lists.TAKEN_STOP);
         ck("פקודות: אותו שם — שגיאה \"שם קיים\", גם בתנאי אחר (מבנה 103)", m2.id == 0 && m3.id == 0
                 && Words.ListCmdW.smartTaken("חדשים").equals(m2.error) && Words.ListCmdW.smartTaken("חדשים").equals(m3.error));
-        Lists.Made m4 = Lists.newSmart(s, 0, "חדשים", "סוג:ספרים", sp, true);
-        ck("פקודות: \"בכל זאת\" — נוצרת עוד אחת באותו שם, ו\"עדכן\" חל על הראשונה", m4.id != 0 && m4.id != sm && s.item(m4.id).name.equals("חדשים"));
+        // מבנה 104 (המשתמש): "לא נאפשר רשימות חכמות באותו שם… האם לדרוס, האם להחליף שם, האם לעצור"
+        Lists.Made m4 = Lists.newSmart(s, 0, "חדשים", "סוג:ספרים", sp, Lists.TAKEN_REPLACE);
+        ck("פקודות: לדרוס — אותה רשימה, ההגדרות החדשות", m4.id == sm && m4.replaced && "סוג:ספרים".equals(s.prop(sm, Store.P_COND)));
+        Lists.Made m5 = Lists.newSmart(s, 0, "חדשים", "תאריך:שבוע", sp, Lists.TAKEN_RENAME), m6 = Lists.newSmart(s, 0, "חדשים", "x", sp, Lists.TAKEN_RENAME);
+        ck("פקודות: שם אחר — \"(2)\", ואחר כך \"(3)\" — באותה רשימה", m5.renamed && s.item(m5.id).name.equals("חדשים (2)") && s.item(m6.id).name.equals("חדשים (3)")
+                && s.listsOf(m5.id).equals(Arrays.asList(home)));
+        Lists.Made m7 = Lists.newSmart(s, 0, "חדשים", "y", sp, Lists.TAKEN_SKIP);
+        ck("פקודות: לדלג — בלי שינוי", m7.skipped && m7.id == sm && "סוג:ספרים".equals(s.prop(sm, Store.P_COND)));
         ck("פקודות: עדכן רשימה חכמה — התנאי; המיון רק אם נכתב", DbPaths.updateSmart(s, "חדשים", "תאריך:יום", "") == sm
                 && "תאריך:יום".equals(s.prop(sm, Store.P_COND)) && "תאריך".equals(s.prop(sm, Store.P_SORT)));
         ck("פקודות: עדכן רשימה חכמה שאינה — 0", DbPaths.updateSmart(s, "אין", "x", "") == 0);

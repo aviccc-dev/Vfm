@@ -201,32 +201,54 @@ final class Lists {
     }
 
     /**
-     * **רשימה חכמה חדשה — הכלל האחד** (מבנה 103; המשתמש, 15.11.2026: "בעיקרון יש מצבים שנרצה עוד רשימות חכמות באותו שם.
-     * העניין שלעיתים זו טעות וחוסר תשומת לב. אז הייתי קובע כלל אחיד כזה: בכל מקום כאשר מבקשים ליצור רשימה חכמה בעלת שם זהה —
-     * התוכנה עוצרת, מודיעה. אם זה ידני — המשתמש מאשר או מחליף שם. בפקודה — אם יש 'המשך' אז הוא מבצע בלי לשאול; אם לא —
-     * הוא שואל ונעצר."). בתוך into (0 — הבית); יש בה כבר רשימה חכמה בשם הזה — שגיאה ("שם קיים"), אלא אם anyway (המשתמש
-     * אישר, או "המשך" בקובץ). מסד בלי בית — גם רשימה חכמה שעומדת לעצמה באותו שם. שם ריק — "רשימה חכמה".
+     * **רשימה חכמה חדשה — הכלל האחד** (מבנה 103–104). המשתמש (15.11.2026): "לא נאפשר רשימות חכמות באותו שם. התוכנה תודיע
+     * כמו בקובץ עם אותו שם: האם לדרוס, האם להחליף שם, האם לעצור." בתוך into (0 — הבית). יש בה כבר רשימה חכמה בשם הזה —
+     * לפי taken (בקובץ — אותן מילים כמו בהעתקת קבצים, `/תפוס:`): TAKEN_STOP — שגיאה ("שם קיים"); TAKEN_REPLACE ("להחליף") —
+     * הקיימת מקבלת את ההגדרות החדשות (דריסה; הגיבוי לפני — אצל מי שמריץ); TAKEN_RENAME ("לשנות-שם") — חדשה בשם פנוי ("(2)");
+     * TAKEN_SKIP ("לדלג") — בלי שינוי. מסד בלי בית — גם רשימה חכמה שעומדת לעצמה באותו שם. שם ריק — "רשימה חכמה".
      */
-    static Made newSmart(Store s, long into, String name, String cond, java.util.Map<String, String> props, boolean anyway) {
+    /** מבנה 104: מה עושים כששם קיים (הפקודות מתרגמות את "/תפוס:<ערך>" לאחד מאלה). */
+    static final int TAKEN_STOP = 0, TAKEN_REPLACE = 1, TAKEN_RENAME = 2, TAKEN_SKIP = 3;
+
+    static Made newSmart(Store s, long into, String name, String cond, java.util.Map<String, String> props, int taken) {
         Made r = new Made();
         String n = name == null || name.trim().isEmpty() ? Words.SMART_LIST : name.trim();
         long in = into != 0 ? into : DbPaths.home(s);
-        if (!anyway && smartTaken(s, in, n)) {
-            r.error = Words.ListCmdW.smartTaken(n);
+        long had = smartIn(s, in, n);
+        r.name = n;
+        if (had == 0) {
+            r.id = saveSmart(s, 0, in, n, cond, props);
             return r;
         }
-        r.id = saveSmart(s, 0, in, n, cond, props);
+        if (taken == TAKEN_REPLACE) {
+            r.id = saveSmart(s, had, 0, n, cond, props);
+            r.replaced = true;
+        } else if (taken == TAKEN_RENAME) {
+            String free = n;
+            for (int k = 2; smartIn(s, in, free) != 0; k++) free = n + " (" + k + ")";
+            r.name = free;
+            r.id = saveSmart(s, 0, in, free, cond, props);
+            r.renamed = true;
+        } else if (taken == TAKEN_SKIP) {
+            r.id = had;
+            r.skipped = true;
+        } else r.error = Words.ListCmdW.smartTaken(n);
         return r;
+    }
+
+    /** מבנה 104: הרשימה החכמה בשם name שב־in (in = 0 — מסד בלי בית: שעומדת לעצמה), או 0. */
+    static long smartIn(Store s, long in, String name) {
+        if (in != 0) {
+            for (Store.Member m : s.members(in)) if (m.item.type == Store.SMART && m.item.name.equals(name)) return m.item.id;
+            return 0;
+        }
+        for (Store.Item it : s.smarts()) if (it.name.equals(name) && s.listsOf(it.id).isEmpty()) return it.id;
+        return 0;
     }
 
     /** מבנה 103: יש ב־in רשימה חכמה בשם name (in = 0 — מסד בלי בית: רשימה חכמה שעומדת לעצמה). */
     static boolean smartTaken(Store s, long in, String name) {
-        if (in != 0) {
-            for (Store.Member m : s.members(in)) if (m.item.type == Store.SMART && m.item.name.equals(name)) return true;
-            return false;
-        }
-        for (Store.Item it : s.smarts()) if (it.name.equals(name) && s.listsOf(it.id).isEmpty()) return true;
-        return false;
+        return smartIn(s, in, name) != 0;
     }
 
     /** רשימה ידנית חדשה בתוך parent (0 — בבית, אם יש). בלי בדיקת שם — למי שכבר בדק (ייבוא, העתקה). */
@@ -243,6 +265,9 @@ final class Lists {
     static final class Made {
         long id;
         String error;
+        /** מבנה 104: רשימה חכמה — השם שנקבע בסוף; נדרסה / נוצרה בשם אחר / דילגו. */
+        String name;
+        boolean replaced, renamed, skipped;
     }
 
     /**

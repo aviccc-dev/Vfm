@@ -232,13 +232,17 @@ final class Manager {
      */
     static Act onSmartNew(String mode, long in, String name, String cond, java.util.Map<String, String> props, java.io.File here,
                           java.util.Map<String, String> vars, Library lib) {
-        return onSmartNew(mode, in, name, cond, props, false, here, vars, lib);
+        return onSmartNew(mode, in, name, cond, props, "", here, vars, lib);
     }
 
-    /** מבנה 103: anyway — המשתמש אישר "ליצור בכל זאת" למרות שם קיים; כמו "המשך" בקובץ פקודות — אותה הוראה, אותו מסלול. */
-    static Act onSmartNew(String mode, long in, String name, String cond, java.util.Map<String, String> props, boolean anyway,
+    /**
+     * מבנה 104: taken — מה שהמשתמש ענה כשהשם קיים ("להחליף" = לדרוס; "" — עוד לא נשאל). אותה מילה כמו בקובץ פקודות
+     * (`/תפוס:להחליף`) — אותה הוראה, אותו מסלול.
+     */
+    static Act onSmartNew(String mode, long in, String name, String cond, java.util.Map<String, String> props, String taken,
                           java.io.File here, java.util.Map<String, String> vars, Library lib) {
-        String text = (anyway ? Words.DbCmd.N_CONT + "\n" : "") + Verbs.CREATE + " " + Verbs.LIST + " " + Verbs.SMART_WORD + " %" + Batch.V_NEW_NAME + "% %" + Batch.V_CONTENT + "%\n";
+        String text = Verbs.CREATE + " " + Verbs.LIST + " " + Verbs.SMART_WORD + " %" + Batch.V_NEW_NAME + "% %" + Batch.V_CONTENT + "%"
+                + (taken == null || taken.isEmpty() ? "" : " " + Batch.SW_TAKEN + taken) + "\n";
         return new Act(text, Batch.plan(text, here, vars, lib, null, new Batch.Selection(mode, in, name, cond, props)), null);
     }
 

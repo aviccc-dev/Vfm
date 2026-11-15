@@ -618,23 +618,27 @@ final class DbCmdTests {
                                     + "הפקודה עונה כמו המסך " + java.util.Arrays.toString(old97) + " " + java.util.Arrays.toString(new97),
                             java.util.Arrays.equals(old97, new97) && new97[0].equals("נוצרה")
                                     && new97[3].equals("תכנון: " + Words.ListCmdW.smartTaken("חכמה רגילה")));
-                    // מבנה 103: "ליצור בכל זאת" (המשתמש אישר) — אותה פקודה עם "המשך" לפניה; נוצרת, בשני הצדדים
+                    // מבנה 104: "לדרוס" (המשתמש ענה במסך) — אותה פקודה עם /תפוס:להחליף; הקיימת מקבלת את ההגדרות, עם גיבוי לפני
                     {
                         final DbSmartForm.Result f103 = new DbSmartForm.Result();
                         f103.name = "חכמה רגילה";
                         f103.cond = "סוג:epub";
-                        final long[] in103 = {0};
+                        final long[] in103 = {0, 0};
                         Db.write(Db.app, m91, null, new Db.Use<Void>() {
                             @Override public Void run(SqlStore st) {
                                 in103[0] = DbPaths.find(st, m91, java.util.Arrays.asList("חדש"));
-                                DbSmartForm.save(st, 0, DbPaths.find(st, m91, java.util.Arrays.asList("ישן")), f103);
+                                long oldIn = DbPaths.find(st, m91, java.util.Arrays.asList("ישן"));
+                                DbSmartForm.save(st, Lists.smartIn(st, oldIn, f103.name), 0, f103);   // הצד השני — אותה דריסה
+                                in103[1] = Lists.smartIn(st, in103[0], f103.name);
                                 return null;
                             }
                         });
-                        Manager.Act any103 = Manager.onSmartNew(m91, in103[0], f103.name, f103.cond, DbSmartForm.props(f103), true, here, vars, lib);
-                        String said103 = any103.error() != null ? "תכנון: " + any103.error() : any103.say(lib);
-                        o.check("מבנה 103: \"ליצור בכל זאת\" — הפקודה עם \"המשך\" לפניה; נוצרת עוד אחת באותו שם (" + said103 + ")",
-                                any103.error() == null && !any103.failed && any103.made != 0 && any103.text.startsWith(Words.DbCmd.N_CONT + "\n"));
+                        int edits104 = edits99(m91);
+                        Manager.Act rep104 = Manager.onSmartNew(m91, in103[0], f103.name, f103.cond, DbSmartForm.props(f103), Batch.TAKEN_REPLACE, here, vars, lib);
+                        String said104 = rep104.error() != null ? "תכנון: " + rep104.error() : rep104.say(lib);
+                        o.check("מבנה 104: \"לדרוס\" — הפקודה עם /תפוס:להחליף; אותה רשימה (לא עוד אחת), עם גיבוי לפני (" + said104 + ")",
+                                rep104.error() == null && !rep104.failed && rep104.made == in103[1] && rep104.text.contains(Batch.SW_TAKEN + Batch.TAKEN_REPLACE)
+                                        && said104.contains(Words.ListCmdW.smartReplaced("חכמה רגילה")) && edits99(m91) > edits104);
                     }
                     List<String> v97 = go("המשך ()\nאופן \"" + m91 + "\"\nודא תוכן ידנית \"ישן\" שווה תוכן ידנית \"חדש\"\n"
                             + "השווה תוכן ידנית \"ישן\" תוכן ידנית \"חדש\" /הבדלים\n", here, vars, lib);
@@ -654,12 +658,27 @@ final class DbCmdTests {
                     List<String> w97 = go("המשך ()\nאופן \"" + m91 + "\"\nצור רשימה חכמה \"מקובץ 97\" סוג:pdf\nצור רשימה חכמה \"מקובץ 97\" סוג:pdf\n"
                             + "ודא שגיאה\nצור רשימה חכמה %שם-חדש% %תוכן%\n", here, vars, lib);
                     Batch.Plan stop103 = Batch.plan("אופן \"" + m91 + "\"\nצור רשימה חכמה \"מקובץ 97\" סוג:txt\n", here, vars, lib);
-                    o.check("מבנה 103: בקובץ בלי \"המשך\" — שם קיים: שגיאה בתכנון, והקובץ אינו רץ; עם \"המשך\" — נוצרת בכל זאת, ונאמר",
+                    o.check("מבנה 104: בקובץ בלי מתג — שם קיים: שגיאה בתכנון, והקובץ אינו רץ; עם \"המשך\" — השורה אינה מבוצעת, והקובץ ממשיך",
                             stop103.blocked() && stop103.errorText().contains(Words.ListCmdW.smartTaken("מקובץ 97"))
-                                    && String.valueOf(w97).contains(Words.ListCmdW.SMART_DESPITE));
-                    o.check("מבנה 97: רשימה שנמחקה — סירוב שנאמר; \"צור רשימה חכמה\" פעמיים עם \"המשך\" — שתיים (מבנה 103); %שם-חדש% בלי טופס — שגיאה "
+                                    && String.valueOf(w97).contains(Words.ListCmdW.smartTaken("מקובץ 97")));
+                    List<String> t104 = go("אופן \"" + m91 + "\"\nצור רשימה חכמה \"מקובץ 97\" סוג:txt /תפוס:להחליף\nצור רשימה חכמה \"מקובץ 97\" סוג:mp3 /תפוס:לשנות-שם\n"
+                            + "צור רשימה חכמה \"מקובץ 97\" סוג:zip /תפוס:לדלג\nודא שגיאה\nצור רשימה חכמה \"מקובץ 97\" סוג:zip /תפוס:בלבול\n", here, vars, lib);
+                    final String[] c104 = {"", ""};
+                    Db.read(Db.app, m91, new Db.Use<Void>() {
+                        @Override public Void run(SqlStore st) {
+                            for (Store.Item it : st.smarts()) {
+                                if (it.name.equals("מקובץ 97")) c104[0] += st.prop(it.id, Store.P_COND) + ";";
+                                if (it.name.equals("מקובץ 97 (2)")) c104[1] += st.prop(it.id, Store.P_COND) + ";";
+                            }
+                            return null;
+                        }
+                    });
+                    o.check("מבנה 104: בקובץ — /תפוס:להחליף דורס, /תפוס:לשנות-שם — \"(2)\", /תפוס:לדלג — בלי שינוי, ערך לא מוכר — שגיאה ("
+                                    + c104[0] + " · " + c104[1] + ") " + t104,
+                            bad(t104).isEmpty() && c104[0].equals("סוג:txt;") && c104[1].equals("סוג:mp3;") && String.valueOf(t104).contains(Words.ListCmdW.smartSkipped("מקובץ 97")));
+                    o.check("מבנה 97: רשימה שנמחקה — סירוב שנאמר; \"צור רשימה חכמה\" פעמיים עם \"המשך\" — אחת (מבנה 104); %שם-חדש% בלי טופס — שגיאה "
                                     + said97 + " " + w97,
-                            gone97.failed && said97.equals(Words.Db.LIST_GONE) && bad(w97).isEmpty() && smarts97(m91, "מקובץ 97") == 2);
+                            gone97.failed && said97.equals(Words.Db.LIST_GONE) && bad(w97).contains("כישלונות בהרצה: 1") && smarts97(m91, "מקובץ 97") == 1);
                     o.check("מבנה 98: רשימה חכמה חדשה נאמרת \"רשימה חכמה חדשה\" — לא \"רשימה ידנית חדשה\" " + w97,
                             String.valueOf(w97).contains(Words.ListCmdW.createdSmart("מקובץ 97")) && !String.valueOf(w97).contains(Words.ListCmdW.created("מקובץ 97")));
                     String ui97 = Files.readUtf8(new File(src, "src/com/tikiyot/vfm/masachim/rechivim/DbVerbsUi.java"))
@@ -720,6 +739,21 @@ final class DbCmdTests {
                     o.check("מבנה 99: אחרי שלוש העריכות — שתי הרשימות שוות עד הסוף " + v99, bad(v99).isEmpty() && String.valueOf(v99).contains("אין הבדלים"));
                     int after99 = edits99(m91);
                     o.check("מבנה 99: לפני כל עריכה — גיבוי \"לפני עריכה\", גם בפקודה (" + before99 + " ← " + after99 + ")", after99 > before99);
+                    final long[] two104 = {0, 0};
+                    Db.write(Db.app, m91, null, new Db.Use<Void>() {
+                        @Override public Void run(SqlStore st) {
+                            long in = DbPaths.find(st, m91, java.util.Arrays.asList("חדש"));
+                            two104[0] = Lists.smartIn(st, in, "חכמה רגילה");
+                            two104[1] = Lists.saveSmart(st, 0, in, "שנייה 104", "סוג:pdf", null);
+                            return null;
+                        }
+                    });
+                    Manager.Act ren104 = Manager.onSmartEdit(m91, two104[1], "חכמה רגילה", "סוג:pdf", new java.util.HashMap<String, String>(), here, vars, lib);
+                    o.check("מבנה 104: שינוי שם בטופס לשם שכבר קיים באותה רשימה — \"שם קיים\" כבר בתכנון, ושום דבר לא נשמר (" + ren104.error() + ")",
+                            Words.ListCmdW.smartTaken("חכמה רגילה").equals(ren104.error()) && two104[0] != 0);
+                    Db.write(Db.app, m91, null, new Db.Use<Void>() {
+                        @Override public Void run(SqlStore st) { Lists.removeFrom(st, DbPaths.find(st, m91, java.util.Arrays.asList("חדש")), two104[1]); return null; }
+                    });
                     Manager.Act gone99 = Manager.onSmartEdit(m91, 987654321L, "x", "סוג:pdf", new java.util.HashMap<String, String>(), here, vars, lib);
                     String saidGone99 = gone99.say(lib);
                     o.check("מבנה 99: רשימה שנמחקה בזמן שהטופס היה פתוח — \"" + Words.Db.ITEM_GONE + "\" (" + saidGone99 + ")",
@@ -745,7 +779,7 @@ final class DbCmdTests {
                             @Override public Void run(SqlStore t) {
                                 int k = java.util.Arrays.asList(steps100).indexOf(st100);
                                 long id = st100.equals("list") ? DbPaths.ensure(t, m91, java.util.Arrays.asList("ישן-כפתור", "א", "ב"))
-                                        : st100.startsWith("smart:") ? Lists.newSmart(t, 0, "ישן-כפתור", st100.substring(6), null, false).id
+                                        : st100.startsWith("smart:") ? Lists.newSmart(t, 0, "ישן-כפתור", st100.substring(6), null, Lists.TAKEN_STOP).id
                                         : DbPaths.updateSmart(t, "ישן-כפתור", st100.substring(7), "");
                                 for (int j = 0; j < steps100.length; j++) if (steps100[j].equals(st100) && oldIds[j] == 0) { oldIds[j] = id; break; }
                                 return null;

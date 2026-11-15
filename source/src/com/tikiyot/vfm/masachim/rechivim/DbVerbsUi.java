@@ -147,21 +147,22 @@ final class DbVerbsUi {
     }
 
     /**
-     * מבנה 103: שם קיים באותה רשימה — המסך עוצר ושואל (המשתמש: "אם זה ידני — המשתמש מאשר או מחליף שם"): "ליצור בכל זאת" —
-     * אותה פקודה עם "המשך" לפניה (כמו בקובץ); "שם אחר" — שואלים שם, ומנסים שוב. done — רק כשנוצרה.
+     * מבנה 104: שם קיים באותה רשימה — המסך עוצר ושואל, כמו בקובץ עם שם תפוס (המשתמש: "האם לדרוס, האם להחליף שם, האם לעצור"):
+     * "לדרוס" — אותה פקודה עם `/תפוס:להחליף` (כמו בקובץ; גיבוי לפני); "שם אחר" — שואלים שם, ומנסים שוב; "לעצור" — כלום.
+     * done — רק כשנוצרה או נדרסה.
      */
     static void makeSmart(final Activity a, final String mode, final long in, final DbSmartForm.Result r, final Made done) {
-        makeSmart(a, mode, in, r, false, done);
+        makeSmart(a, mode, in, r, "", done);
     }
 
-    private static void makeSmart(final Activity a, final String mode, final long in, final DbSmartForm.Result r, boolean anyway, final Made done) {
+    private static void makeSmart(final Activity a, final String mode, final long in, final DbSmartForm.Result r, String taken, final Made done) {
         final Library lib = Library.get(a);
-        Manager.Act act = Manager.onSmartNew(mode, in, r.name, r.cond, DbSmartForm.props(r), anyway, Paths.data(), BatchUi.vars(a, Paths.data()), lib);
+        Manager.Act act = Manager.onSmartNew(mode, in, r.name, r.cond, DbSmartForm.props(r), taken, Paths.data(), BatchUi.vars(a, Paths.data()), lib);
         String why = act.error();
         if (why != null && why.equals(Words.ListCmdW.smartTaken(r.name.trim().isEmpty() ? Words.SMART_LIST : r.name.trim()))) {
             new android.app.AlertDialog.Builder(a).setTitle(Words.ListCmdW.SMART_TAKEN_TITLE).setMessage(why)
-                    .setPositiveButton(Words.ListCmdW.SMART_ANYWAY, new android.content.DialogInterface.OnClickListener() {
-                        @Override public void onClick(android.content.DialogInterface d, int w) { makeSmart(a, mode, in, r, true, done); }
+                    .setPositiveButton(Words.ListCmdW.SMART_REPLACE, new android.content.DialogInterface.OnClickListener() {
+                        @Override public void onClick(android.content.DialogInterface d, int w) { makeSmart(a, mode, in, r, Batch.TAKEN_REPLACE, done); }
                     })
                     .setNegativeButton(Words.ListCmdW.OTHER_NAME, new android.content.DialogInterface.OnClickListener() {
                         @Override
@@ -171,12 +172,12 @@ final class DbVerbsUi {
                                 public void ok(String value) {
                                     if (value.trim().isEmpty()) return;
                                     r.name = value.trim();
-                                    makeSmart(a, mode, in, r, false, done);
+                                    makeSmart(a, mode, in, r, "", done);
                                 }
                             });
                         }
                     })
-                    .setNeutralButton(Words.CANCEL, null).show();
+                    .setNeutralButton(Words.ListCmdW.SMART_STOP, null).show();
             return;
         }
         if (why != null) {

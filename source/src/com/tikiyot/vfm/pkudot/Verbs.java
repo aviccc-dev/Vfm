@@ -65,6 +65,8 @@ final class Verbs {
         boolean noOpen;
         /** מבנה 48: /מגיבוי — ב"צור אופן". */
         boolean fromBackup;
+        /** מבנה 104: /תפוס:<ערך> — ב"צור רשימה חכמה": מה עושים כשיש כבר רשימה חכמה בשם הזה ("" — לעצור). */
+        String taken = "";
         /** שגיאת תחביר — או null. */
         String error;
     }
@@ -134,6 +136,12 @@ final class Verbs {
         if (!bare.equals(rest)) {
             c.fromBackup = true;
             rest = bare;
+        }
+        for (String w : rest.split(" ")) {                                       // מבנה 104: /תפוס:<ערך> — כמו בהעתקת קבצים
+            if (!w.startsWith(Batch.SW_TAKEN)) continue;
+            if (!Batch.takenValue(w)) c.error = Batch.takenUnknown(w);
+            else c.taken = w.substring(Batch.SW_TAKEN.length());
+            rest = (" " + rest + " ").replace(" " + w + " ", " ").trim();
         }
         if (c.verb.equals(BACK)) {
             c.kind = K_BACK;
