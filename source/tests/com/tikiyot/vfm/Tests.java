@@ -4994,7 +4994,7 @@ public final class Tests {
             for (String h : v.keySet()) v.put(h, "%פנימי%\\x");
             List<String> filled = CmdTemplates.fill(t.lines, v);
             boolean ok = CmdTemplates.holes(filled).isEmpty();
-            for (String fl : filled) ok &= Commands.get(Commands.normal(fl).split(" ")[0]) != null || Batch.isLoopStart(fl) || Batch.isLoopEnd(fl)
+            for (String fl : filled) ok &= Commands.get(Commands.normal(fl).split(" ")[0]) != null || Loops.isLoopStart(fl) || Loops.isLoopEnd(fl)
                     || fl.startsWith(Batch.MEASURE) || fl.startsWith("::") || fl.equals(Batch.CHECK);             // 1.25.0: שורות מבנה; הערה
             check("1.23.0: תבנית — ממולאת ומוכרת: " + t.name, ok);
         }

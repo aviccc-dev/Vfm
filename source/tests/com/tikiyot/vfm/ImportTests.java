@@ -658,12 +658,12 @@ final class ImportTests {
         write(new File(cd, "פנים.vbat"), "בדיקה\nMD ידנית \"מכלול\"\nכלול \"עמוק.vbat\"\n");
         write(new File(cd, "עמוק.vbat"), "ECHO עמוק\n");
         write(new File(cd, "מעגל.vbat"), "כלול \"מעגל.vbat\"\n");
-        String[] ex = Batch.calls(new String[]{"ECHO א", "כלול \"פנים.vbat\"", "ECHO ב"}, cd, null, 0, new java.util.HashSet<String>());
+        String[] ex = Loops.calls(new String[]{"ECHO א", "כלול \"פנים.vbat\"", "ECHO ב"}, cd, null, 0, new java.util.HashSet<String>());
         ck("כלול: השורות של הקובץ במקום השורה (גם כלול בתוך כלול), בלי שורת \"בדיקה\" שלו", Arrays.asList(ex).equals(Arrays.asList(
                 "ECHO א", "ECHO " + Words.DbCmd.called("פנים.vbat", 3), "MD ידנית \"מכלול\"", "ECHO " + Words.DbCmd.called("עמוק.vbat", 1), "ECHO עמוק", "ECHO ב")));
-        String[] cyc = Batch.calls(new String[]{"כלול \"מעגל.vbat\""}, cd, null, 0, new java.util.HashSet<String>());
+        String[] cyc = Loops.calls(new String[]{"כלול \"מעגל.vbat\""}, cd, null, 0, new java.util.HashSet<String>());
         ck("כלול: מעגל — נעצר (השורה נשארת ונכשלת)", cyc.length == 2 && cyc[1].equals("כלול \"מעגל.vbat\""));
-        String[] none = Batch.calls(new String[]{"כלול \"אין.vbat\""}, cd, null, 0, new java.util.HashSet<String>());
+        String[] none = Loops.calls(new String[]{"כלול \"אין.vbat\""}, cd, null, 0, new java.util.HashSet<String>());
         ck("כלול: קובץ שלא קיים — השורה נשארת", none.length == 1);
         Batch.Plan bp = Batch.plan("כלול \"אין.vbat\"\nאופן \"x\"\n", cd, null);
         ck("כלול שנכשל ואופן מחוץ למסד — שגיאה בתכנון, עם הסבר", bp.steps.size() == 2 && Words.DbCmd.CALL_FAILED.equals(bp.steps.get(0).error)
