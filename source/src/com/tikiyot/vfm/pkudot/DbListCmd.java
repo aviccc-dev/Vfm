@@ -330,7 +330,11 @@ final class DbListCmd {
         }
         Store.Item it = s.item(id);
         if (n.equals(it.name)) return Res.same(Words.DbCmd.renamed(a.label(), n));
-        String e = Lists.nameError(s, java.util.Collections.singletonList(parent), id, it.type, name);   // מ0.23: הבדיקה האחת
+        // מבנה 86: השם נבדק בכל הרשימות שהפריט נמצא בהן — כמו בעריכה שבמסך (Lists.edit). עד כאן נבדקה רק הרשימה שבדרך שנכתבה,
+        // ורשימה שמשותפת לשתי רשימות יכלה לקבל שם שכבר תפוס בשנייה: שתי רשימות באותו שם באותה רשימה, ודרך שאינה חד־משמעית.
+        List<Long> parents = new ArrayList<Long>(s.listsOf(id));
+        if (!parents.contains(parent)) parents.add(parent);
+        String e = Lists.nameError(s, parents, id, it.type, name);              // מ0.23: הבדיקה האחת
         if (e != null) return Res.err(e);
         final long fid = id;
         s.atomic(new Store.Work() {
