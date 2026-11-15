@@ -1887,6 +1887,8 @@ final class Batch {
         String bad = listSwitch(cmd, lp, sw);                                 // מ0.40 (ממצא 41): מתג שלא שייך לשורה — שגיאה
         if (bad != null) { s.error = bad; return; }
         List<String> fsFiles = new ArrayList<String>();
+        List<String> fsDirs = new ArrayList<String>();                         // מבנה 115: תיקייה שלמה מהכונן אל רשימה
+        boolean dirToList = cmd.equals("COPY") && lp.sides.size() == 2 && lp.sides.get(1).list();
         File fsDest = null;
         for (int i = 0; i < lp.sides.size(); i++) {
             ListCmd.Side x = lp.sides.get(i);
@@ -1901,11 +1903,21 @@ final class Batch {
             if (p.equals(SELECTED_MARK)) {                                      // מבנה 114: הקבצים שנבחרו במסך — אל רשימה
                 Selection sel = sim.selected;
                 if (i != 0 || sel == null || (sel.files.isEmpty() && sel.dirs.isEmpty())) { s.error = Words.Cmd.NOTHING_SELECTED; return; }
-                if (!sel.dirs.isEmpty()) { s.error = Words.ListCmdW.FOLDER_TO_LIST; return; }
+                if (!sel.dirs.isEmpty() && !dirToList) { s.error = Words.ListCmdW.FOLDER_TO_LIST; return; }
                 for (String f : sel.files) {
                     if (!sim.isFile(new File(f))) { s.error = Words.Cmd.notFound(f); return; }
                     fsFiles.add(new File(f).getAbsolutePath());
                 }
+                for (String d : sel.dirs) {                                     // מבנה 115
+                    if (!sim.isDir(new File(d))) { s.error = Words.FOLDER_NOT_FOUND + ": " + d; return; }
+                    fsDirs.add(new File(d).getAbsolutePath());
+                }
+                continue;
+            }
+            // מבנה 115 (הכלל של מבנה 112): שם של תיקייה הוא התיקייה עצמה — אל רשימה היא נכנסת כרשימה בשמה, עם המבנה שלה
+            // (עד כאן: הקבצים שבה). רק הקבצים שבה: "תיקייה\*".
+            if (dirToList && i == 0 && !new File(p).getName().contains("*") && !new File(p).getName().contains("?") && sim.isDir(new File(p))) {
+                fsDirs.add(new File(p).getAbsolutePath());
                 continue;
             }
             if (i == lp.sides.size() - 1 && i > 0) fsDest = new File(p);
@@ -1919,8 +1931,29 @@ final class Batch {
                 s.files.clear();
             }
         }
-        if (DbVerbs.active()) DbListCmd.plan(s, cmd, lp, sw, sim, fsFiles, fsDest);   // מ0.12: עובדים במסד
+        if (DbVerbs.active()) DbListCmd.plan(s, cmd, lp, sw, sim, fsFiles, fsDest, fsDirs);   // מ0.12: עובדים במסד
         else s.error = Words.DbCmd.NO_DB;                                    // מ0.26: המנוע הישן נמחק — רשימות רק במסד
+    }
+
+    /**
+     * מבנה 115: תיקייה כמו שההדמיה רואה אותה (כולל מה ששורות קודמות יצרו) — לעץ מנותק, כמו Tree.scanFolder: עם המבנה
+     * (תת־תיקיות — צמתים), או הקבצים בלבד (כולם, גם מתת־תיקיות, בצומת אחד).
+     */
+    static Tree.Node scan(Sim sim, Step s, File dir, boolean structure) {
+        Tree.Node n = new Tree.Node();
+        n.name = Names.cleanName(dir.getName());
+        scanInto(n, n, dir, structure, sim, s, 0);
+        return n;
+    }
+
+    private static void scanInto(Tree.Node node, Tree.Node flat, File dir, boolean structure, Sim sim, Step s, int depth) {
+        for (File x : sim.files(dir))
+            if (visible(s, x)) (structure ? node : flat).entries.add(new Tree.Entry(x.getAbsolutePath(), sim.real(x).length()));
+        if (depth > 60) return;
+        for (File d : sim.subdirs(dir)) {
+            if (Vols.skip(d, false)) continue;
+            scanInto(structure ? Tree.newChild(node, node.uniqueChildName(d.getName())) : node, flat, d, structure, sim, s, depth + 1);
+        }
     }
 
     /**
@@ -1940,6 +1973,9 @@ final class Batch {
             if (x.equals(ListCmd.SW_CONDS) || x.equals(ListCmd.SW_DIFF)) { if (cmd.equals("COMP")) continue; return Words.Cmd.switchNotHere(x, null); }
             boolean take = u.equals("/S") || x.equals(SW_KEEP) || u.equals("/Y") || u.equals("/-Y") || x.startsWith(SW_TAKEN);
             if (take && toFolder) continue;
+            if (fromDisk && cmd.equals("COPY") && sd.get(1).list() && (x.equals(ListCmd.SW_LIVE) || x.equals(ListCmd.SW_FLAT)
+                    || x.equals(SW_TAKEN + TAKEN_SKIP) || x.equals(SW_TAKEN + TAKEN_RENAME) || x.equals(SW_TAKEN + TAKEN_STOP)))
+                continue;                                                       // מבנה 115: תיקייה מהכונן אל רשימה
             if (cmd.equals("MD") && (x.equals(SW_TAKEN + TAKEN_SKIP) || x.equals(SW_TAKEN + TAKEN_RENAME) || x.equals(SW_TAKEN + TAKEN_STOP)))
                 continue;                                                       // מבנה 109: "צור תיקייה ידנית … /תפוס:לדלג"
             return Words.Cmd.switchNotHere(Commands.switchWord(x), null);

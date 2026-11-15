@@ -286,14 +286,21 @@ final class DbMore {
      * תיקייה חיה: רשימה חכמה בתוך list שמוצאת את מה שבתיקייה (התנאי, המיון והתצוגה — כמו בישן).
      * אותה תיקייה כבר שם (אותו תנאי) — בלי כפולה, 0. אחרת — מספר החכמה החדשה.
      */
+    /** מבנה 115: התיקייה החיה הזו (אותו תנאי) כבר ב־list. */
+    static boolean liveThere(Store s, long list, String folder) {
+        String cond = Cond.SOURCE + ":" + Cond.quote(folder);
+        for (Store.Member m : s.members(list))
+            if (m.item.type == Store.SMART && cond.equals(s.prop(m.item.id, Store.P_COND))) return true;
+        return false;
+    }
+
     static long liveFolder(Store s, final long list, String folder) {
         final java.util.Map<String, String> kv = new java.util.LinkedHashMap<String, String>();   // מ0.29: מה שהיה Unify.folderKeys
         kv.put(SmartLists.COND, Cond.SOURCE + ":" + Cond.quote(folder));
         kv.put(SmartLists.SORT, Sort.NAME);
         kv.put(SmartLists.VIEW, FolderView.ALL);
         final String cond = kv.get(SmartLists.COND);
-        for (Store.Member m : s.members(list))
-            if (m.item.type == Store.SMART && cond.equals(s.prop(m.item.id, Store.P_COND))) return 0;
+        if (liveThere(s, list, folder)) return 0;
         final String name = freeName(s, list, Store.SMART, new java.io.File(folder).getName());
         final long[] out = {0};
         s.atomic(new Store.Work() {

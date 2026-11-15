@@ -1983,6 +1983,19 @@ public final class Words {
             return " · עכשיו בה: " + lists + " רשימות, " + items + " פריטים";
         }
 
+        /** מבנה 115: תיקייה מהכונן אל רשימה — מה נכנס. */
+        public static String foldersAdded(String to, int lists, int items, int smarts, int skipped) {
+            java.util.List<String> p = new java.util.ArrayList<String>();
+            if (smarts > 0) p.add(smarts == 1 ? "רשימה חכמה של התיקייה" : smarts + " רשימות חכמות של תיקיות");
+            if (lists > 0) p.add(lists == 1 ? "רשימה אחת" : lists + " רשימות");
+            if (items > 0 || p.isEmpty()) p.add(items + " קבצים");
+            StringBuilder b = new StringBuilder("נכנסו ל" + to + ": ");
+            for (int i = 0; i < p.size(); i++) b.append(i > 0 ? " · " : "").append(p.get(i));
+            return b + (skipped > 0 ? " · לא נכנסו: " + skipped + " (כבר שם)" : "");
+        }
+
+        public static final String FOLDER_SW_ONLY = "/חיה ו־/קבצים — רק בהעתקה של תיקייה מהכונן אל רשימה, ורק אחד מהם";
+
         public static String copied(int done, int skipped, String why, String to) {
             return "נכנסו ל" + to + ": " + done + (skipped > 0 ? " · לא נכנסו: " + skipped + (why != null ? " (" + why + ")" : "") : "");
         }

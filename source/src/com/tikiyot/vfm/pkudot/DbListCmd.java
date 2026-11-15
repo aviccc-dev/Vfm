@@ -276,6 +276,43 @@ final class DbListCmd {
         return Res.ok(what + " — " + Words.ListCmdW.copied(r.added, ps.size() - r.added, ps.size() > r.added ? Words.DbCmd.ALREADY : null, label) + nowIn(s, dest));
     }
 
+    /**
+     * מבנה 115: הכלל האחד של "תיקייה מהכונן אל רשימה" — לשורה הכתובה ולמסך (➕, "לרשימה", הדבקה). שלוש צורות, כמו במסך:
+     * בלי מתג — התיקייה עצמה: רשימה בשמה, ובתוכה התת־תיקיות כרשימות והקבצים (DbMore.attach); /קבצים — רק הקבצים, ישר לרשימה;
+     * /חיה — רשימה חכמה של התיקייה (DbMore.liveFolder; אותה תיקייה כבר שם — לא נכפלת). **שם קיים** (רשימה, או רשימה חכמה אחרת,
+     * בשם של התיקייה) — כמו בכל מקום (ה1, ה2): עוצרים, אלא אם /תפוס:לשנות-שם ("(2)") או /תפוס:לדלג. קודם בודקים הכול, ורק אז כותבים.
+     * nodes — התיקיות שנסרקו (לא ב־/חיה), באותו סדר של dirs. files — קבצים שנבחרו לצד התיקיות (מהמסך).
+     */
+    static Res addFolders(Store s, long dest, String label, List<String> dirs, List<Tree.Node> nodes, List<String> files,
+                          boolean live, boolean flat, int taken) {
+        boolean[] skip = new boolean[dirs.size()];
+        for (int i = 0; i < dirs.size() && !flat; i++) {
+            String name = Names.cleanName(new File(dirs.get(i)).getName());
+            String why = live ? (DbMore.liveThere(s, dest, dirs.get(i)) || !Lists.smartTaken(s, dest, name) ? null : Words.ListCmdW.smartTaken(name))
+                    : Lists.nameError(s, java.util.Collections.singletonList(dest), 0, Store.LIST, name);
+            if (why == null || taken == Lists.TAKEN_RENAME) continue;
+            if (taken != Lists.TAKEN_SKIP) return Res.err(why);
+            skip[i] = true;
+        }
+        boolean sign = !(s instanceof MemStore);
+        int lists = 0, items = 0, smarts = 0, skipped = 0;
+        for (int i = 0; i < dirs.size(); i++) {
+            if (skip[i]) { skipped++; continue; }
+            if (live) {
+                if (DbMore.liveFolder(s, dest, dirs.get(i)) != 0) smarts++;
+                else skipped++;
+                continue;
+            }
+            int[] r = DbMore.attach(s, dest, nodes.get(i), !flat, sign);
+            lists += r[0];
+            items += r[1];
+        }
+        if (files != null && !files.isEmpty()) items += DbFiles.add(s, dest, files, null, sign).added;
+        Res ok = Res.ok(Words.ListCmdW.foldersAdded(label, lists, items, smarts, skipped) + nowIn(s, dest));
+        ok.made = dest;
+        return ok;
+    }
+
     /** COPY: לרשימה ידנית (או לבית). fsFiles — קבצים מהכונן (כשהמקור אינו רשימה); הקבצים עצמם לתיקייה — ב-plan. */
     static Res copy(Store s, String mode, ListCmd.Side a, ListCmd.Side b, final List<String> fsFiles, Finder f) {
         final long dest = b.home ? DbPaths.home(s) : b.mask != null ? 0 : DbPaths.find(s, mode, b.path);
@@ -598,7 +635,7 @@ final class DbListCmd {
 
     /** שורה עם מילות סוג, כשעובדים במסד: אותן בדיקות צורה כמו ListCmd.plan; הפעולה — על העותק בזיכרון, ובהרצה — על המסד. */
     static void plan(final Batch.Step s, final String cmd, ListCmd.Parsed p, List<String> sw, final Batch.Sim sim,
-                     final List<String> fsFiles, final File fsDest) {
+                     final List<String> fsFiles, final File fsDest, final List<String> fsDirs) {
         boolean disk = false;                                                  // מ0.40: יש צד בכונן — שם /מכיל: חל
         for (ListCmd.Side x : p.sides) if (!x.list()) disk = true;
         for (String x : sw)
@@ -614,7 +651,7 @@ final class DbListCmd {
         if (sim.modeError != null) { s.error = sim.modeError; return; }      // מ0.17.1: "אופן" שנכשל — לא לרוץ על אופן אחר
         for (ListCmd.Side x : p.sides)
             if (x.picked) {                                                    // מבנה 85: מה שנבחר במסך הרשימות
-                planPicked(s, cmd, p, sw, sim, fsFiles);
+                planPicked(s, cmd, p, sw, sim, fsFiles, fsDirs);
                 return;
             }
         final String mode = mode(sim);
@@ -726,7 +763,20 @@ final class DbListCmd {
                 toFolder(s, cmd, a, db, mode, find, sw, sim, fsDest);
                 return;
             }
-            work = new Work() {
+            final boolean live = sw.contains(ListCmd.SW_LIVE), flat = sw.contains(ListCmd.SW_FLAT);
+            if ((live || flat) && (a.list() || fsDirs.isEmpty() || (live && flat))) { s.error = Words.ListCmdW.FOLDER_SW_ONLY; return; }
+            if (!a.list() && !fsDirs.isEmpty()) {                               // מבנה 115: תיקייה שלמה מהכונן אל רשימה
+                final List<Tree.Node> nodes = new ArrayList<Tree.Node>();
+                if (!live) for (String d : fsDirs) nodes.add(Batch.scan(sim, s, new File(d), !flat));
+                final int taken = takenOf(sw);
+                work = new Work() {
+                    @Override public Res run(Store t, Finder f) {
+                        long dest = b.home ? DbPaths.home(t) : b.mask != null ? 0 : DbPaths.find(t, mode, b.path);
+                        if (dest == 0) return Res.err(listWhy(t, mode, b));
+                        return addFolders(t, dest, b.label(), fsDirs, nodes, fsFiles, live, flat, taken);
+                    }
+                };
+            } else work = new Work() {
                 @Override public Res run(Store t, Finder f) { return copy(t, mode, a, b, fsFiles, f); }
             };
         } else if (cmd.equals("COMP")) {
@@ -809,14 +859,20 @@ final class DbListCmd {
      * **בלי הדמיה:** התכנון של פקודת רשימה כתובה מעתיק את כל המסד לזיכרון כדי שהשורות הבאות יראו את התוצאה; כאן שורה אחת,
      * והמסך כבר הציג את חלון האישור שלו — העתקה של כל המסד בכל לחיצה הייתה עבודה יקרה לחינם (המשפך).
      */
-    private static void planPicked(final Batch.Step s, String cmd, ListCmd.Parsed p, List<String> sw, Batch.Sim sim, List<String> fsFiles) {
+    private static void planPicked(final Batch.Step s, String cmd, ListCmd.Parsed p, List<String> sw, Batch.Sim sim, List<String> fsFiles,
+                                   List<String> fsDirs) {
         final Batch.Selection sel = sim.selected;
         ListCmd.Side a = p.sides.get(0);
         boolean make = cmd.equals("MD") && p.sides.size() == 1 && sw.isEmpty() && a.kind == ListCmd.LIST && !a.content && !a.filesOf;
         final ListCmd.Side to = p.sides.size() == 2 ? p.sides.get(1) : null;
         // מבנה 114: "העתק %נבחרים% ידנית %נבחרים%" — הקבצים שנבחרו (מסלולים), אל הרשימה שנבחרה (המספר שלה; 0 — הבית)
-        boolean add = cmd.equals("COPY") && to != null && sw.isEmpty() && !a.list() && to.picked && to.kind == ListCmd.LIST && !to.content && !to.filesOf;
-        if (sel == null || sel.ids == null || sel.mode == null || (make ? sel.name == null : add ? fsFiles == null || fsFiles.isEmpty() : sel.ids.isEmpty())) {
+        // מבנה 115: גם תיקיות שנבחרו — עם /חיה, /קבצים, /תפוס: (כמו בשורה הכתובה)
+        final boolean live = sw.contains(ListCmd.SW_LIVE), flat = sw.contains(ListCmd.SW_FLAT);
+        final boolean hasDirs = fsDirs != null && !fsDirs.isEmpty();
+        boolean add = cmd.equals("COPY") && to != null && !a.list() && to.picked && to.kind == ListCmd.LIST && !to.content && !to.filesOf;
+        if (add && (live || flat) && (!hasDirs || (live && flat))) { s.error = Words.ListCmdW.FOLDER_SW_ONLY; return; }
+        if (sel == null || sel.ids == null || sel.mode == null
+                || (make ? sel.name == null : add ? (fsFiles == null || fsFiles.isEmpty()) && !hasDirs : sel.ids.isEmpty())) {
             s.error = Words.Cmd.NOTHING_SELECTED;
             return;
         }
@@ -853,7 +909,10 @@ final class DbListCmd {
             // אותו כלל כמו "העתק "<קובץ>" ידנית "<רשימה>"" כתובה (addFiles); מה שנובע מהמקום: הרשימה — לפי המספר. רק מוסיפה — בלי גיבוי לפני.
             final long into = sel.in;
             final List<String> ps = new ArrayList<String>(fsFiles);
-            s.describe = Words.DbCmd.inDb(Words.files(ps.size()) + " — " + Words.ListCmdW.copied(ps.size(), 0, null, Words.DbCmd.HERE_LIST));
+            final List<String> ds = hasDirs ? new ArrayList<String>(fsDirs) : new ArrayList<String>();
+            final int taken = takenOf(sw);
+            s.describe = Words.DbCmd.inDb((ds.isEmpty() ? "" : Words.folders(ds.size()) + " · ") + Words.files(ps.size()) + " — "
+                    + Words.ListCmdW.copied(ps.size() + ds.size(), 0, null, Words.DbCmd.HERE_LIST));
             s.op = new ListCmd.Op() {
                 @Override public String run(Library lib) {
                     Res r = realRes(mode, new Work() {
@@ -861,6 +920,11 @@ final class DbListCmd {
                             long dest = into != 0 ? into : DbPaths.home(t);
                             Store.Item li = dest == 0 ? null : t.item(dest);
                             if (li == null || li.type != Store.LIST) return Res.err(Words.Db.LIST_GONE);
+                            if (!ds.isEmpty()) {                                // מבנה 115: התיקיות נסרקות כאן, בהרצה (המסך מריץ ברקע)
+                                List<Tree.Node> nodes = new ArrayList<Tree.Node>();
+                                if (!live) for (String d : ds) nodes.add(Tree.scanFolder(new File(d), !flat));
+                                return addFolders(t, dest, li.name, ds, nodes, ps, live, flat, taken);
+                            }
                             Res ok = addFiles(t, dest, ps, Words.files(ps.size()), li.name);
                             ok.made = dest;
                             return ok;

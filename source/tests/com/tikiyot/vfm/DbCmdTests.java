@@ -948,17 +948,60 @@ final class DbCmdTests {
                                 !a114.failed && !b114.failed && a114.made == id114[0] && t114.contains(Words.DbCmd.ALREADY) && bad(w114).isEmpty());
                         Manager.Act g114 = Manager.onListAdd(m91, 987654321L, f114, here, vars, lib);
                         String gone114 = g114.error() != null ? g114.error() : g114.say(lib);
-                        List<String> dir114 = new ArrayList<String>(f114);
-                        Batch.Selection sel114 = new Batch.Selection(m91, id114[0], new ArrayList<Long>());
-                        sel114.dirs.add(here.getAbsolutePath());
                         String scr114 = Files.readUtf8(new File(src, "src/com/tikiyot/vfm/masachim/rechivim/DbPicker.java"))
                                 + Files.readUtf8(new File(src, "src/com/tikiyot/vfm/masachim/rechivim/DbVerbsUi.java"));
-                        o.check("מבנה 114: רשימה שנמחקה — \"" + gone114 + "\"; קובץ שאיננו, תיקייה, בחירה ריקה — שגיאה בתכנון; השומר — הבורר וה־➕ אינם מוסיפים בעצמם",
+                        o.check("מבנה 114: רשימה שנמחקה — \"" + gone114 + "\"; קובץ שאיננו, בחירה ריקה — שגיאה בתכנון; השומר — הבורר וה־➕ אינם מוסיפים בעצמם",
                                 g114.failed && gone114.equals(Words.Db.LIST_GONE)
                                         && Manager.onListAdd(m91, id114[0], java.util.Arrays.asList(new File(here, "אין-114.txt").getAbsolutePath()), here, vars, lib).error() != null
                                         && Manager.onListAdd(m91, id114[0], new ArrayList<String>(), here, vars, lib).error() != null
-                                        && Words.ListCmdW.FOLDER_TO_LIST.equals(Batch.plan("העתק %נבחרים% ידנית %נבחרים%\n", here, vars, lib, null, sel114).steps.get(0).error)
                                         && !scr114.contains("DbFiles.add(") && scr114.contains("Manager.onListAdd("));
+                    }
+                    // מבנה 115: תיקייה מהכונן אל רשימה — התיקייה עצמה (עם המבנה), /קבצים, /חיה; שם קיים; מהמסך מול השורה הכתובה
+                    {
+                        File d115 = new File(here, "תיק 115");
+                        new File(d115, "תת").mkdirs();
+                        Files.writeAtomic(new File(d115, "א115.txt"), "1");
+                        Files.writeAtomic(new File(d115, "תת/ב115.txt"), "2");
+                        String p115 = d115.getAbsolutePath(), o115 = "אופן \"" + m91 + "\"\n";
+                        go(o115 + "MD ידנית \"עץ 115\"\nMD ידנית \"עץ מסך 115\"\nMD ידנית \"שטוח 115\"\nMD ידנית \"שטוח מסך 115\"\nMD ידנית \"חי 115\"\n", here, vars, lib);
+                        List<String> w115 = go(o115 + "העתק \"" + p115 + "\" ידנית \"עץ 115\"\nודא ידנית \"עץ 115/תיק 115/תת\" קיימת\n"
+                                + "העתק \"" + p115 + "\" ידנית \"שטוח 115\" /קבצים\nודא ידנית \"שטוח 115/תיק 115\" חסרה\nודא ידנית \"שטוח 115\" /פריטים:2\n"
+                                + "העתק \"" + p115 + "\" ידנית \"חי 115\" /חיה\nהעתק \"" + p115 + "\" ידנית \"חי 115\" /חיה\n", here, vars, lib);
+                        Batch.Plan again115 = Batch.plan(o115 + "העתק \"" + p115 + "\" ידנית \"עץ 115\"\n", here, vars, lib);
+                        List<String> t115 = go(o115 + "העתק \"" + p115 + "\" ידנית \"עץ 115\" /תפוס:לדלג\nודא ידנית \"עץ 115/תיק 115 (2)\" חסרה\n"
+                                + "העתק \"" + p115 + "\" ידנית \"עץ 115\" /תפוס:לשנות-שם\nודא ידנית \"עץ 115/תיק 115 (2)/תת\" קיימת\n", here, vars, lib);
+                        final long[] id115 = {0, 0, 0};
+                        final int[] live115 = {0};
+                        Db.read(Db.app, m91, new Db.Use<Void>() {
+                            @Override public Void run(SqlStore st) {
+                                id115[0] = DbPaths.find(st, m91, java.util.Arrays.asList("עץ מסך 115"));
+                                id115[1] = DbPaths.find(st, m91, java.util.Arrays.asList("שטוח מסך 115"));
+                                id115[2] = DbPaths.find(st, m91, java.util.Arrays.asList("חי 115"));
+                                for (Store.Member x : st.members(id115[2])) if (x.item.type == Store.SMART) live115[0]++;
+                                return null;
+                            }
+                        });
+                        o.check("מבנה 115: תיקייה אל רשימה בקובץ — עם המבנה; /קבצים — רק הקבצים; /חיה — רשימה חכמה אחת, גם בפעם השנייה (" + live115[0] + ") " + w115,
+                                bad(w115).isEmpty() && live115[0] == 1);
+                        o.check("מבנה 115: שם קיים — הקובץ נעצר (\"שם תפוס\"); /תפוס:לדלג — בלי שינוי; /תפוס:לשנות-שם — \"(2)\" " + t115,
+                                again115.blocked() && again115.errorText().contains("תפוס") && bad(t115).isEmpty());
+                        List<String> dl115 = java.util.Arrays.asList(p115), none115 = new ArrayList<String>();
+                        Manager.Act a115 = Manager.onListAdd(m91, id115[0], none115, dl115, Manager.FOLDER_TREE, here, vars, lib);
+                        String s115 = a115.error() != null ? a115.error() : a115.say(lib);
+                        Manager.Act b115 = Manager.onListAdd(m91, id115[1], none115, dl115, Manager.FOLDER_FLAT, here, vars, lib);
+                        String f115 = b115.error() != null ? b115.error() : b115.say(lib);
+                        Manager.Act c115 = Manager.onListAdd(m91, id115[2], none115, dl115, Manager.FOLDER_LIVE, here, vars, lib);
+                        String l115 = c115.error() != null ? c115.error() : c115.say(lib);
+                        List<String> eq115 = go(o115 + "בטל ידנית \"עץ 115/תיק 115 (2)\"\nודא תוכן ידנית \"עץ מסך 115\" שווה תוכן ידנית \"עץ 115\"\n"
+                                + "ודא תוכן ידנית \"שטוח מסך 115\" שווה תוכן ידנית \"שטוח 115\"\n", here, vars, lib);
+                        String scr115 = Files.readUtf8(new File(src, "src/com/tikiyot/vfm/masachim/rechivim/Adder.java"));
+                        o.check("מבנה 115: מהמסך (דרך המנהל) — אותה תוצאה כמו בשורה כתובה: עם המבנה (" + s115 + "), הקבצים בלבד (" + f115 + "), חיה שכבר שם (" + l115 + ") " + eq115,
+                                !a115.failed && !b115.failed && !c115.failed && bad(eq115).isEmpty() && l115.contains("כבר שם"));
+                        o.check("מבנה 115: /חיה עם /קבצים, ו־/חיה על קובץ — שגיאה; השומר — ה־➕ של תיקייה אינו כותב למסד בעצמו",
+                                Batch.plan(o115 + "העתק \"" + p115 + "\" ידנית \"חי 115\" /חיה /קבצים\n", here, vars, lib).blocked()
+                                        && Batch.plan(o115 + "העתק \"" + p115 + "\\א115.txt\" ידנית \"חי 115\" /חיה\n", here, vars, lib).blocked()
+                                        && !scr115.contains("DbMore.") && !scr115.contains("DbListCmd.nowRes(") && !scr115.contains("DbFiles.add(")
+                                        && scr115.contains("Manager.onListAdd("));
                     }
                     Manager.Act gone99 = Manager.onSmartEdit(m91, 987654321L, "x", "סוג:pdf", new java.util.HashMap<String, String>(), here, vars, lib);
                     String saidGone99 = gone99.say(lib);

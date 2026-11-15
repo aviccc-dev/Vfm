@@ -22,6 +22,8 @@ final class ListCmd {
     static final String SW_CONDS = "/תנאים";   // תחביר
     /** מבנה 90: השווה ידנית "א" ידנית "ב" /הבדלים — כל ההבדלים בין שתי רשימות, עד הסוף. */
     static final String SW_DIFF = "/הבדלים";   // תחביר
+    /** מבנה 115: תיקייה מהכונן אל רשימה — /חיה: רשימה חכמה של התיקייה; /קבצים: רק הקבצים שבה (גם בתת־תיקיות), בלי המבנה. */
+    static final String SW_LIVE = "/חיה", SW_FLAT = "/קבצים";   // תחביר
 
     /** מ0.41: "בטל לא-משויכים" · "ודא לא-משויכים /פריטים:N" — הקבצים שהמסד זוכר ואינם באף רשימה. עומדת לבדה, בלי שם אחריה. */
     static final String LOOSE_WORD = "לא-משויכים";   // תחביר
@@ -125,7 +127,7 @@ final class ListCmd {
         Side cur = null;
         for (int i = 1; i < tk.size(); i++) {
             Tok t = tk.get(i);
-            if ((!t.quoted && (Batch.isSwitch(t.text) || t.text.equals(SW_CONDS) || t.text.equals(SW_DIFF))) || (t.valueQuoted && Batch.isSwitch(t.text))) {
+            if ((!t.quoted && (Batch.isSwitch(t.text) || t.text.equals(SW_CONDS) || t.text.equals(SW_DIFF) || t.text.equals(SW_LIVE) || t.text.equals(SW_FLAT))) || (t.valueQuoted && Batch.isSwitch(t.text))) {
                 switches.add(t.text);
                 continue;
             }

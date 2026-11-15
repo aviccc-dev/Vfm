@@ -273,9 +273,24 @@ final class Manager {
      * list — הרשימה (מספר במסד; 0 — הבית); paths — הקבצים, במסלולים מלאים.
      */
     static Act onListAdd(String mode, long list, java.util.List<String> paths, java.io.File here, java.util.Map<String, String> vars, Library lib) {
-        String text = Commands.word(Commands.get("COPY")) + " %" + Batch.V_SELECTED + "% " + ListCmd.MANUAL + " %" + Batch.V_SELECTED + "%\n";
+        return onListAdd(mode, list, paths, new java.util.ArrayList<String>(), FOLDER_TREE, here, vars, lib);
+    }
+
+    /** מבנה 115: איך תיקייה נכנסת לרשימה — כמו שלוש האפשרויות שבמסך. */
+    static final int FOLDER_TREE = 0, FOLDER_LIVE = 1, FOLDER_FLAT = 2;
+
+    /**
+     * מבנה 115: ...וגם תיקיות (dirs): FOLDER_TREE — התיקייה עצמה, רשימה בשמה עם המבנה; FOLDER_LIVE — רשימה חכמה של התיקייה
+     * ("/חיה"); FOLDER_FLAT — רק הקבצים ("/קבצים"). שם קיים — המסך עונה מראש "שם אחר" ("/תפוס:לשנות-שם"), כמו שעשה עד כאן.
+     */
+    static Act onListAdd(String mode, long list, java.util.List<String> paths, java.util.List<String> dirs, int how, java.io.File here,
+                         java.util.Map<String, String> vars, Library lib) {
+        String sw = dirs.isEmpty() ? "" : how == FOLDER_FLAT ? " " + ListCmd.SW_FLAT
+                : (how == FOLDER_LIVE ? " " + ListCmd.SW_LIVE : "") + " " + Batch.SW_TAKEN + Batch.TAKEN_RENAME;
+        String text = Commands.word(Commands.get("COPY")) + " %" + Batch.V_SELECTED + "% " + ListCmd.MANUAL + " %" + Batch.V_SELECTED + "%" + sw + "\n";
         Batch.Selection sel = new Batch.Selection(mode, list, new java.util.ArrayList<Long>());
         sel.files.addAll(paths);
+        sel.dirs.addAll(dirs);
         return new Act(text, Batch.plan(text, here, vars, lib, null, sel), null);
     }
 

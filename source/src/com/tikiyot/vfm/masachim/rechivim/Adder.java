@@ -31,7 +31,7 @@ public final class Adder {
 
     /**
      * מ0.23: אותו דבר במסד — הבורר של המסד, ואותן שלוש אפשרויות לתיקיות: חיה (רשימה חכמה של התיקייה), עם המבנה (רשימות
-     * לתת־התיקיות), או הקבצים בלבד. הקבצים — DbFiles.add, החכמה — DbMore.liveFolder, המבנה — DbMore.attach. ברקע.
+     * לתת־התיקיות), או הקבצים בלבד. מבנה 115: הכול דרך המנהל, כפקודה (Manager.onListAdd) — המסך אינו כותב למסד. ברקע.
      */
     private static void manyDb(final Activity a, final List<File> folders, final List<String> files, final Done done) {
         DbPicker.choose(a, Words.ADD_TO_LIST + " · " + Words.NO_TOUCH, new DbPicker.Picked() {
@@ -53,36 +53,25 @@ public final class Adder {
                             @Override
                             public void onClick(DialogInterface d, final int which) {
                                 Ui.toast(a, Words.AddW.ADDING);
+                                // מבנה 115: דרך המנהל, כפקודה ("העתק %נבחרים% ידנית %נבחרים%" עם /חיה, /קבצים) — אותו כלל כמו בשורה כתובה. ברקע.
+                                final List<String> dirs = new ArrayList<String>();
+                                for (File f : folders) dirs.add(f.getAbsolutePath());
+                                final Library lib = Library.get(a);
+                                final Manager.Act act = Manager.onListAdd(mode, list, files, dirs,
+                                        which == 0 ? Manager.FOLDER_LIVE : which == 1 ? Manager.FOLDER_TREE : Manager.FOLDER_FLAT,
+                                        Paths.data(), BatchUi.vars(a, Paths.data()), lib);
+                                if (act.error() != null) {
+                                    Ui.toast(a, act.error());
+                                    return;
+                                }
                                 new Thread(new Runnable() {
                                     @Override
                                     public void run() {
-                                        final int[] c = {0, 0, 0};             // רשימות, פריטים, חכמות
-                                        final List<Tree.Node> scanned = new ArrayList<Tree.Node>();
-                                        if (which != 0) for (File f : folders) scanned.add(Tree.scanFolder(f, which == 1));
-                                        final DbListCmd.Res res = DbListCmd.nowRes(mode, new DbListCmd.Work() {
-                                            @Override
-                                            public DbListCmd.Res run(Store t, DbListCmd.Finder fd) {
-                                                if (which == 0) {
-                                                    for (File f : folders) if (DbMore.liveFolder(t, list, f.getAbsolutePath()) != 0) c[2]++;
-                                                } else {
-                                                    for (Tree.Node n : scanned) {
-                                                        int[] r = DbMore.attach(t, list, n, which == 1, true);
-                                                        c[0] += r[0];
-                                                        c[1] += r[1];
-                                                    }
-                                                }
-                                                if (!files.isEmpty()) c[1] += DbFiles.add(t, list, files, null, true).added;
-                                                return DbListCmd.Res.ok("");
-                                            }
-                                        }, false);
+                                        final String said = act.say(lib);
                                         a.runOnUiThread(new Runnable() {
                                             @Override
                                             public void run() {
-                                                if (res.error != null) Ui.toast(a, res.error);
-                                                else if (which == 0) Ui.toast(a, Words.AddW.ADDED_N + c[2] + Words.AddW.LIVE_ADDED
-                                                        + (c[1] > 0 ? c[1] + Words.AddW.ITEMS_DOT : "") + Words.NO_TOUCH);
-                                                else Ui.toast(a, (c[0] > 0 ? Words.AddW.ADDED_N + c[0] + Words.AddW.LISTS_AND : Words.AddW.ADDED_N)
-                                                        + c[1] + Words.AddW.ITEMS_DOT + Words.NO_TOUCH);
+                                                Ui.toast(a, said + (act.failed ? "" : Words.NO_TOUCH));
                                                 if (done != null) done.done();
                                             }
                                         });
