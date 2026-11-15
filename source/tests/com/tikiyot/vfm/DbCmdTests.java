@@ -415,7 +415,7 @@ final class DbCmdTests {
                                 + java.util.Arrays.toString(new91),
                         new91[0].equals("נוצרה") && new91[1].equals("נוצרה") && new91[2].equals("נוצרה") && new91[3].equals("נוצרה")
                                 && new91[4].equals(Words.DbCmd.nameTaken("בפנים")) && new91[5].equals("נוצרה") && new91[6].equals("נוצרה")
-                                && new91[7].equals(Words.DbCmd.BAD_NAME) && new91[8].equals(Words.DbCmd.BAD_NAME)
+                                && new91[7].equals(Words.DbCmd.BAD_NAME) && new91[8].equals(Words.DbCmd.BAD_NAME) && new91[9].equals(Words.DbCmd.BAD_NAME)
                                 && new91[10].equals(Words.DbCmd.nameTaken("עמוק")) && new91[11].equals(Words.DbCmd.nameTaken("רגילה"))
                                 && newId91[0] != 0 && newId91[4] == 0 && newId91[7] == 0);
                 final String[] got91 = {"", ""};
@@ -485,6 +485,9 @@ final class DbCmdTests {
                     }
                 }
                 o.check("מבנה 91: אף מסך אינו יוצר רשימה בעצמו; ה־➕ והבורר — דרך המנהל", none91 && ui91.contains("Manager.onListNew(") && ui91.contains("DbVerbsUi.makeList("));
+                List<String> e92 = go("המשך ()\nאופן \"" + m91 + "\"\nודא שגיאה\nשנה ידנית \"חדש/בפנים\" \"  \"\nודא ידנית \"חדש/בפנים\" קיימת\n"
+                        + "ודא ידנית \"חדש/ללא שם\" חסרה\n", here, vars, lib);
+                o.check("מבנה 92: שם שכולו רווחים — סירוב, גם בשינוי שם בפקודה (עד כאן הרשימה קיבלה את השם \"ללא שם\") " + e92, bad(e92).isEmpty());
                 go("המשך ()\nבטל אופן \"" + m91 + "\"\n", here, vars, lib);
             }
         } catch (Throwable t) {

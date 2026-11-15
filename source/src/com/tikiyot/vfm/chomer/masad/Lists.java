@@ -138,7 +138,8 @@ final class Lists {
         String name = raw == null ? "" : raw;
         if (name.contains("/") || name.contains("\\")) return Words.DbCmd.BAD_NAME;
         String n = type == Store.SMART ? name.trim() : Names.cleanName(name);
-        if (n.isEmpty()) return Words.DbCmd.BAD_NAME;
+        // מבנה 92: שם שכולו רווחים (או רק "#") — ריק; עד כאן הניקוי הפך אותו ל"ללא שם", והרשימה נוצרה או שונתה לשם הזה
+        if (n.isEmpty() || name.replace('#', ' ').trim().isEmpty()) return Words.DbCmd.BAD_NAME;
         for (Long p : parents) {
             if (p == null || p == 0) continue;
             for (Store.Member m : s.members(p))
