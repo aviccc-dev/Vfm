@@ -308,7 +308,9 @@ public final class Cond {
         if (value.length() < 2) return null;
         char op = value.charAt(0);
         if (op != '>' && op != '<') return null;
-        String rest = value.substring(1).trim().toUpperCase(Locale.US);
+        // מבנה 95: גם ">=" ו־"<=" (כמו בתאריך); עד כאן "גודל:>=10MB" לא הובן
+        final boolean inclusive = value.charAt(1) == '=';
+        String rest = value.substring(inclusive ? 2 : 1).trim().toUpperCase(Locale.US);
         long mult = 1;
         if (rest.endsWith("KB")) { mult = 1024L; rest = cut(rest, 2); }
         else if (rest.endsWith("MB")) { mult = 1048576L; rest = cut(rest, 2); }
@@ -324,7 +326,7 @@ public final class Cond {
         return new Test() {
             @Override
             public boolean ok(Index ix, Index.Rec r) {
-                return greater ? r.size > bytes : r.size < bytes;
+                return greater ? (inclusive ? r.size >= bytes : r.size > bytes) : (inclusive ? r.size <= bytes : r.size < bytes);
             }
         };
     }
@@ -369,14 +371,37 @@ public final class Cond {
         else if (v.startsWith("<")) { before = true; v = v.substring(1).trim(); }
         final long edge = dateEdge(v);
         if (edge == Long.MIN_VALUE) return null;
+        // מבנה 95: תאריך מדויק הוא יום שלם (או שנה שלמה). "<=1.9.2026" — עד סוף היום הזה (עד כאן — עד תחילתו, והיום עצמו לא נכלל);
+        // ">1.9.2026" — אחריו (עד כאן — גם היום עצמו). ">=" ו"<", וכל זמן יחסי ("שבוע", "3 ימים") — בלי שינוי.
+        long after = dayAfter(v);
+        final long cut = after != Long.MIN_VALUE && (value.trim().startsWith("<=") || (value.trim().startsWith(">") && !value.trim().startsWith(">=")))
+                ? after : edge;
         final boolean older = before;
         return new Test() {
             @Override
             public boolean ok(Index ix, Index.Rec r) {
                 long t = added ? r.added : r.mtime;
-                return older ? t < edge : t >= edge;
+                return older ? t < cut : t >= cut;
             }
         };
+    }
+
+    /**
+     * מבנה 95: לתאריך מדויק — תחילת היום שאחריו (לשנה בלבד — תחילת השנה שאחריה); לזמן יחסי, או ערך שלא הובן — Long.MIN_VALUE.
+     */
+    static long dayAfter(String raw) {
+        String v = Text.norm(raw).trim();
+        long at = dateEdge(raw);
+        if (at == Long.MIN_VALUE || relative(v)) return Long.MIN_VALUE;
+        Calendar c = Calendar.getInstance();
+        c.setTimeInMillis(at);
+        c.add(v.split("[-/.]").length == 1 ? Calendar.YEAR : Calendar.DAY_OF_YEAR, 1);
+        return c.getTimeInMillis();
+    }
+
+    private static boolean relative(String v) {
+        return is(v, "יום") || is(v, "היום") || is(v, "שבוע") || is(v, "חודש") || is(v, "שנה")  // תחביר
+                || v.matches("^(\\d+)\\s*(" + Text.norm("ימים") + "|" + Text.norm("יום") + "|d)$");  // תחביר
     }
 
     /** נקודת הזמן של ערך תאריך, או Long.MIN_VALUE אם לא הובן. */
@@ -393,6 +418,7 @@ public final class Cond {
             String[] p = v.split("[-/.]");
             Calendar cal = Calendar.getInstance();
             cal.clear();
+            cal.setLenient(false);                                         // מבנה 95: "31.2.2026" — לא הובן (עד כאן — 3 במרץ, בשקט)
             if (p.length == 3) {
                 int a = Integer.parseInt(p[0].trim());
                 if (a > 1000) cal.set(a, Integer.parseInt(p[1].trim()) - 1, Integer.parseInt(p[2].trim()));

@@ -5634,6 +5634,36 @@ public final class Tests {
         check("189: נוסף:שבוע — נוסף לפני שעה, אף שהשתנה לפני שנה", Cond.parse("נוסף:שבוע").matches(q, r)
                 && !Cond.parse("תאריך:שבוע").matches(q, r));
         check("189: נוסף:<שבוע — לא", !Cond.parse("נוסף:<שבוע").matches(q, r));
+        // מבנה 95: תאריך מדויק הוא יום שלם; תאריך שאינו קיים — לא מובן; גודל עם "="
+        {
+            Index.Rec d95 = new Index.Rec();
+            d95.dir = -1;
+            d95.name = d95.norm = d95.loose = "y.pdf";
+            java.util.Calendar c95 = java.util.Calendar.getInstance();
+            c95.clear();
+            c95.set(2026, 8, 1, 15, 30);                                     // 1.9.2026 בשלוש וחצי
+            d95.mtime = c95.getTimeInMillis();
+            d95.size = 10L * 1048576;
+            String[][] w95 = {                                               // {תנאי, האם הקובץ מ־1.9.2026 בצהריים עונה}
+                    {"תאריך:<=1.9.2026", "1"}, {"תאריך:<1.9.2026", "0"}, {"תאריך:>=1.9.2026", "1"}, {"תאריך:>1.9.2026", "0"},
+                    {"תאריך:1.9.2026", "1"}, {"תאריך:<=31.8.2026", "0"}, {"תאריך:>31.8.2026", "1"}, {"תאריך:<2.9.2026", "1"},
+                    {"תאריך:<=2026", "1"}, {"תאריך:>2026", "0"}, {"תאריך:>2025", "1"}, {"תאריך:2026-09-01", "1"}, {"תאריך:<=2026-08-31", "0"},
+                    {"גודל:>=10MB", "1"}, {"גודל:>10MB", "0"}, {"גודל:<=10MB", "1"}, {"גודל:<10MB", "0"}};
+            StringBuilder bad95 = new StringBuilder();
+            for (String[] w : w95) {
+                Cond k95 = Cond.parse(w[0]);
+                boolean want = w[1].equals("1"), got = k95.unknown.isEmpty() && k95.matches(q, d95);
+                if (!k95.unknown.isEmpty() || got != want) bad95.append(" [").append(w[0]).append(" — ").append(k95.unknown.isEmpty() ? String.valueOf(got) : "לא הובן").append("]");
+                Cond n = Cond.parse(Text.norm(w[0]));                        // גם אחרי נרמול, כמו בחיפוש
+                if (!n.unknown.isEmpty() || n.matches(q, d95) != want) bad95.append(" [מנורמל: ").append(w[0]).append("]");
+            }
+            check("מבנה 95: \"<=\" ו\">\" על תאריך מדויק — לפי היום כולו; \"=\" בגודל (17 תנאים)" + bad95, bad95.length() == 0);
+            check("מבנה 95: תאריך שאינו קיים (31.2, 30.13) — \"לא הובן\", ולא תאריך אחר בשקט",
+                    Cond.parse("תאריך:31.2.2026").unknown.size() == 1 && Cond.parse("תאריך:1.13.2026").unknown.size() == 1);
+            check("מבנה 95: זמן יחסי — בלי שינוי (\">שבוע\" = \"שבוע\"; \"<=3ימים\" = \"<3ימים\")",
+                    Cond.parse("תאריך:>שבוע").matches(q, r) == Cond.parse("תאריך:שבוע").matches(q, r)
+                            && Cond.parse("תאריך:<=3ימים").matches(q, d95) == Cond.parse("תאריך:<3ימים").matches(q, d95));
+        }
         check("189: גם אחרי נרמול (\"נוספ\")", Cond.parse(Text.norm("נוסף:שבוע")).matches(q, r));
         r.added = 0;
         check("189: לא ידוע — לא \"חדש\", כן \"ישן\"", !Cond.parse("נוסף:שבוע").matches(q, r)
