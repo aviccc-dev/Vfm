@@ -981,20 +981,30 @@ final class DbListCmd {
                     else t.addNote(in, c.arg);
                     return Res.ok(Words.DbCmd.noteAdded(title, c.arg, Names.label(path)));
                 }
+                // מבנה 100: המספר של מה שנוצר / עודכן חוזר (Res.made ← Step.made) — כפתור שמריץ את השורה פותח בדיוק אותו
                 if (list) {
                     if (path == null || path.isEmpty()) return Res.err(Words.Verb.NOT_FOUND + c.arg);
                     if (DbPaths.find(t, mode, path) != 0) return Res.same(Words.ListCmdW.exists(Names.label(path)));
-                    return DbPaths.ensure(t, mode, path) == 0 ? Res.err(Words.Verb.NOT_FOUND + c.arg)
-                            : Res.ok(Words.ListCmdW.created(Names.label(path)));
+                    long id = DbPaths.ensure(t, mode, path);
+                    if (id == 0) return Res.err(Words.Verb.NOT_FOUND + c.arg);
+                    Res ok = Res.ok(Words.ListCmdW.created(Names.label(path)));
+                    ok.made = id;
+                    return ok;
                 }
                 if (smartNew) {
                     long had = DbPaths.smart(t, c.arg);
                     long id = DbPaths.ensureSmart(t, c.arg, c.cond, c.sort);
                     if (id == 0) return Res.err(Words.Verb.NOT_FOUND + c.arg);
-                    return id == had ? Res.same(Words.ListCmdW.exists(c.arg)) : Res.ok(Words.ListCmdW.createdSmart(c.arg));   // מבנה 98
+                    if (id == had) return Res.same(Words.ListCmdW.exists(c.arg));
+                    Res ok = Res.ok(Words.ListCmdW.createdSmart(c.arg));       // מבנה 98
+                    ok.made = id;
+                    return ok;
                 }
-                return DbPaths.updateSmart(t, c.arg, c.cond, c.sort) == 0 ? Res.err(Words.Verb.NOT_FOUND + c.arg)
-                        : Res.ok(Words.DbCmd.updated(c.arg));
+                long id = DbPaths.updateSmart(t, c.arg, c.cond, c.sort);
+                if (id == 0) return Res.err(Words.Verb.NOT_FOUND + c.arg);
+                Res ok = Res.ok(Words.DbCmd.updated(c.arg));
+                ok.made = id;
+                return ok;
             }
         };
         Res r;
@@ -1007,7 +1017,12 @@ final class DbListCmd {
         if (!r.noop) {
             s.describe = Words.DbCmd.inDb(r.text);
             s.op = new ListCmd.Op() {
-                @Override public String run(Library lib) { return real(mode, work, false, lib); }
+                @Override public String run(Library lib) {
+                    Res done = realRes(mode, work, false, lib);                  // כמו real(), ועוד המספר של מה שנוצר (מבנה 100)
+                    if (done.error != null) lastFailed = true;
+                    s.made = done.made;
+                    return done.error != null ? done.error : Words.DbCmd.inDb(done.text);
+                }
             };
         }
         return mode;

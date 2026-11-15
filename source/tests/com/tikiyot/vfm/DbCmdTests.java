@@ -691,6 +691,71 @@ final class DbCmdTests {
                     o.check("מבנה 99: מסך הרשימות אינו שומר עוד רשימה חכמה בעצמו — דרך המנהל",
                             !scr99.contains("DbSmartForm.save(") && scr99.contains("Manager.onSmartEdit("));
                 }
+                // מבנה 100: כפתורים שהפעולה שלהם שורה שכותבת — "צור רשימה", "צור רשימה חכמה", "עדכן רשימה חכמה"; מול הדרך הישנה
+                {
+                    final String[] steps100 = {"list", "list", "smart:סוג:pdf", "smart:סוג:pdf", "smart:סוג:epub", "update:סוג:txt"};
+                    final long[] oldIds = new long[steps100.length];
+                    final long[] newIds = new long[steps100.length];
+                    final boolean[] newWrites = new boolean[steps100.length];
+                    String wasMode100 = Db.currentMode;
+                    Db.currentMode = m91;                                       // הכפתור פועל באופן שפתוח במסך — כמו בתוכנה
+                    try {
+                    for (int i = 0; i < steps100.length; i++) {
+                        final String st100 = steps100[i];
+                        Db.write(Db.app, m91, null, new Db.Use<Void>() {                // הדרך הישנה — מה שהכפתור עשה בעצמו
+                            @Override public Void run(SqlStore t) {
+                                int k = java.util.Arrays.asList(steps100).indexOf(st100);
+                                long id = st100.equals("list") ? DbPaths.ensure(t, m91, java.util.Arrays.asList("ישן-כפתור", "א", "ב"))
+                                        : st100.startsWith("smart:") ? DbPaths.ensureSmart(t, "ישן-כפתור", st100.substring(6), "")
+                                        : DbPaths.updateSmart(t, "ישן-כפתור", st100.substring(7), "");
+                                for (int j = 0; j < steps100.length; j++) if (steps100[j].equals(st100) && oldIds[j] == 0) { oldIds[j] = id; break; }
+                                return null;
+                            }
+                        });
+                        String line = st100.equals("list") ? "צור רשימה \"חדש-כפתור/א/ב\""
+                                : st100.startsWith("smart:") ? "צור רשימה חכמה \"חדש-כפתור\" " + st100.substring(6)
+                                : "עדכן רשימה חכמה \"חדש-כפתור\" " + st100.substring(7);
+                        Manager.Act act = Manager.onVerbLine(line, here, vars, lib);
+                        Permit.close();
+                        try {
+                            newWrites[i] = act.error() == null && act.writes();
+                            if (newWrites[i]) act.say(lib);
+                            newIds[i] = act.made;
+                        } finally {
+                            Permit.open();
+                        }
+                    }
+                    } finally {
+                        Db.currentMode = wasMode100;
+                    }
+                    final List<String> old100 = new ArrayList<String>(), new100 = new ArrayList<String>();
+                    Db.read(Db.app, m91, new Db.Use<Void>() {
+                        @Override public Void run(SqlStore t) {
+                            for (Store.Item it : t.smarts()) {
+                                String row = it.name.replace("ישן-", "X-").replace("חדש-", "X-") + " · " + t.prop(it.id, Store.P_COND);
+                                if (it.name.startsWith("ישן-כפתור")) old100.add(row);
+                                if (it.name.startsWith("חדש-כפתור")) new100.add(row);
+                            }
+                            return null;
+                        }
+                    });
+                    o.check("מבנה 100: רשימות חכמות מכפתור — אותן רשימות, באותם שמות ובאותם תנאים, בשתי הדרכים (כולל \"(2)\" לתנאי אחר, ועדכון) "
+                                    + old100 + " " + new100, old100.equals(new100) && old100.size() == 2);
+                    o.check("מבנה 100: מה שכבר היה (שוב אותה רשימה, אותה חכמה) — אין מה לעשות, ובלי כתיבה; מה שנוצר או עודכן — המספר שלו חוזר "
+                                    + java.util.Arrays.toString(newIds),
+                            newWrites[0] && !newWrites[1] && newWrites[2] && !newWrites[3] && newWrites[4] && newWrites[5]
+                                    && newIds[0] != 0 && newIds[2] != 0 && newIds[4] != 0 && newIds[4] != newIds[2] && newIds[5] == newIds[2]
+                                    && oldIds[0] != 0 && oldIds[4] != oldIds[2] && oldIds[5] == oldIds[2]);
+                    List<String> v100 = go("המשך ()\nאופן \"" + m91 + "\"\nודא תוכן ידנית \"ישן-כפתור\" שווה תוכן ידנית \"חדש-כפתור\"\n", here, vars, lib);
+                    o.check("מבנה 100: \"צור רשימה\" מכפתור — שתי הדרכים בנו אותו מבנה " + v100, bad(v100).isEmpty());
+                    Manager.Act none100 = Manager.onVerbLine("אופן \"" + m91 + "\"\nעדכן רשימה חכמה \"אין כזו 100\" סוג:pdf", here, vars, lib);
+                    o.check("מבנה 100: עדכון של רשימה חכמה שאין — סירוב מהתכנון, באותו נוסח שהכפתור אמר (" + none100.error() + ")",
+                            (Words.Verb.NOT_FOUND + "אין כזו 100").equals(none100.error()));
+                    String ui100 = Files.readUtf8(new File(src, "src/com/tikiyot/vfm/masachim/rechivim/DbVerbsUi.java"));
+                    o.check("מבנה 100: הכפתורים אינם כותבים עוד רשימה או רשימה חכמה בעצמם — דרך המנהל",
+                            !ui100.contains("DbPaths.ensure(") && !ui100.contains("DbPaths.ensureSmart(") && !ui100.contains("DbPaths.updateSmart(")
+                                    && ui100.contains("Manager.onVerbLine("));
+                }
                 List<String> e92 = go("המשך ()\nאופן \"" + m91 + "\"\nודא שגיאה\nשנה ידנית \"חדש/בפנים\" \"  \"\nודא ידנית \"חדש/בפנים\" קיימת\n"
                         + "ודא ידנית \"חדש/ללא שם\" חסרה\n", here, vars, lib);
                 o.check("מבנה 92: שם שכולו רווחים — סירוב, גם בשינוי שם בפקודה (עד כאן הרשימה קיבלה את השם \"ללא שם\") " + e92, bad(e92).isEmpty());

@@ -93,6 +93,12 @@ final class Manager {
             this.dest = dest;
         }
 
+        /** מבנה 100: יש בתכנית משהו לעשות (ולא רק "כבר קיים — בלי שינוי"). */
+        boolean writes() {
+            for (Batch.Step s : plan.steps) if (s.op != null) return true;
+            return false;
+        }
+
         /** למה אי אפשר — מהתכנון (קובץ של התוכנה, תיקייה אסורה, פריט שכבר איננו); null — אפשר. */
         String error() {
             for (Batch.Step s : plan.steps) if (s.error != null) return s.error;
@@ -240,6 +246,15 @@ final class Manager {
         Batch.Selection sel = new Batch.Selection(mode, 0, name, cond, props);
         sel.ids.add(id);
         return new Act(text, Batch.plan(text, here, vars, lib, null, sel), null);
+    }
+
+    /**
+     * מבנה 100: כפתור (בתפריט, בשורה העליונה) שהפעולה שלו היא שורה של פקודה שכותבת — "צור רשימה", "צור רשימה חכמה", "עדכן
+     * רשימה חכמה". עד כאן המסך ביצע אותה בעצמו (DbVerbsUi); עכשיו — אותה שורה בדיוק, כמו בקובץ פקודות. line — כמו שהכפתור כתוב.
+     */
+    static Act onVerbLine(String line, java.io.File here, java.util.Map<String, String> vars, Library lib) {
+        String text = line.trim() + "\n";
+        return new Act(text, Batch.plan(text, here, vars, lib), null);
     }
 
     // ---------- התוצאה חוזרת: מה קורה בסוף ההרצה ----------

@@ -14,28 +14,29 @@ final class DbVerbsUi {
     private DbVerbsUi() { }
 
     /** מבצע את הפקודה במסד; false — אינה פקודת רשימות (ממשיכה כרגיל: מסכים, תיקייה, חיפוש, הרצה). */
-    static boolean run(final Activity a, Verbs.Cmd c) {
+    static boolean run(final Activity a, Verbs.Cmd c, String line, java.io.File dir) {
         final String mode = Db.currentMode;
         if (c.kind.equals(Verbs.K_LIST)) {
             List<String> path = Names.parsePath(c.arg);
-            long id = c.verb.equals(Verbs.CREATE) ? write(a, mode, new Job() {
-                @Override public long run(Store s, List<String> p) { return DbPaths.ensure(s, mode, p); }
-            }, path) : read(a, mode, path);
+            long id;
+            if (c.verb.equals(Verbs.CREATE)) {                                   // מבנה 100: דרך המנהל — השורה עצמה, כמו בקובץ פקודות
+                long[] made = verbLine(a, line, dir);
+                if (made == null) return true;
+                id = made[0] != 0 ? made[0] : read(a, mode, path);
+            } else id = read(a, mode, path);
             if (id == 0) Ui.toast(a, Words.Verb.NOT_FOUND + c.arg);
             else if (c.noOpen) Ui.toast(a, Words.ListCmdW.created(c.arg));     // מ0.40: /בלי-לפתוח
             else DbListScreen.open(a, mode, id, c.sort);                    // מ0.22: עם המיון שבפקודה
             return true;
         }
         if (c.kind.equals(Verbs.K_SMART)) {
-            final String name = c.arg, cond = c.cond, sort = c.sort;
+            final String name = c.arg, sort = c.sort;
             long id;
-            if (c.verb.equals(Verbs.CREATE)) id = write(a, mode, new Job() {
-                @Override public long run(Store s, List<String> p) { return DbPaths.ensureSmart(s, name, cond, sort); }
-            }, null);
-            else if (c.verb.equals(Verbs.UPDATE)) id = write(a, mode, new Job() {
-                @Override public long run(Store s, List<String> p) { return DbPaths.updateSmart(s, name, cond, sort); }
-            }, null);
-            else id = readSmart(a, mode, name);
+            if (c.verb.equals(Verbs.CREATE) || c.verb.equals(Verbs.UPDATE)) {   // מבנה 100: דרך המנהל — השורה עצמה
+                long[] made = verbLine(a, line, dir);
+                if (made == null) return true;
+                id = made[0] != 0 ? made[0] : readSmart(a, mode, name);
+            } else id = readSmart(a, mode, name);
             if (id == 0) Ui.toast(a, Words.Verb.NOT_FOUND + c.arg);
             else if (c.noOpen) Ui.toast(a, Words.ListCmdW.createdSmart(c.arg));   // מ0.40: /בלי-לפתוח; מבנה 98: "חכמה", לא "ידנית"
             else openSmart(a, mode, id, sort);
@@ -114,6 +115,27 @@ final class DbVerbsUi {
             return 0;
         }
         return act.made;
+    }
+
+    /**
+     * מבנה 100: שורה של פקודה שכותבת, מכפתור — דרך המנהל. מחזיר {המספר של מה שנוצר או עודכן; 0 — כבר היה, בלי שינוי}, או null —
+     * לא נעשה, וההודעה כבר הוצגה (שגיאה בשורה, אין כזו, תקלה).
+     */
+    private static long[] verbLine(Activity a, String line, java.io.File here) {
+        Library lib = Library.get(a);
+        java.io.File dir = here != null ? here : Paths.work();
+        Manager.Act act = Manager.onVerbLine(line, dir, BatchUi.vars(a, dir), lib);
+        if (act.error() != null) {
+            Ui.toast(a, act.error());
+            return null;
+        }
+        if (!act.writes()) return new long[]{0};
+        String said = act.say(lib);
+        if (act.failed) {
+            Ui.toast(a, said);
+            return null;
+        }
+        return new long[]{act.made};
     }
 
     /**

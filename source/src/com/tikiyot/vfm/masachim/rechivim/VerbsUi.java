@@ -20,12 +20,13 @@ final class VerbsUi {
     static boolean run(Activity a, String line, File here) {
         if (!Verbs.isVerb(line)) return false;
         Map<String, String> vars = BatchUi.vars(a, here != null ? here : Paths.work());
-        Verbs.Cmd c = Verbs.parse(Verbs.withVars(line, vars));
+        String full = Verbs.withVars(line, vars);
+        Verbs.Cmd c = Verbs.parse(full);
         if (c.error != null) {
             Ui.toast(a, c.error);
             return true;
         }
-        if (DbVerbs.active() && DbVerbsUi.run(a, c)) return true;               // מ0.10: במסד — פקודות הרשימות על המסד
+        if (DbVerbs.active() && DbVerbsUi.run(a, c, full, here)) return true;               // מ0.10: במסד — פקודות הרשימות על המסד
         String host = Verbs.hostCode(c);
         if (host != null) {
             Ui.toast(a, Words.Top.notHere(Verbs.label(c)));                         // מ0.42: אין עוד מסך שעושה אותן בעצמו (TopRow.Host — נמחק)
