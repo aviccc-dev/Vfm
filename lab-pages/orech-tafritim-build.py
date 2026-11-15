@@ -6,13 +6,12 @@ def rep(a,b,n=1):
     assert s.count(a)==n,(s.count(a),a[:70]); s=s.replace(a,b)
 NAME='עורך — בדיקת תפריטים'
 rep('<meta name="vfm-plugin" content="עורך אינטראקטיבי">','<meta name="vfm-plugin" content="%s">'%NAME)
-rep('<meta name="vfm-plugin-version" content="16">','<meta name="vfm-plugin-version" content="1">')
+rep('<meta name="vfm-plugin-version" content="16">','<meta name="vfm-plugin-version" content="2">')
 rep('<meta name="vfm-lab" content="עורך אינטראקטיבי">','<meta name="vfm-lab" content="%s">'%NAME)
 rep('<title>עורך אינטראקטיבי</title>','<title>%s</title>'%NAME)
 # ---- CSS
 rep('.bar2{display:flex;','''/* בדיקת תפריטים 1: שורת תפריטים כמו בחלונות, ומתחתיה סרגל קיצורים שניתן לשינוי */
-.title{padding:6px 12px 0;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.title small{color:var(--muted);font-weight:400}
+.fn{flex:1;min-width:0;align-self:center;text-align:end;padding:0 8px;font-size:.8rem;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .mbar{display:flex;gap:2px;padding:2px 6px 0;position:relative}
 .mbar>button{font:inherit;font-size:.95rem;border:0;background:transparent;color:var(--fg);padding:8px 9px;border-radius:6px;cursor:pointer}
 .mbar>button.on{background:var(--chip);color:var(--chip-fg)}
@@ -28,9 +27,8 @@ rep('.bar2{display:flex;','''/* בדיקת תפריטים 1: שורת תפריט
 # ---- HTML
 a=s.index('<div class="top">'); b=s.index('<div id="ed"></div>')
 s=s[:a]+'''<div class="top">
-  <div class="title" id="fname"></div>
   <div class="mbar" id="mbar" role="menubar">
-    <button type="button" data-m="file">קובץ</button><button type="button" data-m="edit">עריכה</button><button type="button" data-m="view">תצוגה</button><button type="button" data-m="run">הרצה</button><button type="button" data-m="help">עזרה</button>
+    <button type="button" data-m="file">קובץ</button><button type="button" data-m="edit">עריכה</button><button type="button" data-m="view">תצוגה</button><button type="button" data-m="run">הרצה</button><button type="button" data-m="help">עזרה</button><span class="fn" id="fname"></span>
     <div class="menu" id="menu" role="menu" hidden></div>
   </div>
   <div class="tbar" id="tbar"></div>
@@ -41,8 +39,8 @@ rep("const fname=$('fname'),saveBtn=$('save'),runBtn=$('run');","const fname=$('
 a=s.index('function upd(){'); b=s.index('function parseAll(content){')
 s=s[:a]+'''function upd(){
   fname.innerHTML='';
-  if(file){fname.append(document.createTextNode(file.name.replace(/\\.vbat$/,'')));if(dirty())fname.append(E('small',null,'  · לא נשמר'));}
-  else fname.textContent='אין קובץ פתוח — קובץ ← פתיחה';
+  if(file){fname.append(document.createTextNode(file.name.replace(/\\.vbat$/,'')));if(dirty())fname.append(document.createTextNode(' ●'));}
+  else fname.textContent='';
   track();drawTbar();
 }
 '''+s[b:]
@@ -52,6 +50,12 @@ s=s[:a]+s[b:]
 rep("function load(f,content){\n  file=f;","function load(f,content){\n  hist=[];hi=-1;\n  file=f;")
 rep("exists:drawExists,oldsave:drawOldSave,choose:drawChoose,name:drawName,vars:drawVars,cmdfile:drawCmdFile})[sh.kind]();","exists:drawExists,oldsave:drawOldSave,choose:drawChoose,name:drawName,vars:drawVars,cmdfile:drawCmdFile,find:drawFind,tbedit:drawTbEdit})[sh.kind]();")
 rep('לעריכה — "רגילה" בראש העמוד.','לעריכה — תצוגה ← רגילה.')
+rep("top('קובצי הפקודות');\n  const fs=myFiles()","top('פתיחה');\n  const fs=myFiles()")
+rep("  box.appendChild(B('it',[E('span',null,'+ קובץ חדש'),E('span','k','')],()=>{sh={kind:'newfile'};drawSheet();}));\n",'')
+a=s.index("  if(file)box.appendChild(B('it',[E('span',null,'שמירה בשם…')"); b=s.index("  sheetIn.appendChild(box);\n  if(fs.length>10){")
+s=s[:a]+s[b:]
+rep("B('primary','קובצי הפקודות',()=>openSheet({kind:'files'}))","B('primary','פתיחה…',()=>openSheet({kind:'files'}))")
+rep("'בחר קובץ פקודות, או צור חדש'","'אין קובץ פתוח. קובץ ← פתיחה, או קובץ ← חדש'")
 NEW=r'''
 // ====================== בדיקת תפריטים 1: התפריטים, הקיצורים, ביטול, ופעולות על שורות ======================
 // המשתמש (14.11.2026): "תפריט למעלה — קובץ, עריכה, ועוד לפי הצורך. מתחת לזה — קיצורים ניתנים לשינוי" · "לפי הסדר המקובל בחלונות".
@@ -108,7 +112,7 @@ const A={
   asif:{t:'הרצה בכאילו',s:'▶ בכאילו',f:()=>{real=false;run();},on:()=>!!file},
   real:{t:'הרצה אמיתית…',s:'▶ אמיתית',f:()=>{real=true;run();},on:()=>!!file,cls:'real'},
   cmds:{t:'רשימת הפקודות',f:()=>{if(view==='inter'&&file&&act<0)newLineAfter();openSheet({kind:'cmd'});},on:()=>view==='inter'&&!!file},
-  about:{t:'על העורך',f:()=>toast('עורך — בדיקת תפריטים 1 · על בסיס העורך האינטראקטיבי 16')}
+  about:{t:'על העורך',f:()=>toast('עורך — בדיקת תפריטים 2 · על בסיס העורך האינטראקטיבי 16')}
 };
 const MENUS={file:['new','open','-','save','saveas','savetpl','-','close'],
   edit:['undo','redo','-','cut','copy','paste','del','-','line','dup','up','down','-','find'],
@@ -175,5 +179,5 @@ function drawTbEdit(){
 }
 '''
 rep("// ---------- שמירה ----------\nfunction save(then){", NEW+"\n// ---------- שמירה ----------\nfunction save(then){")
-out='lab-pages/תוסף עורך בדיקת תפריטים 1.html'
+out='lab-pages/תוסף עורך בדיקת תפריטים 2.html'
 io.open(out,'w',encoding='utf-8').write(s); print(out,len(s.encode('utf-8')))
