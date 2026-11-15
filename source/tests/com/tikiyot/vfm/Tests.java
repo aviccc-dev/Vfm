@@ -107,9 +107,20 @@ public final class Tests {
         run("מבנה 3: שומרי המבנה — כל קובץ באחת מחמש התיקיות; פניות כלפי מעלה רק מהרשימה", new Runnable() { public void run() { mivne(); } });
         run("מ0.3 — הערכת רשימה חכמה מעל האינדקס (Smarts)", new Runnable() { public void run() { smartsM03(); } });
 
+        run("מבנה 71 — פקודות הרשימות במסד אמיתי, במחשב (מה שעד כאן נבדק רק במכשיר)", new Runnable() { public void run() { dbCmd(); } });
+
         System.out.println("בדיקות: " + passed + " עברו · " + failed + " נכשלו");
         for (String f : failures) System.out.println("  ✗ " + f);
         System.exit(failed == 0 ? 0 : 1);
+    }
+
+    /** מבנה 71: פקודות הרשימות במסד אמיתי — בקובץ נפרד (DbCmdTests); כאן רק מצרפים את התוצאה. */
+    private static void dbCmd() {
+        String src = System.getProperty("vfm.src");
+        if (src == null) return;
+        DbCmdTests.Out o = DbCmdTests.run(new File(src));
+        passed += o.passed;
+        for (String f : o.failed) check(f, false);
     }
 
     /** מבנה 3: שומרי המבנה — בקובץ נפרד (MivneTests); כאן רק מצרפים את התוצאה. */

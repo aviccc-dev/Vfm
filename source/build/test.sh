@@ -6,7 +6,7 @@ T=/home/claude/tools
 W=$(mktemp -d)
 mkdir -p $W/stubs $W/out $W/home
 export LANG=C.UTF-8
-javac -encoding UTF-8 -source 8 -target 8 -Xlint:-options -nowarn -d $W/stubs $(find $DIR/tests/stubs -name "*.java")
+javac -encoding UTF-8 -source 8 -target 8 -Xlint:-options -nowarn -classpath $T/android.jar -d $W/stubs $(find $DIR/tests/stubs -name "*.java")
 javac -encoding UTF-8 -source 8 -target 8 -Xlint:-options -nowarn -classpath $T/android.jar -d $W/out \
     $(find $DIR/src $DIR/tests/com -name "*.java")
 set +e

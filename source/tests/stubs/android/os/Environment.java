@@ -5,4 +5,9 @@ public class Environment {
     public static java.io.File getExternalStorageDirectory() {
         return new java.io.File(System.getProperty("vfm.home"));
     }
+
+    /** מבנה 71: במחשב ה"כונן" הוא תיקייה זמנית — יש גישה. */
+    public static boolean isExternalStorageManager() {
+        return true;
+    }
 }
