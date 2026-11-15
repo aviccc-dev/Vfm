@@ -193,7 +193,10 @@ public final class Cond {
         boolean other = false;
         List<Types.Group> groups = Types.groups();
         for (String p : Text.norm(value).split("\\|")) {
-            if (p.trim().isEmpty()) continue;
+            p = p.trim();
+            if (p.startsWith("*.")) p = p.substring(2);                       // מבנה 96: "סוג:.pdf" ו"סוג:*.pdf" — כמו "סוג:pdf" (עד כאן — 0 קבצים)
+            else if (p.startsWith(".")) p = p.substring(1);
+            if (p.isEmpty()) continue;
             Types.Group g = Types.find(groups, p);                        // שם של קבוצה קודם; אחרת — סיומת
             if (g != null) exts.addAll(g.exts);
             else if (Types.isOther(p)) other = true;

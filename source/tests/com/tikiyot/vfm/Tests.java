@@ -416,6 +416,22 @@ public final class Tests {
             if (!full.equals(strict)) same94 = false;
         }
         check("מבנה 94: בכל תנאי — הרשימה היא בדיוק ההתאמה המלאה של החיפוש (תשעה תנאים)", same94);
+        // מבנה 96 — המקרה של המשתמש: "ביקשתי קובץ pdf עם תווים מסויימים בשם, והוא הביא קבצים עם סיומת אחרת"
+        {
+            File r96 = new File(home, "מבנה96");
+            wipe(r96);
+            for (String n96 : new String[]{"שיעור 12 כללים.pdf", "שיעור 12 כללים.docx", "שיעור 12 כללים.mp3", "כללים.txt", "אחר.pdf"})
+                mk(new File(r96, "D"), n96, 10);
+            Library lib96 = Library.forTests(Collections.singletonList(built("מבנה96", r96)));
+            List<String> s96 = names(lib96.search("כללים pdf", false, true));
+            check("מבנה 96: כך היה — \"כללים pdf\" בחיפוש מביא גם txt, docx ו־mp3 (מתאימים רק ל\"כללים\") " + s96,
+                    s96.contains("כללים.txt") && s96.contains("שיעור 12 כללים.docx") && s96.contains("שיעור 12 כללים.mp3"));
+            boolean only96 = true;
+            for (String q96 : new String[]{"כללים pdf", "pdf כללים", "סוג:pdf כללים", "כללים.pdf", "*כללים*.pdf", "סוג:.pdf כללים", "סוג:*.pdf כללים", "סוג:PDF כללים"})
+                if (!names(lib96.list(q96)).equals(java.util.Arrays.asList("שיעור 12 כללים.pdf"))) only96 = false;
+            check("מבנה 96: ברשימה החכמה — בכל שמונה הדרכים לכתוב את זה, רק \"שיעור 12 כללים.pdf\"", only96);
+            wipe(r96);
+        }
         Smarts.Result sm94 = Smarts.over(lib).find("ספר מוגה", "", 100);
         check("מבנה 94: הספירה של הרשימה החכמה ושורותיה — לפי ההתאמה המלאה (" + sm94.count + ")", sm94.count == list94.hits.size());
         String src94 = read(new File(System.getProperty("vfm.src"), "src/com/tikiyot/vfm/chomer/indeks/Smarts.java"))
