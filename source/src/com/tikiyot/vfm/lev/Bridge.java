@@ -278,7 +278,15 @@ final class Bridge {
             if (!Batch.isBatch(f.getName())) return Words.Lab.ONLY_COMMANDS;
             boolean was = f.isFile();
             if (was && !replace) return EXISTS;
-            Files.writeAtomic(f, text == null ? "" : text);
+            // מבנה 132: קובץ בתיקיות של המשתמש — דרך המנהל, כפקודה "כתוב": התיקייה של המסד וקובצי התוכנה מסורבים (ממצא 41),
+            // והקובץ הקודם עובר לסל (הוראות, סעיף 4). בתוך תיקיית התוכנה (הקיצורים, פקודות המערכת — האזור שהתוכנה מנהלת,
+            // ו"כתוב" אינה כותבת בו) — כמו שהיה: רק קובץ פקודות, נכתב ישר.
+            String root = Paths.clean(Paths.data().getAbsolutePath()), at = Paths.clean(f.getAbsolutePath());
+            if (at.startsWith(root + "/")) Files.writeAtomic(f, text == null ? "" : text);
+            else {
+                String no = Manager.saveFile(f, text, was, Library.get(screen));
+                if (no != null) return no;
+            }
             if (!was) {
                 Library.get(screen).fileAdded(f);
                 Menus.addToMine(f);
@@ -557,11 +565,19 @@ final class Bridge {
             if (n.isEmpty()) return null;
             File dir = downloads ? android.os.Environment.getExternalStoragePublicDirectory(android.os.Environment.DIRECTORY_DOWNLOADS)
                     : Lab.dataDir(exp);
-            if (!dir.isDirectory()) dir.mkdirs();
             File f = new File(dir, n);
             boolean was = f.isFile();
-            Files.writeAtomic(f, text == null ? "" : text);
             Library lib = Library.get(screen);
+            if (downloads) {                                                    // מבנה 132: תיקייה של המשתמש — דרך המנהל, כפקודה "כתוב" (הקודם לסל)
+                String no = Manager.saveFile(f, text, was, lib);
+                if (no != null) {
+                    Log.i("Lab.saveText: " + no);
+                    return null;
+                }
+                return f.getAbsolutePath();
+            }
+            if (!dir.isDirectory()) dir.mkdirs();                               // התיקייה של התוסף עצמו — שלו
+            Files.writeAtomic(f, text == null ? "" : text);
             if (was) lib.fileRemoved(f.getAbsolutePath());
             lib.fileAdded(f);
             return f.getAbsolutePath();

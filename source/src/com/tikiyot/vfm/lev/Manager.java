@@ -279,6 +279,20 @@ final class Manager {
     }
 
     /**
+     * מבנה 132 (הדלת לתוספים — "מחברת"): קובץ של המשתמש שתוסף שומר — קובץ פקודות, או דוח לתיקיית ההורדות — נכתב כפקודה
+     * "כתוב", כמו מכל מקום אחר: קובץ של התוכנה — מסורב; קובץ קיים — רק עם replace, והקודם עובר לסל (הוראות, סעיף 4).
+     * null — נשמר; אחרת — למה לא.
+     */
+    static String saveFile(java.io.File f, String text, boolean replace, Library lib) {
+        java.io.File here = f.getParentFile() != null ? f.getParentFile() : Paths.work();
+        Act act = onNewFile(f, text == null ? "" : text, replace ? Batch.TAKEN_REPLACE : "", here, new java.util.HashMap<String, String>(), lib);
+        String no = act.error();
+        if (no != null) return no;
+        Physical.Result r = act.run(lib, null, null, false);
+        return r.failed > 0 ? (r.note == null || r.note.isEmpty() ? Words.SAVE_FAILED : r.note) : null;
+    }
+
+    /**
      * מבנה 81: פעולה של מסך הסל על הפריטים שנבחרו בו — restore: "שחזר מהסל %נבחרים%"; אחרת "רוקן סל %נבחרים%" (מחיקה לצמיתות).
      * items — המסלולים של הפריטים בתוך הסל.
      */

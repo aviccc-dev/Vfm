@@ -3132,6 +3132,42 @@ public final class Tests {
             } finally {
                 Permit.open();
             }
+            // מבנה 132: הדלת לתוספים — קובץ של המשתמש שתוסף שומר נכתב דרך המנהל, כפקודה "כתוב"
+            {
+                File f132 = new File(d80, "מתוסף 132.vbat");
+                String body132 = "REM %פנימי% \"מירכאות\"\nשורה שנייה";
+                Permit.close();                                                 // כמו בתוכנה: אין היתר, אלא אם המנהל פותח
+                String new132, again132, repl132, prog132;
+                int trash132;
+                try {
+                    new132 = Manager.saveFile(f132, body132, false, lib80);
+                    again132 = Manager.saveFile(f132, "אחר", false, lib80);
+                    String first132 = read(f132);
+                    trash132 = Trash.list(lib80).size();
+                    repl132 = Manager.saveFile(f132, "גרסה שנייה", true, lib80);
+                    trash132 = Trash.list(lib80).size() - trash132;
+                    prog132 = Manager.saveFile(Conf.file(), "x", true, lib80);
+                    File sc132 = new File(Shortcuts.dir(), "קיצור 132.vbat");
+                    check("מבנה 132: \"כתוב\" אינה כותבת בתוך תיקיית התוכנה (הקיצורים) — ולכן שם הגשר כותב כמו שהיה, ורק קובץ פקודות",
+                            Words.Disk.NO_FILE_IN_APP.equals(Manager.saveFile(sc132, "ECHO", false, lib80)) && !sc132.exists());
+                    check("מבנה 132: תוסף שומר קובץ חדש — נכתב כלשונו (" + new132 + "); שוב בלי \"להחליף\" — מסורב, והקובץ לא נגע (" + again132 + ")",
+                            new132 == null && body132.equals(first132) && again132 != null);
+                } finally {
+                    Permit.open();
+                }
+                check("מבנה 132: עם \"להחליף\" — התוכן החדש, והקודם עבר לסל (" + repl132 + " · " + trash132 + ")", repl132 == null && "גרסה שנייה".equals(read(f132)) && trash132 == 1);
+                lib80.flush(5000);
+                Batch.run(Batch.plan("רוקן סל \"" + f132.getAbsolutePath() + "\"\n", d80, v80, lib80), lib80, null, null);   // הסל — נקי לבדיקות שאחרי
+                lib80.flush(5000);
+                check("מבנה 132: קובץ של התוכנה — מסורב גם לתוסף (" + prog132 + ")", prog132 != null && !"x".equals(read(Conf.file())));
+                String br132 = read(new File(code, "lev/Bridge.java")), ls132 = read(new File(code, "masachim/LabScreen.java"));
+                int doors132 = 0;
+                for (File f : javaFiles(code)) if (read(f).contains("addJavascriptInterface(")) doors132++;
+                check("מבנה 132: דלת אחת — תוסף מתחבר לתוכנה רק במקום אחד, ורק אל הגשר; והגשר שומר קובץ של המשתמש רק דרך המנהל",
+                        doors132 == 1 && ls132.contains("addJavascriptInterface(new Bridge(") && br132.contains("Manager.saveFile(f, text, was, Library.get(screen))")
+                                && br132.contains("Manager.saveFile(f, text, was, lib)") && br132.contains("if (at.startsWith(root + \"/\")) Files.writeAtomic(")
+                                && br132.contains("if (!Batch.isBatch(f.getName())) return Words.Lab.ONLY_COMMANDS;"));
+            }
             String pui80 = read(new File(code, "masachim/rechivim/PhysicalUi.java"));
             check("מבנה 80: המסך של הפעולות בכונן אינו כותב עוד קובץ בעצמו; רק דרך המנהל", !pui80.contains("writeAtomic")
                     && pui80.contains("Manager.onNewFile(f, content"));
@@ -3364,7 +3400,7 @@ public final class Tests {
             // מבנה 128: השלד נסגר — מי שעוד כותב או מוחק קובץ ישירות, בלב ובמסכים, הוא רשימה סגורה שרק מתקצרת
             {
                 String[][] known128 = {
-                        {"lev/Bridge.java", "8", "הדלת לתוספים: קובץ פקודות וטקסט שתוסף שומר, ניקוי הנתונים שלו"},
+                        {"lev/Bridge.java", "8", "הדלת לתוספים: התיקייה של התוסף עצמו (שמירה, ניקוי), העותק הפרטי של קובץ שרץ, וקובץ פקודות בתוך תיקיית התוכנה; קובץ בתיקיות של המשתמש — דרך המנהל (מבנה 132)"},
                         {"lev/Lab.java", "10", "תיקיית התוספים: מעבר מהשם הישן, תוסף שבא עם התוכנה"},
                         {"masachim/IniEditScreen.java", "1", "עורך קובצי ההגדרות"},
                         {"masachim/LabScreen.java", "2", "עותק פרטי של עמוד התוסף שרץ"},
