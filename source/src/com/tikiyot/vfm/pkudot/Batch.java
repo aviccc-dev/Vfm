@@ -1795,6 +1795,16 @@ final class Batch {
     private static void planList(Step s, String cmd, ListCmd.Parsed lp, List<String> sw, File here, Map<String, String> vars, Sim sim) {
         if (cmd.equals(VERIFY)) {                                               // מ0.14: ודא — הצד הראשון רשימה, השאר תנאים
             if (!DbVerbs.active()) { s.error = Words.DbCmd.VERIFY_DB_ONLY; return; }
+            if (lp.sides.size() >= 2 && !lp.sides.get(1).list() && DbListCmd.W_SAME.equals(lp.sides.get(1).raw)) {   // מבנה 87: … זהה …
+                if (lp.sides.size() != 3 || !sw.isEmpty() || !lp.sides.get(0).list() || !lp.sides.get(2).list()) {
+                    s.error = Words.DbCmd.VERIFY_SAME_USAGE;
+                    return;
+                }
+                ListCmd.resolve(lp.sides.get(0), vars);
+                ListCmd.resolve(lp.sides.get(2), vars);
+                DbListCmd.planVerifySame(s, lp.sides.get(0), lp.sides.get(2), sim);
+                return;
+            }
             List<String> conds = new ArrayList<String>(sw);
             for (int i = 1; i < lp.sides.size(); i++) conds.add(lp.sides.get(i).raw);
             ListCmd.Side a = lp.sides.get(0);

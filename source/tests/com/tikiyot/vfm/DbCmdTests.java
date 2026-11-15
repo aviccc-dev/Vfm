@@ -177,6 +177,78 @@ final class DbCmdTests {
                         + bad(r86) + ")" + (count(r86, "✅") == 6 ? "" : " " + r86), bad(r86).isEmpty() && count(r86, "✅") == 6);   // חמש שורות ושורת הסיכום
                 go("המשך ()\nבטל אופן \"" + m86 + "\"\n", here, vars, lib);
             }
+            // מבנה 87: "ודא ידנית א זהה ידנית ב" — תמונת מצב של רשימה, והשוואה עד הסוף
+            {
+                final String m87 = "בדיקת-87";
+                String dir87 = "%" + Batch.V_INTERNAL + "%\\בדיקת 87 (אפשר למחוק)";
+                StringBuilder t87 = new StringBuilder("המשך ()\nצור אופן \"" + m87 + "\"\nאופן \"" + m87 + "\"\nMD \"" + dir87 + "\"\n"
+                        + "כתוב \"" + dir87 + "\\ק1.txt\" \"אחת\"\nכתוב \"" + dir87 + "\\ק2.txt\" \"שתיים\"\nכתוב \"" + dir87 + "\\ק3.txt\" \"שלוש\"\n");
+                // אותו מבנה, פעמיים (א, ב); ג — אותו תוכן בסדר אחר; ד — עותק במקום קישור; ה — קובץ נוסף בעומק
+                for (String r87 : new String[]{"א", "ב", "ג", "ד", "ה"}) {
+                    t87.append("MD ידנית \"").append(r87).append("/ספרים/עמוק/עמוק יותר\"\n");
+                    t87.append("MD ידנית \"").append(r87).append("/ריקה\"\n");
+                    if (r87.equals("ג")) t87.append("צור כותרת \"כותרת\" \"").append(r87).append("\"\n");   // לפני הקובץ, ולא אחריו
+                    t87.append("העתק \"").append(dir87).append("\\ק1.txt\" ידנית \"").append(r87).append("/ספרים\"\n");
+                    t87.append("העתק \"").append(dir87).append("\\ק2.txt\" ידנית \"").append(r87).append("/ספרים/עמוק\"\n");
+                    t87.append("העתק \"").append(dir87).append("\\ק1.txt\" ידנית \"").append(r87).append("\"\n");          // אותו קובץ בשתי רשימות
+                    t87.append("צור רעיון \"רעיון ראשון\" \"").append(r87).append("/ספרים\"\n");
+                    if (!r87.equals("ג")) t87.append("צור כותרת \"כותרת\" \"").append(r87).append("\"\n");
+                    if (r87.equals("ה")) t87.append("העתק \"").append(dir87).append("\\ק3.txt\" ידנית \"").append(r87).append("/ספרים/עמוק/עמוק יותר\"\n");
+                    t87.append(r87.equals("ד") ? "העתק" : "קשר").append(" ידנית \"").append(r87).append("/ספרים/עמוק\" ידנית \"").append(r87).append("/ריקה\"\n");
+                }
+                t87.append("ודא ידנית \"א\" זהה ידנית \"ב\"\nודא ידנית \"א\" זהה ידנית \"א\"\nודא ידנית * זהה ידנית *\n"
+                        + "ודא ידנית \"א/ספרים\" זהה ידנית \"ב/ספרים\"\n");
+                List<String> r87 = go(t87.toString(), here, vars, lib);
+                o.check("מבנה 87: שתי רשימות שנבנו באותן פקודות — זהות; רשימה זהה לעצמה; הבית זהה לעצמו; וגם תת־רשימה מול תת־רשימה (" + bad(r87) + ")"
+                        + (count(r87, "✅") == 5 ? "" : " " + r87), bad(r87).isEmpty() && count(r87, "✅") == 5);
+                List<String> d87 = go("המשך ()\nאופן \"" + m87 + "\"\nודא ידנית \"א\" זהה ידנית \"ג\"\nודא ידנית \"א\" זהה ידנית \"ד\"\n"
+                        + "ודא ידנית \"א\" זהה ידנית \"ה\"\nודא ידנית \"א\" זהה ידנית \"אין כזו\"\nודא ידנית \"א\" זהה ידנית \"א/ספרים\"\n", here, vars, lib);
+                String all87 = String.valueOf(d87);
+                o.check("מבנה 87: סדר אחר, עותק במקום קישור, קובץ נוסף בעומק, רשימה שאיננה, ורשימה מול תת־רשימה שלה — חמש ❌, כל אחת אומרת איפה ("
+                        + count(d87, "❌") + ")" + (count(d87, "❌") == 6 ? "" : " " + d87), count(d87, "❌") == 6 && count(d87, "שונות מהשורה ה־") == 4
+                        && all87.contains(Words.ListCmdW.noList("אין כזו")));
+                o.check("מבנה 87: ...עותק במקום קישור נתפס בדיוק במקום: אצל א — \"= L\" (אותה רשימה שוב), אצל ד — רשימה חדשה",
+                        java.util.regex.Pattern.compile("«= L\\d+» מול «L\\d+ \"עמוק\"»").matcher(all87).find());
+                // התמונה עצמה: בלי מספרי המסד, עם אותו קובץ בשני מקומות, ועם מאפיין שמשנה אותה
+                final List<List<String>> snap87 = new ArrayList<List<String>>();
+                final long[] root87 = {0};
+                Db.read(Db.app, m87, new Db.Use<Void>() {
+                    @Override public Void run(SqlStore s) {
+                        root87[0] = DbPaths.find(s, m87, java.util.Arrays.asList("א"));
+                        snap87.add(DbSnap.of(s, root87[0]));
+                        snap87.add(DbSnap.of(s, DbPaths.find(s, m87, java.util.Arrays.asList("ב"))));
+                        return null;
+                    }
+                });
+                String s87 = String.valueOf(snap87.get(0));
+                List<String> a87 = snap87.get(0);
+                o.check("מבנה 87: התמונה — שורה לכל פריט, לפי הסדר והעומק; הקובץ שבשתי רשימות מופיע פעם אחת במסלול שלו ופעם כ\"= F2\", והרשימה"
+                        + " המשותפת — כ\"= L2\"; בלי מספרי המסד " + a87,
+                        a87.size() == 11 && a87.get(0).equals("@") && a87.get(1).equals("  L1 \"ספרים\"") && a87.get(2).equals("    L2 \"עמוק\"")
+                                && a87.get(3).equals("      L3 \"עמוק יותר\"") && a87.get(4).startsWith("      F1 /") && a87.get(4).endsWith("ק2.txt | 10")
+                                && a87.get(5).startsWith("    F2 /") && a87.get(5).endsWith("ק1.txt | 6") && a87.get(6).equals("    N1 \"רעיון ראשון\"")
+                                && a87.get(7).equals("  L4 \"ריקה\"") && a87.get(8).equals("    = L2") && a87.get(9).equals("  = F2")
+                                && a87.get(10).equals("  T1 \"כותרת\"") && DbSnap.diff(a87, snap87.get(1)) == null && !s87.contains(String.valueOf(root87[0]) + " "));
+                Db.write(Db.app, m87, null, new Db.Use<Void>() {
+                    @Override public Void run(SqlStore s) {
+                        s.setProp(DbPaths.find(s, m87, java.util.Arrays.asList("ב", "ספרים", "עמוק")), Store.P_ICON, "📚");
+                        return null;
+                    }
+                });
+                List<String> p87 = go("המשך ()\nאופן \"" + m87 + "\"\nודא ידנית \"א\" זהה ידנית \"ב\"\n", here, vars, lib);
+                o.check("מבנה 87: צלמית שונה לרשימה אחת בעומק — כבר לא זהות, והשורה אומרת מה (" + bad(p87) + ")", count(p87, "❌") == 2
+                        && String.valueOf(p87).contains("{icon=📚}"));
+                o.check("מבנה 87: צורה שגויה — שגיאה כבר בתכנון", Batch.plan("אופן \"" + m87 + "\"\nודא ידנית \"א\" זהה \"ב\"\n", here, vars, lib).errors == 1
+                        && Batch.plan("אופן \"" + m87 + "\"\nודא ידנית \"א\" זהה חכמה \"ב\"\n", here, vars, lib).errors == 1
+                        && Batch.plan("אופן \"" + m87 + "\"\nודא ידנית \"א\" זהה ידנית \"ב\" /רשימות:1\n", here, vars, lib).errors == 1);
+                // יצוא לקובץ טקסט וייבוא ממנו — הרשימה שחוזרת זהה למקור, כולל הרשימה המשותפת והקובץ שבשתי רשימות.
+                // (נבדק מול "א" עצמה; ל"ב" שונתה צלמית למעלה.)
+                List<String> x87 = go("המשך ()\nאופן \"" + m87 + "\"\nCOPY ידנית \"א\" קובץ \"" + dir87 + "\\יצוא-87.txt\"\nMD ידנית \"מיובא\"\n"
+                        + "COPY קובץ \"" + dir87 + "\\יצוא-87.txt\" ידנית \"מיובא\"\nודא ידנית \"א\" זהה ידנית \"מיובא/א\"\n", here, vars, lib);
+                o.check("מבנה 87: יצוא לקובץ וייבוא ממנו — הרשימה שחוזרת זהה למקור עד הסוף (" + bad(x87) + ")" + (count(x87, "✅") == 2 ? "" : " " + x87),
+                        bad(x87).isEmpty() && count(x87, "✅") == 2);
+                go("המשך ()\nמחק תיקייה \"" + dir87 + "\" /S\nבטל אופן \"" + m87 + "\"\n", here, vars, lib);
+            }
         } catch (Throwable t) {
             t.printStackTrace();
             o.check("מבנה 71: חריגה — " + t, false);

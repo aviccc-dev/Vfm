@@ -987,6 +987,61 @@ final class DbListCmd {
         };
     }
 
+    /**
+     * מבנה 87: ודא ידנית "א" זהה ידנית "ב" — שתי הרשימות זהות עד הסוף (DbSnap: סדר, עומק, סוגים, שמות, מאפיינים, ואותו פריט
+     * בשני מקומות). השמות של שתי הרשימות עצמן אינם נבדקים. לא זהות — נאמר המקום הראשון שבו הן שונות.
+     */
+    static void planVerifySame(final Batch.Step s, final ListCmd.Side a, final ListCmd.Side b, Batch.Sim sim) {
+        for (ListCmd.Side x : new ListCmd.Side[]{a, b})
+            if (x.kind != ListCmd.LIST || x.content || x.filesOf || x.mask != null) { s.error = Words.DbCmd.VERIFY_SAME_USAGE; return; }
+        if (sim.modeError != null) { s.error = sim.modeError; return; }
+        final String mode = mode(sim);
+        Store db;
+        try {
+            db = sim(sim, mode);
+        } catch (Throwable t) {
+            Log.e("DbListCmd.verifySame", t);
+            s.error = Words.Db.failed(String.valueOf(t.getMessage()));
+            return;
+        }
+        final String what = Words.DbCmd.verifySame(a.label(), b.label());
+        String[] found = {""};
+        boolean now = same(db, mode, a, b, found);
+        s.target = a.label();
+        s.describe = Words.DbCmd.verifyWill(what) + " · " + Words.DbCmd.inDb(Words.DbCmd.verifyResult(now, what, found[0]));
+        s.op = new ListCmd.Op() {
+            @Override
+            public String run(Library lib) {
+                SqlStore st = null;
+                try {
+                    st = Db.openRead(Db.app, mode);
+                    String[] f = {""};
+                    boolean ok = same(st, mode, a, b, f);
+                    s.verified = ok;
+                    return Words.DbCmd.verifyResult(ok, what, f[0]);
+                } catch (Throwable t) {
+                    s.verified = Boolean.FALSE;
+                    return Words.Db.failed(String.valueOf(t.getMessage()));
+                } finally {
+                    if (st != null) st.close();
+                }
+            }
+        };
+    }
+
+    static boolean same(Store s, String mode, ListCmd.Side a, ListCmd.Side b, String[] found) {
+        long x = list(s, mode, a), y = list(s, mode, b);
+        if (x == 0 || y == 0) {
+            ListCmd.Side gone = x == 0 ? a : b;
+            found[0] = gone.home ? Words.DbCmd.NO_HOME : Words.ListCmdW.noList(gone.raw);
+            return false;
+        }
+        String d = DbSnap.diff(DbSnap.of(s, x), DbSnap.of(s, y));
+        if (d == null) return true;
+        found[0] = d;
+        return false;
+    }
+
     /** מ0.18: ודא "קובץ" קיים / חסר — בכונן (גם מה שהשורות שלפני ייצרו, לפי ההדמיה של Batch). */
     static void planVerifyFile(final Batch.Step s, final File f, List<String> conds) {
         Boolean want = null;
@@ -1060,6 +1115,8 @@ final class DbListCmd {
     static final String SW_FILES_IN = "/קבצים:", W_CONTAINS = "מכיל";   // תחביר
     /** מ0.42: "ודא "<קובץ>" באינדקס" — מה שהיה "בדיקת מסלול באינדקס" בהגדרות. */
     static final String W_IN_INDEX = "באינדקס";   // תחביר
+    /** מבנה 87: ודא ידנית "א" זהה ידנית "ב". */
+    static final String W_SAME = "זהה";   // תחביר
 
     /** מ0.42: האם האינדקס מכיר את הקובץ (ובכונן — קיים?). בהרצה — מול האינדקס של אותו רגע, אחרי שהתור שלו התרוקן. */
     private static void planVerifyIndex(final Batch.Step s, final File f) {
