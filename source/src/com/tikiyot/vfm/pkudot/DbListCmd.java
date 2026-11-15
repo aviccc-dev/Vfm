@@ -631,12 +631,12 @@ final class DbListCmd {
     }
 
     /** מ0.15: האופן של הקובץ — מ"אופן" שבו, אחרת זה שפתוח. */
-    static String mode(Batch.Sim sim) {
+    static String mode(Sim sim) {
         return sim != null && sim.mode != null ? sim.mode : mode();
     }
 
     /** שורה עם מילות סוג, כשעובדים במסד: אותן בדיקות צורה כמו ListCmd.plan; הפעולה — על העותק בזיכרון, ובהרצה — על המסד. */
-    static void plan(final Batch.Step s, final String cmd, ListCmd.Parsed p, List<String> sw, final Batch.Sim sim,
+    static void plan(final Batch.Step s, final String cmd, ListCmd.Parsed p, List<String> sw, final Sim sim,
                      final List<String> fsFiles, final File fsDest, final List<String> fsDirs) {
         boolean disk = false;                                                  // מ0.40: יש צד בכונן — שם /מכיל: חל
         for (ListCmd.Side x : p.sides) if (!x.list()) disk = true;
@@ -861,7 +861,7 @@ final class DbListCmd {
      * **בלי הדמיה:** התכנון של פקודת רשימה כתובה מעתיק את כל המסד לזיכרון כדי שהשורות הבאות יראו את התוצאה; כאן שורה אחת,
      * והמסך כבר הציג את חלון האישור שלו — העתקה של כל המסד בכל לחיצה הייתה עבודה יקרה לחינם (המשפך).
      */
-    private static void planPicked(final Batch.Step s, String cmd, ListCmd.Parsed p, List<String> sw, Batch.Sim sim, List<String> fsFiles,
+    private static void planPicked(final Batch.Step s, String cmd, ListCmd.Parsed p, List<String> sw, Sim sim, List<String> fsFiles,
                                    List<String> fsDirs) {
         final Batch.Selection sel = sim.selected;
         ListCmd.Side a = p.sides.get(0);
@@ -1025,7 +1025,7 @@ final class DbListCmd {
      * רשימה) — כאן כמו שהמסך עשה: תמיד חדשה, בתוך הרשימה שמוצגת (0 — הבית), בשם שהוקלד (ריק — "רשימה חכמה"). בלי הדמיה ובלי
      * גיבוי לפני (רק מוסיפה). לא נפתחת בסוף ההרצה — המסך מחליט.
      */
-    private static String planPickedSmart(final Batch.Step s, final Verbs.Cmd c, Batch.Sim sim) {
+    private static String planPickedSmart(final Batch.Step s, final Verbs.Cmd c, Sim sim) {
         final Batch.Selection sel = sim.selected;
         if (sel == null || sel.props == null || sel.mode == null || sel.name == null || sel.content == null) {
             s.error = Words.Cmd.NOTHING_SELECTED;
@@ -1076,7 +1076,7 @@ final class DbListCmd {
      * כמו שהמסך עשה: כל הטופס, בעסקה אחת; **גיבוי "לפני עריכה" לפני** (מבנה 58 — התנאי הקודם נדרס); ושם שהשתנה — קובצי הפקודות
      * שפונים אליה מתעדכנים (מ0.42, ב8). רשימה שנמחקה בזמן שהטופס היה פתוח — "הפריט הזה כבר לא קיים במסד — לא נשמר" (מבנה 60).
      */
-    private static String planPickedSmartEdit(final Batch.Step s, final Verbs.Cmd c, Batch.Sim sim) {
+    private static String planPickedSmartEdit(final Batch.Step s, final Verbs.Cmd c, Sim sim) {
         final Batch.Selection sel = sim.selected;
         if (sel == null || sel.props == null || sel.mode == null || sel.ids == null || sel.ids.size() != 1 || sel.name == null || sel.content == null) {
             s.error = Words.Cmd.NOTHING_SELECTED;
@@ -1146,7 +1146,7 @@ final class DbListCmd {
      * מהבחירה, ואינם מפוענחים. אותו כלל כמו בשורה הכתובה (edited). מה שנובע מהמקום: במסך — כל הטופס, ושדה שם ריק פירושו "בלי
      * שינוי בשם"; ורעיון / כותרת (שאין להם דרך של שמות) — רק מכאן, והטקסט שלהם הוא ה"שם".
      */
-    private static String planPickedEdit(final Batch.Step s, final Verbs.Cmd c, Batch.Sim sim) {
+    private static String planPickedEdit(final Batch.Step s, final Verbs.Cmd c, Sim sim) {
         final Batch.Selection sel = sim.selected;
         // מבנה 121: סדר ידני ("/מקום:") של הפריטים שנבחרו, בתוך הרשימה שמוצגת; ועיצוב ("/עיצוב:%תוכן%") לרשימה. בלי גיבוי — כמו במסך.
         final boolean place = c.edit != null && c.edit.containsKey(Verbs.E_PLACE), design = c.edit != null && c.edit.containsKey(Store.P_DESIGN);
@@ -1214,7 +1214,7 @@ final class DbListCmd {
      * מפוענח); הרשימה — זו שמוצגת במסך (המספר שלה), או הדרך שנכתבה אחרי. בלי הדמיה (כמו כל פעולה של %נבחרים% ברשימות), ובלי
      * גיבוי לפני (רק מוסיפה) — כמו שהמסך עשה. הסירובים — בנוסח של המסך.
      */
-    private static String planPickedNote(final Batch.Step s, final Verbs.Cmd c, final boolean title, Batch.Sim sim) {
+    private static String planPickedNote(final Batch.Step s, final Verbs.Cmd c, final boolean title, Sim sim) {
         final Batch.Selection sel = sim.selected;
         if (sel == null || sel.ids == null || sel.mode == null || sel.name == null || sel.name.trim().isEmpty()) {
             s.error = Words.Cmd.NOTHING_SELECTED;
@@ -1253,7 +1253,7 @@ final class DbListCmd {
      * "צור רשימה חכמה", "עדכן רשימה חכמה" — הוא שלב רגיל: על העותק בתכנון (שורות מאוחרות רואות אותו), ובהרצה על המסד, במקומו.
      * מחזיר את האופן אם זה פועל כותב (ואז בסוף רק פותחים את המסך), null — אינו כותב (נשאר כולו לסוף).
      */
-    static String planVerb(final Batch.Step s, final Verbs.Cmd c, final Batch.Sim sim) {
+    static String planVerb(final Batch.Step s, final Verbs.Cmd c, final Sim sim) {
         final boolean list = c.kind.equals(Verbs.K_LIST) && c.verb.equals(Verbs.CREATE);
         final boolean smartNew = c.kind.equals(Verbs.K_SMART) && c.verb.equals(Verbs.CREATE);
         final boolean smartUpd = c.kind.equals(Verbs.K_SMART) && c.verb.equals(Verbs.UPDATE);
@@ -1351,7 +1351,7 @@ final class DbListCmd {
      * הרשימה: הדרך כמו שנכתבה ("א/ב"); ואם אין — בתוך "שמור לתוכנה". כל הקבצים שבה, בכל העומק, כולל מה שהרשימות החכמות
      * שבתוכה מוצאות עכשיו. null — שגיאה (ב־err).
      */
-    static Compare.Source compSource(Batch.Sim sim, String name, String skip, String[] err) {
+    static Compare.Source compSource(Sim sim, String name, String skip, String[] err) {
         if (sim.modeError != null) { err[0] = sim.modeError; return null; }
         final String mode = mode(sim);
         Store db;
@@ -1439,7 +1439,7 @@ final class DbListCmd {
     }
 
     /** שורת ודא: בתכנון — על העותק (מה צפוי), בהרצה — על המסד; ❌ לא עוצרת. */
-    static void planVerify(final Batch.Step s, final ListCmd.Side a, List<String> conds, Batch.Sim sim) {
+    static void planVerify(final Batch.Step s, final ListCmd.Side a, List<String> conds, Sim sim) {
         if (!a.list() || a.content || a.filesOf || a.mask != null) { s.error = Words.DbCmd.VERIFY_USAGE; return; }
         final Expect e = expect(conds);
         if (e.error != null) { s.error = e.error; return; }
@@ -1532,7 +1532,7 @@ final class DbListCmd {
      * "ודא ידנית א זהה ידנית ב" · "ודא ידנית א שווה ידנית ב" · "ודא תוכן ידנית א שווה תוכן ידנית ב" (רק מה שבתוכן — השמות של
      * שתי הרשימות והמאפיינים שלהן עצמן אינם נבדקים). "שווה" נכשל גם כשהשתיים זהות: מי שבודק שנוצר עותק — רוצה לדעת אם קיבל קישור.
      */
-    static void planVerifySame(final Batch.Step s, final ListCmd.Side a, final ListCmd.Side b, final boolean exact, Batch.Sim sim) {
+    static void planVerifySame(final Batch.Step s, final ListCmd.Side a, final ListCmd.Side b, final boolean exact, Sim sim) {
         for (ListCmd.Side x : new ListCmd.Side[]{a, b})
             if (x.kind != ListCmd.LIST || x.filesOf || x.mask != null) { s.error = Words.DbCmd.VERIFY_SAME_USAGE; return; }
         if (a.content != b.content || (exact && a.content)) { s.error = Words.DbCmd.VERIFY_SAME_USAGE; return; }
@@ -1761,7 +1761,7 @@ final class DbListCmd {
         }
     }
 
-    static void planMode(final Batch.Step s, String raw, final boolean fromBackup, Batch.Sim sim) {
+    static void planMode(final Batch.Step s, String raw, final boolean fromBackup, Sim sim) {
         final String name = raw == null ? "" : raw.trim();
         if (name.isEmpty() || !name.equals(Names.cleanName(name).replaceAll("[:*?\"<>|\n\t]", " ").trim())) {
             s.error = Words.DbCmd.modeBadName(name);
@@ -1833,7 +1833,7 @@ final class DbListCmd {
      * בלי שאלה. מי שמתחרט — משחזר את התיקייה מהסל, ואז "צור אופן" באותו שם מציע להמשיך מהגיבוי (מבנה 48). אופן שכבר אינו
      * ונשארו ממנו גיבויים (מגרסה קודמת) — "בטל אופן" שולח גם אותם לסל.
      */
-    static void planDropMode(final Batch.Step s, final String name, Batch.Sim sim) {
+    static void planDropMode(final Batch.Step s, final String name, Sim sim) {
         if (!DbVerbs.active()) { s.error = Words.DbCmd.VERIFY_DB_ONLY; return; }
         s.target = name;
         if (!sim.hasMode(name)) {
@@ -1933,7 +1933,7 @@ final class DbListCmd {
     }
 
     /** העותק בזיכרון — פעם אחת לכל קובץ פקודות (השורות הבאות רואות מה שהקודמות עשו). */
-    private static Store sim(Batch.Sim sim, String mode) {
+    private static Store sim(Sim sim, String mode) {
         if (sim.db != null) return sim.db;
         SqlStore real = Db.openRead(Db.app, mode);
         try {
@@ -1944,7 +1944,7 @@ final class DbListCmd {
         return sim.db;
     }
 
-    private static Finder finder(final Batch.Sim sim) {
+    private static Finder finder(final Sim sim) {
         return over(sim.lib, sim.condFiles);
     }
 
@@ -2047,7 +2047,7 @@ final class DbListCmd {
      * כולם, ואם צריך משנה שם"). הביצוע — הרגיל של הכונן (Batch.run); כאן רק התכנון, קובץ אחרי קובץ על ההדמיה.
      */
     private static void toFolder(Batch.Step s, String cmd, ListCmd.Side a, Store db, String mode, Finder find, List<String> sw,
-                                 Batch.Sim sim, File fsDest) {
+                                 Sim sim, File fsDest) {
         if (fsDest == null || !sim.isDir(fsDest)) { s.error = Words.Cmd.NO_DEST; return; }
         final boolean copy = cmd.equals("COPY");
         String[] err = {null};
