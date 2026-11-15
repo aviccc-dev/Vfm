@@ -113,7 +113,7 @@ public class SettingsScreen extends Activity {
                 opts, new android.content.DialogInterface.OnClickListener() {
                     @Override
                     public void onClick(android.content.DialogInterface d, int w) {
-                        Conf.set(Conf.GENERAL, Conf.DELETED, w == 0 ? Conf.DELETED_REMOVE : Conf.DELETED_GREY);
+                        Acts.setting(SettingsScreen.this, Conf.DELETED, w == 0 ? Conf.DELETED_REMOVE : Conf.DELETED_GREY);   // מבנה 127: דרך המנהל
                         labels();
                     }
                 });
@@ -134,8 +134,8 @@ public class SettingsScreen extends Activity {
             public void run() {
                 StringBuilder sb = new StringBuilder();
                 for (String p : ex.get()) if (p.startsWith("/")) sb.append(sb.length() > 0 ? "|" : "").append(p);
-                Conf.set(Conf.GENERAL, Conf.EXCLUDED, sb.toString());
-                Ui.toast(SettingsScreen.this, Words.Prefs.EXCLUDED_SAVED);
+                if (Acts.setting(SettingsScreen.this, Conf.EXCLUDED, sb.toString()))   // מבנה 127: דרך המנהל
+                    Ui.toast(SettingsScreen.this, Words.Prefs.EXCLUDED_SAVED);
             }
         });
     }
@@ -156,7 +156,8 @@ public class SettingsScreen extends Activity {
         rg.setOnCheckedChangeListener(new RadioGroup.OnCheckedChangeListener() {
             @Override
             public void onCheckedChanged(RadioGroup g, int id) {
-                for (int i = 0; i < g.getChildCount(); i++) if (g.getChildAt(i).getId() == id) lib.setUpdateLevel(i + 1);
+                for (int i = 0; i < g.getChildCount(); i++)
+                    if (g.getChildAt(i).getId() == id && lib.updateLevel() != i + 1) Acts.setting(SettingsScreen.this, Conf.LEVEL, Conf.LEVELS[i]);   // מבנה 127
             }
         });
         root.addView(rg);
@@ -171,7 +172,7 @@ public class SettingsScreen extends Activity {
         sp.setOnItemSelectedListener(new android.widget.AdapterView.OnItemSelectedListener() {
             @Override
             public void onItemSelected(android.widget.AdapterView<?> p, View v, int pos, long id) {
-                lib.setPeriodicMinutes(mins[pos]);
+                if (mins[pos] != lib.periodicMinutes()) Acts.setting(SettingsScreen.this, Conf.PERIODIC, String.valueOf(mins[pos]));   // מבנה 127; הבורר קורא לכאן גם כשהמסך נפתח
             }
 
             @Override public void onNothingSelected(android.widget.AdapterView<?> p) { }

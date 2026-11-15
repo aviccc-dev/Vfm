@@ -379,6 +379,8 @@ final class Commands {
             new Def(Batch.PURGE, Words.DbCmd.N_PURGE, null, Family.FILE, Words.DbCmd.W_PURGE,
                     list(pos(Type.PATH, Words.Def.P_FILE, Words.DbCmd.H_PURGE)), null),
             new Def(Batch.EXAMPLES, Words.Cmd.N_EXAMPLES, null, Family.FILE, Words.Cmd.W_EXAMPLES, new Param[0], null),   // מבנה 123
+            new Def(Batch.SET, Words.Cmd.N_SET, new String[]{Words.Cmd.N_SET}, Family.FILE, Words.Cmd.W_SET,   // מבנה 127
+                    list(pos(Type.TEXT, Words.Cmd.P_SET_KEY, Words.Cmd.H_SET_KEY), pos(Type.TEXT, Words.Cmd.P_SET_VALUE, Words.Cmd.H_SET_VALUE)), null),
             new Def(Batch.PACK, Words.Cmd.N_PACK, new String[]{Words.Cmd.N_PACK}, Family.FILE, Words.Cmd.W_PACK,
                     list(pos(Type.PATH, Words.Def.P_FILE, Words.Cmd.H_PACK)), null),
             new Def(Batch.UNPACK, Words.Cmd.N_UNPACK, new String[]{Words.Cmd.N_UNPACK}, Family.FILE, Words.Cmd.W_UNPACK,

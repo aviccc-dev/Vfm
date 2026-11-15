@@ -3258,6 +3258,65 @@ public final class Tests {
             String run126 = read(new File(code, "masachim/RunScreen.java"));
             check("מבנה 126: מסך ההרצה אינו מנקה רשימות בעצמו; רק דרך המנהל", run126.contains("Manager.onRunClean(") && !run126.contains("DbListCmd.")
                     && !read(new File(code, "pkudot/DbListCmd.java")).contains("removeLists("));
+            // מבנה 127: "הגדר" — הגדרה של התוכנה בפקודה; המסכים קובעים דרך המנהל; בלי היתר — מסורב
+            {
+                Library lib127 = Library.forTests(new ArrayList<Index>());
+                String was127 = Conf.get(Conf.GENERAL, Conf.DELETED, ""), ex127 = Conf.get(Conf.GENERAL, Conf.EXCLUDED, "");
+                Batch.Plan w127 = Batch.plan("הגדר \"קובץ שנמחק\" \"השאר באפור\"\nהגדר \"רענון תקופתי בדקות\" \"05\"\n"
+                        + "הגדר \"לא לאנדקס\" \"%פנימי%\\מטמון\\..\\מטמון | %פנימי%/ב\"\n", r, v);
+                String rep127 = String.valueOf(Manager.run(w127, lib127, null, null, false, null));
+                check("מבנה 127: בקובץ פקודות — שלוש הגדרות נקבעות (" + w127.errorText() + "): בחירה, מספר (\"05\" ← 5), ותיקיות (מסלולים נקיים, מופרדים ב|)",
+                        w127.errors == 0 && !w127.trouble && Conf.DELETED_GREY.equals(Conf.get(Conf.GENERAL, Conf.DELETED, ""))
+                                && "5".equals(Conf.get(Conf.GENERAL, Conf.PERIODIC, "")) && lib127.periodicMinutes() == 5
+                                && (r.getAbsolutePath() + "/מטמון|" + r.getAbsolutePath() + "/ב").equals(Conf.get(Conf.GENERAL, Conf.EXCLUDED, ""))
+                                && rep127.contains(Words.Cmd.setDone(Conf.DELETED, Conf.DELETED_GREY)));
+                check("מבנה 127: הגדרה שאין, ערך שאינו מהבחירה, מספר שאינו מספר, תיקייה במסלול יחסי, ושורה חסרה — שגיאה בתכנון, והקובץ אינו רץ",
+                        Batch.plan("הגדר \"אין הגדרה כזו\" \"1\"\n", r, v).errors == 1 && Batch.plan("הגדר \"קובץ שנמחק\" \"אולי\"\n", r, v).errors == 1
+                                && Batch.plan("הגדר \"רענון תקופתי בדקות\" \"חמש\"\n", r, v).errors == 1 && Batch.plan("הגדר \"לא לאנדקס\" \"מטמון\"\n", r, v).errors == 1
+                                && Batch.plan("הגדר \"קובץ שנמחק\"\n", r, v).errors == 1 && Batch.plan("הגדר \"%שם-חדש%\" \"%תוכן%\"\n", r, v).errors == 1
+                                && Batch.plan("הגדר \"אין הגדרה כזו\" \"1\"\n", r, v).errorText().contains(Conf.SEND_TO));
+                Manager.Act a127 = Manager.onSetting(Conf.EXCLUDED, r.getAbsolutePath() + "/100% %פנימי% \"מ\"", r, v, lib127);
+                Permit.close();                                                 // כמו בתוכנה: אין היתר, אלא אם המנהל פותח
+                String said127, direct127;
+                try {
+                    said127 = a127.error() != null ? a127.error() : a127.say(lib127);
+                    direct127 = Conf.apply(Conf.setting(Conf.DELETED), Conf.DELETED_REMOVE);
+                    check("מבנה 127: ההיתר נסגר אחרי ההרצה", !Permit.held());
+                } finally {
+                    Permit.open();
+                }
+                check("מבנה 127: מהמסך, דרך המנהל — \"הגדר \"%שם-חדש%\" \"%תוכן%\"\"; הערך כלשונו, גם עם % ומירכאות (" + said127 + ")",
+                        a127.text.trim().equals("הגדר \"%שם-חדש%\" \"%תוכן%\"") && !a127.failed
+                                && (r.getAbsolutePath() + "/100% %פנימי% \"מ\"").equals(Conf.get(Conf.GENERAL, Conf.EXCLUDED, ""))
+                                && Manager.onSetting("אין הגדרה כזו", "1", r, v, lib127).error() != null
+                                && Manager.onSetting(Conf.LEVEL, "לפעמים", r, v, lib127).error() != null);
+                check("מבנה 127: קביעת הגדרה בלי היתר — מסורבת בנוסח של המשתמש, וההגדרה לא השתנתה (" + direct127 + ")", direct127 != null
+                        && direct127.contains(Words.PermitW.BYPASS) && Permit.strict(Permit.SETTING) && Conf.DELETED_GREY.equals(Conf.get(Conf.GENERAL, Conf.DELETED, "")));
+                Manager.Act same127 = Manager.onSetting(Conf.DELETED, Conf.DELETED_GREY, r, v, lib127);
+                check("מבנה 127: אותו ערך שוב — \"כבר כך\", בלי כישלון", same127.say(lib127).contains(Words.Cmd.SET_SAME) && !same127.failed);
+                String scr127 = read(new File(code, "masachim/SettingsScreen.java")), tr127 = read(new File(code, "masachim/rechivim/Transfer.java")),
+                        bar127 = read(new File(code, "masachim/rechivim/DbPasteBar.java")), lib127src = read(new File(code, "chomer/indeks/Library.java"));
+                check("מבנה 127: מסך ההגדרות, יעד השליחה והצירוף ללוח אינם כותבים הגדרה בעצמם — רק דרך המנהל (Acts.setting)",
+                        !scr127.contains("Conf.set(") && !tr127.contains("Conf.set(") && !bar127.contains("Conf.set") && scr127.contains("Acts.setting(")
+                                && tr127.contains("Acts.setting(") && bar127.contains("Acts.setting(") && !lib127src.contains("setUpdateLevel") && !lib127src.contains("setPeriodicMinutes")
+                                && read(new File(code, "masachim/rechivim/Acts.java")).contains("Manager.setting("));
+                StringBuilder gen127 = new StringBuilder();
+                boolean bool127 = false;
+                for (File f : javaFiles(code)) {
+                    String t = read(f), n = f.getName();
+                    if (n.equals("Conf.java")) continue;
+                    if (t.contains("Conf.set(Conf.GENERAL")) gen127.append(n).append(' ');
+                    if (t.contains("Conf.setBool(Conf.GENERAL")) bool127 = true;
+                }
+                check("מבנה 127: לסעיף [כללי] של ההגדרות אין כותבים ישירים — חוץ מ\"עיצוב הבית\" (מחכה לפקודות העיצוב); הרשימה רק מתקצרת (" + gen127.toString().trim() + ")",
+                        gen127.toString().trim().equals("Design.java") && !bool127);
+                check("מבנה 127: קביעה במקום אחד (Manager.setting) — נקבעת, ושגויה — נאמר למה", Manager.setting(Conf.READERS, "4") == null
+                        && "4".equals(Conf.get(Conf.GENERAL, Conf.READERS, "")) && Manager.setting(Conf.READERS, "הרבה") != null && Manager.setting("אין הגדרה כזו", "1") != null);
+                Conf.set(Conf.GENERAL, Conf.READERS, "8");
+                Conf.set(Conf.GENERAL, Conf.DELETED, was127.isEmpty() ? Conf.DELETED_REMOVE : was127);
+                Conf.set(Conf.GENERAL, Conf.EXCLUDED, ex127);
+                Conf.set(Conf.GENERAL, Conf.PERIODIC, "0");
+            }
             check("מבנה 84: ...ופעולות הכונן — מסורבות כולן (לא חזרו אחורה)", Permit.strict(Permit.DELETE) && Permit.strict(Permit.WRITE));
         }
         // מבנה 55: המכשיר עצר את התוכנה בזמן הרצה — הדוח אומר זאת ואיזו הגדרה פותרת
@@ -4707,7 +4766,7 @@ public final class Tests {
     /** 1.22.5: ההגדרה האחת — שלמה, תואמת למנוע, וכל פרמטר עם שם והסבר. */
     private static void v1225() {
         check("1.22.5: פקודות הקבצים — אותן ובאותו סדר (מ0.14: ודא)",
-                java.util.Arrays.equals(Commands.fileNames(), new String[]{"COPY", "MOVE", "DEL", "REN", "MD", "RD", "COMP", "LINK", "VERIFY", "MODE", "CONTINUE", "WRITE", "WAIT", "BACKUP", "REFRESH", "REPORT", "CALL", "START", "ECHO", "REM", "SECTION", "DROPMODE", "UNTRASH", "PURGE", "EXAMPLES", "PACK", "UNPACK"}));   // מ0.44: קטע; מ0.45: מחק אופן, שחזר מהסל, רוקן סל; מבנה 122: ארוז, פרוס
+                java.util.Arrays.equals(Commands.fileNames(), new String[]{"COPY", "MOVE", "DEL", "REN", "MD", "RD", "COMP", "LINK", "VERIFY", "MODE", "CONTINUE", "WRITE", "WAIT", "BACKUP", "REFRESH", "REPORT", "CALL", "START", "ECHO", "REM", "SECTION", "DROPMODE", "UNTRASH", "PURGE", "EXAMPLES", "SET", "PACK", "UNPACK"}));   // מ0.44: קטע; מ0.45: מחק אופן, שחזר מהסל, רוקן סל; מבנה 122: ארוז, פרוס
         check("1.22.5: שמות נרדפים", Commands.canonical("MKDIR").equals("MD") && Commands.canonical("rmdir").equals("RD")
                 && Commands.canonical("ERASE").equals("DEL") && Commands.canonical("RENAME").equals("REN")
                 && Commands.canonical("copy").equals("COPY") && Commands.canonical("FORMAT").equals("FORMAT")

@@ -369,6 +369,27 @@ public final class Words {
         public static String modeRepaired(String name) { return "האופן \"" + name + "\": נוצר בית, והרשימות נכנסו אליו"; }
 
         // מבנה 122: אריזה ופריסה של zip — כפקודות
+        // מבנה 127: "הגדר" — הגדרה של התוכנה, בפקודה
+        public static final String N_SET = "הגדר",
+                W_SET = "קובע הגדרה של התוכנה (באופן העבודה הפתוח): הגדר \"<הגדרה>\" \"<ערך>\". ההגדרות: קובץ שנמחק · לא לאנדקס · שליחה למכשיר — יעד · עדכון האינדקס · רענון תקופתי בדקות · נתונים מלאים · צירוף ללוח · קוראים לכל כונן",
+                H_SET_KEY = "שם ההגדרה, כמו שהוא כתוב בקובץ ההגדרות", H_SET_VALUE = "הערך; לתיקיות — מסלולים מלאים, מופרדים ב|",
+                P_SET_KEY = "הגדרה", P_SET_VALUE = "ערך",
+                SET_USAGE = "צורה: הגדר \"<הגדרה>\" \"<ערך>\"", SET_SAME = "כבר כך — בלי שינוי";
+
+        public static String setUnknown(String key, String known) { return "אין הגדרה בשם \"" + key + "\" — יש: " + known; }
+
+        public static String setBadChoice(String key, String value, String allowed) { return "\"" + value + "\" אינו ערך של \"" + key + "\" — אפשר: " + allowed; }
+
+        public static String setBadNumber(String key, String value) { return "\"" + key + "\" הוא מספר (0 ומעלה) — נכתב: \"" + value + "\""; }
+
+        public static String setBadDirs(String key, String value) { return "\"" + key + "\" — מסלולים מלאים של תיקיות, מופרדים ב| — נכתב: \"" + value + "\""; }
+
+        public static String setBadText(String key) { return "\"" + key + "\" — ערך בשורה אחת"; }
+
+        public static String setWill(String key, String value) { return "ההגדרה \"" + key + "\" תיקבע: " + (value.isEmpty() ? "(ריק)" : value); }
+
+        public static String setDone(String key, String value) { return "ההגדרה \"" + key + "\": " + (value.isEmpty() ? "(ריק)" : value); }
+
         public static final String N_PACK = "ארוז", N_UNPACK = "פרוס",
                 W_PACK = "אורז תיקייה לקובץ zip לידה (התיקייה נשארת; שם תפוס — \"(2)\")",
                 W_UNPACK = "פורס קובץ zip לתיקייה חדשה לידו (הקובץ נשאר; שם תפוס — \"(2)\")",
@@ -2785,7 +2806,7 @@ public final class Words {
         /** שמות הפעולות — כמו שהם נאמרים בסירוב וביומן. */
         public static final String DELETE = "מחיקה", TRANSFER = "העתקה או העברה", RENAME = "שינוי שם", MAKE_FOLDER = "תיקייה חדשה",
                 RESTORE = "שחזור מהסל", FOREVER = "מחיקה לצמיתות", WRITE = "כתיבת קובץ", DB = "כתיבה למסד",
-                ZIP = "אריזה או פריסה של zip";
+                ZIP = "אריזה או פריסה של zip", SETTING = "שינוי הגדרה";
         /** מבנה 124: הפעולות שהתוכנה עושה לבד — בשם שבו המנהל רושם אותן (וכך הן נאמרות ביומן). */
         public static final String SYS_MENUS = "התקנת התפריטים", SYS_MINE = "הפקודות שלי", SYS_FOLLOW = "המעקב אחרי הכונן",
                 SYS_TOOLS = "הכלים שנוספים לרשימה", SYS_EXIT = "עותק ביציאה", SYS_START = "הכנת האופן בפתיחה",

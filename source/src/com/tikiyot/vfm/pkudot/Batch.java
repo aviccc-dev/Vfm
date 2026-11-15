@@ -219,6 +219,48 @@ final class Batch {
         return new File(p).isDirectory() ? Words.DbCmd.WRITE_IS_FOLDER : null;
     }
 
+    /**
+     * מבנה 127: "הגדר" — הכלל האחד לכל הדרכים (קובץ, מסך): ההגדרה חייבת להיות מוכרת (Conf.SETTINGS), והערך — מתאים לסוג שלה.
+     * מהמסך — "הגדר "%שם-חדש%" "%תוכן%"": המפתח והערך מהבחירה, ואינם מפוענחים (מסלול של תיקייה יכול להכיל %).
+     * נקבעת באופן העבודה הפתוח — שם קובץ ההגדרות.
+     */
+    private static void planSet(final Step s, List<String> tk, Map<String, String> vars, Sim sim) {
+        if (tk.size() != 3) { s.error = Words.Cmd.SET_USAGE; return; }
+        Selection sel = sim.selected;
+        boolean picked = tk.get(1).equals(var(V_NEW_NAME)) && tk.get(2).equals(var(V_CONTENT));
+        if (picked && (sel == null || sel.name == null || sel.content == null)) { s.error = Words.Cmd.NOTHING_SELECTED; return; }
+        final String key = picked ? sel.name : Verbs.withVars(tk.get(1), vars).trim();
+        String raw = picked ? sel.content : Verbs.withVars(tk.get(2), vars);
+        final Conf.Setting set = Conf.setting(key);
+        if (set == null) {
+            StringBuilder known = new StringBuilder();
+            for (Conf.Setting x : Conf.SETTINGS) known.append(known.length() > 0 ? " · " : "").append(x.key);
+            s.error = Words.Cmd.setUnknown(key, known.toString());
+            return;
+        }
+        final String value = Conf.valid(set, raw);
+        if (value == null) {
+            StringBuilder allowed = new StringBuilder();
+            if (set.values != null) for (String x : set.values) allowed.append(allowed.length() > 0 ? " · " : "").append(x);
+            s.error = set.kind == Conf.CHOICE ? Words.Cmd.setBadChoice(key, raw.trim(), allowed.toString())
+                    : set.kind == Conf.NUMBER ? Words.Cmd.setBadNumber(key, raw.trim())
+                    : set.kind == Conf.DIRS ? Words.Cmd.setBadDirs(key, raw.trim()) : Words.Cmd.setBadText(key);
+            return;
+        }
+        s.describe = Words.Cmd.setWill(key, value);
+        s.op = new ListCmd.Op() {
+            @Override public String run(Library lib) {
+                if (value.equals(Conf.current(set))) return Words.Cmd.setDone(key, value) + " · " + Words.Cmd.SET_SAME;
+                String no = Conf.apply(set, value);
+                if (no != null) {
+                    DbListCmd.lastFailed = true;
+                    return no;
+                }
+                return Words.Cmd.setDone(key, value);
+            }
+        };
+    }
+
     private static boolean small(final Plan plan, final Step s, String cmd, List<String> tk, File here,
                                  Map<String, String> vars, final Sim sim) {
         if (cmd.equals(DROP_MODE)) {                                            // מ0.45: מחק אופן
@@ -239,6 +281,10 @@ final class Batch {
                     return msg;
                 }
             };
+            return true;
+        }
+        if (cmd.equals(SET)) {                                                  // מבנה 127: הגדר "<הגדרה>" "<ערך>"
+            planSet(s, tk, vars, sim);
             return true;
         }
         if (cmd.equals(UNTRASH)) {                                              // מ0.45: שחזר מהסל
@@ -849,6 +895,8 @@ final class Batch {
     static final String WRITE = "WRITE", WAIT = "WAIT", BACKUP = "BACKUP", REFRESH = "REFRESH", REPORT = "REPORT", LAB = "LAB";
     /** מבנה 122: אריזה ופריסה של zip. */
     static final String PACK = "PACK", UNPACK = "UNPACK";
+    /** מבנה 127: "הגדר" — הגדרה של התוכנה, בפקודה (מה שמסך ההגדרות קבע בעצמו). */
+    static final String SET = "SET";
     /** מבנה 123: שחזר דוגמאות. */
     static final String EXAMPLES = "EXAMPLES";
     /**

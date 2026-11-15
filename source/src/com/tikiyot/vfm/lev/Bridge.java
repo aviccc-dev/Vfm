@@ -103,7 +103,7 @@ final class Bridge {
             o.put("labNewer", h == null ? "" : h);
             // מ0.42 — לתוסף האבחון: המכשיר, ההרשאה, המקום, היומנים והאינדקס (מה שהיה בראש דוח האבחון ובהגדרות)
             o.put("versionCode", pi.versionCode);
-            o.put("features", "steady dropclean zip");                              // מבנה 50: מה התוכנה יודעת (לתוסף — במקום לנחש לפי מספר הגרסה)
+            o.put("features", "steady dropclean zip set");                              // מבנה 50: מה התוכנה יודעת (לתוסף — במקום לנחש לפי מספר הגרסה)
             // מבנה 59: איפה תיקיות הגיבויים של האופנים, בכתיב של קובץ פקודות — לבדיקה "אופן שבוטל וחוזר" (שם התיקייה שונה בין הבניות)
             o.put("backupsVar", "%" + Drive.INTERNAL + "%\\" + Paths.DB_DIR + "\\" + Backups.DIR);
             o.put("device", Log.device());
@@ -520,9 +520,9 @@ final class Bridge {
     @JavascriptInterface
     public boolean setReaders(int n) {
         if (n < 1 || n > 16) return false;
-        Conf.set(Conf.GENERAL, Conf.READERS, String.valueOf(n));
-        Log.i("קוראים לכל כונן: " + n + " (מתוסף האבחון)");
-        return true;
+        String no = Manager.setting(Conf.READERS, String.valueOf(n));               // מבנה 127: דרך המנהל, כפקודה "הגדר"
+        Log.i("קוראים לכל כונן: " + n + " (מתוסף האבחון)" + (no == null ? "" : " — " + no));
+        return no == null;
     }
 
     /**

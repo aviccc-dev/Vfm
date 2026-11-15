@@ -155,6 +155,15 @@ public final class Acts {
     }
 
     /** ההגדרה \"קובץ שנמחק\": להשאיר ברשימות באפור, או להסיר (ברירת המחדל). */
+    /**
+     * מבנה 127: הגדרה שנקבעת במסך — דרך המנהל, כפקודה "הגדר" (אותו כלל כמו בקובץ פקודות). true — נקבעה; לא — נאמר למשתמש.
+     */
+    public static boolean setting(android.app.Activity a, String key, String value) {
+        String no = Manager.setting(key, value);
+        if (no != null) Ui.toast(a, no);
+        return no == null;
+    }
+
     public static boolean deletedStaysGrey() {
         return Conf.DELETED_GREY.equals(Conf.get(Conf.GENERAL, Conf.DELETED, Conf.DELETED_REMOVE));
     }

@@ -126,7 +126,7 @@ final class Transfer {
         Ui.list(a, Words.Send.FIXED, labels, new DialogInterface.OnClickListener() {
             @Override
             public void onClick(DialogInterface d, int which) {
-                Conf.set(Conf.GENERAL, Conf.SEND_TO, keys.get(which));
+                Acts.setting(a, Conf.SEND_TO, keys.get(which));                 // מבנה 127: דרך המנהל
                 if (done != null) done.run();
             }
         });

@@ -288,7 +288,7 @@ public final class Ui {
     public static void setFull(final boolean v) {
         fullCache = v;
         new Thread(new Runnable() {
-            @Override public void run() { Conf.setBool(Conf.GENERAL, Conf.FULL, v); }
+            @Override public void run() { Manager.setting(Conf.FULL, v ? Conf.YES : Conf.NO); }   // מבנה 127: דרך המנהל, כפקודה "הגדר"
         }).start();
     }
 

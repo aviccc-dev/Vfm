@@ -76,18 +76,14 @@ public final class Library {
     }
 
     /** 110: רמות העדכון — בקובץ ההגדרות של אופן העבודה (ולא בזיכרון אנדרואיד). */
-    public static final String LEVEL_KEY = "עדכון האינדקס", PERIODIC_KEY = "רענון תקופתי בדקות";  // תחביר
-    public static final String[] LEVELS = {"ידני בלבד", "בכל הפעלה של התוכנה", "בכל חזרה אל התוכנה"};  // תחביר
+    public static final String LEVEL_KEY = Conf.LEVEL, PERIODIC_KEY = Conf.PERIODIC;   // מבנה 127: ההגדרה — במקום אחד (Conf)
+    public static final String[] LEVELS = Conf.LEVELS;
 
     /** 1 = ידני · 2 = בכל הפעלה · 3 = בכל חזרה אל התוכנה (ברירת המחדל). */
     public int updateLevel() {
         String v = Conf.get(Conf.GENERAL, LEVEL_KEY, "");
         for (int i = 0; i < LEVELS.length; i++) if (LEVELS[i].equals(v)) return i + 1;
         return prefs().getInt("level", 3) == 1 ? 1 : 3;              // מעבר: מי שבחר ידני — נשאר ידני
-    }
-
-    public void setUpdateLevel(int v) {
-        Conf.set(Conf.GENERAL, LEVEL_KEY, LEVELS[Math.max(1, Math.min(3, v)) - 1]);
     }
 
     /** רענון תקופתי כשהתוכנה פתוחה — בדקות; 0 = כבוי (ברירת המחדל). */
@@ -97,10 +93,6 @@ public final class Library {
         } catch (Throwable t) {
             return 0;
         }
-    }
-
-    public void setPeriodicMinutes(int m) {
-        Conf.set(Conf.GENERAL, PERIODIC_KEY, String.valueOf(Math.max(0, m)));
     }
 
     // ---------- 110: בדיקה בכל חזרה, ורענון תקופתי ----------

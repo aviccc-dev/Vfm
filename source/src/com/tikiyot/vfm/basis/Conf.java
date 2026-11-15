@@ -60,21 +60,104 @@ public final class Conf {
     }
 
     public static boolean is(String section, String key, boolean def) {
-        String v = get(section, key, def ? "כן" : "לא");  // תחביר
-        return "כן".equals(v);  // תחביר
+        String v = get(section, key, def ? YES : NO);
+        return YES.equals(v);
     }
 
     public static synchronized void set(String section, String key, String value) {
+        put(section, key, value);
+    }
+
+    /** כמו set, ומחזיר אם נשמר (מבנה 127: מי שקובע בפקודה צריך לדעת). */
+    private static synchronized boolean put(String section, String key, String value) {
         Ini ini = ini();
         for (Ini.Line l : ini.entries(section))
             if (l.key.equals(key)) {
-                if (value.equals(l.value)) return;
+                if (value.equals(l.value)) return true;
                 ini.set(l, key, value);
-                ini.saveQuiet();
-                return;
+                return ini.saveQuiet();
             }
         ini.add(section, key, value);
-        ini.saveQuiet();
+        return ini.saveQuiet();
+    }
+
+    // ---------- מבנה 127: ההגדרות שנקבעות בפקודה "הגדר" — מפתח, סוג וערכים מותרים, במקום אחד ----------
+    // המשתמש (15.11.2026): "כל מה שאפשר לעבוד בפקודה עדיף שיעבוד בפקודה." המסכים והקובץ לוקחים מכאן; הגדרה שאינה כאן —
+    // "הגדר" אינה מכירה. הכול בסעיף [כללי] של קובץ ההגדרות של אופן העבודה.
+
+    /** 110: רמות העדכון של האינדקס, והרענון התקופתי. */
+    public static final String LEVEL = "עדכון האינדקס", PERIODIC = "רענון תקופתי בדקות";  // תחביר
+    public static final String[] LEVELS = {"ידני בלבד", "בכל הפעלה של התוכנה", "בכל חזרה אל התוכנה"};  // תחביר
+    public static final String YES = "כן", NO = "לא";  // תחביר
+
+    /** סוג הערך: אחד מכמה · מספר (0 ומעלה) · תיקיות (מסלולים מלאים, מופרדים ב"|"; ריק — אין) · טקסט. */
+    public static final int CHOICE = 0, NUMBER = 1, DIRS = 2, TEXT = 3;
+
+    public static final class Setting {
+        public final String key;
+        public final int kind;
+        public final String[] values;
+
+        Setting(String key, int kind, String... values) {
+            this.key = key;
+            this.kind = kind;
+            this.values = values;
+        }
+    }
+
+    public static final Setting[] SETTINGS = {
+            new Setting(DELETED, CHOICE, DELETED_REMOVE, DELETED_GREY),
+            new Setting(EXCLUDED, DIRS),
+            new Setting(SEND_TO, TEXT),
+            new Setting(LEVEL, CHOICE, LEVELS),
+            new Setting(PERIODIC, NUMBER),
+            new Setting(FULL, CHOICE, YES, NO),
+            new Setting(CLIP_ADD, CHOICE, YES, NO),
+            new Setting(READERS, NUMBER),
+    };
+
+    /** ההגדרה לפי המפתח שלה; null — "הגדר" אינה מכירה. */
+    public static Setting setting(String key) {
+        for (Setting s : SETTINGS) if (s.key.equals(key)) return s;
+        return null;
+    }
+
+    /** הערך כמו שיישמר (תיקיות — מסלולים נקיים); null — הערך אינו מתאים להגדרה. */
+    public static String valid(Setting s, String value) {
+        String v = value == null ? "" : value.trim();
+        if (s.kind == CHOICE) {
+            for (String x : s.values) if (x.equals(v)) return v;
+            return null;
+        }
+        if (s.kind == NUMBER) {
+            if (!v.matches("\\d{1,6}")) return null;
+            return String.valueOf(Integer.parseInt(v));
+        }
+        if (s.kind == DIRS) {
+            StringBuilder sb = new StringBuilder();
+            for (String part : v.split("\\|")) {
+                String d = part.trim().replace('\\', '/');
+                if (d.isEmpty()) continue;
+                if (!d.startsWith("/")) return null;
+                sb.append(sb.length() > 0 ? "|" : "").append(Paths.clean(d));
+            }
+            return sb.toString();
+        }
+        return v.indexOf('\n') >= 0 || v.indexOf('\r') >= 0 ? null : v;
+    }
+
+    /** הערך של היום ("" — לא נקבע). */
+    public static String current(Setting s) {
+        return get(GENERAL, s.key, "");
+    }
+
+    /**
+     * הקביעה עצמה. שואלת את ההיתר של שכבת הניהול (הוראות, סעיף 2). null — נקבע ונשמר; אחרת — למה לא (הסירוב, או שהשמירה נכשלה).
+     */
+    public static String apply(Setting s, String value) {
+        String no = Permit.check(Permit.SETTING);
+        if (no != null) return no;
+        return put(GENERAL, s.key, value) ? null : Words.SAVE_FAILED;
     }
 
     /**
@@ -101,6 +184,6 @@ public final class Conf {
     }
 
     public static void setBool(String section, String key, boolean v) {
-        set(section, key, v ? "כן" : "לא");  // תחביר
+        set(section, key, v ? YES : NO);
     }
 }

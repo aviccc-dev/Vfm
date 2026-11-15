@@ -354,6 +354,25 @@ final class Manager {
     }
 
     /**
+     * מבנה 127: הגדרה של התוכנה, מהמסך — "הגדר "%שם-חדש%" "%תוכן%"": המפתח (כמו שהוא בקובץ ההגדרות) והערך — מהבחירה, ואינם
+     * מפוענחים. אותו כלל כמו בשורה כתובה (Conf.SETTINGS): הגדרה שאינה מוכרת, או ערך שאינו מתאים — סירוב מהתכנון.
+     */
+    static Act onSetting(String key, String value, java.io.File here, java.util.Map<String, String> vars, Library lib) {
+        String text = Commands.word(Commands.get(Batch.SET)) + " \"%" + Batch.V_NEW_NAME + "%\" \"%" + Batch.V_CONTENT + "%\"\n";
+        return new Act(text, Batch.plan(text, here, vars, lib, null, new Batch.Selection(java.util.Collections.<String>emptyList(),
+                java.util.Collections.<String>emptyList(), null, key, value)), null);
+    }
+
+    /** מבנה 127: קביעת הגדרה — מתכנן ומריץ במקום אחד (המסכים, הגשר). null — נקבעה; אחרת — למה לא (הסירוב, או הכישלון). */
+    static String setting(String key, String value) {
+        Act act = onSetting(key, value, Paths.work(), new java.util.HashMap<String, String>(), null);
+        String no = act.error();
+        if (no != null) return no;
+        String said = act.say(null);
+        return act.failed ? said : null;
+    }
+
+    /**
      * מבנה 126: "ניקוי" שבסוף הרצה של קובץ פקודות (מסך ההרצה) — רשימה שההרצה יצרה יוצאת מהמסד: "אופן "<שם>"" (אם הקובץ קבע
      * אופן) ואחריה "בטל ידנית "<הדרך>"", כמו בקובץ פקודות. פעולה אחת לכל רשימה: אופן שבוטל בינתיים — סירוב מהתכנון;
      * רשימה שכבר איננה — אין מה לעשות (writes); והשאר ממשיכות.

@@ -51,7 +51,7 @@ final class DbPasteBar {
             @Override
             public void run() {
                 boolean on = !adding();
-                Conf.setBool(Conf.GENERAL, Conf.CLIP_ADD, on);
+                if (!Acts.setting(DbPasteBar.this.a, Conf.CLIP_ADD, on ? Conf.YES : Conf.NO)) return;   // מבנה 127: דרך המנהל
                 Ui.toast(DbPasteBar.this.a, on ? Words.DbClipW.ADD_ON_TOAST : Words.DbClipW.ADD_OFF_TOAST);
                 refresh();
             }
