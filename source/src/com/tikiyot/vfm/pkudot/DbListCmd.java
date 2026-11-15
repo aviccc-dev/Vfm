@@ -2065,7 +2065,7 @@ final class DbListCmd {
             if (x.startsWith(Batch.SW_TAKEN) && !Batch.takenValue(x)) { s.error = Batch.takenUnknown(x); return; }
             if (u.equals("/S") || x.equals(Batch.SW_KEEP)) s.recursive = true;
         }
-        Batch.Filter flt = Batch.filter(sw);                                   // מ0.40: /מכיל:
+        Filter flt = Filter.of(sw);                                   // מ0.40: /מכיל:
         if (flt.error != null) { s.error = flt.error; return; }
         if (!flt.contains.isEmpty()) s.contains = flt.contains;
         // מ0.25 (באג 4): /תפוס:לדלג ו־/מסלול גם מרשימה לתיקייה. /מסלול — המסלול המלא של הקובץ מהכונן, בתוך היעד
