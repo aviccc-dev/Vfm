@@ -494,12 +494,9 @@ final class Batch {
         if (t == W_FREE) f0 = sim.free(f0);
         final File f = f0;
         final boolean replace = t == W_REPLACE;
-        if (sim.isFile(parent)) { s.error = Words.DbCmd.writeNoFolder(Bidi.path(parent.getAbsolutePath())); return; }
+        // מבנה 111 (ה6ב): כמו בשורה הכתובה — התיקייה חייבת להיות קיימת (מי שצריך — "צור תיקייה" לפני; המנהל עושה זאת למסך)
+        if (!sim.isDir(parent)) { s.error = Words.DbCmd.writeNoFolder(Bidi.path(parent.getAbsolutePath())); return; }
         if (sim.lib != null && Physical.noWriteInto(sim.lib, parent) != null) { s.error = Physical.noWriteInto(sim.lib, parent); return; }
-        for (File up = parent; up != null && !sim.isDir(up); up = up.getParentFile()) {
-            sim.dirs.add(up.getAbsolutePath());
-            sim.gone.remove(up.getAbsolutePath());
-        }
         sim.gone.remove(f.getAbsolutePath());
         sim.added.put(f.getAbsolutePath(), GHOST);
         s.dest = f;

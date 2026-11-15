@@ -3055,6 +3055,15 @@ public final class Tests {
                         && again80.note.startsWith(Words.Disk.ALREADY_NAME) && body80.equals(read(new80)));
                 Physical.Result deep80r = Manager.onNewFile(deep80, "ע", Paths.data(), v80, lib80).run(lib80, null, null, false);
                 check("מבנה 80: תיקייה שחסרה מעל הקובץ — נוצרת, כמו שהמסך עשה", deep80r.failed == 0 && "ע".equals(read(deep80)));
+                File deep111 = new File(d80, "תיקייה 111/ק.vbat");
+                Manager.Act a111 = Manager.onNewFile(deep111, "x", Paths.data(), v80, lib80);
+                check("מבנה 111: מהמסך, תיקייה חסרה — שתי פקודות: \"צור תיקייה … /תפוס:לדלג\" ואז \"כתוב\" (" + a111.text.trim() + ")",
+                        a111.error() == null && a111.plan.steps.size() == 2 && a111.text.startsWith("צור תיקייה \"%יעד%\" /תפוס:לדלג\n"));
+                check("מבנה 111: \"כתוב\" לבדה — לא יוצרת תיקייה: בשורה ומהבחירה — שגיאה; ובחומר — סירוב",
+                        Batch.plan("כתוב \"אין-111\\א.txt\" \"x\"\n", d80, v80, lib80).errors == 1
+                        && Batch.plan("כתוב \"%יעד%\\%שם-חדש%\" \"%תוכן%\"\n", d80, v80, lib80, null, new Batch.Selection(new ArrayList<String>(),
+                                new ArrayList<String>(), new File(d80, "אין-111"), "א.txt", "y")).errors == 1
+                        && Physical.newFile(lib80, new File(d80, "אין-111/א.txt"), "x") != null && !new File(d80, "אין-111").exists());
                 check("מבנה 80: ההיתר נסגר אחרי כל הרצה", !Permit.held());
             } finally {
                 Permit.open();

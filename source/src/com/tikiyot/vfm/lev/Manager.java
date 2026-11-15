@@ -187,7 +187,11 @@ final class Manager {
 
     /** מבנה 110 (ה6): taken — התשובה של המשתמש לשאלה "שם קיים" (להחליף), כמו /תפוס: בקובץ; "" — בלי. */
     static Act onNewFile(java.io.File f, String content, String taken, java.io.File here, java.util.Map<String, String> vars, Library lib) {
-        String text = Commands.word(Commands.get(Batch.WRITE)) + " \"%" + Batch.V_DEST + "%\\%" + Batch.V_NEW_NAME + "%\" \"%" + Batch.V_CONTENT + "%\""
+        // מבנה 111 (ה6ב, המשתמש: "כן"): "כתוב" אינו יוצר תיקייה. כשהמסך יוצר קובץ בתיקייה שעוד אין ("פקודה חדשה" בתיקייה
+        // שעוד לא נוצרה) — קודם "צור תיקייה … /תפוס:לדלג", ואז "כתוב": שתי פקודות, כל אחת בכלל שלה.
+        String md = f.getParentFile() != null && !f.getParentFile().isDirectory()
+                ? Commands.word(Commands.get("MD")) + " \"%" + Batch.V_DEST + "%\" " + Batch.SW_TAKEN + Batch.TAKEN_SKIP + "\n" : "";
+        String text = md + Commands.word(Commands.get(Batch.WRITE)) + " \"%" + Batch.V_DEST + "%\\%" + Batch.V_NEW_NAME + "%\" \"%" + Batch.V_CONTENT + "%\""
                 + (taken == null || taken.isEmpty() ? "" : " " + Batch.SW_TAKEN + taken) + "\n";
         return new Act(text, Batch.plan(text, here, vars, lib, null, new Batch.Selection(java.util.Collections.<String>emptyList(),
                 java.util.Collections.<String>emptyList(), f.getParentFile(), f.getName(), content)), f.getParentFile());

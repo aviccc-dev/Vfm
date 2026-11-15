@@ -1168,7 +1168,7 @@ public final class Physical {
     }
 
     /**
-     * מבנה 80: קובץ טקסט חדש בכונן (עד כאן נכתב בקוד של המסך עצמו). אינו מחליף קובץ קיים; תיקייה שחסרה מעליו — נוצרת (140).
+     * מבנה 80: קובץ טקסט חדש בכונן (עד כאן נכתב בקוד של המסך עצמו). אינו מחליף קובץ קיים; מבנה 111: התיקייה חייבת להיות קיימת.
      * null — נוצר; אחרת הסיבה.
      */
     public static String newFile(Library lib, File f, String content) {
@@ -1188,7 +1188,7 @@ public final class Physical {
             if (why != null) return why;
         }
         try {
-            f.getParentFile().mkdirs();
+            if (!f.getParentFile().isDirectory()) return Words.DbCmd.writeNoFolder(f.getParent());   // מבנה 111: לא יוצרים תיקייה כאן
             Files.writeAtomic(f, content);
         } catch (Throwable t) {
             Log.e("קובץ חדש", t);
