@@ -36,7 +36,7 @@ final class MivneTests {
     static final String CODE = "src/com/tikiyot/vfm", LIST = "tests/mivne/lemala.txt";
     /** מי שרשאי לפתוח מסד ישירות: המנוע עצמו, שער המסד, הגיבויים (קובצי גיבוי), ובדיקות המנוע. */
     /** השאלות שרק המנהל שואל (שומר ד). */
-    static final List<String> DECISIONS = Arrays.asList("Batch.singleVerb(", "Batch.wantsCheck(", ".blocked()");
+    static final List<String> DECISIONS = Arrays.asList("Parse.singleVerb(", "Batch.wantsCheck(", ".blocked()");
     /** מי שרשאי לפתוח מסד לכתיבה בעצמו (שומר ג2). */
     static final List<String> WRITE_OPEN = Arrays.asList("Db", "DbScreen");
     static final List<String> GATE = Arrays.asList("SqlStore", "Db", "Backups", "BackupContract", "StoreContract");

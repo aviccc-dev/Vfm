@@ -341,7 +341,7 @@ public class RunScreen extends Activity {
                 @Override public void onClick(View v) { DbVerbsUi.runOpens(RunScreen.this, plan.opens, here); }
             }));
         if (plan.start != null)
-            bs.add(btn("▶ " + (Batch.isHome(plan.start) ? Words.Cmd.HOME_AT_END : plan.start.getName()), new View.OnClickListener() {
+            bs.add(btn("▶ " + (Parse.isHome(plan.start) ? Words.Cmd.HOME_AT_END : plan.start.getName()), new View.OnClickListener() {
                 @Override public void onClick(View v) { BatchUi.openStart(RunScreen.this, plan.start); }
             }));
         if (plan.measureJournal != null && new File(plan.measureJournal).isFile())

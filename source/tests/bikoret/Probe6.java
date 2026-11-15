@@ -51,7 +51,7 @@ public final class Probe6 {
         Library lib = lib(root);                                    // האינדקס נסרק עכשיו
         File fresh = mk(dl, "הורדה חדשה.pdf", 20);                  // ואחריו — הורדה חדשה
         File fresh2 = mk(dl, "עוד הורדה.epub", 30);
-        Map<String, String> vars = Batch.vars(root, root.getAbsolutePath(), null);
+        Map<String, String> vars = Parse.vars(root, root.getAbsolutePath(), null);
         Batch.Plan p = Batch.plan("DEL %הורדות%\\*.pdf\n", root, vars);
         List<String> rep = Batch.run(p, lib, null, null);
         lib.flush(5000);
@@ -69,7 +69,7 @@ public final class Probe6 {
         File d = new File(root, "תמונות");
         mk(d, ".nomedia", 0);
         mk(d, "תמונה.jpg", 10);
-        Map<String, String> vars = Batch.vars(root, root.getAbsolutePath(), null);
+        Map<String, String> vars = Parse.vars(root, root.getAbsolutePath(), null);
         Batch.Plan p = Batch.plan("DEL %פנימי%\\תמונות\\*.*\n", root, vars);
         List<String> names = new ArrayList<String>();
         for (String f : p.steps.get(0).files) names.add(new File(f).getName());
@@ -95,7 +95,7 @@ public final class Probe6 {
         mk(new File(root, Index.TRASH), "ב.pdf", 10);
         new File(root, "יעד").mkdirs();
         Library lib = lib(root);
-        Map<String, String> vars = Batch.vars(root, root.getAbsolutePath(), null);
+        Map<String, String> vars = Parse.vars(root, root.getAbsolutePath(), null);
         List<String> r1 = Batch.run(Batch.plan("RD \"%פנימי%\\" + Index.TRASH + "\" /S\n", root, vars), lib, null, null);
         List<String> r2 = Batch.run(Batch.plan("MOVE \"%פנימי%\\" + Index.TRASH + "\" %פנימי%\\יעד\n", root, vars), lib, null, null);
         lib.flush(5000);

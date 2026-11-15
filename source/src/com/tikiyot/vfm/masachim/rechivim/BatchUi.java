@@ -26,7 +26,7 @@ final class BatchUi {
     static Map<String, String> vars(Activity a, File here) {
         String card = null;
         for (Vols.Vol v : Vols.list(a)) if (!v.internal && card == null) card = v.root.getAbsolutePath();
-        return Batch.vars(here, internal(a), card);
+        return Parse.vars(here, internal(a), card);
     }
 
     /** כל קובצי הפקודות שהאינדקס מכיר (216: גם לכפתור הרצה בשורת הכפתורים). */
@@ -185,7 +185,7 @@ final class BatchUi {
                         final List<String> report = rep;
                         busy.close();
                         Log.i("קובץ פקודות: " + f + " · " + RunReport.logLine(report)     // 187; מ0.43: בקיצור
-                                + (plan.start != null ? " · " + (Batch.isHome(plan.start) ? Words.Cmd.HOME_AT_END : Words.Cmd.openAtEnd(plan.start.getName())) : ""));
+                                + (plan.start != null ? " · " + (Parse.isHome(plan.start) ? Words.Cmd.HOME_AT_END : Words.Cmd.openAtEnd(plan.start.getName())) : ""));
                         Ui.afterIndex(a, new Runnable() {
                             @Override
                             public void run() {
@@ -222,7 +222,7 @@ final class BatchUi {
     /** 216: מה ש־START ביקש — קובץ נפתח, תיקייה נפתחת במנהל הקבצים. */
     static void openStart(Activity a, File start) {
         if (start == null) return;
-        if (Batch.isHome(start)) Home.go(a);                                  // 1.9.0
+        if (Parse.isHome(start)) Home.go(a);                                  // 1.9.0
         else if (start.isFile()) Ui.open(a, start);
         else a.startActivity(SearchScreen.fileManager(a, start.getAbsolutePath()));   // 159
     }
@@ -244,7 +244,7 @@ final class BatchUi {
                 Ui.toast(a, Words.Db.REPORT_COPIED);
             }
         });
-        if (Batch.isHome(start))                                              // 1.9.0
+        if (Parse.isHome(start))                                              // 1.9.0
             b.setPositiveButton(Words.Cmd.TO_HOME, new DialogInterface.OnClickListener() {
                 @Override
                 public void onClick(DialogInterface d, int w) { Home.go(a); }

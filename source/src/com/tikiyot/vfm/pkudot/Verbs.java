@@ -154,7 +154,7 @@ final class Verbs {
         }
         for (String w : rest.split(" ")) {                                       // מבנה 104: /תפוס:<ערך> — כמו בהעתקת קבצים
             if (!w.startsWith(Syntax.SW_TAKEN)) continue;
-            if (!Batch.takenValue(w)) c.error = Batch.takenUnknown(w);
+            if (!Parse.takenValue(w)) c.error = Parse.takenUnknown(w);
             else c.taken = w.substring(Syntax.SW_TAKEN.length());
             rest = (" " + rest + " ").replace(" " + w + " ", " ").trim();
         }
@@ -195,7 +195,7 @@ final class Verbs {
             } else if (starts(rest, TOOL)) {                                  // מ0.19: כלי כפקודה
                 c.kind = K_TOOL;
                 c.arg = after(rest, TOOL);
-                List<String> tk = Batch.tokens(c.arg);
+                List<String> tk = Parse.tokens(c.arg);
                 if (tk.isEmpty() || !Target.isKind(tk.get(0))) c.error = Words.Verb.usage(OPEN);
             } else if (starts(rest, MENU)) {                                  // 1.17.0
                 c.kind = K_MENU;
@@ -223,14 +223,14 @@ final class Verbs {
             } else if (c.verb.equals(UPDATE) && starts(rest, LIST)) {         // מבנה 113: עדכן רשימה "<דרך>" /שם: /צלמית: /תיאור: /למה:
                 c.kind = K_LIST;
                 c.edit = new java.util.LinkedHashMap<String, String>();
-                for (String w : Batch.tokens(after(rest, LIST))) {
+                for (String w : Parse.tokens(after(rest, LIST))) {
                     String key = w.startsWith(SW_NAME) ? E_NAME : w.startsWith(SW_ICON) ? Store.P_ICON : w.startsWith(SW_DESC) ? Store.P_DESC
                             : w.startsWith(SW_WHY) ? Store.P_WHY : w.startsWith(SW_PLACE) ? E_PLACE : w.startsWith(SW_DESIGN) ? Store.P_DESIGN : null;
                     if (key != null) c.edit.put(key, w.substring(w.indexOf(':') + 1));
                     else if (w.startsWith("/") || !c.arg.isEmpty()) c.error = Words.Verb.usage(UPDATE);
                     else c.arg = unquote(w);
                 }
-                boolean picked = Batch.var(Batch.V_SELECTED).equals(c.arg);     // מהמסך — מה שבטופס, מהבחירה
+                boolean picked = Parse.var(Batch.V_SELECTED).equals(c.arg);     // מהמסך — מה שבטופס, מהבחירה
                 if (c.arg.isEmpty() || (c.edit.isEmpty() && !picked) || (c.edit.containsKey(E_NAME) && c.edit.get(E_NAME).trim().isEmpty())
                         || (c.edit.containsKey(E_PLACE) && place(c.edit.get(E_PLACE)) < 0))
                     c.error = Words.Verb.usage(UPDATE);                          // שם ריק בשורה — שגיאה (ה4); מקום לא מוכר
@@ -411,7 +411,7 @@ final class Verbs {
 
     /** מ0.19: "<סוג>" /מפתח:ערך … ← Target (הסוג והפרמטרים, כמו בכלי שבבית הישן). */
     static Target toolTarget(String arg) {
-        List<String> tk = Batch.tokens(arg == null ? "" : arg);
+        List<String> tk = Parse.tokens(arg == null ? "" : arg);
         if (tk.isEmpty()) return null;
         java.util.Map<String, String> m = new java.util.LinkedHashMap<String, String>();
         for (int i = 1; i < tk.size(); i++) {

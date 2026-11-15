@@ -135,7 +135,7 @@ final class DbListCmd {
             if (x.mask != null) {
                 for (Store.Member m : s.members(id)) {
                     String p = pathOf(s, m.item);
-                    if (p != null && Batch.wild(x.mask, new File(p).getName())) out.add(p);
+                    if (p != null && Parse.wild(x.mask, new File(p).getName())) out.add(p);
                 }
             } else if (!deep(s, id, f, out, new HashSet<Long>())) {
                 err[0] = Words.ListCmdW.INDEX_NOT_READY;
@@ -237,7 +237,7 @@ final class DbListCmd {
                     for (Store.Member m : t.members(id)) {
                         if (a.mask != null) {
                             String p = pathOf(t, m.item);
-                            if (p == null || !Batch.wild(a.mask, new File(p).getName())) continue;
+                            if (p == null || !Parse.wild(a.mask, new File(p).getName())) continue;
                         }
                         n[0]++;
                         boolean idea = m.item.type == Store.NOTE || m.item.type == Store.TITLE;
@@ -345,7 +345,7 @@ final class DbListCmd {
                 for (Store.Member m : s.members(src)) {
                     if (a.mask != null) {
                         String p = pathOf(s, m.item);
-                        if (p == null || !Batch.wild(a.mask, new File(p).getName())) continue;
+                        if (p == null || !Parse.wild(a.mask, new File(p).getName())) continue;
                     }
                     if (m.item.type == Store.LIST && (m.item.id == dest || s.contains(m.item.id, dest))) {
                         self.add(m.item.name);                               // היעד עצמו (או מה שהוא בתוכו) — לא לתוך עצמו
@@ -436,7 +436,7 @@ final class DbListCmd {
                 for (Store.Member m : s.members(src)) {
                     if (a.mask != null) {
                         String p = pathOf(s, m.item);
-                        if (p == null || !Batch.wild(a.mask, new File(p).getName())) continue;
+                        if (p == null || !Parse.wild(a.mask, new File(p).getName())) continue;
                     }
                     ids.add(m.item.id);
                 }
@@ -1261,10 +1261,10 @@ final class DbListCmd {
         final boolean listUpd = c.kind.equals(Verbs.K_LIST) && c.verb.equals(Verbs.UPDATE);   // מבנה 113: עדכן רשימה
         if (!list && !smartNew && !smartUpd && !note && !title && !listUpd) return null;
         if (listUpd) c.noOpen = true;                                           // השם יכול להשתנות — לא פותחים בסוף
-        if (listUpd && Batch.var(Batch.V_SELECTED).equals(c.arg)) return planPickedEdit(s, c, sim);                  // מבנה 113: מהטופס
-        if ((note || title) && Batch.var(Batch.V_SELECTED).equals(c.arg)) return planPickedNote(s, c, title, sim);   // מבנה 93: מהמסך
-        if (smartNew && Batch.var(Batch.V_NEW_NAME).equals(c.arg)) return planPickedSmart(s, c, sim);                // מבנה 97: מהטופס
-        if (smartUpd && Batch.var(Batch.V_SELECTED).equals(c.arg)) return planPickedSmartEdit(s, c, sim);            // מבנה 99: מהטופס
+        if (listUpd && Parse.var(Batch.V_SELECTED).equals(c.arg)) return planPickedEdit(s, c, sim);                  // מבנה 113: מהטופס
+        if ((note || title) && Parse.var(Batch.V_SELECTED).equals(c.arg)) return planPickedNote(s, c, title, sim);   // מבנה 93: מהמסך
+        if (smartNew && Parse.var(Batch.V_NEW_NAME).equals(c.arg)) return planPickedSmart(s, c, sim);                // מבנה 97: מהטופס
+        if (smartUpd && Parse.var(Batch.V_SELECTED).equals(c.arg)) return planPickedSmartEdit(s, c, sim);            // מבנה 99: מהטופס
         if (sim.modeError != null) { s.error = sim.modeError; return null; }
         final String mode = mode(sim);
         final Store db;
@@ -2062,7 +2062,7 @@ final class DbListCmd {
             if (x.equals(Syntax.SW_TAKEN + Syntax.TAKEN_SKIP)) s.skipTaken = true;
             if (x.equals(Syntax.SW_TAKEN + Syntax.TAKEN_STOP)) s.failTaken = true;
             if (x.equals(Syntax.SW_TAKEN + Syntax.TAKEN_RENAME)) s.renameTaken = true;
-            if (x.startsWith(Syntax.SW_TAKEN) && !Batch.takenValue(x)) { s.error = Batch.takenUnknown(x); return; }
+            if (x.startsWith(Syntax.SW_TAKEN) && !Parse.takenValue(x)) { s.error = Parse.takenUnknown(x); return; }
             if (u.equals("/S") || x.equals(Syntax.SW_KEEP)) s.recursive = true;
         }
         Filter flt = Filter.of(sw);                                   // מ0.40: /מכיל:

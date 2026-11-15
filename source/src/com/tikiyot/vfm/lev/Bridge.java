@@ -413,7 +413,7 @@ final class Bridge {
     /** מסלול מלא ← הצורה שבקובצי הפקודות (%הורדות%\…). */
     @JavascriptInterface
     public String toVar(String abs) {
-        return Batch.toVar(abs == null ? "" : abs, vars);
+        return Parse.toVar(abs == null ? "" : abs, vars);
     }
 
     /** הצורה שבקובצי הפקודות ← מסלול מלא (null — משתנה לא מוכר). */
@@ -731,7 +731,7 @@ final class Bridge {
     private File resolve(String raw) {
         if (raw == null || raw.trim().isEmpty()) return Shortcuts.dir();       // מבנה 41: לתוסף, ריק = תיקיית הפקודות (כמו שהיה); בקובץ פקודות — שגיאה
         String[] err = {null};
-        String p = Batch.path(raw, Shortcuts.dir(), vars, err);
+        String p = Parse.path(raw, Shortcuts.dir(), vars, err);
         return p == null ? null : new File(p);
     }
 

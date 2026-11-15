@@ -507,9 +507,9 @@ public final class Tests {
         check("1.10.0: עד 5 שורות במקום", Buttons.parseAll(many.toString()).rows(Buttons.TOP).size() == Buttons.MAX_ROWS);
 
         // START %בית%
-        Map<String, String> vars = Batch.vars(root, root.getAbsolutePath(), null);
+        Map<String, String> vars = Parse.vars(root, root.getAbsolutePath(), null);
         Batch.Plan hp = Batch.plan("START %בית%", root, vars);
-        check("1.9.0: START %בית%", hp.errors == 0 && Batch.isHome(hp.start));
+        check("1.9.0: START %בית%", hp.errors == 0 && Parse.isHome(hp.start));
         check("1.9.0: %בית% רק אחרי START", Batch.plan("COPY %כאן%\\א.pdf %בית%", root, vars).errors == 1);
         check("1.9.0: אחרי %בית% — בלי מסלול", Batch.plan("START %בית%\\x", root, vars).errors == 1);
     }
@@ -522,7 +522,7 @@ public final class Tests {
             Files.writeAtomic(new File(root, "הורדות/א.pdf"), "x");
             Files.writeAtomic(new File(root, "הורדות/ב.txt"), "x");
         } catch (Exception e) { throw new RuntimeException(e); }
-        Map<String, String> vars = Batch.vars(root, root.getAbsolutePath(), null);
+        Map<String, String> vars = Parse.vars(root, root.getAbsolutePath(), null);
         Batch.Plan p = Batch.plan("@ECHO OFF\nבכאילו\nMD לשלוח\nMOVE הורדות\\*.pdf לשלוח\nDEL הורדות\\*.txt\nECHO סוף\n", root, vars);
         check("1.10.0: בכאילו — מזוהה", p.asIf && p.errors == 0);
         check("1.10.0: בלי בכאילו — רגיל", !Batch.plan("MD לשלוח", root, vars).asIf);
@@ -560,7 +560,7 @@ public final class Tests {
             n++;
             String text = "";
             try { text = Files.readUtf8(b); } catch (Exception e) { }
-            Batch.Plan bp = Batch.plan(text, demo, Batch.vars(demo, home.getAbsolutePath(), null));
+            Batch.Plan bp = Batch.plan(text, demo, Parse.vars(demo, home.getAbsolutePath(), null));
             String errs = "";
             for (Batch.Step st : bp.steps) if (st.error != null) errs += st.line + ": " + st.error + " ";
             check("1.10.0: דוגמת פקודות בכאילו ובלי שגיאות — " + b.getName() + " " + errs, bp.asIf && bp.errors == 0 && bp.changes() > 0 || bp.start != null && bp.asIf && bp.errors == 0);
@@ -568,7 +568,7 @@ public final class Tests {
         eq("1.10.0: ארבע דוגמאות פקודות", 4, n);
         check("1.10.0: קובץ \"ישן\" — לפני שנתיים", System.currentTimeMillis() - new File(demo, "הורדות/קבלה ישנה.txt").lastModified() > 700L * 24 * 3600 * 1000);
         Batch.Plan del = null;
-        for (File b : bats) if (b.getName().startsWith("3 ")) try { del = Batch.plan(Files.readUtf8(b), demo, Batch.vars(demo, home.getAbsolutePath(), null)); } catch (Exception e) { }
+        for (File b : bats) if (b.getName().startsWith("3 ")) try { del = Batch.plan(Files.readUtf8(b), demo, Parse.vars(demo, home.getAbsolutePath(), null)); } catch (Exception e) { }
         check("1.10.0: דוגמה 3 — מוחקת רק את הישנים", del != null && del.steps.get(0).files.size() == 2);
     }
 
@@ -1701,7 +1701,7 @@ public final class Tests {
         File src = new File(root, "מקור"), work = new File(root, "עבודה");
         mk(src, "א.txt", 10);
         mk(new File(work, "נוכחי"), "א.txt", 10);
-        java.util.Map<String, String> vars = Batch.vars(here, root.getAbsolutePath(), null);
+        java.util.Map<String, String> vars = Parse.vars(here, root.getAbsolutePath(), null);
         Batch.Plan p = Batch.plan("RD \"" + work + "\" /S\nMD \"" + work + "/נוכחי\"\nCOMP \"" + src + "\" \"" + work + "/נוכחי\"\n"
                 + "COPY %רק-במקור% \"" + work + "/נוכחי\"", here, vars);
         eq("מ0.27: בלי שגיאות", 0, p.errors);
@@ -1721,7 +1721,7 @@ public final class Tests {
         wipe(dl);
         dl.mkdirs();
         try {
-            java.util.Map<String, String> vars = Batch.vars(dl, home.getAbsolutePath(), null);
+            java.util.Map<String, String> vars = Parse.vars(dl, home.getAbsolutePath(), null);
             vars.put(Syntax.V_DOWNLOADS, dl.getAbsolutePath());
             Batch.Plan pl = Batch.plan("הוסף מעבדה\nהחלף מעבדה \"עורך\" \"2\"\n", dl, vars);
             check("מ0.38→מ0.40: \"הוסף/החלף מעבדה\" ירדו — שגיאה עם הסבר, ולא נבלעות בפועל \"הוסף\"", pl.errors == 2
@@ -1732,7 +1732,7 @@ public final class Tests {
             mk(new File(w, "מקור"), "א.pdf", 5);
             mk(new File(w, "מקור"), "ב.tmp", 5);
             mk(new File(w, "יעד"), "x.txt", 5);
-            java.util.Map<String, String> wv = Batch.vars(w, w.getAbsolutePath(), null);
+            java.util.Map<String, String> wv = Parse.vars(w, w.getAbsolutePath(), null);
             Batch.Plan lp = Batch.plan("הערה ניסוי\n"
                     + "העתק \"%כאן%\\מקור\" \"%כאן%\\יעד\" /עמוק /תפוס:לדלג /תאריך:חודש /נסתרים\n"
                     + "העבר \"%כאן%\\מקור\\*.pdf\" \"%כאן%\\יעד\" /תפוס:להחליף\n"
@@ -1747,7 +1747,7 @@ public final class Tests {
             File yd = new File(w, "כרטיס-י"), dd = new File(w, "הורדות-י");      // קובץ ההחזרה שנשלח למשתמש (12.11.2026) — מתוכנן בלי שגיאה
             mk(new File(yd, "YMusic"), "מעבדה עורך 1.html", 5);
             dd.mkdirs();
-            java.util.Map<String, String> yv = Batch.vars(w, w.getAbsolutePath(), yd.getAbsolutePath());
+            java.util.Map<String, String> yv = Parse.vars(w, w.getAbsolutePath(), yd.getAbsolutePath());
             yv.put(Syntax.V_DOWNLOADS, dd.getAbsolutePath());
             Batch.Plan yp = Batch.plan("בדיקה\nהעבר \"%כרטיס%\\YMusic\" \"%הורדות%\" /עמוק /תאריך:יום /תפוס:לשאול\n", w, yv);
             check("מ0.39: קובץ ההחזרה להורדות — בלי שגיאה, וקובץ אחד", yp.errors == 0 && yp.steps.get(yp.steps.size() - 1).files.size() == 1);
@@ -1770,7 +1770,7 @@ public final class Tests {
         mk(src, "א.txt", 10);
         mk(new File(src, "תת"), "ב.txt", 10);
         mk(src, ".נסתר", 5);
-        java.util.Map<String, String> vars = Batch.vars(here, root.getAbsolutePath(), null);
+        java.util.Map<String, String> vars = Parse.vars(here, root.getAbsolutePath(), null);
         String r = root.getAbsolutePath();
         String he = "הערה זו שורת הערה\n"
                 + "הודעה שלום מהבדיקה\n"
@@ -1875,7 +1875,7 @@ public final class Tests {
         } catch (Exception e) {
             check("מ0.40: הכנה — " + e, false);
         }
-        java.util.Map<String, String> wv = Batch.vars(w, w.getAbsolutePath(), null);
+        java.util.Map<String, String> wv = Parse.vars(w, w.getAbsolutePath(), null);
         // השורות כמו שהעורך כותב אותן (מודל העמוד, lab-pages/מעבדה עורך 4.html — אותו מבנה בעברית ובאנגלית)
         String he = "הערה ניסוי\n"
                 + "העתק \"%כאן%\\מקור\" \"%כאן%\\יעד\" /עמוק /תפוס:לדלג /תאריך:חודש /נסתרים\n"
@@ -1939,7 +1939,7 @@ public final class Tests {
             String n = Commands.normal(l);
             java.util.List<String> sw = new java.util.ArrayList<String>();
             ListCmd.Parsed lp = ListCmd.parse(n, sw);
-            String c = Commands.canonical(Batch.tokens(n).get(0));
+            String c = Commands.canonical(Parse.tokens(n).get(0));
             boolean known = java.util.Arrays.asList("COPY", "MOVE", "DEL", "RD", "REN", "COMP", Syntax.LINK, Syntax.VERIFY).contains(c);
             check("מ0.40: שורת רשימות שהעורך כותב — " + l, lp != null && lp.error == null && lp.anyList() && known);
         }
@@ -1959,7 +1959,7 @@ public final class Tests {
             String v6 = "<meta name=\"vfm-plugin\" content=\"עורך אינטראקטיבי\"><meta name=\"vfm-plugin-version\" content=\"6\">שש";
             Files.writeAtomic(new File(dl, "תוסף עורך אינטראקטיבי 6.html"), v6);
             Files.writeAtomic(new File(dl, "שמור.html"), "<p>תוסף תזונה</p>");                 // html אחר — לא זז
-            java.util.Map<String, String> iv = Batch.vars(dl, ext.getAbsolutePath(), null);
+            java.util.Map<String, String> iv = Parse.vars(dl, ext.getAbsolutePath(), null);
             iv.put(Syntax.V_DOWNLOADS, dl.getAbsolutePath());
             String real = Files.readUtf8(new File(System.getProperty("vfm.src"), "../lab-pages/עורך אינטראקטיבי.vbat"));
             Batch.Plan rp = Batch.plan(real, dl, iv);                           // במחשב אין מסד: רק שורת הרשימה — "אין מסד"
@@ -2020,7 +2020,7 @@ public final class Tests {
         mk(a, "x.txt", 5);
         mk(b, "y.txt", 5);
         try { Files.writeAtomic(new File(a, "x.txt"), "איקס"); } catch (Exception e) { check("מ0.40: הכנה — " + e, false); }
-        java.util.Map<String, String> v = Batch.vars(r, r.getAbsolutePath(), null);
+        java.util.Map<String, String> v = Parse.vars(r, r.getAbsolutePath(), null);
         Index ix = new Index("040ב", "040ב", r.getAbsolutePath());
         ix.scan(null);
         Library lib = Library.forTests(new ArrayList<Index>(java.util.Collections.singletonList(ix)));
@@ -2127,7 +2127,7 @@ public final class Tests {
             String all = Files.readUtf8(new File(tdir, "klali.vbat"));
             int a = all.indexOf(":: מ0.40"), b = all.indexOf(":: מ0.40 — הקבצים שברשימה");
             String part = all.substring(a, b) + "מחק תיקייה \"%פנימי%\\בדיקת מ0.40 (אפשר למחוק)\" /עמוק\n";
-            java.util.Map<String, String> v = Batch.vars(r, r.getAbsolutePath(), null);
+            java.util.Map<String, String> v = Parse.vars(r, r.getAbsolutePath(), null);
             Index ix = new Index("040ג", "040ג", r.getAbsolutePath());
             ix.scan(null);
             Library lib = Library.forTests(new ArrayList<Index>(java.util.Collections.singletonList(ix)));
@@ -2143,7 +2143,7 @@ public final class Tests {
                     {"pkudot-masad", "בדיקת פקודות"}, {"pkudot-kalul", "בדיקת כלול"}, {"gersa-023", "בדיקת מ0.23"}, {"gersa-024", "בדיקת מ0.24"}};
             for (String[] x : parts) Files.writeAtomic(new File(td, x[1] + "." + Batch.EXT), Files.readUtf8(new File(tdir, x[0] + ".vbat")));
             Batch.Plan sp = Batch.plan("בדיקה\nהמשך ()\nכלול \"בדיקה כללית.vbat\"\nכלול \"בדיקת לחץ.vbat\"\nכלול \"בדיקת שני אופנים.vbat\"\nכלול \"בדיקת עומס.vbat\"\n",
-                    td, Batch.vars(td, r.getAbsolutePath(), null));
+                    td, Parse.vars(td, r.getAbsolutePath(), null));
             int calls = 0, verifies = 0;
             for (Batch.Step x : sp.steps) {
                 if (Words.DbCmd.CALL_FAILED.equals(x.error)) calls++;
@@ -2226,7 +2226,7 @@ public final class Tests {
         File r = new File(home, "כונן-044");
         wipe(r);
         r.mkdirs();
-        java.util.Map<String, String> v = Batch.vars(r, r.getAbsolutePath(), null);
+        java.util.Map<String, String> v = Parse.vars(r, r.getAbsolutePath(), null);
         Batch.Plan p = Batch.plan("קטע \"א\"\nכתוב \"%כאן%\\א.txt\" \"x\"\nודא \"%כאן%\\א.txt\" קיים\nקטע \"ב\"\nודא \"%כאן%\\ב.txt\" חסר\n", r, v);
         eq("מ0.44: קטע — בלי שגיאות, ולא נחשב שינוי", 0, p.errors);
         List<String> rep = Batch.run(p, null, null, null);
@@ -2250,7 +2250,7 @@ public final class Tests {
         Index ix = new Index("045", "045", r.getAbsolutePath());
         ix.scan(null);
         Library lib = Library.forTests(new ArrayList<Index>(java.util.Collections.singletonList(ix)));
-        java.util.Map<String, String> v = Batch.vars(r, r.getAbsolutePath(), null);
+        java.util.Map<String, String> v = Parse.vars(r, r.getAbsolutePath(), null);
         String f = "\"%כאן%\\סל\\א.txt\"";
         String text = "צור תיקייה \"%כאן%\\סל\"\nכתוב " + f + " \"ראשון\"\nמחק " + f + "\nודא " + f + " חסר\nודא " + f + " /בסל:1\n"
                 + "שחזר מהסל " + f + "\nודא " + f + " מכיל \"ראשון\"\nודא " + f + " /בסל:0\n"
@@ -2302,7 +2302,7 @@ public final class Tests {
             throw new RuntimeException(e);
         }
         ix.scan(null);
-        java.util.Map<String, String> v = Batch.vars(here, r.getAbsolutePath(), null);
+        java.util.Map<String, String> v = Parse.vars(here, r.getAbsolutePath(), null);
         String text = "המשך ()\nמדידה /עד:30שניות\n" + CmdMatrix.text(false);
         Batch.Plan p = Batch.plan(text, here, v, lib);
         eq("מ0.45: ...בלי מסד — בלי שגיאות בתכנון (" + p.errorText() + ")", 0, p.errors);
@@ -2357,7 +2357,7 @@ public final class Tests {
         File r = new File(home, "כונן-מבנה27");
         wipe(r);
         r.mkdirs();
-        java.util.Map<String, String> v = Batch.vars(r, r.getAbsolutePath(), null);
+        java.util.Map<String, String> v = Parse.vars(r, r.getAbsolutePath(), null);
         eq("מבנה 27: יש שינוי, בלי שגיאה — מותר להריץ", Manager.GO, Manager.approve(Batch.plan("MD \"א\"\n", r, v)));
         eq("מבנה 27: בכאילו — רק התוצאה", Manager.AS_IF, Manager.approve(Batch.plan(Syntax.AS_IF + "\nMD \"א\"\n", r, v)));
         eq("מבנה 27: רק ECHO — אין מה לעשות", Manager.NOTHING, Manager.approve(Batch.plan("ECHO שלום\n", r, v)));
@@ -2400,19 +2400,19 @@ public final class Tests {
         eq("מבנה 28: השורות — בלי \\r", Arrays.asList("א", "ב"), Manager.lines("א\r\nב\r\n"));
         // מבנה 41: מסלול ריק — שגיאה, לא "התיקייה הזו"
         String[] pe = {null};
-        check("מבנה 41: מסלול ריק — שגיאה", Batch.path("", r, v, pe) == null && Words.Cmd.EMPTY_PATH.equals(pe[0]));
-        check("מבנה 41: רק רווחים — שגיאה", Batch.path("   ", r, v, pe) == null);
+        check("מבנה 41: מסלול ריק — שגיאה", Parse.path("", r, v, pe) == null && Words.Cmd.EMPTY_PATH.equals(pe[0]));
+        check("מבנה 41: רק רווחים — שגיאה", Parse.path("   ", r, v, pe) == null);
         java.util.Map<String, String> v2 = new java.util.HashMap<String, String>(v);
         v2.put("ריק", "");
-        check("מבנה 41: משתנה שהערך שלו ריק — שגיאה", Batch.path("%ריק%", r, v2, pe) == null && Words.Cmd.EMPTY_PATH.equals(pe[0]));
-        eq("מבנה 41: נקודה — התיקייה של הקובץ, כמו קודם (מבנה 42: בלי הנקודה בסוף)", r.getAbsolutePath(), Batch.path(".", r, v, pe));
+        check("מבנה 41: משתנה שהערך שלו ריק — שגיאה", Parse.path("%ריק%", r, v2, pe) == null && Words.Cmd.EMPTY_PATH.equals(pe[0]));
+        eq("מבנה 41: נקודה — התיקייה של הקובץ, כמו קודם (מבנה 42: בלי הנקודה בסוף)", r.getAbsolutePath(), Parse.path(".", r, v, pe));
         // מבנה 42: מסלול בצורה אחת
         eq("מבנה 42: נקודות ולוכסנים כפולים יורדים", "/a/c", Paths.clean("/a/./b/..//c/"));
         eq("מבנה 42: מעל השורש — נשארים בשורש", "/", Paths.clean("/../.."));
         eq("מבנה 42: מסלול נקי — כמו שהוא", "/a/.נסתר/b", Paths.clean("/a/.נסתר/b"));
         eq("מבנה 42: סימן פנימי של המנוע — לא נוגעים", Syntax.SHARE_MARK, Paths.clean(Syntax.SHARE_MARK));
         eq("מבנה 42: מסלול יחסי", "../x", Paths.clean("a/../../x"));
-        eq("מבנה 42: בקובץ פקודות — \"תיקייה\\..\" היא התיקייה שמעל", r.getAbsolutePath(), Batch.path("א\\..\\.", r, v, pe));
+        eq("מבנה 42: בקובץ פקודות — \"תיקייה\\..\" היא התיקייה שמעל", r.getAbsolutePath(), Parse.path("א\\..\\.", r, v, pe));
         File k42 = new File(r, "ק42");
         new File(k42, "פנים").mkdirs();
         File f42 = new File(k42, "קובץ.txt");
@@ -2561,7 +2561,7 @@ public final class Tests {
                     Physical.programFile(counter64) != null && Physical.programFile(new File(bk64, "א.db").getAbsolutePath()) != null
                             && Physical.programFile(db64.getAbsolutePath()) != null
                             && Physical.programFile(plug64.getAbsolutePath() + "/../" + Backups.DIR + "/אופן-64/א.db") != null);
-            java.util.Map<String, String> v64 = Batch.vars(ext64, ext64.getAbsolutePath(), null);
+            java.util.Map<String, String> v64 = Parse.vars(ext64, ext64.getAbsolutePath(), null);
             String bkCmd = "%" + Syntax.V_INTERNAL + "%\\" + Paths.DB_DIR + "\\" + Backups.DIR + "\\אופן-64";
             Batch.Plan del64 = Batch.plan("המשך ()\nמחק תיקייה \"" + bkCmd + "\" /עמוק\nDEL \"" + bkCmd + "\\*.db\"\nMOVE \"" + bkCmd + "\" \"%" + Syntax.V_INTERNAL + "%\\יעד-64\"\n", ext64, v64, lib64);
             Batch.run(del64, lib64, null, null);
@@ -2631,7 +2631,7 @@ public final class Tests {
             new File(d67, "ב").mkdirs();
             write(new File(d67, "א"), "לבד.txt", "1");
             write(new File(d67, "א/תת"), "x.txt", "x");
-            java.util.Map<String, String> v67 = Batch.vars(d67, d67.getAbsolutePath(), null);
+            java.util.Map<String, String> v67 = Parse.vars(d67, d67.getAbsolutePath(), null);
             Batch.Plan c67 = Batch.plan("COMP א ב\nCOPY %רק-במקור% ב\nDEL \"ב\\תת\\x.txt\"\nDEL \"א\\תת\\x.txt\"\n", d67, v67);
             check("מבנה 67: אחרי העתקה מהשוואה — קובץ שבתוך תיקייה שהועתקה נראה ביעד, והמקור נשאר (" + c67.errorText() + ")", c67.errors == 0);
             Batch.Plan m67 = Batch.plan("COMP א ב\nMOVE %רק-במקור% ב\nDEL \"ב\\תת\\x.txt\"\n", d67, v67);
@@ -2663,7 +2663,7 @@ public final class Tests {
             Index ix73 = new Index("73", "73", d73.getAbsolutePath());
             ix73.scan(null);
             Library lib73 = Library.forTests(new ArrayList<Index>(java.util.Collections.singletonList(ix73)));
-            java.util.Map<String, String> v73 = Batch.vars(d73, d73.getAbsolutePath(), null);
+            java.util.Map<String, String> v73 = Parse.vars(d73, d73.getAbsolutePath(), null);
             Batch.Selection sel73 = new Batch.Selection(java.util.Arrays.asList(new File(d73, "א.txt").getAbsolutePath(), new File(d73, "ב.txt").getAbsolutePath()),
                     java.util.Collections.singletonList(new File(d73, "תת").getAbsolutePath()));
             Batch.Plan p73 = Batch.plan("מחק %נבחרים%\n", d73, v73, lib73, null, sel73);
@@ -2708,7 +2708,7 @@ public final class Tests {
             Index ix74 = new Index("74", "74", ext74.getAbsolutePath());
             ix74.scan(null);
             Library lib74 = Library.forTests(new ArrayList<Index>(java.util.Collections.singletonList(ix74)));
-            java.util.Map<String, String> v74 = Batch.vars(Paths.data(), ext74.getAbsolutePath(), null);
+            java.util.Map<String, String> v74 = Parse.vars(Paths.data(), ext74.getAbsolutePath(), null);
             List<String> f74 = java.util.Collections.singletonList(new File(d74, "א.txt").getAbsolutePath()),
                     dirs74 = java.util.Collections.singletonList(new File(d74, "תיקייה").getAbsolutePath()), none74 = new ArrayList<String>();
             Manager.Act own74 = Manager.onSelected("DEL", java.util.Collections.singletonList(new File(Paths.data(), "הגדרה-74.ini").getAbsolutePath()), none74, Paths.data(), v74, lib74);
@@ -2762,7 +2762,7 @@ public final class Tests {
             Index ix76 = new Index("76", "76", d76.getAbsolutePath());
             ix76.scan(null);
             Library lib76 = Library.forTests(new ArrayList<Index>(java.util.Collections.singletonList(ix76)));
-            java.util.Map<String, String> v76 = Batch.vars(d76, d76.getAbsolutePath(), null);
+            java.util.Map<String, String> v76 = Parse.vars(d76, d76.getAbsolutePath(), null);
             List<String> a76 = java.util.Collections.singletonList(new File(d76, "א.txt").getAbsolutePath());
             check("מבנה 76: בבדיקות ההיתר פתוח (הן קוראות לפעולות ישירות)", Permit.held());
             Permit.close();                                                     // מכאן — כמו בתוכנה: אין היתר, אלא אם המנהל פותח
@@ -2822,7 +2822,7 @@ public final class Tests {
             Index ix77 = new Index("77", "77", ext77.getAbsolutePath());
             ix77.scan(null);
             Library lib77 = Library.forTests(new ArrayList<Index>(java.util.Collections.singletonList(ix77)));
-            java.util.Map<String, String> v77 = Batch.vars(Paths.data(), ext77.getAbsolutePath(), null);
+            java.util.Map<String, String> v77 = Parse.vars(Paths.data(), ext77.getAbsolutePath(), null);
             String a77 = new File(d77, "א.txt").getAbsolutePath(), b77 = new File(d77, "ב.txt").getAbsolutePath(),
                     dir77 = new File(d77, "תיקייה").getAbsolutePath(), own77 = new File(Paths.data(), "הגדרה-77.ini").getAbsolutePath();
             List<String> f77 = java.util.Arrays.asList(a77, b77), dirs77 = java.util.Collections.singletonList(dir77), none77 = new ArrayList<String>();
@@ -2914,7 +2914,7 @@ public final class Tests {
             Index ix78 = new Index("78", "78", ext78.getAbsolutePath());
             ix78.scan(null);
             Library lib78 = Library.forTests(new ArrayList<Index>(java.util.Collections.singletonList(ix78)));
-            java.util.Map<String, String> v78 = Batch.vars(Paths.data(), ext78.getAbsolutePath(), null);
+            java.util.Map<String, String> v78 = Parse.vars(Paths.data(), ext78.getAbsolutePath(), null);
             String a78 = new File(d78, "א.txt").getAbsolutePath(), own78 = new File(Paths.data(), "הגדרה-78.ini").getAbsolutePath();
             Manager.Act can78 = Manager.onRename(a78, "א.txt", Paths.data(), v78, lib78);
             check("מבנה 78: לפני שמבקשים שם — \"מותר לשנות לקובץ הזה שם?\": כן, ואין מה לעשות (" + can78.error() + ")",
@@ -2977,7 +2977,7 @@ public final class Tests {
             Index ix79 = new Index("79", "79", ext79.getAbsolutePath());
             ix79.scan(null);
             Library lib79 = Library.forTests(new ArrayList<Index>(java.util.Collections.singletonList(ix79)));
-            java.util.Map<String, String> v79 = Batch.vars(Paths.data(), ext79.getAbsolutePath(), null);
+            java.util.Map<String, String> v79 = Parse.vars(Paths.data(), ext79.getAbsolutePath(), null);
             Manager.Act act79 = Manager.onMakeFolder(d79, "  חדשה 100% %תאריך% ", Paths.data(), v79, lib79);
             check("מבנה 79: הפקודה שהמסך מריץ — \"צור תיקייה \"%יעד%\\%שם-חדש%\"\", בלי סירוב (" + act79.error() + ")", act79.error() == null
                     && act79.text.trim().equals("צור תיקייה \"%יעד%\\%שם-חדש%\"") && act79.plan.steps.size() == 1
@@ -3027,7 +3027,7 @@ public final class Tests {
             Index ix80 = new Index("80", "80", ext80.getAbsolutePath());
             ix80.scan(null);
             Library lib80 = Library.forTests(new ArrayList<Index>(java.util.Collections.singletonList(ix80)));
-            java.util.Map<String, String> v80 = Batch.vars(Paths.data(), ext80.getAbsolutePath(), null);
+            java.util.Map<String, String> v80 = Parse.vars(Paths.data(), ext80.getAbsolutePath(), null);
             String body80 = "REM %פנימי% \"מירכאות\"\nשורה שנייה \\n לא שורה חדשה\n" + Batch.template();
             File new80 = new File(d80, "חדש 100%.vbat"), deep80 = new File(d80, "תיקייה חדשה/עמוק.vbat");
             Manager.Act act80 = Manager.onNewFile(new80, body80, Paths.data(), v80, lib80);
@@ -3311,7 +3311,7 @@ public final class Tests {
             Index ix81 = new Index("81", "81", d81.getAbsolutePath());
             ix81.scan(null);
             Library lib81 = Library.forTests(new ArrayList<Index>(java.util.Collections.singletonList(ix81)));
-            java.util.Map<String, String> v81 = Batch.vars(d81, d81.getAbsolutePath(), null);
+            java.util.Map<String, String> v81 = Parse.vars(d81, d81.getAbsolutePath(), null);
             Physical.delete(lib81, java.util.Arrays.asList(new File(d81, "א.txt").getAbsolutePath(), new File(d81, "ב.txt").getAbsolutePath(),
                     new File(d81, "ג.txt").getAbsolutePath()), java.util.Collections.singletonList(new File(d81, "תיקייה").getAbsolutePath()), false);
             lib81.flush(5000);
@@ -3748,7 +3748,7 @@ public final class Tests {
         File r = new File(home, "כונן-045ב");
         wipe(r);
         r.mkdirs();
-        java.util.Map<String, String> v = Batch.vars(r, r.getAbsolutePath(), null);
+        java.util.Map<String, String> v = Parse.vars(r, r.getAbsolutePath(), null);
         // ודא תקין — מתחילת הקטע
         Batch.Plan p = Batch.plan("המשך ()\nקטע \"א\"\nכתוב \"%כאן%\\א.txt\" \"x\"\nודא תקין\nקטע \"ב\"\nמחק \"%כאן%\\אין\\*.txt\"\nREN \"%כאן%\\אין.txt\" \"ב.txt\"\nודא תקין\nקטע \"ג\"\nודא תקין\n", r, v);
         List<String> rep = Batch.run(p, null, null, null);
@@ -3850,7 +3850,7 @@ public final class Tests {
         File r = new File(home, "כונן-042");
         wipe(r);
         r.mkdirs();
-        java.util.Map<String, String> v = Batch.vars(r, r.getAbsolutePath(), null);
+        java.util.Map<String, String> v = Parse.vars(r, r.getAbsolutePath(), null);
         Verbs.Cmd m = Verbs.parse("צור אופן \"בדיקות מערכת\"");
         check("מ0.42: צור אופן — השם", m.error == null && m.kind.equals(Verbs.K_MODE) && m.arg.equals("בדיקות מערכת"));
         check("מ0.42: צור אופן בלי שם — שגיאה", Verbs.parse("צור אופן").error != null);
@@ -3873,7 +3873,7 @@ public final class Tests {
         File r = new File(home, "כונן-041");
         wipe(r);
         r.mkdirs();
-        java.util.Map<String, String> v = Batch.vars(r, r.getAbsolutePath(), null);
+        java.util.Map<String, String> v = Parse.vars(r, r.getAbsolutePath(), null);
         Batch.Plan p = Batch.plan("בטל לא-משויכים\nודא לא-משויכים /פריטים:0\nהעתק לא-משויכים ידנית \"א\"\n", r, v);
         check("מ0.41: בטל לא-משויכים — שורה של המסד (במחשב אין מסד)", p.steps.size() == 3 && Words.DbCmd.NO_DB.equals(p.steps.get(0).error)
                 && Words.DbCmd.VERIFY_DB_ONLY.equals(p.steps.get(1).error) && p.steps.get(2).error != null);
@@ -3881,16 +3881,16 @@ public final class Tests {
         Batch.Plan q = Batch.plan("בטל \"לא-משויכים\"\n", r, v);
         check("מ0.41: \"לא-משויכים\" במרכאות — תיקייה רגילה", q.errors == 0 && q.steps.get(0).cmd.equals("RD"));
         // קובץ שכולו פקודת פתיחה אחת — רץ מיד (הכפתורים בשורות הם קובצי פקודות)
-        eq("מ0.41: צלמית, שם ופקודת פתיחה — השורה", "פתח מסך הבית", Batch.singleVerb("צלמית 🏠\nשם בית\nפתח מסך הבית\n"));
-        eq("מ0.41: ...גם עם הערה, שורה ריקה ו\"למה\"", "חזור", Batch.singleVerb("צלמית →\nלמה חוזרים\n\nהערה סתם\n:: עוד\nחזור\n"));
-        check("מ0.41: שתי פקודות — לא", Batch.singleVerb("פתח מסך הבית\nפתח מסך חיפוש\n") == null);
-        check("מ0.41: פקודת קבצים — לא", Batch.singleVerb("צלמית ▶\nהעתק \"א\" \"ב\"\n") == null && Batch.singleVerb("מחק \"א\"\n") == null);
-        check("מ0.41: \"צור תיקייה\" אינה פקודת פתיחה", Batch.singleVerb("צור תיקייה \"א\"\n") == null);
-        check("מ0.41: \"בדיקה\" או \"הדמיה\" בראש — לא (מסך ההרצה)", Batch.singleVerb("בדיקה\nפתח מסך הבית\n") == null
-                && Batch.singleVerb("הדמיה\nפתח מסך הבית\n") == null);
-        check("מ0.41: קובץ ריק — לא", Batch.singleVerb("") == null && Batch.singleVerb("צלמית ▶\n") == null);
+        eq("מ0.41: צלמית, שם ופקודת פתיחה — השורה", "פתח מסך הבית", Parse.singleVerb("צלמית 🏠\nשם בית\nפתח מסך הבית\n"));
+        eq("מ0.41: ...גם עם הערה, שורה ריקה ו\"למה\"", "חזור", Parse.singleVerb("צלמית →\nלמה חוזרים\n\nהערה סתם\n:: עוד\nחזור\n"));
+        check("מ0.41: שתי פקודות — לא", Parse.singleVerb("פתח מסך הבית\nפתח מסך חיפוש\n") == null);
+        check("מ0.41: פקודת קבצים — לא", Parse.singleVerb("צלמית ▶\nהעתק \"א\" \"ב\"\n") == null && Parse.singleVerb("מחק \"א\"\n") == null);
+        check("מ0.41: \"צור תיקייה\" אינה פקודת פתיחה", Parse.singleVerb("צור תיקייה \"א\"\n") == null);
+        check("מ0.41: \"בדיקה\" או \"הדמיה\" בראש — לא (מסך ההרצה)", Parse.singleVerb("בדיקה\nפתח מסך הבית\n") == null
+                && Parse.singleVerb("הדמיה\nפתח מסך הבית\n") == null);
+        check("מ0.41: קובץ ריק — לא", Parse.singleVerb("") == null && Parse.singleVerb("צלמית ▶\n") == null);
         for (String[] x : Reserved.system())
-            check("מ0.41: פקודת המערכת \"" + x[1] + "\" — פקודת פתיחה אחת", x[2].equals(Batch.singleVerb(Program.ICON + " " + x[0] + "\n" + Program.NAME + " " + x[1] + "\n" + x[2] + "\n")));
+            check("מ0.41: פקודת המערכת \"" + x[1] + "\" — פקודת פתיחה אחת", x[2].equals(Parse.singleVerb(Program.ICON + " " + x[0] + "\n" + Program.NAME + " " + x[1] + "\n" + x[2] + "\n")));
         // שמות המסכים של השורות — של "פתח מסך", ועוד שניים
         check("מ0.41: שמות המסכים — \"רשימה\" ו\"רשימה חכמה\" אינם שמות של \"פתח מסך\"", !java.util.Arrays.asList(Verbs.SCREENS).contains(Verbs.S_LIST_SCREEN)
                 && !java.util.Arrays.asList(Verbs.SCREENS).contains(Verbs.S_SMART_SCREEN) && java.util.Arrays.asList(Verbs.SCREENS).contains(Verbs.S_HOME));
@@ -3926,7 +3926,7 @@ public final class Tests {
         eq("מ0.41: קובץ אחד — פקודת פתיחה", 1, Choice.arity("פתח תיקייה %נבחרים%\n"));
         eq("מ0.41: שורה אחת מקבלת כמה ואחרת אחד — אחד", 1, Choice.arity("מחק %נבחרים%\nהפעל %נבחרים%\n"));
         eq("מ0.41: בלי %נבחרים% (גם בהערה) — 0", 0, Choice.arity("הערה %נבחרים%\nפתח מסך הבית\n"));
-        java.util.Map<String, String> v = Batch.vars(d, r.getAbsolutePath(), null);
+        java.util.Map<String, String> v = Parse.vars(d, r.getAbsolutePath(), null);
         Index ix = new Index("041ב", "041ב", r.getAbsolutePath());
         ix.scan(null);
         Library lib = Library.forTests(new ArrayList<Index>(java.util.Collections.singletonList(ix)));
@@ -4000,7 +4000,7 @@ public final class Tests {
         new File(r, "Download").mkdirs();
         try {
             String text = Files.readUtf8(new File(System.getProperty("vfm.src"), "../lab-pages/דוגמה לבחירה.vbat"));
-            java.util.Map<String, String> v = Batch.vars(r, r.getAbsolutePath(), null);
+            java.util.Map<String, String> v = Parse.vars(r, r.getAbsolutePath(), null);
             Index ix = new Index("041ג", "041ג", r.getAbsolutePath());
             ix.scan(null);
             Library lib = Library.forTests(new ArrayList<Index>(java.util.Collections.singletonList(ix)));
@@ -4042,7 +4042,7 @@ public final class Tests {
         File here = new File(root, "כאן"), work = new File(root, "עבודה");
         here.mkdirs();
         work.mkdirs();
-        java.util.Map<String, String> vars = Batch.vars(here, root.getAbsolutePath(), null);
+        java.util.Map<String, String> vars = Parse.vars(here, root.getAbsolutePath(), null);
         check("מ0.37: המשתנים %שעה% ו־%ייחודי% קיימים", vars.get(Syntax.V_TIME) != null && vars.get(Syntax.V_UNIQUE) != null);
         String w = work.getAbsolutePath();
         String text = "המשך ()\n"
@@ -4095,7 +4095,7 @@ public final class Tests {
         File here = new File(root, "כאן"), x = new File(root, "X"), sub = new File(x, "sub");
         here.mkdirs();
         sub.mkdirs();
-        java.util.Map<String, String> vars = Batch.vars(here, root.getAbsolutePath(), null);
+        java.util.Map<String, String> vars = Parse.vars(here, root.getAbsolutePath(), null);
         Batch.Plan p = Batch.plan("RD \"" + sub + "\"\nRD \"" + x + "\"", here, vars);
         eq("מ0.32 (44): RD לתת־תיקייה ואחריו RD לתיקייה — בלי \"לא ריקה\"", 0, p.errors);
         Batch.Plan q = Batch.plan("MD \"" + x + "/חדשה\"\nRD \"" + x + "/sub\"\nRD \"" + x + "\"", here, vars);
@@ -4110,7 +4110,7 @@ public final class Tests {
         File src = new File(root, "מקור"), work = new File(root, "עבודה");
         mk(src, "א.txt", 10);
         mk(work, "ישן.txt", 10);
-        java.util.Map<String, String> vars = Batch.vars(here, root.getAbsolutePath(), null);
+        java.util.Map<String, String> vars = Parse.vars(here, root.getAbsolutePath(), null);
         Batch.Plan p = Batch.plan("RD \"" + work + "\" /S\nMD \"" + work + "\"\nCOPY \"" + src + "/א.txt\" \"" + work + "\"\nECHO כאן: %כאן%", here, vars);
         eq("מ0.30 (35): RD /S ואחריו MD לאותה תיקייה ו־COPY אליה — בלי שגיאות", 0, p.errors);
         Batch.Plan bad = Batch.plan("MD \"" + work + "/חדשה\"\nCOPY \"" + root + "/אין-כזה.txt\" \"" + work + "\"", here, vars);
@@ -4121,7 +4121,7 @@ public final class Tests {
         Batch.Plan cont3 = Batch.plan("המשך (3)\n" + miss + miss + miss, here, vars), contAll = Batch.plan("המשך ()\n" + miss + miss + miss + miss, here, vars);
         check("מ0.31: \"המשך\" — כישלון אחד מותר, שניים — חסום", !cont.blocked() && cont2.blocked());
         check("מ0.31: \"המשך (3)\" — שלושה; \"המשך ()\" — בלי גבול", !cont3.blocked() && cont3.allowErrors == 3 && !contAll.blocked());
-        eq("מ0.31: צורה לא מובנת", -1, Batch.allowOf("המשך הרבה"));
+        eq("מ0.31: צורה לא מובנת", -1, Parse.allowOf("המשך הרבה"));
         Batch.Plan stop = Batch.plan("המשך\n" + miss + "ECHO סוף\n", here, vars);
         check("מ0.31: כישלון אחד עם \"המשך\" — ההרצה לא נעצרת", !Batch.run(stop, null, null, null).toString().contains("⛔"));
         check("מ0.30 (46): ECHO מחליף משתנים", p.echoes.size() == 1 && p.echoes.get(0).contains(here.getAbsolutePath()));
@@ -4141,11 +4141,11 @@ public final class Tests {
     private static void batchRun() throws Exception {
         // קריאת שורה, כמו cmd
         eq("117א: מרכאות שומרות רווחים", "[MOVE, %הורדות%\\ספר חדש.pdf, יעד, /Y]",
-                Batch.tokens("MOVE \"%הורדות%\\ספר חדש.pdf\" יעד /Y").toString());
-        check("117א: מתג מוכר", Batch.isSwitch("/Y") && Batch.isSwitch("/-y") && Batch.isSwitch("/תאריך:יום") && Batch.isSwitch("/MAXAGE:3"));
-        check("117א: מסלול אינו מתג", !Batch.isSwitch("/storage/emulated/0") && !Batch.isSwitch("/ספרים"));
-        check("117א: תבנית", Batch.wild("*.pdf", "ספר.PDF") && !Batch.wild("*.pdf", "ספר.epub") && Batch.wild("פרק ?.txt", "פרק 3.txt")
-                && Batch.wild("*.*", "README"));
+                Parse.tokens("MOVE \"%הורדות%\\ספר חדש.pdf\" יעד /Y").toString());
+        check("117א: מתג מוכר", Parse.isSwitch("/Y") && Parse.isSwitch("/-y") && Parse.isSwitch("/תאריך:יום") && Parse.isSwitch("/MAXAGE:3"));
+        check("117א: מסלול אינו מתג", !Parse.isSwitch("/storage/emulated/0") && !Parse.isSwitch("/ספרים"));
+        check("117א: תבנית", Parse.wild("*.pdf", "ספר.PDF") && !Parse.wild("*.pdf", "ספר.epub") && Parse.wild("פרק ?.txt", "פרק 3.txt")
+                && Parse.wild("*.*", "README"));
 
         File root = new File(home, "כונן-117");
         wipe(root);
@@ -4157,13 +4157,13 @@ public final class Tests {
         File c = mk(dl, "שיר.mp3", 50);
         File old = mk(dl, "ישן.pdf", 40);
         old.setLastModified(System.currentTimeMillis() - 400L * 24 * 3600 * 1000);   // לפני יותר משנה
-        java.util.Map<String, String> vars = Batch.vars(here, root.getAbsolutePath(), null);
+        java.util.Map<String, String> vars = Parse.vars(here, root.getAbsolutePath(), null);
 
         // משתנים ומסלולים
         String[] err = {null};
-        eq("117א: משתנה ו-\\", dl.getAbsolutePath() + "/x.pdf", Batch.path("%הורדות%\\x.pdf", here, vars, err));
-        eq("117א: מסלול יחסי — ביחס לתיקייה של הקובץ", new File(here, "משנה").getAbsolutePath(), Batch.path("משנה", here, vars, err));
-        check("117א: משתנה שאינו מוכר", Batch.path("%כרטיס%\\x", here, vars, err) == null && err[0].contains("כרטיס"));
+        eq("117א: משתנה ו-\\", dl.getAbsolutePath() + "/x.pdf", Parse.path("%הורדות%\\x.pdf", here, vars, err));
+        eq("117א: מסלול יחסי — ביחס לתיקייה של הקובץ", new File(here, "משנה").getAbsolutePath(), Parse.path("משנה", here, vars, err));
+        check("117א: משתנה שאינו מוכר", Parse.path("%כרטיס%\\x", here, vars, err) == null && err[0].contains("כרטיס"));
 
         // תכנון: MOVE עם סינון, בלי לשנות דבר
         new File(root, "ספרים").mkdirs();
@@ -4273,11 +4273,11 @@ public final class Tests {
     // ---------- קובצי פקודות: מסלול מהבורר ← משתנה (117א, שלב 2) ----------
 
     private static void batchForm() {
-        java.util.Map<String, String> vars = Batch.vars(new File("/storage/emulated/0/קיצורי דרך"), "/storage/emulated/0", "/storage/AAAA-BBBB");
-        eq("שלב 2: מסלול מהבורר — המשתנה הארוך ביותר", "%הורדות%\\ספרים", Batch.toVar("/storage/emulated/0/Download/ספרים", vars));
-        eq("שלב 2: פנימי", "%פנימי%\\ספרים\\חדשים", Batch.toVar("/storage/emulated/0/ספרים/חדשים", vars));
-        eq("שלב 2: כרטיס", "%כרטיס%", Batch.toVar("/storage/AAAA-BBBB", vars));
-        eq("שלב 2: מחוץ למשתנים — כמו שהוא, עם \\", "\\mnt\\x", Batch.toVar("/mnt/x", vars));
+        java.util.Map<String, String> vars = Parse.vars(new File("/storage/emulated/0/קיצורי דרך"), "/storage/emulated/0", "/storage/AAAA-BBBB");
+        eq("שלב 2: מסלול מהבורר — המשתנה הארוך ביותר", "%הורדות%\\ספרים", Parse.toVar("/storage/emulated/0/Download/ספרים", vars));
+        eq("שלב 2: פנימי", "%פנימי%\\ספרים\\חדשים", Parse.toVar("/storage/emulated/0/ספרים/חדשים", vars));
+        eq("שלב 2: כרטיס", "%כרטיס%", Parse.toVar("/storage/AAAA-BBBB", vars));
+        eq("שלב 2: מחוץ למשתנים — כמו שהוא, עם \\", "\\mnt\\x", Parse.toVar("/mnt/x", vars));
     }
 
     // ---------- תיקוני הביקורות השישית והשביעית ----------
@@ -4297,7 +4297,7 @@ public final class Tests {
         mk(dl, "ישן.pdf", 10);
         mk(dl, "שיר.mp3", 10);
         mk(dl, ".nomedia", 0);
-        java.util.Map<String, String> vars = Batch.vars(root, root.getAbsolutePath(), null);
+        java.util.Map<String, String> vars = Parse.vars(root, root.getAbsolutePath(), null);
 
         // 118: שורה שתלויה בשורה שלפניה
         Batch.Plan p = Batch.plan("MD %פנימי%\\חדשה\nMOVE %הורדות%\\*.pdf %פנימי%\\חדשה\nREN %פנימי%\\חדשה\\ישן.pdf חדש.pdf\n"
@@ -4348,23 +4348,23 @@ public final class Tests {
         // ניקוי השיתוף (1.9.0): MD לתיקייה שכבר קיימת — בלי שגיאה; קובץ פקודות — רק בסיומת vbat
         File land2 = new File(root, "נחתו190");
         land2.mkdirs();
-        Batch.Plan again = Batch.plan("MD \"%כאן%\\לשלוח\"\nMD \"%כאן%\\לשלוח\" /תפוס:לדלג", land2, Batch.vars(land2, root.getAbsolutePath(), null));
+        Batch.Plan again = Batch.plan("MD \"%כאן%\\לשלוח\"\nMD \"%כאן%\\לשלוח\" /תפוס:לדלג", land2, Parse.vars(land2, root.getAbsolutePath(), null));
         check("MD לתיקייה שתיווצר/קיימת — עם /תפוס:לדלג: בלי שגיאה (מבנה 109)", again.errors == 0 && again.changes() == 1);
         // מבנה 109 (המשתמש): "סירוב, אלא אם כן יש הוראה להמשיך… אם קיימת ספריה זאת המשך לשורה הבאה, אחרת עוצר"
-        Batch.Plan stop109 = Batch.plan("MD \"%כאן%\\לשלוח\"\nMD \"%כאן%\\לשלוח\"", land2, Batch.vars(land2, root.getAbsolutePath(), null));
-        Batch.Plan ren109 = Batch.plan("MD \"%כאן%\\לשלוח\"\nMD \"%כאן%\\לשלוח\" /תפוס:לשנות-שם", land2, Batch.vars(land2, root.getAbsolutePath(), null));
-        Batch.Plan bad109 = Batch.plan("MD \"%כאן%\\לשלוח\" /תפוס:להחליף", land2, Batch.vars(land2, root.getAbsolutePath(), null));
+        Batch.Plan stop109 = Batch.plan("MD \"%כאן%\\לשלוח\"\nMD \"%כאן%\\לשלוח\"", land2, Parse.vars(land2, root.getAbsolutePath(), null));
+        Batch.Plan ren109 = Batch.plan("MD \"%כאן%\\לשלוח\"\nMD \"%כאן%\\לשלוח\" /תפוס:לשנות-שם", land2, Parse.vars(land2, root.getAbsolutePath(), null));
+        Batch.Plan bad109 = Batch.plan("MD \"%כאן%\\לשלוח\" /תפוס:להחליף", land2, Parse.vars(land2, root.getAbsolutePath(), null));
         check("מבנה 109: תיקייה קיימת בלי מתג — שגיאה (\"שם קיים\"), והקובץ אינו רץ; /תפוס:לשנות-שם — \"(2)\"; /תפוס:להחליף — לא קיים לתיקייה",
                 stop109.blocked() && stop109.errorText().contains(Words.Cmd.folderTaken("לשלוח")) && ren109.errors == 0 && ren109.changes() == 2
                         && ren109.steps.get(1).dest.getName().equals("לשלוח (2)") && bad109.errors == 1);
         check("1.9.0: קובץ פקודות — רק vbat", Batch.isBatch("א.VBAT") && !Batch.isBatch("סידור — לשלוח.vbat.txt")
                 && !Batch.isBatch("הערות.txt"));
-        check("1.9.0: /חתימה: — מתג לא מוכר", Batch.plan("COPY %כאן%\\א.pdf %כאן% /חתימה:2:abc", land2, Batch.vars(land2, root.getAbsolutePath(), null)).errors == 1);
+        check("1.9.0: /חתימה: — מתג לא מוכר", Batch.plan("COPY %כאן%\\א.pdf %כאן% /חתימה:2:abc", land2, Parse.vars(land2, root.getAbsolutePath(), null)).errors == 1);
 
         // 139: %~dp0 ו-ECHO.
         String[] err = {null};
-        eq("139: %~dp0 — התיקייה של הקובץ", new File(root, "x.pdf").getAbsolutePath(), Batch.path("%~dp0x.pdf", root, vars, err));
-        eq("139: %~dp0\\ — גם עם לוכסן", new File(root, "x.pdf").getAbsolutePath(), Batch.path("%~dp0\\x.pdf", root, vars, err));
+        eq("139: %~dp0 — התיקייה של הקובץ", new File(root, "x.pdf").getAbsolutePath(), Parse.path("%~dp0x.pdf", root, vars, err));
+        eq("139: %~dp0\\ — גם עם לוכסן", new File(root, "x.pdf").getAbsolutePath(), Parse.path("%~dp0\\x.pdf", root, vars, err));
         Batch.Plan e = Batch.plan("ECHO.\nECHO שלום", root, vars);
         check("139: ECHO. — מוכר", e.errors == 0 && e.echoes.size() == 2);
 
@@ -4628,11 +4628,11 @@ public final class Tests {
         check("131: פריט אחד / רשימה אחת", Words.items(1).equals("פריט אחד") && Words.lists(4).equals("4 רשימות"));
         check("131: ועוד", Words.andMore(18).equals("ועוד 18"));
         check("187: שינוי אחד / 3 שינויים (ביומן)", Words.Lib.changes(1).equals("שינוי אחד") && Words.Lib.changes(3).equals("3 שינויים"));
-        Batch.Plan p = Batch.plan("RD\n", new File("/x"), Batch.vars(new File("/x"), "/p", null));
+        Batch.Plan p = Batch.plan("RD\n", new File("/x"), Parse.vars(new File("/x"), "/p", null));
         check("131: שגיאת שימוש — מהמילון", p.steps.size() == 1 && Commands.usage("RD").equals(p.steps.get(0).error));
         // התחביר במקום אחד: התבנית והטופס מבינים זה את זה
         String t = Batch.template();
-        check("131: התבנית — המשתנים מהתחביר", t.contains(Batch.var(Syntax.V_HERE)) && t.contains(Batch.var(Syntax.V_DOWNLOADS)));
+        check("131: התבנית — המשתנים מהתחביר", t.contains(Parse.var(Syntax.V_HERE)) && t.contains(Parse.var(Syntax.V_DOWNLOADS)));
         check("131: התבנית — שם תפוס מהתחביר", t.contains(Syntax.SW_TAKEN + Syntax.TAKEN_SKIP));
         check("131: תאריך וגודל — מ-DateSize", Syntax.SW_DATE.equals(DateSize.DATE) && Syntax.SW_SIZE.equals(DateSize.SIZE));
         // שמות בכונן — מ-Paths
@@ -5023,7 +5023,7 @@ public final class Tests {
             check("1.22.5: מה עושה — " + d.name, !d.what.isEmpty());
             check("1.22.5: שימוש — " + d.name, !d.usage().isEmpty() && (d.family != Commands.Family.FILE || d.usage().startsWith(Commands.word(d))));   // מ0.38: בעברית
             for (Commands.Param p : d.params) {
-                boolean ok = !p.label.isEmpty() && !p.help.isEmpty() && (!p.isSwitch() || Batch.isSwitch(p.key))
+                boolean ok = !p.label.isEmpty() && !p.help.isEmpty() && (!p.isSwitch() || Parse.isSwitch(p.key))
                         && (p.type != Commands.Type.CHOICE || !p.options.isEmpty());
                 check("1.22.5: פרמטר — " + d.name + " " + (p.isSwitch() ? p.key : p.label), ok);
             }
@@ -5041,7 +5041,7 @@ public final class Tests {
                 {"MOVE", "/עד:20%"}, {"DEL", "/תאריך:שבוע"}, {"RD", "/S"}, {"COMP", "/רשימה:גיבוי"}, {"COMP", "/A:H"}};
         for (String[] x : seen) {
             Commands.Def d = Commands.get(x[0]);
-            check("1.22.5: מתג בהגדרה — " + x[0] + " " + x[1], Batch.isSwitch(x[1]) && d.switchFor(x[1]) != null);
+            check("1.22.5: מתג בהגדרה — " + x[0] + " " + x[1], Parse.isSwitch(x[1]) && d.switchFor(x[1]) != null);
         }
         check("1.22.5: COPY בלי /רשימה:, COMP בלי /מצב:", Commands.get("COPY").switchFor("/רשימה:x") == null
                 && Commands.get("COMP").switchFor("/מצב:1.1.2026") == null);
@@ -5080,7 +5080,7 @@ public final class Tests {
                     + "COMP /רשימה:\"המסמכים שלי\" \"גיבוי\\נוכחי\"\n"
                     + "MOVE %רק-ביעד% \"גיבוי\\היסטוריה\\%תאריך%\" /עד:50%\n"
                     + "COPY %רק-במקור% \"גיבוי\\נוכחי\" /תפוס:לעצור /יומן:\"גיבוי\\יומן\\%תאריך%.txt\"\n";
-            Map<String, String> vars = Batch.vars(r1, r1.getAbsolutePath(), null);
+            Map<String, String> vars = Parse.vars(r1, r1.getAbsolutePath(), null);
             vars.put(Syntax.V_NOW, "01.10.2026 10-00-00");
             Batch.Plan p = Batch.plan(text, r1, vars, lib);
             Batch.run(p, lib, null, null);
@@ -5171,7 +5171,7 @@ public final class Tests {
         write(docs, "a.txt", "v1").setLastModified(base);
         write(docs, "b.txt", "b").setLastModified(base);
         write(new File(docs, "dir"), "c.txt", "c").setLastModified(base);
-        Map<String, String> vars = Batch.vars(root, root.getAbsolutePath(), null);
+        Map<String, String> vars = Parse.vars(root, root.getAbsolutePath(), null);
         vars.put(Syntax.V_NOW, "01.10.2026 10-00-00");
         Batch.Plan p = Batch.plan(text, root, vars, lib);
         Batch.run(p, lib, null, null);
@@ -5335,7 +5335,7 @@ public final class Tests {
                 + "COMP מסמכים \"גיבוי\\נוכחי\"\n"
                 + "MOVE %רק-ביעד% \"גיבוי\\היסטוריה\\%תאריך%\" /עד:50%\n"
                 + "COPY %רק-במקור% \"גיבוי\\נוכחי\" /תפוס:לעצור /יומן:\"גיבוי\\יומן\\%תאריך%.txt\"\n";
-        Map<String, String> vars = Batch.vars(root, root.getAbsolutePath(), null);
+        Map<String, String> vars = Parse.vars(root, root.getAbsolutePath(), null);
         Batch.Plan p = Batch.plan(text, root, vars, lib);
         check("1.20.0: גיבוי ראשון — בלי שגיאות", p.errors == 0);
         check("1.20.0: COMP — תיאור", p.steps.get(1).describe.contains("רק במקור 10"));
@@ -5354,7 +5354,7 @@ public final class Tests {
         new File(docs, "חדשה/ריקה").mkdirs();
         new File(docs, "ריקה").delete();
         write(docs, "4.txt", "ארבע");
-        vars = Batch.vars(root, root.getAbsolutePath(), null);
+        vars = Parse.vars(root, root.getAbsolutePath(), null);
         vars.put(Syntax.V_NOW, "0002");
         p = Batch.plan(text, root, vars, lib);
         check("1.20.0: גיבוי שני — בלי שגיאות", p.errors == 0);
@@ -5480,11 +5480,11 @@ public final class Tests {
         check("1.19.0: העברת תיקייה — \"נוסף\" עובר", hb != null && hb.rec.added == 3333L);
 
         // 4. קובץ פקודות: COPY /S ו־/מסלול, /יומן:, %תאריך%, %מזהה-כרטיס%
-        Map<String, String> vars = Batch.vars(root, root.getAbsolutePath(), "/storage/ABCD-1234");
+        Map<String, String> vars = Parse.vars(root, root.getAbsolutePath(), "/storage/ABCD-1234");
         check("1.19.0: %תאריך% — יום.חודש.שנה שעה-דקה-שנייה", vars.get(Syntax.V_NOW).matches("\\d\\d\\.\\d\\d\\.\\d{4} \\d\\d-\\d\\d-\\d\\d"));
         eq("1.19.0: %מזהה-כרטיס%", "ABCD-1234", vars.get(Syntax.V_CARD_ID));
-        check("1.19.0: בלי כרטיס — בלי מזהה", Batch.vars(root, root.getAbsolutePath(), null).get(Syntax.V_CARD_ID) == null);
-        vars = Batch.vars(root, root.getAbsolutePath(), null);
+        check("1.19.0: בלי כרטיס — בלי מזהה", Parse.vars(root, root.getAbsolutePath(), null).get(Syntax.V_CARD_ID) == null);
+        vars = Parse.vars(root, root.getAbsolutePath(), null);
         String now = vars.get(Syntax.V_NOW);
         Batch.Plan p = Batch.plan("COPY מקור \"גיבוי2\\%תאריך%\" /S /יומן:\"גיבוי2\\יומן\\%תאריך%.txt\"", root, vars);
         check("1.19.0: COPY /S — בלי שגיאה", p.errors == 0 && p.steps.size() == 1);

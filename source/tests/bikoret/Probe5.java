@@ -45,7 +45,7 @@ public final class Probe5 {
         wipe(root);
         File dl = new File(root, "Download");
         mk(dl, "א.pdf", 10);
-        Map<String, String> vars = Batch.vars(root, root.getAbsolutePath(), null);
+        Map<String, String> vars = Parse.vars(root, root.getAbsolutePath(), null);
         Batch.Plan p = Batch.plan("MD %פנימי%\\חדשה\n" + "MOVE %הורדות%\\*.pdf %פנימי%\\חדשה\n", root, vars);
         Batch.Step mv = p.steps.get(1);
         say("1. MD ואז MOVE אליה — שגיאת תכנון: " + (mv.error == null ? "אין" : "\"" + mv.error + "\"") + " · שגיאות בתוכנית: " + p.errors);
@@ -58,7 +58,7 @@ public final class Probe5 {
         File dl = new File(root, "Download");
         mk(dl, "ישן.pdf", 10);
         new File(root, "יעד").mkdirs();
-        Map<String, String> vars = Batch.vars(root, root.getAbsolutePath(), null);
+        Map<String, String> vars = Parse.vars(root, root.getAbsolutePath(), null);
         Batch.Plan p = Batch.plan("REN %הורדות%\\ישן.pdf חדש.pdf\n" + "COPY %הורדות%\\חדש.pdf %פנימי%\\יעד\n", root, vars);
         Batch.Step cp = p.steps.get(1);
         say("2. REN ואז COPY של השם החדש — שגיאת תכנון: " + (cp.error == null ? "אין" : "\"" + cp.error + "\""));
@@ -72,7 +72,7 @@ public final class Probe5 {
         File old = mk(dir, "ישן.pdf", 10);
         old.setLastModified(System.currentTimeMillis() - 900L * 24 * 3600 * 1000);
         new File(root, "יעד").mkdirs();
-        Map<String, String> vars = Batch.vars(root, root.getAbsolutePath(), null);
+        Map<String, String> vars = Parse.vars(root, root.getAbsolutePath(), null);
         Batch.Plan p = Batch.plan("MOVE %פנימי%\\ספרים %פנימי%\\יעד /תאריך:שבוע\n", root, vars);
         Batch.Step s = p.steps.get(0);
         say("3. MOVE של תיקייה עם /תאריך:שבוע (הקובץ בה בן שנתיים): שגיאה=" + s.error + " · תיקיות=" + s.dirs.size() + " · \"" + s.describe + "\" · הסינון נאמר? " + s.describe.contains("סינון"));

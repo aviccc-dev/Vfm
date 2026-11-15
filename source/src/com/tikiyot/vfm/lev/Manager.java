@@ -22,7 +22,7 @@ final class Manager {
 
     /** לאן הולך הטקסט, לפי הסדר. verbTried — פקודת הפתיחה כבר נוסתה ולא בוצעה: ממשיכים כקובץ רגיל. */
     static int route(String text, boolean verbTried) {
-        if (!verbTried && Batch.singleVerb(text) != null) return TO_VERB;
+        if (!verbTried && Parse.singleVerb(text) != null) return TO_VERB;
         if (Batch.wantsCheck(text)) return TO_CHECK;
         if (!CmdTemplates.holes(lines(text)).isEmpty()) return TO_HOLES;
         return TO_RUN;
@@ -30,7 +30,7 @@ final class Manager {
 
     /** פקודת הפתיחה שהטקסט כולו — למי שקיבל TO_VERB. */
     static String verb(String text) {
-        return Batch.singleVerb(text);
+        return Parse.singleVerb(text);
     }
 
     /** שורות הטקסט — כמו שההרצה מפרקת אותן. */
@@ -692,6 +692,6 @@ final class Manager {
 
     /** 186: הייתה תקלה, ו־START הוא קובץ (לא הבית) — נפתח בכל זאת, לצד הדוח. מבנה 29. */
     static boolean openStartOnTrouble(Batch.Plan plan) {
-        return plan.trouble && plan.start != null && !Batch.isHome(plan.start) && plan.start.isFile();
+        return plan.trouble && plan.start != null && !Parse.isHome(plan.start) && plan.start.isFile();
     }
 }

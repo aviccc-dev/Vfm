@@ -61,13 +61,13 @@ final class Choice {
         for (String raw : Bidi.strip(text == null ? "" : text).replace("\r", "").split("\n")) {
             String l = Commands.normal(raw);
             if (!l.contains(SEL) || l.startsWith("::") || Program.isHeader(l)) continue;
-            List<String> tk = Batch.tokens(l);
+            List<String> tk = Parse.tokens(l);
             Commands.Def d = tk.isEmpty() ? null : Commands.get(tk.get(0));
             if (d != null && d.name.equals("REM")) continue;
             int pos = -1, at = 0;
             for (int i = 1; i < tk.size() && pos < 0; i++) {
                 String t = tk.get(i);
-                if (Batch.isSwitch(t) || TYPE_WORDS.contains(t)) continue;
+                if (Parse.isSwitch(t) || TYPE_WORDS.contains(t)) continue;
                 if (t.contains(SEL)) pos = at;
                 at++;
             }
@@ -94,7 +94,7 @@ final class Choice {
         for (String raw : lines) {
             String l = Commands.normal(raw);
             if (l.isEmpty() || l.startsWith("::") || Program.isHeader(l)) continue;
-            List<String> tk = Batch.tokens(l);
+            List<String> tk = Parse.tokens(l);
             Commands.Def d = tk.isEmpty() ? null : Commands.get(tk.get(0));
             if (d != null && d.name.equals("REM")) continue;
             if (d == null || !PLAIN.contains(d.name) || ListCmd.parse(l, new ArrayList<String>()) != null) return null;
@@ -124,7 +124,7 @@ final class Choice {
         boolean ok = true;
         try {
             Boolean p = planned(expand(text, files.subList(0, Math.min(2, files.size()))), f.getParentFile(),
-                    Batch.vars(f.getParentFile(), Vols.internalRoot(c), Vols.cardRoot(c)), Library.get(c));
+                    Parse.vars(f.getParentFile(), Vols.internalRoot(c), Vols.cardRoot(c)), Library.get(c));
             ok = p == null || p;
         } catch (Throwable t) {
             Log.e("Choice.fits", t);

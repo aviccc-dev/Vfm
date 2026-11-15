@@ -227,7 +227,7 @@ final class Batch {
     private static void planSet(final Step s, List<String> tk, Map<String, String> vars, Sim sim) {
         if (tk.size() != 3) { s.error = Words.Cmd.SET_USAGE; return; }
         Selection sel = sim.selected;
-        boolean picked = tk.get(1).equals(var(V_NEW_NAME)) && tk.get(2).equals(var(V_CONTENT));
+        boolean picked = tk.get(1).equals(Parse.var(V_NEW_NAME)) && tk.get(2).equals(Parse.var(V_CONTENT));
         if (picked && (sel == null || sel.name == null || sel.content == null)) { s.error = Words.Cmd.NOTHING_SELECTED; return; }
         final String key = picked ? sel.name : Verbs.withVars(tk.get(1), vars).trim();
         String raw = picked ? sel.content : Verbs.withVars(tk.get(2), vars);
@@ -369,7 +369,7 @@ final class Batch {
         if (cmd.equals(Syntax.PACK) || cmd.equals(Syntax.UNPACK)) {                           // מבנה 122: מה שהמסך עשה בעצמו (PhysicalUi.askZip / askUnzip)
             final boolean pack = cmd.equals(Syntax.PACK);
             String[] err = {null};
-            String p = tk.size() == 2 ? path(tk.get(1), here, vars, err) : null;
+            String p = tk.size() == 2 ? Parse.path(tk.get(1), here, vars, err) : null;
             if (p == null) { s.error = err[0] != null ? err[0] : pack ? Words.Cmd.PACK_USAGE : Words.Cmd.UNPACK_USAGE; return true; }
             if (p.equals(SELECTED_MARK)) {                                      // מהמסך: התיקייה / הקובץ שנבחרו
                 Selection sel = sim.selected;
@@ -425,7 +425,7 @@ final class Batch {
         }
         if (cmd.equals(Syntax.REPORT)) {
             String[] err = {null};
-            String p = tk.size() == 2 ? path(tk.get(1), here, vars, err) : null;
+            String p = tk.size() == 2 ? Parse.path(tk.get(1), here, vars, err) : null;
             if (p == null) { s.error = err[0] != null ? err[0] : Words.DbCmd.REPORT_USAGE; return true; }
             if ((s.error = noWriteHere(p)) != null) return true;                 // מבנה 45
             plan.reportFile = p;
@@ -508,11 +508,11 @@ final class Batch {
             if (a.isEmpty() || a.size() > 2) { s.error = Words.DbCmd.WRITE_USAGE; return true; }
             if (append && taken != null) { s.error = Words.Cmd.WRITE_TAKEN_ONLY; return true; }   // "להוסיף" — אין שם תפוס
             String[] err = {null};
-            String p = path(a.get(0), here, vars, err);
+            String p = Parse.path(a.get(0), here, vars, err);
             if (p == null) { s.error = err[0]; return true; }
-            if (new File(p).getName().equals(NAME_TOKEN) || (a.size() == 2 && a.get(1).equals(var(V_CONTENT)) && sim.selected != null
+            if (new File(p).getName().equals(NAME_TOKEN) || (a.size() == 2 && a.get(1).equals(Parse.var(V_CONTENT)) && sim.selected != null
                     && sim.selected.content != null)) {                         // מבנה 80: קובץ חדש מהמסך
-                writeSelected(s, new File(p), append || a.size() != 2 || !a.get(1).equals(var(V_CONTENT)), taken, sim);
+                writeSelected(s, new File(p), append || a.size() != 2 || !a.get(1).equals(Parse.var(V_CONTENT)), taken, sim);
                 return true;
             }
             if (Physical.programFile(p) != null) { s.error = Physical.programFile(p); return true; }   // מבנה 45
@@ -645,7 +645,7 @@ final class Batch {
     private static void planUntrash(final Step s, List<String> tk, File here, Map<String, String> vars, Sim sim) {
         if (tk.size() != 2) { s.error = Words.DbCmd.UNTRASH_USAGE; return; }
         String[] err = {null};
-        final String p = path(tk.get(1), here, vars, err);
+        final String p = Parse.path(tk.get(1), here, vars, err);
         if (p == null) { s.error = err[0] != null ? err[0] : Words.DbCmd.UNTRASH_USAGE; return; }
         if (p.startsWith(SELECTED_MARK)) {                                      // מבנה 81: מה שנבחר במסך הסל
             if (p.equals(SELECTED_MARK)) trashSelected(s, sim, true);
@@ -690,7 +690,7 @@ final class Batch {
         final String p;
         if (tk.size() == 2) {
             String[] err = {null};
-            p = path(tk.get(1), here, vars, err);
+            p = Parse.path(tk.get(1), here, vars, err);
             if (p == null) { s.error = err[0] != null ? err[0] : Words.DbCmd.PURGE_USAGE; return; }
             if (p.startsWith(SELECTED_MARK)) {                                  // מבנה 81: מה שנבחר במסך הסל
                 if (p.equals(SELECTED_MARK)) trashSelected(s, sim, false);
@@ -764,49 +764,7 @@ final class Batch {
         return out;
     }
 
-    /**
-     * מ0.31 (המשתמש, 11.11.2026: "המשך סתם רק פעם אחת, אם יש מספר בתוך סוגריים אז כפי המספר, אם סוגריים ריקות אז ממשיך
-     * בלי עצירה בכלל"): כמה כישלונות מותרים לפי שורת "המשך". ‎-1 — הצורה לא מובנת.
-     */
-    static int allowOf(String line) {
-        String rest = line.trim();
-        int sp = 0;
-        while (sp < rest.length() && !Character.isWhitespace(rest.charAt(sp)) && rest.charAt(sp) != '(') sp++;
-        rest = rest.substring(sp).trim();
-        if (rest.isEmpty()) return 1;
-        if (rest.startsWith("(") && rest.endsWith(")")) rest = rest.substring(1, rest.length() - 1).trim();
-        if (rest.isEmpty()) return Integer.MAX_VALUE;
-        try {
-            int n = Integer.parseInt(rest);
-            return n < 0 ? -1 : n;
-        } catch (NumberFormatException e) {
-            return -1;
-        }
-    }
-
     // ---------- קריאה ----------
-
-    /** מפצל שורה לחלקים כמו cmd: רווחים מפרידים, ומרכאות שומרות רווחים (המרכאות עצמן יורדות). */
-    static List<String> tokens(String line) {
-        List<String> out = new ArrayList<String>();
-        StringBuilder cur = new StringBuilder();
-        boolean q = false, any = false;
-        for (int i = 0; i < line.length(); i++) {
-            char c = line.charAt(i);
-            if (c == '"') {
-                q = !q;
-                any = true;
-            } else if (!q && Character.isWhitespace(c)) {
-                if (any || cur.length() > 0) out.add(cur.toString());
-                cur.setLength(0);
-                any = false;
-            } else {
-                cur.append(c);
-            }
-        }
-        if (any || cur.length() > 0) out.add(cur.toString());
-        return out;
-    }
 
     // ---------- קריאת שורה: משתנים, מתגים, מסלולים (המילים עצמן — Syntax, מבנה 159) ----------
 
@@ -853,154 +811,9 @@ final class Batch {
                 out.add(new AsIfRow("📤", Words.AsIf.SHARE, s.describe));
         for (String[] o : plan.opens) out.add(new AsIfRow("▶", Verbs.label(Verbs.parse(o[0])), Words.AsIf.AT_END));   // מ0.25: כולן, בסדר
         if (plan.start != null)
-            out.add(new AsIfRow("▶", isHome(plan.start) ? Words.Cmd.HOME_AT_END : plan.start.getName(), Words.AsIf.AT_END));
+            out.add(new AsIfRow("▶", Parse.isHome(plan.start) ? Words.Cmd.HOME_AT_END : plan.start.getName(), Words.AsIf.AT_END));
         if (out.isEmpty()) out.add(new AsIfRow("·", Words.AsIf.NOTHING, ""));
         return out;
-    }
-
-
-    /** START %בית% — היעד שבסוף הוא מסך הבית. */
-    static boolean isHome(File f) {
-        return f != null && Syntax.HOME_MARK.equals(f.getPath());
-    }
-
-    /** "/תפוס:<ערך>" — ערך מוכר. */
-    static boolean takenValue(String sw) {
-        for (String v : new String[]{Syntax.TAKEN_ASK, Syntax.TAKEN_SKIP, Syntax.TAKEN_REPLACE, Syntax.TAKEN_STOP, Syntax.TAKEN_RENAME}) if (sw.equals(Syntax.SW_TAKEN + v)) return true;
-        return false;
-    }
-
-    static String takenUnknown(String sw) {
-        return Words.Cmd.switchUnknown(sw) + " (" + Syntax.TAKEN_ASK + " · " + Syntax.TAKEN_SKIP + " · " + Syntax.TAKEN_REPLACE + " · " + Syntax.TAKEN_STOP
-                + " · " + Syntax.TAKEN_RENAME + ")";
-    }
-
-    static String var(String name) {
-        return "%" + name + "%";
-    }
-
-    /** מתג: מתחיל ב-"/" ושמו מוכר (כך "/storage/..." אינו מתג). */
-    private static final Pattern SWITCH = Pattern.compile(
-            "^/(-?Y|S|Q|F|A(:.*)?|D(:.*)?|" + Syntax.SW_DATE + ".*|" + Syntax.SW_SIZE + ".*|" + Syntax.SW_TAKEN.substring(1)
-                    + ".*|" + Syntax.SW_KEEP.substring(1) + "|" + Syntax.SW_JOURNAL.substring(1) + ".*|" + Syntax.SW_LIMIT.substring(1)
-                    + ".*|" + Syntax.SW_STATE.substring(1) + ".*|" + Syntax.SW_LIST.substring(1) + ".*|" + Syntax.SW_APPEND.substring(1) + "|" + Syntax.SW_CONTAINS + ".*|MAXAGE:.*|MINAGE:.*|MAX:.*|MIN:.*)$",
-            Pattern.CASE_INSENSITIVE);
-
-    static boolean isSwitch(String t) {
-        return SWITCH.matcher(t).matches();
-    }
-
-    /** מסלול מלא שנבחר בבורר — בסגנון bat: המשתנה הארוך ביותר שמתאים בהתחלה, ו-"\\". */
-    static String toVar(String abs, Map<String, String> vars) {
-        String best = null, bestVal = "";
-        for (Map.Entry<String, String> e : vars.entrySet()) {
-            if (e.getKey().equals(Syntax.V_HERE)) continue;                      // תלוי בקובץ — לא מציעים
-            String v = e.getValue();
-            if ((abs.equals(v) || abs.startsWith(v + "/")) && v.length() > bestVal.length()) {
-                best = e.getKey();
-                bestVal = v;
-            }
-        }
-        String rest = best == null ? abs : abs.substring(bestVal.length());
-        String out = (best == null ? "" : "%" + best + "%") + rest.replace('/', '\\');
-        return out.isEmpty() ? abs : out;
-    }
-
-    /** משתנים קבועים. */
-    /**
-     * מ0.41: קובץ שכולו פקודת פתיחה אחת (חוץ מהכותרת — צלמית, שם, למה — ומהערות): השורה; אחרת null. קובץ כזה רץ מיד, בלי
-     * הכנה ותצוגה מקדימה — כמו כפתור (הכפתורים בשורות הם קובצי פקודות).
-     */
-    static String singleVerb(String text) {
-        String one = null;
-        for (String raw : Bidi.strip(text == null ? "" : text).replace("\r", "").split("\n")) {
-            String l = Commands.normal(raw);
-            if (l.isEmpty() || l.startsWith("::") || Program.isHeader(l)) continue;
-            int sp = l.indexOf(' ');
-            Commands.Def d = Commands.get(sp < 0 ? l : l.substring(0, sp));
-            if (d != null && d.name.equals("REM")) continue;
-            if (one != null || !Verbs.isVerb(l)) return null;
-            one = l;
-        }
-        return one;
-    }
-
-    static Map<String, String> vars(File here, String internal, String card) {
-        Map<String, String> v = new LinkedHashMap<String, String>();
-        v.put(Syntax.V_INTERNAL, internal);
-        if (card != null) v.put(Syntax.V_CARD, card);
-        v.put(Syntax.V_DOWNLOADS, internal + "/Download");
-        v.put(Syntax.V_HERE, here.getAbsolutePath());
-        if (card != null) v.put(Syntax.V_CARD_ID, new File(card).getName());       // 1.19.0
-        v.put(Syntax.V_NOW, new java.text.SimpleDateFormat(Syntax.NOW_FORMAT, Locale.ROOT).format(new java.util.Date()));   // 1.19.0
-        v.put(Syntax.V_TIME, new java.text.SimpleDateFormat("HH-mm-ss", Locale.ROOT).format(new java.util.Date()));   // מ0.37
-        v.put(Syntax.V_UNIQUE, Long.toString(System.currentTimeMillis(), 36));        // מ0.37: שם שלא חוזר בין הרצות
-        v.put(Syntax.V_ONLY_A, Syntax.ONLY_A_MARK);                                         // 1.20.0
-        v.put(Syntax.V_ONLY_B, Syntax.ONLY_B_MARK);
-        v.put(Syntax.V_SHARE, Syntax.SHARE_MARK);                                           // 203
-        v.put(Syntax.V_HOME, Syntax.HOME_MARK);                                             // 1.9.0
-        return v;
-    }
-
-    /** מחליף משתנים, "\\" ב-"/", ומסלול יחסי — ביחס לתיקייה של הקובץ. null = משתנה לא מוכר. */
-    static String path(String raw, File here, Map<String, String> vars, String[] error) {
-        // מבנה 41 (ממצא 35): מסלול ריק — שגיאה. עד כאן "" פוענח כ"התיקייה של הקובץ", ו־DEL "" מחק את כל הקבצים שבה
-        // (משתנה ריק או מקום פתוח שלא מולא הופכים בדיוק לזה). מי שמתכוון לתיקייה הזו — כותב "." .
-        if (raw == null || raw.trim().isEmpty()) {
-            error[0] = Words.Cmd.EMPTY_PATH;
-            return null;
-        }
-        StringBuilder sb = new StringBuilder();
-        int i = 0;
-        while (i < raw.length()) {
-            char c = raw.charAt(i);
-            if (raw.startsWith("%~dp0", i)) {                          // 139: התיקייה של הקובץ, כמו ב-bat
-                String h = vars.get(Syntax.V_HERE);
-                sb.append(h).append('/');
-                i += 5;
-                if (i < raw.length() && (raw.charAt(i) == '\\' || raw.charAt(i) == '/')) i++;
-                continue;
-            }
-            if (c == '%') {
-                int j = raw.indexOf('%', i + 1);
-                if (j < 0) {
-                    error[0] = Words.Cmd.MISSING_PERCENT;
-                    return null;
-                }
-                String name = raw.substring(i + 1, j);
-                String val = vars.get(name);
-                if (val == null) {
-                    error[0] = Words.Cmd.unknownVar(name);
-                    return null;
-                }
-                sb.append(val);
-                i = j + 1;
-            } else {
-                sb.append(c == '\\' ? '/' : c);
-                i++;
-            }
-        }
-        String p = sb.toString();
-        if (p.trim().isEmpty()) {                                               // משתנה שהערך שלו ריק
-            error[0] = Words.Cmd.EMPTY_PATH;
-            return null;
-        }
-        while (p.length() > 1 && p.endsWith("/")) p = p.substring(0, p.length() - 1);
-        if (!p.startsWith("/")) p = new File(here, p).getAbsolutePath();
-        return Paths.clean(p);                                                  // מבנה 42: צורה אחת — בלי "." ו".."
-    }
-
-    /** תבנית שם בסגנון bat: * ו-? (בלי הבדל בין גדולות לקטנות). */
-    static boolean wild(String pattern, String name) {
-        StringBuilder re = new StringBuilder();
-        for (char c : pattern.toCharArray()) {
-            if (c == '*') re.append(".*");
-            else if (c == '?') re.append('.');
-            else re.append(Pattern.quote(String.valueOf(c)));
-        }
-        String p = re.toString();
-        if (pattern.equals("*.*")) p = ".*";                   // כמו ב-bat: *.* — כל הקבצים, גם בלי סיומת
-        return Pattern.compile(p, Pattern.CASE_INSENSITIVE | Pattern.UNICODE_CASE).matcher(name).matches();
     }
 
     // ---------- תכנון ----------
@@ -1012,12 +825,6 @@ final class Batch {
     /** מתכנן את כל הקובץ, בלי לשנות דבר. כל שורה מכירה את מה שהשורות שלפניה יעשו (118). */
     static Plan plan(String text, File here, Map<String, String> vars) {
         return plan(text, here, vars, null);
-    }
-
-    static String clean(String raw) {
-        String line = raw.trim();
-        if (line.startsWith("@")) line = line.substring(1).trim();
-        return line;
     }
 
     /** 1.20.0: עם האינדקס — ההשוואה לוקחת ממנו חתימות שכבר חושבו. */
@@ -1151,7 +958,7 @@ final class Batch {
             prev = ln;
             if (clock.skip(plan, ln.loops, ln.rounds)) continue;               // לולאה שעברה את הגבול — גם בתכנון
             int n = ln.num - 1;
-            final String shown = clean(ln.text);                                 // מ0.38: מה שנכתב (לדוח) — גם כשהוא בעברית
+            final String shown = Parse.clean(ln.text);                                 // מ0.38: מה שנכתב (לדוח) — גם כשהוא בעברית
             String line = Commands.normal(shown);
             if (ln.error != null) {
                 Step s = new Step();
@@ -1171,12 +978,12 @@ final class Batch {
             if (line.equals(Syntax.CHECK)) continue;                                  // 1.28.0: שורת כותרת — מסך ההרצה (BatchUi)
             if (line.equals(Syntax.MEASURE) || line.startsWith(Syntax.MEASURE + " ")) {     // 1.25.0: שורת כותרת — מדידה
                 plan.measure = true;
-                List<String> mt = tokens(line);
+                List<String> mt = Parse.tokens(line);
                 for (int k = 0; k < mt.size(); k++) {
                     String x = mt.get(k);
                     if (x.startsWith(Syntax.SW_JOURNAL)) {
                         String[] err = {null};
-                        plan.measureJournal = path(x.substring(Syntax.SW_JOURNAL.length()).trim(), here, vars, err);
+                        plan.measureJournal = Parse.path(x.substring(Syntax.SW_JOURNAL.length()).trim(), here, vars, err);
                         if (plan.measureJournal != null && (err[0] = noWriteHere(plan.measureJournal)) != null) plan.measureJournal = null;   // מבנה 45
                         if (plan.measureJournal == null) {                           // מבנה 43: מסלול שגוי — שגיאה, לא "בלי יומן" בשקט
                             Step s = new Step();
@@ -1240,7 +1047,7 @@ final class Batch {
                 plan.steps.add(s);
                 continue;
             }
-            List<String> tk = tokens(line);
+            List<String> tk = Parse.tokens(line);
             if (tk.isEmpty()) continue;
             String cmd = Commands.canonical(tk.get(0));                       // 1.22.5: שמות נרדפים — מההגדרה האחת
             if (cmd.equals("REM")) continue;
@@ -1268,7 +1075,7 @@ final class Batch {
                 continue;
             }
             if (cmd.equals(Syntax.CONT)) {                                             // מ0.30: המשך [N] — הקובץ רץ גם כשיש שורות שגיאה
-                int allow = allowOf(line);
+                int allow = Parse.allowOf(line);
                 if (allow < 0) {
                     s.error = Words.DbCmd.CONT_USAGE;
                     plan.errors++;
@@ -1318,7 +1125,7 @@ final class Batch {
             if (lp == null && cmd.equals(Syntax.VERIFY) && tk.size() >= 2) {          // מ0.18: ודא "קובץ" קיים — בלי מילת סוג
                 List<String> conds = new ArrayList<String>(tk.subList(2, tk.size()));
                 String[] err = {null};
-                String p = path(tk.get(1), here, vars, err);
+                String p = Parse.path(tk.get(1), here, vars, err);
                 if (p == null) s.error = err[0];
                 else DbListCmd.planVerifyFile(s, new File(p), conds);
                 if (s.error != null) plan.errors++;
@@ -1335,11 +1142,11 @@ final class Batch {
                 sw.addAll(lsw);
                 for (ListCmd.Side x : lp.sides) args.add(x.raw);
             } else
-            for (int i = 1; i < tk.size(); i++) (isSwitch(tk.get(i)) ? sw : args).add(tk.get(i));
+            for (int i = 1; i < tk.size(); i++) (Parse.isSwitch(tk.get(i)) ? sw : args).add(tk.get(i));
             String[] err = {null};
             List<String> paths = new ArrayList<String>();
             for (String a : args) {
-                String p = path(a, here, vars, err);
+                String p = Parse.path(a, here, vars, err);
                 if (p == null) break;
                 paths.add(p);
             }
@@ -1351,7 +1158,7 @@ final class Batch {
                         err[0] = Words.Cmd.JOURNAL_USAGE;
                         break;
                     }
-                    s.journal = path(v, here, vars, err);
+                    s.journal = Parse.path(v, here, vars, err);
                     if (s.journal == null) break;
                     if ((err[0] = noWriteHere(s.journal)) != null) break;       // מבנה 45
                 }
@@ -1391,7 +1198,7 @@ final class Batch {
             if (a.list()) ListCmd.resolve(a, vars);
             else {                                                              // מ0.18: ודא "קובץ" קיים / חסר — בכונן
                 String[] err = {null};
-                String p = path(a.raw, here, vars, err);
+                String p = Parse.path(a.raw, here, vars, err);
                 if (p == null) { s.error = err[0]; return; }
                 DbListCmd.planVerifyFile(s, new File(p), conds);
                 return;
@@ -1408,12 +1215,12 @@ final class Batch {
         for (int i = 0; i < lp.sides.size(); i++) {
             ListCmd.Side x = lp.sides.get(i);
             if (x.list()) {
-                if (var(V_SELECTED).equals(x.raw)) x.picked = true;             // מבנה 85: מה שנבחר במסך הרשימות — מספרים, לא דרך של שמות
+                if (Parse.var(V_SELECTED).equals(x.raw)) x.picked = true;             // מבנה 85: מה שנבחר במסך הרשימות — מספרים, לא דרך של שמות
                 else ListCmd.resolve(x, vars);
                 continue;
             }
             String[] err = {null};
-            String p = path(x.raw, here, vars, err);
+            String p = Parse.path(x.raw, here, vars, err);
             if (p == null) { s.error = err[0]; return; }
             if (p.equals(SELECTED_MARK)) {                                      // מבנה 114: הקבצים שנבחרו במסך — אל רשימה
                 Selection sel = sim.selected;
@@ -1527,7 +1334,7 @@ final class Batch {
             if (x.equals(Syntax.SW_TAKEN + Syntax.TAKEN_RENAME)) s.renameTaken = true;      // מ0.40
             if (u.equals("/S") || x.equals(Syntax.SW_KEEP)) s.recursive = true;
             if (u.equals("/A") || u.startsWith("/A:H") || u.equals("/A:")) s.hidden = true;
-            if (x.startsWith(Syntax.SW_TAKEN) && !takenValue(x)) s.error = takenUnknown(x);
+            if (x.startsWith(Syntax.SW_TAKEN) && !Parse.takenValue(x)) s.error = Parse.takenUnknown(x);
             if (x.startsWith(Syntax.SW_LIMIT) && limit(x) < 0) s.error = Words.Cmd.switchUnknown(x);
             if (x.startsWith(Syntax.SW_LIST)) {                                      // 1.22.0
                 s.listName = x.substring(Syntax.SW_LIST.length()).trim();
@@ -1686,7 +1493,7 @@ final class Batch {
                 File best = null;
                 int n = 0;
                 for (File x : sim.files(dir))
-                    if (wild(name, x.getName()) && visible(s, x)) {
+                    if (Parse.wild(name, x.getName()) && visible(s, x)) {
                         n++;
                         if (best == null || sim.real(x).lastModified() > sim.real(best).lastModified()) best = x;
                     }
@@ -1758,7 +1565,7 @@ final class Batch {
         for (File x : sim.files(dir)) {
             if (!visible(s, x) || Physical.isPartial(x.getName())) continue;
             any = true;
-            if (mask != null && !wild(mask, x.getName())) continue;
+            if (mask != null && !Parse.wild(mask, x.getName())) continue;
             s.total++;
             if (flt.ok(sim.real(x))) s.files.add(x.getAbsolutePath());
         }
@@ -1978,7 +1785,7 @@ final class Batch {
         for (File x : k) {
             if (!visible(s, x) || Physical.isPartial(x.getName())) continue;
             if (x.isDirectory()) collect(s, x, mask, out);
-            else if (mask == null || wild(mask, x.getName())) out.add(x.getAbsolutePath());
+            else if (mask == null || Parse.wild(mask, x.getName())) out.add(x.getAbsolutePath());
         }
     }
 
@@ -2050,7 +1857,7 @@ final class Batch {
             File dir = f.getParentFile();
             if (dir == null || !sim.isDir(dir)) { s.error = Words.FOLDER_NOT_FOUND + ": " + (dir == null ? src : dir.getAbsolutePath()); return; }
             for (File x : sim.files(dir))
-                if (wild(name, x.getName()) && visible(s, x)) {
+                if (Parse.wild(name, x.getName()) && visible(s, x)) {
                     s.total++;
                     if (flt.ok(sim.real(x))) s.files.add(x.getAbsolutePath());
                 }
@@ -2588,7 +2395,7 @@ final class Batch {
      * פקודה תעבור את המבחן הזה תמיד"): מסך ההרצה — רק לקובץ שיש בו שורת "בדיקה".
      */
     static boolean wantsCheck(String text) {
-        for (String raw : Bidi.strip(text).replace("\r", "").split("\n")) if (clean(raw).equals(Syntax.CHECK)) return true;
+        for (String raw : Bidi.strip(text).replace("\r", "").split("\n")) if (Parse.clean(raw).equals(Syntax.CHECK)) return true;
         return false;
     }
 
@@ -2716,11 +2523,11 @@ final class Batch {
     /** תבנית לקובץ חדש — ההסבר מהמילון, התחביר מכאן. */
     static String template() {
         return Words.Cmd.template(join(Arrays.asList(Commands.fileNames()), "  "),
-                var(Syntax.V_INTERNAL) + "  " + var(Syntax.V_CARD) + "  " + var(Syntax.V_DOWNLOADS) + "  " + var(Syntax.V_HERE) + "  " + var(Syntax.V_SHARE) + "  " + var(Syntax.V_HOME)
-                        + "  " + var(Syntax.V_NOW) + "  " + var(Syntax.V_CARD_ID),
+                Parse.var(Syntax.V_INTERNAL) + "  " + Parse.var(Syntax.V_CARD) + "  " + Parse.var(Syntax.V_DOWNLOADS) + "  " + Parse.var(Syntax.V_HERE) + "  " + Parse.var(Syntax.V_SHARE) + "  " + Parse.var(Syntax.V_HOME)
+                        + "  " + Parse.var(Syntax.V_NOW) + "  " + Parse.var(Syntax.V_CARD_ID),
                 "/" + Syntax.SW_DATE + "יום  /" + Syntax.SW_DATE + "<שנה  /" + Syntax.SW_SIZE + ">10MB",   // תחביר
                 Syntax.SW_TAKEN + Syntax.TAKEN_ASK, Syntax.SW_TAKEN + Syntax.TAKEN_SKIP,
-                "MOVE \"" + var(Syntax.V_DOWNLOADS) + "\\*.pdf\" \"" + var(Syntax.V_INTERNAL) + "\\ספרים\" /" + Syntax.SW_DATE + "שבוע");   // תחביר
+                "MOVE \"" + Parse.var(Syntax.V_DOWNLOADS) + "\\*.pdf\" \"" + Parse.var(Syntax.V_INTERNAL) + "\\ספרים\" /" + Syntax.SW_DATE + "שבוע");   // תחביר
     }
 
     // ---------- הפקודות שירדו: "הוסף תוסף" / "החלף תוסף" (מבנה 11: עד כאן ב־Lab; אלה שורות של פקודות, לא ניהול התוספים) ----------

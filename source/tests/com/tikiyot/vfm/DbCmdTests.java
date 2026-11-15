@@ -56,7 +56,7 @@ final class DbCmdTests {
             Index ix = new Index("71", "71", root.getAbsolutePath());
             ix.scan(null);
             Library lib = Library.forTests(new ArrayList<Index>(java.util.Collections.singletonList(ix)));
-            Map<String, String> vars = Batch.vars(here, root.getAbsolutePath(), null);
+            Map<String, String> vars = Parse.vars(here, root.getAbsolutePath(), null);
             o.check("מבנה 71: עם ההקשר המדומה — הפקודות הן של המסד", DbVerbs.active());
 
             // א. הקטן ביותר: אופן, רשימה, בדיקה, ביטול

@@ -24,7 +24,7 @@ final class Loops {
 
     /** "חזור 6" · "חזור <סבבים>" — לולאה (בלי מספר — הפועל "חזור", חזרה למסך הקודם). */
     static boolean isLoopStart(String line) {
-        List<String> tk = Batch.tokens(line);
+        List<String> tk = Parse.tokens(line);
         if (tk.size() < 2 || !tk.get(0).equals(Syntax.LOOP)) return false;
         char c = tk.get(1).isEmpty() ? ' ' : tk.get(1).charAt(0);
         return Character.isDigit(c) || c == '<' || c == '%';
@@ -57,13 +57,13 @@ final class Loops {
     static String[] calls(String[] lines, File here, Map<String, String> vars, int depth, java.util.Set<String> stack) {
         List<String> out = new ArrayList<String>();
         for (String raw : lines) {
-            List<String> tk = Batch.tokens(Batch.clean(raw));
+            List<String> tk = Parse.tokens(Parse.clean(raw));
             if (tk.size() != 2 || !Syntax.CALL.equals(Commands.canonical(tk.get(0)))) {
                 out.add(raw);
                 continue;
             }
             String[] err = {null};
-            String p = Batch.path(tk.get(1), here, vars, err);
+            String p = Parse.path(tk.get(1), here, vars, err);
             File f = p == null ? null : new File(p);
             String key = f == null ? "" : f.getAbsolutePath();
             if (f == null || !f.isFile() || depth >= Syntax.CALL_DEPTH || stack.contains(key)) {
@@ -77,7 +77,7 @@ final class Loops {
                 stack.remove(key);
                 List<String> keep = new ArrayList<String>();
                 for (String x : sub) {
-                    String c = Batch.clean(x);
+                    String c = Parse.clean(x);
                     if (c.equals(Syntax.CHECK) || c.equals(Syntax.AS_IF) || c.equals(Syntax.AS_IF2)) continue;   // שורות כותרת — רק של הקובץ הראשי
                     keep.add(x);
                 }
@@ -100,18 +100,18 @@ final class Loops {
     private static void expand(String[] lines, int from, int to, int[] loops, int[] rounds, String round, Batch.Plan plan, List<Ln> out) {
         for (int i = from; i < to; i++) {
             if (out.size() > Syntax.MAX_LINES) return;
-            String line = Batch.clean(lines[i]);
+            String line = Parse.clean(lines[i]);
             if (isLoopStart(line)) {
                 int depth = 0, end = -1;
                 for (int j = i + 1; j < to && end < 0; j++) {
-                    String x = Batch.clean(lines[j]);
+                    String x = Parse.clean(lines[j]);
                     if (isLoopStart(x)) depth++;
                     else if (isLoopEnd(x)) {
                         if (depth == 0) end = j;
                         else depth--;
                     }
                 }
-                List<String> tk = Batch.tokens(round == null ? line : line.replace(Batch.var(Syntax.V_ROUND), round));
+                List<String> tk = Parse.tokens(round == null ? line : line.replace(Parse.var(Syntax.V_ROUND), round));
                 int n = -1;
                 long limit = 0;
                 String err = null;
@@ -154,7 +154,7 @@ final class Loops {
             }
             Ln x = new Ln();
             x.num = i + 1;
-            x.text = round == null ? lines[i] : lines[i].replace(Batch.var(Syntax.V_ROUND), round);
+            x.text = round == null ? lines[i] : lines[i].replace(Parse.var(Syntax.V_ROUND), round);
             if (isLoopEnd(line)) x.error = Words.Loop.END_WITHOUT_START;
             if (loops.length > 0) {
                 x.loops = loops;

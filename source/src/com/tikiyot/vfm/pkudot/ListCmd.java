@@ -127,7 +127,7 @@ final class ListCmd {
         Side cur = null;
         for (int i = 1; i < tk.size(); i++) {
             Tok t = tk.get(i);
-            if ((!t.quoted && (Batch.isSwitch(t.text) || t.text.equals(SW_CONDS) || t.text.equals(SW_DIFF) || t.text.equals(SW_LIVE) || t.text.equals(SW_FLAT))) || (t.valueQuoted && Batch.isSwitch(t.text))) {
+            if ((!t.quoted && (Parse.isSwitch(t.text) || t.text.equals(SW_CONDS) || t.text.equals(SW_DIFF) || t.text.equals(SW_LIVE) || t.text.equals(SW_FLAT))) || (t.valueQuoted && Parse.isSwitch(t.text))) {
                 switches.add(t.text);
                 continue;
             }
@@ -171,7 +171,7 @@ final class ListCmd {
     /** הדרך לרשימה: "א\ב" או "א/ב"; "*" — הבית; משתנים (%…%) מוחלפים. */
     static void resolve(Side s, Map<String, String> vars) {
         String raw = s.raw;
-        if (vars != null) for (Map.Entry<String, String> e : vars.entrySet()) raw = raw.replace(Batch.var(e.getKey()), e.getValue());
+        if (vars != null) for (Map.Entry<String, String> e : vars.entrySet()) raw = raw.replace(Parse.var(e.getKey()), e.getValue());
         s.raw = raw;
         s.path = new ArrayList<String>();
         if (raw.trim().equals(HOME)) {
@@ -196,7 +196,7 @@ final class ListCmd {
 
     /** התנאים — מילה מול מילה: מה רק באחת, מה רק בשנייה. */
     static String condsDiff(String ca, String cb, String la, String lb) {
-        List<String> a = Batch.tokens(ca == null ? "" : ca), b = Batch.tokens(cb == null ? "" : cb);
+        List<String> a = Parse.tokens(ca == null ? "" : ca), b = Parse.tokens(cb == null ? "" : cb);
         List<String> onlyA = new ArrayList<String>(), onlyB = new ArrayList<String>();
         for (String x : a) if (!b.contains(x)) onlyA.add(x);
         for (String x : b) if (!a.contains(x)) onlyB.add(x);

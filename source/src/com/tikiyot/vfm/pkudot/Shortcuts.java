@@ -95,7 +95,7 @@ final class Shortcuts {
                 boolean changed = false;
                 String in = null;                                                  // "אופן" שבקובץ — עד כאן
                 for (int i = 0; i < lines.length; i++) {
-                    List<String> tk = Batch.tokens(Bidi.strip(lines[i]).trim());
+                    List<String> tk = Parse.tokens(Bidi.strip(lines[i]).trim());
                     if (tk.size() == 2 && Syntax.MODE.equals(Commands.canonical(tk.get(0)))) {
                         in = tk.get(1).trim();
                         continue;

@@ -94,7 +94,7 @@ final class Program {
         } catch (Throwable t) {
             return -1;
         }
-        Map<String, String> vars = Batch.vars(f.getParentFile(), Vols.internalRoot(c), Vols.cardRoot(c));
+        Map<String, String> vars = Parse.vars(f.getParentFile(), Vols.internalRoot(c), Vols.cardRoot(c));
         Batch.Plan plan = Batch.plan(text, f.getParentFile(), vars);
         Set<String> all = new HashSet<String>();
         boolean any = false;
