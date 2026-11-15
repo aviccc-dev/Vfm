@@ -86,6 +86,13 @@ final class DbListCmd {
         return DbPaths.find(s, mode, x.path);
     }
 
+    /** מבנה 107: למה הצד אינו מוביל לרשימה — "אין", או "יש כמה… לכתוב את המקום". */
+    static String listWhy(Store s, String mode, ListCmd.Side x) {
+        if (x.home) return Words.DbCmd.NO_HOME;
+        DbPaths.Found f = DbPaths.listAt(s, mode, x.path);
+        return f.ambiguous ? f.error : Words.ListCmdW.noList(x.raw);
+    }
+
     /** רשימה חכמה: {הרשימה שבה (0 — עומדת לעצמה), החכמה}, או null. בלי דרך — בבית, ואם אין שם — לפי השם בכל המסד. */
     static long[] smart(Store s, String mode, ListCmd.Side x) {
         DbPaths.Found f = DbPaths.smartAt(s, mode, x.path);                       // מבנה 106: הכלל האחד — דרך, או שם בלי ספק
@@ -120,7 +127,7 @@ final class DbListCmd {
             }
             long id = list(s, mode, x);
             if (id == 0) {
-                err[0] = Words.ListCmdW.noList(x.raw);
+                err[0] = listWhy(s, mode, x);
                 return null;
             }
             if (x.mask != null) {
@@ -249,7 +256,7 @@ final class DbListCmd {
     /** COPY: לרשימה ידנית (או לבית). fsFiles — קבצים מהכונן (כשהמקור אינו רשימה); הקבצים עצמם לתיקייה — ב-plan. */
     static Res copy(Store s, String mode, ListCmd.Side a, ListCmd.Side b, final List<String> fsFiles, Finder f) {
         final long dest = b.home ? DbPaths.home(s) : b.mask != null ? 0 : DbPaths.find(s, mode, b.path);
-        if (dest == 0) return Res.err(b.home ? Words.DbCmd.NO_HOME : Words.ListCmdW.noList(b.raw));
+        if (dest == 0) return Res.err(listWhy(s, mode, b));
         if (!a.list() || a.filesOf) {                                        // מסלולים ← לרשימה
             List<String> paths = fsFiles;
             String what = Words.files(fsFiles == null ? 0 : fsFiles.size());
@@ -273,7 +280,7 @@ final class DbListCmd {
             label = Words.ListCmdW.smartList(a.label());
         } else {
             long src = list(s, mode, a);
-            if (src == 0) return Res.err(a.home ? Words.DbCmd.NO_HOME : Words.ListCmdW.noList(a.raw));
+            if (src == 0) return Res.err(listWhy(s, mode, a));
             if (a.home || a.content || a.mask != null) {
                 for (Store.Member m : s.members(src)) {
                     if (a.mask != null) {
@@ -327,7 +334,7 @@ final class DbListCmd {
             parent = r[0];
         } else {
             id = DbPaths.find(s, mode, a.path);
-            if (id == 0) return Res.err(Words.ListCmdW.noList(a.raw));
+            if (id == 0) return Res.err(listWhy(s, mode, a));
             List<String> up = new ArrayList<String>(a.path.subList(0, a.path.size() - 1));
             parent = up.isEmpty() ? DbPaths.home(s) : DbPaths.find(s, mode, up);
         }
@@ -352,7 +359,7 @@ final class DbListCmd {
      */
     static Res link(Store s, String mode, ListCmd.Side a, ListCmd.Side b, boolean move) {
         long dest = b.home ? DbPaths.home(s) : b.mask != null ? 0 : DbPaths.find(s, mode, b.path);
-        if (dest == 0) return Res.err(b.home ? Words.DbCmd.NO_HOME : Words.ListCmdW.noList(b.raw));
+        if (dest == 0) return Res.err(listWhy(s, mode, b));
         List<Long> ids = new ArrayList<Long>();
         long from;
         String label;
@@ -364,7 +371,7 @@ final class DbListCmd {
             label = Words.ListCmdW.smartList(a.label());
         } else {
             long src = list(s, mode, a);
-            if (src == 0) return Res.err(a.home ? Words.DbCmd.NO_HOME : Words.ListCmdW.noList(a.raw));
+            if (src == 0) return Res.err(listWhy(s, mode, a));
             if (a.home || a.content || a.mask != null) {
                 for (Store.Member m : s.members(src)) {
                     if (a.mask != null) {
@@ -402,7 +409,7 @@ final class DbListCmd {
             o = DbExport.paths(ps, name, when);
         } else {
             long id = list(s, mode, a);
-            if (id == 0) return Res.err(a.home ? Words.DbCmd.NO_HOME : Words.ListCmdW.noList(a.raw));
+            if (id == 0) return Res.err(listWhy(s, mode, a));
             name = a.home ? Words.DbCmd.exportModeName(mode) : Words.DbCmd.exportListName(s.item(id).name);
             o = DbExport.list(s, id, a.home, name, when);
         }
@@ -430,7 +437,7 @@ final class DbListCmd {
     /** מ0.22: ייבוא — הטקסט (בפורמט היצוא) לתוך הרשימה. */
     static Res importFrom(Store s, String mode, File in, ListCmd.Side b) {
         long dest = b.home ? DbPaths.home(s) : DbPaths.find(s, mode, b.path);
-        if (dest == 0) return Res.err(b.home ? Words.DbCmd.NO_HOME : Words.ListCmdW.noList(b.raw));
+        if (dest == 0) return Res.err(listWhy(s, mode, b));
         String text;
         try {
             text = Files.readUtf8(in);
@@ -444,7 +451,7 @@ final class DbListCmd {
     /** מ0.22: העתקה מאופן אחר — המקור נפתח לקריאה בלבד; עותק עצמאי (קבצים — לפי המסלול). */
     static Res copyFromMode(Store t, String mode, String srcMode, ListCmd.Side a, ListCmd.Side b) {
         long dest = b.home ? DbPaths.home(t) : DbPaths.find(t, mode, b.path);
-        if (dest == 0) return Res.err(b.home ? Words.DbCmd.NO_HOME : Words.ListCmdW.noList(b.raw));
+        if (dest == 0) return Res.err(listWhy(t, mode, b));
         SqlStore src = null;
         try {
             src = Db.openRead(Db.app, srcMode);
@@ -456,8 +463,9 @@ final class DbListCmd {
 
     /** מ0.22: הליבה של ההעתקה בין מסדים (נבדקת במחשב על שני מסדים). */
     static Res copyAcross(Store src, String srcMode, ListCmd.Side a, Store t, long dest, String destLabel) {
-        long id = DbPaths.find(src, srcMode, a.path);
-        if (id == 0) return Res.err(Words.ListCmdW.noList(Words.DbCmd.MODE_PREFIX + srcMode + "/" + ListCmd.pathText(a.path)));
+        DbPaths.Found at = DbPaths.listAt(src, srcMode, a.path);                // מבנה 107: גם באופן אחר — ספק עוצר
+        long id = at.error != null ? 0 : at.id;
+        if (id == 0) return Res.err(at.ambiguous ? at.error : Words.ListCmdW.noList(Words.DbCmd.MODE_PREFIX + srcMode + "/" + ListCmd.pathText(a.path)));
         int n = 0;
         if (a.content) for (Store.Member m : src.members(id)) n += DbMore.copyAcross(src, m.item.id, t, dest);
         else {
@@ -1021,8 +1029,9 @@ final class DbListCmd {
             @Override
             public Res run(Store t, Finder f) {
                 if (note || title) {
-                    long in = DbPaths.find(t, mode, path);
-                    if (in == 0) return Res.err(Words.ListCmdW.noList(Names.label(path)));
+                    DbPaths.Found at = DbPaths.listAt(t, mode, path);            // מבנה 107
+                    long in = at.error != null ? 0 : at.id;
+                    if (in == 0) return Res.err(at.ambiguous ? at.error : Words.ListCmdW.noList(Names.label(path)));
                     if (title) t.addTitle(in, c.arg);
                     else t.addNote(in, c.arg);
                     return Res.ok(Words.DbCmd.noteAdded(title, c.arg, Names.label(path)));
@@ -1091,14 +1100,15 @@ final class DbListCmd {
             return null;
         }
         List<String> path = Names.parsePath(name == null ? "" : name.replace('\\', '/'));
-        long id = DbPaths.find(db, mode, path);
-        if (id == 0 && !path.isEmpty()) {
+        DbPaths.Found at = DbPaths.listAt(db, mode, path);
+        long id = at.error != null ? 0 : at.id;
+        if (id == 0 && !path.isEmpty() && !at.ambiguous) {
             List<String> in = new ArrayList<String>();
             in.add(Reserved.ROOT);
             in.addAll(path);
             id = DbPaths.find(db, mode, in);
         }
-        if (id == 0) { err[0] = Words.ListCmdW.noList(name); return null; }
+        if (id == 0) { err[0] = at.ambiguous ? at.error : Words.ListCmdW.noList(name); return null; }
         Set<String> out = new LinkedHashSet<String>();
         if (!deep(db, id, finder(sim), out, new HashSet<Long>())) { err[0] = Words.ListCmdW.INDEX_NOT_READY; return null; }
         Compare.Source src = new Compare.Source();
@@ -1239,7 +1249,7 @@ final class DbListCmd {
         if (x == 0 || y == 0) {
             ListCmd.Side gone = x == 0 ? a : b;
             lastFailed = true;
-            return gone.home ? Words.DbCmd.NO_HOME : Words.ListCmdW.noList(gone.raw);
+            return listWhy(s, mode, gone);
         }
         DbDiff.Out o = DbDiff.of(s, x, y, a.label(), b.label(), !a.content);
         String relation = x == y ? Words.DbCmd.REL_SAME : a.content ? Words.DbCmd.REL_CONTENT_EQUAL : Words.DbCmd.REL_EQUAL;
@@ -1303,7 +1313,7 @@ final class DbListCmd {
         long x = list(s, mode, a), y = list(s, mode, b);
         if (x == 0 || y == 0) {
             ListCmd.Side gone = x == 0 ? a : b;
-            found[0] = gone.home ? Words.DbCmd.NO_HOME : Words.ListCmdW.noList(gone.raw);
+            found[0] = listWhy(s, mode, gone);
             return false;
         }
         if (x == y) {

@@ -1854,6 +1854,13 @@ public final class Words {
             return "אין רשימה חכמה: \"" + name + "\"";
         }
 
+        /** מבנה 107: שם שיש לו כמה רשימות ידניות — לא מנחשים; כותבים את המקום. */
+        public static String listAmbiguous(String name, java.util.List<String> places, String example) {
+            StringBuilder sb = new StringBuilder();
+            for (String p : places) sb.append(sb.length() > 0 ? ", " : "").append("ב«").append(p).append("»");
+            return "יש כמה רשימות בשם \"" + name + "\" (" + sb + ") — לא ברור לאיזו הכוונה; לכתוב את המקום, למשל \"" + example + "\"";
+        }
+
         /** מבנה 106: שם שיש לו כמה רשימות חכמות (ברשימות שונות) — לא מנחשים; כותבים את המקום. */
         public static String smartAmbiguous(String name, java.util.List<String> places, String example) {
             StringBuilder sb = new StringBuilder();

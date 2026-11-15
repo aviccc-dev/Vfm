@@ -835,6 +835,26 @@ final class DbCmdTests {
                                 amb106.blocked() && amb106.errorText().contains("יש כמה רשימות חכמות בשם \"חדשים 106\"") && bad(ok106).isEmpty()
                                         && c106[0].equals("a") && c106[1].equals("סוג:pdf") && !e106.containsAll(editNames(m91)));
                     }
+                    // מבנה 107: בקובץ — רשימה ידנית בשם של שתיים: הקובץ אינו רץ; עם המקום — רץ
+                    {
+                        go("המשך ()\nאופן \"" + m91 + "\"\nMD ידנית \"ספרים 106/פרק 107\"\nMD ידנית \"שיעורים 106/פרק 107\"\n", here, vars, lib);
+                        Batch.Plan amb107 = Batch.plan("אופן \"" + m91 + "\"\nצור רעיון \"x\" \"פרק 107\"\n", here, vars, lib);
+                        Batch.Plan amb107b = Batch.plan("אופן \"" + m91 + "\"\nהעתק ידנית \"פרק 107\" ידנית \"חדש\"\n", here, vars, lib);
+                        List<String> ok107 = go("אופן \"" + m91 + "\"\nצור רעיון \"רעיון 107\" \"שיעורים 106/פרק 107\"\n", here, vars, lib);
+                        final int[] n107 = {-1, -1};
+                        Db.read(Db.app, m91, new Db.Use<Void>() {
+                            @Override public Void run(SqlStore st) {
+                                n107[0] = st.members(DbPaths.find(st, m91, java.util.Arrays.asList("שיעורים 106", "פרק 107"))).size();
+                                n107[1] = st.members(DbPaths.find(st, m91, java.util.Arrays.asList("ספרים 106", "פרק 107"))).size();
+                                return null;
+                            }
+                        });
+                        ok107.add("בשיעורים: " + n107[0] + ", בספרים: " + n107[1]);
+                        o.check("מבנה 107: בקובץ — שם של שתי רשימות ידניות: הקובץ אינו רץ, \"יש כמה רשימות… לכתוב את המקום\" (רעיון, העתקה); עם המקום — רק היא " + ok107,
+                                amb107.blocked() && amb107.errorText().contains("יש כמה רשימות בשם \"פרק 107\"")
+                                        && amb107b.blocked() && amb107b.errorText().contains("יש כמה רשימות בשם \"פרק 107\"") && bad(ok107).isEmpty()
+                                        && n107[0] == 1 && n107[1] == 0);
+                    }
                     Manager.Act gone99 = Manager.onSmartEdit(m91, 987654321L, "x", "סוג:pdf", new java.util.HashMap<String, String>(), here, vars, lib);
                     String saidGone99 = gone99.say(lib);
                     o.check("מבנה 99: רשימה שנמחקה בזמן שהטופס היה פתוח — \"" + Words.Db.ITEM_GONE + "\" (" + saidGone99 + ")",

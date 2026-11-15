@@ -24,6 +24,7 @@ final class DbVerbsUi {
                 if (made == null) return true;
                 id = made[0] != 0 ? made[0] : read(a, mode, path);
             } else id = read(a, mode, path);
+            if (id < 0) return true;                                           // מבנה 107: יש ספק — ההודעה כבר הוצגה
             if (id == 0) Ui.toast(a, Words.Verb.NOT_FOUND + c.arg);
             else if (c.noOpen) Ui.toast(a, Words.ListCmdW.created(c.arg));     // מ0.40: /בלי-לפתוח
             else DbListScreen.open(a, mode, id, c.sort);                    // מ0.22: עם המיון שבפקודה
@@ -258,6 +259,7 @@ final class DbVerbsUi {
     /** מ0.18.1: פותח רשימה לפי המסלול — באופן נתון (גם אם אינו האופן שפתוח). */
     static void openPath(Activity a, String mode, List<String> path) {
         long id = read(a, mode, path);
+        if (id < 0) return;                                                    // מבנה 107: יש ספק — ההודעה כבר הוצגה
         if (id == 0) Ui.toast(a, Words.Verb.NOT_FOUND + Names.label(path));
         else {
             Db.saveMode(a, mode);
@@ -308,14 +310,20 @@ final class DbVerbsUi {
 
     /** מ0.23: האם יש במסד של האופן רשימה במסלול הזה. */
     static boolean exists(Activity a, String mode, List<String> path) {
-        return mode != null && Db.dbFile(a, mode).isFile() && read(a, mode, path) != 0;
+        return mode != null && Db.dbFile(a, mode).isFile() && read(a, mode, path) > 0;
     }
 
+    /** הרשימה במסלול; מבנה 107: יש ספק ("יש כמה… לכתוב את המקום") — ההודעה מוצגת, ו־‎-1. */
     private static long read(Activity a, String mode, List<String> path) {
         SqlStore s = null;
         try {
             s = Db.openRead(a, mode);
-            return DbPaths.find(s, mode, path);
+            DbPaths.Found f = DbPaths.listAt(s, mode, path);
+            if (f.ambiguous) {
+                Ui.toast(a, f.error);
+                return -1;
+            }
+            return f.error != null ? 0 : f.id;
         } catch (Throwable t) {
             Log.e("DbVerbsUi.read", t);
             return 0;

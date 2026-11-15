@@ -193,6 +193,22 @@ final class ImportTests {
                 && amb.error.contains("ספרים 106") && amb.error.contains("שיעורים 106"));
         ck("מבנה 106: עם הדרך — בדיוק היא", DbPaths.smartAt(s, "פק", Arrays.asList("שיעורים 106", "כפולה 106")).id == d2
                 && DbPaths.smartAt(s, "פק", Arrays.asList("ספרים 106", "כפולה 106")).id == d1);
+        // מבנה 107: אותו עיקרון לרשימה ידנית
+        long ya = s.createList("ילדה 107", sA), yb = s.createList("ילדה 107", sB), only = s.createList("יחידה ידנית 107", sA);
+        DbPaths.Found y1 = DbPaths.listAt(s, "פק", Arrays.asList("ילדה 107"));
+        ck("מבנה 107: רשימה ידנית בשם של שתיים (לא בראש) — \"יש כמה… לכתוב את המקום\", עם המקומות; find — 0, ולא הראשונה בשקט",
+                y1.ambiguous && y1.error.contains("ספרים 106") && y1.error.contains("שיעורים 106") && DbPaths.find(s, "פק", Arrays.asList("ילדה 107")) == 0);
+        ck("מבנה 107: עם הדרך — בדיוק היא; קיצור בלי ספק (אחת בכל המסד) — היא",
+                DbPaths.find(s, "פק", Arrays.asList("שיעורים 106", "ילדה 107")) == yb && DbPaths.find(s, "פק", Arrays.asList("ספרים 106", "ילדה 107")) == ya
+                        && DbPaths.find(s, "פק", Arrays.asList("יחידה ידנית 107")) == only);
+        long top107 = s.createList("ילדה 107", home);
+        ck("מבנה 107: יש אחת בראש (בבית) — היא: זו הדרך המלאה מהבית, אין ספק", DbPaths.find(s, "פק", Arrays.asList("ילדה 107")) == top107);
+        long twin1 = s.createList("תאום", sA), twin2 = s.createList("תאום", sA);   // נתונים ישנים: שתיים באותו שם באותה רשימה
+        DbPaths.Found y2 = DbPaths.listAt(s, "פק", Arrays.asList("ספרים 106", "תאום"));
+        ck("מבנה 107: בתוך הדרך — שתיים באותו שם באותה רשימה (נתונים ישנים): גם זה ספק", y2.ambiguous && twin1 != twin2);
+        Lists.Made y3 = Lists.newListAt(s, "פק", Arrays.asList("ספרים 106", "תאום", "חדשה"));
+        ck("מבנה 107: רשימה חדשה בדרך שיש בה ספק — סירוב, ולא נוצרת דרך חדשה במקום אחר", y3.error != null && y3.error.equals(y2.error) && y3.id == 0
+                && s.members(twin1).isEmpty() && s.members(twin2).isEmpty());
         ck("מבנה 106: קיצור בלי ספק — אחת בכל המסד: היא; דרך לרשימה שאין — \"אין רשימה\"",
                 DbPaths.smartAt(s, "פק", Arrays.asList("יחידה 106")).id == u1 && DbPaths.smartAt(s, "פק", Arrays.asList("אין 106", "x")).error.contains("אין רשימה"));
         long made2 = DbPaths.ensure(s, "פק", Names.parsePath("חדשה בראש"));

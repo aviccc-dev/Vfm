@@ -326,7 +326,12 @@ final class Lists {
         long parent = 0;
         if (path.size() > 1) {
             List<String> up = path.subList(0, path.size() - 1);
-            parent = DbPaths.find(s, mode, up);
+            DbPaths.Found at = DbPaths.listAt(s, mode, up);
+            if (at.ambiguous) {                                                 // מבנה 107: יש ספק בדרך — לא יוצרים דרך חדשה
+                r.error = at.error;
+                return r;
+            }
+            parent = at.id;
             if (parent == 0) parent = DbPaths.ensure(s, mode, up);
             if (parent == 0) {
                 r.error = Words.DbCmd.BAD_NAME;

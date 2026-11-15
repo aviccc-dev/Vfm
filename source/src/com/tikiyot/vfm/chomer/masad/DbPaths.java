@@ -11,18 +11,76 @@ final class DbPaths {
 
     private DbPaths() { }
 
-    /**
-     * הרשימה במסלול, או 0. קודם — לפי המקור (רשימה שהועתקה מהישן באותו מסלול); אחרת — הליכה לפי השמות: החלק הראשון —
-     * רשימה בשם הזה שאינה בתוך רשימה אחרת (חוץ מהבית), ואם אין — כל רשימה בשם הזה; כל חלק הבא — רשימה בשם הזה בתוך הקודמת.
-     */
+    /** הרשימה במסלול, או 0 — אין, או שיש ספק (listAt אומר מה). */
     static long find(Store s, String mode, List<String> path) {
-        if (path == null || path.isEmpty()) return 0;
+        Found f = listAt(s, mode, path);
+        return f.error != null ? 0 : f.id;
+    }
+
+    /**
+     * **מבנה 107 — פנייה לרשימה ידנית: הכלל האחד** (אותו עיקרון של מבנה 106; המשתמש: "כאשר רוצים לפנות לרשימה צריך לכתוב את
+     * כל המסלול… אם אין ספק בכוונתו — התוכנה מקצרת, בודקת לבד ופועלת בהתאם; אם יש ספק — הוא צריך להחליט"). קודם — לפי המקור
+     * (רשימה שהועתקה מהישן באותו מסלול). אחרת — לפי השמות: החלק הראשון — רשימה בשם הזה בראש (בבית, או שאינה בתוך שום רשימה);
+     * אין בראש — הקיצור: אחת בשם הזה בכל המסד — היא; כמה — שגיאה ("יש כמה… לכתוב את המקום"). כל חלק הבא — בתוך הקודם (כמה
+     * באותה רשימה — מנתונים ישנים — גם זה ספק). עד כאן: בראש — הראשונה; אין בראש — הראשונה בכל המסד, בשקט.
+     */
+    static Found listAt(Store s, String mode, List<String> path) {
+        Found f = new Found();
+        if (path == null || path.isEmpty()) {
+            f.error = Words.ListCmdW.noList("");
+            return f;
+        }
         long o = s.findByOrigin(DbPaths.originOf(mode, Names.fullLabel(path)));
         Store.Item oi = o == 0 ? null : s.item(o);
-        if (oi != null && oi.type == Store.LIST && oi.name.equals(path.get(path.size() - 1).trim())) return o;   // מ0.13.1: אחרי שינוי שם — לפי השמות
-        long cur = top(s, path.get(0));
-        for (int i = 1; i < path.size() && cur != 0; i++) cur = child(s, cur, path.get(i));
-        return cur;
+        if (oi != null && oi.type == Store.LIST && oi.name.equals(path.get(path.size() - 1).trim())) {   // מ0.13.1: אחרי שינוי שם — לפי השמות
+            f.id = o;
+            return f;
+        }
+        String first = path.get(0).trim();
+        long home = home(s);
+        List<Long> at = new ArrayList<Long>();
+        for (Store.Item it : s.lists()) {
+            if (!it.name.equals(first) || it.id == home) continue;
+            List<Long> in = new ArrayList<Long>(s.listsOf(it.id));
+            in.remove(home);
+            if (in.isEmpty()) at.add(it.id);
+        }
+        if (at.isEmpty())                                                       // הקיצור: לא בראש — בכל המסד
+            for (Store.Item it : s.lists()) if (it.name.equals(first) && it.id != home) at.add(it.id);
+        if (!many(s, f, at, first, null)) return f;
+        long cur = at.get(0);
+        for (int i = 1; i < path.size(); i++) {
+            String n = path.get(i).trim();
+            List<Long> kids = new ArrayList<Long>();
+            for (Store.Member m : s.members(cur)) if (m.item.type == Store.LIST && m.item.name.equals(n)) kids.add(m.item.id);
+            if (!many(s, f, kids, n, Names.key(path.subList(0, i)))) {
+                if (f.error == null) f.error = Words.ListCmdW.noList(Names.key(path));
+                return f;
+            }
+            cur = kids.get(0);
+        }
+        f.id = cur;
+        return f;
+    }
+
+    /** true — בדיוק אחת. אף אחת — שגיאה "אין"; כמה — "יש כמה… לכתוב את המקום" (in — הדרך עד כאן, או null בחלק הראשון). */
+    private static boolean many(Store s, Found f, List<Long> ids, String name, String in) {
+        if (ids.size() == 1) return true;
+        if (ids.isEmpty()) {
+            f.error = Words.ListCmdW.noList(in == null ? name : Names.key(java.util.Arrays.asList(in, name)));
+            return false;
+        }
+        List<String> places = new ArrayList<String>();
+        String example = null;
+        for (Long id : ids) {
+            List<Long> of = s.listsOf(id);
+            String where = of.isEmpty() ? Words.Db.STANDALONE : s.item(of.get(0)).name;
+            places.add(where);
+            if (example == null && !of.isEmpty() && in == null) example = Names.key(java.util.Arrays.asList(where, name));
+        }
+        f.error = Words.ListCmdW.listAmbiguous(name, places, example == null ? (in == null ? name : in + "/" + name) : example);
+        f.ambiguous = true;
+        return false;
     }
 
     /** "צור רשימה": קיימת — כמו שהיא; חסרה — נוצרת בכל הדרך (חלק ראשון — עומד לעצמו). בעסקה אחת. מחזיר את הרשימה. */
@@ -35,7 +93,7 @@ final class DbPaths {
             @Override
             public void run(Store t) {
                 String first = Names.cleanName(path.get(0));
-                long cur = top(t, first);
+                long cur = topOnly(t, first);                                   // מבנה 107: יוצרים בראש — רק מה שבראש, בלי קיצור
                 if (cur == 0) cur = t.createList(first, DbPaths.home(t));    // מ0.10.1: חדשה בראש — בבית (אם יש)
                 for (int i = 1; i < path.size(); i++) {
                     String name = Names.cleanName(path.get(i));
@@ -130,18 +188,17 @@ final class DbPaths {
         return f;
     }
 
-    /** רשימה בשם הזה בראש: שאינה בתוך רשימה (חוץ מהבית); אם אין — כל רשימה בשם הזה. */
-    private static long top(Store s, String name) {
+    /** רשימה בשם הזה בראש: שאינה בתוך רשימה (חוץ מהבית), או 0. מבנה 107: בלי "ואם אין — כל רשימה בשם הזה". */
+    private static long topOnly(Store s, String name) {
         String n = name.trim();
-        long home = DbPaths.home(s), any = 0;
+        long home = DbPaths.home(s);
         for (Store.Item it : s.lists()) {
             if (!it.name.equals(n) || it.id == home) continue;
             List<Long> in = new ArrayList<Long>(s.listsOf(it.id));
             in.remove(home);
             if (in.isEmpty()) return it.id;
-            if (any == 0) any = it.id;
         }
-        return any;
+        return 0;
     }
 
     /** מבנה 102: רשימה בשם הזה שעומדת לעצמה (אינה בתוך שום רשימה, והיא אינה הבית) — או 0. למסד בלי בית. */
