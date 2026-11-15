@@ -66,17 +66,4 @@ public final class Modes {
         while (n.startsWith(".")) n = n.substring(1).trim();
         return n;
     }
-
-    /**
-     * יוצר אופן חדש, ריק. מחזיר null אם הצליח, או הסבר למה לא.
-     */
-    public static String create(String name) {
-        String n = clean(name);
-        if (n.isEmpty()) return Words.NEED_NAME;
-        String bad = Files.badName(n);                                    // 129
-        if (bad != null) return bad;
-        File dir = new File(new File(Paths.data(), DIR), n);
-        if (dir.exists()) return Words.WorkModes.EXISTS;
-        return dir.mkdirs() ? null : Words.CANT_CREATE_FOLDER;
-    }
 }

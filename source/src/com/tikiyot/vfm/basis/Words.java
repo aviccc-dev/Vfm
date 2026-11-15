@@ -1732,7 +1732,7 @@ public final class Words {
     public static final class Ed {
         private Ed() { }
 
-        public static final String MINE_SUFFIX = " (שלי)", NONE = "—", FILL = "השלמת התבנית",
+        public static final String NONE = "—", FILL = "השלמת התבנית",
                 NO_SMART = "אין רשימות חכמות", WHOLE_HOME = "★ כל מה שבבית";
 
         /** 1.25.2: מה מבקשים במקום הפתוח. */

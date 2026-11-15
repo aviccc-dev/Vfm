@@ -993,13 +993,14 @@ public final class Tests {
 
         // העברה לתיקייה: הקובץ זז, האינדקס בשני הקצוות, הרשימות עוקבות
         File dest = new File(root, "יעד");
-        r = Physical.move(lib, Arrays.asList(c), dest);
+        r = Physical.transfer(lib, Arrays.asList(c), java.util.Collections.<String>emptyList(), dest, false, null, null, true);
         lib.flush(5000);
         String moved = new File(dest, "היגיון.txt").getAbsolutePath();
         check("העברה: הקובץ ביעד", new File(moved).isFile() && !new File(c).exists());
         check("העברה: האינדקס בשני הקצוות", !has(lib, c) && has(lib, moved));
         mk(new File(root, "Documents"), "היגיון.txt", 3);
-        r = Physical.move(lib, Arrays.asList(new File(root, "Documents/היגיון.txt").getAbsolutePath()), dest);
+        r = Physical.transfer(lib, Arrays.asList(new File(root, "Documents/היגיון.txt").getAbsolutePath()),
+                java.util.Collections.<String>emptyList(), dest, false, null, null, true);
         eq("העברה: שם תפוס ביעד — לא נדרס", 1, r.failed);
         eq("העברה: הקובץ שביעד לא השתנה", 10L, new File(moved).length());
 
@@ -1609,22 +1610,20 @@ public final class Tests {
         other.mkdirs();
         File arrived = new File(other, "ספרים.zip");
         Files.copy(out, arrived);
-        File dest = Zip.target(arrived);
-        eq("116: היעד — תיקייה בשם הקובץ", "ספרים", dest.getName());
+        File dest = new File(other, "ספרים");               // מבנה 135: היעד נקבע בפקודה "פרוס" (נבדק במבנה 122); Zip.target נמחקה
         Zip.Result u = Zip.unpack(arrived, dest, null);
         check("116: נפרס", u.error == null && u.files == 4 && u.skipped == 0);
         check("116: קובץ ה-ZIP נשאר", arrived.isFile());
 
         // פעם שנייה — שם תפוס, ובלי הכפלה של התיקייה העליונה
-        File dest2 = Zip.target(arrived);
-        eq("116: יעד תפוס — \"(2)\"", "ספרים (2)", dest2.getName());
+        File dest2 = new File(other, "ספרים (2)");
         Zip.unpack(arrived, dest2, null);
 
         // האינדקס לומד על מה שנפרס
         Index ix = new Index("107", "107", root.getAbsolutePath());
         ix.scan(null);
         Library lib = Library.forTests(new ArrayList<Index>(java.util.Collections.singletonList(ix)));
-        File dest3 = Zip.target(arrived);
+        File dest3 = new File(other, "ספרים (3)");
         Zip.unpack(arrived, dest3, null);
         lib.dirChanged(other.getAbsolutePath());
         lib.flush(5000);
@@ -1646,7 +1645,7 @@ public final class Tests {
         zo.write(new byte[8]);
         zo.closeEntry();
         zo.close();
-        File ld = Zip.target(loose);
+        File ld = new File(loose.getParentFile(), "שונים");
         Zip.Result lr = Zip.unpack(loose, ld, null);
         eq("116: שמות שמנסים לצאת מהיעד — מדולגים", 2, lr.skipped);
         check("116: לא נכתב שום דבר מחוץ ליעד", !new File(root, "מחוץ.txt").exists() && !new File(home, "מחוץ.txt").exists());
@@ -1801,12 +1800,12 @@ public final class Tests {
         eq("מ0.38: \"צור רשימה\" נשארת פועל", "צור רשימה א", Commands.normal("צור רשימה א"));
         check("מ0.38: \"צור תיקייה\" — MD; שם עברי לכל פקודה", Commands.normal("צור תיקייה \"x\"").startsWith("MD ")
                 && Commands.word(Commands.get("COPY")).equals("העתק") && Commands.word(Commands.get("RD")).equals("מחק תיקייה") && Commands.get("העבר").name.equals("MOVE"));
-        eq("מ0.38: העורך מציג בעברית", "העתק \"a /S\" b /עמוק /נסתרים /Y", Commands.hebrew("COPY \"a /S\" b /s /A:H /Y"));
-        eq("מ0.38: RD ← מחק תיקייה", "מחק תיקייה x /עמוק", Commands.hebrew("RD x /S"));
-        eq("מ0.38: ECHO — הטקסט לא נגוע", "הודעה a /S b", Commands.hebrew("ECHO a /S b"));
-        eq("מ0.38: שורת רשימות — כמו שהיא", "COPY ידנית \"א\" קובץ \"x.txt\"", Commands.hebrew("COPY ידנית \"א\" קובץ \"x.txt\""));
-        eq("מ0.38: פועל, הערה, שורה ריקה — כמו שהן", "ודא \"x\" קיים\n:: REM\n\nהעבר a b", Commands.hebrewText("ודא \"x\" קיים\n:: REM\n\nMOVE a b"));
-        Batch.Plan pt = Batch.plan(Commands.hebrewText(en), here, vars);
+        eq("מ0.38: העורך מציג בעברית", "העתק \"a /S\" b /עמוק /נסתרים /Y", Ivrit.hebrew("COPY \"a /S\" b /s /A:H /Y"));
+        eq("מ0.38: RD ← מחק תיקייה", "מחק תיקייה x /עמוק", Ivrit.hebrew("RD x /S"));
+        eq("מ0.38: ECHO — הטקסט לא נגוע", "הודעה a /S b", Ivrit.hebrew("ECHO a /S b"));
+        eq("מ0.38: שורת רשימות — כמו שהיא", "COPY ידנית \"א\" קובץ \"x.txt\"", Ivrit.hebrew("COPY ידנית \"א\" קובץ \"x.txt\""));
+        eq("מ0.38: פועל, הערה, שורה ריקה — כמו שהן", "ודא \"x\" קיים\n:: REM\n\nהעבר a b", Ivrit.hebrewText("ודא \"x\" קיים\n:: REM\n\nMOVE a b"));
+        Batch.Plan pt = Batch.plan(Ivrit.hebrewText(en), here, vars);
         boolean same2 = pt.errors == pe.errors && pt.steps.size() == pe.steps.size();
         for (int i = 0; same2 && i < pt.steps.size(); i++)
             same2 = pt.steps.get(i).cmd.equals(pe.steps.get(i).cmd) && pt.steps.get(i).files.equals(pe.steps.get(i).files) && pt.steps.get(i).recursive == pe.steps.get(i).recursive;
@@ -3633,12 +3632,12 @@ public final class Tests {
         // השמות בשתי מילים
         eq("מ0.45: \"בטל אופן\" — DROPMODE", "DROPMODE \"זמני\"", Commands.normal("בטל אופן \"זמני\""));
         eq("מ0.45: ...\"מחק אופן\" (השם הראשון) — עדיין נקרא", "DROPMODE \"זמני\"", Commands.normal("מחק אופן \"זמני\""));
-        eq("מ0.45: העורך כותב \"בטל אופן\"", "בטל אופן \"זמני\"", Commands.hebrew("DROPMODE \"זמני\""));
+        eq("מ0.45: העורך כותב \"בטל אופן\"", "בטל אופן \"זמני\"", Ivrit.hebrew("DROPMODE \"זמני\""));
         eq("מ0.45: \"בטל לא-משויכים\" ו\"בטל ידנית\" — כמו קודם", "בטל ידנית \"א\"", Commands.normal("בטל ידנית \"א\""));
         eq("מ0.45: \"רוקן סל\" לבד — PURGE", "PURGE", Commands.normal("רוקן סל"));
         eq("מ0.45: \"שחזר מהסל\" — UNTRASH", "UNTRASH \"א\"", Commands.normal("שחזר מהסל \"א\""));
         eq("מ0.45: \"מחק תיקייה\" — עדיין RD", "RD \"א\"", Commands.normal("מחק תיקייה \"א\""));
-        eq("מ0.45: העורך כותב בעברית", "שחזר מהסל \"א\"", Commands.hebrew("UNTRASH \"א\""));
+        eq("מ0.45: העורך כותב בעברית", "שחזר מהסל \"א\"", Ivrit.hebrew("UNTRASH \"א\""));
         check("מ0.45: מחק אופן / ודא אופן — רק במסד (במחשב: שגיאה מוסברת)",
                 Words.DbCmd.VERIFY_DB_ONLY.equals(Batch.plan("בטל אופן \"זמני\"\n", r, v).steps.get(0).error)
                         && Words.DbCmd.VERIFY_DB_ONLY.equals(Batch.plan("ודא אופן \"זמני\" חסר\n", r, v).steps.get(0).error));
@@ -4338,9 +4337,11 @@ public final class Tests {
         check("142: ביטול מנקה", Clip.isEmpty());
         check("142: הפעולות — \"ואז הדבקה\"", Actions.MOVE_TO_FOLDER.label.contains("הדבקה") && Actions.COPY_TO_FOLDER.label.contains("הדבקה"));
 
-        // 129: שם אופן — אותו כלל של שם בכונן
-        check("129: שם אופן עם \":\" נדחה", Modes.create("בדיקות: מקיפות") != null);
-        check("129: שם אופן עם \"?\" נדחה", Modes.create("מה?") != null);
+        // 129: שם אופן — אותו כלל של שם בכונן. מבנה 135: נבדק בדרך שהתוכנה יוצרת בה אופן — "צור אופן" (Modes.create נמחקה)
+        File r129 = drive("אופן129");
+        Map<String, String> v129 = new java.util.HashMap<String, String>();
+        check("129: שם אופן עם \":\" נדחה", String.valueOf(Batch.plan("צור אופן \"בדיקות: מקיפות\"\n", r129, v129).steps.get(0).error).startsWith("שם אופן לא תקין"));
+        check("129: שם אופן עם \"?\" נדחה", String.valueOf(Batch.plan("צור אופן \"מה?\"\n", r129, v129).steps.get(0).error).startsWith("שם אופן לא תקין"));
     }
 
     // ---------- הלוח ברשימות (142), ומהירות הבורר (133) ----------
@@ -4865,13 +4866,6 @@ public final class Tests {
             check("1.23.0: שלי — נשמרה, ושם תפוס מקבל מספר", a != null && b != null && !a.equals(b) && mine.size() == 2
                     && mine.get(0).lines.get(0).equals("COPY a b"));
             check("1.23.0: שם עם תווים אסורים", CmdTemplates.save("א/ב", Arrays.asList("MD x")) != null);
-            File cpy = CmdTemplates.copyToMine(ts.get(0));                      // 1.25.3
-            check("1.25.3: עריכת נפוצה של התוכנה — עותק אצל שלי", cpy != null && cpy.getName().contains("(שלי)")
-                    && cpy.length() > 0);
-            CmdTemplates.Tpl first = CmdTemplates.mine().get(0);
-            File rn = CmdTemplates.rename(first, "שם חדש");
-            check("1.25.3: שינוי שם לשלי", rn != null && rn.isFile() && !first.file.exists());
-            check("1.25.3: שם תפוס — לא", CmdTemplates.rename(CmdTemplates.mine().get(0), Text.stem(CmdTemplates.mine().get(1).file.getName())) == null);
         } finally {
             CmdTemplates.testRoot = null;
         }

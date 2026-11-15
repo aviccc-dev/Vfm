@@ -376,11 +376,6 @@ public final class Physical {
         return toTrash(lib, f, stamp(), r) != null ? null : r.note;
     }
 
-    /** העברה של קבצים (כמו קודם): שם תפוס ביעד — לא נדרס. */
-    public static Result move(Library lib, List<String> paths, File folder) {
-        return transfer(lib, paths, java.util.Collections.<String>emptyList(), folder, false, null, null, true);
-    }
-
     /**
      * העברה (copy=false) או העתקה (copy=true) לתיקייה, של קבצים ותיקיות, גם בין כוננים (82).
      * שם תפוס — asker שואל (null: לא נוגעים, ונרשם ככישלון). בין כוננים — קובץ אחרי קובץ: מועתק, נבדק,

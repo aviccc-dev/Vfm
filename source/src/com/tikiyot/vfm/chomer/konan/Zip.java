@@ -143,13 +143,6 @@ final class Zip {
         }
     }
 
-    /** לאן לפרוס: תיקייה חדשה ליד הקובץ, בשם הקובץ בלי ".zip"; שם תפוס — "(2)". */
-    static File target(File zip) {
-        String n = zip.getName();
-        if (n.toLowerCase(java.util.Locale.ROOT).endsWith(".zip")) n = n.substring(0, n.length() - 4);
-        if (n.trim().isEmpty()) n = Words.Send.UNPACK_DIR;
-        return new File(zip.getParentFile(), Physical.freeName(zip.getParentFile(), n, true));
-    }
 
     /**
      * פורס את הקובץ אל dest (שנוצרת). אם כל התוכן בתוך תיקייה אחת בשם היעד — היא לא מוכפלת
