@@ -169,10 +169,13 @@ final class DbListCmd {
     // ---------- הפעולות ----------
 
     /** MD ידנית "א\ב": קיימת — בלי שינוי; חסרה — נוצרת בכל הדרך (חלק ראשון — בבית). */
+    /** מבנה 102: "צור תיקייה ידנית" — הכלל האחד של רשימה חדשה (Lists.newListAt): שם קיים — סירוב (עד כאן: "בלי שינוי"). */
     static Res md(Store s, String mode, ListCmd.Side a) {
-        if (DbPaths.find(s, mode, a.path) != 0) return Res.same(Words.ListCmdW.exists(a.label()));
-        DbPaths.ensure(s, mode, a.path);
-        return Res.ok(Words.ListCmdW.created(a.label()));
+        Lists.Made m = Lists.newListAt(s, mode, a.path);
+        if (m.error != null) return Res.err(m.error);
+        Res ok = Res.ok(Words.ListCmdW.created(a.label()));
+        ok.made = m.id;
+        return ok;
     }
 
     /** RD / DEL על רשימה: רשימה, חכמה, תוכן, או קבצים לפי תבנית — יוצאים מהרשימות (הקבצים בכונן לא נוגעים). */
@@ -982,13 +985,12 @@ final class DbListCmd {
                     return Res.ok(Words.DbCmd.noteAdded(title, c.arg, Names.label(path)));
                 }
                 // מבנה 100: המספר של מה שנוצר / עודכן חוזר (Res.made ← Step.made) — כפתור שמריץ את השורה פותח בדיוק אותו
-                if (list) {
+                if (list) {                                                      // מבנה 102: "צור רשימה" — הכלל האחד; שם קיים — סירוב
                     if (path == null || path.isEmpty()) return Res.err(Words.Verb.NOT_FOUND + c.arg);
-                    if (DbPaths.find(t, mode, path) != 0) return Res.same(Words.ListCmdW.exists(Names.label(path)));
-                    long id = DbPaths.ensure(t, mode, path);
-                    if (id == 0) return Res.err(Words.Verb.NOT_FOUND + c.arg);
+                    Lists.Made m = Lists.newListAt(t, mode, path);
+                    if (m.error != null) return Res.err(m.error);
                     Res ok = Res.ok(Words.ListCmdW.created(Names.label(path)));
-                    ok.made = id;
+                    ok.made = m.id;
                     return ok;
                 }
                 if (smartNew) {

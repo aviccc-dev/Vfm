@@ -216,15 +216,47 @@ final class Lists {
         String error;
     }
 
-    /** מ0.23: רשימה חדשה מהמסך (➕, הבורר) — אחרי nameError, כמו MD: שם תפוס באותה רשימה — שגיאה, לא כפולה. */
+    /**
+     * **רשימה חדשה — הכלל האחד** (מבנה 102; המשתמש, 15.11.2026: "לסרב בהודעה שם קיים" · "גם בפקודות לעצור… הוראה שלא
+     * מתקיימת דינה לעצור את ההרצה, אלא אם כן יש הוראה מפורשת להמשיך"). בתוך parent (0 — הבית); הבדיקה האחת של שם
+     * (nameError): שם תפוס באותה רשימה, ריק, או עם "/" — סירוב, ושום דבר לא נוצר. מסד בלי בית — גם רשימה שעומדת לעצמה באותו
+     * שם היא "תפוס". ה־➕, הבורר, הכפתור "צור רשימה" ושתי השורות הכתובות ("צור רשימה", "צור תיקייה ידנית") — כולם כאן.
+     */
     static Made newListChecked(Store s, long parent, String name) {
         Made r = new Made();
         long into = parent != 0 ? parent : DbPaths.home(s);
         List<Long> ps = new ArrayList<Long>();
         ps.add(into);
         r.error = nameError(s, ps, 0, Store.LIST, name);
+        if (r.error == null && into == 0 && DbPaths.standalone(s, Names.cleanName(name)) != 0) r.error = Words.DbCmd.nameTaken(Names.cleanName(name));
         if (r.error == null) r.id = newList(s, into, name);
         return r;
+    }
+
+    /**
+     * מבנה 102: רשימה חדשה לפי דרך של שמות ("א/ב/ג") — אותו כלל (newListChecked) על החלק האחרון; מה שבדרך ("א/ב") — כמו
+     * שהפקודות מוצאות אותו (DbPaths.find), וחסר — נוצר. שם לא תקין בחלק האחרון — סירוב לפני שנוצר משהו בדרך.
+     */
+    static Made newListAt(Store s, String mode, List<String> path) {
+        Made r = new Made();
+        if (path == null || path.isEmpty()) {
+            r.error = Words.DbCmd.BAD_NAME;
+            return r;
+        }
+        String last = path.get(path.size() - 1);
+        r.error = nameError(s, new ArrayList<Long>(), 0, Store.LIST, last);
+        if (r.error != null) return r;
+        long parent = 0;
+        if (path.size() > 1) {
+            List<String> up = path.subList(0, path.size() - 1);
+            parent = DbPaths.find(s, mode, up);
+            if (parent == 0) parent = DbPaths.ensure(s, mode, up);
+            if (parent == 0) {
+                r.error = Words.DbCmd.BAD_NAME;
+                return r;
+            }
+        }
+        return newListChecked(s, parent, last);
     }
 
 

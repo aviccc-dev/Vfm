@@ -422,7 +422,8 @@ final class ImportTests {
         DbListCmd.Res r = DbListCmd.md(s, M, x[0]);
         long torah = at(s, "תורה"), gem = at(s, "תורה/גמרא");
         ck("MD במסד: נוצרת בכל הדרך, הראשונה בבית", !r.noop && r.error == null && gem != 0 && s.listsOf(torah).equals(Arrays.asList(home)));
-        ck("MD במסד: קיימת — בלי שינוי", DbListCmd.md(s, M, x[0]).noop);
+        DbListCmd.Res again = DbListCmd.md(s, M, x[0]);                       // מבנה 102 (המשתמש): קיימת — סירוב, "שם תפוס"
+        ck("MD במסד: קיימת — סירוב (מבנה 102)", again.error != null && again.error.equals(Words.DbCmd.nameTaken("גמרא")) && at(s, "תורה/גמרא") == gem);
 
         x = sides("COPY ידנית \"ספרים\" ידנית \"תורה\"");
         r = DbListCmd.copy(s, M, x[0], x[1], null, f);

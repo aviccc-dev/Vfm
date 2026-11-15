@@ -111,6 +111,14 @@ final class DbPaths {
         return any;
     }
 
+    /** מבנה 102: רשימה בשם הזה שעומדת לעצמה (אינה בתוך שום רשימה, והיא אינה הבית) — או 0. למסד בלי בית. */
+    static long standalone(Store s, String name) {
+        String n = name.trim();
+        for (Store.Item it : s.lists())
+            if (it.name.equals(n) && s.listsOf(it.id).isEmpty() && !"1".equals(s.prop(it.id, Store.P_HOME))) return it.id;
+        return 0;
+    }
+
     static long child(Store s, long list, String name) {
         String n = name.trim();
         for (Store.Member m : s.members(list)) if (m.item.type == Store.LIST && m.item.name.equals(n)) return m.item.id;

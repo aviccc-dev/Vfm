@@ -466,8 +466,20 @@ final class DbCmdTests {
                                 && Manager.onListNew("אין-אופן-כזה-91", 0, "א", here, vars, lib).error() != null && !Db.dbFile(Db.app, "אין-אופן-כזה-91").exists()
                                 && Batch.plan("צור תיקייה ידנית %נבחרים%\n", here, vars, lib, null, new Batch.Selection(m91, 0, new ArrayList<Long>())).errors == 1
                                 && Batch.plan("צור תיקייה ידנית %נבחרים%\n", here, vars, lib).errors == 1);
-                List<String> md91 = go("המשך ()\nאופן \"" + m91 + "\"\nMD ידנית \"חדש/בפנים\"\nודא ידנית \"חדש/בפנים\" קיימת\n", here, vars, lib);
-                o.check("מבנה 91: \"צור תיקייה ידנית\" כתובה לא השתנתה — רשימה קיימת היא \"בלי שינוי\", לא סירוב " + md91, bad(md91).isEmpty());
+                // מבנה 102 (המשתמש): רשימה קיימת — סירוב גם בשורה כתובה, ובלי "ודא שגיאה" / "המשך" — הקובץ כולו אינו רץ
+                Batch.Plan md102 = Batch.plan("אופן \"" + m91 + "\"\nMD ידנית \"חדש/בפנים\"\n", here, vars, lib);
+                Batch.Plan vb102 = Batch.plan("אופן \"" + m91 + "\"\nצור רשימה \"חדש/בפנים\" /בלי-לפתוח\n", here, vars, lib);
+                o.check("מבנה 102: \"צור תיקייה ידנית\" ו\"צור רשימה\" על רשימה קיימת — שגיאה בתכנון, \"שם תפוס\", והקובץ אינו רץ",
+                        md102.blocked() && vb102.blocked() && md102.errorText().contains(Words.DbCmd.nameTaken("בפנים"))
+                                && vb102.errorText().contains(Words.DbCmd.nameTaken("בפנים")));
+                List<String> md91 = go("אופן \"" + m91 + "\"\nודא שגיאה\nMD ידנית \"חדש/בפנים\"\nודא ידנית \"חדש/בפנים\" קיימת\n", here, vars, lib);
+                o.check("מבנה 102: עם \"ודא שגיאה\" (הוראה מפורשת) — ממשיך, והרשימה הקיימת לא נגעה " + md91, bad(md91).isEmpty());
+                String dlc102 = Files.readUtf8(new File(src, "src/com/tikiyot/vfm/pkudot/DbListCmd.java"));
+                int md102at = dlc102.indexOf("static Res md(Store s");
+                o.check("מבנה 102: שומר — הכלל האחד: \"צור תיקייה ידנית\" ו\"צור רשימה\" — דרך Lists.newListAt; ה־➕ — דרך Lists.newListChecked; ואין עוד \"כבר קיימת — בלי שינוי\" לרשימה",
+                        md102at > 0 && dlc102.indexOf("Lists.newListAt(", md102at) > md102at && dlc102.indexOf("Lists.newListAt(", md102at) < dlc102.indexOf("\n    }\n", md102at)
+                                && dlc102.split("Lists\\.newListAt\\(", -1).length == 3 && dlc102.contains("Lists.newListChecked(")
+                                && !dlc102.contains("Res.same(Words.ListCmdW.exists(a.label()))") && !dlc102.contains("Res.same(Words.ListCmdW.exists(Names.label(path)))"));
                 String ui91 = Files.readUtf8(new File(src, "src/com/tikiyot/vfm/masachim/rechivim/DbVerbsUi.java"))
                         + Files.readUtf8(new File(src, "src/com/tikiyot/vfm/masachim/rechivim/DbPicker.java"));
                 boolean none91 = true;
