@@ -41,6 +41,8 @@ final class DbListCmd {
         long made;
         /** מבנה 104: נדרס מה שהיה (רשימה חכמה בשם קיים) — בהרצה: גיבוי לפני. */
         boolean replaced;
+        /** מבנה 116: הפריטים (מספרים) שהפעולה הכניסה ליעד — כדי שהלוח של המסך ידע מה עבר. */
+        List<Long> entered;
 
         Res renamed(long id, String from, String to) {
             if (id != 0 && from != null && to != null && !from.equals(to)) {
@@ -900,6 +902,51 @@ final class DbListCmd {
                     }, false, lib);
                     if (r.error != null) lastFailed = true;
                     s.made = r.made;
+                    return r.error != null ? r.error : Words.DbCmd.inDb(r.text);
+                }
+            };
+            return;
+        }
+        // מבנה 116: ההדבקה מהלוח של הרשימות — "העתק / העבר ידנית %נבחרים% ידנית %נבחרים%": הפריטים שנבחרו (מספרים), מהרשימה
+        // שסומנו בה (sel.in — להעברה), אל הרשימה sel.to. אותה ליבה כמו בשורה הכתובה (Lists.copyInto / moveTo), ואותה הודעה;
+        // מה שנובע מהמקום: לפי מספרים, ולכן כל פריט (גם קובץ, רעיון, רשימה חכמה) — לא רק מה שיש לו דרך של שמות.
+        boolean xfer = (cmd.equals("COPY") || cmd.equals("MOVE")) && to != null && sw.isEmpty() && a.picked && a.kind == ListCmd.LIST
+                && !a.content && !a.filesOf && to.picked && to.kind == ListCmd.LIST && !to.content && !to.filesOf;
+        if (xfer) {
+            final boolean move = cmd.equals("MOVE");
+            final long from = sel.in, into = sel.to;
+            final List<Long> ids = new ArrayList<Long>(sel.ids);
+            s.describe = Words.DbCmd.inDb(Words.ListCmdW.copied(ids.size(), 0, null, Words.DbCmd.HERE_LIST));
+            s.op = new ListCmd.Op() {
+                @Override public String run(Library lib) {
+                    Res r = realRes(mode, new Work() {
+                        @Override public Res run(Store t, Finder f) {
+                            Store.Item li = into == 0 ? null : t.item(into);
+                            if (li == null || li.type != Store.LIST) return Res.err(Words.Db.LIST_GONE);
+                            Lists.Copied all = new Lists.Copied();
+                            List<Long> entered = new ArrayList<Long>();
+                            for (Long id : ids) {                               // אחד אחד — כדי לדעת מי נכנס (הלוח)
+                                Lists.Copied one;
+                                if (t.item(id) == null) {
+                                    one = new Lists.Copied();
+                                    one.skipped = 1;
+                                    one.why = Words.DbClipW.GONE;
+                                } else one = move ? Lists.moveTo(t, java.util.Collections.singletonList(id), from, into)
+                                        : Lists.copyIds(t, java.util.Collections.singletonList(id), into);
+                                if (one.done == 1) entered.add(id);
+                                all.done += one.done;
+                                all.skipped += one.skipped;
+                                if (all.why == null) all.why = one.why;
+                            }
+                            Res ok = Res.ok(Words.ListCmdW.copied(all.done, all.skipped, all.why, li.name) + nowIn(t, into));
+                            ok.made = into;
+                            ok.entered = entered;
+                            return ok;
+                        }
+                    }, move, lib);                                              // העברה מוציאה מהמקור — גיבוי לפני
+                    if (r.error != null) lastFailed = true;
+                    s.made = r.made;
+                    s.entered = r.entered;
                     return r.error != null ? r.error : Words.DbCmd.inDb(r.text);
                 }
             };

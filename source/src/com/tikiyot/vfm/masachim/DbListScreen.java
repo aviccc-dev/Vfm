@@ -759,32 +759,58 @@ public class DbListScreen extends ListScreen<Store.Member> {
                 });
     }
 
+    /**
+     * מבנה 116: ההדבקה — דרך המנהל, בפקודות: מהלוח של הרשימות — "העתק ידנית %נבחרים% ידנית %נבחרים%" למה שסומן להעתקה, ו"העבר…"
+     * למה שסומן להעברה (שורה לכל רשימה שממנה סומן; גיבוי לפני); מהכונן — "העתק %נבחרים% ידנית %נבחרים%" (מבנה 114–115). כאן
+     * נשארים הלוח וההודעה. ברקע (תיקיות נסרקות).
+     */
     private void pasteNow(final List<String> files, final List<String> dirs, final boolean structure) {
         final long dest = here();
-        final boolean db = !DbClip.empty() && DbClip.cannot(mode) == null;
-        final boolean before = db && DbClip.anyMove();
-        final String m = mode;
+        final Library lib = Library.get(this);
+        final java.util.Map<String, String> vars = BatchUi.vars(this, Paths.data());
+        final List<Manager.Act> acts = new ArrayList<Manager.Act>();
+        final List<Long> movedFrom = new ArrayList<Long>();                     // לכל פעולה: הרשימה שממנה מעבירים; -1 — לא העברה
+        if (!DbClip.empty() && DbClip.cannot(mode) == null) {
+            List<Long> copy = new ArrayList<Long>();
+            java.util.Map<Long, List<Long>> move = new java.util.LinkedHashMap<Long, List<Long>>();
+            for (DbClip.Item it : DbClip.items()) {
+                if (it.how != DbClip.MOVE) { copy.add(it.id); continue; }
+                if (!move.containsKey(it.from)) move.put(it.from, new ArrayList<Long>());
+                move.get(it.from).add(it.id);
+            }
+            if (!copy.isEmpty()) {
+                acts.add(Manager.onListPaste(mode, false, 0, copy, dest, Paths.data(), vars, lib));
+                movedFrom.add(-1L);
+            }
+            for (java.util.Map.Entry<Long, List<Long>> e : move.entrySet()) {
+                acts.add(Manager.onListPaste(mode, true, e.getKey(), e.getValue(), dest, Paths.data(), vars, lib));
+                movedFrom.add(e.getKey());
+            }
+        }
+        if (!files.isEmpty() || !dirs.isEmpty()) {
+            acts.add(Manager.onListAdd(mode, dest, files, dirs, structure ? Manager.FOLDER_TREE : Manager.FOLDER_FLAT, Paths.data(), vars, lib));
+            movedFrom.add(-1L);
+        }
+        for (Manager.Act act : acts)
+            if (act.error() != null) {
+                done(act.error());
+                return;
+            }
+        if (acts.isEmpty()) return;
         if (!dirs.isEmpty()) Ui.toast(this, Words.DbClipW.ADDING);
         new Thread(new Runnable() {
             @Override
             public void run() {
-                final List<Tree.Node> scanned = new ArrayList<Tree.Node>();
-                for (String d : dirs) scanned.add(Tree.scanFolder(new File(d), structure));      // ברקע
-                final DbListCmd.Res res = DbListCmd.nowRes(m, new DbListCmd.Work() {
-                    @Override
-                    public DbListCmd.Res run(Store t, DbListCmd.Finder f) {
-                        Lists.Copied c = db ? DbClip.paste(t, dest) : new Lists.Copied();
-                        if (!files.isEmpty()) c.done += DbFiles.add(t, dest, files, null, true).added;
-                        for (Tree.Node n : scanned) c.done += DbMore.attach(t, dest, n, structure, true)[1];
-                        return DbListCmd.Res.ok(Words.VClipW.PASTED + c.done
-                                + (c.skipped > 0 ? Words.VClipW.SKIPPED + c.skipped + " (" + c.why + ")" : ""));
-                    }
-                }, before);
+                final StringBuilder said = new StringBuilder();
+                for (int i = 0; i < acts.size(); i++) {
+                    said.append(said.length() > 0 ? "\n" : "").append(acts.get(i).say(lib));
+                    if (movedFrom.get(i) >= 0) DbClip.moved(movedFrom.get(i), acts.get(i).entered);   // "העבר" שנכנס — יוצא מהלוח
+                }
                 runOnUiThread(new Runnable() {
                     @Override
                     public void run() {
                         if (isFinishing()) return;
-                        done(res.error != null ? res.error : res.text);
+                        done(said.toString());
                     }
                 });
             }

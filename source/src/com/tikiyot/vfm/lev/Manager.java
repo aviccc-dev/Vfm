@@ -86,6 +86,8 @@ final class Manager {
         /** מבנה 91: אחרי say — המספר במסד של מה שנוצר (0 — לא נוצר), והאם הפעולה נכשלה. */
         long made;
         boolean failed;
+        /** מבנה 116: אחרי say — הפריטים שנכנסו ליעד (הדבקה מהלוח); null — לא רלוונטי. */
+        java.util.List<Long> entered;
 
         Act(String text, Batch.Plan plan, java.io.File dest) {
             this.text = text;
@@ -117,6 +119,7 @@ final class Manager {
                 for (Batch.Step s : plan.steps) if (s.said != null) {
                     said = s.said;
                     made = s.made;
+                    entered = s.entered;
                     failed = s.saidFailed;
                 }
             } catch (Throwable t) {
@@ -291,6 +294,19 @@ final class Manager {
         Batch.Selection sel = new Batch.Selection(mode, list, new java.util.ArrayList<Long>());
         sel.files.addAll(paths);
         sel.dirs.addAll(dirs);
+        return new Act(text, Batch.plan(text, here, vars, lib, null, sel), null);
+    }
+
+    /**
+     * מבנה 116: הדבקה מהלוח של הרשימות — "העתק / העבר ידנית %נבחרים% ידנית %נבחרים%". ids — הפריטים (מספרים במסד); from —
+     * הרשימה שסומנו בה (להעברה: משם הם יוצאים); dest — הרשימה שאליה מדביקים.
+     */
+    static Act onListPaste(String mode, boolean move, long from, java.util.List<Long> ids, long dest, java.io.File here,
+                           java.util.Map<String, String> vars, Library lib) {
+        String text = Commands.word(Commands.get(move ? "MOVE" : "COPY")) + " " + ListCmd.MANUAL + " %" + Batch.V_SELECTED + "% " + ListCmd.MANUAL
+                + " %" + Batch.V_SELECTED + "%\n";
+        Batch.Selection sel = new Batch.Selection(mode, from, ids);
+        sel.to = dest;
         return new Act(text, Batch.plan(text, here, vars, lib, null, sel), null);
     }
 

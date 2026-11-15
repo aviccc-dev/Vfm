@@ -1003,6 +1003,47 @@ final class DbCmdTests {
                                         && !scr115.contains("DbMore.") && !scr115.contains("DbListCmd.nowRes(") && !scr115.contains("DbFiles.add(")
                                         && scr115.contains("Manager.onListAdd("));
                     }
+                    // מבנה 116: ההדבקה מהלוח של הרשימות — מהמסך (דרך המנהל) מול "העתק / העבר ידנית … ידנית …" כתובה
+                    {
+                        String o116 = "אופן \"" + m91 + "\"\n";
+                        go(o116 + "MD ידנית \"מקור 116/תת 116/עמוק\"\nצור רעיון \"רעיון 116\" \"מקור 116/תת 116\"\nMD ידנית \"מסך 116\"\nMD ידנית \"כתוב 116\"\n"
+                                + "MD ידנית \"העברה א 116/זז 116\"\nMD ידנית \"העברה ב 116/זז 116\"\n", here, vars, lib);
+                        final long[] id116 = new long[5];
+                        Db.read(Db.app, m91, new Db.Use<Void>() {
+                            @Override public Void run(SqlStore st) {
+                                id116[0] = DbPaths.find(st, m91, java.util.Arrays.asList("מקור 116", "תת 116"));
+                                id116[1] = DbPaths.find(st, m91, java.util.Arrays.asList("מסך 116"));
+                                id116[2] = DbPaths.find(st, m91, java.util.Arrays.asList("העברה א 116", "זז 116"));
+                                id116[3] = DbPaths.find(st, m91, java.util.Arrays.asList("העברה א 116"));
+                                return null;
+                            }
+                        });
+                        Manager.Act c116 = Manager.onListPaste(m91, false, 0, java.util.Arrays.asList(id116[0], 987654321L, id116[1]), id116[1], here, vars, lib);
+                        String sc116 = c116.error() != null ? c116.error() : c116.say(lib);
+                        DbClip.clear();
+                        final List<Store.Item> clip116 = new ArrayList<Store.Item>();
+                        Db.read(Db.app, m91, new Db.Use<Void>() {
+                            @Override public Void run(SqlStore st) { clip116.add(st.item(id116[2])); return null; }
+                        });
+                        DbClip.put(m91, id116[3], clip116, DbClip.MOVE, false);
+                        Manager.Act m116 = Manager.onListPaste(m91, true, id116[3], java.util.Arrays.asList(id116[2]), id116[1], here, vars, lib);
+                        String sm116 = m116.error() != null ? m116.error() : m116.say(lib);
+                        DbClip.moved(id116[3], m116.entered);
+                        List<String> w116 = go(o116 + "העתק ידנית \"מקור 116/תת 116\" ידנית \"כתוב 116\"\nהעבר ידנית \"העברה ב 116/זז 116\" ידנית \"כתוב 116\"\n"
+                                + "ודא תוכן ידנית \"מסך 116\" שווה תוכן ידנית \"כתוב 116\"\nודא ידנית \"העברה א 116/זז 116\" חסרה\nודא ידנית \"מסך 116/זז 116\" קיימת\n"
+                                + "ודא ידנית \"מקור 116/תת 116/עמוק\" קיימת\n", here, vars, lib);
+                        o.check("מבנה 116: הדבקה מהלוח — מהמסך: העתקה (" + sc116 + ") והעברה (" + sm116 + "), מול השורות הכתובות: הרשימות שוות; מה שעבר יצא מהמקור ומהלוח " + w116,
+                                !c116.failed && !m116.failed && bad(w116).isEmpty() && sc116.contains(Words.DbClipW.GONE)
+                                        && c116.entered != null && c116.entered.size() == 1 && m116.entered != null && m116.entered.contains(id116[2]) && DbClip.empty());
+                        Manager.Act g116 = Manager.onListPaste(m91, false, 0, java.util.Arrays.asList(id116[0]), 987654321L, here, vars, lib);
+                        String gone116 = g116.error() != null ? g116.error() : g116.say(lib);
+                        String scr116 = Files.readUtf8(new File(src, "src/com/tikiyot/vfm/masachim/DbListScreen.java"));
+                        o.check("מבנה 116: רשימת יעד שנמחקה — \"" + gone116 + "\"; בחירה ריקה — שגיאה; השומר — מסך הרשימות אינו מדביק בעצמו",
+                                g116.failed && gone116.equals(Words.Db.LIST_GONE)
+                                        && Manager.onListPaste(m91, false, 0, new ArrayList<Long>(), id116[1], here, vars, lib).error() != null
+                                        && !scr116.contains("DbClip.paste(") && !scr116.contains("DbListCmd.nowRes(") && !scr116.contains("DbMore.attach(")
+                                        && !scr116.contains("DbFiles.add(") && scr116.contains("Manager.onListPaste("));
+                    }
                     Manager.Act gone99 = Manager.onSmartEdit(m91, 987654321L, "x", "סוג:pdf", new java.util.HashMap<String, String>(), here, vars, lib);
                     String saidGone99 = gone99.say(lib);
                     o.check("מבנה 99: רשימה שנמחקה בזמן שהטופס היה פתוח — \"" + Words.Db.ITEM_GONE + "\" (" + saidGone99 + ")",

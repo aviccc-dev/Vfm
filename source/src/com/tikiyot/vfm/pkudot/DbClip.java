@@ -117,6 +117,16 @@ final class DbClip {
         return all;
     }
 
+    /** מבנה 116: פריטים של "העבר" שנכנסו ליעד (ההדבקה נעשתה בפקודה, דרך המנהל) — יוצאים מהלוח. */
+    static synchronized void moved(long from, List<Long> entered) {
+        if (entered == null) return;
+        for (int i = items.size() - 1; i >= 0; i--) {
+            Item it = items.get(i);
+            if (it.how == MOVE && it.from == from && entered.contains(it.id)) items.remove(i);
+        }
+        if (items.isEmpty()) mode = null;
+    }
+
     /** קבצים ותיקיות שהועתקו בכונן (Clip) — נכנסים לרשימה; בהעברה — לא (עולמות נפרדים). */
     static boolean diskForLists() {
         return !Clip.isEmpty() && Clip.isCopy();

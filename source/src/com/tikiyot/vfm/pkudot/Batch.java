@@ -43,6 +43,8 @@ final class Batch {
         boolean saidFailed;
         /** מבנה 91: המספר במסד של מה שהפעולה יצרה (רשימה חדשה מהמסך) — כדי שהמסך יפתח אותה; 0 — לא נוצר דבר. */
         long made;
+        /** מבנה 116: הפריטים שהפעולה הכניסה ליעד (הדבקה מהלוח של הרשימות) — null: לא רלוונטי. */
+        List<Long> entered;
         /** מ0.37: "ודא שגיאה" — השורה הזו צריכה להיכשל בהרצה (בתכנון היא תקינה). */
         boolean expectFail;
         /** 1.19.0: COPY/MOVE /S — שמירת מסלול: השורש שממנו נמדד המסלול; files — כל הקבצים, dirs — תיקיות ריקות. */
@@ -1537,6 +1539,8 @@ final class Batch {
         String mode;
         long in;
         List<Long> ids;
+        /** מבנה 116: הרשימה שאליה מדביקים (הדבקה מהלוח של הרשימות); 0 — אין. */
+        long to;
 
         Selection(String mode, long in, List<Long> ids) {
             this(new ArrayList<String>(), new ArrayList<String>(), null, null, null);
