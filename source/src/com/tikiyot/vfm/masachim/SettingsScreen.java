@@ -234,69 +234,47 @@ public class SettingsScreen extends Activity {
     }
 
     private void rebuild() {
-        if (working) return;
-        working = true;
-        new Thread(new Runnable() {
-            @Override
-            public void run() {
-                lib.build(new Index.Progress() {
-                    @Override
-                    public void onScan(String label, int items) {
-                        lib.status = Words.Prefs.SCANNING + label + "… " + Files.count(items);
-                        h.post(new Runnable() {
-                            @Override public void run() { show(); }
-                        });
-                    }
-                });
-                working = false;
-                h.post(new Runnable() {
-                    @Override
-                    public void run() {
-                        show();
-                        Ui.toast(SettingsScreen.this, Words.Prefs.INDEX_BUILT);
-                    }
-                });
-            }
-        }).start();
+        index(Manager.INDEX_FULL, null);
     }
 
     private void refresh() {
-        if (working) return;
-        working = true;
-        new Thread(new Runnable() {
-            @Override
-            public void run() {
-                final long t0 = System.currentTimeMillis();
-                final int changed = lib.refreshAsked();
-                working = false;
-                h.post(new Runnable() {
-                    @Override
-                    public void run() {
-                        show();
-                        Ui.toast(SettingsScreen.this, changed + Words.Prefs.CHANGES_DOT
-                                + (System.currentTimeMillis() - t0) + Words.Prefs.MS);
-                    }
-                });
-            }
-        }).start();
+        index(Manager.INDEX_QUICK, null);
     }
 
     /** רענון מעמיק (108, 114) — ברקע, עם הודעה בסוף. */
     private void deepRefresh() {
+        index(Manager.INDEX_DEEP, Words.Prefs.DEEP_RUNNING);
+    }
+
+    /**
+     * מבנה 120: שלוש פעולות האינדקס — דרך המנהל, כפקודה ("רענן" · "רענן עמוק" · "רענן מלא"), ברקע. כאן נשארות ההודעות; ההתקדמות של
+     * בנייה מחדש נקראת מהמצב של האינדקס (lib.status), פעם בחצי שנייה.
+     */
+    private void index(final int kind, String starting) {
         if (working) return;
         working = true;
-        Ui.toast(this, Words.Prefs.DEEP_RUNNING);
+        if (starting != null) Ui.toast(this, starting);
+        final java.util.Map<String, String> vars = BatchUi.vars(this, Paths.work());
+        final Runnable tick = new Runnable() {
+            @Override
+            public void run() {
+                if (!working) return;
+                show();
+                h.postDelayed(this, 500);
+            }
+        };
+        h.postDelayed(tick, 500);
         new Thread(new Runnable() {
             @Override
             public void run() {
-                final long t0 = System.currentTimeMillis();
-                final int changed = lib.deepRefresh();
+                Manager.Act act = Manager.onIndex(kind, Paths.work(), vars, lib);   // ברקע: "רענן" מרענן כבר בהכנה
+                final String said = act.error() != null ? act.error() : act.say(lib);
                 working = false;
                 h.post(new Runnable() {
                     @Override
                     public void run() {
                         show();
-                        Ui.toast(SettingsScreen.this, changed + Words.Prefs.CHANGES_DOT + (System.currentTimeMillis() - t0) / 1000.0 + Words.Prefs.SECONDS);
+                        Ui.toast(SettingsScreen.this, said);
                     }
                 });
             }

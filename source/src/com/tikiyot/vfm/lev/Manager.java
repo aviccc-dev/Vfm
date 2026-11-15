@@ -297,6 +297,20 @@ final class Manager {
         return new Act(text, Batch.plan(text, here, vars, lib, null, sel), null);
     }
 
+    /** מבנה 120: רענון האינדקס מהמסך (הגדרות, חיפוש) — "רענן" · "רענן עמוק" · "רענן מלא", כמו בקובץ פקודות. */
+    static final int INDEX_QUICK = 0, INDEX_DEEP = 1, INDEX_FULL = 2;
+
+    static Act onIndex(int kind, java.io.File here, java.util.Map<String, String> vars, Library lib) {
+        String text = Commands.word(Commands.get(Batch.REFRESH)) + (kind == INDEX_DEEP ? " " + Batch.W_DEEP : kind == INDEX_FULL ? " " + Batch.W_FULL : "") + "\n";
+        return new Act(text, Batch.plan(text, here, vars, lib), null);
+    }
+
+    /** מבנה 119: "גיבוי עכשיו" של אופן, מהמסך — "אופן "<שם>"" ואחריה "גבה", כמו בקובץ פקודות. */
+    static Act onBackup(String mode, java.io.File here, java.util.Map<String, String> vars, Library lib) {
+        String text = Commands.word(Commands.get(Batch.MODE)) + " \"" + mode + "\"\n" + Commands.word(Commands.get(Batch.BACKUP)) + "\n";
+        return new Act(text, Batch.plan(text, here, vars, lib), null);
+    }
+
     /**
      * מבנה 116: הדבקה מהלוח של הרשימות — "העתק / העבר ידנית %נבחרים% ידנית %נבחרים%". ids — הפריטים (מספרים במסד); from —
      * הרשימה שסומנו בה (להעברה: משם הם יוצאים); dest — הרשימה שאליה מדביקים.

@@ -1060,6 +1060,31 @@ final class DbCmdTests {
                         o.check("מבנה 117: ➕ ← \"קבצים מתיקייה / מחיפוש\" (מסך המסד) — דרך המנהל, לא כתיבה ישירה",
                                 !ds117.contains("DbFiles.add(") && ds117.contains("DbVerbsUi.addToList("));
                     }
+                    // מבנה 119–120: "גיבוי עכשיו" ושלוש פעולות האינדקס — מהמסכים דרך המנהל, בשורות הפקודה הקיימות
+                    {
+                        File[] b0 = Db.backupsOf(Db.app, m91).dir.listFiles();
+                        Manager.Act bk119 = Manager.onBackup(m91, here, vars, lib);
+                        String s119 = bk119.error() != null ? bk119.error() : bk119.say(lib);
+                        File[] b1 = Db.backupsOf(Db.app, m91).dir.listFiles();
+                        String ds119 = Files.readUtf8(new File(src, "src/com/tikiyot/vfm/masachim/DbScreen.java"));
+                        o.check("מבנה 119: \"גיבוי עכשיו\" מהמסך — \"אופן … / גבה\" דרך המנהל: נשמר גיבוי של האופן הזה (" + s119 + "); השומר — מסך המסד אינו מגבה בעצמו",
+                                !bk119.failed && s119.contains(m91) && b1 != null && b1.length > (b0 == null ? 0 : b0.length) && !ds119.contains(".manual("));
+                        StringBuilder said120 = new StringBuilder();
+                        boolean ok120 = true;
+                        Manager.Act full120 = Manager.onIndex(Manager.INDEX_FULL, here, vars, lib);   // בנייה מחדש אינה רצה במחשב (כמו הקבוצה "rebuild") — רק התכנון
+                        ok120 &= full120.error() == null && full120.writes() && full120.text.trim().equals("רענן מלא");
+                        for (int k : new int[]{Manager.INDEX_QUICK, Manager.INDEX_DEEP}) {
+                            Manager.Act ix120 = Manager.onIndex(k, here, vars, lib);
+                            String sx = ix120.error() != null ? ix120.error() : ix120.say(lib);
+                            ok120 &= ix120.error() == null && !ix120.failed;
+                            said120.append(sx).append(" | ");
+                        }
+                        String st120 = Files.readUtf8(new File(src, "src/com/tikiyot/vfm/masachim/SettingsScreen.java"))
+                                + Files.readUtf8(new File(src, "src/com/tikiyot/vfm/masachim/SearchScreen.java"));
+                        o.check("מבנה 120: רענון · רענון עמוק · בנייה מחדש מהמסך — \"רענן…\" דרך המנהל (" + said120 + "); השומר — ההגדרות והחיפוש אינם מרעננים בעצמם",
+                                ok120 && !st120.contains("lib.refreshAsked(") && !st120.contains("lib.deepRefresh(") && !st120.contains("lib.build(")
+                                        && st120.contains("Manager.onIndex("));
+                    }
                     Manager.Act gone99 = Manager.onSmartEdit(m91, 987654321L, "x", "סוג:pdf", new java.util.HashMap<String, String>(), here, vars, lib);
                     String saidGone99 = gone99.say(lib);
                     o.check("מבנה 99: רשימה שנמחקה בזמן שהטופס היה פתוח — \"" + Words.Db.ITEM_GONE + "\" (" + saidGone99 + ")",

@@ -334,9 +334,11 @@ final class Batch {
             // מ0.40 — המשתמש: "הוא יכול להריץ פקודה 'רענן אינדקס' לפני שהוא מתחיל". עד כאן "רענן" רץ רק בהרצה — אחרי שכל
             // השורות כבר תוכננו, ורשימה חכמה בשורה שאחריו לא ראתה קובץ שהורד הרגע. עכשיו — רענון מהיר כבר בהכנה (ברקע, לא
             // משנה קבצים), והשורות שאחריו מתוכננות מול האינדקס המעודכן. בהרצה — כמו קודם (גם מה ששורות קודמות שינו).
+            final int[] inPlan = {0};                                            // מבנה 120: מה שנמצא כבר בהכנה — נספר בהודעה של ההרצה
             if (sim.lib != null && sim.lib.ready)
                 try {
                     int n = sim.lib.refreshAsked();
+                    inPlan[0] = n;
                     sim.condFiles.clear();                                           // מה שחכמות מצאו לפני הרענון — לא תקף
                     s.describe += Words.DbCmd.refreshedInPlan(n);
                 } catch (Throwable t) {
@@ -346,11 +348,15 @@ final class Batch {
                 @Override public String run(Library lib) {
                     if (lib == null) return full ? Words.DbCmd.REBUILD_WILL + note : Words.DbCmd.refreshWill(deep);
                     if (full) {
-                        if (rd > 0) lib.build(Words.Lib.WHY_REQUEST, null, rd);
-                        else lib.build(null);
+                        final Library l = lib;                                   // מבנה 120: ההתקדמות — במצב של האינדקס (מסך ההגדרות מציג אותו)
+                        Index.Progress pr = new Index.Progress() {
+                            @Override public void onScan(String label, int items) { l.status = Words.Prefs.SCANNING + label + "… " + Files.count(items); }
+                        };
+                        if (rd > 0) lib.build(Words.Lib.WHY_REQUEST, pr, rd);
+                        else lib.build(pr);
                         return Words.DbCmd.rebuilt(lib.totalFiles(), lib.totalDirs()) + note;
                     }
-                    return Words.DbCmd.refreshed(deep ? lib.deepRefresh() : lib.refreshAsked());
+                    return Words.DbCmd.refreshed((deep ? lib.deepRefresh() : lib.refreshAsked()) + inPlan[0]);
                 }
             };
             return true;

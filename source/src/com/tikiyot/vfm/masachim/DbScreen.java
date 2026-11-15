@@ -606,25 +606,18 @@ public class DbScreen extends Activity {
     }
 
     private void backupNow() {
+        // מבנה 119: דרך המנהל — "אופן "<שם>"" ו"גבה", כמו בקובץ פקודות. כאן נשארים חלון ההמתנה וההודעה.
+        final Library lib = Library.get(this);
+        final Manager.Act act = Manager.onBackup(mode, Paths.work(), BatchUi.vars(this, Paths.work()), lib);
+        if (act.error() != null) {
+            Ui.toast(this, act.error());
+            return;
+        }
         final AlertDialog wait = new AlertDialog.Builder(this).setMessage(Words.Db.BACKUP_SAVING).setCancelable(false).show();
-        final Backups bk = backups(mode);
-        final SqlStore s = store;
         new Thread(new Runnable() {
             @Override
             public void run() {
-                String msg;
-                try {
-                    StringBuilder names = new StringBuilder();
-                    synchronized (storeLock) {
-                        if (s != store) throw new IllegalStateException("closed");
-                        for (Backups.Entry e : bk.manual(s, System.currentTimeMillis())) names.append(e.name).append('\n');
-                    }
-                    msg = Words.Db.backupSaved(names.toString().trim(), bk.dir.getPath());
-                } catch (Throwable t) {
-                    Log.e("DbScreen.backupNow", t);
-                    msg = Words.Db.failed(String.valueOf(t.getMessage()));
-                }
-                final String text = msg;
+                final String text = act.say(lib);
                 runOnUiThread(new Runnable() {
                     @Override
                     public void run() {

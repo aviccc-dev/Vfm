@@ -233,14 +233,17 @@ public class SearchScreen extends Activity implements Clip.Holder {
             public void onClick(View v) {
                 if (!input.getText().toString().trim().isEmpty()) return;
                 Ui.toast(SearchScreen.this, Words.Look.REFRESHING);
+                final java.util.Map<String, String> vars = BatchUi.vars(SearchScreen.this, Paths.work());
                 new Thread(new Runnable() {
                     @Override
                     public void run() {
-                        final int n = lib.refreshAsked();
+                        // מבנה 120: דרך המנהל — "רענן", כמו בקובץ פקודות
+                        Manager.Act act = Manager.onIndex(Manager.INDEX_QUICK, Paths.work(), vars, lib);
+                        final String said = act.error() != null ? act.error() : act.say(lib);
                         runOnUiThread(new Runnable() {
                             @Override
                             public void run() {
-                                Ui.toast(SearchScreen.this, n == 0 ? Words.Look.INDEX_UP_TO_DATE : n + Words.Look.FOLDERS_REFRESHED);
+                                Ui.toast(SearchScreen.this, said);
                                 search();
                             }
                         });
