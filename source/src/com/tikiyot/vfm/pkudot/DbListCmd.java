@@ -988,12 +988,19 @@ final class DbListCmd {
     }
 
     /**
-     * מבנה 87: ודא ידנית "א" זהה ידנית "ב" — שתי הרשימות זהות עד הסוף (DbSnap: סדר, עומק, סוגים, שמות, מאפיינים, ואותו פריט
-     * בשני מקומות). השמות של שתי הרשימות עצמן אינם נבדקים. לא זהות — נאמר המקום הראשון שבו הן שונות.
+     * מבנה 87–88: היחס בין שתי רשימות, לפי ההגדרה של המשתמש (15.11.2026): "רשימות בעלות אותו שם, אותה תכולה, היושבות בשני
+     * מקומות שונים במסד — כלומר עם שני מספרים שונים — הן דומות או שוות, אך לא זהות. אם נשנה באחת מהן פרט אחד — הן כבר יהיו
+     * דומות ולא שוות."
+     *   זהה  — אותה רשימה ממש (אותו מספר במסד), שהדרכים שנכתבו מגיעות אליה משני מקומות ("קשר");
+     *   שווה — רשימה אחרת (מספר אחר), אותו שם ואותו תוכן עד הסוף (DbSnap: סדר, עומק, סוגים, שמות, מאפיינים, קישורים פנימיים);
+     *   דומה — רשימה אחרת שחלק ממנה שווה (השם, או התוכן) ויש הבדל — זה נאמר בתוצאה, עם ההבדל הראשון.
+     * "ודא ידנית א זהה ידנית ב" · "ודא ידנית א שווה ידנית ב" · "ודא תוכן ידנית א שווה תוכן ידנית ב" (רק מה שבתוכן — השמות של
+     * שתי הרשימות והמאפיינים שלהן עצמן אינם נבדקים). "שווה" נכשל גם כשהשתיים זהות: מי שבודק שנוצר עותק — רוצה לדעת אם קיבל קישור.
      */
-    static void planVerifySame(final Batch.Step s, final ListCmd.Side a, final ListCmd.Side b, Batch.Sim sim) {
+    static void planVerifySame(final Batch.Step s, final ListCmd.Side a, final ListCmd.Side b, final boolean exact, Batch.Sim sim) {
         for (ListCmd.Side x : new ListCmd.Side[]{a, b})
-            if (x.kind != ListCmd.LIST || x.content || x.filesOf || x.mask != null) { s.error = Words.DbCmd.VERIFY_SAME_USAGE; return; }
+            if (x.kind != ListCmd.LIST || x.filesOf || x.mask != null) { s.error = Words.DbCmd.VERIFY_SAME_USAGE; return; }
+        if (a.content != b.content || (exact && a.content)) { s.error = Words.DbCmd.VERIFY_SAME_USAGE; return; }
         if (sim.modeError != null) { s.error = sim.modeError; return; }
         final String mode = mode(sim);
         Store db;
@@ -1004,9 +1011,9 @@ final class DbListCmd {
             s.error = Words.Db.failed(String.valueOf(t.getMessage()));
             return;
         }
-        final String what = Words.DbCmd.verifySame(a.label(), b.label());
+        final String what = exact ? Words.DbCmd.verifySame(a.label(), b.label()) : Words.DbCmd.verifyEqual(a.label(), b.label(), a.content);
         String[] found = {""};
-        boolean now = same(db, mode, a, b, found);
+        boolean now = related(db, mode, a, b, exact, found);
         s.target = a.label();
         s.describe = Words.DbCmd.verifyWill(what) + " · " + Words.DbCmd.inDb(Words.DbCmd.verifyResult(now, what, found[0]));
         s.op = new ListCmd.Op() {
@@ -1016,7 +1023,7 @@ final class DbListCmd {
                 try {
                     st = Db.openRead(Db.app, mode);
                     String[] f = {""};
-                    boolean ok = same(st, mode, a, b, f);
+                    boolean ok = related(st, mode, a, b, exact, f);
                     s.verified = ok;
                     return Words.DbCmd.verifyResult(ok, what, f[0]);
                 } catch (Throwable t) {
@@ -1029,16 +1036,31 @@ final class DbListCmd {
         };
     }
 
-    static boolean same(Store s, String mode, ListCmd.Side a, ListCmd.Side b, String[] found) {
+    /** exact — "זהה" (אותה רשימה); אחרת "שווה" (רשימה אחרת, שווה). found — מה היחס באמת, כשלא. */
+    static boolean related(Store s, String mode, ListCmd.Side a, ListCmd.Side b, boolean exact, String[] found) {
         long x = list(s, mode, a), y = list(s, mode, b);
         if (x == 0 || y == 0) {
             ListCmd.Side gone = x == 0 ? a : b;
             found[0] = gone.home ? Words.DbCmd.NO_HOME : Words.ListCmdW.noList(gone.raw);
             return false;
         }
-        String d = DbSnap.diff(DbSnap.of(s, x), DbSnap.of(s, y));
-        if (d == null) return true;
-        found[0] = d;
+        if (x == y) {
+            found[0] = Words.DbCmd.REL_SAME;
+            return exact;
+        }
+        List<String> sa = DbSnap.of(s, x), sb = DbSnap.of(s, y);
+        String inside = DbSnap.diff(sa.subList(1, sa.size()), sb.subList(1, sb.size()));     // מה שבתוכן
+        String own = sa.get(0).equals(sb.get(0)) ? null : Words.DbCmd.snapDiff(1, sa.get(0), sb.get(0), 1, 1);   // המאפיינים שלהן עצמן
+        String na = s.item(x).name, nb = s.item(y).name;
+        boolean names = na.equals(nb), equal = a.content ? inside == null : names && own == null && inside == null;
+        if (equal) {
+            found[0] = a.content ? Words.DbCmd.REL_SEPARATE + ", " + Words.DbCmd.REL_CONTENT_EQUAL : Words.DbCmd.REL_EQUAL;
+            return !exact;
+        }
+        String why = a.content ? inside : !names ? Words.DbCmd.relNames(na, nb) + (inside == null && own == null ? " · " + Words.DbCmd.REL_CONTENT_EQUAL : "")
+                : own != null ? own : inside;
+        boolean similar = !a.content && (names || (inside == null && own == null));        // חלק שווה: השם, או כל התוכן
+        found[0] = (exact ? Words.DbCmd.REL_SEPARATE + " · " : "") + why + (similar ? Words.DbCmd.REL_SIMILAR : "");
         return false;
     }
 
@@ -1115,8 +1137,8 @@ final class DbListCmd {
     static final String SW_FILES_IN = "/קבצים:", W_CONTAINS = "מכיל";   // תחביר
     /** מ0.42: "ודא "<קובץ>" באינדקס" — מה שהיה "בדיקת מסלול באינדקס" בהגדרות. */
     static final String W_IN_INDEX = "באינדקס";   // תחביר
-    /** מבנה 87: ודא ידנית "א" זהה ידנית "ב". */
-    static final String W_SAME = "זהה";   // תחביר
+    /** מבנה 87–88: ודא ידנית "א" זהה ידנית "ב" (אותה רשימה) · ודא ידנית "א" שווה ידנית "ב" (רשימה אחרת, שווה). */
+    static final String W_SAME = "זהה", W_EQUAL = "שווה";   // תחביר
 
     /** מ0.42: האם האינדקס מכיר את הקובץ (ובכונן — קיים?). בהרצה — מול האינדקס של אותו רגע, אחרי שהתור שלו התרוקן. */
     private static void planVerifyIndex(final Batch.Step s, final File f) {
