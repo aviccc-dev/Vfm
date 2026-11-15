@@ -27,6 +27,23 @@ final class VerbsUi {
         }
     }
 
+    static {                                                                    // מבנה 142: הרשימות של הקומה הזו — רשומות אצל המנהל
+        Manager.list(Words.PermitW.R_TOOLS, new Manager.Lister() {
+            @Override public java.util.List<String> names() {
+                java.util.List<String> l = new java.util.ArrayList<String>();
+                for (Func f : Func.all()) l.add(f.kind);
+                return l;
+            }
+        });
+        Manager.list(Words.PermitW.R_ACTIONS, new Manager.Lister() {
+            @Override public java.util.List<String> names() {
+                java.util.List<String> l = new java.util.ArrayList<String>();
+                for (Actions.Action x : Actions.all()) l.add(x.id);
+                return l;
+            }
+        });
+    }
+
     private static void screen(String name, Do d) {
         Manager.register(Manager.screenKey(name), d);
     }

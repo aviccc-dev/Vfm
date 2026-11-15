@@ -413,7 +413,21 @@ function header(){
   return 'גרסה: '+(info.version||'?')+' ('+(info.versionCode||'?')+') · '+(info.model||'')+'\n'
     +'הרשאת גישה לכל הקבצים: '+(info.access?'✓':'✗')+' · מקום פנוי: '+(info.freeMb!=null?info.freeMb+'MB':'?')+'\n'
     +'האופן השמור: '+(info.savedMode||'?')+' · האופנים: '+ms.join(', ')+'\n'
-    +'האינדקס: '+(info.indexReady?'מוכן':'נטען')+'\n';
+    +'האינדקס: '+(info.indexReady?'מוכן':'נטען')+'\n'
+    +(info.door!=null?'הדלת לתוספים: גרסה '+info.door+' · המרשם: '+(info.registry||'—')+'\n':'')+doorCheck();
+}
+
+// אבחון 13 (מבנה 138–142): הדלת בודקת את עצמה בכל דוח, בלי התערבות — כתיבה לתיקייה של התוסף, קריאה חזרה, ורשימת התיקייה.
+// שלושתן עוברות בתוכנה דרך שכבת הניהול; אם אחת מסורבת או נכשלת — ❌ כאן, עם מה שחזר.
+function doorCheck(){
+  try{
+    if(!can('saveText')||!can('readText'))return '';
+    const n='בדיקת הדלת.txt',t='דלת '+Date.now(),p=V.saveText(n,t,false),back=p?V.readText(p):null;
+    let listed=true;
+    if(can('listDir')){const ls=J(V.listDir(dataDir()),null);listed=!!ls&&ls.some(x=>x.name===n);}
+    const ok=!!p&&back===t&&listed;
+    return 'בדיקת הדלת (כתיבה, קריאה ורשימת תיקייה — דרך שכבת הניהול): '+(ok?'✅':'❌ נכתב: '+(p?'כן':'לא')+' · נקרא: '+(back===t?'כן':'לא')+' · ברשימה: '+(listed?'כן':'לא'))+'\n';
+  }catch(e){return 'בדיקת הדלת: ❌ '+e.message+'\n';}
 }
 
 function fullReport(){

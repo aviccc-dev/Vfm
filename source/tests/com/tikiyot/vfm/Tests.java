@@ -3438,6 +3438,23 @@ public final class Tests {
                         Verbs.K_MENU, Verbs.K_NEW_CMD, Verbs.K_TOOL, Verbs.K_NOTE, Verbs.K_TITLE, Verbs.K_MODE, Manager.OPEN_DB})
                     if (!Manager.registered(k)) miss131.append(k).append(' ');
                 check("מבנה 131: כל מסך וכל סוג של פקודת פתיחה רשומים אצל המנהל (" + miss131.toString().trim() + ")", loaded131 && miss131.length() == 0);
+                // מבנה 142: המרשם האחד — כל הרשימות רשומות אצל המנהל, וכל אחת מוסרת בדיוק את מה שיש בה
+                Map<String, List<String>> reg142 = Manager.registry();
+                String line142 = Manager.registryLine();
+                check("מבנה 142: המרשם — שישה סוגים, לפי הסדר (" + reg142.keySet() + ")", new ArrayList<String>(reg142.keySet()).equals(Arrays.asList(
+                        Words.PermitW.R_COMMANDS, Words.PermitW.R_OPENERS, Words.PermitW.R_SYSTEM, Words.PermitW.R_PLUGINS, Words.PermitW.R_TOOLS, Words.PermitW.R_ACTIONS)));
+                check("מבנה 142: כל רשימה — בדיוק מה שיש במקור שלה (" + line142 + ")",
+                        reg142.get(Words.PermitW.R_COMMANDS).size() == Commands.ALL.size() && reg142.get(Words.PermitW.R_COMMANDS).contains("COPY")
+                                && reg142.get(Words.PermitW.R_TOOLS).size() == Func.all().size() && reg142.get(Words.PermitW.R_ACTIONS).size() == Actions.all().size()
+                                && reg142.get(Words.PermitW.R_OPENERS).contains(Manager.screenKey(Verbs.S_HOME)) && reg142.get(Words.PermitW.R_SYSTEM).contains(Permit.SYS_MENUS)
+                                && line142.startsWith(Words.PermitW.R_COMMANDS + " " + Commands.ALL.size() + " · "));
+                Manager.list("בדיקה142", new Manager.Lister() {
+                    @Override public List<String> names() { throw new IllegalStateException("נכשלת בכוונה"); }
+                });
+                boolean bad142 = Manager.registry().get("בדיקה142").isEmpty() && Manager.registry().get(Words.PermitW.R_COMMANDS).size() == Commands.ALL.size();
+                Manager.list("בדיקה142", null);
+                check("מבנה 142: רשימה שנכשלת — ריקה (ונרשמת ביומן), והשאר נמסרות; התוכנה מוסרת את המרשם לתוסף (info.registry)",
+                        bad142 && !Manager.registry().containsKey("בדיקה142") && read(new File(code, "lev/Bridge.java")).contains("o.put(\"registry\", Manager.registryLine());"));
                 String line131 = "פתח מסך " + Verbs.S_SETTINGS, key131 = Manager.screenKey(Verbs.S_SETTINGS);
                 final int[] called131 = {0};
                 Manager.Opener db131 = Manager.register(Manager.OPEN_DB, null);   // בלי פקודות הרשימות: בבדיקה אין מסך

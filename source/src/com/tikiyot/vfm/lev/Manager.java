@@ -95,6 +95,71 @@ final class Manager {
         return "";
     }
 
+    // ---------- המרשם האחד (מבנה 142; ממצא 12) ----------
+    // "מכירה" הייתה מפוזרת בחמישה מרשמים: הפקודות (Commands), פעולות המסכים (Actions), הכלים (Func), התוספים (Lab), ומי שפותח
+    // (כאן). הם רשימות של דברים שונים, וכל אחת נשארת במקומה — מה שמתאחד הוא הכניסה: כל רשימה רשומה אצל המנהל, ושואלים אותו.
+    // רשימה של קומה שמעל (הכלים, פעולות המסכים) נרשמת מלמעלה, כמו הפותחים. התפריטים אינם מרשם של קוד — הם רשימות במסד.
+
+    /** רשימה שהמנהל מכיר: יודעת לומר מה יש בה. */
+    interface Lister {
+        java.util.List<String> names();
+    }
+
+    private static final java.util.Map<String, Lister> LISTS = java.util.Collections.synchronizedMap(new java.util.LinkedHashMap<String, Lister>());
+
+    static {
+        list(Words.PermitW.R_COMMANDS, new Lister() {
+            @Override public java.util.List<String> names() {
+                java.util.List<String> l = new java.util.ArrayList<String>();
+                for (Commands.Def d : Commands.ALL) l.add(d.name);
+                return l;
+            }
+        });
+        list(Words.PermitW.R_OPENERS, new Lister() {
+            @Override public java.util.List<String> names() {
+                synchronized (OPENERS) { return new java.util.ArrayList<String>(OPENERS.keySet()); }
+            }
+        });
+        list(Words.PermitW.R_SYSTEM, new Lister() {
+            @Override public java.util.List<String> names() { return Permit.systemNames(); }
+        });
+        list(Words.PermitW.R_PLUGINS, new Lister() {
+            @Override public java.util.List<String> names() { return Lab.names(Lab.root()); }
+        });
+    }
+
+    /** רישום של רשימה אצל המנהל, בשם הסוג שלה. */
+    static void list(String kind, Lister l) {
+        if (l == null) LISTS.remove(kind);
+        else LISTS.put(kind, l);
+    }
+
+    /** כל מה שהתוכנה מכירה: סוג ← השמות. רשימה שנכשלת — ריקה, ונרשם ביומן. */
+    static java.util.Map<String, java.util.List<String>> registry() {
+        java.util.Map<String, java.util.List<String>> out = new java.util.LinkedHashMap<String, java.util.List<String>>();
+        java.util.List<java.util.Map.Entry<String, Lister>> all;
+        synchronized (LISTS) { all = new java.util.ArrayList<java.util.Map.Entry<String, Lister>>(LISTS.entrySet()); }
+        for (java.util.Map.Entry<String, Lister> e : all) {
+            java.util.List<String> names;
+            try {
+                names = e.getValue().names();
+            } catch (Throwable t) {
+                Log.e("המרשם: " + e.getKey(), t);
+                names = new java.util.ArrayList<String>();
+            }
+            out.put(e.getKey(), names);
+        }
+        return out;
+    }
+
+    /** המרשם בשורה אחת — "פקודות 61 · פותחים 22 · …" (לדוח האבחון). */
+    static String registryLine() {
+        StringBuilder sb = new StringBuilder();
+        for (java.util.Map.Entry<String, java.util.List<String>> e : registry().entrySet())
+            sb.append(sb.length() > 0 ? " · " : "").append(e.getKey()).append(' ').append(e.getValue().size());
+        return sb.toString();
+    }
+
     // ---------- מאשרת: מה עושים עם תכנית מוכנה ----------
 
     /** בכאילו — רק התוצאה, בלי ביצוע (1.10.0). */

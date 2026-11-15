@@ -64,6 +64,15 @@ public final class Permit {
         SYSTEM.add(name);
     }
 
+    /** מבנה 142: הפעולות של המערכת שרשומות — למרשם של המנהל. */
+    public static java.util.List<String> systemNames() {
+        synchronized (SYSTEM) {
+            java.util.List<String> l = new java.util.ArrayList<String>(SYSTEM);
+            java.util.Collections.sort(l);
+            return l;
+        }
+    }
+
     public static boolean isSystem(String name) {
         return SYSTEM.contains(name);
     }
