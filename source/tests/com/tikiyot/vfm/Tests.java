@@ -1274,7 +1274,10 @@ public final class Tests {
         Sort w = Sort.of(Sort.MINE, false, m);
         w.choose(1, w.options().length);             // שם
         w.choose(w.options().length, w.options().length);   // כיוון
-        try { Thread.sleep(200); } catch (InterruptedException ignored) { }
+        // מבנה 89: השמירה נעשית ברקע. עד כאן — המתנה קבועה של 200 אלפיות, ובמחשב עמוס זה לא הספיק (נכשלה בהרצה אחת משלוש,
+        // 15.11.2026). עכשיו: מחכים עד שנשמר, עד 5 שניות.
+        for (int k = 0; k < 100 && !("שם".equals(m.get("מיון", "")) && "יורד".equals(m.get("כיוון", ""))); k++)
+            try { Thread.sleep(50); } catch (InterruptedException ignored) { }
         eq("79: הבחירה נשמרת", "שם", m.get("מיון", ""));
         eq("79: הכיוון נשמר", "יורד", m.get("כיוון", ""));
         Sort again = Sort.of(Sort.MINE, false, m);
