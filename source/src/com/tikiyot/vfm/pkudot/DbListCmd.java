@@ -769,9 +769,14 @@ final class DbListCmd {
         s.noop = r.noop && !atRun;
         if (s.noop) return;
         final Work w = work;
-        final boolean before = destructive;
+        // מבנה 108 (ה4; הוראות סעיף 4 — דריסה רק אחרי גיבוי): שינוי שם של רשימה — גיבוי "לפני עריכה", כמו בטופס שבמסך (עד כאן — בלי)
+        final String before = destructive ? Backups.OP_DELETE : cmd.equals("REN") ? Backups.OP_EDIT : null;
         s.op = new ListCmd.Op() {
-            @Override public String run(Library lib) { return real(mode, w, before, lib); }
+            @Override public String run(Library lib) {
+                Res r = realRes(mode, w, before, lib);
+                if (r.error != null) lastFailed = true;
+                return r.error != null ? r.error : Words.DbCmd.inDb(r.text);
+            }
         };
     }
 

@@ -855,6 +855,13 @@ final class DbCmdTests {
                                         && amb107b.blocked() && amb107b.errorText().contains("יש כמה רשימות בשם \"פרק 107\"") && bad(ok107).isEmpty()
                                         && n107[0] == 1 && n107[1] == 0);
                     }
+                    // מבנה 108 (ה4): שינוי שם של רשימה בקובץ — עם גיבוי "לפני עריכה", כמו בטופס
+                    {
+                        java.util.Set<String> b108 = editNames(m91);
+                        List<String> r108 = go("אופן \"" + m91 + "\"\nשנה ידנית \"שיעורים 106/פרק 107\" \"פרק 108\"\n", here, vars, lib);
+                        o.check("מבנה 108: \"שנה ידנית\" בקובץ — השם השתנה, ולפני כן נעשה גיבוי \"לפני עריכה\" " + r108,
+                                bad(r108).isEmpty() && !b108.containsAll(editNames(m91)));
+                    }
                     Manager.Act gone99 = Manager.onSmartEdit(m91, 987654321L, "x", "סוג:pdf", new java.util.HashMap<String, String>(), here, vars, lib);
                     String saidGone99 = gone99.say(lib);
                     o.check("מבנה 99: רשימה שנמחקה בזמן שהטופס היה פתוח — \"" + Words.Db.ITEM_GONE + "\" (" + saidGone99 + ")",
