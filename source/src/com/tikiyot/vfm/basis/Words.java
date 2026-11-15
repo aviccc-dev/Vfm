@@ -1854,6 +1854,13 @@ public final class Words {
             return "אין רשימה חכמה: \"" + name + "\"";
         }
 
+        /** מבנה 106: שם שיש לו כמה רשימות חכמות (ברשימות שונות) — לא מנחשים; כותבים את המקום. */
+        public static String smartAmbiguous(String name, java.util.List<String> places, String example) {
+            StringBuilder sb = new StringBuilder();
+            for (String p : places) sb.append(sb.length() > 0 ? ", " : "").append("ב«").append(p).append("»");
+            return "יש כמה רשימות חכמות בשם \"" + name + "\" (" + sb + ") — לא ברור לאיזו הכוונה; לכתוב את המקום, למשל \"" + example + "\"";
+        }
+
         public static String notYet(String cmd) {
             return "הפקודה " + cmd + " — עדיין לא על רשימות";
         }
@@ -2507,6 +2514,8 @@ public final class Words {
         public static final String APP_NAME_M = "מנהל קבצים וירטואלי · מ";
         public static final String TITLE = "מסד נתונים";
         /** מ0.9: המראה המוכר. */
+        /** מבנה 106: רשימה חכמה שאינה בתוך שום רשימה. */
+        public static final String STANDALONE = "בלי רשימה";
         public static final String LIST_GONE = "הרשימה הזו כבר לא קיימת במסד", ITEM_GONE = "הפריט הזה כבר לא קיים במסד — לא נשמר", ROW_GONE = "המסך הציג שורה שכבר אינה במסד — נטען מחדש",
                 FAMILIAR = "🏠 בית", ADD_IN_LIST = "הוספת קבצים — מתוך רשימה", NO_HOME = "אין בית במסד הזה";
 

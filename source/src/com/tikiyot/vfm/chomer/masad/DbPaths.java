@@ -49,18 +49,77 @@ final class DbPaths {
     }
 
     /** רשימה חכמה לפי השם (הראשונה במספר זיהוי), או 0. */
-    static long smart(Store s, String name) {
-        String n = name == null ? "" : name.trim();
-        for (Store.Item it : s.smarts()) if (it.name.equals(n)) return it.id;
-        return 0;
+    /** מה נמצא: הרשימה שבה (in; 0 — עומדת לעצמה), הרשימה החכמה (id), או השגיאה. */
+    static final class Found {
+        long in, id;
+        String error;
+        /** יש כמה בשם הזה — המשתמש צריך להחליט (כותב את המקום). */
+        boolean ambiguous;
+    }
+
+    /**
+     * **מבנה 106 — פנייה לרשימה חכמה: הכלל האחד.** המשתמש (15.11.2026): "כאשר רוצים לפנות לרשימה צריך לכתוב את כל המסלול —
+     * אופן, רשימה, רשימות משנה, הרשימה הנצרכת. רק בשביל לחסוך לכתוב: אם אין ספק בכוונתו, אז התוכנה מקצרת, בודקת לבד ופועלת
+     * בהתאם. אם יש ספק — אז הוא צריך להחליט." · דרך עם רשימה ("ספרים/חדשים") — בדיוק שם. שם לבד — זו הדרך מהבית: יש בבית
+     * רשימה חכמה בשם הזה — היא; אין — הקיצור: אחת בכל המסד — היא; כמה — שגיאה ("יש כמה… לכתוב את המקום"); אף אחת — "אין".
+     * עד כאן שם לבד הביא בשקט את הראשונה במספר.
+     */
+    static Found smartAt(Store s, String mode, List<String> path) {
+        Found f = new Found();
+        String raw = Names.key(path == null ? new ArrayList<String>() : path);
+        if (path == null || path.isEmpty()) {
+            f.error = Words.ListCmdW.noSmart(raw);
+            return f;
+        }
+        String name = path.get(path.size() - 1).trim();
+        if (path.size() > 1) {
+            List<String> up = path.subList(0, path.size() - 1);
+            f.in = find(s, mode, up);
+            if (f.in == 0) {
+                f.error = Words.ListCmdW.noList(Names.key(up));
+                return f;
+            }
+            f.id = Lists.smartIn(s, f.in, name);
+            if (f.id == 0) f.error = Words.ListCmdW.noSmart(raw);
+            return f;
+        }
+        long h = home(s);
+        if (h != 0 && (f.id = Lists.smartIn(s, h, name)) != 0) {
+            f.in = h;
+            return f;
+        }
+        List<Store.Item> all = new ArrayList<Store.Item>();
+        for (Store.Item it : s.smarts()) if (it.name.equals(name)) all.add(it);
+        if (all.isEmpty()) {
+            f.error = Words.ListCmdW.noSmart(raw);
+            return f;
+        }
+        if (all.size() > 1) {
+            List<String> places = new ArrayList<String>();
+            String example = null;
+            for (Store.Item it : all) {
+                List<Long> of = s.listsOf(it.id);
+                String where = of.isEmpty() ? Words.Db.STANDALONE : s.item(of.get(0)).name;
+                places.add(where);
+                if (example == null && !of.isEmpty()) example = Names.key(java.util.Arrays.asList(where, name));
+            }
+            f.error = Words.ListCmdW.smartAmbiguous(name, places, example == null ? name : example);
+            f.ambiguous = true;
+            return f;
+        }
+        f.id = all.get(0).id;
+        List<Long> of = s.listsOf(f.id);
+        f.in = of.isEmpty() ? 0 : of.get(0);
+        return f;
     }
 
     // מבנה 103: "צור רשימה חכמה" (ensureSmart — אותו שם ואותו תנאי: הקיימת; תנאי אחר: "(2)") נמחק: הכלל האחד — Lists.newSmart.
 
-    /** "עדכן רשימה חכמה": רק קיימת — התנאי (והמיון, אם נכתב). 0 — אין כזו. */
-    static long updateSmart(Store s, String name, final String cond, final String sort) {
-        final long id = smart(s, name);
-        if (id == 0) return 0;
+    /** "עדכן רשימה חכמה": רק קיימת — התנאי (והמיון, אם נכתב). מבנה 106: הרשימה — לפי smartAt (דרך, או שם בלי ספק). */
+    static Found updateSmart(Store s, String mode, List<String> path, final String cond, final String sort) {
+        final Found f = smartAt(s, mode, path);
+        if (f.error != null) return f;
+        final long id = f.id;
         s.atomic(new Store.Work() {
             @Override
             public void run(Store t) {
@@ -68,7 +127,7 @@ final class DbPaths {
                 if (sort != null && !sort.isEmpty()) t.setProp(id, Store.P_SORT, sort);
             }
         }, true);
-        return id;
+        return f;
     }
 
     /** רשימה בשם הזה בראש: שאינה בתוך רשימה (חוץ מהבית); אם אין — כל רשימה בשם הזה. */

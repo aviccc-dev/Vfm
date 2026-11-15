@@ -37,6 +37,7 @@ final class DbVerbsUi {
                 if (made == null) return true;
                 id = made[0] != 0 ? made[0] : readSmart(a, mode, name);
             } else id = readSmart(a, mode, name);
+            if (id < 0) return true;                                           // מבנה 106: יש ספק — ההודעה כבר הוצגה
             if (id == 0) Ui.toast(a, Words.Verb.NOT_FOUND + c.arg);
             else if (c.noOpen) Ui.toast(a, Words.ListCmdW.createdSmart(c.arg));   // מ0.40: /בלי-לפתוח; מבנה 98: "חכמה", לא "ידנית"
             else openSmart(a, mode, id, sort);
@@ -275,6 +276,7 @@ final class DbVerbsUi {
             if (c.kind.equals(Verbs.K_LIST)) openPath(a, o[1], Names.parsePath(c.arg));
             else {
                 long id = readSmart(a, o[1], c.arg);
+                if (id < 0) continue;                                          // מבנה 106: יש ספק — ההודעה כבר הוצגה
                 if (id == 0) Ui.toast(a, Words.Verb.NOT_FOUND + c.arg);
                 else {
                     Db.saveMode(a, o[1]);
@@ -322,11 +324,17 @@ final class DbVerbsUi {
         }
     }
 
+    /** מבנה 106: הרשימה החכמה לפי הכלל האחד (דרך, או שם בלי ספק); ספק — ההודעה מוצגת, ו־0. */
     private static long readSmart(Activity a, String mode, String name) {
         SqlStore s = null;
         try {
             s = Db.openRead(a, mode);
-            return DbPaths.smart(s, name);
+            DbPaths.Found f = DbPaths.smartAt(s, mode, Names.parsePath(name));
+            if (f.ambiguous) {
+                Ui.toast(a, f.error);
+                return -1;
+            }
+            return f.error != null ? 0 : f.id;
         } catch (Throwable t) {
             Log.e("DbVerbsUi.smart", t);
             return 0;

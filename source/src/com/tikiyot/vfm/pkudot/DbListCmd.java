@@ -88,18 +88,14 @@ final class DbListCmd {
 
     /** רשימה חכמה: {הרשימה שבה (0 — עומדת לעצמה), החכמה}, או null. בלי דרך — בבית, ואם אין שם — לפי השם בכל המסד. */
     static long[] smart(Store s, String mode, ListCmd.Side x) {
-        if (x.path == null || x.path.isEmpty()) return null;
-        String name = x.path.get(x.path.size() - 1).trim();
-        List<String> parent = new ArrayList<String>(x.path.subList(0, x.path.size() - 1));
-        long in = parent.isEmpty() ? DbPaths.home(s) : DbPaths.find(s, mode, parent);
-        if (in != 0)
-            for (Store.Member m : s.members(in))
-                if (m.item.type == Store.SMART && m.item.name.equals(name)) return new long[]{in, m.item.id};
-        if (!parent.isEmpty()) return null;
-        long id = DbPaths.smart(s, name);
-        if (id == 0) return null;
-        List<Long> of = s.listsOf(id);
-        return new long[]{of.isEmpty() ? 0 : of.get(0), id};
+        DbPaths.Found f = DbPaths.smartAt(s, mode, x.path);                       // מבנה 106: הכלל האחד — דרך, או שם בלי ספק
+        return f.error != null ? null : new long[]{f.in, f.id};
+    }
+
+    /** מבנה 106: למה הצד אינו מוביל לרשימה חכמה — "אין", או "יש כמה… לכתוב את המקום". */
+    static String smartWhy(Store s, String mode, ListCmd.Side x) {
+        String e = DbPaths.smartAt(s, mode, x.path).error;
+        return e != null ? e : Words.ListCmdW.noSmart(x.raw);
     }
 
     /** הקבצים שהצד מצביע עליהם: ידנית — בכל העומק (כל רשימה פעם אחת); חכמה — מה שהיא מוצאת עכשיו. ממוינים, בלי כפולים. */
@@ -108,7 +104,7 @@ final class DbListCmd {
         if (x.kind == ListCmd.SMART_LIST) {
             long[] r = smart(s, mode, x);
             if (r == null) {
-                err[0] = Words.ListCmdW.noSmart(x.raw);
+                err[0] = smartWhy(s, mode, x);
                 return null;
             }
             List<String> found = f == null ? null : f.find(s.prop(r[1], Store.P_COND));
@@ -196,7 +192,7 @@ final class DbListCmd {
         }
         if (a.kind == ListCmd.SMART_LIST) {
             final long[] r = smart(s, mode, a);
-            if (r == null) return Res.err(Words.ListCmdW.noSmart(a.raw));
+            if (r == null) return Res.err(smartWhy(s, mode, a));
             s.atomic(new Store.Work() {
                 @Override public void run(Store t) {
                     if (r[0] != 0) t.removeMember(r[0], r[1]);
@@ -272,7 +268,7 @@ final class DbListCmd {
         String label;
         if (a.kind == ListCmd.SMART_LIST) {
             long[] r = smart(s, mode, a);
-            if (r == null) return Res.err(Words.ListCmdW.noSmart(a.raw));
+            if (r == null) return Res.err(smartWhy(s, mode, a));
             what.add(s.item(r[1]));
             label = Words.ListCmdW.smartList(a.label());
         } else {
@@ -326,7 +322,7 @@ final class DbListCmd {
         long id, parent;
         if (a.kind == ListCmd.SMART_LIST) {
             long[] r = smart(s, mode, a);
-            if (r == null) return Res.err(Words.ListCmdW.noSmart(a.raw));
+            if (r == null) return Res.err(smartWhy(s, mode, a));
             id = r[1];
             parent = r[0];
         } else {
@@ -362,7 +358,7 @@ final class DbListCmd {
         String label;
         if (a.kind == ListCmd.SMART_LIST) {
             long[] r = smart(s, mode, a);
-            if (r == null) return Res.err(Words.ListCmdW.noSmart(a.raw));
+            if (r == null) return Res.err(smartWhy(s, mode, a));
             ids.add(r[1]);
             from = r[0];
             label = Words.ListCmdW.smartList(a.label());
@@ -1045,10 +1041,11 @@ final class DbListCmd {
                     props.put(Store.P_SORT, c.sort);
                     return smartMade(Lists.newSmart(t, 0, c.arg, c.cond, props, taken(c.taken)));
                 }
-                long id = DbPaths.updateSmart(t, c.arg, c.cond, c.sort);
-                if (id == 0) return Res.err(Words.Verb.NOT_FOUND + c.arg);
+                DbPaths.Found u = DbPaths.updateSmart(t, mode, Names.parsePath(c.arg), c.cond, c.sort);   // מבנה 106
+                if (u.error != null) return Res.err(u.error);
                 Res ok = Res.ok(Words.DbCmd.updated(c.arg));
-                ok.made = id;
+                ok.made = u.id;
+                ok.replaced = true;                                              // מבנה 106: דורס את התנאי — גיבוי לפני (הוראות, סעיף 4)
                 return ok;
             }
         };

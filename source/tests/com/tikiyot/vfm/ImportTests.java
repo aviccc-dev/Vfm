@@ -166,7 +166,7 @@ final class ImportTests {
         Lists.Made m1 = Lists.newSmart(s, 0, "חדשים", "תאריך:שבוע", sp, Lists.TAKEN_STOP);
         long sm = m1.id;
         ck("פקודות: צור רשימה חכמה — נוצרת בבית, עם התנאי והמיון", sm != 0 && s.item(sm).type == Store.SMART && "תאריך:שבוע".equals(s.prop(sm, Store.P_COND))
-                && "תאריך".equals(s.prop(sm, Store.P_SORT)) && DbPaths.smart(s, "חדשים") == sm && s.listsOf(sm).equals(Arrays.asList(home)));
+                && "תאריך".equals(s.prop(sm, Store.P_SORT)) && DbPaths.smartAt(s, "פק", Arrays.asList("חדשים")).id == sm && s.listsOf(sm).equals(Arrays.asList(home)));
         Lists.Made m2 = Lists.newSmart(s, 0, "חדשים", "תאריך:שבוע", sp, Lists.TAKEN_STOP), m3 = Lists.newSmart(s, 0, "חדשים", "תאריך:חודש", sp, Lists.TAKEN_STOP);
         ck("פקודות: אותו שם — שגיאה \"שם קיים\", גם בתנאי אחר (מבנה 103)", m2.id == 0 && m3.id == 0
                 && Words.ListCmdW.smartTaken("חדשים").equals(m2.error) && Words.ListCmdW.smartTaken("חדשים").equals(m3.error));
@@ -178,9 +178,23 @@ final class ImportTests {
                 && s.listsOf(m5.id).equals(Arrays.asList(home)));
         Lists.Made m7 = Lists.newSmart(s, 0, "חדשים", "y", sp, Lists.TAKEN_SKIP);
         ck("פקודות: לדלג — בלי שינוי", m7.skipped && m7.id == sm && "סוג:ספרים".equals(s.prop(sm, Store.P_COND)));
-        ck("פקודות: עדכן רשימה חכמה — התנאי; המיון רק אם נכתב", DbPaths.updateSmart(s, "חדשים", "תאריך:יום", "") == sm
+        ck("פקודות: עדכן רשימה חכמה — התנאי; המיון רק אם נכתב", DbPaths.updateSmart(s, "פק", Arrays.asList("חדשים"), "תאריך:יום", "").id == sm
                 && "תאריך:יום".equals(s.prop(sm, Store.P_COND)) && "תאריך".equals(s.prop(sm, Store.P_SORT)));
-        ck("פקודות: עדכן רשימה חכמה שאינה — 0", DbPaths.updateSmart(s, "אין", "x", "") == 0);
+        ck("פקודות: עדכן רשימה חכמה שאינה — שגיאה", DbPaths.updateSmart(s, "פק", Arrays.asList("אין"), "x", "").error != null);
+        // מבנה 106 (המשתמש): "צריך לכתוב את כל המסלול… אם אין ספק — התוכנה מקצרת; אם יש ספק — הוא צריך להחליט"
+        long sA = s.createList("ספרים 106", home), sB = s.createList("שיעורים 106", home);
+        long d1 = Lists.saveSmart(s, 0, sA, "כפולה 106", "a", null), d2 = Lists.saveSmart(s, 0, sB, "כפולה 106", "b", null);
+        long u1 = Lists.saveSmart(s, 0, sA, "יחידה 106", "c", null), h1 = Lists.saveSmart(s, 0, home, "כפולה 106", "h", null);
+        DbPaths.Found amb = DbPaths.smartAt(s, "פק", Arrays.asList("כפולה 106"));
+        ck("מבנה 106: שם בלי ספק — יש בבית: היא (הדרך מהבית)", amb.error == null && amb.id == h1);
+        Lists.removeFrom(s, home, h1);
+        amb = DbPaths.smartAt(s, "פק", Arrays.asList("כפולה 106"));
+        ck("מבנה 106: שם עם ספק — שתיים ברשימות שונות, אף אחת בבית: שגיאה \"יש כמה… לכתוב את המקום\", עם המקומות", amb.ambiguous && amb.id == 0
+                && amb.error.contains("ספרים 106") && amb.error.contains("שיעורים 106"));
+        ck("מבנה 106: עם הדרך — בדיוק היא", DbPaths.smartAt(s, "פק", Arrays.asList("שיעורים 106", "כפולה 106")).id == d2
+                && DbPaths.smartAt(s, "פק", Arrays.asList("ספרים 106", "כפולה 106")).id == d1);
+        ck("מבנה 106: קיצור בלי ספק — אחת בכל המסד: היא; דרך לרשימה שאין — \"אין רשימה\"",
+                DbPaths.smartAt(s, "פק", Arrays.asList("יחידה 106")).id == u1 && DbPaths.smartAt(s, "פק", Arrays.asList("אין 106", "x")).error.contains("אין רשימה"));
         long made2 = DbPaths.ensure(s, "פק", Names.parsePath("חדשה בראש"));
         ck("פקודות: צור רשימה חדשה בראש — נכנסת לבית", made2 != 0 && s.listsOf(made2).equals(Arrays.asList(home))
                 && DbPaths.find(s, "פק", Names.parsePath("חדשה בראש")) == made2);

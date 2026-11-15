@@ -633,12 +633,12 @@ final class DbCmdTests {
                                 return null;
                             }
                         });
-                        int edits104 = edits99(m91);
+                        java.util.Set<String> edits104 = editNames(m91);
                         Manager.Act rep104 = Manager.onSmartNew(m91, in103[0], f103.name, f103.cond, DbSmartForm.props(f103), Batch.TAKEN_REPLACE, here, vars, lib);
                         String said104 = rep104.error() != null ? "תכנון: " + rep104.error() : rep104.say(lib);
                         o.check("מבנה 104: \"לדרוס\" — הפקודה עם /תפוס:להחליף; אותה רשימה (לא עוד אחת), עם גיבוי לפני (" + said104 + ")",
                                 rep104.error() == null && !rep104.failed && rep104.made == in103[1] && rep104.text.contains(Batch.SW_TAKEN + Batch.TAKEN_REPLACE)
-                                        && said104.contains(Words.ListCmdW.smartReplaced("חכמה רגילה")) && edits99(m91) > edits104);
+                                        && said104.contains(Words.ListCmdW.smartReplaced("חכמה רגילה")) && !edits104.containsAll(editNames(m91)));
                     }
                     List<String> v97 = go("המשך ()\nאופן \"" + m91 + "\"\nודא תוכן ידנית \"ישן\" שווה תוכן ידנית \"חדש\"\n"
                             + "השווה תוכן ידנית \"ישן\" תוכן ידנית \"חדש\" /הבדלים\n", here, vars, lib);
@@ -693,7 +693,7 @@ final class DbCmdTests {
                             {"רשימה חכמה", "אחרי שינוי", "גודל:>1MB", "", "", "", "", ""},                // שם חדש
                             {"בפנים", "בפנים", "100% «שתי מילים» \"מירכאות\"", "", "", "", "", ""}};          // אותו שם, תנאי עם תווים
                     final String[] old99 = new String[e99.length], new99 = new String[e99.length];
-                    int before99 = edits99(m91);
+                    java.util.Set<String> before99 = editNames(m91);
                     for (int i = 0; i < e99.length; i++) {
                         final int k = i;
                         final DbSmartForm.Result f = new DbSmartForm.Result();
@@ -737,8 +737,8 @@ final class DbCmdTests {
                     List<String> v99 = go("המשך ()\nאופן \"" + m91 + "\"\nודא תוכן ידנית \"ישן\" שווה תוכן ידנית \"חדש\"\n"
                             + "השווה תוכן ידנית \"ישן\" תוכן ידנית \"חדש\" /הבדלים\n", here, vars, lib);
                     o.check("מבנה 99: אחרי שלוש העריכות — שתי הרשימות שוות עד הסוף " + v99, bad(v99).isEmpty() && String.valueOf(v99).contains("אין הבדלים"));
-                    int after99 = edits99(m91);
-                    o.check("מבנה 99: לפני כל עריכה — גיבוי \"לפני עריכה\", גם בפקודה (" + before99 + " ← " + after99 + ")", after99 > before99);
+                    java.util.Set<String> after99 = editNames(m91);
+                    o.check("מבנה 99: לפני כל עריכה — גיבוי \"לפני עריכה\", גם בפקודה (" + before99 + " ← " + after99 + ")", !before99.containsAll(after99));
                     final long[] two104 = {0, 0};
                     Db.write(Db.app, m91, null, new Db.Use<Void>() {
                         @Override public Void run(SqlStore st) {
@@ -809,6 +809,32 @@ final class DbCmdTests {
                         o.check("מבנה 105: מסך הרשימות שואל על כפולות כשנפתח, ועונה דרך המנהל בלבד",
                                 scr105.contains("Lists.smartTwin(store, listId)") && scr105.contains("askTwin();") && scr105.contains("Manager.onListRemove(mode, listId, java.util.Collections.singletonList(twin[1])"));
                     }
+                    // מבנה 106: "עדכן רשימה חכמה" בקובץ — שם עם ספק: עוצרים; עם המקום: מעדכנים, עם גיבוי לפני
+                    {
+                        go("המשך ()\nאופן \"" + m91 + "\"\nMD ידנית \"ספרים 106\"\nMD ידנית \"שיעורים 106\"\n", here, vars, lib);
+                        Db.write(Db.app, m91, null, new Db.Use<Void>() {
+                            @Override public Void run(SqlStore st) {
+                                Lists.saveSmart(st, 0, DbPaths.find(st, m91, java.util.Arrays.asList("ספרים 106")), "חדשים 106", "a", null);
+                                Lists.saveSmart(st, 0, DbPaths.find(st, m91, java.util.Arrays.asList("שיעורים 106")), "חדשים 106", "b", null);
+                                return null;
+                            }
+                        });
+                        Batch.Plan amb106 = Batch.plan("אופן \"" + m91 + "\"\nעדכן רשימה חכמה \"חדשים 106\" סוג:pdf\n", here, vars, lib);
+                        java.util.Set<String> e106 = editNames(m91);
+                        List<String> ok106 = go("אופן \"" + m91 + "\"\nעדכן רשימה חכמה \"שיעורים 106/חדשים 106\" סוג:pdf\n", here, vars, lib);
+                        final String[] c106 = {"", ""};
+                        Db.read(Db.app, m91, new Db.Use<Void>() {
+                            @Override public Void run(SqlStore st) {
+                                c106[0] = st.prop(Lists.smartIn(st, DbPaths.find(st, m91, java.util.Arrays.asList("ספרים 106")), "חדשים 106"), Store.P_COND);
+                                c106[1] = st.prop(Lists.smartIn(st, DbPaths.find(st, m91, java.util.Arrays.asList("שיעורים 106")), "חדשים 106"), Store.P_COND);
+                                return null;
+                            }
+                        });
+                        o.check("מבנה 106: בקובץ — שם של שתי רשימות חכמות: הקובץ אינו רץ, \"יש כמה… לכתוב את המקום\"; עם המקום — רק היא מתעדכנת, וגיבוי לפני ("
+                                        + c106[0] + " · " + c106[1] + ") " + ok106,
+                                amb106.blocked() && amb106.errorText().contains("יש כמה רשימות חכמות בשם \"חדשים 106\"") && bad(ok106).isEmpty()
+                                        && c106[0].equals("a") && c106[1].equals("סוג:pdf") && !e106.containsAll(editNames(m91)));
+                    }
                     Manager.Act gone99 = Manager.onSmartEdit(m91, 987654321L, "x", "סוג:pdf", new java.util.HashMap<String, String>(), here, vars, lib);
                     String saidGone99 = gone99.say(lib);
                     o.check("מבנה 99: רשימה שנמחקה בזמן שהטופס היה פתוח — \"" + Words.Db.ITEM_GONE + "\" (" + saidGone99 + ")",
@@ -835,7 +861,7 @@ final class DbCmdTests {
                                 int k = java.util.Arrays.asList(steps100).indexOf(st100);
                                 long id = st100.equals("list") ? DbPaths.ensure(t, m91, java.util.Arrays.asList("ישן-כפתור", "א", "ב"))
                                         : st100.startsWith("smart:") ? Lists.newSmart(t, 0, "ישן-כפתור", st100.substring(6), null, Lists.TAKEN_STOP).id
-                                        : DbPaths.updateSmart(t, "ישן-כפתור", st100.substring(7), "");
+                                        : DbPaths.updateSmart(t, m91, java.util.Arrays.asList("ישן-כפתור"), st100.substring(7), "").id;
                                 for (int j = 0; j < steps100.length; j++) if (steps100[j].equals(st100) && oldIds[j] == 0) { oldIds[j] = id; break; }
                                 return null;
                             }
@@ -876,8 +902,8 @@ final class DbCmdTests {
                     List<String> v100 = go("המשך ()\nאופן \"" + m91 + "\"\nודא תוכן ידנית \"ישן-כפתור\" שווה תוכן ידנית \"חדש-כפתור\"\n", here, vars, lib);
                     o.check("מבנה 100: \"צור רשימה\" מכפתור — שתי הדרכים בנו אותו מבנה " + v100, bad(v100).isEmpty());
                     Manager.Act none100 = Manager.onVerbLine("אופן \"" + m91 + "\"\nעדכן רשימה חכמה \"אין כזו 100\" סוג:pdf", here, vars, lib);
-                    o.check("מבנה 100: עדכון של רשימה חכמה שאין — סירוב מהתכנון, באותו נוסח שהכפתור אמר (" + none100.error() + ")",
-                            (Words.Verb.NOT_FOUND + "אין כזו 100").equals(none100.error()));
+                    o.check("מבנה 100: עדכון של רשימה חכמה שאין — סירוב מהתכנון (מבנה 106: בנוסח של הכלל האחד) (" + none100.error() + ")",
+                            Words.ListCmdW.noSmart("אין כזו 100").equals(none100.error()));
                     String ui100 = Files.readUtf8(new File(src, "src/com/tikiyot/vfm/masachim/rechivim/DbVerbsUi.java"));
                     o.check("מבנה 100: הכפתורים אינם כותבים עוד רשימה או רשימה חכמה בעצמם — דרך המנהל",
                             !ui100.contains("DbPaths.ensure(") && !ui100.contains("DbPaths.ensureSmart(") && !ui100.contains("DbPaths.updateSmart(")
@@ -898,12 +924,12 @@ final class DbCmdTests {
         return o;
     }
 
-    /** מבנה 99: כמה גיבויים "לפני עריכה" יש לאופן. */
-    private static int edits99(String mode) {
+    /** מבנה 106: השמות של הגיבויים "לפני עריכה" (נשמרים עד חמישה — לכן משווים שמות, לא ספירה). */
+    private static java.util.Set<String> editNames(String mode) {
+        java.util.Set<String> out = new java.util.HashSet<String>();
         File[] bk = Db.backupsDir(mode).listFiles();
-        int n = 0;
-        if (bk != null) for (File f : bk) if (f.getName().contains(Backups.OP_EDIT)) n++;
-        return n;
+        if (bk != null) for (File f : bk) if (f.getName().contains(Backups.OP_EDIT)) out.add(f.getName());
+        return out;
     }
 
     /** מבנה 97: כמה רשימות חכמות בשם הזה יש במסד של האופן. */
