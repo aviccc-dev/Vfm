@@ -2184,6 +2184,13 @@ public final class Words {
             return "הוחזר מהסל: \"" + name + "\"" + (renamed != null ? " · השם היה תפוס — \"" + renamed + "\"" : "");
         }
         public static String notInTrash(String name) { return "אין בסל דבר שנמחק מ\"" + name + "\""; }
+        /** מבנה 81: פריטים שנבחרו במסך הסל. */
+        public static String untrashPickedWill(int n) { return "יוחזרו מהסל: " + n + " — מה שנבחר במסך הסל"; }
+        public static String purgePickedWill(int n) { return "מחיקה לצמיתות מהסל: " + n + " — מה שנבחר במסך הסל; אין דרך חזרה"; }
+        public static String untrashedPicked(int n, int failed) {
+            return "הוחזרו מהסל: " + n + (failed > 0 ? " · " + failed + " לא הוחזרו" : "");
+        }
+        public static final String GONE_FROM_TRASH = "כבר אינו בסל";
         public static String purgeWill(String name) { return "מחיקה לצמיתות מהסל: מה שנמחק מ\"" + name + "\" — אין דרך חזרה"; }
         public static String purged(int n, int failed) {
             return "נמחקו לצמיתות מהסל: " + n + (failed > 0 ? " · " + failed + " לא נמחקו" : "");

@@ -156,6 +156,15 @@ final class Manager {
                 java.util.Collections.<String>emptyList(), f.getParentFile(), f.getName(), content)), f.getParentFile());
     }
 
+    /**
+     * מבנה 81: פעולה של מסך הסל על הפריטים שנבחרו בו — restore: "שחזר מהסל %נבחרים%"; אחרת "רוקן סל %נבחרים%" (מחיקה לצמיתות).
+     * items — המסלולים של הפריטים בתוך הסל.
+     */
+    static Act onTrash(boolean restore, java.util.List<String> items, java.io.File here, java.util.Map<String, String> vars, Library lib) {
+        String text = Commands.word(Commands.get(restore ? Batch.UNTRASH : Batch.PURGE)) + " %" + Batch.V_SELECTED + "%\n";
+        return new Act(text, Batch.plan(text, here, vars, lib, null, new Batch.Selection(items, java.util.Collections.<String>emptyList())), null);
+    }
+
     // ---------- התוצאה חוזרת: מה קורה בסוף ההרצה ----------
 
     /** פקודות הפתיחה שבסוף הקובץ רצות רק כשההרצה הלכה חלק (1.13.0; מ0.25). */

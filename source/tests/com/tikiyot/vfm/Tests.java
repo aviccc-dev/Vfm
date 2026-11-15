@@ -2709,9 +2709,11 @@ public final class Tests {
                 Batch.Plan p76 = Batch.plan("DEL \"א.txt\"\n", d76, v76, lib76);
                 Batch.run(p76, lib76, null, null);
                 check("מבנה 76: גם המנוע, כשמריצים אותו שלא דרך המנהל — לא מוחק, והשורה נכשלת", new File(d76, "א.txt").isFile() && p76.trouble);
-                check("מבנה 76: פעולה שעוד במעבר (מחיקה לצמיתות — של רשימה ריקה; שינוי השם והתיקייה החדשה עברו בצעדים 78–79) — אינה מסורבת, ונרשמת ביומן",
-                        Physical.deleteForever(lib76, new ArrayList<Trash.Item>()).failed == 0
-                                && !Permit.strict(Permit.FOREVER) && Permit.strict(Permit.DELETE));
+                check("מבנה 76: פעולה שעוד במעבר — אינה מסורבת, רק נרשמת ביומן (מצעד 81 אין כזו בכונן: כל פעולות הכונן מסורבות בלי היתר)",
+                        Permit.check("פעולת בדיקה שעוד במעבר") == null && !Permit.strict("פעולת בדיקה שעוד במעבר")
+                                && Permit.strict(Permit.DELETE) && Permit.strict(Permit.TRANSFER) && Permit.strict(Permit.RENAME)
+                                && Permit.strict(Permit.MAKE_FOLDER) && Permit.strict(Permit.WRITE) && Permit.strict(Permit.RESTORE)
+                                && Permit.strict(Permit.FOREVER));
                 Manager.Act act76 = Manager.onSelected("DEL", a76, new ArrayList<String>(), d76, v76, lib76);
                 Physical.Result yes76 = act76.run(lib76, null, null, false);
                 lib76.flush(5000);
@@ -3003,6 +3005,71 @@ public final class Tests {
             check("מבנה 80: המסך של הפעולות בכונן אינו כותב עוד קובץ בעצמו; רק דרך המנהל", !pui80.contains("writeAtomic")
                     && pui80.contains("Manager.onNewFile(f, content"));
             wipe(d80);
+        }
+        // מבנה 81: מסך הסל — שחזור ומחיקה לצמיתות של הפריטים שנבחרו, דרך המנהל
+        {
+            File d81 = new File(r, "ניסוי-81");
+            wipe(d81);
+            new File(d81, "תיקייה").mkdirs();
+            for (String n : new String[]{"א.txt", "ב.txt", "ג.txt", "ד.txt"}) write(d81, n, n);
+            write(new File(d81, "תיקייה"), "פנים.txt", "5");
+            Index ix81 = new Index("81", "81", d81.getAbsolutePath());
+            ix81.scan(null);
+            Library lib81 = Library.forTests(new ArrayList<Index>(java.util.Collections.singletonList(ix81)));
+            java.util.Map<String, String> v81 = Batch.vars(d81, d81.getAbsolutePath(), null);
+            Physical.delete(lib81, java.util.Arrays.asList(new File(d81, "א.txt").getAbsolutePath(), new File(d81, "ב.txt").getAbsolutePath(),
+                    new File(d81, "ג.txt").getAbsolutePath()), java.util.Collections.singletonList(new File(d81, "תיקייה").getAbsolutePath()), false);
+            lib81.flush(5000);
+            java.util.Map<String, String> in81 = new java.util.HashMap<String, String>();     // שם מקורי ← המסלול בסל
+            for (Trash.Item it : Trash.list(lib81)) if (it.original != null) in81.put(new File(it.original).getName(), it.path());
+            check("מבנה 81: ההכנה — ארבעה פריטים בסל (שלושה קבצים ותיקייה)", in81.size() == 4 && Trash.list(lib81).size() == 4);
+            List<String> back81 = java.util.Arrays.asList(in81.get("א.txt"), in81.get("תיקייה")), kill81 = java.util.Collections.singletonList(in81.get("ב.txt"));
+            check("מבנה 81: בחירה ריקה — שגיאה; %נבחרים% שלא לבדו — שגיאה", Manager.onTrash(true, new ArrayList<String>(), d81, v81, lib81).error() != null
+                    && Batch.plan("רוקן סל \"%נבחרים%\\x\"\n", d81, v81, lib81, null, new Batch.Selection(kill81, new ArrayList<String>())).errors == 1);
+            Permit.close();
+            try {
+                List<Trash.Item> one81 = new ArrayList<Trash.Item>();
+                for (Trash.Item it : Trash.list(lib81)) if (it.path().equals(in81.get("ג.txt"))) one81.add(it);
+                Physical.Result no81 = Physical.restore(lib81, one81), no81b = Physical.deleteForever(lib81, one81);
+                check("מבנה 81: שחזור ומחיקה לצמיתות בלי היתר — מסורבים, והפריט בסל (" + no81.note + ")", no81.failed > 0 && no81b.failed > 0
+                        && no81.note.contains(Words.PermitW.BYPASS) && no81b.note.contains(Words.PermitW.BYPASS) && Trash.list(lib81).size() == 4
+                        && !new File(d81, "ג.txt").exists() && Permit.strict(Permit.RESTORE) && Permit.strict(Permit.FOREVER));
+                Manager.Act r81 = Manager.onTrash(true, back81, d81, v81, lib81);
+                check("מבנה 81: הפקודה שהמסך מריץ לשחזור — \"שחזר מהסל %נבחרים%\" (" + r81.error() + ")", r81.error() == null
+                        && r81.text.trim().equals("שחזר מהסל %נבחרים%"));
+                Physical.Result rr81 = r81.run(lib81, null, null, false);
+                lib81.flush(5000);
+                check("מבנה 81: דרך המנהל — הקובץ והתיקייה (עם מה שבתוכה) חזרו למקומם; השאר בסל (" + rr81.note + ")", rr81.failed == 0 && rr81.done.size() == 2
+                        && "א.txt".equals(read(new File(d81, "א.txt"))) && "5".equals(read(new File(d81, "תיקייה/פנים.txt"))) && Trash.list(lib81).size() == 2);
+                Physical.Result again81 = r81.run(lib81, null, null, false);
+                check("מבנה 81: הרצה שנייה (הפריטים כבר אינם בסל) — כישלון שמדווח לכל פריט (" + again81.note + ")", again81.failed == 2
+                        && again81.done.isEmpty() && Words.DbCmd.GONE_FROM_TRASH.equals(again81.note));
+                Manager.Act k81 = Manager.onTrash(false, kill81, d81, v81, lib81);
+                check("מבנה 81: הפקודה שהמסך מריץ למחיקה לצמיתות — \"רוקן סל %נבחרים%\"", k81.error() == null && k81.text.trim().equals("רוקן סל %נבחרים%"));
+                Physical.Result kr81 = k81.run(lib81, null, null, false);
+                lib81.flush(5000);
+                check("מבנה 81: ...נמחק רק מה שנבחר — \"ג\" עדיין בסל", kr81.failed == 0 && kr81.done.size() == 1 && Trash.list(lib81).size() == 1
+                        && Trash.list(lib81).get(0).path().equals(in81.get("ג.txt")));
+                Physical.Result out81 = Manager.onTrash(false, java.util.Collections.singletonList(new File(d81, "ד.txt").getAbsolutePath()), d81, v81, lib81)
+                        .run(lib81, null, null, false);
+                check("מבנה 81: מסלול שאינו פריט בסל — מחיקה לצמיתות אינה נוגעת בו", out81.failed == 1 && out81.done.isEmpty() && new File(d81, "ד.txt").isFile());
+                check("מבנה 81: ההיתר נסגר אחרי כל הרצה", !Permit.held());
+            } finally {
+                Permit.open();
+            }
+            String pui81 = read(new File(code, "masachim/rechivim/PhysicalUi.java"));
+            int direct81 = 0;
+            List<File> all81 = new ArrayList<File>();
+            collect76(new File(code, "masachim"), all81);
+            for (File f : all81) {
+                String t = read(f);
+                if (t.contains("Physical.restore(") || t.contains("Physical.deleteForever(") || t.contains("Trash.empty(") || t.contains("Trash.restore(")) direct81++;
+            }
+            check("מבנה 81: במסכים — אין עוד שחזור או מחיקה לצמיתות ישירים (" + direct81 + "); רק דרך המנהל", direct81 == 0 && pui81.contains("Manager.onTrash("));
+            check("מבנה 81: המסך של הפעולות בכונן אינו קורא עוד לאף פעולה שמשנה בכונן — רק שאלות (שמות, מקום פנוי, ספירה)",
+                    !java.util.regex.Pattern.compile("Physical\\.(delete|deleteOwn|transfer|transferKeep|transferTo|rename|makeFolder|newFile|restore|deleteForever|oldToTrash)\\(").matcher(pui81).find());
+            Physical.deleteForever(lib81, Trash.list(lib81));
+            wipe(d81);
         }
         // מבנה 55: המכשיר עצר את התוכנה בזמן הרצה — הדוח אומר זאת ואיזו הגדרה פותרת
         List<String> rep55 = new ArrayList<String>();

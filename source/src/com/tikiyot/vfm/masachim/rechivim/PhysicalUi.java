@@ -314,8 +314,20 @@ final class PhysicalUi {
         }
     }
 
+    /** מבנה 81: פעולת הסל (שחזור / מחיקה לצמיתות) על הפריטים שנבחרו — כפקודה, דרך המנהל. */
+    private static Manager.Act trashAct(Activity a, List<Trash.Item> list, boolean restore) {
+        List<String> items = new ArrayList<String>();
+        for (Trash.Item it : list) items.add(it.path());
+        return Manager.onTrash(restore, items, Paths.data(), BatchUi.vars(a, Paths.data()), Library.get(a));
+    }
+
     public static void askRestore(final Activity a, final List<Trash.Item> list, final Physical.Done done) {
         if (list.isEmpty()) return;
+        final Manager.Act act = trashAct(a, list, true);                        // מבנה 81: "שחזר מהסל %נבחרים%"
+        if (act.error() != null) {
+            Ui.toast(a, act.error());
+            return;
+        }
         int unknown = 0;
         List<String> shown = new ArrayList<String>();
         for (Trash.Item it : list) {
@@ -329,7 +341,7 @@ final class PhysicalUi {
                     @Override
                     public void run() {
                         perform(a, Words.Disk.RESTORED, Words.Disk.UPDATED, done, new Op() {
-                            @Override public Physical.Result go() { return Physical.restore(Library.get(a), list); }
+                            @Override public Physical.Result go() { return act.run(Library.get(a), null, null, false); }
                         });
                     }
                 });
@@ -337,6 +349,11 @@ final class PhysicalUi {
 
     public static void askDeleteForever(final Activity a, final List<Trash.Item> list, final Physical.Done done) {
         if (list.isEmpty()) return;
+        final Manager.Act act = trashAct(a, list, false);                       // מבנה 81: "רוקן סל %נבחרים%"
+        if (act.error() != null) {
+            Ui.toast(a, act.error());
+            return;
+        }
         long size = 0;
         List<String> shown = new ArrayList<String>();
         for (Trash.Item it : list) {
@@ -349,7 +366,7 @@ final class PhysicalUi {
                     @Override
                     public void run() {
                         perform(a, Words.Disk.DELETED, Words.Disk.REMOVED, done, new Op() {
-                            @Override public Physical.Result go() { return Physical.deleteForever(Library.get(a), list); }
+                            @Override public Physical.Result go() { return act.run(Library.get(a), null, null, false); }
                         });
                     }
                 });

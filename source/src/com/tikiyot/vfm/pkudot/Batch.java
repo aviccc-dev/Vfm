@@ -224,7 +224,7 @@ final class Batch {
             return true;
         }
         if (cmd.equals(PURGE)) {                                                // מ0.45: רוקן סל
-            planPurge(s, tk, here, vars);
+            planPurge(s, tk, here, vars, sim);
             return true;
         }
         if (cmd.equals(VERIFY) && tk.size() == 2 && tk.get(1).trim().equals(Words.DbCmd.W_OK_SINCE)) {   // מ0.45: ודא תקין
@@ -474,6 +474,11 @@ final class Batch {
         String[] err = {null};
         final String p = path(tk.get(1), here, vars, err);
         if (p == null) { s.error = err[0] != null ? err[0] : Words.DbCmd.UNTRASH_USAGE; return; }
+        if (p.startsWith(SELECTED_MARK)) {                                      // מבנה 81: מה שנבחר במסך הסל
+            if (p.equals(SELECTED_MARK)) trashSelected(s, sim, true);
+            else s.error = Words.Cmd.SELECTED_ONLY_SOURCE;
+            return;
+        }
         final File f = new File(p);
         boolean now = false;
         if (sim.lib != null && sim.lib.ready)
@@ -507,13 +512,18 @@ final class Batch {
     }
 
     /** מ0.45: "רוקן סל" — כל הסל; "רוקן סל "<מסלול מקורי>"" — מה שנמחק מהמסלול הזה (או מתוכו). Physical.deleteForever. */
-    private static void planPurge(final Step s, List<String> tk, File here, Map<String, String> vars) {
+    private static void planPurge(final Step s, List<String> tk, File here, Map<String, String> vars, Sim sim) {
         if (tk.size() > 2) { s.error = Words.DbCmd.PURGE_USAGE; return; }
         final String p;
         if (tk.size() == 2) {
             String[] err = {null};
             p = path(tk.get(1), here, vars, err);
             if (p == null) { s.error = err[0] != null ? err[0] : Words.DbCmd.PURGE_USAGE; return; }
+            if (p.startsWith(SELECTED_MARK)) {                                  // מבנה 81: מה שנבחר במסך הסל
+                if (p.equals(SELECTED_MARK)) trashSelected(s, sim, false);
+                else s.error = Words.Cmd.SELECTED_ONLY_SOURCE;
+                return;
+            }
             s.target = new File(p).getName();
             s.describe = Words.DbCmd.purgeWill(new File(p).getName());
         } else {
@@ -529,6 +539,34 @@ final class Batch {
                 Physical.Result r = Physical.deleteForever(lib, its);
                 if (r.failed > 0) DbListCmd.lastFailed = true;
                 return Words.DbCmd.purged(r.done.size(), r.failed);
+            }
+        };
+    }
+
+    /**
+     * מבנה 81: שחזור או מחיקה לצמיתות של פריטים שנבחרו במסך הסל. הבחירה היא המסלולים של הפריטים **בתוך הסל** (הפריט עצמו — ולא
+     * "מה שנמחק מהמסלול הזה", כמו בשורה כתובה: במסך בוחרים פריט מסוים, גם כזה שהמקום המקורי שלו אינו ידוע). בהרצה הפריטים
+     * נמצאים מחדש בסל לפי המסלול — מסלול שאינו פריט בסל פשוט אינו נמצא, כך שמחיקה לצמיתות אינה יכולה לגעת במה שמחוץ לסל.
+     * פריט שכבר אינו בסל — נספר ככישלון. ההדמיה אינה יודעת לאן כל פריט חוזר (שורה אחת, מהמסך).
+     */
+    private static void trashSelected(final Step s, Sim sim, final boolean restore) {
+        Selection sel = sim.selected;
+        if (sel == null || (sel.files.isEmpty() && sel.dirs.isEmpty())) { s.error = Words.Cmd.NOTHING_SELECTED; return; }
+        final List<String> picked = new ArrayList<String>(sel.files);
+        picked.addAll(sel.dirs);
+        s.describe = restore ? Words.DbCmd.untrashPickedWill(picked.size()) : Words.DbCmd.purgePickedWill(picked.size());
+        s.op = new ListCmd.Op() {
+            @Override public String run(Library lib) {
+                if (lib == null) return s.describe;
+                java.util.Set<String> want = new java.util.HashSet<String>(picked);
+                List<Trash.Item> its = new ArrayList<Trash.Item>();
+                for (Trash.Item it : Trash.list(lib)) if (want.contains(it.path())) its.add(it);
+                Physical.Result r = restore ? Physical.restore(lib, its) : Physical.deleteForever(lib, its);
+                for (int k = its.size(); k < picked.size(); k++) r.fail(Words.DbCmd.GONE_FROM_TRASH);
+                s.result = r;
+                if (r.failed > 0) DbListCmd.lastFailed = true;
+                return (restore ? Words.DbCmd.untrashedPicked(r.done.size(), r.failed) : Words.DbCmd.purged(r.done.size(), r.failed))
+                        + (r.failed > 0 && !r.note.isEmpty() ? " (" + r.note + ")" : "");
             }
         };
     }
