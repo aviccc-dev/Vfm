@@ -63,21 +63,7 @@ final class SmallCmds {
             DbListCmd.planDropMode(s, Verbs.withVars(tk.get(1).trim(), vars), sim);
             return true;
         }
-        if (cmd.equals(Syntax.EXAMPLES)) {                                             // מבנה 123: שחזר דוגמאות (מה שהמסך עשה בעצמו)
-            if (tk.size() != 1) { s.error = Words.Cmd.EXAMPLES_USAGE; return true; }
-            if (!DbVerbs.active()) { s.error = Words.DbCmd.VERIFY_DB_ONLY; return true; }
-            sim.dbs.remove(DbExamples.MODE);                                    // מה שההדמיה החזיקה מהאופן הזה — כבר לא תקף
-            s.describe = Words.Cmd.EXAMPLES_WILL;
-            s.op = new ListCmd.Op() {
-                @Override public String run(Library lib) {
-                    boolean[] failed = {false};
-                    String msg = Db.restoreExamples(Db.app, Reserved.FILES, failed);
-                    if (failed[0]) DbListCmd.lastFailed = true;
-                    return msg;
-                }
-            };
-            return true;
-        }
+        if (cmd.equals(Syntax.EXAMPLES)) return planExamples(plan, s, cmd, tk, here, vars, sim);   // מבנה 123: שחזר דוגמאות (מה שהמסך עשה בעצמו)
         if (cmd.equals(Syntax.SET)) {                                                  // מבנה 127: הגדר "<הגדרה>" "<ערך>"
             planSet(s, tk, vars, sim);
             return true;
@@ -95,38 +81,8 @@ final class SmallCmds {
             s.describe = Words.DbCmd.verifyWill(Words.DbCmd.OK_SINCE_WHAT);
             return true;
         }
-        if (cmd.equals(Syntax.VERIFY) && tk.size() == 2 && tk.get(1).trim().equals(Words.DbCmd.W_STEADY)) {   // מבנה 50: ודא רציף
-            if (!plan.measure) { s.error = Words.DbCmd.STEADY_NEEDS_MEASURE; return true; }
-            s.describe = Words.DbCmd.verifyWill(Words.DbCmd.STEADY_WHAT);
-            s.op = new ListCmd.Op() {
-                @Override public String run(Library lib) {
-                    Batch.Pulse p = plan.pulse;
-                    long off = p == null ? 0 : p.screenOff(), miss = p == null ? 0 : p.missed();
-                    int r = Batch.steady(off, miss);
-                    s.verified = r == Batch.STEADY_OK;
-                    return Words.DbCmd.steadyResult(r, off, miss);
-                }
-            };
-            return true;
-        }
-        if (cmd.equals(Syntax.VERIFY) && tk.size() == 4 && tk.get(1).trim().equals(Verbs.MODE_WORD)) {   // מ0.45: ודא אופן "<שם>" קיים / חסר
-            final String m = Verbs.withVars(tk.get(2).trim(), vars);
-            String w = tk.get(3).trim();
-            final boolean want = w.equals(Words.DbCmd.WORD_EXISTS_M) || w.equals(Words.DbCmd.WORD_EXISTS);
-            if (!want && !w.equals(Words.DbCmd.WORD_MISSING_M) && !w.equals(Words.DbCmd.WORD_MISSING)) { s.error = Words.DbCmd.VERIFY_USAGE; return true; }
-            if (!DbVerbs.active()) { s.error = Words.DbCmd.VERIFY_DB_ONLY; return true; }
-            final String what = Words.DbCmd.verifyMode(m, want);
-            s.target = m;
-            s.describe = Words.DbCmd.verifyWill(what);
-            s.op = new ListCmd.Op() {
-                @Override public String run(Library lib) {
-                    boolean has = Db.dbModes(Db.app).contains(m);
-                    s.verified = has == want;
-                    return Words.DbCmd.verifyResult(has == want, what, has ? Words.DbCmd.WORD_EXISTS_M : Words.DbCmd.WORD_MISSING_M);
-                }
-            };
-            return true;
-        }
+        if (cmd.equals(Syntax.VERIFY) && tk.size() == 2 && tk.get(1).trim().equals(Words.DbCmd.W_STEADY)) return planVerifySteady(plan, s, cmd, tk, here, vars, sim);   // מבנה 50: ודא רציף
+        if (cmd.equals(Syntax.VERIFY) && tk.size() == 4 && tk.get(1).trim().equals(Verbs.MODE_WORD)) return planVerifyMode(plan, s, cmd, tk, here, vars, sim);   // מ0.45: ודא אופן "<שם>" קיים / חסר
         if (cmd.equals(Syntax.SECTION)) {                                              // מ0.44: קטע
             if (tk.size() != 2 || tk.get(1).trim().isEmpty()) { s.error = Words.DbCmd.SECTION_USAGE; return true; }
             s.noop = true;
@@ -143,232 +99,303 @@ final class SmallCmds {
             s.describe = Words.DbCmd.EXPECT_NEXT;
             return true;
         }
-        if (cmd.equals(Syntax.WAIT)) {
-            int sec = -1;
-            if (tk.size() == 2) try { sec = Integer.parseInt(tk.get(1).trim()); } catch (NumberFormatException e) { sec = -1; }
-            if (sec < 0 || sec > 600) { s.error = Words.DbCmd.WAIT_USAGE; return true; }
-            final int n = sec;
-            s.describe = Words.DbCmd.waitFor(n);
-            s.op = new ListCmd.Op() {
-                @Override public String run(Library lib) {
-                    // מבנה 62 (ממצא 40ה): בחתיכות של רבע שנייה — "עצור" נענה מיד (עד כאן: רק אחרי שכל ההמתנה נגמרה, עד 600 שניות)
-                    for (int left = n * 4; left > 0; left--) {
-                        if (plan.asked != null && plan.asked.stopped()) return Words.DbCmd.waitStopped(n, n - (left + 3) / 4);
-                        try { Thread.sleep(250); } catch (InterruptedException e) { Thread.currentThread().interrupt(); break; }
-                    }
-                    return Words.DbCmd.waitFor(n);
-                }
-            };
-            return true;
-        }
-        if (cmd.equals(Syntax.PACK) || cmd.equals(Syntax.UNPACK)) {                           // מבנה 122: מה שהמסך עשה בעצמו (PhysicalUi.askZip / askUnzip)
-            final boolean pack = cmd.equals(Syntax.PACK);
-            String[] err = {null};
-            String p = tk.size() == 2 ? Parse.path(tk.get(1), here, vars, err) : null;
-            if (p == null) { s.error = err[0] != null ? err[0] : pack ? Words.Cmd.PACK_USAGE : Words.Cmd.UNPACK_USAGE; return true; }
-            if (p.equals(Batch.SELECTED_MARK)) {                                      // מהמסך: התיקייה / הקובץ שנבחרו
-                Batch.Selection sel = sim.selected;
-                List<String> one = sel == null ? null : pack ? sel.dirs : sel.files;
-                if (one == null || one.size() != 1) { s.error = Words.Cmd.NOTHING_SELECTED; return true; }
-                p = one.get(0);
-            }
-            final File src = new File(p), parent = src.getParentFile();
-            if (pack ? !sim.isDir(src) : !sim.isFile(src)) { s.error = (pack ? Words.FOLDER_NOT_FOUND : Words.FILE_NOT_FOUND) + ": " + tk.get(1); return true; }
-            if (parent == null) { s.error = Words.Cmd.NO_DEST; return true; }
-            String stem = src.getName();
-            if (!pack && stem.toLowerCase(Locale.ROOT).endsWith(".zip")) stem = stem.substring(0, stem.length() - 4);
-            if (!pack && stem.trim().isEmpty()) stem = Words.Send.UNPACK_DIR;
-            File out0 = new File(parent, pack ? src.getName() + ".zip" : stem);
-            for (int i = 2; sim.isFile(out0) || sim.isDir(out0); i++) out0 = new File(parent, pack ? src.getName() + " (" + i + ").zip" : stem + " (" + i + ")");
-            final File out = out0;
-            String own = Physical.programFile(pack ? src.getAbsolutePath() : out.getAbsolutePath());
-            if (own != null) { s.error = pack ? Words.Disk.NO_FILE_IN_APP : Words.Disk.NO_UNPACK_IN_APP; return true; }
-            if (sim.lib != null && Physical.noWriteInto(sim.lib, parent) != null) { s.error = Physical.noWriteInto(sim.lib, parent); return true; }
-            if (!pack && src.isFile() && Zip.contents(src) == null) { s.error = Words.Disk.BAD_ZIP; return true; }
-            if (pack) sim.added.put(out.getAbsolutePath(), Batch.GHOST);
-            else sim.dirs.add(out.getAbsolutePath());                            // מה שבתוכה — נודע רק בהרצה
-            sim.gone.remove(out.getAbsolutePath());
-            s.dest = out;
-            s.describe = pack ? Words.Cmd.packWill(src.getName(), out.getName()) : Words.Cmd.unpackWill(src.getName(), out.getName());
-            s.op = new ListCmd.Op() {
-                @Override public String run(Library lib) {
-                    try {
-                        if (out.exists()) { DbListCmd.lastFailed = true; return Words.Disk.ALREADY_NAME + out.getName() + "\""; }
-                        if (!pack) {
-                            long[] c = Zip.contents(src);
-                            if (c == null) { DbListCmd.lastFailed = true; return Words.Disk.BAD_ZIP; }
-                            long free = Physical.free(parent);
-                            if (c[1] > 0 && free < c[1]) { DbListCmd.lastFailed = true; return Words.Cmd.noRoom(Files.size(c[1]), Files.size(free)); }
-                        }
-                        Zip.Result r = pack ? Zip.pack(src, out, plan.asked) : Zip.unpack(src, out, plan.asked);
-                        if (lib != null) {
-                            lib.dirChanged(parent.getAbsolutePath());          // האינדקס לומד על מה שנוצר
-                            lib.flush(5000);
-                        }
-                        if (r.error != null) { DbListCmd.lastFailed = true; return r.error; }
-                        return (pack ? Words.Cmd.packed(out.getName(), r.files)
-                                : Words.Disk.UNPACKED + Words.files(r.files) + Words.Disk.TO_QUOTE + out.getName() + "\""
-                                + (r.skipped > 0 ? " · " + r.skipped + Words.Disk.SKIPPED : "")) + (r.stopped ? Words.Disk.STOPPED_SUFFIX : "");
-                    } catch (Throwable t) {
-                        Log.e("Batch.zip", t);
-                        DbListCmd.lastFailed = true;
-                        return Words.Db.failed(String.valueOf(t.getMessage()));
-                    }
-                }
-            };
-            return true;
-        }
-        if (cmd.equals(Syntax.REPORT)) {
-            String[] err = {null};
-            String p = tk.size() == 2 ? Parse.path(tk.get(1), here, vars, err) : null;
-            if (p == null) { s.error = err[0] != null ? err[0] : Words.DbCmd.REPORT_USAGE; return true; }
-            if ((s.error = Batch.noWriteHere(p)) != null) return true;                 // מבנה 45
-            plan.reportFile = p;
-            s.noop = true;
-            s.describe = Words.DbCmd.reportTo(Bidi.path(p));
-            return true;
-        }
-        if (cmd.equals(Syntax.REFRESH)) {
-            int readers = 0;                                                     // מ0.45 (ב9): "רענן מלא /קוראים:N" — כמה ראשים הכי מהיר
-            List<String> a = new ArrayList<String>();
-            for (int i = 1; i < tk.size(); i++) {
-                String x = tk.get(i).trim();
-                if (!x.startsWith(Words.DbCmd.SW_READERS)) { a.add(x); continue; }
-                try { readers = Integer.parseInt(x.substring(Words.DbCmd.SW_READERS.length()).trim()); } catch (NumberFormatException e) { readers = -1; }
-                if (readers < 1 || readers > 16) { s.error = Words.DbCmd.READERS_USAGE; return true; }
-            }
-            final boolean deep = a.size() == 1 && a.get(0).equals(Syntax.W_DEEP);
-            final boolean full = a.size() == 1 && a.get(0).equals(Syntax.W_FULL);   // מ0.43: בנייה מחדש — מה שהיה הכפתור בהגדרות, כבדיקה
-            if (a.size() > 1 || (a.size() == 1 && !deep && !full)) { s.error = Words.DbCmd.REFRESH_USAGE; return true; }
-            if (readers > 0 && !full) { s.error = Words.DbCmd.READERS_USAGE; return true; }
-            final int rd = readers;
-            final String note = rd > 0 ? Words.DbCmd.readersNote(rd) : "";
-            s.describe = full ? Words.DbCmd.REBUILD_WILL + note : Words.DbCmd.refreshWill(deep);
-            // מ0.40 — המשתמש: "הוא יכול להריץ פקודה 'רענן אינדקס' לפני שהוא מתחיל". עד כאן "רענן" רץ רק בהרצה — אחרי שכל
-            // השורות כבר תוכננו, ורשימה חכמה בשורה שאחריו לא ראתה קובץ שהורד הרגע. עכשיו — רענון מהיר כבר בהכנה (ברקע, לא
-            // משנה קבצים), והשורות שאחריו מתוכננות מול האינדקס המעודכן. בהרצה — כמו קודם (גם מה ששורות קודמות שינו).
-            final int[] inPlan = {0};                                            // מבנה 120: מה שנמצא כבר בהכנה — נספר בהודעה של ההרצה
-            if (sim.lib != null && sim.lib.ready)
-                try {
-                    int n = sim.lib.refreshAsked();
-                    inPlan[0] = n;
-                    sim.condFiles.clear();                                           // מה שחכמות מצאו לפני הרענון — לא תקף
-                    s.describe += Words.DbCmd.refreshedInPlan(n);
-                } catch (Throwable t) {
-                    Log.e("Batch.plan: רענן", t);                                     // בכונן
-                }
-            s.op = new ListCmd.Op() {
-                @Override public String run(Library lib) {
-                    if (lib == null) return full ? Words.DbCmd.REBUILD_WILL + note : Words.DbCmd.refreshWill(deep);
-                    if (full) {
-                        final Library l = lib;                                   // מבנה 120: ההתקדמות — במצב של האינדקס (מסך ההגדרות מציג אותו)
-                        Index.Progress pr = new Index.Progress() {
-                            @Override public void onScan(String label, int items) { l.status = Words.Prefs.SCANNING + label + "… " + Files.count(items); }
-                        };
-                        if (rd > 0) lib.build(Words.Lib.WHY_REQUEST, pr, rd);
-                        else lib.build(pr);
-                        return Words.DbCmd.rebuilt(lib.totalFiles(), lib.totalDirs()) + note;
-                    }
-                    return Words.DbCmd.refreshed((deep ? lib.deepRefresh() : lib.refreshAsked()) + inPlan[0]);
-                }
-            };
-            return true;
-        }
-        if (cmd.equals(Syntax.BACKUP)) {
-            if (tk.size() != 1) { s.error = Words.DbCmd.BACKUP_USAGE; return true; }
-            if (!DbVerbs.active()) { s.error = Words.DbCmd.VERIFY_DB_ONLY; return true; }
-            if (sim.modeError != null) { s.error = sim.modeError; return true; }
-            final String mode = sim.mode != null ? sim.mode : Db.currentMode;
-            s.describe = Words.DbCmd.backupWill(mode);
-            s.op = new ListCmd.Op() {
-                @Override public String run(Library lib) { return DbListCmd.backupNow(mode); }
-            };
-            return true;
-        }
-        if (cmd.equals(Syntax.WRITE)) {
-            boolean append = false;
-            String taken = null;                                                // מבנה 110 (ה6): /תפוס: — מה עושים כשהקובץ כבר קיים
-            List<String> a = new ArrayList<String>();
-            for (int i = 1; i < tk.size(); i++) {
-                String x = tk.get(i).trim();
-                if (x.equals(Syntax.SW_APPEND)) append = true;
-                else if (x.startsWith(Syntax.SW_TAKEN)) {
-                    taken = x.substring(Syntax.SW_TAKEN.length());
-                    if (!taken.equals(Syntax.TAKEN_STOP) && !taken.equals(Syntax.TAKEN_REPLACE) && !taken.equals(Syntax.TAKEN_SKIP) && !taken.equals(Syntax.TAKEN_RENAME)) {
-                        s.error = Words.Cmd.WRITE_TAKEN_ONLY;
-                        return true;
-                    }
-                } else a.add(tk.get(i));
-            }
-            if (a.isEmpty() || a.size() > 2) { s.error = Words.DbCmd.WRITE_USAGE; return true; }
-            if (append && taken != null) { s.error = Words.Cmd.WRITE_TAKEN_ONLY; return true; }   // "להוסיף" — אין שם תפוס
-            String[] err = {null};
-            String p = Parse.path(a.get(0), here, vars, err);
-            if (p == null) { s.error = err[0]; return true; }
-            if (new File(p).getName().equals(Batch.NAME_TOKEN) || (a.size() == 2 && a.get(1).equals(Parse.var(Batch.V_CONTENT)) && sim.selected != null
-                    && sim.selected.content != null)) {                         // מבנה 80: קובץ חדש מהמסך
-                writeSelected(s, new File(p), append || a.size() != 2 || !a.get(1).equals(Parse.var(Batch.V_CONTENT)), taken, sim);
-                return true;
-            }
-            if (Physical.programFile(p) != null) { s.error = Physical.programFile(p); return true; }   // מבנה 45
-            File f0 = new File(p);
-            final String text = a.size() == 2 ? Verbs.withVars(a.get(1), vars).replace("\\n", "\n") : "";
-            File dir = f0.getParentFile();
-            if (dir == null || !sim.isDir(dir)) { s.error = Words.DbCmd.writeNoFolder(Bidi.path(dir == null ? p : dir.getAbsolutePath())); return true; }
-            if (sim.isDir(f0)) { s.error = Words.DbCmd.WRITE_IS_FOLDER; return true; }
-            int t = writeTaken(s, f0, append, taken, sim);                     // מבנה 110: הכלל האחד של "קובץ קיים"
-            if (t == W_STOP) return true;
-            if (t == W_FREE) f0 = sim.free(f0);
-            final File f = f0;
-            final boolean replace = t == W_REPLACE;
-            if (sim.lib != null && Physical.noWriteInto(sim.lib, dir) != null) { s.error = Physical.noWriteInto(sim.lib, dir); return true; }   // מבנה 65: הסל — כבר בתכנון
-            final boolean add = append;
-            boolean had = sim.isFile(f) && sim.real(f) != Batch.GHOST;                // מבנה 46: קובץ שכבר קיים (לא כזה ששורה קודמת כותבת)
-            sim.gone.remove(p);
-            if (!sim.isFile(f)) sim.added.put(p, Batch.GHOST);
-            s.dest = f;
-            s.describe = Words.DbCmd.writeWill(f.getName(), text.length(), add) + (!add && had ? Words.DbCmd.OLD_TO_TRASH_WILL : "");
-            s.op = new ListCmd.Op() {
-                @Override public String run(Library lib) {
-                    try {
-                        String no = Permit.check(Permit.WRITE);                     // מבנה 80: גם "כתוב" שואלת את ההיתר
-                        if (no != null) { DbListCmd.lastFailed = true; return no; }
-                        // מבנה 65: מותר בכל מקום שמותר להעתיק אליו — גם בשורש הכונן ובתיקיות המשתמש שבתיקיית התוכנה; לא בסל, ולא קובץ של התוכנה
-                        String why0 = Physical.programFile(f.getAbsolutePath());
-                        if (why0 == null && lib != null) why0 = Physical.noWriteInto(lib, f.getParentFile());
-                        if (why0 != null) { DbListCmd.lastFailed = true; return why0; }
-                        if (f.isDirectory()) { DbListCmd.lastFailed = true; return Words.DbCmd.WRITE_IS_FOLDER; }
-                        boolean was = f.isFile(), toTrash = was && !add && lib != null;
-                        if (was && !add && !replace) {                              // מבנה 110: נוצר בינתיים — לא מחליפים בלי הוראה
-                            DbListCmd.lastFailed = true;
-                            return Words.Cmd.fileTaken(f.getName());
-                        }
-                        if (toTrash) {                                              // מבנה 46: הקובץ הקודם — לסל, לא נדרס
-                            String why = Physical.oldToTrash(lib, f);
-                            if (why != null) { DbListCmd.lastFailed = true; return why; }
-                        }
-                        Files.writeAtomic(f, add && was ? Files.readUtf8(f) + text : text);
-                        if (toTrash) {
-                            lib.fileAdded(f);
-                            lib.flush(5000);
-                            return Words.DbCmd.written(f.getName(), text.length(), false) + Words.DbCmd.OLD_TO_TRASH;
-                        }
-                        if (lib != null) {
-                            if (was) lib.fileRemoved(f.getAbsolutePath());
-                            lib.fileAdded(f);
-                            lib.flush(5000);   // מ0.45: שורה שאחריה (מחק, העבר) — מול הגודל החדש, לא "הקובץ השתנה מאז הסריקה"
-                        }
-                        return Words.DbCmd.written(f.getName(), text.length(), add && was);
-                    } catch (Throwable t) {
-                        Log.e("Batch.write", t);
-                        DbListCmd.lastFailed = true;
-                        return Words.Db.failed(String.valueOf(t.getMessage()));
-                    }
-                }
-            };
-            return true;
-        }
+        if (cmd.equals(Syntax.WAIT)) return planWait(plan, s, cmd, tk, here, vars, sim);
+        if (cmd.equals(Syntax.PACK) || cmd.equals(Syntax.UNPACK)) return planZip(plan, s, cmd, tk, here, vars, sim);   // מבנה 122: מה שהמסך עשה בעצמו (PhysicalUi.askZip / askUnzip)
+        if (cmd.equals(Syntax.REPORT)) return planReport(plan, s, cmd, tk, here, vars, sim);
+        if (cmd.equals(Syntax.REFRESH)) return planRefresh(plan, s, cmd, tk, here, vars, sim);
+        if (cmd.equals(Syntax.BACKUP)) return planBackup(plan, s, cmd, tk, here, vars, sim);
+        if (cmd.equals(Syntax.WRITE)) return planWrite(plan, s, cmd, tk, here, vars, sim);
         return false;
+    }
+
+    /** מבנה 123: שחזר דוגמאות (מה שהמסך עשה בעצמו) */
+    private static boolean planExamples(final Batch.Plan plan, final Batch.Step s, String cmd, List<String> tk, File here, Map<String, String> vars, final Sim sim) {
+        if (tk.size() != 1) { s.error = Words.Cmd.EXAMPLES_USAGE; return true; }
+        if (!DbVerbs.active()) { s.error = Words.DbCmd.VERIFY_DB_ONLY; return true; }
+        sim.dbs.remove(DbExamples.MODE);                                    // מה שההדמיה החזיקה מהאופן הזה — כבר לא תקף
+        s.describe = Words.Cmd.EXAMPLES_WILL;
+        s.op = new ListCmd.Op() {
+            @Override public String run(Library lib) {
+                boolean[] failed = {false};
+                String msg = Db.restoreExamples(Db.app, Reserved.FILES, failed);
+                if (failed[0]) DbListCmd.lastFailed = true;
+                return msg;
+            }
+        };
+        return true;
+    }
+
+    /** מבנה 50: ודא רציף */
+    private static boolean planVerifySteady(final Batch.Plan plan, final Batch.Step s, String cmd, List<String> tk, File here, Map<String, String> vars, final Sim sim) {
+        if (!plan.measure) { s.error = Words.DbCmd.STEADY_NEEDS_MEASURE; return true; }
+        s.describe = Words.DbCmd.verifyWill(Words.DbCmd.STEADY_WHAT);
+        s.op = new ListCmd.Op() {
+            @Override public String run(Library lib) {
+                Batch.Pulse p = plan.pulse;
+                long off = p == null ? 0 : p.screenOff(), miss = p == null ? 0 : p.missed();
+                int r = Batch.steady(off, miss);
+                s.verified = r == Batch.STEADY_OK;
+                return Words.DbCmd.steadyResult(r, off, miss);
+            }
+        };
+        return true;
+    }
+
+    /** מ0.45: ודא אופן "<שם>" קיים / חסר */
+    private static boolean planVerifyMode(final Batch.Plan plan, final Batch.Step s, String cmd, List<String> tk, File here, Map<String, String> vars, final Sim sim) {
+        final String m = Verbs.withVars(tk.get(2).trim(), vars);
+        String w = tk.get(3).trim();
+        final boolean want = w.equals(Words.DbCmd.WORD_EXISTS_M) || w.equals(Words.DbCmd.WORD_EXISTS);
+        if (!want && !w.equals(Words.DbCmd.WORD_MISSING_M) && !w.equals(Words.DbCmd.WORD_MISSING)) { s.error = Words.DbCmd.VERIFY_USAGE; return true; }
+        if (!DbVerbs.active()) { s.error = Words.DbCmd.VERIFY_DB_ONLY; return true; }
+        final String what = Words.DbCmd.verifyMode(m, want);
+        s.target = m;
+        s.describe = Words.DbCmd.verifyWill(what);
+        s.op = new ListCmd.Op() {
+            @Override public String run(Library lib) {
+                boolean has = Db.dbModes(Db.app).contains(m);
+                s.verified = has == want;
+                return Words.DbCmd.verifyResult(has == want, what, has ? Words.DbCmd.WORD_EXISTS_M : Words.DbCmd.WORD_MISSING_M);
+            }
+        };
+        return true;
+    }
+
+    /** planWait */
+    private static boolean planWait(final Batch.Plan plan, final Batch.Step s, String cmd, List<String> tk, File here, Map<String, String> vars, final Sim sim) {
+        int sec = -1;
+        if (tk.size() == 2) try { sec = Integer.parseInt(tk.get(1).trim()); } catch (NumberFormatException e) { sec = -1; }
+        if (sec < 0 || sec > 600) { s.error = Words.DbCmd.WAIT_USAGE; return true; }
+        final int n = sec;
+        s.describe = Words.DbCmd.waitFor(n);
+        s.op = new ListCmd.Op() {
+            @Override public String run(Library lib) {
+                // מבנה 62 (ממצא 40ה): בחתיכות של רבע שנייה — "עצור" נענה מיד (עד כאן: רק אחרי שכל ההמתנה נגמרה, עד 600 שניות)
+                for (int left = n * 4; left > 0; left--) {
+                    if (plan.asked != null && plan.asked.stopped()) return Words.DbCmd.waitStopped(n, n - (left + 3) / 4);
+                    try { Thread.sleep(250); } catch (InterruptedException e) { Thread.currentThread().interrupt(); break; }
+                }
+                return Words.DbCmd.waitFor(n);
+            }
+        };
+        return true;
+    }
+
+    /** מבנה 122: מה שהמסך עשה בעצמו (PhysicalUi.askZip / askUnzip) */
+    private static boolean planZip(final Batch.Plan plan, final Batch.Step s, String cmd, List<String> tk, File here, Map<String, String> vars, final Sim sim) {
+        final boolean pack = cmd.equals(Syntax.PACK);
+        String[] err = {null};
+        String p = tk.size() == 2 ? Parse.path(tk.get(1), here, vars, err) : null;
+        if (p == null) { s.error = err[0] != null ? err[0] : pack ? Words.Cmd.PACK_USAGE : Words.Cmd.UNPACK_USAGE; return true; }
+        if (p.equals(Batch.SELECTED_MARK)) {                                      // מהמסך: התיקייה / הקובץ שנבחרו
+            Batch.Selection sel = sim.selected;
+            List<String> one = sel == null ? null : pack ? sel.dirs : sel.files;
+            if (one == null || one.size() != 1) { s.error = Words.Cmd.NOTHING_SELECTED; return true; }
+            p = one.get(0);
+        }
+        final File src = new File(p), parent = src.getParentFile();
+        if (pack ? !sim.isDir(src) : !sim.isFile(src)) { s.error = (pack ? Words.FOLDER_NOT_FOUND : Words.FILE_NOT_FOUND) + ": " + tk.get(1); return true; }
+        if (parent == null) { s.error = Words.Cmd.NO_DEST; return true; }
+        String stem = src.getName();
+        if (!pack && stem.toLowerCase(Locale.ROOT).endsWith(".zip")) stem = stem.substring(0, stem.length() - 4);
+        if (!pack && stem.trim().isEmpty()) stem = Words.Send.UNPACK_DIR;
+        File out0 = new File(parent, pack ? src.getName() + ".zip" : stem);
+        for (int i = 2; sim.isFile(out0) || sim.isDir(out0); i++) out0 = new File(parent, pack ? src.getName() + " (" + i + ").zip" : stem + " (" + i + ")");
+        final File out = out0;
+        String own = Physical.programFile(pack ? src.getAbsolutePath() : out.getAbsolutePath());
+        if (own != null) { s.error = pack ? Words.Disk.NO_FILE_IN_APP : Words.Disk.NO_UNPACK_IN_APP; return true; }
+        if (sim.lib != null && Physical.noWriteInto(sim.lib, parent) != null) { s.error = Physical.noWriteInto(sim.lib, parent); return true; }
+        if (!pack && src.isFile() && Zip.contents(src) == null) { s.error = Words.Disk.BAD_ZIP; return true; }
+        if (pack) sim.added.put(out.getAbsolutePath(), Batch.GHOST);
+        else sim.dirs.add(out.getAbsolutePath());                            // מה שבתוכה — נודע רק בהרצה
+        sim.gone.remove(out.getAbsolutePath());
+        s.dest = out;
+        s.describe = pack ? Words.Cmd.packWill(src.getName(), out.getName()) : Words.Cmd.unpackWill(src.getName(), out.getName());
+        s.op = new ListCmd.Op() {
+            @Override public String run(Library lib) {
+                try {
+                    if (out.exists()) { DbListCmd.lastFailed = true; return Words.Disk.ALREADY_NAME + out.getName() + "\""; }
+                    if (!pack) {
+                        long[] c = Zip.contents(src);
+                        if (c == null) { DbListCmd.lastFailed = true; return Words.Disk.BAD_ZIP; }
+                        long free = Physical.free(parent);
+                        if (c[1] > 0 && free < c[1]) { DbListCmd.lastFailed = true; return Words.Cmd.noRoom(Files.size(c[1]), Files.size(free)); }
+                    }
+                    Zip.Result r = pack ? Zip.pack(src, out, plan.asked) : Zip.unpack(src, out, plan.asked);
+                    if (lib != null) {
+                        lib.dirChanged(parent.getAbsolutePath());          // האינדקס לומד על מה שנוצר
+                        lib.flush(5000);
+                    }
+                    if (r.error != null) { DbListCmd.lastFailed = true; return r.error; }
+                    return (pack ? Words.Cmd.packed(out.getName(), r.files)
+                            : Words.Disk.UNPACKED + Words.files(r.files) + Words.Disk.TO_QUOTE + out.getName() + "\""
+                            + (r.skipped > 0 ? " · " + r.skipped + Words.Disk.SKIPPED : "")) + (r.stopped ? Words.Disk.STOPPED_SUFFIX : "");
+                } catch (Throwable t) {
+                    Log.e("Batch.zip", t);
+                    DbListCmd.lastFailed = true;
+                    return Words.Db.failed(String.valueOf(t.getMessage()));
+                }
+            }
+        };
+        return true;
+    }
+
+    /** planReport */
+    private static boolean planReport(final Batch.Plan plan, final Batch.Step s, String cmd, List<String> tk, File here, Map<String, String> vars, final Sim sim) {
+        String[] err = {null};
+        String p = tk.size() == 2 ? Parse.path(tk.get(1), here, vars, err) : null;
+        if (p == null) { s.error = err[0] != null ? err[0] : Words.DbCmd.REPORT_USAGE; return true; }
+        if ((s.error = Batch.noWriteHere(p)) != null) return true;                 // מבנה 45
+        plan.reportFile = p;
+        s.noop = true;
+        s.describe = Words.DbCmd.reportTo(Bidi.path(p));
+        return true;
+    }
+
+    /** planRefresh */
+    private static boolean planRefresh(final Batch.Plan plan, final Batch.Step s, String cmd, List<String> tk, File here, Map<String, String> vars, final Sim sim) {
+        int readers = 0;                                                     // מ0.45 (ב9): "רענן מלא /קוראים:N" — כמה ראשים הכי מהיר
+        List<String> a = new ArrayList<String>();
+        for (int i = 1; i < tk.size(); i++) {
+            String x = tk.get(i).trim();
+            if (!x.startsWith(Words.DbCmd.SW_READERS)) { a.add(x); continue; }
+            try { readers = Integer.parseInt(x.substring(Words.DbCmd.SW_READERS.length()).trim()); } catch (NumberFormatException e) { readers = -1; }
+            if (readers < 1 || readers > 16) { s.error = Words.DbCmd.READERS_USAGE; return true; }
+        }
+        final boolean deep = a.size() == 1 && a.get(0).equals(Syntax.W_DEEP);
+        final boolean full = a.size() == 1 && a.get(0).equals(Syntax.W_FULL);   // מ0.43: בנייה מחדש — מה שהיה הכפתור בהגדרות, כבדיקה
+        if (a.size() > 1 || (a.size() == 1 && !deep && !full)) { s.error = Words.DbCmd.REFRESH_USAGE; return true; }
+        if (readers > 0 && !full) { s.error = Words.DbCmd.READERS_USAGE; return true; }
+        final int rd = readers;
+        final String note = rd > 0 ? Words.DbCmd.readersNote(rd) : "";
+        s.describe = full ? Words.DbCmd.REBUILD_WILL + note : Words.DbCmd.refreshWill(deep);
+        // מ0.40 — המשתמש: "הוא יכול להריץ פקודה 'רענן אינדקס' לפני שהוא מתחיל". עד כאן "רענן" רץ רק בהרצה — אחרי שכל
+        // השורות כבר תוכננו, ורשימה חכמה בשורה שאחריו לא ראתה קובץ שהורד הרגע. עכשיו — רענון מהיר כבר בהכנה (ברקע, לא
+        // משנה קבצים), והשורות שאחריו מתוכננות מול האינדקס המעודכן. בהרצה — כמו קודם (גם מה ששורות קודמות שינו).
+        final int[] inPlan = {0};                                            // מבנה 120: מה שנמצא כבר בהכנה — נספר בהודעה של ההרצה
+        if (sim.lib != null && sim.lib.ready)
+            try {
+                int n = sim.lib.refreshAsked();
+                inPlan[0] = n;
+                sim.condFiles.clear();                                           // מה שחכמות מצאו לפני הרענון — לא תקף
+                s.describe += Words.DbCmd.refreshedInPlan(n);
+            } catch (Throwable t) {
+                Log.e("Batch.plan: רענן", t);                                     // בכונן
+            }
+        s.op = new ListCmd.Op() {
+            @Override public String run(Library lib) {
+                if (lib == null) return full ? Words.DbCmd.REBUILD_WILL + note : Words.DbCmd.refreshWill(deep);
+                if (full) {
+                    final Library l = lib;                                   // מבנה 120: ההתקדמות — במצב של האינדקס (מסך ההגדרות מציג אותו)
+                    Index.Progress pr = new Index.Progress() {
+                        @Override public void onScan(String label, int items) { l.status = Words.Prefs.SCANNING + label + "… " + Files.count(items); }
+                    };
+                    if (rd > 0) lib.build(Words.Lib.WHY_REQUEST, pr, rd);
+                    else lib.build(pr);
+                    return Words.DbCmd.rebuilt(lib.totalFiles(), lib.totalDirs()) + note;
+                }
+                return Words.DbCmd.refreshed((deep ? lib.deepRefresh() : lib.refreshAsked()) + inPlan[0]);
+            }
+        };
+        return true;
+    }
+
+    /** planBackup */
+    private static boolean planBackup(final Batch.Plan plan, final Batch.Step s, String cmd, List<String> tk, File here, Map<String, String> vars, final Sim sim) {
+        if (tk.size() != 1) { s.error = Words.DbCmd.BACKUP_USAGE; return true; }
+        if (!DbVerbs.active()) { s.error = Words.DbCmd.VERIFY_DB_ONLY; return true; }
+        if (sim.modeError != null) { s.error = sim.modeError; return true; }
+        final String mode = sim.mode != null ? sim.mode : Db.currentMode;
+        s.describe = Words.DbCmd.backupWill(mode);
+        s.op = new ListCmd.Op() {
+            @Override public String run(Library lib) { return DbListCmd.backupNow(mode); }
+        };
+        return true;
+    }
+
+    /** planWrite */
+    private static boolean planWrite(final Batch.Plan plan, final Batch.Step s, String cmd, List<String> tk, File here, Map<String, String> vars, final Sim sim) {
+        boolean append = false;
+        String taken = null;                                                // מבנה 110 (ה6): /תפוס: — מה עושים כשהקובץ כבר קיים
+        List<String> a = new ArrayList<String>();
+        for (int i = 1; i < tk.size(); i++) {
+            String x = tk.get(i).trim();
+            if (x.equals(Syntax.SW_APPEND)) append = true;
+            else if (x.startsWith(Syntax.SW_TAKEN)) {
+                taken = x.substring(Syntax.SW_TAKEN.length());
+                if (!taken.equals(Syntax.TAKEN_STOP) && !taken.equals(Syntax.TAKEN_REPLACE) && !taken.equals(Syntax.TAKEN_SKIP) && !taken.equals(Syntax.TAKEN_RENAME)) {
+                    s.error = Words.Cmd.WRITE_TAKEN_ONLY;
+                    return true;
+                }
+            } else a.add(tk.get(i));
+        }
+        if (a.isEmpty() || a.size() > 2) { s.error = Words.DbCmd.WRITE_USAGE; return true; }
+        if (append && taken != null) { s.error = Words.Cmd.WRITE_TAKEN_ONLY; return true; }   // "להוסיף" — אין שם תפוס
+        String[] err = {null};
+        String p = Parse.path(a.get(0), here, vars, err);
+        if (p == null) { s.error = err[0]; return true; }
+        if (new File(p).getName().equals(Batch.NAME_TOKEN) || (a.size() == 2 && a.get(1).equals(Parse.var(Batch.V_CONTENT)) && sim.selected != null
+                && sim.selected.content != null)) {                         // מבנה 80: קובץ חדש מהמסך
+            writeSelected(s, new File(p), append || a.size() != 2 || !a.get(1).equals(Parse.var(Batch.V_CONTENT)), taken, sim);
+            return true;
+        }
+        if (Physical.programFile(p) != null) { s.error = Physical.programFile(p); return true; }   // מבנה 45
+        File f0 = new File(p);
+        final String text = a.size() == 2 ? Verbs.withVars(a.get(1), vars).replace("\\n", "\n") : "";
+        File dir = f0.getParentFile();
+        if (dir == null || !sim.isDir(dir)) { s.error = Words.DbCmd.writeNoFolder(Bidi.path(dir == null ? p : dir.getAbsolutePath())); return true; }
+        if (sim.isDir(f0)) { s.error = Words.DbCmd.WRITE_IS_FOLDER; return true; }
+        int t = writeTaken(s, f0, append, taken, sim);                     // מבנה 110: הכלל האחד של "קובץ קיים"
+        if (t == W_STOP) return true;
+        if (t == W_FREE) f0 = sim.free(f0);
+        final File f = f0;
+        final boolean replace = t == W_REPLACE;
+        if (sim.lib != null && Physical.noWriteInto(sim.lib, dir) != null) { s.error = Physical.noWriteInto(sim.lib, dir); return true; }   // מבנה 65: הסל — כבר בתכנון
+        final boolean add = append;
+        boolean had = sim.isFile(f) && sim.real(f) != Batch.GHOST;                // מבנה 46: קובץ שכבר קיים (לא כזה ששורה קודמת כותבת)
+        sim.gone.remove(p);
+        if (!sim.isFile(f)) sim.added.put(p, Batch.GHOST);
+        s.dest = f;
+        s.describe = Words.DbCmd.writeWill(f.getName(), text.length(), add) + (!add && had ? Words.DbCmd.OLD_TO_TRASH_WILL : "");
+        s.op = new ListCmd.Op() {
+            @Override public String run(Library lib) {
+                try {
+                    String no = Permit.check(Permit.WRITE);                     // מבנה 80: גם "כתוב" שואלת את ההיתר
+                    if (no != null) { DbListCmd.lastFailed = true; return no; }
+                    // מבנה 65: מותר בכל מקום שמותר להעתיק אליו — גם בשורש הכונן ובתיקיות המשתמש שבתיקיית התוכנה; לא בסל, ולא קובץ של התוכנה
+                    String why0 = Physical.programFile(f.getAbsolutePath());
+                    if (why0 == null && lib != null) why0 = Physical.noWriteInto(lib, f.getParentFile());
+                    if (why0 != null) { DbListCmd.lastFailed = true; return why0; }
+                    if (f.isDirectory()) { DbListCmd.lastFailed = true; return Words.DbCmd.WRITE_IS_FOLDER; }
+                    boolean was = f.isFile(), toTrash = was && !add && lib != null;
+                    if (was && !add && !replace) {                              // מבנה 110: נוצר בינתיים — לא מחליפים בלי הוראה
+                        DbListCmd.lastFailed = true;
+                        return Words.Cmd.fileTaken(f.getName());
+                    }
+                    if (toTrash) {                                              // מבנה 46: הקובץ הקודם — לסל, לא נדרס
+                        String why = Physical.oldToTrash(lib, f);
+                        if (why != null) { DbListCmd.lastFailed = true; return why; }
+                    }
+                    Files.writeAtomic(f, add && was ? Files.readUtf8(f) + text : text);
+                    if (toTrash) {
+                        lib.fileAdded(f);
+                        lib.flush(5000);
+                        return Words.DbCmd.written(f.getName(), text.length(), false) + Words.DbCmd.OLD_TO_TRASH;
+                    }
+                    if (lib != null) {
+                        if (was) lib.fileRemoved(f.getAbsolutePath());
+                        lib.fileAdded(f);
+                        lib.flush(5000);   // מ0.45: שורה שאחריה (מחק, העבר) — מול הגודל החדש, לא "הקובץ השתנה מאז הסריקה"
+                    }
+                    return Words.DbCmd.written(f.getName(), text.length(), add && was);
+                } catch (Throwable t) {
+                    Log.e("Batch.write", t);
+                    DbListCmd.lastFailed = true;
+                    return Words.Db.failed(String.valueOf(t.getMessage()));
+                }
+            }
+        };
+        return true;
     }
 
     /**
