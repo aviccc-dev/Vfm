@@ -188,9 +188,9 @@ public class RunScreen extends Activity {
         for (String e : plan.echoes) bodies[1].addView(info("💬 " + e));
         for (Batch.Step s : ok)                                                // 1.27.0: היעד "החדש" כבר קיים — אזהרה
             if (s.noop && s.listPath != null && s.cmd.equals("MD")) bodies[1].addView(warn(Words.Run.exists(s.target)));
-        row(bodies[1], Words.Run.WILL_CREATE, names(ok, Batch.K_CREATE));
-        row(bodies[1], Words.Run.WILL_CHANGE, names(ok, Batch.K_CHANGE));
-        row(bodies[1], Words.Run.WILL_DELETE, names(ok, Batch.K_DELETE));
+        row(bodies[1], Words.Run.WILL_CREATE, names(ok, Runner.K_CREATE));
+        row(bodies[1], Words.Run.WILL_CHANGE, names(ok, Runner.K_CHANGE));
+        row(bodies[1], Words.Run.WILL_DELETE, names(ok, Runner.K_DELETE));
         row(bodies[1], Words.Run.DISK, diskText(ok));
         if (plan.errors > 0) row(bodies[1], Words.Run.ERRORS, String.valueOf(plan.errors));
         for (String n : plan.notes) bodies[1].addView(info(n));
@@ -317,9 +317,9 @@ public class RunScreen extends Activity {
         }
         for (String e : plan.echoes) bodies[3].addView(info("💬 " + e));
         for (String in : plan.inputs) bodies[3].addView(info(in));
-        row(bodies[3], Words.Run.CREATED, names(ran, Batch.K_CREATE));
-        row(bodies[3], Words.Run.CHANGED, names(ran, Batch.K_CHANGE));
-        row(bodies[3], Words.Run.DELETED, names(ran, Batch.K_DELETE));
+        row(bodies[3], Words.Run.CREATED, names(ran, Runner.K_CREATE));
+        row(bodies[3], Words.Run.CHANGED, names(ran, Runner.K_CHANGE));
+        row(bodies[3], Words.Run.DELETED, names(ran, Runner.K_DELETE));
         row(bodies[3], Words.Run.DISK, diskText(ran));
         row(bodies[3], Words.Run.SKIPPED, skipped == 0 ? Words.Ed.NONE : String.valueOf(skipped));
         row(bodies[3], Words.Run.TIME, Words.Loop.time(took));
@@ -452,7 +452,7 @@ public class RunScreen extends Activity {
     /** הרשימה הראשונה שנוצרה או שהשתנתה (לכפתור "פתח"). */
     private List<String> firstList() {
         for (Batch.Step s : plan.steps)
-            if (s.ran && s.op != null && s.target != null && Batch.kind(s) != Batch.K_DELETE) {
+            if (s.ran && s.op != null && s.target != null && Runner.kind(s) != Runner.K_DELETE) {
                 String t = s.target.replace("\"", "").trim();
                 if (t.equals(Words.ListCmdW.HOME)) continue;
                 String m = plan.modeOf(s);                                      // מ0.32: האופן של השורה, לא האחרון בקובץ
@@ -474,9 +474,9 @@ public class RunScreen extends Activity {
         Set<String> out = new LinkedHashSet<String>();
         int n = 0;
         for (Batch.Step s : steps) {
-            if (Batch.kind(s) != kind || s.noop) continue;
+            if (Runner.kind(s) != kind || s.noop) continue;
             n++;
-            out.add(s.target != null ? s.target : s.dest != null && s.op == null && kind == Batch.K_CREATE ? s.dest.getName() : s.describe);
+            out.add(s.target != null ? s.target : s.dest != null && s.op == null && kind == Runner.K_CREATE ? s.dest.getName() : s.describe);
         }
         if (n == 0) return Words.Ed.NONE;
         StringBuilder sb = new StringBuilder();
@@ -493,7 +493,7 @@ public class RunScreen extends Activity {
 
     private String diskText(List<Batch.Step> steps) {
         int n = 0;
-        for (Batch.Step s : steps) if (Batch.disk(s)) n++;
+        for (Batch.Step s : steps) if (Runner.disk(s)) n++;
         return n == 0 ? Words.Run.NO_DISK : Words.Run.diskLines(n);
     }
 

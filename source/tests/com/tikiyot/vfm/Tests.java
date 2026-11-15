@@ -2272,7 +2272,7 @@ public final class Tests {
         // רוקן סל בלי מסלול — כל הסל
         Batch.Plan all = Batch.plan("כתוב \"%כאן%\\סל\\ב.txt\" \"x\"\nמחק \"%כאן%\\סל\\ב.txt\"\nרוקן סל\nודא \"%כאן%\\סל\\ב.txt\" /בסל:0\n", r, v, lib);
         check("מ0.45: רוקן סל — בתצוגה: כל הסל, ומסומן כמחיקה", all.errors == 0 && all.steps.get(2).describe.equals(Words.DbCmd.PURGE_ALL_WILL)
-                && Batch.kind(all.steps.get(2)) == Batch.K_DELETE);
+                && Runner.kind(all.steps.get(2)) == Runner.K_DELETE);
         String ar = Batch.run(all, lib, null, null).toString();
         check("מ0.45: ...והסל ריק (" + ar + ")", ar.contains("ודא: 1 עברו · 0 נכשלו") && Trash.list(lib).isEmpty());
         eq("מ0.45: שחזר מהסל בלי מסלול — שגיאה", 1, Batch.plan("שחזר מהסל\n", r, v, lib).errors);
@@ -3293,6 +3293,11 @@ public final class Tests {
                 check("מבנה 154: שמירה על קובץ קיים באזור — התוכן החדש נכתב (" + ok154 + "), והקודם בסל עם התוכן שלו; קובץ חדש — נכתב, בלי סל; מחוץ לאזור — לא",
                         ok154 == null && "גרסה חדשה".equals(read(f154)) && in154 && new154 == null && "x".equals(read(new File(z154, "חדש.vbat")))
                                 && Words.PermitW.NOT_IN_ZONE.equals(Manager.ownSaveKeepOld(z154, new File(r151, "בחוץ.vbat"), "x", lib151)));
+                // מבנה 164: ההרצה יצאה ל־Runner — הכניסה נשארה Batch.run (רק המנהל קורא לה); ל־Runner.run0 — רק Batch
+                StringBuilder run164 = new StringBuilder();
+                for (File f : javaFiles(code)) if (!f.getName().equals("Batch.java") && read(f).contains("Runner.run0(")) run164.append(f.getName()).append(' ');
+                check("מבנה 164: ההרצה עצמה (Runner.run0) — רק מהכניסה Batch.run (" + run164.toString().trim() + ")",
+                        run164.length() == 0 && read(new File(code, "pkudot/Batch.java")).contains("Runner.run0("));
                 wipe(r151);
                 wipe(d138);
             }
@@ -3574,9 +3579,9 @@ public final class Tests {
         }
         // מבנה 55: המכשיר עצר את התוכנה בזמן הרצה — הדוח אומר זאת ואיזו הגדרה פותרת
         List<String> rep55 = new ArrayList<String>();
-        Batch.stoppedHint(rep55, 4000);
+        Runner.stoppedHint(rep55, 4000);
         check("מבנה 55: פחות מ־5 שניות — בלי שורה", rep55.isEmpty());
-        Batch.stoppedHint(rep55, 58400);
+        Runner.stoppedHint(rep55, 58400);
         check("מבנה 55: 58 שניות — שורה אחת, עם הזמן ועם ההגדרה", rep55.size() == 1 && rep55.get(0).contains("58") && rep55.get(0).contains("ללא הגבלות"));
         Batch.Plan p55 = Batch.plan("ECHO שלום\n", r, v);
         check("מבנה 55: הרצה רגילה — בלי השורה, והדופק פועל גם בלי \"מדידה\"", !String.valueOf(Batch.run(p55, null, null, null)).contains("עצר את התוכנה") && p55.pulse != null);
@@ -3703,7 +3708,7 @@ public final class Tests {
         check("מבנה 39: העברה בין כוננים — העותק נבדק, ורק אז המקור נמחק", Physical.moveFile(ma, mb, false) && !ma.exists() && da.equals(Physical.digest(mb)));
         check("מבנה 39: קובץ שאינו נקרא — אין חתימה (ולכן אין מחיקה של מקור)", Physical.digest(new File(r, "אין-קובץ-כזה")) == null);
         // מבנה 38: הדופק — כמה זמן התוכנה לא רצה
-        Batch.Pulse pulse = new Batch.Pulse();
+        Runner.Pulse pulse = new Runner.Pulse();
         try { Thread.sleep(1300); } catch (InterruptedException e) { throw new RuntimeException(e); }
         check("מבנה 38: התוכנה רצה כרגיל — הדופק לא מדווח על עצירה", pulse.missed() == 0);
         pulse.stop();

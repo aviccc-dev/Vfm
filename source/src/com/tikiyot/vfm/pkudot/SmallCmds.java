@@ -131,7 +131,7 @@ final class SmallCmds {
         s.describe = Words.DbCmd.verifyWill(Words.DbCmd.STEADY_WHAT);
         s.op = new ListCmd.Op() {
             @Override public String run(Library lib) {
-                Batch.Pulse p = plan.pulse;
+                Runner.Pulse p = plan.pulse;
                 long off = p == null ? 0 : p.screenOff(), miss = p == null ? 0 : p.missed();
                 int r = Batch.steady(off, miss);
                 s.verified = r == Batch.STEADY_OK;
