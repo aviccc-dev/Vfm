@@ -76,6 +76,15 @@ final class Verbs {
     /** מבנה 113: "עדכן רשימה "<דרך>" /שם:… /צלמית:… /תיאור:… /למה:…" — המתגים. */
     static final String SW_NAME = "/שם:", SW_ICON = "/צלמית:", SW_DESC = "/תיאור:", SW_WHY = "/למה:";   // תחביר
     static final String E_NAME = "name";
+    /** מבנה 121: /מקום:למעלה|למטה|לראש|לסוף — המקום של הרשימה בתוך הרשימה שהיא בה (סדר ידני); /עיצוב:"<שם>" — העיצוב שלה ("" — לרשת). */
+    static final String SW_PLACE = "/מקום:", SW_DESIGN = "/עיצוב:", E_PLACE = "place";   // תחביר
+    static final String[] PLACES = {"למעלה", "למטה", "לראש", "לסוף"};   // תחביר — לפי הסדר של DbMore.UP … BOTTOM
+
+    /** מבנה 121: המילה של /מקום: ← DbMore.UP … BOTTOM; ‎-1 — לא מוכרת. */
+    static int place(String word) {
+        for (int i = 0; i < PLACES.length; i++) if (PLACES[i].equals(word == null ? "" : word.trim())) return i;
+        return -1;
+    }
 
     private Verbs() { }
 
@@ -216,14 +225,15 @@ final class Verbs {
                 c.edit = new java.util.LinkedHashMap<String, String>();
                 for (String w : Batch.tokens(after(rest, LIST))) {
                     String key = w.startsWith(SW_NAME) ? E_NAME : w.startsWith(SW_ICON) ? Store.P_ICON : w.startsWith(SW_DESC) ? Store.P_DESC
-                            : w.startsWith(SW_WHY) ? Store.P_WHY : null;
+                            : w.startsWith(SW_WHY) ? Store.P_WHY : w.startsWith(SW_PLACE) ? E_PLACE : w.startsWith(SW_DESIGN) ? Store.P_DESIGN : null;
                     if (key != null) c.edit.put(key, w.substring(w.indexOf(':') + 1));
                     else if (w.startsWith("/") || !c.arg.isEmpty()) c.error = Words.Verb.usage(UPDATE);
                     else c.arg = unquote(w);
                 }
                 boolean picked = Batch.var(Batch.V_SELECTED).equals(c.arg);     // מהמסך — מה שבטופס, מהבחירה
-                if (c.arg.isEmpty() || (c.edit.isEmpty() && !picked) || (c.edit.containsKey(E_NAME) && c.edit.get(E_NAME).trim().isEmpty()))
-                    c.error = Words.Verb.usage(UPDATE);                          // שם ריק בשורה — שגיאה (ה4)
+                if (c.arg.isEmpty() || (c.edit.isEmpty() && !picked) || (c.edit.containsKey(E_NAME) && c.edit.get(E_NAME).trim().isEmpty())
+                        || (c.edit.containsKey(E_PLACE) && place(c.edit.get(E_PLACE)) < 0))
+                    c.error = Words.Verb.usage(UPDATE);                          // שם ריק בשורה — שגיאה (ה4); מקום לא מוכר
             } else if (c.verb.equals(CREATE) && starts(rest, MODE_WORD)) {    // מ0.42
                 c.kind = K_MODE;
                 c.arg = unquote(after(rest, MODE_WORD));

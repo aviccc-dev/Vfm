@@ -826,12 +826,11 @@ public class DbListScreen extends ListScreen<Store.Member> {
         Ui.options(this, Words.DbCmd.ORDER_TITLE, how, new android.content.DialogInterface.OnClickListener() {
             @Override
             public void onClick(android.content.DialogInterface d, final int which) {
-                DbListCmd.now(mode, new DbListCmd.Work() {
-                    @Override public DbListCmd.Res run(Store t, DbListCmd.Finder f) {
-                        DbMore.order(t, in, ids, which);
-                        return DbListCmd.Res.ok("");
-                    }
-                }, false);
+                // מבנה 121: דרך המנהל, כפקודה ("עדכן רשימה %נבחרים% /מקום:…")
+                Library lib = Library.get(DbListScreen.this);
+                Manager.Act act = Manager.onListOrder(mode, in, ids, which, Paths.data(), BatchUi.vars(DbListScreen.this, Paths.data()), lib);
+                String said = act.error() != null ? act.error() : act.say(lib);
+                if (act.error() != null || act.failed) Ui.toast(DbListScreen.this, said);
                 sortBy = "";
                 refresh();
             }
@@ -915,13 +914,11 @@ public class DbListScreen extends ListScreen<Store.Member> {
                 cur == null || cur.isEmpty() ? "" : null, true, new DesignUi.Done() {
             @Override
             public void chosen(final String name) {
-                DbVerbsUi.write(DbListScreen.this, mode, new DbVerbsUi.Job() {
-                    @Override
-                    public long run(Store s, java.util.List<String> p) {
-                        s.setProp(listId, Store.P_DESIGN, name);              // "" — לרשת (המאפיין נמחק)
-                        return listId;
-                    }
-                }, null);
+                // מבנה 121: דרך המנהל, כפקודה ("עדכן רשימה %נבחרים% /עיצוב:…"); "" — לרשת (המאפיין נמחק)
+                Library lib = Library.get(DbListScreen.this);
+                Manager.Act act = Manager.onListDesign(mode, listId, name, Paths.data(), BatchUi.vars(DbListScreen.this, Paths.data()), lib);
+                String said = act.error() != null ? act.error() : act.say(lib);
+                if (act.error() != null || act.failed) Ui.toast(DbListScreen.this, said);
                 refresh();
             }
 

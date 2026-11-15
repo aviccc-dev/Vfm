@@ -297,6 +297,20 @@ final class Manager {
         return new Act(text, Batch.plan(text, here, vars, lib, null, sel), null);
     }
 
+    /** מבנה 121: סדר ידני של מה שנבחר ברשימה in — "עדכן רשימה %נבחרים% /מקום:<איך>". how — DbMore.UP … BOTTOM. */
+    static Act onListOrder(String mode, long in, java.util.List<Long> ids, int how, java.io.File here, java.util.Map<String, String> vars, Library lib) {
+        String text = Verbs.UPDATE + " " + Verbs.LIST + " %" + Batch.V_SELECTED + "% " + Verbs.SW_PLACE + Verbs.PLACES[how] + "\n";
+        return new Act(text, Batch.plan(text, here, vars, lib, null, new Batch.Selection(mode, in, ids)), null);
+    }
+
+    /** מבנה 121: העיצוב של רשימה — "עדכן רשימה %נבחרים% /עיצוב:%תוכן%". name — שם העיצוב, כלשונו ("" — לרשת). */
+    static Act onListDesign(String mode, long list, String name, java.io.File here, java.util.Map<String, String> vars, Library lib) {
+        String text = Verbs.UPDATE + " " + Verbs.LIST + " %" + Batch.V_SELECTED + "% " + Verbs.SW_DESIGN + "%" + Batch.V_CONTENT + "%\n";
+        Batch.Selection sel = new Batch.Selection(mode, 0, "", name, null);
+        sel.ids.add(list);
+        return new Act(text, Batch.plan(text, here, vars, lib, null, sel), null);
+    }
+
     /** מבנה 120: רענון האינדקס מהמסך (הגדרות, חיפוש) — "רענן" · "רענן עמוק" · "רענן מלא", כמו בקובץ פקודות. */
     static final int INDEX_QUICK = 0, INDEX_DEEP = 1, INDEX_FULL = 2;
 

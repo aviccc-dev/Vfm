@@ -1085,6 +1085,42 @@ final class DbCmdTests {
                                 ok120 && !st120.contains("lib.refreshAsked(") && !st120.contains("lib.deepRefresh(") && !st120.contains("lib.build(")
                                         && st120.contains("Manager.onIndex("));
                     }
+                    // מבנה 121: סדר ידני ועיצוב לרשימה — "עדכן רשימה … /מקום: /עיצוב:", בקובץ ומהמסך
+                    {
+                        String o121 = "אופן \"" + m91 + "\"\n";
+                        List<String> w121 = go(o121 + "MD ידנית \"סדר 121/א\"\nMD ידנית \"סדר 121/ב\"\nMD ידנית \"סדר 121/ג\"\n"
+                                + "עדכן רשימה \"סדר 121/ג\" /מקום:לראש\nעדכן רשימה \"סדר 121/ב\" /עיצוב:\"כחול 121\"\n", here, vars, lib);
+                        final long[] id121 = new long[3];
+                        final String[] got121 = new String[4];
+                        final Db.Use<Void> read121 = new Db.Use<Void>() {
+                            @Override public Void run(SqlStore st) {
+                                id121[0] = DbPaths.find(st, m91, java.util.Arrays.asList("סדר 121"));
+                                id121[1] = DbPaths.find(st, m91, java.util.Arrays.asList("סדר 121", "א"));
+                                id121[2] = DbPaths.find(st, m91, java.util.Arrays.asList("סדר 121", "ב"));
+                                StringBuilder b = new StringBuilder();
+                                for (Store.Member x : st.members(id121[0])) b.append(x.item.name);
+                                got121[0] = b.toString();
+                                got121[1] = String.valueOf(st.prop(id121[2], Store.P_DESIGN));
+                                return null;
+                            }
+                        };
+                        Db.read(Db.app, m91, read121);
+                        String order1 = got121[0], design1 = got121[1];
+                        Manager.Act or121 = Manager.onListOrder(m91, id121[0], java.util.Arrays.asList(id121[1]), DbMore.BOTTOM, here, vars, lib);
+                        String so121 = or121.error() != null ? or121.error() : or121.say(lib);
+                        Manager.Act de121 = Manager.onListDesign(m91, id121[2], "", here, vars, lib);
+                        String sd121 = de121.error() != null ? de121.error() : de121.say(lib);
+                        Db.read(Db.app, m91, read121);
+                        String scr121 = Files.readUtf8(new File(src, "src/com/tikiyot/vfm/masachim/DbListScreen.java"));
+                        o.check("מבנה 121: בקובץ — /מקום:לראש (" + order1 + ") ו־/עיצוב: (" + design1 + "); מהמסך — לסוף (" + got121[0] + " · " + so121 + "), עיצוב \"לרשת\" ("
+                                        + got121[1] + " · " + sd121 + ") " + w121,
+                                bad(w121).isEmpty() && "גאב".equals(order1) && "כחול 121".equals(design1) && !or121.failed && "גבא".equals(got121[0])
+                                        && !de121.failed && "null".equals(got121[1]));
+                        o.check("מבנה 121: מקום לא מוכר — שגיאה בתכנון; השומר — מסך הרשימות אינו מסדר ואינו קובע עיצוב בעצמו",
+                                Batch.plan(o121 + "עדכן רשימה \"סדר 121/א\" /מקום:הצידה\n", here, vars, lib).blocked()
+                                        && !scr121.contains("DbMore.order(") && !scr121.contains("DbVerbsUi.write(") && !scr121.contains("DbListCmd.now(")
+                                        && scr121.contains("Manager.onListOrder(") && scr121.contains("Manager.onListDesign("));
+                    }
                     Manager.Act gone99 = Manager.onSmartEdit(m91, 987654321L, "x", "סוג:pdf", new java.util.HashMap<String, String>(), here, vars, lib);
                     String saidGone99 = gone99.say(lib);
                     o.check("מבנה 99: רשימה שנמחקה בזמן שהטופס היה פתוח — \"" + Words.Db.ITEM_GONE + "\" (" + saidGone99 + ")",

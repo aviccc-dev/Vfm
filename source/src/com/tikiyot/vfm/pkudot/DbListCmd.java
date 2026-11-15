@@ -1148,6 +1148,42 @@ final class DbListCmd {
      */
     private static String planPickedEdit(final Batch.Step s, final Verbs.Cmd c, Batch.Sim sim) {
         final Batch.Selection sel = sim.selected;
+        // מבנה 121: סדר ידני ("/מקום:") של הפריטים שנבחרו, בתוך הרשימה שמוצגת; ועיצוב ("/עיצוב:%תוכן%") לרשימה. בלי גיבוי — כמו במסך.
+        final boolean place = c.edit != null && c.edit.containsKey(Verbs.E_PLACE), design = c.edit != null && c.edit.containsKey(Store.P_DESIGN);
+        if (place || design) {
+            if (sel == null || sel.mode == null || sel.ids == null || sel.ids.isEmpty() || (place && design) || c.edit.size() != 1
+                    || (design && (sel.ids.size() != 1 || sel.content == null))) {
+                s.error = Words.Cmd.NOTHING_SELECTED;
+                return null;
+            }
+            final String m = sel.mode;
+            if (!Db.dbFile(Db.app, m).isFile()) { s.error = Words.DbCmd.noMode(m, sim.modes()); return null; }
+            final long in = sel.in;
+            final List<Long> ids = new ArrayList<Long>(sel.ids);
+            final int how = place ? Verbs.place(c.edit.get(Verbs.E_PLACE)) : 0;
+            final String name = design ? sel.content.trim() : null;
+            s.describe = Words.DbCmd.inDb(place ? Words.ListCmdW.ORDERED : Words.ListCmdW.DESIGN_SET);
+            s.op = new ListCmd.Op() {
+                @Override public String run(Library lib) {
+                    Res r = realRes(m, new Work() {
+                        @Override public Res run(Store t, Finder f) {
+                            if (place) {
+                                if (in == 0 || t.item(in) == null) return Res.err(Words.Db.LIST_GONE);
+                                DbMore.order(t, in, ids, how);
+                                return Res.ok(Words.ListCmdW.ORDERED);
+                            }
+                            Store.Item it = t.item(ids.get(0));
+                            if (it == null || it.type != Store.LIST) return Res.err(Words.Db.LIST_GONE);
+                            t.setProp(it.id, Store.P_DESIGN, name);              // "" — לרשת (המאפיין נמחק)
+                            return Res.ok(Words.ListCmdW.DESIGN_SET);
+                        }
+                    }, false, lib);
+                    if (r.error != null) lastFailed = true;
+                    return r.error != null ? r.error : Words.DbCmd.inDb(r.text);
+                }
+            };
+            return m;
+        }
         if (sel == null || sel.props == null || sel.mode == null || sel.ids == null || sel.ids.size() != 1 || sel.name == null) {
             s.error = Words.Cmd.NOTHING_SELECTED;
             return null;
@@ -1256,6 +1292,15 @@ final class DbListCmd {
                     List<String> at = Names.parsePath(c.arg);
                     DbPaths.Found u = DbPaths.listAt(t, mode, at);
                     if (u.error != null || u.id == 0) return Res.err(u.ambiguous ? u.error : Words.ListCmdW.noList(Names.label(at)));
+                    if (c.edit.containsKey(Verbs.E_PLACE)) {                     // מבנה 121: סדר ידני — בתוך הרשימה שהיא בה
+                        List<String> up = at.subList(0, at.size() - 1);
+                        long parent = up.isEmpty() ? DbPaths.home(t) : DbPaths.find(t, mode, new ArrayList<String>(up));
+                        List<Long> in = t.listsOf(u.id);
+                        if (!in.contains(parent)) parent = in.size() == 1 ? in.get(0) : 0;
+                        if (parent == 0) return Res.err(Words.DbCmd.needFullWay(Names.label(at)));
+                        DbMore.order(t, parent, java.util.Collections.singletonList(u.id), Verbs.place(c.edit.get(Verbs.E_PLACE)));
+                    }
+                    if (c.edit.containsKey(Store.P_DESIGN)) t.setProp(u.id, Store.P_DESIGN, c.edit.get(Store.P_DESIGN).trim());   // "" — לרשת
                     return edited(t, u.id, c.edit.get(Verbs.E_NAME), c.edit.get(Store.P_ICON), c.edit.get(Store.P_DESC), c.edit.get(Store.P_WHY));
                 }
                 // מבנה 100: המספר של מה שנוצר / עודכן חוזר (Res.made ← Step.made) — כפתור שמריץ את השורה פותח בדיוק אותו
