@@ -769,7 +769,7 @@ final class DbListCmd {
             if ((live || flat) && (a.list() || fsDirs.isEmpty() || (live && flat))) { s.error = Words.ListCmdW.FOLDER_SW_ONLY; return; }
             if (!a.list() && !fsDirs.isEmpty()) {                               // מבנה 115: תיקייה שלמה מהכונן אל רשימה
                 final List<Tree.Node> nodes = new ArrayList<Tree.Node>();
-                if (!live) for (String d : fsDirs) nodes.add(Batch.scan(sim, s, new File(d), !flat));
+                if (!live) for (String d : fsDirs) nodes.add(ListLines.scan(sim, s, new File(d), !flat));
                 final int taken = takenOf(sw);
                 work = new Work() {
                     @Override public Res run(Store t, Finder f) {
