@@ -71,6 +71,13 @@ final class Bridge {
     }
 
     /** תשובת saveCommandFile כשיש כבר קובץ — העמוד שואל: להחליף או שם אחר. */
+    /**
+     * מבנה 141: מספר הגרסה של הדלת — של רשימת הפונקציות שתוסף יכול לפנות אליהן (info.door). עולה כשפונקציה יוצאת מהדלת או
+     * משנה את מה שהיא עושה; פונקציה שנוספת — אינה מעלה אותו (תוסף ישן אינו נפגע), והתוסף שואל עליה ב־info.features.
+     * שומר בבדיקות: הרשימה כתובה שם, שם אחרי שם; שינוי בה בלי לעדכן את הבדיקה — הבנייה נעצרת.
+     */
+    static final int DOOR = 1;
+
     static final String EXISTS = "exists";
     private static final String PREFS = "lab";
 
@@ -105,6 +112,7 @@ final class Bridge {
             o.put("labNewer", h == null ? "" : h);
             // מ0.42 — לתוסף האבחון: המכשיר, ההרשאה, המקום, היומנים והאינדקס (מה שהיה בראש דוח האבחון ובהגדרות)
             o.put("versionCode", pi.versionCode);
+            o.put("door", DOOR);                                                        // מבנה 141
             o.put("features", "steady dropclean zip set");                              // מבנה 50: מה התוכנה יודעת (לתוסף — במקום לנחש לפי מספר הגרסה)
             // מבנה 59: איפה תיקיות הגיבויים של האופנים, בכתיב של קובץ פקודות — לבדיקה "אופן שבוטל וחוזר" (שם התיקייה שונה בין הבניות)
             o.put("backupsVar", "%" + Drive.INTERNAL + "%\\" + Paths.DB_DIR + "\\" + Backups.DIR);

@@ -3224,6 +3224,14 @@ public final class Tests {
                 check("מבנה 140: העברה ותיקייה באזור של התוכנה — בלי היתר מסורבות; והשומר — Lab אינו כותב, מוחק או מעביר קובץ בעצמו",
                         !mv140 && f138.isFile() && !dir140 && !new File(d138, "חדשה140").exists()
                                 && !lab140.contains("Permit.") && !lab140.contains("Physical.own") && !lab140.contains("Files.writeAtomic(") && !lab140.contains(".delete()") && !lab140.contains(".renameTo(") && !lab140.contains(".mkdirs()"));
+                // מבנה 141: מספר הגרסה של הדלת — רשימת הפונקציות קבועה; פונקציה שיוצאת מחייבת להעלות את המספר (ולעדכן כאן)
+                String br141 = read(new File(code, "lev/Bridge.java"));
+                StringBuilder door141 = new StringBuilder();
+                java.util.regex.Matcher m141 = java.util.regex.Pattern.compile("@JavascriptInterface\\s+public \\S+ (\\w+)\\(").matcher(br141);
+                while (m141.find()) door141.append(m141.group(1)).append(' ');
+                check("מבנה 141: הדלת, גרסה 1 — 35 הפונקציות, לפי הקבוצות (מידע · קריאה · כתיבה · הרצה · חלונות); התוכנה מוסרת את המספר (info.door) [" + door141.toString().trim() + "]",
+                        Bridge.DOOR == 1 && br141.contains("o.put(\"door\", DOOR);")
+                                && door141.toString().trim().equals("info theme places modes dataDir startFile dbStats pathInfo commandMatrix smartLists commandFiles myCommands templates readText listDir toVar expand saveCommandFile writeCommandFile saveTemplate saveText cleanData setReaders load save runCommands runFile pickFolder pickFile pickList smartForm send toast log close"));
                 wipe(d138);
             }
             String pui80 = read(new File(code, "masachim/rechivim/PhysicalUi.java"));
