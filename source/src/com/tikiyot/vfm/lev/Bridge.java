@@ -419,8 +419,10 @@ final class Bridge {
             // והקובץ הקודם עובר לסל (הוראות, סעיף 4). בתוך תיקיית התוכנה (הקיצורים, פקודות המערכת — האזור שהתוכנה מנהלת,
             // ו"כתוב" אינה כותבת בו) — כמו שהיה: רק קובץ פקודות, נכתב ישר.
             String root = Paths.clean(Paths.data().getAbsolutePath()), at = Paths.clean(f.getAbsolutePath());
-            if (at.startsWith(root + "/")) Files.writeAtomic(f, text == null ? "" : text);
-            else {
+            if (at.startsWith(root + "/")) {                                    // מבנה 139: גם זה — דרך המנהל
+                String no = Manager.ownSave(Paths.data(), f, text);
+                if (no != null) return no;
+            } else {
                 String no = Manager.saveFile(f, text, was, Library.get(screen));
                 if (no != null) return no;
             }
@@ -471,8 +473,11 @@ final class Bridge {
                 }
                 return f.getAbsolutePath();
             }
-            if (!dir.isDirectory()) dir.mkdirs();                               // התיקייה של התוסף עצמו — שלו
-            Files.writeAtomic(f, text == null ? "" : text);
+            String no = Manager.ownSave(dir, f, text);                          // מבנה 139: התיקייה של התוסף עצמו — דרך המנהל
+            if (no != null) {
+                Log.i("Lab.saveText: " + no);
+                return null;
+            }
             if (was) lib.fileRemoved(f.getAbsolutePath());
             lib.fileAdded(f);
             return f.getAbsolutePath();
@@ -491,16 +496,10 @@ final class Bridge {
         String n = Lab.safe(sub == null ? "" : sub);
         if (n.isEmpty() || !n.equals(sub) || n.contains("/") || n.startsWith(".")) return -1;
         File d = new File(Lab.dataDir(exp), n);
-        File[] k = d.listFiles();
-        int c = 0;
         Library lib = Library.get(screen);
-        if (k != null)
-            for (File f : k)
-                if (f.isFile() && f.delete()) {
-                    lib.fileRemoved(f.getAbsolutePath());
-                    c++;
-                }
-        return c;
+        java.util.List<File> gone = Manager.ownClean(Lab.dataDir(exp), d);     // מבנה 139: דרך המנהל
+        for (File f : gone) lib.fileRemoved(f.getAbsolutePath());
+        return gone.size();
     }
 
     /** מ0.45 (ב9): כמה קוראים לכל כונן בבנייה — מה שהיה בהגדרות; התוסף מודד וקובע. 1 עד 16. */
@@ -533,11 +532,11 @@ final class Bridge {
             public void run() {
                 try {
                     File dir = new File(screen.getCacheDir(), "lab");
-                    dir.mkdirs();
                     File f = new File(dir, Words.Lab.RUN_FILE + "." + Batch.EXT);
                     // מ0.40 — המשתמש: "למה ההעברה בוצעה בפועל? הרי זה אמור לעבוד רק בכאילו." מהמעבדה — תמיד הדמיה:
                     // שורת "הדמיה" בראש, ומסך ההרצה מראה מה היה קורה, בלי כפתור הרצה. שום דבר בכונן או במסד לא משתנה.
-                    Files.writeAtomic(f, Batch.AS_IF2 + "\n" + (text == null ? "" : text));
+                    String no = Manager.ownSave(dir, f, Batch.AS_IF2 + "\n" + (text == null ? "" : text));   // מבנה 139
+                    if (no != null) { host.toast(no); return; }
                     // מ0.39: תמיד במסך ההרצה — תצוגה מקדימה, אישור, ודוח (בהרצה הרגילה, בלי "בדיקה", זה רץ מיד ונראית רק
                     // הודעה קצרה; המשתמש: "איפה רואים את התוצאה של הפעולה?")
                     host.run(f, null);
@@ -561,13 +560,13 @@ final class Bridge {
             public void run() {
                 try {
                     File dir = new File(screen.getCacheDir(), "lab");
-                    dir.mkdirs();
                     String w = where == null ? "" : where.trim();
                     String name = Lab.safe(new File(w).getName());
                     if (name.isEmpty()) name = Words.Lab.RUN_FILE + "." + Batch.EXT;
                     if (!Batch.isBatch(name)) name = name + "." + Batch.EXT;
                     File f = new File(dir, name);
-                    Files.writeAtomic(f, (real ? "" : Batch.AS_IF2 + "\n") + (text == null ? "" : text));
+                    String no = Manager.ownSave(dir, f, (real ? "" : Batch.AS_IF2 + "\n") + (text == null ? "" : text));   // מבנה 139
+                    if (no != null) { host.toast(no); return; }
                     File here = w.startsWith("/") ? new File(w).getParentFile() : Shortcuts.dir();
                     host.run(f, here);
                 } catch (Throwable t) {

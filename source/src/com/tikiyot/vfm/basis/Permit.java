@@ -23,11 +23,13 @@ public final class Permit {
             WRITE = Words.PermitW.WRITE, ZIP = Words.PermitW.ZIP,
             /** מבנה 127: שינוי הגדרה בפקודה "הגדר" (Conf.apply) — מסורב בלי היתר מהיום הראשון. */
             SETTING = Words.PermitW.SETTING,
+            /** מבנה 139: קובץ באזור שהתוכנה מנהלת (התיקייה של תוסף, עותק של קובץ שרץ, קובץ פקודות בתיקיית התוכנה) — מסורב בלי היתר מהיום הראשון. */
+            OWN = Words.PermitW.OWN,
             /** מבנה 84: כתיבה למסד (רשימות, אופנים). מבנה 126: המעבר הסתיים — בלי היתר היא מסורבת, כמו פעולות הכונן. */
             DB = Words.PermitW.DB;
 
     /** הפעולות שכבר עוברות כולן דרך שכבת הניהול: בלי היתר — מסורבות. */
-    private static final java.util.Set<String> STRICT = new java.util.HashSet<String>(java.util.Arrays.asList(DELETE, TRANSFER, RENAME, MAKE_FOLDER, WRITE, RESTORE, FOREVER, ZIP, DB, SETTING));   // מבנה 77: גם העתקה והעברה · 78: שינוי שם · 79: תיקייה חדשה · 80: כתיבת קובץ · 81: הסל — כל פעולות הכונן
+    private static final java.util.Set<String> STRICT = new java.util.HashSet<String>(java.util.Arrays.asList(DELETE, TRANSFER, RENAME, MAKE_FOLDER, WRITE, RESTORE, FOREVER, ZIP, DB, SETTING, OWN));   // מבנה 77: גם העתקה והעברה · 78: שינוי שם · 79: תיקייה חדשה · 80: כתיבת קובץ · 81: הסל — כל פעולות הכונן
 
     private static final ThreadLocal<int[]> DEPTH = new ThreadLocal<int[]>() {
         @Override protected int[] initialValue() { return new int[1]; }

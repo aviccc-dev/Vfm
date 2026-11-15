@@ -278,6 +278,44 @@ final class Manager {
                 java.util.Collections.<String>emptyList(), f.getParentFile(), f.getName(), content)), f.getParentFile());
     }
 
+    /**
+     * מבנה 139 ("הכל יוכל, אבל דרך שכבת הניהול"): קובץ באזור שהתוכנה מנהלת — zone: התיקייה של התוסף, התיקייה הפרטית של קובץ
+     * שרץ, או תיקיית התוכנה (קובץ פקודות בקיצורים). המנהל בודק שהקובץ בתוך האזור שנמסר, פותח היתר, והחומר כותב.
+     * null — נכתב; אחרת — למה לא.
+     */
+    static String ownSave(java.io.File zone, java.io.File f, String text) {
+        if (!inZone(zone, f)) {
+            Log.i(Words.PermitW.NOT_IN_ZONE + ": " + (f == null ? "" : f.getAbsolutePath()));
+            return Words.PermitW.NOT_IN_ZONE;
+        }
+        Permit.open();
+        try {
+            return Physical.ownWrite(f, text);
+        } finally {
+            Permit.close();
+        }
+    }
+
+    /** מבנה 139: מחיקת הקבצים (רק קבצים) שבתיקייה dir שבתוך האזור zone. מחזיר את מה שנמחק; מחוץ לאזור — דבר. */
+    static java.util.List<java.io.File> ownClean(java.io.File zone, java.io.File dir) {
+        java.util.List<java.io.File> gone = new java.util.ArrayList<java.io.File>();
+        java.io.File[] k = inZone(zone, dir) ? dir.listFiles() : null;
+        if (k == null) return gone;
+        Permit.open();
+        try {
+            for (java.io.File f : k) if (Physical.ownDelete(f)) gone.add(f);
+        } finally {
+            Permit.close();
+        }
+        return gone;
+    }
+
+    private static boolean inZone(java.io.File zone, java.io.File f) {
+        if (zone == null || f == null) return false;
+        String z = Paths.clean(zone.getAbsolutePath()), p = Paths.clean(f.getAbsolutePath());
+        return p.startsWith(z + "/");
+    }
+
     /** מבנה 138: הגודל הגדול ביותר של קובץ שתוסף קורא כטקסט. */
     static final long PLUGIN_READ_MAX = 2L * 1024 * 1024;
 

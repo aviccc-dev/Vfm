@@ -3168,7 +3168,7 @@ public final class Tests {
                 for (File f : javaFiles(code)) if (read(f).contains("addJavascriptInterface(")) doors132++;
                 check("מבנה 132: דלת אחת — תוסף מתחבר לתוכנה רק במקום אחד, ורק אל הגשר; והגשר שומר קובץ של המשתמש רק דרך המנהל",
                         doors132 == 1 && ls132.contains("addJavascriptInterface(new Bridge(") && br132.contains("Manager.saveFile(f, text, was, Library.get(screen))")
-                                && br132.contains("Manager.saveFile(f, text, was, lib)") && br132.contains("if (at.startsWith(root + \"/\")) Files.writeAtomic(")
+                                && br132.contains("Manager.saveFile(f, text, was, lib)") && br132.contains("Manager.ownSave(Paths.data(), f, text)")
                                 && br132.contains("if (!Batch.isBatch(f.getName())) return Words.Lab.ONLY_COMMANDS;"));
             }
             {   // מבנה 138 (המשתמש: "הכל יוכל, אבל דרך שכבת הניהול"): תוסף קורא קובץ ושואל מה בתיקייה — דרך המנהל
@@ -3184,7 +3184,28 @@ public final class Tests {
                 String br138 = read(new File(code, "lev/Bridge.java"));
                 check("מבנה 138: השומר — הגשר אינו קורא קובץ בעצמו, ואינו סורק תיקייה מלבד התיקייה של התוסף (הניקוי)",
                         !br138.contains("Files.readUtf8(") && br138.contains("Manager.pluginRead(resolve(path))") && br138.contains("Manager.pluginList(resolve(path))")
-                                && br138.split("listFiles\\(", -1).length - 1 == 1);
+                                && !br138.contains("listFiles("));
+                // מבנה 139: האזור שהתוכנה מנהלת — כתיבה ומחיקה דרך המנהל, בהיתר; מחוץ לאזור — לא
+                File z139 = new File(d138, "אזור"), f139 = new File(z139, "תת/קובץ.txt"), out139 = new File(d138, "בחוץ.txt");
+                String ok139 = Manager.ownSave(z139, f139, "תוכן"), no139 = Manager.ownSave(z139, out139, "x");
+                String by139;
+                boolean del139;
+                Permit.close();                                                 // הבדיקות כאן רצות בתוך היתר פתוח; "בלי המנהל" — בלעדיו
+                try {
+                    by139 = Physical.ownWrite(new File(z139, "עוקף.txt"), "x");
+                    del139 = Physical.ownDelete(f139);
+                } finally {
+                    Permit.open();
+                }
+                check("מבנה 139: קובץ באזור של התוכנה — נכתב דרך המנהל (" + ok139 + "); מחוץ לאזור — מסורב (" + no139 + "); בלי המנהל — מסורב, ולא נכתב",
+                        ok139 == null && "תוכן".equals(read(f139)) && Words.PermitW.NOT_IN_ZONE.equals(no139) && !out139.exists()
+                                && by139 != null && by139.contains(Words.PermitW.BYPASS) && !new File(z139, "עוקף.txt").exists() && !del139 && f139.isFile());
+                new File(z139, "תת/תיקייה").mkdirs();
+                java.util.List<File> gone139 = Manager.ownClean(z139, new File(z139, "תת"));
+                check("מבנה 139: ניקוי — רק הקבצים שבתיקייה, דרך המנהל; תיקייה מחוץ לאזור — דבר", gone139.size() == 1 && !f139.exists()
+                        && new File(z139, "תת/תיקייה").isDirectory() && Manager.ownClean(z139, d138).isEmpty() && f138.isFile());
+                check("מבנה 139: השומר — הגשר אינו כותב ואינו מוחק קובץ בעצמו; ו\"כתיבה באזור של התוכנה\" מסורבת בלי היתר",
+                        !br138.contains("Files.writeAtomic(") && !br138.contains(".delete()") && !br138.contains(".mkdirs()") && Permit.strict(Permit.OWN));
                 wipe(d138);
             }
             String pui80 = read(new File(code, "masachim/rechivim/PhysicalUi.java"));
@@ -3419,7 +3440,6 @@ public final class Tests {
             // מבנה 128: השלד נסגר — מי שעוד כותב או מוחק קובץ ישירות, בלב ובמסכים, הוא רשימה סגורה שרק מתקצרת
             {
                 String[][] known128 = {
-                        {"lev/Bridge.java", "8", "הדלת לתוספים: התיקייה של התוסף עצמו (שמירה, ניקוי), העותק הפרטי של קובץ שרץ, וקובץ פקודות בתוך תיקיית התוכנה; קובץ בתיקיות של המשתמש — דרך המנהל (מבנה 132)"},
                         {"lev/Lab.java", "10", "תיקיית התוספים: מעבר מהשם הישן, תוסף שבא עם התוכנה"},
                         {"masachim/IniEditScreen.java", "1", "עורך קובצי ההגדרות"},
                         {"masachim/LabScreen.java", "2", "עותק פרטי של עמוד התוסף שרץ"},

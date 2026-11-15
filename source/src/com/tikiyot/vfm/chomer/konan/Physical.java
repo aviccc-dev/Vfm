@@ -1170,6 +1170,27 @@ public final class Physical {
         return newFile(lib, f, content, false);
     }
 
+    /**
+     * מבנה 139: כתיבה של קובץ באזור שהתוכנה מנהלת בעצמה (התיקייה של תוסף, עותק פרטי של קובץ שרץ, קובץ פקודות בתוך תיקיית
+     * התוכנה) — לא קובץ של המשתמש, ולכן בלי סל ובלי שאלה; אבל רק בהיתר של שכבת הניהול. null — נכתב; אחרת — למה לא.
+     */
+    public static String ownWrite(File f, String text) {
+        String no = Permit.check(Permit.OWN);
+        if (no != null) return no;
+        try {
+            Files.writeAtomic(f, text == null ? "" : text);
+            return null;
+        } catch (Throwable t) {
+            Log.e("Physical.ownWrite", t);
+            return Words.Db.failed(String.valueOf(t.getMessage()));
+        }
+    }
+
+    /** מבנה 139: מחיקה של קובץ באזור שהתוכנה מנהלת (תוצאות ישנות בתיקייה של תוסף) — רק בהיתר. true — נמחק. */
+    public static boolean ownDelete(File f) {
+        return Permit.check(Permit.OWN) == null && f.isFile() && f.delete();
+    }
+
     /** מבנה 110: replace — קובץ קיים עובר קודם לסל (oldToTrash), ואז נכתב החדש; בלי — קובץ קיים הוא סירוב. */
     public static String newFile(Library lib, File f, String content, boolean replace) {
         String no = Permit.check(Permit.WRITE);
