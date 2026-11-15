@@ -165,6 +165,56 @@ final class DbCmdTests {
                 o.check("מבנה 85: מסך הרשימות אינו מסיר עוד בעצמו; רק דרך המנהל", !scr85.contains("Lists.removeFrom(") && scr85.contains("Manager.onListRemove("));
                 go("המשך ()\nבטל אופן \"" + m85 + "\"\n", here, vars, lib);
             }
+            // מבנה 126: "ניקוי" שבסוף ההרצה — דרך המנהל, כפקודה; וכתיבה למסד בלי היתר — מסורבת, על מסד אמיתי
+            {
+                final String m126 = "בדיקת-126";
+                List<String> r126 = go("המשך ()\nצור אופן \"" + m126 + "\"\nאופן \"" + m126 + "\"\nMD ידנית \"נוצרה 126\\פנימית\"\nMD ידנית \"נשארת 126\"\n", here, vars, lib);
+                List<String> p126 = java.util.Arrays.asList("נוצרה 126");
+                Manager.Act act126 = Manager.onRunClean(m126, p126, here, vars, lib);
+                o.check("מבנה 126: ההכנה (" + bad(r126) + "); הפקודה שהמסך מריץ — \"אופן\" ו\"בטל ידנית\", בלי סירוב (" + act126.error() + ")", bad(r126).isEmpty()
+                        && act126.error() == null && act126.text.trim().equals("אופן \"" + m126 + "\"\nבטל ידנית \"נוצרה 126\""));
+                o.check("מבנה 126: קובץ שלא קבע אופן — בלי שורת \"אופן\"", Manager.onRunClean(null, p126, here, vars, lib).text.trim().equals("בטל ידנית \"נוצרה 126\""));
+                o.check("מבנה 126: רשימה שכבר איננה — אין מה לעשות (בלי שינוי); אופן שבוטל בינתיים — סירוב מהתכנון, ולא נוצר מסד ריק",
+                        !Manager.onRunClean(m126, java.util.Arrays.asList("אין כזאת 126"), here, vars, lib).writes() && act126.writes()
+                                && Manager.onRunClean("אין-אופן-כזה-126", p126, here, vars, lib).error() != null && !Db.dbFile(Db.app, "אין-אופן-כזה-126").exists());
+                String refused126 = null;
+                Permit.close();                                                 // כמו בתוכנה: אין היתר, אלא אם המנהל פותח
+                try {
+                    act126.say(lib);
+                    o.check("מבנה 126: ההיתר נסגר אחרי ההרצה", !Permit.held());
+                    try {
+                        Db.write(Db.app, m126, null, new Db.Use<Void>() {
+                            @Override public Void run(SqlStore s) {
+                                s.createList("עוקפת 126", 0);
+                                return null;
+                            }
+                        });
+                    } catch (java.io.IOException e) {
+                        refused126 = e.getMessage();
+                    } catch (Exception e) {
+                        refused126 = null;
+                    }
+                } finally {
+                    Permit.open();
+                }
+                final long[] after126 = new long[3];
+                final int[] backups126 = {0};
+                Db.read(Db.app, m126, new Db.Use<Void>() {
+                    @Override public Void run(SqlStore s) {
+                        after126[0] = DbPaths.find(s, m126, java.util.Arrays.asList("נוצרה 126"));
+                        after126[1] = DbPaths.find(s, m126, java.util.Arrays.asList("נשארת 126"));
+                        after126[2] = DbPaths.find(s, m126, java.util.Arrays.asList("עוקפת 126"));
+                        return null;
+                    }
+                });
+                File[] bk126 = Db.backupsDir(m126).listFiles();
+                if (bk126 != null) for (File f : bk126) if (f.getName().contains(Backups.OP_DELETE)) backups126[0]++;
+                o.check("מבנה 126: דרך המנהל — הרשימה שההרצה יצרה יצאה, האחרת נשארה; בלי כישלון; ולפני ההסרה — גיבוי (" + backups126[0] + ")",
+                        !act126.failed && after126[0] == 0 && after126[1] != 0 && backups126[0] >= 1);
+                o.check("מבנה 126: כתיבה למסד בלי היתר — מסורבת בנוסח של המשתמש, ודבר לא נכתב (" + refused126 + ")",
+                        refused126 != null && refused126.contains(Words.PermitW.BYPASS) && refused126.contains(Words.PermitW.REFUSED) && after126[2] == 0);
+                go("המשך ()\nבטל אופן \"" + m126 + "\"\n", here, vars, lib);
+            }
             // מבנה 86: שינוי שם של רשימה שנמצאת בשתי רשימות — השם נבדק בשתיהן (כמו בעריכה שבמסך)
             {
                 String m86 = "בדיקת-86";

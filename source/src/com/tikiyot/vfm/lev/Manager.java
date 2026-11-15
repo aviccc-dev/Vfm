@@ -354,6 +354,17 @@ final class Manager {
     }
 
     /**
+     * מבנה 126: "ניקוי" שבסוף הרצה של קובץ פקודות (מסך ההרצה) — רשימה שההרצה יצרה יוצאת מהמסד: "אופן "<שם>"" (אם הקובץ קבע
+     * אופן) ואחריה "בטל ידנית "<הדרך>"", כמו בקובץ פקודות. פעולה אחת לכל רשימה: אופן שבוטל בינתיים — סירוב מהתכנון;
+     * רשימה שכבר איננה — אין מה לעשות (writes); והשאר ממשיכות.
+     */
+    static Act onRunClean(String mode, java.util.List<String> path, java.io.File here, java.util.Map<String, String> vars, Library lib) {
+        String text = (mode == null ? "" : Commands.word(Commands.get(Batch.MODE)) + " \"" + mode + "\"\n")
+                + Commands.HE_UNLIST + " " + ListCmd.MANUAL + " \"" + ListCmd.pathText(path) + "\"\n";
+        return new Act(text, Batch.plan(text, here, vars, lib), null);
+    }
+
+    /**
      * מבנה 116: הדבקה מהלוח של הרשימות — "העתק / העבר ידנית %נבחרים% ידנית %נבחרים%". ids — הפריטים (מספרים במסד); from —
      * הרשימה שסומנו בה (להעברה: משם הם יוצאים); dest — הרשימה שאליה מדביקים.
      */

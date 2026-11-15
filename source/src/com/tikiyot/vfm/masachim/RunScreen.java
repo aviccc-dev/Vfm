@@ -420,14 +420,13 @@ public class RunScreen extends Activity {
             @Override
             public void run() {
                 List<String> gone = new ArrayList<String>();
-                if (DbVerbs.active()) {                                        // מ0.32 (ממצא 38): כל רשימה — באופן שבו נוצרה
-                    java.util.Map<String, List<List<String>>> by = new java.util.LinkedHashMap<String, List<List<String>>>();
+                if (DbVerbs.active()) {                                        // מבנה 126: דרך המנהל, כפקודה — רשימה אחרי רשימה, כל אחת באופן שבו נוצרה (מ0.32, ממצא 38)
                     for (List<String> p : made) {
-                        String m = createdIn.get(p);
-                        if (!by.containsKey(m)) by.put(m, new ArrayList<List<String>>());
-                        by.get(m).add(p);
+                        Manager.Act act = Manager.onRunClean(createdIn.get(p), p, here, vars, lib);
+                        if (act.error() != null || !act.writes()) continue;      // האופן בוטל בינתיים, או שהרשימה כבר איננה — אין מה לנקות
+                        act.say(lib);
+                        if (!act.failed) gone.add(ListCmd.pathText(p));
                     }
-                    for (java.util.Map.Entry<String, List<List<String>>> e : by.entrySet()) gone.addAll(DbListCmd.removeLists(e.getValue(), e.getKey()));
                 }
                 Log.i(Words.Run.CLEANED + ": " + gone);
                 bodies[3].addView(warn(Words.Run.CLEANED + ": " + join(gone)));

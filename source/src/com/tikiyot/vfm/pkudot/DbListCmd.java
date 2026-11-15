@@ -1977,29 +1977,6 @@ final class DbListCmd {
         return r.error != null ? r.error : Words.DbCmd.inDb(r.text);
     }
 
-    /** "ניקוי" שבסוף ההרצה (RunScreen): הרשימות שההרצה יצרה — יוצאות מהמסד (גיבוי לפני). מחזיר את מה שיצא. */
-    static List<String> removeLists(final List<List<String>> paths, String fileMode) {
-        final String mode = fileMode != null ? fileMode : mode();   // מ0.17: האופן של הקובץ ("אופן"), אם נכתב
-        final List<String> gone = new ArrayList<String>();
-        if (!Db.dbModes(Db.app).contains(mode)) return gone;        // מבנה 48: האופן בוטל בינתיים — אין מה לנקות, ולא יוצרים לו מסד ריק
-        String r = real(mode, new Work() {
-            @Override
-            public Res run(Store t, Finder f) {
-                for (List<String> p : paths) {
-                    ListCmd.Side x = new ListCmd.Side();
-                    x.kind = ListCmd.LIST;
-                    x.raw = ListCmd.pathText(p);
-                    x.path = new ArrayList<String>(p);
-                    Res one = remove(t, mode, x);
-                    if (one.error == null && !one.noop) gone.add(x.raw);
-                }
-                return Res.ok("");
-            }
-        }, true, null);
-        if (r != null && !r.isEmpty()) Log.i("DbListCmd.removeLists: " + r);
-        return gone;
-    }
-
     /** ההרצה: המסד נפתח לרגע; לפני פעולה שמוציאה — גיבוי "לפני פעולה" (נכשל — לא מבצעים). */
     /** מ0.37: "גבה" — גיבוי ידני של המסד של האופן (עותק וגם טקסט); גיבוי ידני לא נמחק לבד. */
     static String backupNow(final String mode) {

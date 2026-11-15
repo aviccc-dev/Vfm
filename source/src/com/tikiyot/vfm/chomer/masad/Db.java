@@ -105,7 +105,7 @@ final class Db {
      * beforeOp — לא null: קודם נשמר גיבוי "לפני <הפעולה>" (Backups.OP_*); נכשל הגיבוי — הפעולה לא רצה, ונזרק BeforeFailed.
      */
     static <T> T write(android.content.Context c, String mode, String beforeOp, Use<T> use) throws Exception {
-        // מבנה 84: כל כתיבה למסד שואלת את ההיתר של שכבת הניהול. עוד במעבר: בלי היתר — נרשם ביומן (פעם אחת לכל מקום) והכתיבה נעשית.
+        // מבנה 84: כל כתיבה למסד שואלת את ההיתר של שכבת הניהול. מבנה 126: בלי היתר — מסורבת (המעבר הסתיים); ביומן נרשם מי ביקש.
         String no = Permit.check(Permit.DB, PERMIT_WRAPPERS);
         if (no != null) throw new java.io.IOException(no);
         SqlStore s = open(c, mode);

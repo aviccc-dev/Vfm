@@ -3230,17 +3230,34 @@ public final class Tests {
                     .equals(ix83.dirPath(ix83.dirId(new File(d83, "בסיס/חדשה 29").getAbsolutePath()))));
             wipe(d83);
         }
-        // מבנה 84: גם הכתיבה למסד שואלת את ההיתר — עוד במעבר (נרשמת, לא מסורבת)
+        // מבנה 84: גם הכתיבה למסד שואלת את ההיתר. מבנה 126: המעבר הסתיים — בלי היתר היא מסורבת
         {
             String db84 = read(new File(code, "chomer/masad/Db.java"));
             check("מבנה 84: שער הכתיבה למסד (Db.write) ומסד שמוחזק פתוח (openHeld) שואלים את ההיתר",
                     db84.contains("Permit.check(Permit.DB, PERMIT_WRAPPERS)") && db84.contains("Permit.check(Permit.DB);"));
             Permit.close();
             try {
-                check("מבנה 84: כתיבה למסד בלי היתר — עוד במעבר: אינה מסורבת", Permit.check(Permit.DB) == null && !Permit.strict(Permit.DB));
+                String no84 = Permit.check(Permit.DB);
+                check("מבנה 126: כתיבה למסד בלי היתר — מסורבת, בנוסח של המשתמש (המעבר של המסד הסתיים)", no84 != null && Permit.strict(Permit.DB)
+                        && no84.contains(Words.PermitW.BYPASS) && no84.contains(Words.PermitW.REFUSED) && no84.contains(Permit.DB));
             } finally {
                 Permit.open();
             }
+            // מבנה 126: מי שפונה לשער הכתיבה של המסד מהלב ומהמסכים — רק המקומות הידועים (פעולות של המערכת, רשומות אצל המנהל); הרשימה רק מתקצרת
+            StringBuilder who126 = new StringBuilder(), wrap126 = new StringBuilder();
+            for (File f : javaFiles(code)) {
+                String t = read(f), n = f.getName(), path126 = f.getPath().replace('\\', '/');
+                boolean upper = path126.contains("/lev/") || path126.contains("/masachim/");
+                if (upper && (t.contains("Db.write(") || t.contains("Db.openHeld("))) who126.append(n).append(' ');
+                if (!n.equals("DbVerbsUi.java") && t.contains("DbVerbsUi.write(")) wrap126.append(n).append(' ');
+            }
+            check("מבנה 126: בלב ובמסכים, לשער הכתיבה של המסד פונים רק המקומות הידועים (" + who126.toString().trim() + ")",
+                    who126.toString().trim().split(" ").length == 5 && who126.toString().contains("Menus.java") && who126.toString().contains("DbListScreen.java")
+                            && who126.toString().contains("DbVerbsUi.java") && who126.toString().contains("DbCmdMenu.java") && who126.toString().contains("DbScreen.java"));
+            check("מבנה 126: ...ולעטיפה של המסכים (DbVerbsUi.write) — רק השורה העליונה (" + wrap126.toString().trim() + ")", wrap126.toString().trim().equals("TopRow.java"));
+            String run126 = read(new File(code, "masachim/RunScreen.java"));
+            check("מבנה 126: מסך ההרצה אינו מנקה רשימות בעצמו; רק דרך המנהל", run126.contains("Manager.onRunClean(") && !run126.contains("DbListCmd.")
+                    && !read(new File(code, "pkudot/DbListCmd.java")).contains("removeLists("));
             check("מבנה 84: ...ופעולות הכונן — מסורבות כולן (לא חזרו אחורה)", Permit.strict(Permit.DELETE) && Permit.strict(Permit.WRITE));
         }
         // מבנה 55: המכשיר עצר את התוכנה בזמן הרצה — הדוח אומר זאת ואיזו הגדרה פותרת
