@@ -178,6 +178,12 @@ final class Commands {
                 Batch.TAKEN_STOP, Batch.TAKEN_SKIP, Batch.TAKEN_RENAME);
     }
 
+    /** מבנה 110 (ה6): "כתוב" על קובץ קיים: לעצור (בלי מתג) · להחליף (הקודם לסל) · לדלג · לשנות-שם. */
+    private static Param takenWrite() {
+        return sw(Batch.SW_TAKEN, null, Type.CHOICE, Words.Def.P_TAKEN, Words.Def.H_TAKEN_WRITE,
+                Batch.TAKEN_STOP, Batch.TAKEN_REPLACE, Batch.TAKEN_SKIP, Batch.TAKEN_RENAME);
+    }
+
     private static Param taken() {
         return sw(Batch.SW_TAKEN, new String[]{"/Y", "/-Y"}, Type.CHOICE, Words.Def.P_TAKEN, Words.Def.H_TAKEN,
                 Batch.TAKEN_ASK, Batch.TAKEN_SKIP, Batch.TAKEN_REPLACE, Batch.TAKEN_STOP, Batch.TAKEN_RENAME);
@@ -350,7 +356,7 @@ final class Commands {
             new Def(Batch.WRITE, Words.DbCmd.N_WRITE, new String[]{Words.DbCmd.N_WRITE}, Family.FILE, Words.DbCmd.W_WRITE, list(
                     pos(Type.PATH, Words.Def.P_FILE, Words.DbCmd.H_WRITE_FILE),
                     pos(Type.TEXT, Words.DbCmd.P_TEXT_IN, Words.DbCmd.H_WRITE_TEXT),
-                    sw(Batch.SW_APPEND, null, Type.FLAG, Words.DbCmd.P_APPEND, Words.DbCmd.H_APPEND)), null),
+                    sw(Batch.SW_APPEND, null, Type.FLAG, Words.DbCmd.P_APPEND, Words.DbCmd.H_APPEND), takenWrite()), null),
             new Def(Batch.WAIT, Words.DbCmd.N_WAIT, new String[]{Words.DbCmd.N_WAIT}, Family.FILE, Words.DbCmd.W_WAIT,
                     list(pos(Type.TEXT, Words.DbCmd.P_SECONDS, Words.DbCmd.H_SECONDS)), null),
             new Def(Batch.BACKUP, Words.DbCmd.N_BACKUP, new String[]{Words.DbCmd.N_BACKUP}, Family.FILE, Words.DbCmd.W_BACKUP, new Param[0], null),

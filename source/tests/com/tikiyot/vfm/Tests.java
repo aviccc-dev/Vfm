@@ -2235,8 +2235,8 @@ public final class Tests {
         String f = "\"%כאן%\\סל\\א.txt\"";
         String text = "צור תיקייה \"%כאן%\\סל\"\nכתוב " + f + " \"ראשון\"\nמחק " + f + "\nודא " + f + " חסר\nודא " + f + " /בסל:1\n"
                 + "שחזר מהסל " + f + "\nודא " + f + " מכיל \"ראשון\"\nודא " + f + " /בסל:0\n"
-                // מבנה 46: "כתוב שני" נכתב על "ראשון" ששוחזר — והוא עובר לסל; לכן 3 בסל (עד כאן 2), ואחרי השחזור 2 (עד כאן 1)
-                + "כתוב " + f + " \"שני\"\nמחק " + f + "\nכתוב " + f + " \"שלישי\"\nמחק " + f + "\nודא " + f + " /בסל:3\n"
+                // מבנה 46: "כתוב שני" נכתב על "ראשון" ששוחזר (מבנה 110: עם /תפוס:להחליף) — והוא עובר לסל; לכן 3 בסל (עד כאן 2), ואחרי השחזור 2 (עד כאן 1)
+                + "כתוב " + f + " \"שני\" /תפוס:להחליף\nמחק " + f + "\nכתוב " + f + " \"שלישי\"\nמחק " + f + "\nודא " + f + " /בסל:3\n"
                 + "שחזר מהסל " + f + "\nודא " + f + " מכיל \"שלישי\"\nודא " + f + " /בסל:2\n"
                 + "מחק " + f + "\nרוקן סל " + f + "\nודא " + f + " /בסל:0\nודא " + f + " חסר\n";
         Batch.Plan p = Batch.plan(text, r, v, lib);
@@ -3014,18 +3014,28 @@ public final class Tests {
             Manager.Act act80 = Manager.onNewFile(new80, body80, Paths.data(), v80, lib80);
             check("מבנה 80: הפקודה שהמסך מריץ — \"כתוב \"%יעד%\\%שם-חדש%\" \"%תוכן%\"\", בלי סירוב (" + act80.error() + ")", act80.error() == null
                     && act80.text.trim().equals("כתוב \"%יעד%\\%שם-חדש%\" \"%תוכן%\"") && new80.equals(act80.plan.steps.get(0).dest));
-            check("מבנה 80: קובץ שכבר קיים — סירוב מהתכנון, בנוסח של המסך (לא מחליפים)", (Words.Disk.ALREADY_NAME + "קיים.vbat\"").equals(
+            check("מבנה 110: קובץ שכבר קיים — מהמסך אותה שגיאה כמו בשורה (\"שם קיים\", והמסך שואל)", Words.Cmd.fileTaken("קיים.vbat").equals(
                     Manager.onNewFile(new File(d80, "קיים.vbat"), "x", Paths.data(), v80, lib80).error()));
+            Manager.Act rep110 = Manager.onNewFile(new File(d80, "קיים.vbat"), "חדש-110", Batch.TAKEN_REPLACE, Paths.data(), v80, lib80);
+            String said110 = rep110.error() == null ? String.valueOf(rep110.run(lib80, null, null, false).note) : rep110.error();
+            lib80.flush(5000);
+            List<Trash.Item> tr110 = Batch.trashed(lib80, new File(d80, "קיים.vbat").getAbsolutePath(), false);
+            check("מבנה 110: מהמסך \"להחליף\" — אותה פקודה עם /תפוס:להחליף: נכתב החדש, והקודם בסל עם התוכן שלו (" + said110 + ")",
+                    rep110.text.contains("/תפוס:להחליף") && "חדש-110".equals(read(new File(d80, "קיים.vbat"))) && !tr110.isEmpty()
+                    && "ישן".equals(read(new File(tr110.get(tr110.size() - 1).path()))));
+            Batch.run(Batch.plan("רוקן סל \"" + new File(d80, "קיים.vbat").getAbsolutePath() + "\"\n", d80, v80, lib80), lib80, null, null);   // הסל — נקי לבדיקות שאחרי
+            lib80.flush(5000);
             check("מבנה 80: בתוך תיקיית התוכנה — סירוב מהתכנון", Words.Disk.NO_FILE_IN_APP.equals(
                     Manager.onNewFile(new File(Paths.data(), "חדש-80.vbat"), "x", Paths.data(), v80, lib80).error()));
             check("מבנה 80: שם לא תקין — אותו סירוב של הכונן", Physical.badName("א:ב?.vbat") != null
                     && Physical.badName("א:ב?.vbat").equals(Manager.onNewFile(new File(d80, "א:ב?.vbat"), "x", Paths.data(), v80, lib80).error()));
-            check("מבנה 80: במנוע — %תוכן% עם /הוסף, או בלי השם שמהמסך — שגיאה; \"כתוב\" כתובה על קובץ קיים — כמו שהייתה (הקודם לסל)",
+            check("מבנה 80: במנוע — %תוכן% עם /הוסף, או בלי השם שמהמסך — שגיאה; \"כתוב\" כתובה על קובץ קיים — שם קיים, ועם /תפוס:להחליף — עוברת (מבנה 110)",
                     Batch.plan("כתוב \"%יעד%\\%שם-חדש%\" \"%תוכן%\" /הוסף\n", d80, v80, lib80, null, new Batch.Selection(new ArrayList<String>(),
                             new ArrayList<String>(), d80, "x.txt", "y")).errors == 1
                             && Batch.plan("כתוב \"x.txt\" \"%תוכן%\"\n", d80, v80, lib80, null, new Batch.Selection(new ArrayList<String>(),
                             new ArrayList<String>(), d80, "x.txt", "y")).errors == 1
-                            && Batch.plan("כתוב \"קיים.vbat\" \"חדש\"\n", d80, v80, lib80).errors == 0);
+                            && Batch.plan("כתוב \"קיים.vbat\" \"חדש\"\n", d80, v80, lib80).errors == 1
+                            && Batch.plan("כתוב \"קיים.vbat\" \"חדש\" /תפוס:להחליף\n", d80, v80, lib80).errors == 0);
             Permit.close();
             try {
                 String no80 = Physical.newFile(lib80, new File(d80, "עוקף.txt"), "x");
@@ -3207,7 +3217,7 @@ public final class Tests {
         ix46.scan(null);
         Library lib46 = Library.forTests(new ArrayList<Index>(java.util.Collections.singletonList(ix46)));
         int trash46 = Batch.trashed(lib46, w46.getAbsolutePath(), false).size();
-        Batch.Plan pw46 = Batch.plan(Batch.WRITE + " \"ת46\\כתוב46.txt\" \"חדש\"\n" + Batch.WRITE + " \"ת46\\כתוב46-ב.txt\" \"א\"\n" + Batch.WRITE + " \"ת46\\כתוב46-ב.txt\" \"ב\" " + Batch.SW_APPEND + "\n", r, v, lib46);
+        Batch.Plan pw46 = Batch.plan(Batch.WRITE + " \"ת46\\כתוב46.txt\" \"חדש\" /תפוס:להחליף\n" + Batch.WRITE + " \"ת46\\כתוב46-ב.txt\" \"א\"\n" + Batch.WRITE + " \"ת46\\כתוב46-ב.txt\" \"ב\" " + Batch.SW_APPEND + "\n", r, v, lib46);
         check("מבנה 46: התכנון אומר שהקובץ הקיים יעבור לסל — ורק עליו", pw46.errors == 0 && pw46.steps.get(0).describe.contains(Words.DbCmd.OLD_TO_TRASH_WILL)
                 && !pw46.steps.get(1).describe.contains(Words.DbCmd.OLD_TO_TRASH_WILL) && !pw46.steps.get(2).describe.contains(Words.DbCmd.OLD_TO_TRASH_WILL));
         String rep46 = String.valueOf(Batch.run(pw46, lib46, null, null));
@@ -3217,6 +3227,18 @@ public final class Tests {
                 && in46.size() == trash46 + 1 && "ישן".equals(read(new File(in46.get(in46.size() - 1).path()))) && rep46.contains(Words.DbCmd.OLD_TO_TRASH));
         check("מבנה 46: /הוסף — מוסיף, ושום דבר לא עובר לסל", "אב".equals(read(new File(r, "ת46/כתוב46-ב.txt")))
                 && Batch.trashed(lib46, new File(r, "ת46/כתוב46-ב.txt").getAbsolutePath(), false).isEmpty());
+        // מבנה 110 (ה6): "כתוב" על קובץ קיים — בלי הוראה עוצר; /תפוס:לדלג — ממשיכים; /תפוס:לשנות-שם — "(2)"; לשאול / עם /הוסף — שגיאה
+        Batch.Plan stop110 = Batch.plan(Batch.WRITE + " \"ת46\\כתוב46.txt\" \"עוד\"\n", r, v, lib46);
+        Batch.Plan go110 = Batch.plan(Batch.WRITE + " \"ת46\\כתוב46.txt\" \"עוד\" /תפוס:לדלג\n" + Batch.WRITE + " \"ת46\\כתוב46.txt\" \"שני\" /תפוס:לשנות-שם\n", r, v, lib46);
+        String rep110 = go110.errors == 0 ? String.valueOf(Batch.run(go110, lib46, null, null)) : go110.errorText();
+        lib46.flush(5000);
+        check("מבנה 110: \"כתוב\" על קובץ קיים — בלי מתג: שם קיים, הקובץ נעצר; לדלג: בלי שינוי (ונאמר); לשנות-שם: \"(2)\" (" + rep110 + ")",
+                stop110.blocked() && stop110.errorText().contains(Words.Cmd.fileTaken("כתוב46.txt"))
+                && "חדש".equals(read(w46)) && rep110.contains(Words.Cmd.fileSkipped("כתוב46.txt"))
+                && "שני".equals(read(new File(r, "ת46/כתוב46 (2).txt"))));
+        check("מבנה 110: /תפוס:לשאול ב\"כתוב\", ו־/תפוס עם /הוסף — שגיאה (לא נבלע בשקט)",
+                Batch.plan(Batch.WRITE + " \"ת46\\כתוב46.txt\" \"x\" /תפוס:לשאול\n", r, v, lib46).errorText().contains(Words.Cmd.WRITE_TAKEN_ONLY)
+                && Batch.plan(Batch.WRITE + " \"ת46\\כתוב46.txt\" \"x\" /הוסף /תפוס:להחליף\n", r, v, lib46).errorText().contains(Words.Cmd.WRITE_TAKEN_ONLY));
         // מבנה 45: קובץ שהמנוע כותב בעצמו — לא על קובץ של התוכנה
         String set45 = app42 + "/" + Paths.SETTINGS + "/x.txt";
         check("מבנה 45: דוח על קובץ של התוכנה — שגיאה", Batch.plan("דוח \"" + set45 + "\"\nMD \"ת45\"\n", r, v).errors == 1);

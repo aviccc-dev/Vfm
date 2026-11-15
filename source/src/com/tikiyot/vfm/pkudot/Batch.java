@@ -366,26 +366,40 @@ final class Batch {
         }
         if (cmd.equals(WRITE)) {
             boolean append = false;
+            String taken = null;                                                // מבנה 110 (ה6): /תפוס: — מה עושים כשהקובץ כבר קיים
             List<String> a = new ArrayList<String>();
             for (int i = 1; i < tk.size(); i++) {
-                if (tk.get(i).trim().equals(SW_APPEND)) append = true;
-                else a.add(tk.get(i));
+                String x = tk.get(i).trim();
+                if (x.equals(SW_APPEND)) append = true;
+                else if (x.startsWith(SW_TAKEN)) {
+                    taken = x.substring(SW_TAKEN.length());
+                    if (!taken.equals(TAKEN_STOP) && !taken.equals(TAKEN_REPLACE) && !taken.equals(TAKEN_SKIP) && !taken.equals(TAKEN_RENAME)) {
+                        s.error = Words.Cmd.WRITE_TAKEN_ONLY;
+                        return true;
+                    }
+                } else a.add(tk.get(i));
             }
             if (a.isEmpty() || a.size() > 2) { s.error = Words.DbCmd.WRITE_USAGE; return true; }
+            if (append && taken != null) { s.error = Words.Cmd.WRITE_TAKEN_ONLY; return true; }   // "להוסיף" — אין שם תפוס
             String[] err = {null};
             String p = path(a.get(0), here, vars, err);
             if (p == null) { s.error = err[0]; return true; }
             if (new File(p).getName().equals(NAME_TOKEN) || (a.size() == 2 && a.get(1).equals(var(V_CONTENT)) && sim.selected != null
                     && sim.selected.content != null)) {                         // מבנה 80: קובץ חדש מהמסך
-                writeSelected(s, new File(p), append || a.size() != 2 || !a.get(1).equals(var(V_CONTENT)), sim);
+                writeSelected(s, new File(p), append || a.size() != 2 || !a.get(1).equals(var(V_CONTENT)), taken, sim);
                 return true;
             }
             if (Physical.programFile(p) != null) { s.error = Physical.programFile(p); return true; }   // מבנה 45
-            final File f = new File(p);
+            File f0 = new File(p);
             final String text = a.size() == 2 ? Verbs.withVars(a.get(1), vars).replace("\\n", "\n") : "";
-            File dir = f.getParentFile();
+            File dir = f0.getParentFile();
             if (dir == null || !sim.isDir(dir)) { s.error = Words.DbCmd.writeNoFolder(Bidi.path(dir == null ? p : dir.getAbsolutePath())); return true; }
-            if (sim.isDir(f)) { s.error = Words.DbCmd.WRITE_IS_FOLDER; return true; }
+            if (sim.isDir(f0)) { s.error = Words.DbCmd.WRITE_IS_FOLDER; return true; }
+            int t = writeTaken(s, f0, append, taken, sim);                     // מבנה 110: הכלל האחד של "קובץ קיים"
+            if (t == W_STOP) return true;
+            if (t == W_FREE) f0 = sim.free(f0);
+            final File f = f0;
+            final boolean replace = t == W_REPLACE;
             if (sim.lib != null && Physical.noWriteInto(sim.lib, dir) != null) { s.error = Physical.noWriteInto(sim.lib, dir); return true; }   // מבנה 65: הסל — כבר בתכנון
             final boolean add = append;
             boolean had = sim.isFile(f) && sim.real(f) != GHOST;                // מבנה 46: קובץ שכבר קיים (לא כזה ששורה קודמת כותבת)
@@ -404,6 +418,10 @@ final class Batch {
                         if (why0 != null) { DbListCmd.lastFailed = true; return why0; }
                         if (f.isDirectory()) { DbListCmd.lastFailed = true; return Words.DbCmd.WRITE_IS_FOLDER; }
                         boolean was = f.isFile(), toTrash = was && !add && lib != null;
+                        if (was && !add && !replace) {                              // מבנה 110: נוצר בינתיים — לא מחליפים בלי הוראה
+                            DbListCmd.lastFailed = true;
+                            return Words.Cmd.fileTaken(f.getName());
+                        }
                         if (toTrash) {                                              // מבנה 46: הקובץ הקודם — לסל, לא נדרס
                             String why = Physical.oldToTrash(lib, f);
                             if (why != null) { DbListCmd.lastFailed = true; return why; }
@@ -437,7 +455,28 @@ final class Batch {
      * מפוענחים). שלא כמו "כתוב" כתובה (קובץ קיים — הקודם עובר לסל; התיקייה חייבת להיות קיימת) — כאן, כמו שהמסך עשה: קובץ קיים
      * הוא סירוב, ותיקייה שחסרה נוצרת. הסירובים — בתכנון ובנוסח של המסך.
      */
-    private static void writeSelected(final Step s, File marked, boolean misuse, Sim sim) {
+    /**
+     * מבנה 110 (ה6, המשתמש: "כן" — כמו בתיקייה): הכלל האחד של "כתוב" על קובץ שכבר קיים, לשורה הכתובה ולקובץ החדש מהמסך.
+     * בלי מתג (או /תפוס:לעצור) — שגיאה, והקובץ נעצר; להחליף — הקודם לסל; לשנות-שם — בשם פנוי "(2)"; לדלג — השורה אינה עושה דבר.
+     * "/הוסף" — אין כאן שם תפוס. מחזיר מה לעשות; W_STOP — השורה כבר סגורה (שגיאה או דילוג).
+     */
+    static final int W_NEW = 0, W_REPLACE = 1, W_FREE = 2, W_STOP = 3;
+
+    private static int writeTaken(Step s, File f, boolean append, String taken, Sim sim) {
+        if (append || !sim.isFile(f)) return W_NEW;
+        if (TAKEN_REPLACE.equals(taken)) return W_REPLACE;
+        if (TAKEN_RENAME.equals(taken)) return W_FREE;
+        if (TAKEN_SKIP.equals(taken)) {
+            s.noop = true;
+            s.dest = f;
+            s.describe = Words.Cmd.fileSkipped(f.getName());
+            return W_STOP;
+        }
+        s.error = Words.Cmd.fileTaken(f.getName());
+        return W_STOP;
+    }
+
+    private static void writeSelected(final Step s, File marked, boolean misuse, String taken, Sim sim) {
         final Selection sel = sim.selected;
         File parent = marked.getParentFile();
         if (misuse || sel == null || sel.name == null || sel.content == null || sel.dest == null || !marked.getName().equals(NAME_TOKEN)
@@ -447,9 +486,14 @@ final class Batch {
         }
         String bad = Physical.badName(sel.name);
         if (bad != null) { s.error = bad; return; }
-        final File f = new File(parent, sel.name.trim());
-        if (Physical.programFile(f.getAbsolutePath()) != null) { s.error = Words.Disk.NO_FILE_IN_APP; return; }
-        if (sim.isFile(f) || sim.isDir(f)) { s.error = Words.Disk.ALREADY_NAME + f.getName() + "\""; return; }
+        File f0 = new File(parent, sel.name.trim());
+        if (Physical.programFile(f0.getAbsolutePath()) != null) { s.error = Words.Disk.NO_FILE_IN_APP; return; }
+        if (sim.isDir(f0)) { s.error = Words.Disk.ALREADY_NAME + f0.getName() + "\""; return; }
+        int t = writeTaken(s, f0, false, taken, sim);                          // מבנה 110: אותו כלל כמו בשורה הכתובה
+        if (t == W_STOP) return;
+        if (t == W_FREE) f0 = sim.free(f0);
+        final File f = f0;
+        final boolean replace = t == W_REPLACE;
         if (sim.isFile(parent)) { s.error = Words.DbCmd.writeNoFolder(Bidi.path(parent.getAbsolutePath())); return; }
         if (sim.lib != null && Physical.noWriteInto(sim.lib, parent) != null) { s.error = Physical.noWriteInto(sim.lib, parent); return; }
         for (File up = parent; up != null && !sim.isDir(up); up = up.getParentFile()) {
@@ -459,12 +503,13 @@ final class Batch {
         sim.gone.remove(f.getAbsolutePath());
         sim.added.put(f.getAbsolutePath(), GHOST);
         s.dest = f;
-        s.describe = Words.DbCmd.writeWill(f.getName(), sel.content.length(), false);
+        s.describe = Words.DbCmd.writeWill(f.getName(), sel.content.length(), false) + (replace ? Words.DbCmd.OLD_TO_TRASH_WILL : "");
         s.op = new ListCmd.Op() {
             @Override public String run(Library lib) {
-                String why = Physical.newFile(lib, f, sel.content);
+                boolean was = f.isFile();
+                String why = Physical.newFile(lib, f, sel.content, replace);
                 if (why != null) { DbListCmd.lastFailed = true; return why; }
-                return Words.DbCmd.written(f.getName(), sel.content.length(), false);
+                return Words.DbCmd.written(f.getName(), sel.content.length(), false) + (was ? Words.DbCmd.OLD_TO_TRASH : "");
             }
         };
     }

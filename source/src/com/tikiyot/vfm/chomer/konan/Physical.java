@@ -1172,12 +1172,21 @@ public final class Physical {
      * null — נוצר; אחרת הסיבה.
      */
     public static String newFile(Library lib, File f, String content) {
+        return newFile(lib, f, content, false);
+    }
+
+    /** מבנה 110: replace — קובץ קיים עובר קודם לסל (oldToTrash), ואז נכתב החדש; בלי — קובץ קיים הוא סירוב. */
+    public static String newFile(Library lib, File f, String content, boolean replace) {
         String no = Permit.check(Permit.WRITE);
         if (no != null) return no;
         String bad = badName(f.getName());
         if (bad != null) return bad;
         if (programFile(f.getAbsolutePath()) != null) return Words.Disk.NO_FILE_IN_APP;
-        if (f.exists()) return Words.Disk.ALREADY_NAME + f.getName() + "\"";
+        if (f.isDirectory() || (f.exists() && !replace)) return Words.Disk.ALREADY_NAME + f.getName() + "\"";
+        if (f.exists() && lib != null) {
+            String why = oldToTrash(lib, f);
+            if (why != null) return why;
+        }
         try {
             f.getParentFile().mkdirs();
             Files.writeAtomic(f, content);

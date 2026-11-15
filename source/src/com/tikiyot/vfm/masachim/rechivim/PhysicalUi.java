@@ -531,10 +531,34 @@ final class PhysicalUi {
 
     /** קובץ טקסט חדש בכונן (קובץ פקודות, 117א) — עם חלון אישור בתבנית. לא מחליף קובץ קיים. */
     public static void askNewFile(final Activity a, final File f, final String content, final Runnable onMade) {
+        askNewFile(a, f, content, "", onMade);
+    }
+
+    private static void askNewFile(final Activity a, final File f, final String content, String taken, final Runnable onMade) {
         final Library lib = Library.get(a);
         // מבנה 80: הקובץ החדש מהמסך — דרך הפקודה "כתוב "%יעד%\%שם-חדש%" "%תוכן%"" (המנהל). עד כאן המסך כתב את הקובץ בעצמו. הסירובים
         // (שם לא תקין, תיקיית התוכנה, שם שכבר קיים) באים מהתכנון שלה; כאן נשארים חלון האישור וההודעה.
-        final Manager.Act act = Manager.onNewFile(f, content, Paths.data(), BatchUi.vars(a, Paths.data()), lib);
+        final Manager.Act act = Manager.onNewFile(f, content, taken, Paths.data(), BatchUi.vars(a, Paths.data()), lib);
+        if (Words.Cmd.fileTaken(f.getName()).equals(act.error())) {          // מבנה 110 (ה6): שם קיים — אותה שאלה כמו בכל מקום
+            new android.app.AlertDialog.Builder(a).setTitle(Words.ListCmdW.SMART_TAKEN_TITLE).setMessage(act.error())
+                    .setPositiveButton(Words.Disk.REPLACE_OLD_TO_TRASH, new android.content.DialogInterface.OnClickListener() {
+                        @Override public void onClick(android.content.DialogInterface d, int w) { askNewFile(a, f, content, Batch.TAKEN_REPLACE, onMade); }
+                    })
+                    .setNegativeButton(Words.ListCmdW.OTHER_NAME, new android.content.DialogInterface.OnClickListener() {
+                        @Override
+                        public void onClick(android.content.DialogInterface d, int w) {
+                            Ui.askText(a, Words.ListCmdW.OTHER_NAME, f.getName(), Words.Short.NAME_HINT, new Ui.Text1() {
+                                @Override
+                                public void ok(String value) {
+                                    if (value.trim().isEmpty()) return;
+                                    askNewFile(a, new File(f.getParentFile(), value.trim()), content, "", onMade);
+                                }
+                            });
+                        }
+                    })
+                    .setNeutralButton(Words.ListCmdW.SMART_STOP, null).show();
+            return;
+        }
         if (act.error() != null) {
             Ui.toast(a, act.error());
             return;

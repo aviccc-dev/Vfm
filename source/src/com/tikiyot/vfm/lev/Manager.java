@@ -182,7 +182,13 @@ final class Manager {
 
     /** מבנה 80: קובץ טקסט חדש, מהמסך — הקובץ f עם התוכן הזה: "כתוב "%יעד%\%שם-חדש%" "%תוכן%"". אינו מחליף קובץ קיים. */
     static Act onNewFile(java.io.File f, String content, java.io.File here, java.util.Map<String, String> vars, Library lib) {
-        String text = Commands.word(Commands.get(Batch.WRITE)) + " \"%" + Batch.V_DEST + "%\\%" + Batch.V_NEW_NAME + "%\" \"%" + Batch.V_CONTENT + "%\"\n";
+        return onNewFile(f, content, "", here, vars, lib);
+    }
+
+    /** מבנה 110 (ה6): taken — התשובה של המשתמש לשאלה "שם קיים" (להחליף), כמו /תפוס: בקובץ; "" — בלי. */
+    static Act onNewFile(java.io.File f, String content, String taken, java.io.File here, java.util.Map<String, String> vars, Library lib) {
+        String text = Commands.word(Commands.get(Batch.WRITE)) + " \"%" + Batch.V_DEST + "%\\%" + Batch.V_NEW_NAME + "%\" \"%" + Batch.V_CONTENT + "%\""
+                + (taken == null || taken.isEmpty() ? "" : " " + Batch.SW_TAKEN + taken) + "\n";
         return new Act(text, Batch.plan(text, here, vars, lib, null, new Batch.Selection(java.util.Collections.<String>emptyList(),
                 java.util.Collections.<String>emptyList(), f.getParentFile(), f.getName(), content)), f.getParentFile());
     }
