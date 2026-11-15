@@ -450,7 +450,7 @@ final class Bridge {
             // ו"כתוב" אינה כותבת בו) — כמו שהיה: רק קובץ פקודות, נכתב ישר.
             String root = Paths.clean(Paths.data().getAbsolutePath()), at = Paths.clean(f.getAbsolutePath());
             if (at.startsWith(root + "/")) {                                    // מבנה 139: גם זה — דרך המנהל
-                String no = Manager.ownSave(Paths.data(), f, text);
+                String no = Manager.ownSaveKeepOld(Paths.data(), f, text, Library.get(screen));   // מבנה 154: הקודם — לסל
                 if (no != null) return no;
             } else {
                 String no = Manager.saveFile(f, text, was, Library.get(screen));

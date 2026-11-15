@@ -1186,6 +1186,21 @@ public final class Physical {
         }
     }
 
+    /**
+     * מבנה 154 (המשתמש, 15.11.2026: שמר בעורך קובץ פקודות קיים — "אין בסל"): קובץ פקודות של המשתמש שיושב בתוך תיקיית התוכנה
+     * (הקיצורים, "הפקודות שלי") הוא שלו — כשהוא מוחלף, הגרסה הקודמת עוברת קודם לסל (הוראות, סעיף 4), ורק אז נכתב החדש.
+     * null — נכתב; אחרת — למה לא (והקובץ הקודם לא נגע).
+     */
+    public static String ownReplace(Library lib, File f, String text) {
+        String no = Permit.check(Permit.OWN);
+        if (no != null) return no;
+        if (f.isFile() && lib != null) {
+            String why = oldToTrash(lib, f);
+            if (why != null) return why;
+        }
+        return ownWrite(f, text);
+    }
+
     /** מבנה 139: מחיקה של קובץ באזור שהתוכנה מנהלת (תוצאות ישנות בתיקייה של תוסף) — רק בהיתר. true — נמחק. */
     public static boolean ownDelete(File f) {
         return Permit.check(Permit.OWN) == null && f.isFile() && f.delete();

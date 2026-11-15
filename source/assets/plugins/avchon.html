@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="vfm-plugin" content="אבחון">
-<meta name="vfm-plugin-version" content="14">
+<meta name="vfm-plugin-version" content="15">
 <title>אבחון</title>
 <style>
 /* תוסף "אבחון" (מ0.42): הבדיקות, הדוחות והתקלות — מה שהיה ב־⋮ ובהגדרות (claude/tosaf-bdikot.md).
@@ -414,7 +414,27 @@ function header(){
     +'הרשאת גישה לכל הקבצים: '+(info.access?'✓':'✗')+' · מקום פנוי: '+(info.freeMb!=null?info.freeMb+'MB':'?')+'\n'
     +'האופן השמור: '+(info.savedMode||'?')+' · האופנים: '+ms.join(', ')+'\n'
     +'האינדקס: '+(info.indexReady?'מוכן':'נטען')+'\n'
-    +(info.door!=null?'הדלת לתוספים: גרסה '+info.door+' · המרשם: '+(info.registry||'—')+'\n':'')+doorCheck()+foldersLine();
+    +(info.door!=null?'הדלת לתוספים: גרסה '+info.door+' · המרשם: '+(info.registry||'—')+'\n':'')+doorCheck()+foldersLine()+saveCheck();
+}
+
+// אבחון 15 (מבנה 154; המשתמש: "הבדיקה הידנית לא הצליחה. אין בסל"): שמירה על קובץ פקודות קיים — הקודם צריך לעבור לסל.
+// נבדק כאן בלי ידיים: קובץ בתיקייה של התוסף, נשמר עליו תוכן חדש דרך הדלת (כמו שהעורך שומר), ונספר מה שבסל לפני ואחרי.
+// פעם אחת לכל גרסה של התוכנה (כדי לא למלא את הסל); התוצאה נזכרת ומוצגת בכל דוח.
+function saveCheck(){
+  try{
+    if(!can('saveCommandFile')||!can('listDir'))return '';
+    const key='savecheck',ver=String(info.versionCode||''),had=J(pref(key,null),null);
+    if(had&&had.v===ver)return had.t+'\n';
+    const n='בדיקת שמירה (אפשר למחוק).vbat',trash='%פנימי%\\.נמחקו';
+    const count=()=>{const l=J(V.listDir(trash),null);return l?l.filter(x=>x.name.indexOf(n)>=0).length:-1;};
+    const p=V.saveText(n,'הערה ראשון',false),before=count();
+    const r=p?V.saveCommandFile(p,'הערה שני\n',true):'לא נכתב';
+    const after=count(),now=p?V.readText(p):null;
+    const ok=r===''&&now==='הערה שני\n'&&before>=0&&after===before+1;
+    const t='בדיקת שמירה (קובץ פקודות קיים — הקודם לסל): '+(ok?'✅':'❌ השמירה: '+(r===''?'נשמר':r)+' · התוכן החדש: '+(now==='הערה שני\n'?'כן':'לא')+' · בסל לפני '+before+', אחרי '+after);
+    setPref(key,JSON.stringify({v:ver,t:t}));
+    return t+'\n';
+  }catch(e){return 'בדיקת שמירה: ❌ '+e.message+'\n';}
 }
 
 // אבחון 14 (מבנה 151): התיקיות שיש בהן קובצי פקודות — מה שהעורך מציג ב"פתיחה"; כאן בדוח, בלי לפתוח את העורך.

@@ -361,6 +361,20 @@ final class Manager {
         }
     }
 
+    /** מבנה 154: כמו ownSave, לקובץ של המשתמש שבתוך האזור (קובץ פקודות בקיצורים): קובץ קיים — הקודם עובר לסל, ואז נכתב. */
+    static String ownSaveKeepOld(java.io.File zone, java.io.File f, String text, Library lib) {
+        if (!inZone(zone, f)) {
+            Log.i(Words.PermitW.NOT_IN_ZONE + ": " + (f == null ? "" : f.getAbsolutePath()));
+            return Words.PermitW.NOT_IN_ZONE;
+        }
+        Permit.open();
+        try {
+            return Physical.ownReplace(lib, f, text);
+        } finally {
+            Permit.close();
+        }
+    }
+
     /** מבנה 139: מחיקת הקבצים (רק קבצים) שבתיקייה dir שבתוך האזור zone. מחזיר את מה שנמחק; מחוץ לאזור — דבר. */
     static java.util.List<java.io.File> ownClean(java.io.File zone, java.io.File dir) {
         java.util.List<java.io.File> gone = new java.util.ArrayList<java.io.File>();

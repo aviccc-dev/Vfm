@@ -3171,7 +3171,7 @@ public final class Tests {
                 for (File f : javaFiles(code)) if (read(f).contains("addJavascriptInterface(")) doors132++;
                 check("מבנה 132: דלת אחת — תוסף מתחבר לתוכנה רק במקום אחד, ורק אל הגשר; והגשר שומר קובץ של המשתמש רק דרך המנהל",
                         doors132 == 1 && ls132.contains("addJavascriptInterface(new Bridge(") && br132.contains("Manager.saveFile(f, text, was, Library.get(screen))")
-                                && br132.contains("Manager.saveFile(f, text, was, lib)") && br132.contains("Manager.ownSave(Paths.data(), f, text)")
+                                && br132.contains("Manager.saveFile(f, text, was, lib)") && br132.contains("Manager.ownSaveKeepOld(Paths.data(), f, text, Library.get(screen))")
                                 && br132.contains("if (!Batch.isBatch(f.getName())) return Words.Lab.ONLY_COMMANDS;"));
             }
             {   // מבנה 138 (המשתמש: "הכל יוכל, אבל דרך שכבת הניהול"): תוסף קורא קובץ ושואל מה בתיקייה — דרך המנהל
@@ -3279,6 +3279,20 @@ public final class Tests {
                 check("מבנה 151: רק תיקיות שיש בהן קובצי פקודות, וכמה בכל אחת (" + cf151 + "); בלי אינדקס — null",
                         cf151 != null && cf151.size() == 2 && Integer.valueOf(2).equals(cf151.get(new File(r151, "א").getAbsolutePath()))
                                 && Integer.valueOf(1).equals(cf151.get(new File(r151, "ב/עמוק").getAbsolutePath())) && Manager.commandFolders(null) == null);
+                // מבנה 154: קובץ פקודות של המשתמש בתוך תיקיית התוכנה — כשהוא מוחלף, הקודם עובר לסל
+                File z154 = new File(r151, "אזור154"), f154 = mk(z154, "פקודה.vbat", 4);
+                lib151.dirChanged(z154.getAbsolutePath());
+                lib151.flush(5000);
+                String first154 = read(f154);
+                String ok154 = Manager.ownSaveKeepOld(z154, f154, "גרסה חדשה", lib151);
+                lib151.flush(5000);
+                File[] tr154 = new File(r151, Index.TRASH).listFiles();
+                boolean in154 = false;
+                if (tr154 != null) for (File t : tr154) if (t.getName().endsWith("פקודה.vbat") && first154.equals(read(t))) in154 = true;
+                String new154 = Manager.ownSaveKeepOld(z154, new File(z154, "חדש.vbat"), "x", lib151);
+                check("מבנה 154: שמירה על קובץ קיים באזור — התוכן החדש נכתב (" + ok154 + "), והקודם בסל עם התוכן שלו; קובץ חדש — נכתב, בלי סל; מחוץ לאזור — לא",
+                        ok154 == null && "גרסה חדשה".equals(read(f154)) && in154 && new154 == null && "x".equals(read(new File(z154, "חדש.vbat")))
+                                && Words.PermitW.NOT_IN_ZONE.equals(Manager.ownSaveKeepOld(z154, new File(r151, "בחוץ.vbat"), "x", lib151)));
                 wipe(r151);
                 wipe(d138);
             }
