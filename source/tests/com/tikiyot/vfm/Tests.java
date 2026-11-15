@@ -3206,6 +3206,24 @@ public final class Tests {
                         && new File(z139, "תת/תיקייה").isDirectory() && Manager.ownClean(z139, d138).isEmpty() && f138.isFile());
                 check("מבנה 139: השומר — הגשר אינו כותב ואינו מוחק קובץ בעצמו; ו\"כתיבה באזור של התוכנה\" מסורבת בלי היתר",
                         !br138.contains("Files.writeAtomic(") && !br138.contains(".delete()") && !br138.contains(".mkdirs()") && Permit.strict(Permit.OWN));
+                // מבנה 140: תיקיית התוספים — מה שהתוכנה עושה שם לבד רשום אצל המנהל, ונעשה בחומר בהיתר
+                File p140 = new File(d138, "תוספים140");
+                File b140 = Lab.addBundled(p140, "<meta name=\"vfm-plugin\" content=\"בדיקה140\"><meta name=\"vfm-plugin-version\" content=\"1\">", "בדיקה140.html");
+                boolean mv140, dir140;
+                Permit.close();
+                try {
+                    mv140 = Physical.ownMove(f138, new File(d138, "זז.txt"));
+                    dir140 = Physical.ownDir(new File(d138, "חדשה140"));
+                } finally {
+                    Permit.open();
+                }
+                String lab140 = read(new File(code, "lev/Lab.java"));
+                check("מבנה 140: תוסף שבא עם התוכנה נכנס לתיקיית התוספים (" + b140 + "), ופעם שנייה — כבר יש; העברה מחוץ לאזור — לא",
+                        b140 != null && b140.isFile() && Lab.addBundled(p140, read(b140), "בדיקה140.html") == null && !Manager.ownMove(p140, f138, new File(p140, "x.txt")) && f138.isFile()
+                                && Manager.ownFolder(p140, new File(p140, "תת140")) && Manager.ownDrop(p140, new File(p140, "תת140")) && !new File(p140, "תת140").exists());
+                check("מבנה 140: העברה ותיקייה באזור של התוכנה — בלי היתר מסורבות; והשומר — Lab אינו כותב, מוחק או מעביר קובץ בעצמו",
+                        !mv140 && f138.isFile() && !dir140 && !new File(d138, "חדשה140").exists()
+                                && !lab140.contains("Permit.") && !lab140.contains("Physical.own") && !lab140.contains("Files.writeAtomic(") && !lab140.contains(".delete()") && !lab140.contains(".renameTo(") && !lab140.contains(".mkdirs()"));
                 wipe(d138);
             }
             String pui80 = read(new File(code, "masachim/rechivim/PhysicalUi.java"));
@@ -3440,7 +3458,6 @@ public final class Tests {
             // מבנה 128: השלד נסגר — מי שעוד כותב או מוחק קובץ ישירות, בלב ובמסכים, הוא רשימה סגורה שרק מתקצרת
             {
                 String[][] known128 = {
-                        {"lev/Lab.java", "10", "תיקיית התוספים: מעבר מהשם הישן, תוסף שבא עם התוכנה"},
                         {"masachim/IniEditScreen.java", "1", "עורך קובצי ההגדרות"},
                         {"masachim/LabScreen.java", "2", "עותק פרטי של עמוד התוסף שרץ"},
                         {"masachim/itzuv/Design.java", "12", "קובצי העיצוב"},

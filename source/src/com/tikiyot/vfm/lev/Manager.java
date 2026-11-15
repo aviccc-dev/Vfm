@@ -310,6 +310,39 @@ final class Manager {
         return gone;
     }
 
+    /** מבנה 140: העברה או שינוי שם בתוך האזור (שני הקצוות בתוכו). true — עבר. */
+    static boolean ownMove(java.io.File zone, java.io.File from, java.io.File to) {
+        if (!inZone(zone, from) || !inZone(zone, to)) return false;
+        Permit.open();
+        try {
+            return Physical.ownMove(from, to);
+        } finally {
+            Permit.close();
+        }
+    }
+
+    /** מבנה 140: תיקייה בתוך האזור — נוצרת אם אין. true — קיימת בסוף. */
+    static boolean ownFolder(java.io.File zone, java.io.File d) {
+        if (!inZone(zone, d)) return false;
+        Permit.open();
+        try {
+            return Physical.ownDir(d);
+        } finally {
+            Permit.close();
+        }
+    }
+
+    /** מבנה 140: קובץ, או תיקייה ריקה, בתוך האזור — יוצאים. true — יצא. */
+    static boolean ownDrop(java.io.File zone, java.io.File f) {
+        if (!inZone(zone, f)) return false;
+        Permit.open();
+        try {
+            return f.isDirectory() ? Physical.ownRemoveEmpty(f) : Physical.ownDelete(f);
+        } finally {
+            Permit.close();
+        }
+    }
+
     private static boolean inZone(java.io.File zone, java.io.File f) {
         if (zone == null || f == null) return false;
         String z = Paths.clean(zone.getAbsolutePath()), p = Paths.clean(f.getAbsolutePath());

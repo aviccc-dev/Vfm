@@ -1191,6 +1191,22 @@ public final class Physical {
         return Permit.check(Permit.OWN) == null && f.isFile() && f.delete();
     }
 
+    /** מבנה 140: העברה או שינוי שם בתוך האזור שהתוכנה מנהלת — רק בהיתר. true — עבר. */
+    public static boolean ownMove(File from, File to) {
+        return Permit.check(Permit.OWN) == null && from.renameTo(to);
+    }
+
+    /** מבנה 140: תיקייה באזור שהתוכנה מנהלת — נוצרת (עם מה שמעליה), רק בהיתר. true — קיימת בסוף. */
+    public static boolean ownDir(File d) {
+        return d.isDirectory() || (Permit.check(Permit.OWN) == null && d.mkdirs());
+    }
+
+    /** מבנה 140: תיקייה ריקה באזור שהתוכנה מנהלת — יוצאת, רק בהיתר. תיקייה שיש בה משהו — נשארת. */
+    public static boolean ownRemoveEmpty(File d) {
+        String[] left = d.list();
+        return left != null && left.length == 0 && Permit.check(Permit.OWN) == null && d.delete();
+    }
+
     /** מבנה 110: replace — קובץ קיים עובר קודם לסל (oldToTrash), ואז נכתב החדש; בלי — קובץ קיים הוא סירוב. */
     public static String newFile(Library lib, File f, String content, boolean replace) {
         String no = Permit.check(Permit.WRITE);

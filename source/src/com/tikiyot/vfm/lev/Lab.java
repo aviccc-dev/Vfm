@@ -37,14 +37,14 @@ final class Lab {
      */
     static File root() {
         File r = new File(Paths.dbData(), DIR), old = new File(Paths.dbData(), OLD_DIR);
+        File z = Paths.dbData();                                               // מבנה 140: האזור — התיקייה של התוכנה; הכול דרך המנהל
         if (old.isDirectory()) {
             if (!r.exists()) {
-                if (!old.renameTo(r)) Log.i("Lab.root: התיקייה \"" + OLD_DIR + "\" לא עברה ל\"" + DIR + "\"");   // בכונן
+                if (!Manager.ownMove(z, old, r)) Log.i("Lab.root: התיקייה \"" + OLD_DIR + "\" לא עברה ל\"" + DIR + "\"");   // בכונן
             } else {
                 File[] in = old.listFiles();
-                if (in != null) for (File k : in) if (!new File(r, k.getName()).exists()) k.renameTo(new File(r, k.getName()));
-                String[] left = old.list();
-                if (left != null && left.length == 0) old.delete();
+                if (in != null) for (File k : in) if (!new File(r, k.getName()).exists()) Manager.ownMove(z, k, new File(r, k.getName()));
+                Manager.ownDrop(z, old);
             }
         }
         flatten(r);
@@ -72,15 +72,14 @@ final class Lab {
                 String n = safe(PREFIX + " " + p.name + " " + p.ver) + EXT;
                 File to = new File(r, n);
                 if (to.isFile() && to.length() == f.length() && Sig.of(to) != null && Sig.of(to).equals(Sig.of(f))) {
-                    f.delete();                                                  // אותו עמוד כבר בתיקייה (המריץ העביר אותו מההורדות) — לא מכפילים
+                    Manager.ownDrop(r, f);                                       // אותו עמוד כבר בתיקייה (המריץ העביר אותו מההורדות) — לא מכפילים
                     continue;
                 }
                 if (to.exists()) to = new File(r, Physical.freeName(r, n, false));
-                if (!f.renameTo(to)) Log.i("Lab.flatten: לא עבר " + f);   // בכונן
+                if (!Manager.ownMove(r, f, to)) Log.i("Lab.flatten: לא עבר " + f);   // בכונן
             }
-            new File(d, OLD_ACTIVE).delete();
-            String[] left = d.list();
-            if (left != null && left.length == 0) d.delete();
+            Manager.ownDrop(r, new File(d, OLD_ACTIVE));
+            Manager.ownDrop(r, d);
         }
     }
 
@@ -96,7 +95,7 @@ final class Lab {
         String n = safe(plugin == null ? "" : plugin);
         if (n.isEmpty() || n.startsWith(".")) n = "_" + n;                     // מבנה 47: שם ריק, "." או ".." — לא התיקייה שמעל (שם כל קובצי התוכנה)
         File d = new File(new File(Paths.dbData(), DATA_DIR), n);
-        d.mkdirs();
+        if (!d.isDirectory()) Manager.ownFolder(Paths.dbData(), d);            // מבנה 140: דרך המנהל
         return d;
     }
 
@@ -111,14 +110,9 @@ final class Lab {
         String n = safe(PREFIX + " " + nv[0] + " " + nv[1]) + EXT;
         File to = new File(root, n);
         if (to.exists()) to = new File(root, Physical.freeName(root, n, false));
-        try {
-            if (!root.isDirectory() && !root.mkdirs()) return null;
-            Files.writeAtomic(to, html);
-            return to;
-        } catch (Throwable t) {
-            Log.e("Lab.addBundled", t);
-            return null;
-        }
+        String no = Manager.ownSave(root, to, html);                            // מבנה 140: דרך המנהל (התיקייה נוצרת בכתיבה)
+        if (no != null) Log.i("Lab.addBundled: " + no);
+        return no == null ? to : null;
     }
 
     /** שם שמותר בכונן — כמו בעורך: לא משאירים דבר לא תקין, מתקנים לדומה. */
