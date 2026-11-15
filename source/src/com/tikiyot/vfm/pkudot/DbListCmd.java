@@ -1700,7 +1700,7 @@ final class DbListCmd {
             @Override
             public String run(Library lib) {
                 if (lib != null) lib.flush(5000);
-                int c = lib == null ? 0 : Batch.trashed(lib, f.getAbsolutePath(), false).size();
+                int c = lib == null ? 0 : SmallCmds.trashed(lib, f.getAbsolutePath(), false).size();
                 boolean ok = n < 0 ? c > 0 : c == n;
                 s.verified = ok;
                 return Words.DbCmd.verifyResult(ok, what, Words.DbCmd.trashGot(c));

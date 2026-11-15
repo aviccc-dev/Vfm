@@ -2573,7 +2573,7 @@ public final class Tests {
             Physical.Result own64 = Physical.deleteOwn(lib64, bk64);
             lib64.flush(5000);
             check("מבנה 64: התוכנה עצמה (\"בטל אופן\") — כן: התיקייה עוברת לסל", own64.failed == 0 && own64.done.size() == 1 && !bk64.exists()
-                    && Batch.trashed(lib64, bk64.getAbsolutePath(), false).size() == 1);
+                    && SmallCmds.trashed(lib64, bk64.getAbsolutePath(), false).size() == 1);
             Batch.run(Batch.plan("שחזר מהסל \"" + bkCmd + "\"\n", ext64, v64, lib64), lib64, null, null);
             lib64.flush(5000);
             check("מבנה 64: ...ושחזור מהסל מחזיר אותה למקומה (מי שמתחרט על ביטול אופן)", bk64.isDirectory() && bk64.list().length == 1);
@@ -3038,7 +3038,7 @@ public final class Tests {
             Manager.Act rep110 = Manager.onNewFile(new File(d80, "קיים.vbat"), "חדש-110", Syntax.TAKEN_REPLACE, Paths.data(), v80, lib80);
             String said110 = rep110.error() == null ? String.valueOf(rep110.run(lib80, null, null, false).note) : rep110.error();
             lib80.flush(5000);
-            List<Trash.Item> tr110 = Batch.trashed(lib80, new File(d80, "קיים.vbat").getAbsolutePath(), false);
+            List<Trash.Item> tr110 = SmallCmds.trashed(lib80, new File(d80, "קיים.vbat").getAbsolutePath(), false);
             check("מבנה 110: מהמסך \"להחליף\" — אותה פקודה עם /תפוס:להחליף: נכתב החדש, והקודם בסל עם התוכן שלו (" + said110 + ")",
                     rep110.text.contains("/תפוס:להחליף") && "חדש-110".equals(read(new File(d80, "קיים.vbat"))) && !tr110.isEmpty()
                     && "ישן".equals(read(new File(tr110.get(tr110.size() - 1).path()))));
@@ -3150,7 +3150,7 @@ public final class Tests {
                     lib80.flush(5000);
                     repl132 = Manager.saveFile(f132, "גרסה שנייה", true, lib80);
                     lib80.flush(5000);                                              // הסל נקרא מהאינדקס — מחכים שיתעדכן (כמו בבדיקה של מבנה 110)
-                    List<Trash.Item> tr132 = Batch.trashed(lib80, f132.getAbsolutePath(), false);
+                    List<Trash.Item> tr132 = SmallCmds.trashed(lib80, f132.getAbsolutePath(), false);
                     trash132 = tr132.size() == 1 && body132.equals(read(new File(tr132.get(0).path()))) ? 1 : -tr132.size();
                     prog132 = Manager.saveFile(Conf.file(), "x", true, lib80);
                     File sc132 = new File(Shortcuts.dir(), "קיצור 132.vbat");
@@ -3618,17 +3618,17 @@ public final class Tests {
         Index ix46 = new Index("מבנה46", "מבנה46", r.getAbsolutePath());
         ix46.scan(null);
         Library lib46 = Library.forTests(new ArrayList<Index>(java.util.Collections.singletonList(ix46)));
-        int trash46 = Batch.trashed(lib46, w46.getAbsolutePath(), false).size();
+        int trash46 = SmallCmds.trashed(lib46, w46.getAbsolutePath(), false).size();
         Batch.Plan pw46 = Batch.plan(Syntax.WRITE + " \"ת46\\כתוב46.txt\" \"חדש\" /תפוס:להחליף\n" + Syntax.WRITE + " \"ת46\\כתוב46-ב.txt\" \"א\"\n" + Syntax.WRITE + " \"ת46\\כתוב46-ב.txt\" \"ב\" " + Syntax.SW_APPEND + "\n", r, v, lib46);
         check("מבנה 46: התכנון אומר שהקובץ הקיים יעבור לסל — ורק עליו", pw46.errors == 0 && pw46.steps.get(0).describe.contains(Words.DbCmd.OLD_TO_TRASH_WILL)
                 && !pw46.steps.get(1).describe.contains(Words.DbCmd.OLD_TO_TRASH_WILL) && !pw46.steps.get(2).describe.contains(Words.DbCmd.OLD_TO_TRASH_WILL));
         String rep46 = String.valueOf(Batch.run(pw46, lib46, null, null));
         lib46.flush(5000);
-        List<Trash.Item> in46 = Batch.trashed(lib46, w46.getAbsolutePath(), false);
+        List<Trash.Item> in46 = SmallCmds.trashed(lib46, w46.getAbsolutePath(), false);
         check("מבנה 46: \"כתוב\" על קובץ קיים — התוכן החדש נכתב, והקודם בסל עם התוכן שלו (" + rep46 + ")", !pw46.trouble && "חדש".equals(read(w46))
                 && in46.size() == trash46 + 1 && "ישן".equals(read(new File(in46.get(in46.size() - 1).path()))) && rep46.contains(Words.DbCmd.OLD_TO_TRASH));
         check("מבנה 46: /הוסף — מוסיף, ושום דבר לא עובר לסל", "אב".equals(read(new File(r, "ת46/כתוב46-ב.txt")))
-                && Batch.trashed(lib46, new File(r, "ת46/כתוב46-ב.txt").getAbsolutePath(), false).isEmpty());
+                && SmallCmds.trashed(lib46, new File(r, "ת46/כתוב46-ב.txt").getAbsolutePath(), false).isEmpty());
         // מבנה 110 (ה6): "כתוב" על קובץ קיים — בלי הוראה עוצר; /תפוס:לדלג — ממשיכים; /תפוס:לשנות-שם — "(2)"; לשאול / עם /הוסף — שגיאה
         Batch.Plan stop110 = Batch.plan(Syntax.WRITE + " \"ת46\\כתוב46.txt\" \"עוד\"\n", r, v, lib46);
         Batch.Plan go110 = Batch.plan(Syntax.WRITE + " \"ת46\\כתוב46.txt\" \"עוד\" /תפוס:לדלג\n" + Syntax.WRITE + " \"ת46\\כתוב46.txt\" \"שני\" /תפוס:לשנות-שם\n", r, v, lib46);
