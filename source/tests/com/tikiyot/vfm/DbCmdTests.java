@@ -79,7 +79,7 @@ final class DbCmdTests {
             Map<String, String> names = new java.util.HashMap<String, String>();
             names.put("TEST_MODE", TEST_MODE);
             names.put("BK_MODE", "בדיקת המשך מגיבוי");
-            names.put("BK_DIR", "%" + Batch.V_INTERNAL + "%\\" + Paths.DB_DIR + "\\" + Backups.DIR + "\\בדיקת המשך מגיבוי");
+            names.put("BK_DIR", "%" + Syntax.V_INTERNAL + "%\\" + Paths.DB_DIR + "\\" + Backups.DIR + "\\בדיקת המשך מגיבוי");
             int all = 0;
             // מה שלא רץ כאן, ולמה. קבוצה חדשה בתוסף שאינה כאן — רצה; ואם אינה יכולה לרוץ במחשב, הבנייה נעצרת עד שרושמים אותה כאן.
             Map<String, String> onlyDevice = new java.util.LinkedHashMap<String, String>();
@@ -230,7 +230,7 @@ final class DbCmdTests {
             // מבנה 87: "ודא ידנית א זהה ידנית ב" — תמונת מצב של רשימה, והשוואה עד הסוף
             {
                 final String m87 = "בדיקת-87";
-                String dir87 = "%" + Batch.V_INTERNAL + "%\\בדיקת 87 (אפשר למחוק)";
+                String dir87 = "%" + Syntax.V_INTERNAL + "%\\בדיקת 87 (אפשר למחוק)";
                 StringBuilder t87 = new StringBuilder("המשך ()\nצור אופן \"" + m87 + "\"\nאופן \"" + m87 + "\"\nMD \"" + dir87 + "\"\n"
                         + "כתוב \"" + dir87 + "\\ק1.txt\" \"אחת\"\nכתוב \"" + dir87 + "\\ק2.txt\" \"שתיים\"\nכתוב \"" + dir87 + "\\ק3.txt\" \"שלוש\"\n");
                 // אותו מבנה, פעמיים (א, ב); ג — אותו תוכן בסדר אחר; ד — עותק במקום קישור; ה — קובץ נוסף בעומק
@@ -320,7 +320,7 @@ final class DbCmdTests {
             // מבנה 90: "השווה ידנית א ידנית ב /הבדלים" — כל ההבדלים בין שתי רשימות
             {
                 final String m90 = "בדיקת-90";
-                String dir90 = "%" + Batch.V_INTERNAL + "%\\בדיקת 90 (אפשר למחוק)";
+                String dir90 = "%" + Syntax.V_INTERNAL + "%\\בדיקת 90 (אפשר למחוק)";
                 StringBuilder t90 = new StringBuilder("המשך ()\nצור אופן \"" + m90 + "\"\nאופן \"" + m90 + "\"\nMD \"" + dir90 + "\"\n"
                         + "כתוב \"" + dir90 + "\\ק1.txt\" \"אחת\"\nכתוב \"" + dir90 + "\\ק2.txt\" \"שתיים\"\nכתוב \"" + dir90 + "\\ק3.txt\" \"שלוש\"\n");
                 // א, ב — אותו מבנה. כל אחת מהאחרות שונה מ"א" בדבר אחד בלבד:
@@ -689,10 +689,10 @@ final class DbCmdTests {
                             }
                         });
                         java.util.Set<String> edits104 = editNames(m91);
-                        Manager.Act rep104 = Manager.onSmartNew(m91, in103[0], f103.name, f103.cond, DbSmartForm.props(f103), Batch.TAKEN_REPLACE, here, vars, lib);
+                        Manager.Act rep104 = Manager.onSmartNew(m91, in103[0], f103.name, f103.cond, DbSmartForm.props(f103), Syntax.TAKEN_REPLACE, here, vars, lib);
                         String said104 = rep104.error() != null ? "תכנון: " + rep104.error() : rep104.say(lib);
                         o.check("מבנה 104: \"לדרוס\" — הפקודה עם /תפוס:להחליף; אותה רשימה (לא עוד אחת), עם גיבוי לפני (" + said104 + ")",
-                                rep104.error() == null && !rep104.failed && rep104.made == in103[1] && rep104.text.contains(Batch.SW_TAKEN + Batch.TAKEN_REPLACE)
+                                rep104.error() == null && !rep104.failed && rep104.made == in103[1] && rep104.text.contains(Syntax.SW_TAKEN + Syntax.TAKEN_REPLACE)
                                         && said104.contains(Words.ListCmdW.smartReplaced("חכמה רגילה")) && !edits104.containsAll(editNames(m91)));
                     }
                     List<String> v97 = go("המשך ()\nאופן \"" + m91 + "\"\nודא תוכן ידנית \"ישן\" שווה תוכן ידנית \"חדש\"\n"

@@ -140,7 +140,7 @@ final class CmdTemplates {
             List<ListCmd.Tok> tk = ListCmd.tokens(l);
             for (int i = 0; i < tk.size(); i++) {
                 if (!tk.get(i).text.contains(mark)) continue;
-                if (i == 1 && tk.get(0).text.equals(Batch.LOOP)) return HOLE_NUMBER;
+                if (i == 1 && tk.get(0).text.equals(Syntax.LOOP)) return HOLE_NUMBER;
                 if (i > 0 && !tk.get(i - 1).quoted) {
                     String w = tk.get(i - 1).text;
                     if (w.equals(ListCmd.MANUAL)) return hole.startsWith(MANY_PREFIX) ? HOLE_MANY : HOLE_MANUAL;

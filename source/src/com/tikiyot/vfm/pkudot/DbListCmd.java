@@ -198,7 +198,7 @@ final class DbListCmd {
 
     /** מבנה 109: "/תפוס:<ערך>" מתוך המתגים של השורה. */
     static int takenOf(List<String> sw) {
-        for (String x : sw) if (x.startsWith(Batch.SW_TAKEN)) return taken(x.substring(Batch.SW_TAKEN.length()));
+        for (String x : sw) if (x.startsWith(Syntax.SW_TAKEN)) return taken(x.substring(Syntax.SW_TAKEN.length()));
         return Lists.TAKEN_STOP;
     }
 
@@ -641,7 +641,7 @@ final class DbListCmd {
         boolean disk = false;                                                  // מ0.40: יש צד בכונן — שם /מכיל: חל
         for (ListCmd.Side x : p.sides) if (!x.list()) disk = true;
         for (String x : sw)
-            if (x.startsWith("/" + Batch.SW_DATE) || x.startsWith("/" + Batch.SW_SIZE) || (!disk && x.startsWith("/" + Batch.SW_CONTAINS))) {
+            if (x.startsWith("/" + Syntax.SW_DATE) || x.startsWith("/" + Syntax.SW_SIZE) || (!disk && x.startsWith("/" + Syntax.SW_CONTAINS))) {
                 s.error = Words.ListCmdW.NO_FILTER;
                 return;
             }
@@ -807,7 +807,7 @@ final class DbListCmd {
             work = new Work() {
                 @Override public Res run(Store t, Finder f) { return rename(t, mode, a, name); }
             };
-        } else if (cmd.equals("MOVE") || cmd.equals(Batch.LINK)) {           // מ0.17: העברה וקישור — במסד
+        } else if (cmd.equals("MOVE") || cmd.equals(Syntax.LINK)) {           // מ0.17: העברה וקישור — במסד
             if (sd.size() != 2) { s.error = Words.DbCmd.USAGE_LINK; return; }
             final ListCmd.Side a = sd.get(0), b = sd.get(1);
             if (cmd.equals("MOVE") && a.list() && b.kind == ListCmd.FS && !b.content && !b.filesOf) {   // מ0.40: הקבצים עצמם — לתיקייה
@@ -1004,8 +1004,8 @@ final class DbListCmd {
 
     /** מבנה 104: "/תפוס:<ערך>" (Verbs.Cmd.taken) ← מה שהחומר מבין. "" ו"לשאול" — בקובץ אין את מי לשאול: לעצור. */
     static int taken(String v) {
-        return Batch.TAKEN_REPLACE.equals(v) ? Lists.TAKEN_REPLACE : Batch.TAKEN_RENAME.equals(v) ? Lists.TAKEN_RENAME
-                : Batch.TAKEN_SKIP.equals(v) ? Lists.TAKEN_SKIP : Lists.TAKEN_STOP;
+        return Syntax.TAKEN_REPLACE.equals(v) ? Lists.TAKEN_REPLACE : Syntax.TAKEN_RENAME.equals(v) ? Lists.TAKEN_RENAME
+                : Syntax.TAKEN_SKIP.equals(v) ? Lists.TAKEN_SKIP : Lists.TAKEN_STOP;
     }
 
     /** מבנה 104: ההודעה לפי מה שקרה. */
@@ -2058,12 +2058,12 @@ final class DbListCmd {
         // ולכן התיקון לא פעל במכשיר ("הועתקו 1" במקום "דולגו", והקובץ ישר בתיקייה).
         for (String x : sw) {
             String u = x.toUpperCase(java.util.Locale.ROOT);
-            if (u.equals("/Y") || x.equals(Batch.SW_TAKEN + Batch.TAKEN_REPLACE)) s.replace = true;
-            if (x.equals(Batch.SW_TAKEN + Batch.TAKEN_SKIP)) s.skipTaken = true;
-            if (x.equals(Batch.SW_TAKEN + Batch.TAKEN_STOP)) s.failTaken = true;
-            if (x.equals(Batch.SW_TAKEN + Batch.TAKEN_RENAME)) s.renameTaken = true;
-            if (x.startsWith(Batch.SW_TAKEN) && !Batch.takenValue(x)) { s.error = Batch.takenUnknown(x); return; }
-            if (u.equals("/S") || x.equals(Batch.SW_KEEP)) s.recursive = true;
+            if (u.equals("/Y") || x.equals(Syntax.SW_TAKEN + Syntax.TAKEN_REPLACE)) s.replace = true;
+            if (x.equals(Syntax.SW_TAKEN + Syntax.TAKEN_SKIP)) s.skipTaken = true;
+            if (x.equals(Syntax.SW_TAKEN + Syntax.TAKEN_STOP)) s.failTaken = true;
+            if (x.equals(Syntax.SW_TAKEN + Syntax.TAKEN_RENAME)) s.renameTaken = true;
+            if (x.startsWith(Syntax.SW_TAKEN) && !Batch.takenValue(x)) { s.error = Batch.takenUnknown(x); return; }
+            if (u.equals("/S") || x.equals(Syntax.SW_KEEP)) s.recursive = true;
         }
         Filter flt = Filter.of(sw);                                   // מ0.40: /מכיל:
         if (flt.error != null) { s.error = flt.error; return; }

@@ -107,7 +107,7 @@ final class CmdMatrix {
     static final String COMPARE = "להשוואה (בדיקה)";   // בכונן
 
     /** תיקייה שכבר קיימת בהכנה (ההשוואה מחושבת בהכנה): התיקייה של קובץ ההרצה — בתוסף, תיקיית הנתונים שלו. */
-    static final String HERE = "%" + Batch.V_HERE + "%";
+    static final String HERE = "%" + Syntax.V_HERE + "%";
 
     private static String d(String rel) {
         return DIR + "\\" + rel;
@@ -129,7 +129,7 @@ final class CmdMatrix {
         String key = p == null ? null : p.key;
         String sw = p == null ? "" : " " + sample(p, option, k);
         String name = def.name;
-        if (key != null && key.equals(Batch.SW_LIST) && !db) return false;    // COMP /רשימה: — במסד
+        if (key != null && key.equals(Syntax.SW_LIST) && !db) return false;    // COMP /רשימה: — במסד
         if (sw.contains("⚠")) return false;
         if (name.equals("COPY") || name.equals("MOVE")) {
             boolean copy = name.equals("COPY");
@@ -143,13 +143,13 @@ final class CmdMatrix {
                 out.add("כתוב \"" + d("להעברה\\" + k + "\\.נסתר.txt") + "\" \"נסתר\"");
             }
             out.add("צור תיקייה \"" + dst + "\"");
-            if (Batch.SW_TAKEN.equals(key) && !Batch.TAKEN_ASK.equals(option) && !Batch.TAKEN_STOP.equals(option))   // שם תפוס — באמת
+            if (Syntax.SW_TAKEN.equals(key) && !Syntax.TAKEN_ASK.equals(option) && !Syntax.TAKEN_STOP.equals(option))   // שם תפוס — באמת
                 out.add("כתוב \"" + dst + "\\א.txt\" \"היה ביעד\"");
-            if (Batch.SW_STATE.equals(key)) src = HERE + "\\" + FIXTURE;          // גיבוי נבדק בהכנה — מול הכונן
+            if (Syntax.SW_STATE.equals(key)) src = HERE + "\\" + FIXTURE;          // גיבוי נבדק בהכנה — מול הכונן
             if ("/S".equals(key)) src = copy ? d("מקור") : d("להעברה\\" + k);
-            if (Batch.SW_LIMIT.equals(key)) {                                    // אחרי השוואה בלבד
+            if (Syntax.SW_LIMIT.equals(key)) {                                    // אחרי השוואה בלבד
                 out.add("השווה \"" + HERE + "\\" + COMPARE + "\" \"" + dst + "\"");   // מבנה 70: לא התיקייה של קובץ ההרצה כולה
-                out.add(word + " %" + Batch.V_ONLY_A + "% \"" + dst + "\"" + sw);
+                out.add(word + " %" + Syntax.V_ONLY_A + "% \"" + dst + "\"" + sw);
                 return true;
             }
             out.add(word + " \"" + src + "\" \"" + dst + "\"" + sw);
@@ -168,45 +168,45 @@ final class CmdMatrix {
             if (key != null) out.add("כתוב \"" + d("להסרה " + k + "\\א.txt") + "\" \"x\"");
             out.add(Commands.word(def) + " \"" + d("להסרה " + k) + "\"" + sw);
         } else if (name.equals("COMP")) {                                        // ההשוואה מחושבת בהכנה — מול מה שכבר בכונן
-            if (Batch.SW_LIST.equals(key)) {                                     // רשימה ריקה — ההשוואה נעצרת (מ0.45, במכשיר): קובץ בה קודם
+            if (Syntax.SW_LIST.equals(key)) {                                     // רשימה ריקה — ההשוואה נעצרת (מ0.45, במכשיר): קובץ בה קודם
                 out.add("העתק \"" + HERE + "\\" + FIXTURE + "\\" + State.CURRENT + "\\א.txt\" ידנית \"" + LIST + "/א\"");
                 // מבנה 53 (מהדוח של נ0.4): היעד היה HERE — והקובץ שברשימה נמצא בתוכו, וקובץ שבתוך היעד תמיד מדולג ("הרשימה
                 // ריקה", ❌ אחד בכל הרצה). היעד עכשיו — תיקיית "יומן" של הגיבוי הקטן: קיימת בהכנה, והקובץ אינו בתוכה.
-                out.add(Commands.word(def) + " " + Batch.SW_LIST + "\"" + LIST + "/א\" \"" + HERE + "\\" + FIXTURE + "\\" + State.JOURNAL + "\"");
+                out.add(Commands.word(def) + " " + Syntax.SW_LIST + "\"" + LIST + "/א\" \"" + HERE + "\\" + FIXTURE + "\\" + State.JOURNAL + "\"");
             }
             else out.add(Commands.word(def) + " \"" + HERE + "\" \"" + d("העתק\\1") + "\"" + sw);
-        } else if (name.equals(Batch.LINK)) {
+        } else if (name.equals(Syntax.LINK)) {
             if (!db) return false;
             out.add(Commands.word(def) + " ידנית \"" + LIST + "/א\" ידנית \"" + LIST + "/ב\"" + sw);
-        } else if (name.equals(Batch.VERIFY)) {
+        } else if (name.equals(Syntax.VERIFY)) {
             out.add(Commands.word(def) + " \"" + d("מקור\\א.txt") + "\" קיים" + sw);
             if (db) out.add(Commands.word(def) + " ידנית \"" + LIST + "/א\" קיימת");
-        } else if (name.equals(Batch.WRITE)) {
+        } else if (name.equals(Syntax.WRITE)) {
             out.add(Commands.word(def) + " \"" + d("כתוב " + k + ".txt") + "\" \"שורה\"" + sw);
-        } else if (name.equals(Batch.PACK)) {                                   // מבנה 122
+        } else if (name.equals(Syntax.PACK)) {                                   // מבנה 122
             out.add("צור תיקייה \"" + d("לארוז " + k) + "\" /תפוס:לדלג");
             out.add("כתוב \"" + d("לארוז " + k + "\\א.txt") + "\" \"x\" /תפוס:להחליף");
             out.add(Commands.word(def) + " \"" + d("לארוז " + k) + "\"" + sw);
             out.add("ודא \"" + d("לארוז " + k + ".zip") + "\" קיים");
-        } else if (name.equals(Batch.UNPACK)) {
+        } else if (name.equals(Syntax.UNPACK)) {
             out.add("צור תיקייה \"" + d("לפרוס " + k) + "\" /תפוס:לדלג");
             out.add("כתוב \"" + d("לפרוס " + k + "\\א.txt") + "\" \"x\" /תפוס:להחליף");
             out.add("ארוז \"" + d("לפרוס " + k) + "\"");
             out.add("מחק תיקייה \"" + d("לפרוס " + k) + "\" /עמוק");
             out.add(Commands.word(def) + " \"" + d("לפרוס " + k + ".zip") + "\"" + sw);
             out.add("ודא \"" + d("לפרוס " + k + "\\א.txt") + "\" קיים");
-        } else if (name.equals(Batch.WAIT)) {
+        } else if (name.equals(Syntax.WAIT)) {
             out.add(Commands.word(def) + " 0" + sw);
-        } else if (name.equals(Batch.REFRESH)) {
+        } else if (name.equals(Syntax.REFRESH)) {
             out.add(Commands.word(def) + sw);
         } else if (name.equals("ECHO") || name.equals("REM")) {
             out.add(Commands.word(def) + " בדיקת כל הפקודות" + sw);
-        } else if (name.equals(Batch.UNTRASH)) {
+        } else if (name.equals(Syntax.UNTRASH)) {
             out.add("כתוב \"" + d("לסל " + k + ".txt") + "\" \"x\"");
             out.add("מחק \"" + d("לסל " + k + ".txt") + "\"");
             out.add(Commands.word(def) + " \"" + d("לסל " + k + ".txt") + "\"" + sw);
             out.add("ודא \"" + d("לסל " + k + ".txt") + "\" קיים");
-        } else if (name.equals(Batch.PURGE)) {
+        } else if (name.equals(Syntax.PURGE)) {
             out.add("כתוב \"" + d("לסל " + k + ".txt") + "\" \"x\"");
             out.add("מחק \"" + d("לסל " + k + ".txt") + "\"");
             out.add(Commands.word(def) + " \"" + d("לסל " + k + ".txt") + "\"" + sw);
@@ -233,18 +233,18 @@ final class CmdMatrix {
     static final java.util.Map<String, String> SAMPLES = new java.util.LinkedHashMap<String, String>();
 
     static {
-        SAMPLES.put(Batch.SW_JOURNAL, "\"" + DIR + "\\יומן #.txt\"");
-        SAMPLES.put(Batch.SW_LIMIT, "100%");
-        SAMPLES.put(Batch.SW_STATE, "31.12.2099");
-        SAMPLES.put("/" + Batch.SW_DATE, "שבוע");
-        SAMPLES.put("/" + Batch.SW_SIZE, "<1MB");
-        SAMPLES.put("/" + Batch.SW_CONTAINS, "\"אחת\"");
+        SAMPLES.put(Syntax.SW_JOURNAL, "\"" + DIR + "\\יומן #.txt\"");
+        SAMPLES.put(Syntax.SW_LIMIT, "100%");
+        SAMPLES.put(Syntax.SW_STATE, "31.12.2099");
+        SAMPLES.put("/" + Syntax.SW_DATE, "שבוע");
+        SAMPLES.put("/" + Syntax.SW_SIZE, "<1MB");
+        SAMPLES.put("/" + Syntax.SW_CONTAINS, "\"אחת\"");
         SAMPLES.put("/D:", "1-1-2000");
         SAMPLES.put("/MAXAGE:", "7");
         SAMPLES.put("/MINAGE:", "0");
         SAMPLES.put("/MAX:", "1000000");
         SAMPLES.put("/MIN:", "1");
-        SAMPLES.put(Batch.SW_LIST, "\"" + LIST + "/א\"");
+        SAMPLES.put(Syntax.SW_LIST, "\"" + LIST + "/א\"");
     }
 
     /** המתגים שכל פקודה בקובץ צריכה (לבדיקת המחשב): "COPY /S" … */

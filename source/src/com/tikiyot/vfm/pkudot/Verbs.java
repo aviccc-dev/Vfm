@@ -153,9 +153,9 @@ final class Verbs {
             rest = bare;
         }
         for (String w : rest.split(" ")) {                                       // מבנה 104: /תפוס:<ערך> — כמו בהעתקת קבצים
-            if (!w.startsWith(Batch.SW_TAKEN)) continue;
+            if (!w.startsWith(Syntax.SW_TAKEN)) continue;
             if (!Batch.takenValue(w)) c.error = Batch.takenUnknown(w);
-            else c.taken = w.substring(Batch.SW_TAKEN.length());
+            else c.taken = w.substring(Syntax.SW_TAKEN.length());
             rest = (" " + rest + " ").replace(" " + w + " ", " ").trim();
         }
         if (c.verb.equals(BACK)) {

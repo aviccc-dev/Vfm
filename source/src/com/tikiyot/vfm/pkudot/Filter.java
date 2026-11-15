@@ -41,8 +41,8 @@ final class Filter {
             String up = s.toUpperCase(Locale.ROOT);
             Cond.Test t = null;
             boolean known = true;
-            if (s.startsWith(Batch.SW_CONTAINS)) {                                  // מ0.40
-                String v = s.substring(Batch.SW_CONTAINS.length()).trim();
+            if (s.startsWith(Syntax.SW_CONTAINS)) {                                  // מ0.40
+                String v = s.substring(Syntax.SW_CONTAINS.length()).trim();
                 if (v.length() >= 2 && v.startsWith("\"") && v.endsWith("\"")) v = v.substring(1, v.length() - 1);
                 if (v.isEmpty()) {
                     f.error = Words.Cmd.CONTAINS_USAGE;
@@ -56,8 +56,8 @@ final class Filter {
                 }
                 continue;
             }
-            if (s.startsWith(Batch.SW_DATE)) t = Cond.date(s.substring(Batch.SW_DATE.length()));
-            else if (s.startsWith(Batch.SW_SIZE)) t = Cond.size(s.substring(Batch.SW_SIZE.length()));
+            if (s.startsWith(Syntax.SW_DATE)) t = Cond.date(s.substring(Syntax.SW_DATE.length()));
+            else if (s.startsWith(Syntax.SW_SIZE)) t = Cond.size(s.substring(Syntax.SW_SIZE.length()));
             else if (up.startsWith("MAXAGE:")) t = Cond.date(s.substring(7).trim() + "d");
             else if (up.startsWith("MINAGE:")) t = Cond.date("<" + s.substring(7).trim() + "d");
             else if (up.startsWith("MAX:")) t = Cond.size("<" + (parseLong(s.substring(4)) + 1));

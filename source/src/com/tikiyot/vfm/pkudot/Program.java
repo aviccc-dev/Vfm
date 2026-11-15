@@ -103,7 +103,7 @@ final class Program {
             if (s.cmd.equals("MOVE") || s.cmd.equals("COPY") || s.cmd.equals("DEL") || s.cmd.equals("REN")) {
                 any = true;
                 all.addAll(s.files);
-            } else if (s.cmd.equals(Batch.OPEN)) {
+            } else if (s.cmd.equals(Syntax.OPEN)) {
                 List<String> found = Verbs.files(c, Verbs.parse(s.open));
                 if (found != null) {
                     any = true;

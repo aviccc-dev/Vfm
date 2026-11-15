@@ -336,9 +336,9 @@ final class Manager {
         // מבנה 111 (ה6ב, המשתמש: "כן"): "כתוב" אינו יוצר תיקייה. כשהמסך יוצר קובץ בתיקייה שעוד אין ("פקודה חדשה" בתיקייה
         // שעוד לא נוצרה) — קודם "צור תיקייה … /תפוס:לדלג", ואז "כתוב": שתי פקודות, כל אחת בכלל שלה.
         String md = f.getParentFile() != null && !f.getParentFile().isDirectory()
-                ? Commands.word(Commands.get("MD")) + " \"%" + Batch.V_DEST + "%\" " + Batch.SW_TAKEN + Batch.TAKEN_SKIP + "\n" : "";
-        String text = md + Commands.word(Commands.get(Batch.WRITE)) + " \"%" + Batch.V_DEST + "%\\%" + Batch.V_NEW_NAME + "%\" \"%" + Batch.V_CONTENT + "%\""
-                + (taken == null || taken.isEmpty() ? "" : " " + Batch.SW_TAKEN + taken) + "\n";
+                ? Commands.word(Commands.get("MD")) + " \"%" + Batch.V_DEST + "%\" " + Syntax.SW_TAKEN + Syntax.TAKEN_SKIP + "\n" : "";
+        String text = md + Commands.word(Commands.get(Syntax.WRITE)) + " \"%" + Batch.V_DEST + "%\\%" + Batch.V_NEW_NAME + "%\" \"%" + Batch.V_CONTENT + "%\""
+                + (taken == null || taken.isEmpty() ? "" : " " + Syntax.SW_TAKEN + taken) + "\n";
         return new Act(text, Batch.plan(text, here, vars, lib, null, new Batch.Selection(java.util.Collections.<String>emptyList(),
                 java.util.Collections.<String>emptyList(), f.getParentFile(), f.getName(), content)), f.getParentFile());
     }
@@ -475,7 +475,7 @@ final class Manager {
      */
     static String saveFile(java.io.File f, String text, boolean replace, Library lib) {
         java.io.File here = f.getParentFile() != null ? f.getParentFile() : Paths.work();
-        Act act = onNewFile(f, text == null ? "" : text, replace ? Batch.TAKEN_REPLACE : "", here, new java.util.HashMap<String, String>(), lib);
+        Act act = onNewFile(f, text == null ? "" : text, replace ? Syntax.TAKEN_REPLACE : "", here, new java.util.HashMap<String, String>(), lib);
         String no = act.error();
         if (no != null) return no;
         Physical.Result r = act.run(lib, null, null, false);
@@ -487,13 +487,13 @@ final class Manager {
      * items — המסלולים של הפריטים בתוך הסל.
      */
     static Act onTrash(boolean restore, java.util.List<String> items, java.io.File here, java.util.Map<String, String> vars, Library lib) {
-        String text = Commands.word(Commands.get(restore ? Batch.UNTRASH : Batch.PURGE)) + " %" + Batch.V_SELECTED + "%\n";
+        String text = Commands.word(Commands.get(restore ? Syntax.UNTRASH : Syntax.PURGE)) + " %" + Batch.V_SELECTED + "%\n";
         return new Act(text, Batch.plan(text, here, vars, lib, null, new Batch.Selection(items, java.util.Collections.<String>emptyList())), null);
     }
 
     /** מבנה 122: אריזה של תיקייה ("ארוז %נבחרים%") או פריסה של קובץ zip ("פרוס %נבחרים%"), מהמסך. path — מה שנבחר. */
     static Act onZip(boolean pack, String path, java.io.File here, java.util.Map<String, String> vars, Library lib) {
-        String text = Commands.word(Commands.get(pack ? Batch.PACK : Batch.UNPACK)) + " %" + Batch.V_SELECTED + "%\n";
+        String text = Commands.word(Commands.get(pack ? Syntax.PACK : Syntax.UNPACK)) + " %" + Batch.V_SELECTED + "%\n";
         java.util.List<String> one = java.util.Collections.singletonList(path), none = java.util.Collections.<String>emptyList();
         return new Act(text, Batch.plan(text, here, vars, lib, null, new Batch.Selection(pack ? none : one, pack ? one : none)), null);
     }
@@ -544,7 +544,7 @@ final class Manager {
     static Act onSmartNew(String mode, long in, String name, String cond, java.util.Map<String, String> props, String taken,
                           java.io.File here, java.util.Map<String, String> vars, Library lib) {
         String text = Verbs.CREATE + " " + Verbs.LIST + " " + Verbs.SMART_WORD + " %" + Batch.V_NEW_NAME + "% %" + Batch.V_CONTENT + "%"
-                + (taken == null || taken.isEmpty() ? "" : " " + Batch.SW_TAKEN + taken) + "\n";
+                + (taken == null || taken.isEmpty() ? "" : " " + Syntax.SW_TAKEN + taken) + "\n";
         return new Act(text, Batch.plan(text, here, vars, lib, null, new Batch.Selection(mode, in, name, cond, props)), null);
     }
 
@@ -578,7 +578,7 @@ final class Manager {
     static Act onListAdd(String mode, long list, java.util.List<String> paths, java.util.List<String> dirs, int how, java.io.File here,
                          java.util.Map<String, String> vars, Library lib) {
         String sw = dirs.isEmpty() ? "" : how == FOLDER_FLAT ? " " + ListCmd.SW_FLAT
-                : (how == FOLDER_LIVE ? " " + ListCmd.SW_LIVE : "") + " " + Batch.SW_TAKEN + Batch.TAKEN_RENAME;
+                : (how == FOLDER_LIVE ? " " + ListCmd.SW_LIVE : "") + " " + Syntax.SW_TAKEN + Syntax.TAKEN_RENAME;
         String text = Commands.word(Commands.get("COPY")) + " %" + Batch.V_SELECTED + "% " + ListCmd.MANUAL + " %" + Batch.V_SELECTED + "%" + sw + "\n";
         Batch.Selection sel = new Batch.Selection(mode, list, new java.util.ArrayList<Long>());
         sel.files.addAll(paths);
@@ -604,13 +604,13 @@ final class Manager {
     static final int INDEX_QUICK = 0, INDEX_DEEP = 1, INDEX_FULL = 2;
 
     static Act onIndex(int kind, java.io.File here, java.util.Map<String, String> vars, Library lib) {
-        String text = Commands.word(Commands.get(Batch.REFRESH)) + (kind == INDEX_DEEP ? " " + Batch.W_DEEP : kind == INDEX_FULL ? " " + Batch.W_FULL : "") + "\n";
+        String text = Commands.word(Commands.get(Syntax.REFRESH)) + (kind == INDEX_DEEP ? " " + Syntax.W_DEEP : kind == INDEX_FULL ? " " + Syntax.W_FULL : "") + "\n";
         return new Act(text, Batch.plan(text, here, vars, lib), null);
     }
 
     /** מבנה 119: "גיבוי עכשיו" של אופן, מהמסך — "אופן "<שם>"" ואחריה "גבה", כמו בקובץ פקודות. */
     static Act onBackup(String mode, java.io.File here, java.util.Map<String, String> vars, Library lib) {
-        String text = Commands.word(Commands.get(Batch.MODE)) + " \"" + mode + "\"\n" + Commands.word(Commands.get(Batch.BACKUP)) + "\n";
+        String text = Commands.word(Commands.get(Syntax.MODE)) + " \"" + mode + "\"\n" + Commands.word(Commands.get(Syntax.BACKUP)) + "\n";
         return new Act(text, Batch.plan(text, here, vars, lib), null);
     }
 
@@ -619,7 +619,7 @@ final class Manager {
      * מפוענחים. אותו כלל כמו בשורה כתובה (Conf.SETTINGS): הגדרה שאינה מוכרת, או ערך שאינו מתאים — סירוב מהתכנון.
      */
     static Act onSetting(String key, String value, java.io.File here, java.util.Map<String, String> vars, Library lib) {
-        String text = Commands.word(Commands.get(Batch.SET)) + " \"%" + Batch.V_NEW_NAME + "%\" \"%" + Batch.V_CONTENT + "%\"\n";
+        String text = Commands.word(Commands.get(Syntax.SET)) + " \"%" + Batch.V_NEW_NAME + "%\" \"%" + Batch.V_CONTENT + "%\"\n";
         return new Act(text, Batch.plan(text, here, vars, lib, null, new Batch.Selection(java.util.Collections.<String>emptyList(),
                 java.util.Collections.<String>emptyList(), null, key, value)), null);
     }
@@ -639,7 +639,7 @@ final class Manager {
      * רשימה שכבר איננה — אין מה לעשות (writes); והשאר ממשיכות.
      */
     static Act onRunClean(String mode, java.util.List<String> path, java.io.File here, java.util.Map<String, String> vars, Library lib) {
-        String text = (mode == null ? "" : Commands.word(Commands.get(Batch.MODE)) + " \"" + mode + "\"\n")
+        String text = (mode == null ? "" : Commands.word(Commands.get(Syntax.MODE)) + " \"" + mode + "\"\n")
                 + Commands.HE_UNLIST + " " + ListCmd.MANUAL + " \"" + ListCmd.pathText(path) + "\"\n";
         return new Act(text, Batch.plan(text, here, vars, lib), null);
     }

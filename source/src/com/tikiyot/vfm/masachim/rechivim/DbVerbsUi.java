@@ -168,7 +168,7 @@ final class DbVerbsUi {
         if (why != null && why.equals(Words.ListCmdW.smartTaken(r.name.trim().isEmpty() ? Words.SMART_LIST : r.name.trim()))) {
             new android.app.AlertDialog.Builder(a).setTitle(Words.ListCmdW.SMART_TAKEN_TITLE).setMessage(why)
                     .setPositiveButton(Words.ListCmdW.SMART_REPLACE, new android.content.DialogInterface.OnClickListener() {
-                        @Override public void onClick(android.content.DialogInterface d, int w) { makeSmart(a, mode, in, r, Batch.TAKEN_REPLACE, done); }
+                        @Override public void onClick(android.content.DialogInterface d, int w) { makeSmart(a, mode, in, r, Syntax.TAKEN_REPLACE, done); }
                     })
                     .setNegativeButton(Words.ListCmdW.OTHER_NAME, new android.content.DialogInterface.OnClickListener() {
                         @Override

@@ -171,7 +171,7 @@ final class Bridge {
     public String places() {
         JSONArray a = new JSONArray();
         try {
-            String[] keys = {Batch.V_DOWNLOADS, Batch.V_INTERNAL, Batch.V_CARD};
+            String[] keys = {Syntax.V_DOWNLOADS, Syntax.V_INTERNAL, Syntax.V_CARD};
             for (String k : keys) {
                 String v = vars.get(k);
                 if (v == null) continue;
@@ -565,7 +565,7 @@ final class Bridge {
                     File f = new File(dir, Words.Lab.RUN_FILE + "." + Batch.EXT);
                     // מ0.40 — המשתמש: "למה ההעברה בוצעה בפועל? הרי זה אמור לעבוד רק בכאילו." מהמעבדה — תמיד הדמיה:
                     // שורת "הדמיה" בראש, ומסך ההרצה מראה מה היה קורה, בלי כפתור הרצה. שום דבר בכונן או במסד לא משתנה.
-                    String no = Manager.ownSave(dir, f, Batch.AS_IF2 + "\n" + (text == null ? "" : text));   // מבנה 139
+                    String no = Manager.ownSave(dir, f, Syntax.AS_IF2 + "\n" + (text == null ? "" : text));   // מבנה 139
                     if (no != null) { host.toast(no); return; }
                     // מ0.39: תמיד במסך ההרצה — תצוגה מקדימה, אישור, ודוח (בהרצה הרגילה, בלי "בדיקה", זה רץ מיד ונראית רק
                     // הודעה קצרה; המשתמש: "איפה רואים את התוצאה של הפעולה?")
@@ -595,7 +595,7 @@ final class Bridge {
                     if (name.isEmpty()) name = Words.Lab.RUN_FILE + "." + Batch.EXT;
                     if (!Batch.isBatch(name)) name = name + "." + Batch.EXT;
                     File f = new File(dir, name);
-                    String no = Manager.ownSave(dir, f, (real ? "" : Batch.AS_IF2 + "\n") + (text == null ? "" : text));   // מבנה 139
+                    String no = Manager.ownSave(dir, f, (real ? "" : Syntax.AS_IF2 + "\n") + (text == null ? "" : text));   // מבנה 139
                     if (no != null) { host.toast(no); return; }
                     File here = w.startsWith("/") ? new File(w).getParentFile() : Shortcuts.dir();
                     host.run(f, here);

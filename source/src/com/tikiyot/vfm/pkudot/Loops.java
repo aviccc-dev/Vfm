@@ -25,13 +25,13 @@ final class Loops {
     /** "חזור 6" · "חזור <סבבים>" — לולאה (בלי מספר — הפועל "חזור", חזרה למסך הקודם). */
     static boolean isLoopStart(String line) {
         List<String> tk = Batch.tokens(line);
-        if (tk.size() < 2 || !tk.get(0).equals(Batch.LOOP)) return false;
+        if (tk.size() < 2 || !tk.get(0).equals(Syntax.LOOP)) return false;
         char c = tk.get(1).isEmpty() ? ' ' : tk.get(1).charAt(0);
         return Character.isDigit(c) || c == '<' || c == '%';
     }
 
     static boolean isLoopEnd(String line) {
-        return line.equals(Batch.LOOP_END);
+        return line.equals(Syntax.LOOP_END);
     }
 
     /** הגבול לסבב: "30שניות", "30 שניות", "2דקות", "500ms"; -1 — לא מובן. */
@@ -51,14 +51,14 @@ final class Loops {
 
     /** פורס את הלולאות: כל סבב — השורות שבתוכה, עם %סבב% = מספר הסבב (בלולאה פנימית — שלה). */
     /**
-     * מ0.15: Batch.CALL "קובץ" (בעברית: כלול) — במקום השורה: הודעה "▸ כלול: …" ואחריה שורות הקובץ (גם Batch.CALL שבתוכו, עד
-     * Batch.CALL_DEPTH). קובץ שלא נמצא, מעגל, או עומק — השורה נשארת כמו שהיא ונכשלת בתכנון (עם הסבר).
+     * מ0.15: Syntax.CALL "קובץ" (בעברית: כלול) — במקום השורה: הודעה "▸ כלול: …" ואחריה שורות הקובץ (גם Syntax.CALL שבתוכו, עד
+     * Syntax.CALL_DEPTH). קובץ שלא נמצא, מעגל, או עומק — השורה נשארת כמו שהיא ונכשלת בתכנון (עם הסבר).
      */
     static String[] calls(String[] lines, File here, Map<String, String> vars, int depth, java.util.Set<String> stack) {
         List<String> out = new ArrayList<String>();
         for (String raw : lines) {
             List<String> tk = Batch.tokens(Batch.clean(raw));
-            if (tk.size() != 2 || !Batch.CALL.equals(Commands.canonical(tk.get(0)))) {
+            if (tk.size() != 2 || !Syntax.CALL.equals(Commands.canonical(tk.get(0)))) {
                 out.add(raw);
                 continue;
             }
@@ -66,7 +66,7 @@ final class Loops {
             String p = Batch.path(tk.get(1), here, vars, err);
             File f = p == null ? null : new File(p);
             String key = f == null ? "" : f.getAbsolutePath();
-            if (f == null || !f.isFile() || depth >= Batch.CALL_DEPTH || stack.contains(key)) {
+            if (f == null || !f.isFile() || depth >= Syntax.CALL_DEPTH || stack.contains(key)) {
                 out.add(raw);
                 continue;
             }
@@ -78,7 +78,7 @@ final class Loops {
                 List<String> keep = new ArrayList<String>();
                 for (String x : sub) {
                     String c = Batch.clean(x);
-                    if (c.equals(Batch.CHECK) || c.equals(Batch.AS_IF) || c.equals(Batch.AS_IF2)) continue;   // שורות כותרת — רק של הקובץ הראשי
+                    if (c.equals(Syntax.CHECK) || c.equals(Syntax.AS_IF) || c.equals(Syntax.AS_IF2)) continue;   // שורות כותרת — רק של הקובץ הראשי
                     keep.add(x);
                 }
                 out.add("ECHO " + Words.DbCmd.called(f.getName(), keep.size()));
@@ -99,7 +99,7 @@ final class Loops {
 
     private static void expand(String[] lines, int from, int to, int[] loops, int[] rounds, String round, Batch.Plan plan, List<Ln> out) {
         for (int i = from; i < to; i++) {
-            if (out.size() > Batch.MAX_LINES) return;
+            if (out.size() > Syntax.MAX_LINES) return;
             String line = Batch.clean(lines[i]);
             if (isLoopStart(line)) {
                 int depth = 0, end = -1;
@@ -111,7 +111,7 @@ final class Loops {
                         else depth--;
                     }
                 }
-                List<String> tk = Batch.tokens(round == null ? line : line.replace(Batch.var(Batch.V_ROUND), round));
+                List<String> tk = Batch.tokens(round == null ? line : line.replace(Batch.var(Syntax.V_ROUND), round));
                 int n = -1;
                 long limit = 0;
                 String err = null;
@@ -119,15 +119,15 @@ final class Loops {
                 for (int k = 2; k < tk.size() && err == null; k++) {
                     String x = tk.get(k);
                     if (x.equals(Words.Loop.TIMES_WORD)) continue;
-                    if (x.startsWith(Batch.SW_LIMIT)) {
-                        String v = x.substring(Batch.SW_LIMIT.length());
+                    if (x.startsWith(Syntax.SW_LIMIT)) {
+                        String v = x.substring(Syntax.SW_LIMIT.length());
                         if (k + 1 < tk.size() && !tk.get(k + 1).isEmpty() && !Character.isDigit(tk.get(k + 1).charAt(0)) && !tk.get(k + 1).startsWith("/")
                                 && limitMs(v + tk.get(k + 1)) > 0) v += tk.get(++k);                 // "/עד:30 שניות"
                         limit = limitMs(v);
                         if (limit <= 0) err = Words.Loop.BAD_LIMIT;
                     } else err = Words.Loop.USAGE;
                 }
-                if (err == null && (n < 1 || n > Batch.MAX_ROUNDS)) err = Words.Loop.tooMany(Batch.MAX_ROUNDS);
+                if (err == null && (n < 1 || n > Syntax.MAX_ROUNDS)) err = Words.Loop.tooMany(Syntax.MAX_ROUNDS);
                 if (err == null && end < 0) err = Words.Loop.NO_END;
                 if (err != null) {
                     Ln e = new Ln();
@@ -144,7 +144,7 @@ final class Loops {
                 plan.loopLine.add(i + 1);
                 int[] l2 = java.util.Arrays.copyOf(loops, loops.length + 1), r2 = java.util.Arrays.copyOf(rounds, rounds.length + 1);
                 l2[loops.length] = id;
-                for (int r = 1; r <= n && out.size() <= Batch.MAX_LINES; r++) {
+                for (int r = 1; r <= n && out.size() <= Syntax.MAX_LINES; r++) {
                     r2 = r2.clone();
                     r2[rounds.length] = r;
                     expand(lines, i + 1, end, l2, r2, String.valueOf(r), plan, out);
@@ -154,7 +154,7 @@ final class Loops {
             }
             Ln x = new Ln();
             x.num = i + 1;
-            x.text = round == null ? lines[i] : lines[i].replace(Batch.var(Batch.V_ROUND), round);
+            x.text = round == null ? lines[i] : lines[i].replace(Batch.var(Syntax.V_ROUND), round);
             if (isLoopEnd(line)) x.error = Words.Loop.END_WITHOUT_START;
             if (loops.length > 0) {
                 x.loops = loops;
@@ -162,11 +162,11 @@ final class Loops {
             }
             out.add(x);
         }
-        if (out.size() > Batch.MAX_LINES && (out.isEmpty() || out.get(out.size() - 1).error == null)) {
+        if (out.size() > Syntax.MAX_LINES && (out.isEmpty() || out.get(out.size() - 1).error == null)) {
             Ln e = new Ln();
             e.num = from + 1;
             e.text = "";
-            e.error = Words.Loop.tooLong(Batch.MAX_LINES);
+            e.error = Words.Loop.tooLong(Syntax.MAX_LINES);
             out.add(e);
         }
     }

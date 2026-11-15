@@ -96,7 +96,7 @@ final class Shortcuts {
                 String in = null;                                                  // "אופן" שבקובץ — עד כאן
                 for (int i = 0; i < lines.length; i++) {
                     List<String> tk = Batch.tokens(Bidi.strip(lines[i]).trim());
-                    if (tk.size() == 2 && Batch.MODE.equals(Commands.canonical(tk.get(0)))) {
+                    if (tk.size() == 2 && Syntax.MODE.equals(Commands.canonical(tk.get(0)))) {
                         in = tk.get(1).trim();
                         continue;
                     }

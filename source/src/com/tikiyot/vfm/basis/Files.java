@@ -216,7 +216,7 @@ public final class Files {
 
     // --- מבנה 9: קבועים ושאלות קטנות שישבו גבוה מדי (בפקודות ובכונן), וגם מי שמתחתם צריך אותם ---
 
-    /** תבנית התאריך והשעה שבשמות קבצים (%עכשיו%, יומן ההרצה, יומני המצב). עד כאן — Batch.NOW_FORMAT. */
+    /** תבנית התאריך והשעה שבשמות קבצים (%עכשיו%, יומן ההרצה, יומני המצב). עד כאן — Syntax.NOW_FORMAT. */
     public static final String NOW_FORMAT = "dd.MM.yyyy HH-mm-ss";
     /** הסיומת של קובץ פקודות. עד כאן — Batch.EXT. */
     public static final String CMD_EXT = "vbat";

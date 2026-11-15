@@ -540,7 +540,7 @@ final class PhysicalUi {
         if (Words.Cmd.fileTaken(f.getName()).equals(act.error())) {          // מבנה 110 (ה6): שם קיים — אותה שאלה כמו בכל מקום
             new android.app.AlertDialog.Builder(a).setTitle(Words.ListCmdW.SMART_TAKEN_TITLE).setMessage(act.error())
                     .setPositiveButton(Words.Disk.REPLACE_OLD_TO_TRASH, new android.content.DialogInterface.OnClickListener() {
-                        @Override public void onClick(android.content.DialogInterface d, int w) { askNewFile(a, f, content, Batch.TAKEN_REPLACE, onMade); }
+                        @Override public void onClick(android.content.DialogInterface d, int w) { askNewFile(a, f, content, Syntax.TAKEN_REPLACE, onMade); }
                     })
                     .setNegativeButton(Words.ListCmdW.OTHER_NAME, new android.content.DialogInterface.OnClickListener() {
                         @Override

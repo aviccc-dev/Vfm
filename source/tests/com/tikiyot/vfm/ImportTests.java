@@ -650,7 +650,7 @@ final class ImportTests {
                 && !DbListCmd.verify(s, M, vn, DbListCmd.expect(new ArrayList<String>()), fd));
         ck("ודא: תנאי לא מוכר / מספר שגוי — צורה", DbListCmd.expect(Arrays.asList("משהו")).error != null
                 && DbListCmd.expect(Arrays.asList("/פריטים:x")).error != null && DbListCmd.expect(Arrays.asList("חסרה", "/רשימות:1")).error != null);
-        ck("ודא: השם בעברית מוכר כפקודה", Batch.VERIFY.equals(Commands.canonical("ודא")));
+        ck("ודא: השם בעברית מוכר כפקודה", Syntax.VERIFY.equals(Commands.canonical("ודא")));
 
         // כלול (מ0.15)
         File cd = new File(System.getProperty("java.io.tmpdir"), "call" + System.nanoTime());
