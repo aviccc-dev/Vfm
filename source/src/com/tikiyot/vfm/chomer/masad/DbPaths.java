@@ -55,29 +55,7 @@ final class DbPaths {
         return 0;
     }
 
-    /**
-     * "צור רשימה חכמה": אותו שם ואותו תנאי — הקיימת; אותו שם ותנאי אחר — "שם (2)" (ואם תפוס — 3…), כמו במנוע הישן.
-     * עומדת לעצמה. בעסקה אחת. מחזיר את הרשימה החכמה.
-     */
-    static long ensureSmart(Store s, String name, final String cond, final String sort) {
-        final String base = name == null ? "" : name.trim();
-        long had = smart(s, base);
-        if (had != 0 && same(s.prop(had, Store.P_COND), cond)) return had;
-        String n = base;
-        for (int k = 2; smart(s, n) != 0; k++) n = base + " (" + k + ")";
-        final String free = n;
-        final long[] out = {0};
-        s.atomic(new Store.Work() {
-            @Override
-            public void run(Store t) {
-                long id = t.createSmart(free, 0);
-                t.setProp(id, Store.P_COND, cond);
-                t.setProp(id, Store.P_SORT, sort);
-                out[0] = id;
-            }
-        }, true);
-        return out[0];
-    }
+    // מבנה 103: "צור רשימה חכמה" (ensureSmart — אותו שם ואותו תנאי: הקיימת; תנאי אחר: "(2)") נמחק: הכלל האחד — Lists.newSmart.
 
     /** "עדכן רשימה חכמה": רק קיימת — התנאי (והמיון, אם נכתב). 0 — אין כזו. */
     static long updateSmart(Store s, String name, final String cond, final String sort) {
@@ -91,10 +69,6 @@ final class DbPaths {
             }
         }, true);
         return id;
-    }
-
-    private static boolean same(String a, String b) {
-        return (a == null ? "" : a.trim()).equals(b == null ? "" : b.trim());
     }
 
     /** רשימה בשם הזה בראש: שאינה בתוך רשימה (חוץ מהבית); אם אין — כל רשימה בשם הזה. */

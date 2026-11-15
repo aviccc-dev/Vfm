@@ -1878,6 +1878,15 @@ public final class Words {
             return "רשימה ידנית חדשה: " + label;
         }
 
+        /** מבנה 103: יש כבר רשימה חכמה בשם הזה, באותה רשימה. */
+        public static String smartTaken(String name) {
+            return "כבר יש כאן רשימה חכמה בשם \"" + name + "\" — שם קיים";
+        }
+
+        public static final String SMART_TAKEN_TITLE = "שם קיים", SMART_ANYWAY = "ליצור בכל זאת", OTHER_NAME = "שם אחר";
+        /** מבנה 103: נוצרה למרות שם קיים — כי נכתב "המשך" לפני השורה, או שהמשתמש אישר במסך. */
+        public static final String SMART_DESPITE = " (שם קיים — נוצרה בכל זאת)";
+
         /** מבנה 98: עד כאן גם רשימה חכמה חדשה נאמרה "רשימה ידנית חדשה". */
         public static String createdSmart(String label) {
             return "רשימה חכמה חדשה: " + label;

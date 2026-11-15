@@ -592,7 +592,11 @@ final class DbCmdTests {
                         Db.write(Db.app, m91, null, new Db.Use<Void>() {
                             @Override public Void run(SqlStore st) {
                                 in[0] = DbPaths.find(st, m91, pn);
-                                old97[k] = DbSmartForm.save(st, 0, DbPaths.find(st, m91, po), f97) != 0 ? "נוצרה" : "לא";   // הדרך הישנה
+                                long at = DbPaths.find(st, m91, po);
+                                // מבנה 103 (המשתמש): שם קיים — עוצרים; הדרך "הישנה" כאן היא הכלל שהמשתמש קבע, כדי ששתי הרשימות יישארו שוות
+                                if (Lists.smartTaken(st, at != 0 ? at : DbPaths.home(st), f97.name.trim().isEmpty() ? Words.SMART_LIST : f97.name.trim()))
+                                    old97[k] = "תכנון: " + Words.ListCmdW.smartTaken(f97.name.trim());
+                                else old97[k] = DbSmartForm.save(st, 0, at, f97) != 0 ? "נוצרה" : "לא";
                                 return null;
                             }
                         });
@@ -612,7 +616,26 @@ final class DbCmdTests {
                     }
                     o.check("מבנה 97: רשימה חכמה חדשה בשבעה מצבים (בבית, בעומק, ברשימה משותפת, אותו שם שוב, בלי שם, תווים מיוחדים ו«», שם של רשימה ידנית) — "
                                     + "הפקודה עונה כמו המסך " + java.util.Arrays.toString(old97) + " " + java.util.Arrays.toString(new97),
-                            java.util.Arrays.equals(old97, new97) && new97[0].equals("נוצרה"));
+                            java.util.Arrays.equals(old97, new97) && new97[0].equals("נוצרה")
+                                    && new97[3].equals("תכנון: " + Words.ListCmdW.smartTaken("חכמה רגילה")));
+                    // מבנה 103: "ליצור בכל זאת" (המשתמש אישר) — אותה פקודה עם "המשך" לפניה; נוצרת, בשני הצדדים
+                    {
+                        final DbSmartForm.Result f103 = new DbSmartForm.Result();
+                        f103.name = "חכמה רגילה";
+                        f103.cond = "סוג:epub";
+                        final long[] in103 = {0};
+                        Db.write(Db.app, m91, null, new Db.Use<Void>() {
+                            @Override public Void run(SqlStore st) {
+                                in103[0] = DbPaths.find(st, m91, java.util.Arrays.asList("חדש"));
+                                DbSmartForm.save(st, 0, DbPaths.find(st, m91, java.util.Arrays.asList("ישן")), f103);
+                                return null;
+                            }
+                        });
+                        Manager.Act any103 = Manager.onSmartNew(m91, in103[0], f103.name, f103.cond, DbSmartForm.props(f103), true, here, vars, lib);
+                        String said103 = any103.error() != null ? "תכנון: " + any103.error() : any103.say(lib);
+                        o.check("מבנה 103: \"ליצור בכל זאת\" — הפקודה עם \"המשך\" לפניה; נוצרת עוד אחת באותו שם (" + said103 + ")",
+                                any103.error() == null && !any103.failed && any103.made != 0 && any103.text.startsWith(Words.DbCmd.N_CONT + "\n"));
+                    }
                     List<String> v97 = go("המשך ()\nאופן \"" + m91 + "\"\nודא תוכן ידנית \"ישן\" שווה תוכן ידנית \"חדש\"\n"
                             + "השווה תוכן ידנית \"ישן\" תוכן ידנית \"חדש\" /הבדלים\n", here, vars, lib);
                     o.check("מבנה 97: אחרי שבע הפעולות — שתי הרשימות שוות עד הסוף, כולל התנאי, המיון, התצוגה, הצלמית, התיאור וה\"למה\" " + v97,
@@ -630,9 +653,13 @@ final class DbCmdTests {
                     String said97 = gone97.say(lib);
                     List<String> w97 = go("המשך ()\nאופן \"" + m91 + "\"\nצור רשימה חכמה \"מקובץ 97\" סוג:pdf\nצור רשימה חכמה \"מקובץ 97\" סוג:pdf\n"
                             + "ודא שגיאה\nצור רשימה חכמה %שם-חדש% %תוכן%\n", here, vars, lib);
-                    o.check("מבנה 97: רשימה שנמחקה — סירוב שנאמר; \"צור רשימה חכמה\" כתובה לא השתנתה (פעמיים — אותה רשימה); %שם-חדש% בלי טופס — שגיאה "
+                    Batch.Plan stop103 = Batch.plan("אופן \"" + m91 + "\"\nצור רשימה חכמה \"מקובץ 97\" סוג:txt\n", here, vars, lib);
+                    o.check("מבנה 103: בקובץ בלי \"המשך\" — שם קיים: שגיאה בתכנון, והקובץ אינו רץ; עם \"המשך\" — נוצרת בכל זאת, ונאמר",
+                            stop103.blocked() && stop103.errorText().contains(Words.ListCmdW.smartTaken("מקובץ 97"))
+                                    && String.valueOf(w97).contains(Words.ListCmdW.SMART_DESPITE));
+                    o.check("מבנה 97: רשימה שנמחקה — סירוב שנאמר; \"צור רשימה חכמה\" פעמיים עם \"המשך\" — שתיים (מבנה 103); %שם-חדש% בלי טופס — שגיאה "
                                     + said97 + " " + w97,
-                            gone97.failed && said97.equals(Words.Db.LIST_GONE) && bad(w97).isEmpty() && smarts97(m91, "מקובץ 97") == 1);
+                            gone97.failed && said97.equals(Words.Db.LIST_GONE) && bad(w97).isEmpty() && smarts97(m91, "מקובץ 97") == 2);
                     o.check("מבנה 98: רשימה חכמה חדשה נאמרת \"רשימה חכמה חדשה\" — לא \"רשימה ידנית חדשה\" " + w97,
                             String.valueOf(w97).contains(Words.ListCmdW.createdSmart("מקובץ 97")) && !String.valueOf(w97).contains(Words.ListCmdW.created("מקובץ 97")));
                     String ui97 = Files.readUtf8(new File(src, "src/com/tikiyot/vfm/masachim/rechivim/DbVerbsUi.java"))
@@ -718,7 +745,7 @@ final class DbCmdTests {
                             @Override public Void run(SqlStore t) {
                                 int k = java.util.Arrays.asList(steps100).indexOf(st100);
                                 long id = st100.equals("list") ? DbPaths.ensure(t, m91, java.util.Arrays.asList("ישן-כפתור", "א", "ב"))
-                                        : st100.startsWith("smart:") ? DbPaths.ensureSmart(t, "ישן-כפתור", st100.substring(6), "")
+                                        : st100.startsWith("smart:") ? Lists.newSmart(t, 0, "ישן-כפתור", st100.substring(6), null, false).id
                                         : DbPaths.updateSmart(t, "ישן-כפתור", st100.substring(7), "");
                                 for (int j = 0; j < steps100.length; j++) if (steps100[j].equals(st100) && oldIds[j] == 0) { oldIds[j] = id; break; }
                                 return null;
@@ -751,13 +778,12 @@ final class DbCmdTests {
                             return null;
                         }
                     });
-                    o.check("מבנה 100: רשימות חכמות מכפתור — אותן רשימות, באותם שמות ובאותם תנאים, בשתי הדרכים (כולל \"(2)\" לתנאי אחר, ועדכון) "
-                                    + old100 + " " + new100, old100.equals(new100) && old100.size() == 2);
-                    o.check("מבנה 100: מה שכבר היה (שוב אותה רשימה, אותה חכמה) — אין מה לעשות, ובלי כתיבה; מה שנוצר או עודכן — המספר שלו חוזר "
-                                    + java.util.Arrays.toString(newIds),
-                            newWrites[0] && !newWrites[1] && newWrites[2] && !newWrites[3] && newWrites[4] && newWrites[5]
-                                    && newIds[0] != 0 && newIds[2] != 0 && newIds[4] != 0 && newIds[4] != newIds[2] && newIds[5] == newIds[2]
-                                    && oldIds[0] != 0 && oldIds[4] != oldIds[2] && oldIds[5] == oldIds[2]);
+                    // מבנה 102–103 (המשתמש): שם קיים — סירוב, לרשימה ולרשימה חכמה; בכפתור אין "המשך", ולכן גם בתנאי אחר — סירוב
+                    o.check("מבנה 103: רשימות חכמות מכפתור — רק אחת בשם הזה (אותו שם שוב, גם בתנאי אחר — סירוב), והעדכון חל עליה " + new100,
+                            new100.size() == 1 && new100.get(0).equals("X-כפתור · סוג:txt"));
+                    o.check("מבנה 100: שם קיים — בלי כתיבה; מה שנוצר או עודכן — המספר שלו חוזר " + java.util.Arrays.toString(newIds),
+                            newWrites[0] && !newWrites[1] && newWrites[2] && !newWrites[3] && !newWrites[4] && newWrites[5]
+                                    && newIds[0] != 0 && newIds[2] != 0 && newIds[5] == newIds[2] && oldIds[0] != 0);
                     List<String> v100 = go("המשך ()\nאופן \"" + m91 + "\"\nודא תוכן ידנית \"ישן-כפתור\" שווה תוכן ידנית \"חדש-כפתור\"\n", here, vars, lib);
                     o.check("מבנה 100: \"צור רשימה\" מכפתור — שתי הדרכים בנו אותו מבנה " + v100, bad(v100).isEmpty());
                     Manager.Act none100 = Manager.onVerbLine("אופן \"" + m91 + "\"\nעדכן רשימה חכמה \"אין כזו 100\" סוג:pdf", here, vars, lib);

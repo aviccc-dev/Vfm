@@ -433,8 +433,9 @@ public class SearchScreen extends Activity implements Clip.Holder {
                     Ui.toast(SearchScreen.this, Words.DbCmd.NO_DB);
                     return;
                 }
-                long id = DbVerbsUi.makeSmart(SearchScreen.this, mode, 0, r);   // מבנה 97: דרך המנהל, כפקודה; בבית
-                if (id != 0) Ui.toast(SearchScreen.this, Words.Find.saved(n));
+                DbVerbsUi.makeSmart(SearchScreen.this, mode, 0, r, new DbVerbsUi.Made() {   // מבנה 97: דרך המנהל; בבית. מבנה 103: שם קיים — שואלים
+                    @Override public void ok(long id) { Ui.toast(SearchScreen.this, Words.Find.saved(r.name)); }
+                });
             }
         });
     }

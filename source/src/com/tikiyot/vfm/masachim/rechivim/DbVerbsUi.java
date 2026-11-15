@@ -142,19 +142,53 @@ final class DbVerbsUi {
      * מבנה 97: רשימה חכמה חדשה ממה שבטופס, בתוך in (0 — הבית) — דרך המנהל, כפקודה ("צור רשימה חכמה %שם-חדש% %תוכן%"). מחזיר את
      * המספר שלה; 0 — לא נוצרה, וההודעה כבר הוצגה.
      */
-    static long makeSmart(Activity a, String mode, long in, DbSmartForm.Result r) {
-        Library lib = Library.get(a);
-        Manager.Act act = Manager.onSmartNew(mode, in, r.name, r.cond, DbSmartForm.props(r), Paths.data(), BatchUi.vars(a, Paths.data()), lib);
-        if (act.error() != null) {
-            Ui.toast(a, act.error());
-            return 0;
+    interface Made {
+        void ok(long id);
+    }
+
+    /**
+     * מבנה 103: שם קיים באותה רשימה — המסך עוצר ושואל (המשתמש: "אם זה ידני — המשתמש מאשר או מחליף שם"): "ליצור בכל זאת" —
+     * אותה פקודה עם "המשך" לפניה (כמו בקובץ); "שם אחר" — שואלים שם, ומנסים שוב. done — רק כשנוצרה.
+     */
+    static void makeSmart(final Activity a, final String mode, final long in, final DbSmartForm.Result r, final Made done) {
+        makeSmart(a, mode, in, r, false, done);
+    }
+
+    private static void makeSmart(final Activity a, final String mode, final long in, final DbSmartForm.Result r, boolean anyway, final Made done) {
+        final Library lib = Library.get(a);
+        Manager.Act act = Manager.onSmartNew(mode, in, r.name, r.cond, DbSmartForm.props(r), anyway, Paths.data(), BatchUi.vars(a, Paths.data()), lib);
+        String why = act.error();
+        if (why != null && why.equals(Words.ListCmdW.smartTaken(r.name.trim().isEmpty() ? Words.SMART_LIST : r.name.trim()))) {
+            new android.app.AlertDialog.Builder(a).setTitle(Words.ListCmdW.SMART_TAKEN_TITLE).setMessage(why)
+                    .setPositiveButton(Words.ListCmdW.SMART_ANYWAY, new android.content.DialogInterface.OnClickListener() {
+                        @Override public void onClick(android.content.DialogInterface d, int w) { makeSmart(a, mode, in, r, true, done); }
+                    })
+                    .setNegativeButton(Words.ListCmdW.OTHER_NAME, new android.content.DialogInterface.OnClickListener() {
+                        @Override
+                        public void onClick(android.content.DialogInterface d, int w) {
+                            Ui.askText(a, Words.ListCmdW.OTHER_NAME, r.name, Words.Short.NAME_HINT, new Ui.Text1() {
+                                @Override
+                                public void ok(String value) {
+                                    if (value.trim().isEmpty()) return;
+                                    r.name = value.trim();
+                                    makeSmart(a, mode, in, r, false, done);
+                                }
+                            });
+                        }
+                    })
+                    .setNeutralButton(Words.CANCEL, null).show();
+            return;
+        }
+        if (why != null) {
+            Ui.toast(a, why);
+            return;
         }
         String said = act.say(lib);
         if (act.failed || act.made == 0) {
             Ui.toast(a, said);
-            return 0;
+            return;
         }
-        return act.made;
+        done.ok(act.made);
     }
 
     /** רשימה חכמה חדשה — בטופס המוכר — בתוך in (0 — בתוך הבית, אם יש). */
@@ -162,8 +196,9 @@ final class DbVerbsUi {
         DbSmartForm.showNew(a, new DbSmartForm.Done() {
             @Override
             public void ok(final DbSmartForm.Result r) {
-                makeSmart(a, mode, in, r);                                       // מבנה 97: דרך המנהל, כפקודה
-                if (a instanceof DbListScreen) ((DbListScreen) a).reload();
+                makeSmart(a, mode, in, r, new Made() {                            // מבנה 97: דרך המנהל, כפקודה; מבנה 103: שם קיים — שואלים
+                    @Override public void ok(long id) { if (a instanceof DbListScreen) ((DbListScreen) a).reload(); }
+                });
             }
         }, new Func.Done() {
             @Override public void ok(String name, Target t) { saveDups(a, mode, in, name, t); }   // מ0.28: נבחר "כפולים" בפס הסוג

@@ -1049,6 +1049,8 @@ final class Batch {
      * קובץ שהועבר או הועתק ליעד, שם חדש מ-REN, ומה שנמחק או הועבר ממקומו.
      */
     static final class Sim {
+        /** מבנה 103: "המשך" שנכתב לפני השורה — הוראה מפורשת להמשיך גם כשהוראה לא מתקיימת (0 — אין). */
+        int allowErrors;
         final java.util.Set<String> dirs = new java.util.HashSet<String>();
         final java.util.Set<String> gone = new java.util.HashSet<String>();
         /**
@@ -1717,6 +1719,7 @@ final class Batch {
                     plan.errors++;
                 } else {
                     plan.allowErrors = allow;
+                    sim.allowErrors = allow;                                    // מבנה 103: השורות שאחריה יודעות שיש "המשך"
                     s.noop = true;
                     s.describe = allow == Integer.MAX_VALUE ? Words.DbCmd.CONT_ALWAYS : Words.DbCmd.contUpTo(allow);
 

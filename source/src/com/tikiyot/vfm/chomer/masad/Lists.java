@@ -200,6 +200,35 @@ final class Lists {
         return out[0];
     }
 
+    /**
+     * **רשימה חכמה חדשה — הכלל האחד** (מבנה 103; המשתמש, 15.11.2026: "בעיקרון יש מצבים שנרצה עוד רשימות חכמות באותו שם.
+     * העניין שלעיתים זו טעות וחוסר תשומת לב. אז הייתי קובע כלל אחיד כזה: בכל מקום כאשר מבקשים ליצור רשימה חכמה בעלת שם זהה —
+     * התוכנה עוצרת, מודיעה. אם זה ידני — המשתמש מאשר או מחליף שם. בפקודה — אם יש 'המשך' אז הוא מבצע בלי לשאול; אם לא —
+     * הוא שואל ונעצר."). בתוך into (0 — הבית); יש בה כבר רשימה חכמה בשם הזה — שגיאה ("שם קיים"), אלא אם anyway (המשתמש
+     * אישר, או "המשך" בקובץ). מסד בלי בית — גם רשימה חכמה שעומדת לעצמה באותו שם. שם ריק — "רשימה חכמה".
+     */
+    static Made newSmart(Store s, long into, String name, String cond, java.util.Map<String, String> props, boolean anyway) {
+        Made r = new Made();
+        String n = name == null || name.trim().isEmpty() ? Words.SMART_LIST : name.trim();
+        long in = into != 0 ? into : DbPaths.home(s);
+        if (!anyway && smartTaken(s, in, n)) {
+            r.error = Words.ListCmdW.smartTaken(n);
+            return r;
+        }
+        r.id = saveSmart(s, 0, in, n, cond, props);
+        return r;
+    }
+
+    /** מבנה 103: יש ב־in רשימה חכמה בשם name (in = 0 — מסד בלי בית: רשימה חכמה שעומדת לעצמה). */
+    static boolean smartTaken(Store s, long in, String name) {
+        if (in != 0) {
+            for (Store.Member m : s.members(in)) if (m.item.type == Store.SMART && m.item.name.equals(name)) return true;
+            return false;
+        }
+        for (Store.Item it : s.smarts()) if (it.name.equals(name) && s.listsOf(it.id).isEmpty()) return true;
+        return false;
+    }
+
     /** רשימה ידנית חדשה בתוך parent (0 — בבית, אם יש). בלי בדיקת שם — למי שכבר בדק (ייבוא, העתקה). */
     static long newList(Store s, final long parent, final String name) {
         final long into = parent != 0 ? parent : DbPaths.home(s);

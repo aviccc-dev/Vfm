@@ -232,7 +232,13 @@ final class Manager {
      */
     static Act onSmartNew(String mode, long in, String name, String cond, java.util.Map<String, String> props, java.io.File here,
                           java.util.Map<String, String> vars, Library lib) {
-        String text = Verbs.CREATE + " " + Verbs.LIST + " " + Verbs.SMART_WORD + " %" + Batch.V_NEW_NAME + "% %" + Batch.V_CONTENT + "%\n";
+        return onSmartNew(mode, in, name, cond, props, false, here, vars, lib);
+    }
+
+    /** מבנה 103: anyway — המשתמש אישר "ליצור בכל זאת" למרות שם קיים; כמו "המשך" בקובץ פקודות — אותה הוראה, אותו מסלול. */
+    static Act onSmartNew(String mode, long in, String name, String cond, java.util.Map<String, String> props, boolean anyway,
+                          java.io.File here, java.util.Map<String, String> vars, Library lib) {
+        String text = (anyway ? Words.DbCmd.N_CONT + "\n" : "") + Verbs.CREATE + " " + Verbs.LIST + " " + Verbs.SMART_WORD + " %" + Batch.V_NEW_NAME + "% %" + Batch.V_CONTENT + "%\n";
         return new Act(text, Batch.plan(text, here, vars, lib, null, new Batch.Selection(mode, in, name, cond, props)), null);
     }
 

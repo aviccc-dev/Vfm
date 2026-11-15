@@ -850,14 +850,29 @@ final class DbListCmd {
         final String name = sel.name.trim(), cond = sel.content;
         final java.util.Map<String, String> props = sel.props;
         final String shown = name.isEmpty() ? Words.SMART_LIST : name;
+        final boolean anyway = sim.allowErrors > 0;                              // מבנה 103: המשתמש אישר במסך ("המשך" לפני השורה)
+        // מבנה 103: הכלל האחד — שם קיים באותה רשימה: עוצרים כבר בתכנון, והמסך שואל (ליצור בכל זאת / שם אחר)
+        try {
+            String taken = Db.read(Db.app, mode, new Db.Use<String>() {
+                @Override public String run(SqlStore t) {
+                    long in = into != 0 ? into : DbPaths.home(t);
+                    return Lists.smartTaken(t, in, shown) ? Words.ListCmdW.smartTaken(shown) : null;
+                }
+            });
+            if (taken != null && !anyway) { s.error = taken; return null; }
+        } catch (Throwable e) {
+            Log.e("DbListCmd.smartTaken", e);
+        }
         s.describe = Words.DbCmd.inDb(Words.ListCmdW.createdSmart(shown));
         s.op = new ListCmd.Op() {
             @Override public String run(Library lib) {
                 Res r = realRes(mode, new Work() {
                     @Override public Res run(Store t, Finder f) {
                         if (into != 0 && (t.item(into) == null || t.item(into).type != Store.LIST)) return Res.err(Words.Db.LIST_GONE);
+                        Lists.Made m = Lists.newSmart(t, into, name, cond, props, anyway);
+                        if (m.error != null) return Res.err(m.error);
                         Res ok = Res.ok(Words.ListCmdW.createdSmart(shown));
-                        ok.made = Lists.saveSmart(t, 0, into, name, cond, props);
+                        ok.made = m.id;
                         return ok;
                     }
                 }, false, lib);
@@ -974,6 +989,7 @@ final class DbListCmd {
         }
         final List<String> path = list ? Names.parsePath(c.arg) : note || title ? Names.parsePath(c.cond) : null;
         if ((note || title) && path.isEmpty()) { s.error = Words.DbCmd.NOTE_NEEDS_LIST; return null; }
+        final boolean anyway = sim.allowErrors > 0;                              // מבנה 103: "המשך" — הוראה מפורשת להמשיך
         final Work work = new Work() {
             @Override
             public Res run(Store t, Finder f) {
@@ -993,13 +1009,14 @@ final class DbListCmd {
                     ok.made = m.id;
                     return ok;
                 }
-                if (smartNew) {
-                    long had = DbPaths.smart(t, c.arg);
-                    long id = DbPaths.ensureSmart(t, c.arg, c.cond, c.sort);
-                    if (id == 0) return Res.err(Words.Verb.NOT_FOUND + c.arg);
-                    if (id == had) return Res.same(Words.ListCmdW.exists(c.arg));
-                    Res ok = Res.ok(Words.ListCmdW.createdSmart(c.arg));       // מבנה 98
-                    ok.made = id;
+                if (smartNew) {                                                  // מבנה 103: הכלל האחד (Lists.newSmart) — בבית
+                    java.util.Map<String, String> props = new java.util.HashMap<String, String>();
+                    props.put(Store.P_SORT, c.sort);
+                    boolean taken = Lists.smartTaken(t, DbPaths.home(t), c.arg.trim());
+                    Lists.Made m = Lists.newSmart(t, 0, c.arg, c.cond, props, anyway);
+                    if (m.error != null) return Res.err(m.error);
+                    Res ok = Res.ok(Words.ListCmdW.createdSmart(c.arg) + (taken ? Words.ListCmdW.SMART_DESPITE : ""));   // מבנה 98
+                    ok.made = m.id;
                     return ok;
                 }
                 long id = DbPaths.updateSmart(t, c.arg, c.cond, c.sort);
