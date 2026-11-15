@@ -268,7 +268,7 @@ final class Manager {
             } catch (Throwable t) {
                 Log.e("פעולת מסך: " + text.trim(), t);
             }
-            Log.i("פעולת מסך: " + text.trim() + " · " + (report == null ? Words.Disk.ERROR : Batch.logLine(report)));
+            Log.i("פעולת מסך: " + text.trim() + " · " + (report == null ? Words.Disk.ERROR : RunReport.logLine(report)));
             if (said == null) failed = true;
             return said != null ? said : Words.Db.failed(Words.Disk.ERROR);
         }
@@ -290,7 +290,7 @@ final class Manager {
             // מבנה 77: מה שכבר היה בתיקיית היעד — בפקודה "לא נעשה דבר"; למסך זה נמסר כמו שהיה אצלו: "כבר בתיקייה הזו", לכל פריט.
             for (Batch.Step s : plan.steps) for (int k = 0; k < s.inPlace; k++) r.fail(Words.Disk.ALREADY_HERE);
             Log.i("פעולת מסך: " + text.trim() + (dest == null ? "" : " [" + dest.getAbsolutePath() + "]") + " · "
-                    + (report == null ? Words.Disk.ERROR : Batch.logLine(report)));
+                    + (report == null ? Words.Disk.ERROR : RunReport.logLine(report)));
             return r;
         }
     }

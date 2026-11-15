@@ -343,7 +343,7 @@ final class Batch {
             return true;
         }
         if (cmd.equals(VERIFY) && tk.size() == 2 && tk.get(1).trim().equals(W_ERROR)) {
-            s.cmd = EXPECT;
+            s.cmd = RunReport.EXPECT;
             s.noop = true;
             s.describe = Words.DbCmd.EXPECT_NEXT;
             return true;
@@ -762,69 +762,6 @@ final class Batch {
         for (Trash.Item it : Trash.list(lib))
             if (it.original != null && (it.original.equals(p) || (under && it.original.startsWith(p + "/")))) out.add(it);
         return out;
-    }
-
-    /**
-     * מ0.43: דוח של הרצה — ליומן התקלות בקיצור: כמה שורות, הסיכום של "ודא", וכל שורה עם ❌ או ⚠ (עד 30). עד כאן — כל הדוח, ובדיקה
-     * אחת (300 שורות) דחקה את התקלות מהיומן. הדוח המלא — בשורה "דוח" ובמסך ההרצה.
-     */
-    static String logLine(List<String> report) {
-        if (report.isEmpty()) return Words.Cmd.NO_CHANGE;
-        if (report.size() <= 12) return report.toString();
-        StringBuilder sb = new StringBuilder(Words.DbCmd.logLines(report.size()));
-        int shown = 0;
-        for (String r : report) {
-            boolean bad = r.contains("❌") || r.contains("⚠");
-            boolean sum = r.contains(Words.DbCmd.VERIFY_SUM_MARK);
-            if ((bad && shown < 30) || sum) {
-                sb.append(" · ").append(r);
-                if (bad) shown++;
-            }
-        }
-        return sb.toString();
-    }
-
-    /** מ0.37: "דוח "<קובץ>"" — ההודעות (ECHO) והיומן נכתבים לקובץ; כישלון בכתיבה — שורה ביומן, לא עוצר. */
-    private static void writeReport(Plan plan, List<String> report) {
-        if (plan.reportFile == null) return;
-        try {
-            StringBuilder sb = new StringBuilder();
-            for (String e : plan.echoes) sb.append(e).append('\n');
-            if (!plan.echoes.isEmpty()) sb.append('\n');
-            for (String r : report) sb.append(r).append('\n');
-            File f = new File(plan.reportFile);
-            File dir = f.getParentFile();
-            if (dir != null && !dir.isDirectory()) dir.mkdirs();
-            Files.writeAtomic(f, sb.toString());
-            report.add(Words.DbCmd.reportWritten(Bidi.path(plan.reportFile)));
-        } catch (Throwable t) {
-            Log.e("Batch.report", t);
-            report.add(Words.DbCmd.reportFailed(String.valueOf(t.getMessage())));
-        }
-    }
-
-    /** מ0.37: שורת "ודא שגיאה" — סימון בלבד; מה שנבדק היא השורה שאחריה. */
-    static final String EXPECT = "EXPECT";
-
-    /** מ0.37: אחרי התכנון — כל "ודא שגיאה" נצמד לשורה שאחריו: נכשלה כבר בתכנון — עברה (ואינה שגיאה); אחרת — תיבדק בהרצה. */
-    static void expectErrors(Plan plan) {
-        for (int i = 0; i < plan.steps.size(); i++) {
-            Step m = plan.steps.get(i);
-            if (!EXPECT.equals(m.cmd) || m.error != null) continue;
-            Step next = i + 1 < plan.steps.size() ? plan.steps.get(i + 1) : null;
-            if (next == null || EXPECT.equals(next.cmd)) {
-                m.noop = false;
-                m.error = Words.DbCmd.EXPECT_NOTHING;
-                plan.errors++;
-            } else if (next.error != null) {
-                next.describe = Words.DbCmd.expectOk(next.error);
-                next.error = null;
-                next.noop = true;
-                next.op = null;
-                next.verified = Boolean.TRUE;
-                plan.errors--;
-            } else next.expectFail = true;
-        }
     }
 
     /**
@@ -1912,7 +1849,7 @@ final class Batch {
             if (cmd.equals("START") && s.error == null) plan.start = s.dest;
             plan.steps.add(s);
         }
-        expectErrors(plan);                                                    // מ0.37: "ודא שגיאה"
+        RunReport.expectErrors(plan);                                                    // מ0.37: "ודא שגיאה"
         return plan;
     }
 
@@ -2939,7 +2876,7 @@ final class Batch {
             plan.trouble = true;
             report.add(Words.DbCmd.notRun(plan.errors));
             report.add(plan.errorText());
-            writeReport(plan, report);
+            RunReport.write(plan, report);
             return report;
         }
         Clock clock = new Clock();                                               // 1.25.0: לולאה — עצירה לפי זמן
@@ -3109,7 +3046,7 @@ final class Batch {
         int ok = 0, bad = 0;                                                     // מ0.14: ודא — כמה עברו וכמה נכשלו
         for (Step s : plan.steps) if (s.verified != null) { if (s.verified) ok++; else bad++; }
         if (ok + bad > 0) report.add(Words.DbCmd.verifySummary(ok, bad));
-        writeReport(plan, report);
+        RunReport.write(plan, report);
         return report;
     }
 

@@ -184,7 +184,7 @@ final class BatchUi {
                         }
                         final List<String> report = rep;
                         busy.close();
-                        Log.i("קובץ פקודות: " + f + " · " + Batch.logLine(report)     // 187; מ0.43: בקיצור
+                        Log.i("קובץ פקודות: " + f + " · " + RunReport.logLine(report)     // 187; מ0.43: בקיצור
                                 + (plan.start != null ? " · " + (Batch.isHome(plan.start) ? Words.Cmd.HOME_AT_END : Words.Cmd.openAtEnd(plan.start.getName())) : ""));
                         Ui.afterIndex(a, new Runnable() {
                             @Override

@@ -295,7 +295,7 @@ public class RunScreen extends Activity {
                 report = rep;
                 took = System.currentTimeMillis() - started;
                 running = false;
-                Log.i("קובץ פקודות: " + file + " · " + Batch.logLine(report));   // מ0.43: בקיצור
+                Log.i("קובץ פקודות: " + file + " · " + RunReport.logLine(report));   // מ0.43: בקיצור
                 Ui.afterIndex(RunScreen.this, new Runnable() {
                     @Override public void run() { summary(); }
                 });
