@@ -384,23 +384,8 @@ final class DbVerbsUi {
      */
     static void createMode(final Activity a, final String name, final ModeReady ready) {
         if (Db.modeState(a, name) != Db.MODE_HAS_BACKUP) {
-            // מבנה 118: דרך המנהל — השורה "צור אופן "<שם>"", כמו בקובץ פקודות. אופן שכבר קיים — בלי כתיבה, ונפתח.
-            Library lib = Library.get(a);
-            Manager.Act act = modeAct(a, name, false, lib);
-            if (act.error() != null) {
-                Ui.toast(a, act.error());
-                return;
-            }
-            if (act.writes()) {
-                String said = act.say(lib);
-                if (act.failed) {
-                    Ui.toast(a, said);
-                    return;
-                }
-            }
-            long h = homeOf(a, name);
-            if (h == 0) Ui.toast(a, Words.DbCmd.modeFailed(name));
-            else ready.open(name, h);
+            long h = modeHome(a, name);
+            if (h != 0) ready.open(name, h);
             return;
         }
         Backups.Entry last = Db.lastBackup(a, name);
@@ -419,6 +404,29 @@ final class DbVerbsUi {
     private static Manager.Act modeAct(Activity a, String name, boolean fromBackup, Library lib) {
         String line = Verbs.CREATE + " " + Verbs.MODE_WORD + " \"" + name + "\"" + (fromBackup ? " " + Verbs.FROM_BACKUP : "");
         return Manager.onVerbLine(line, Paths.work(), BatchUi.vars(a, Paths.work()), lib);
+    }
+
+    /**
+     * מבנה 118, 123: האופן קיים ויש בו בית — דרך המנהל, בשורה "צור אופן "<שם>"" (כמו בקובץ פקודות): אין — נוצר; קיים בלי בית
+     * ויש בו רשימות — הבית נוצר; קיים — בלי כתיבה. מחזיר את הבית; 0 — לא הצליח (וההודעה הוצגה).
+     */
+    static long modeHome(Activity a, String name) {
+        Library lib = Library.get(a);
+        Manager.Act act = modeAct(a, name, false, lib);
+        if (act.error() != null) {
+            Ui.toast(a, act.error());
+            return 0;
+        }
+        if (act.writes()) {
+            String said = act.say(lib);
+            if (act.failed) {
+                Ui.toast(a, said);
+                return 0;
+            }
+        }
+        long h = homeOf(a, name);
+        if (h == 0) Ui.toast(a, Words.Db.NO_HOME);
+        return h;
     }
 
     private static long homeOf(android.content.Context c, String mode) {

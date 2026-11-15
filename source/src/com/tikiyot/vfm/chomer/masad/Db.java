@@ -311,12 +311,19 @@ final class Db {
 
     /** מ0.29 (באג 1): שחזור הדוגמאות באופן הדוגמאות — גיבוי של המסד לפני, ואז DbExamples.restore. מחזיר הודעה למסך. */
     static String restoreExamples(android.content.Context c, Runnable systemFiles) {
+        return restoreExamples(c, systemFiles, new boolean[1]);
+    }
+
+    /** מבנה 123: ...ו־failed[0] — האם נכשל (לפקודה "שחזר דוגמאות"). */
+    static String restoreExamples(android.content.Context c, Runnable systemFiles, boolean[] failed) {
+        failed[0] = true;
         try {
             return write(c, DbExamples.MODE, Backups.OP_RESTORE, new Use<String>() {
                 @Override
                 public String run(SqlStore s) throws Exception {
                     DbExamples.files(DbExamples.asset(c, DbExamples.ASSET_DEMO), systemFiles);
                     int n = DbExamples.restore(s, DbExamples.asset(c, DbExamples.ASSET), Environment.getExternalStorageDirectory().getAbsolutePath());
+                    failed[0] = false;
                     return Words.Db.examplesRestored(n);
                 }
             });

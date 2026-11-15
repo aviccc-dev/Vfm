@@ -375,11 +375,8 @@ public class DbListScreen extends ListScreen<Store.Member> {
                 } finally {
                     if (s != null) s.close();
                 }
-                if (h == 0) h = Db.repairHome(DbListScreen.this, m);           // מבנה 56: יש רשימות ואין בית — הבית נוצר והן נכנסות אליו
-                if (h == 0) {
-                    Ui.toast(DbListScreen.this, Words.Db.NO_HOME);
-                    return;
-                }
+                if (h == 0) h = DbVerbsUi.modeHome(DbListScreen.this, m);      // מבנה 56, 123: יש רשימות ואין בית — "צור אופן" מתקן (דרך המנהל)
+                if (h == 0) return;
                 finish();
                 open(DbListScreen.this, m, h);
             }
@@ -400,11 +397,8 @@ public class DbListScreen extends ListScreen<Store.Member> {
 
     /** פותח אופן: המסד נוצר אם אין ומקבל בית (DbScreen.prepare), הבית נפתח, והמסך הזה נסגר. */
     private void openMode(String name) {
-        long h = Db.prepare(this, name, Reserved.FILES);
-        if (h == 0) {
-            Ui.toast(this, Words.Db.NO_HOME);
-            return;
-        }
+        long h = DbVerbsUi.modeHome(this, name);                              // מבנה 123: דרך המנהל ("צור אופן")
+        if (h == 0) return;
         Db.saveMode(this, name);
         finish();
         open(this, name, h);
@@ -416,11 +410,18 @@ public class DbListScreen extends ListScreen<Store.Member> {
                 Words.Db.EXAMPLES_RESTORE_GO, new Runnable() {
                     @Override
                     public void run() {
+                        // מבנה 123: דרך המנהל, כפקודה ("שחזר דוגמאות")
+                        final Library lib = Library.get(DbListScreen.this);
+                        final Manager.Act act = Manager.onVerbLine(Words.Cmd.N_EXAMPLES, Paths.work(), BatchUi.vars(DbListScreen.this, Paths.work()), lib);
+                        if (act.error() != null) {
+                            Ui.toast(DbListScreen.this, act.error());
+                            return;
+                        }
                         final PhysicalUi.Busy busy = new PhysicalUi.Busy(DbListScreen.this, Words.Db.EXAMPLES_RESTORE);
                         new Thread(new Runnable() {
                             @Override
                             public void run() {
-                                final String msg = Db.restoreExamples(getApplicationContext(), Reserved.FILES);
+                                final String msg = act.say(lib);
                                 runOnUiThread(new Runnable() {
                                     @Override
                                     public void run() {

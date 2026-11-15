@@ -226,6 +226,21 @@ final class Batch {
             DbListCmd.planDropMode(s, Verbs.withVars(tk.get(1).trim(), vars), sim);
             return true;
         }
+        if (cmd.equals(EXAMPLES)) {                                             // מבנה 123: שחזר דוגמאות (מה שהמסך עשה בעצמו)
+            if (tk.size() != 1) { s.error = Words.Cmd.EXAMPLES_USAGE; return true; }
+            if (!DbVerbs.active()) { s.error = Words.DbCmd.VERIFY_DB_ONLY; return true; }
+            sim.dbs.remove(DbExamples.MODE);                                    // מה שההדמיה החזיקה מהאופן הזה — כבר לא תקף
+            s.describe = Words.Cmd.EXAMPLES_WILL;
+            s.op = new ListCmd.Op() {
+                @Override public String run(Library lib) {
+                    boolean[] failed = {false};
+                    String msg = Db.restoreExamples(Db.app, Reserved.FILES, failed);
+                    if (failed[0]) DbListCmd.lastFailed = true;
+                    return msg;
+                }
+            };
+            return true;
+        }
         if (cmd.equals(UNTRASH)) {                                              // מ0.45: שחזר מהסל
             planUntrash(s, tk, here, vars, sim);
             return true;
@@ -834,6 +849,8 @@ final class Batch {
     static final String WRITE = "WRITE", WAIT = "WAIT", BACKUP = "BACKUP", REFRESH = "REFRESH", REPORT = "REPORT", LAB = "LAB";
     /** מבנה 122: אריזה ופריסה של zip. */
     static final String PACK = "PACK", UNPACK = "UNPACK";
+    /** מבנה 123: שחזר דוגמאות. */
+    static final String EXAMPLES = "EXAMPLES";
     /**
      * מ0.44: "קטע "<שם>"" — שורה בדוח, במקום שלה בהרצה ("▸ <שם>"). ההודעות (ECHO) עולות לראש הדוח; הקטע מחלק את הדוח לפי הסדר —
      * תוסף האבחון יודע כך איזו בדיקה עברה ואיזו נכשלה, כשמריצים כמה ביחד. לא משנה דבר.

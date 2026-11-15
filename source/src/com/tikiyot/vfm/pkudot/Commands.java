@@ -227,7 +227,7 @@ final class Commands {
             HE_COMP = "השווה", HE_START = "הפעל", HE_ECHO = "הודעה", HE_REM = "הערה",   // תחביר
             HE_MD = "צור תיקייה", HE_RD = "מחק תיקייה", HE_DEEP = "/עמוק", HE_HIDDEN = "/נסתרים";   // תחביר
     private static final String[][] TWO_WORDS = {{HE_MD, "MD"}, {HE_RD, "RD"},
-            {Words.DbCmd.N_DROP_MODE, Batch.DROP_MODE}, {Words.DbCmd.N_DROP_MODE_OLD, Batch.DROP_MODE}, {Words.DbCmd.N_UNTRASH, Batch.UNTRASH}, {Words.DbCmd.N_PURGE, Batch.PURGE}};   // מ0.45
+            {Words.DbCmd.N_DROP_MODE, Batch.DROP_MODE}, {Words.DbCmd.N_DROP_MODE_OLD, Batch.DROP_MODE}, {Words.DbCmd.N_UNTRASH, Batch.UNTRASH}, {Words.Cmd.N_EXAMPLES, Batch.EXAMPLES}, {Words.DbCmd.N_PURGE, Batch.PURGE}};   // מ0.45
     private static final String[][] HE_SWITCHES = {{HE_DEEP, "/S"}, {HE_HIDDEN, "/A:H"}};
 
     /** השורה בצורה שהמנוע קורא: "צור תיקייה" ← MD, "מחק תיקייה" ← RD, והמתגים העבריים ← האנגליים (מחוץ למרכאות). */
@@ -378,6 +378,7 @@ final class Commands {
                     list(pos(Type.PATH, Words.Def.P_FILE, Words.DbCmd.H_UNTRASH)), null),
             new Def(Batch.PURGE, Words.DbCmd.N_PURGE, null, Family.FILE, Words.DbCmd.W_PURGE,
                     list(pos(Type.PATH, Words.Def.P_FILE, Words.DbCmd.H_PURGE)), null),
+            new Def(Batch.EXAMPLES, Words.Cmd.N_EXAMPLES, null, Family.FILE, Words.Cmd.W_EXAMPLES, new Param[0], null),   // מבנה 123
             new Def(Batch.PACK, Words.Cmd.N_PACK, new String[]{Words.Cmd.N_PACK}, Family.FILE, Words.Cmd.W_PACK,
                     list(pos(Type.PATH, Words.Def.P_FILE, Words.Cmd.H_PACK)), null),
             new Def(Batch.UNPACK, Words.Cmd.N_UNPACK, new String[]{Words.Cmd.N_UNPACK}, Family.FILE, Words.Cmd.W_UNPACK,

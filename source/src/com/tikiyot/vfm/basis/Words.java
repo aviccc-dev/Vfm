@@ -359,6 +359,15 @@ public final class Words {
 
         public static final String WRITE_TAKEN_ONLY = "ב\"כתוב\" — /תפוס:להחליף, /תפוס:לדלג או /תפוס:לשנות-שם; בלי מתג — קובץ קיים עוצר";
 
+        // מבנה 123: שחזור הדוגמאות — כפקודה; ואופן שיש בו רשימות ואין בו בית
+        public static final String N_EXAMPLES = "שחזר דוגמאות",
+                W_EXAMPLES = "מחזיר את רשימות הדוגמאות (באופן \"דוגמאות\") למצב ההתחלתי; גיבוי של המסד לפני. קבצים בכונן — לא נוגע",
+                EXAMPLES_USAGE = "צורה: שחזר דוגמאות", EXAMPLES_WILL = "רשימות הדוגמאות יוחלפו בדוגמאות המקוריות (גיבוי לפני)";
+
+        public static String modeRepairWill(String name) { return "האופן \"" + name + "\" קיים בלי בית — הבית ייווצר, והרשימות ייכנסו אליו"; }
+
+        public static String modeRepaired(String name) { return "האופן \"" + name + "\": נוצר בית, והרשימות נכנסו אליו"; }
+
         // מבנה 122: אריזה ופריסה של zip — כפקודות
         public static final String N_PACK = "ארוז", N_UNPACK = "פרוס",
                 W_PACK = "אורז תיקייה לקובץ zip לידה (התיקייה נשארת; שם תפוס — \"(2)\")",

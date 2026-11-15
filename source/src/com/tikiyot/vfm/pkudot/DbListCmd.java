@@ -1749,6 +1749,18 @@ final class DbListCmd {
      * מ0.42: "צור אופן "<שם>"" — אופן חדש: מסד עם בית (כמו "אופן חדש" בתפריט האופנים). קיים — בלי שינוי. ההדמיה מכירה אותו
      * מהשורה הזו: שורת "אופן" שאחריה עובדת, על מסד ריק בזיכרון. המשתמש (על הבדיקות): "סתם מצטבר שם שאריות".
      */
+    /** מבנה 123: במסד של האופן יש רשימות (או רשימות חכמות) ואין בית. */
+    private static boolean noHome(String mode) {
+        try {
+            return Db.read(Db.app, mode, new Db.Use<Boolean>() {
+                @Override public Boolean run(SqlStore s) { return DbPaths.home(s) == 0 && !(s.lists().isEmpty() && s.smarts().isEmpty()); }
+            });
+        } catch (Throwable t) {
+            Log.e("DbListCmd.noHome", t);
+            return false;
+        }
+    }
+
     static void planMode(final Batch.Step s, String raw, final boolean fromBackup, Batch.Sim sim) {
         final String name = raw == null ? "" : raw.trim();
         if (name.isEmpty() || !name.equals(Names.cleanName(name).replaceAll("[:*?\"<>|\n\t]", " ").trim())) {
@@ -1759,6 +1771,19 @@ final class DbListCmd {
         s.target = name;
         // מבנה 47: אופן ש"בטל אופן" שלפני ביטל — אינו "קיים" (עד כאן: "צור אופן" אחריו לא עשה דבר, ו"אופן" אחריהם נכשל בתכנון)
         if ((Db.dbModes(Db.app).contains(name) && !sim.dropped.contains(name)) || sim.created.contains(name)) {
+            // מבנה 123: אופן שיש במסד שלו רשימות ואין בו בית (מבנה 56) — "צור אופן" מתקן: הבית נוצר, והרשימות נכנסות אליו. עד כאן
+            // תיקן רק תפריט האופנים שבמסך, בעצמו. מסד ריק — לא נוגעים.
+            if (!sim.created.contains(name) && noHome(name)) {
+                s.describe = Words.Cmd.modeRepairWill(name);
+                s.op = new ListCmd.Op() {
+                    @Override public String run(Library lib) {
+                        if (Db.repairHome(Db.app, name) != 0) return Words.Cmd.modeRepaired(name);
+                        lastFailed = true;
+                        return Words.DbCmd.modeFailed(name);
+                    }
+                };
+                return;
+            }
             s.noop = true;
             s.describe = Words.DbCmd.modeExists(name);
             return;

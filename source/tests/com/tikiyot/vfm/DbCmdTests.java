@@ -1121,6 +1121,36 @@ final class DbCmdTests {
                                         && !scr121.contains("DbMore.order(") && !scr121.contains("DbVerbsUi.write(") && !scr121.contains("DbListCmd.now(")
                                         && scr121.contains("Manager.onListOrder(") && scr121.contains("Manager.onListDesign("));
                     }
+                    // מבנה 123: "שחזר דוגמאות" כפקודה; ו"צור אופן" על אופן שיש בו רשימות ואין בו בית — מתקן
+                    {
+                        final String nh123 = "בלי-בית-123";
+                        Db.write(Db.app, nh123, null, new Db.Use<Void>() {
+                            @Override public Void run(SqlStore st) { st.createList("יתומה 123", 0); return null; }
+                        });
+                        Manager.Act fix123 = Manager.onVerbLine("צור אופן \"" + nh123 + "\"", here, vars, lib);
+                        boolean writes123 = fix123.error() == null && fix123.writes();
+                        String sf123 = fix123.error() != null ? fix123.error() : fix123.say(lib);
+                        final long[] h123 = {0, 0};
+                        Db.read(Db.app, nh123, new Db.Use<Void>() {
+                            @Override public Void run(SqlStore st) {
+                                h123[0] = DbPaths.home(st);
+                                h123[1] = DbPaths.find(st, nh123, java.util.Arrays.asList("יתומה 123"));
+                                return null;
+                            }
+                        });
+                        Manager.Act again123 = Manager.onVerbLine("צור אופן \"" + nh123 + "\"", here, vars, lib);
+                        o.check("מבנה 123: \"צור אופן\" על אופן שיש בו רשימות ואין בו בית — הבית נוצר והרשימה בתוכו (" + sf123 + "); פעם שנייה — בלי כתיבה",
+                                writes123 && !fix123.failed && h123[0] != 0 && h123[1] != 0 && again123.error() == null && !again123.writes());
+                        go("בטל אופן \"" + nh123 + "\"\n", here, vars, lib);
+                        List<String> ex123 = go("אופן \"" + DbExamples.MODE + "\"\nMD ידנית \"זמנית 123\" /תפוס:לדלג\nשחזר דוגמאות\n", here, vars, lib);
+                        Manager.Act ea123 = Manager.onVerbLine("שחזר דוגמאות", here, vars, lib);
+                        String se123 = ea123.error() != null ? ea123.error() : ea123.say(lib);
+                        String scr123 = Files.readUtf8(new File(src, "src/com/tikiyot/vfm/masachim/DbListScreen.java"));
+                        o.check("מבנה 123: \"שחזר דוגמאות\" — בקובץ פקודות ומהמסך דרך המנהל (" + se123 + ") " + ex123 + "; \"שחזר דוגמאות x\" — שגיאה; השומר — מסך הרשימות אינו משחזר, אינו מתקן ואינו מכין אופן בעצמו",
+                                bad(ex123).isEmpty() && !ea123.failed && se123.contains("הדוגמאות שוחזרו")
+                                        && Batch.plan("שחזר דוגמאות x\n", here, vars, lib).blocked()
+                                        && !scr123.contains("Db.restoreExamples(") && !scr123.contains("Db.repairHome(") && !scr123.contains("Db.prepare("));
+                    }
                     Manager.Act gone99 = Manager.onSmartEdit(m91, 987654321L, "x", "סוג:pdf", new java.util.HashMap<String, String>(), here, vars, lib);
                     String saidGone99 = gone99.say(lib);
                     o.check("מבנה 99: רשימה שנמחקה בזמן שהטופס היה פתוח — \"" + Words.Db.ITEM_GONE + "\" (" + saidGone99 + ")",
