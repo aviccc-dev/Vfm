@@ -2,7 +2,7 @@ package com.tikiyot.vfm;
 
 // מ0.23: בורר רשימה מהמסד — במקום ListPicker (עץ הרשימות הישן) בכל מקום שבוחרים רשימה כשעובדים במסד: "לרשימה" במסכי
 // הקבצים, שיתוף מאפליקציה אחרת, טופס המקומות הפתוחים בפקודות, כפתור בשורה העליונה. אותו חלון בדיוק (PickDialog) —
-// רק המקור אחר (צילום של המסד: מהבית ומטה, רשימות ידניות בלבד), ויצירת רשימה חדשה דרך הליבה (Lists.newList).
+// רק המקור אחר (צילום של המסד: מהבית ומטה, רשימות ידניות בלבד), ויצירת רשימה חדשה — מבנה 91: דרך המנהל, כפקודה (DbVerbsUi.makeList).
 // מבנה 18: הצילום ושאר הקריאות מהמסד — ב־DbLists (החומר). אחראי: החלון, וההוספה לרשימה שנבחרה. אסור לו: לשנות רשימות חוץ מיצירת רשימה חדשה.
 
 import android.app.Activity;
@@ -67,19 +67,7 @@ final class DbPicker {
                     public void ok(final String name) {
                         if (name.trim().isEmpty()) return;
                         final long in = parent.isEmpty() ? snap.home : snap.id(parent);
-                        final String[] err = {null};
-                        final long id = DbVerbsUi.write(act, mode, new DbVerbsUi.Job() {
-                            @Override
-                            public long run(Store s, List<String> p) {
-                                Lists.Made r = Lists.newListChecked(s, in, name);
-                                err[0] = r.error;
-                                return r.id;
-                            }
-                        }, null);
-                        if (err[0] != null) {
-                            Ui.toast(act, err[0]);
-                            return;
-                        }
+                        final long id = DbVerbsUi.makeList(act, mode, in, name);   // מבנה 91: דרך המנהל, כפקודה
                         if (id == 0) return;
                         ArrayList<String> p = new ArrayList<String>(parent);
                         p.add(Names.cleanName(name));

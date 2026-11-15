@@ -37,6 +37,8 @@ final class DbListCmd {
         /** מ0.42 (ב8): רשימה או חכמה ששינתה שם — רק בהרצה אמיתית (realRes) קובצי הפקודות שפונים אליה מתעדכנים. */
         long renamed;
         String renamedFrom, renamedTo;
+        /** מבנה 91: המספר של מה שנוצר (רשימה חדשה מהמסך). */
+        long made;
 
         Res renamed(long id, String from, String to) {
             if (id != 0 && from != null && to != null && !from.equals(to)) {
@@ -773,10 +775,41 @@ final class DbListCmd {
      */
     private static void planPicked(final Batch.Step s, String cmd, ListCmd.Parsed p, List<String> sw, Batch.Sim sim) {
         final Batch.Selection sel = sim.selected;
-        if (sel == null || sel.ids == null || sel.ids.isEmpty() || sel.mode == null) { s.error = Words.Cmd.NOTHING_SELECTED; return; }
+        ListCmd.Side a = p.sides.get(0);
+        boolean make = cmd.equals("MD") && p.sides.size() == 1 && sw.isEmpty() && a.kind == ListCmd.LIST && !a.content && !a.filesOf;
+        if (sel == null || sel.ids == null || sel.mode == null || (make ? sel.name == null : sel.ids.isEmpty())) {
+            s.error = Words.Cmd.NOTHING_SELECTED;
+            return;
+        }
         final String mode = sel.mode;
         if (!Db.dbFile(Db.app, mode).isFile()) { s.error = Words.DbCmd.noMode(mode, sim.modes()); return; }
-        ListCmd.Side a = p.sides.get(0);
+        if (make) {
+            // מבנה 91: רשימה חדשה מהמסך (➕, בורר הרשימות) — בתוך הרשימה שמוצגת (לפי המספר שלה; 0 — הבית), בשם שהוקלד כלשונו.
+            // שלא כמו "צור תיקייה ידנית" כתובה (דרך של שמות; רשימה קיימת — "בלי שינוי"; יוצרת גם את מה שבדרך) — כאן כמו שהמסך עשה:
+            // שם אחד, והבדיקה האחת של שם (Lists.nameError): תפוס, ריק, או עם "/" — סירוב, ושום דבר לא נוצר. בלי גיבוי לפני (רק מוסיפה).
+            final long into = sel.in;
+            final String name = sel.name;
+            s.target = a.label();
+            s.describe = Words.DbCmd.inDb(Words.ListCmdW.created(Names.cleanName(name)));
+            s.op = new ListCmd.Op() {
+                @Override public String run(Library lib) {
+                    Res r = realRes(mode, new Work() {
+                        @Override public Res run(Store t, Finder f) {
+                            if (into != 0 && (t.item(into) == null || t.item(into).type != Store.LIST)) return Res.err(Words.Db.LIST_GONE);
+                            Lists.Made m = Lists.newListChecked(t, into, name);
+                            if (m.error != null) return Res.err(m.error);
+                            Res ok = Res.ok(Words.ListCmdW.created(Names.cleanName(name)));
+                            ok.made = m.id;
+                            return ok;
+                        }
+                    }, false, lib);
+                    if (r.error != null) lastFailed = true;
+                    s.made = r.made;
+                    return r.error != null ? r.error : Words.DbCmd.inDb(r.text);
+                }
+            };
+            return;
+        }
         boolean remove = (cmd.equals("RD") || cmd.equals("DEL")) && p.sides.size() == 1 && sw.isEmpty()
                 && a.kind == ListCmd.LIST && !a.content && !a.filesOf;
         if (!remove) { s.error = Words.Cmd.SELECTED_IN_LIST; return; }

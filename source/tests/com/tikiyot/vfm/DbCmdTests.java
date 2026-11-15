@@ -355,6 +355,138 @@ final class DbCmdTests {
                         !k90[0] && k90[1] && k90[2] && k90b[0] && k90b[1] && k90b[2] && k90b[3]);
                 go("המשך ()\nמחק תיקייה \"" + dir90 + "\" /S\nבטל אופן \"" + m90 + "\"\n", here, vars, lib);
             }
+            // מבנה 91: "רשימה חדשה" של המסך (➕, הבורר) — דרך המנהל, כפקודה; מול הדרך הישנה, על המצבים של המפה (ב1, ב2, ב4, ג2–ג4, א5)
+            {
+                final String m91 = "בדיקת-91";
+                // "ישן" ו"חדש" — אותו מבנה: רשימה "בפנים", רשימה חכמה "תפוס־חכמה", ו"משותפת" שנמצאת גם ב"מקום שני"
+                StringBuilder t91 = new StringBuilder("המשך ()\nצור אופן \"" + m91 + "\"\nאופן \"" + m91 + "\"\n");
+                for (String r : new String[]{"ישן", "חדש"})
+                    t91.append("MD ידנית \"").append(r).append("/בפנים/עמוק\"\nMD ידנית \"").append(r).append("/משותפת\"\nMD ידנית \"").append(r)
+                            .append("/מקום שני\"\nקשר ידנית \"").append(r).append("/משותפת\" ידנית \"").append(r).append("/מקום שני\"\n");
+                List<String> r91 = go(t91.toString(), here, vars, lib);
+                o.check("מבנה 91: ההכנה (" + bad(r91) + ")", bad(r91).isEmpty());
+                final String[][] cases91 = {                                    // {בתוך מה (דרך), השם שהוקלד}
+                        {"", "רגילה"}, {"בפנים", "בעומק שתיים"}, {"בפנים/עמוק", "בעומק שלוש"}, {"משותפת", "בתוך משותפת"},
+                        {"", "בפנים"}, {"", "  רווחים בקצוות  "}, {"", "100% %תאריך% \"מירכאות\" *"}, {"", "א/ב"}, {"", "א\\ב"}, {"", "   "},
+                        {"בפנים", "עמוק"}, {"", "רגילה"}};
+                final String[] old91 = new String[cases91.length], new91 = new String[cases91.length];
+                final long[] newId91 = new long[cases91.length];
+                final long[] home91 = {0};
+                for (int i = 0; i < cases91.length; i++) {
+                    final int k = i;
+                    final List<String> po = new ArrayList<String>(), pn = new ArrayList<String>();
+                    po.add("ישן");
+                    pn.add("חדש");
+                    for (String x : cases91[i][0].split("/")) if (!x.isEmpty()) { po.add(x); pn.add(x); }
+                    final long[] in = {0, 0};
+                    Db.write(Db.app, m91, null, new Db.Use<Void>() {            // הדרך הישנה: מה שהמסך עשה בעצמו
+                        @Override public Void run(SqlStore st) {
+                            in[0] = DbPaths.find(st, m91, po);
+                            in[1] = DbPaths.find(st, m91, pn);
+                            home91[0] = DbPaths.home(st);
+                            Lists.Made m = Lists.newListChecked(st, in[0], cases91[k][1]);
+                            old91[k] = m.error == null ? "נוצרה" : m.error;
+                            return null;
+                        }
+                    });
+                    Manager.Act act = Manager.onListNew(m91, in[1], cases91[i][1], here, vars, lib);
+                    if (act.error() != null) new91[i] = "תכנון: " + act.error();
+                    else {
+                        Permit.close();
+                        try {
+                            String said = act.say(lib);
+                            new91[i] = act.failed ? said : "נוצרה";
+                            newId91[i] = act.made;
+                            if (Permit.held()) new91[i] += " (ההיתר נשאר פתוח)";
+                        } finally {
+                            Permit.open();
+                        }
+                    }
+                }
+                boolean same91 = true;
+                StringBuilder d91 = new StringBuilder();
+                for (int i = 0; i < cases91.length; i++)
+                    if (!old91[i].equals(new91[i])) {
+                        same91 = false;
+                        d91.append(" [").append(cases91[i][1]).append(": ישן «").append(old91[i]).append("» חדש «").append(new91[i]).append("»]");
+                    }
+                o.check("מבנה 91: בכל 12 המצבים — הפקודה עונה כמו שהמסך ענה (נוצרה, או אותו סירוב באותו נוסח)" + d91, same91);
+                o.check("מבנה 91: מה נוצר ומה סורב — רגילה, בעומק, בתוך רשימה משותפת, רווחים, תווים מיוחדים: נוצרו; שם תפוס, \"/\", \"\\\": סורבו "
+                                + java.util.Arrays.toString(new91),
+                        new91[0].equals("נוצרה") && new91[1].equals("נוצרה") && new91[2].equals("נוצרה") && new91[3].equals("נוצרה")
+                                && new91[4].equals(Words.DbCmd.nameTaken("בפנים")) && new91[5].equals("נוצרה") && new91[6].equals("נוצרה")
+                                && new91[7].equals(Words.DbCmd.BAD_NAME) && new91[8].equals(Words.DbCmd.BAD_NAME)
+                                && new91[10].equals(Words.DbCmd.nameTaken("עמוק")) && new91[11].equals(Words.DbCmd.nameTaken("רגילה"))
+                                && newId91[0] != 0 && newId91[4] == 0 && newId91[7] == 0);
+                final String[] got91 = {"", ""};
+                final boolean[] ok91 = {false, false, false};
+                Db.read(Db.app, m91, new Db.Use<Void>() {
+                    @Override public Void run(SqlStore st) {
+                        got91[0] = st.item(newId91[5]) == null ? "?" : st.item(newId91[5]).name;
+                        got91[1] = st.item(newId91[6]) == null ? "?" : st.item(newId91[6]).name;
+                        long shared = DbPaths.find(st, m91, java.util.Arrays.asList("חדש", "משותפת"));
+                        ok91[0] = st.listsOf(newId91[0]).size() == 1 && st.listsOf(newId91[0]).get(0) == DbPaths.find(st, m91, java.util.Arrays.asList("חדש"));
+                        ok91[1] = DbPaths.find(st, m91, java.util.Arrays.asList("חדש", "מקום שני", "משותפת", "בתוך משותפת")) == newId91[3]
+                                && st.listsOf(newId91[3]).size() == 1 && st.listsOf(newId91[3]).get(0) == shared;
+                        ok91[2] = st.check() == null;
+                        return null;
+                    }
+                });
+                o.check("מבנה 91: השם נשמר כמו שהוקלד — הרווחים שבקצוות יורדים, ו־% ומירכאות אינם מפוענחים («" + got91[0] + "» · «" + got91[1] + "»)",
+                        got91[0].equals("רווחים בקצוות") && got91[1].equals(Names.cleanName("100% %תאריך% \"מירכאות\" *")));
+                o.check("מבנה 91: הרשימה החדשה — במקום אחד בלבד, בתוך הרשימה שנבחרה; ברשימה משותפת — נראית משני המקומות; המסד תקין",
+                        ok91[0] && ok91[1] && ok91[2]);
+                List<String> v91 = go("המשך ()\nאופן \"" + m91 + "\"\nודא תוכן ידנית \"ישן\" שווה תוכן ידנית \"חדש\"\n"
+                        + "השווה תוכן ידנית \"ישן\" תוכן ידנית \"חדש\" /הבדלים\n", here, vars, lib);
+                o.check("מבנה 91: אחרי 12 הפעולות — מה שהדרך הישנה בנתה ומה שהפקודה בנתה שווים עד הסוף " + v91,
+                        bad(v91).isEmpty() && String.valueOf(v91).contains("אין הבדלים"));
+                // בבית (in = 0), רשימה שכבר איננה, ופריט שאינו רשימה
+                Manager.Act home91a = Manager.onListNew(m91, 0, "ישר בבית", here, vars, lib);
+                String saidHome91 = home91a.say(lib);
+                final long[] par91 = {0, 0};
+                final long made91 = home91a.made;
+                Db.write(Db.app, m91, null, new Db.Use<Void>() {
+                    @Override public Void run(SqlStore st) {
+                        par91[0] = st.listsOf(made91).isEmpty() ? -1 : st.listsOf(made91).get(0);
+                        par91[1] = st.addNote(home91[0], "רעיון");
+                        return null;
+                    }
+                });
+                Manager.Act gone91 = Manager.onListNew(m91, 987654321L, "לשום מקום", here, vars, lib);
+                String saidGone91 = gone91.say(lib);
+                Manager.Act note91 = Manager.onListNew(m91, par91[1], "בתוך רעיון", here, vars, lib);
+                String saidNote91 = note91.say(lib);
+                o.check("מבנה 91: בלי רשימה (0) — נוצרת בבית; רשימה שכבר איננה, או פריט שאינו רשימה — סירוב שנאמר, ושום דבר לא נוצר ("
+                                + saidHome91 + " · " + saidGone91 + " · " + saidNote91 + ")",
+                        !home91a.failed && made91 != 0 && par91[0] == home91[0] && gone91.failed && gone91.made == 0 && saidGone91.equals(Words.Db.LIST_GONE)
+                                && note91.failed && note91.made == 0);
+                File[] bk91 = Db.backupsDir(m91).listFiles();
+                o.check("מבנה 91: יצירה רק מוסיפה — בלי גיבוי לפני (כמו במסך); אופן שאין לו מסד, ובלי שם — סירוב מהתכנון",
+                        (bk91 == null || bk91.length == 0)
+                                && Manager.onListNew("אין-אופן-כזה-91", 0, "א", here, vars, lib).error() != null && !Db.dbFile(Db.app, "אין-אופן-כזה-91").exists()
+                                && Batch.plan("צור תיקייה ידנית %נבחרים%\n", here, vars, lib, null, new Batch.Selection(m91, 0, new ArrayList<Long>())).errors == 1
+                                && Batch.plan("צור תיקייה ידנית %נבחרים%\n", here, vars, lib).errors == 1);
+                List<String> md91 = go("המשך ()\nאופן \"" + m91 + "\"\nMD ידנית \"חדש/בפנים\"\nודא ידנית \"חדש/בפנים\" קיימת\n", here, vars, lib);
+                o.check("מבנה 91: \"צור תיקייה ידנית\" כתובה לא השתנתה — רשימה קיימת היא \"בלי שינוי\", לא סירוב " + md91, bad(md91).isEmpty());
+                String ui91 = Files.readUtf8(new File(src, "src/com/tikiyot/vfm/masachim/rechivim/DbVerbsUi.java"))
+                        + Files.readUtf8(new File(src, "src/com/tikiyot/vfm/masachim/rechivim/DbPicker.java"));
+                boolean none91 = true;
+                java.util.ArrayDeque<File> todo91 = new java.util.ArrayDeque<File>();
+                todo91.add(new File(src, "src/com/tikiyot/vfm/masachim"));
+                while (!todo91.isEmpty()) {
+                    File[] fs91 = todo91.poll().listFiles();
+                    if (fs91 == null) continue;
+                    for (File f : fs91) {
+                        if (f.isDirectory()) todo91.add(f);
+                        else if (f.getName().endsWith(".java")) {
+                            String c91 = Files.readUtf8(f);
+                            if (c91.contains("Lists.newList(") || c91.contains("Lists.newListChecked(")) none91 = false;
+                        }
+                    }
+                }
+                o.check("מבנה 91: אף מסך אינו יוצר רשימה בעצמו; ה־➕ והבורר — דרך המנהל", none91 && ui91.contains("Manager.onListNew(") && ui91.contains("DbVerbsUi.makeList("));
+                go("המשך ()\nבטל אופן \"" + m91 + "\"\n", here, vars, lib);
+            }
         } catch (Throwable t) {
             t.printStackTrace();
             o.check("מבנה 71: חריגה — " + t, false);

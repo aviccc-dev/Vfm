@@ -94,19 +94,29 @@ final class DbVerbsUi {
             @Override
             public void ok(final String name) {
                 if (name.trim().isEmpty()) return;
-                final String[] err = {null};
-                long id = write(a, mode, new Job() {
-                    @Override
-                    public long run(Store s, List<String> p) {                // מ0.23: עם בדיקת השם (כמו MD) — לא כפולה
-                        Lists.Made r = Lists.newListChecked(s, in, name);
-                        err[0] = r.error;
-                        return r.id;
-                    }
-                }, null);
-                if (err[0] != null) Ui.toast(a, err[0]);
-                else if (id != 0) DbListScreen.open(a, mode, id);
+                long id = makeList(a, mode, in, name);
+                if (id != 0) DbListScreen.open(a, mode, id);
             }
         });
+    }
+
+    /**
+     * מבנה 91: רשימה חדשה בשם שהוקלד, בתוך in (0 — הבית) — דרך המנהל, כפקודה ("צור תיקייה ידנית %נבחרים%"). משמש את ה־➕
+     * ואת בורר הרשימות. מחזיר את המספר של הרשימה; 0 — לא נוצרה, וההודעה כבר הוצגה (שם תפוס, שם לא תקין, תקלה).
+     */
+    static long makeList(Activity a, String mode, long in, String name) {
+        Library lib = Library.get(a);
+        Manager.Act act = Manager.onListNew(mode, in, name, Paths.data(), BatchUi.vars(a, Paths.data()), lib);
+        if (act.error() != null) {
+            Ui.toast(a, act.error());
+            return 0;
+        }
+        String said = act.say(lib);
+        if (act.failed || act.made == 0) {
+            Ui.toast(a, said);
+            return 0;
+        }
+        return act.made;
     }
 
     /** רשימה חכמה חדשה — בטופס המוכר — בתוך in (0 — בתוך הבית, אם יש). */

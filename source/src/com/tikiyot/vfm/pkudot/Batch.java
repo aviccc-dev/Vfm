@@ -41,6 +41,8 @@ final class Batch {
         /** מבנה 85: מה שפעולה של רשימות או של המסד אמרה בהרצה (ההודעה), והאם נכשלה — למסך שהריץ את השורה. */
         String said;
         boolean saidFailed;
+        /** מבנה 91: המספר במסד של מה שהפעולה יצרה (רשימה חדשה מהמסך) — כדי שהמסך יפתח אותה; 0 — לא נוצר דבר. */
+        long made;
         /** מ0.37: "ודא שגיאה" — השורה הזו צריכה להיכשל בהרצה (בתכנון היא תקינה). */
         boolean expectFail;
         /** 1.19.0: COPY/MOVE /S — שמירת מסלול: השורש שממנו נמדד המסלול; files — כל הקבצים, dirs — תיקיות ריקות. */
@@ -1499,6 +1501,14 @@ final class Batch {
             this.mode = mode;
             this.in = in;
             this.ids = new ArrayList<Long>(ids);
+        }
+
+        /** מבנה 91: יצירה במסך הרשימות — האופן, הרשימה שבתוכה יוצרים (0 — הבית), והשם שהוקלד (אינו מפוענח). */
+        Selection(String mode, long in, String name) {
+            this(new ArrayList<String>(), new ArrayList<String>(), null, name, null);
+            this.mode = mode;
+            this.in = in;
+            this.ids = new ArrayList<Long>();
         }
 
         Selection(List<String> files, List<String> dirs) {
