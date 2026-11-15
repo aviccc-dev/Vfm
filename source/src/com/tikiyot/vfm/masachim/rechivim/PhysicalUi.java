@@ -514,17 +514,12 @@ final class PhysicalUi {
 
     /** קובץ טקסט חדש בכונן (קובץ פקודות, 117א) — עם חלון אישור בתבנית. לא מחליף קובץ קיים. */
     public static void askNewFile(final Activity a, final File f, final String content, final Runnable onMade) {
-        String bad = Physical.badName(f.getName());
-        if (bad != null) {
-            Ui.toast(a, bad);
-            return;
-        }
-        if (Physical.programFile(f.getAbsolutePath()) != null) {
-            Ui.toast(a, Words.Disk.NO_FILE_IN_APP);
-            return;
-        }
-        if (f.exists()) {
-            Ui.toast(a, Words.Disk.ALREADY_NAME + f.getName() + "\"");
+        final Library lib = Library.get(a);
+        // מבנה 80: הקובץ החדש מהמסך — דרך הפקודה "כתוב "%יעד%\%שם-חדש%" "%תוכן%"" (המנהל). עד כאן המסך כתב את הקובץ בעצמו. הסירובים
+        // (שם לא תקין, תיקיית התוכנה, שם שכבר קיים) באים מהתכנון שלה; כאן נשארים חלון האישור וההודעה.
+        final Manager.Act act = Manager.onNewFile(f, content, Paths.data(), BatchUi.vars(a, Paths.data()), lib);
+        if (act.error() != null) {
+            Ui.toast(a, act.error());
             return;
         }
         boolean newDir = !f.getParentFile().isDirectory();                     // 140
@@ -534,17 +529,23 @@ final class PhysicalUi {
                 Words.Disk.CAN_DELETE_IT, Words.Disk.CREATE, new Runnable() {
                     @Override
                     public void run() {
-                        try {
-                            f.getParentFile().mkdirs();
-                            Files.writeAtomic(f, content);
-                        } catch (Throwable t) {
-                            Log.e("קובץ חדש", t);
-                            Ui.toast(a, Words.Disk.CANT_CREATE_FILE);
-                            return;
-                        }
-                        Library.get(a).dirChanged(f.getParent());
-                        Log.i("נוצר קובץ בכונן: " + f);
-                        onMade.run();
+                        new Thread(new Runnable() {
+                            @Override
+                            public void run() {
+                                final Physical.Result r = act.run(lib, null, null, false);
+                                a.runOnUiThread(new Runnable() {
+                                    @Override
+                                    public void run() {
+                                        if (a.isFinishing()) return;
+                                        if (r.failed > 0) {
+                                            Ui.toast(a, r.note);
+                                            return;
+                                        }
+                                        onMade.run();
+                                    }
+                                });
+                            }
+                        }).start();
                     }
                 });
     }

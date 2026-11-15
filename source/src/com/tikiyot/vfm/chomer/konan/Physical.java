@@ -1167,6 +1167,29 @@ public final class Physical {
         return null;
     }
 
+    /**
+     * מבנה 80: קובץ טקסט חדש בכונן (עד כאן נכתב בקוד של המסך עצמו). אינו מחליף קובץ קיים; תיקייה שחסרה מעליו — נוצרת (140).
+     * null — נוצר; אחרת הסיבה.
+     */
+    public static String newFile(Library lib, File f, String content) {
+        String no = Permit.check(Permit.WRITE);
+        if (no != null) return no;
+        String bad = badName(f.getName());
+        if (bad != null) return bad;
+        if (programFile(f.getAbsolutePath()) != null) return Words.Disk.NO_FILE_IN_APP;
+        if (f.exists()) return Words.Disk.ALREADY_NAME + f.getName() + "\"";
+        try {
+            f.getParentFile().mkdirs();
+            Files.writeAtomic(f, content);
+        } catch (Throwable t) {
+            Log.e("קובץ חדש", t);
+            return Words.Disk.CANT_CREATE_FILE;
+        }
+        if (lib != null) lib.dirChanged(f.getParent());                         // האינדקס לומד עליו (וגם על תיקייה שנוצרה)
+        Log.i("נוצר קובץ בכונן: " + f);
+        return null;
+    }
+
     // ================= 1.19.0: יומן העתקה =================
 
     /**

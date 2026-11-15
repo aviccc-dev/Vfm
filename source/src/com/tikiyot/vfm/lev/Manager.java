@@ -149,6 +149,13 @@ final class Manager {
                 java.util.Collections.<String>emptyList(), parent, name)), parent);
     }
 
+    /** מבנה 80: קובץ טקסט חדש, מהמסך — הקובץ f עם התוכן הזה: "כתוב "%יעד%\%שם-חדש%" "%תוכן%"". אינו מחליף קובץ קיים. */
+    static Act onNewFile(java.io.File f, String content, java.io.File here, java.util.Map<String, String> vars, Library lib) {
+        String text = Commands.word(Commands.get(Batch.WRITE)) + " \"%" + Batch.V_DEST + "%\\%" + Batch.V_NEW_NAME + "%\" \"%" + Batch.V_CONTENT + "%\"\n";
+        return new Act(text, Batch.plan(text, here, vars, lib, null, new Batch.Selection(java.util.Collections.<String>emptyList(),
+                java.util.Collections.<String>emptyList(), f.getParentFile(), f.getName(), content)), f.getParentFile());
+    }
+
     // ---------- התוצאה חוזרת: מה קורה בסוף ההרצה ----------
 
     /** פקודות הפתיחה שבסוף הקובץ רצות רק כשההרצה הלכה חלק (1.13.0; מ0.25). */

@@ -370,6 +370,11 @@ final class Batch {
             String[] err = {null};
             String p = path(a.get(0), here, vars, err);
             if (p == null) { s.error = err[0]; return true; }
+            if (new File(p).getName().equals(NAME_TOKEN) || (a.size() == 2 && a.get(1).equals(var(V_CONTENT)) && sim.selected != null
+                    && sim.selected.content != null)) {                         // מבנה 80: קובץ חדש מהמסך
+                writeSelected(s, new File(p), append || a.size() != 2 || !a.get(1).equals(var(V_CONTENT)), sim);
+                return true;
+            }
             if (Physical.programFile(p) != null) { s.error = Physical.programFile(p); return true; }   // מבנה 45
             final File f = new File(p);
             final String text = a.size() == 2 ? Verbs.withVars(a.get(1), vars).replace("\\n", "\n") : "";
@@ -386,6 +391,8 @@ final class Batch {
             s.op = new ListCmd.Op() {
                 @Override public String run(Library lib) {
                     try {
+                        String no = Permit.check(Permit.WRITE);                     // מבנה 80: גם "כתוב" שואלת את ההיתר
+                        if (no != null) { DbListCmd.lastFailed = true; return no; }
                         // מבנה 65: מותר בכל מקום שמותר להעתיק אליו — גם בשורש הכונן ובתיקיות המשתמש שבתיקיית התוכנה; לא בסל, ולא קובץ של התוכנה
                         String why0 = Physical.programFile(f.getAbsolutePath());
                         if (why0 == null && lib != null) why0 = Physical.noWriteInto(lib, f.getParentFile());
@@ -418,6 +425,43 @@ final class Batch {
             return true;
         }
         return false;
+    }
+
+    /**
+     * מבנה 80: קובץ חדש מהמסך — "כתוב "%יעד%\%שם-חדש%" "%תוכן%"": בתיקייה שנבחרה, בשם ובתוכן שהמסך מסר (נלקחים מהבחירה ואינם
+     * מפוענחים). שלא כמו "כתוב" כתובה (קובץ קיים — הקודם עובר לסל; התיקייה חייבת להיות קיימת) — כאן, כמו שהמסך עשה: קובץ קיים
+     * הוא סירוב, ותיקייה שחסרה נוצרת. הסירובים — בתכנון ובנוסח של המסך.
+     */
+    private static void writeSelected(final Step s, File marked, boolean misuse, Sim sim) {
+        final Selection sel = sim.selected;
+        File parent = marked.getParentFile();
+        if (misuse || sel == null || sel.name == null || sel.content == null || sel.dest == null || !marked.getName().equals(NAME_TOKEN)
+                || parent == null || !parent.getAbsolutePath().equals(Paths.clean(sel.dest))) {
+            s.error = Words.DbCmd.WRITE_USAGE;
+            return;
+        }
+        String bad = Physical.badName(sel.name);
+        if (bad != null) { s.error = bad; return; }
+        final File f = new File(parent, sel.name.trim());
+        if (Physical.programFile(f.getAbsolutePath()) != null) { s.error = Words.Disk.NO_FILE_IN_APP; return; }
+        if (sim.isFile(f) || sim.isDir(f)) { s.error = Words.Disk.ALREADY_NAME + f.getName() + "\""; return; }
+        if (sim.isFile(parent)) { s.error = Words.DbCmd.writeNoFolder(Bidi.path(parent.getAbsolutePath())); return; }
+        if (sim.lib != null && Physical.noWriteInto(sim.lib, parent) != null) { s.error = Physical.noWriteInto(sim.lib, parent); return; }
+        for (File up = parent; up != null && !sim.isDir(up); up = up.getParentFile()) {
+            sim.dirs.add(up.getAbsolutePath());
+            sim.gone.remove(up.getAbsolutePath());
+        }
+        sim.gone.remove(f.getAbsolutePath());
+        sim.added.put(f.getAbsolutePath(), GHOST);
+        s.dest = f;
+        s.describe = Words.DbCmd.writeWill(f.getName(), sel.content.length(), false);
+        s.op = new ListCmd.Op() {
+            @Override public String run(Library lib) {
+                String why = Physical.newFile(lib, f, sel.content);
+                if (why != null) { DbListCmd.lastFailed = true; return why; }
+                return Words.DbCmd.written(f.getName(), sel.content.length(), false);
+            }
+        };
     }
 
     /**
@@ -1399,6 +1443,8 @@ final class Batch {
         final String dest;
         /** מבנה 78: השם שהוקלד במסך (שינוי שם) — %שם-חדש%; null — אין. */
         final String name;
+        /** מבנה 80: התוכן של קובץ חדש — %תוכן%; null — אין. */
+        final String content;
 
         Selection(List<String> files, List<String> dirs) {
             this(files, dirs, null, null);
@@ -1409,10 +1455,15 @@ final class Batch {
         }
 
         Selection(List<String> files, List<String> dirs, File dest, String name) {
+            this(files, dirs, dest, name, null);
+        }
+
+        Selection(List<String> files, List<String> dirs, File dest, String name, String content) {
             this.files = new ArrayList<String>(files);
             this.dirs = new ArrayList<String>(dirs);
             this.dest = dest == null ? null : dest.getAbsolutePath();
             this.name = name;
+            this.content = content;
         }
     }
 
@@ -1424,6 +1475,8 @@ final class Batch {
      * ואפילו טקסט שנראה כמו משתנה ("%תאריך%"), ובשורה כתובה המשתנים שבשם החדש מוחלפים (מבנה 43).
      */
     static final String V_NEW_NAME = "שם-חדש", NAME_TOKEN = "\u0000name", NAME_MARK = "/" + NAME_TOKEN;   // תחביר
+    /** מבנה 80: התוכן של קובץ חדש מהמסך — גם הוא סימן, ונלקח מהבחירה כלשונו (בשורה כתובה, ב"כתוב", המשתנים מוחלפים ו־\n הוא שורה חדשה). */
+    static final String V_CONTENT = "תוכן", CONTENT_MARK = "/\u0000content";   // תחביר
 
     static Plan plan(String text, File here, Map<String, String> vars, Library lib, Physical.Progress progress, Selection selected) {
         Plan plan = new Plan();
@@ -1435,6 +1488,7 @@ final class Batch {
             vars.put(V_SELECTED, SELECTED_MARK);
             if (selected.dest != null) vars.put(V_DEST, selected.dest);
             if (selected.name != null) vars.put(V_NEW_NAME, NAME_MARK);
+            if (selected.content != null) vars.put(V_CONTENT, CONTENT_MARK);
         }
         plan.sim = sim;
         String[] lines = Bidi.strip(text).replace("\r", "").split("\n");          // 204
@@ -2714,7 +2768,13 @@ final class Batch {
             if (s.cmd.equals("ECHO") || s.cmd.equals("START") || (s.cmd.equals(OPEN) && s.op == null)) continue;
             if (s.op != null) {                                                // 1.24.0: רשימות
                 DbListCmd.lastFailed = false;
-                report.add(Words.Cmd.line(s.label(), s.op.run(lib)));
+                String got = s.op.run(lib);
+                report.add(Words.Cmd.line(s.label(), got));
+                if (s.cmd.equals(WRITE) && s.dest != null) {                    // מבנה 80: מה שיצא — גם למסך שהריץ את השורה
+                    s.result = new Physical.Result();
+                    if (DbListCmd.lastFailed) s.result.fail(got);
+                    else s.result.done.add(s.dest.getAbsolutePath());
+                }
                 if (DbListCmd.lastFailed) {
                     plan.trouble = true;
                     fails++;

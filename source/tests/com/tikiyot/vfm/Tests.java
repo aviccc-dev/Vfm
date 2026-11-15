@@ -2948,6 +2948,62 @@ public final class Tests {
                     && read(new File(code, "masachim/rechivim/PhysicalUi.java")).contains("Manager.onMakeFolder(parent, name"));
             wipe(d79);
         }
+        // מבנה 80: קובץ חדש מהמסך — דרך המנהל, כפקודה "כתוב "%יעד%\%שם-חדש%" "%תוכן%""
+        {
+            File ext80 = Paths.data().getParentFile(), d80 = new File(ext80, "ניסוי-80");
+            wipe(d80);
+            d80.mkdirs();
+            write(d80, "קיים.vbat", "ישן");
+            Paths.data().mkdirs();
+            Index ix80 = new Index("80", "80", ext80.getAbsolutePath());
+            ix80.scan(null);
+            Library lib80 = Library.forTests(new ArrayList<Index>(java.util.Collections.singletonList(ix80)));
+            java.util.Map<String, String> v80 = Batch.vars(Paths.data(), ext80.getAbsolutePath(), null);
+            String body80 = "REM %פנימי% \"מירכאות\"\nשורה שנייה \\n לא שורה חדשה\n" + Batch.template();
+            File new80 = new File(d80, "חדש 100%.vbat"), deep80 = new File(d80, "תיקייה חדשה/עמוק.vbat");
+            Manager.Act act80 = Manager.onNewFile(new80, body80, Paths.data(), v80, lib80);
+            check("מבנה 80: הפקודה שהמסך מריץ — \"כתוב \"%יעד%\\%שם-חדש%\" \"%תוכן%\"\", בלי סירוב (" + act80.error() + ")", act80.error() == null
+                    && act80.text.trim().equals("כתוב \"%יעד%\\%שם-חדש%\" \"%תוכן%\"") && new80.equals(act80.plan.steps.get(0).dest));
+            check("מבנה 80: קובץ שכבר קיים — סירוב מהתכנון, בנוסח של המסך (לא מחליפים)", (Words.Disk.ALREADY_NAME + "קיים.vbat\"").equals(
+                    Manager.onNewFile(new File(d80, "קיים.vbat"), "x", Paths.data(), v80, lib80).error()));
+            check("מבנה 80: בתוך תיקיית התוכנה — סירוב מהתכנון", Words.Disk.NO_FILE_IN_APP.equals(
+                    Manager.onNewFile(new File(Paths.data(), "חדש-80.vbat"), "x", Paths.data(), v80, lib80).error()));
+            check("מבנה 80: שם לא תקין — אותו סירוב של הכונן", Physical.badName("א:ב?.vbat") != null
+                    && Physical.badName("א:ב?.vbat").equals(Manager.onNewFile(new File(d80, "א:ב?.vbat"), "x", Paths.data(), v80, lib80).error()));
+            check("מבנה 80: במנוע — %תוכן% עם /הוסף, או בלי השם שמהמסך — שגיאה; \"כתוב\" כתובה על קובץ קיים — כמו שהייתה (הקודם לסל)",
+                    Batch.plan("כתוב \"%יעד%\\%שם-חדש%\" \"%תוכן%\" /הוסף\n", d80, v80, lib80, null, new Batch.Selection(new ArrayList<String>(),
+                            new ArrayList<String>(), d80, "x.txt", "y")).errors == 1
+                            && Batch.plan("כתוב \"x.txt\" \"%תוכן%\"\n", d80, v80, lib80, null, new Batch.Selection(new ArrayList<String>(),
+                            new ArrayList<String>(), d80, "x.txt", "y")).errors == 1
+                            && Batch.plan("כתוב \"קיים.vbat\" \"חדש\"\n", d80, v80, lib80).errors == 0);
+            Permit.close();
+            try {
+                String no80 = Physical.newFile(lib80, new File(d80, "עוקף.txt"), "x");
+                check("מבנה 80: קובץ חדש בלי היתר — מסורב, ולא נכתב (" + no80 + ")", no80 != null && no80.contains(Words.PermitW.BYPASS)
+                        && !new File(d80, "עוקף.txt").exists() && Permit.strict(Permit.WRITE));
+                Batch.Plan w80 = Batch.plan("כתוב \"בפקודה.txt\" \"א\"\n", d80, v80, lib80);
+                Batch.run(w80, lib80, null, null);
+                check("מבנה 80: גם \"כתוב\" בקובץ פקודות, כשהמנוע רץ שלא דרך המנהל — לא נכתב, והשורה נכשלת", !new File(d80, "בפקודה.txt").exists() && w80.trouble);
+                Batch.Plan w80b = Batch.plan("כתוב \"בפקודה.txt\" \"א\"\n", d80, v80, lib80);
+                Manager.run(w80b, lib80, null, null, false, null);
+                check("מבנה 80: ...ודרך המנהל — נכתב", "א".equals(read(new File(d80, "בפקודה.txt"))) && !w80b.trouble);
+                Physical.Result r80 = act80.run(lib80, null, null, false);
+                check("מבנה 80: דרך המנהל — הקובץ נוצר, והתוכן כלשונו: משתנים, מירכאות ו־\\n לא פוענחו (" + r80.note + ")", r80.failed == 0
+                        && r80.done.size() == 1 && body80.equals(read(new80)));
+                Physical.Result again80 = act80.run(lib80, null, null, false);
+                check("מבנה 80: הרצה שנייה (כבר קיים) — כישלון שמדווח, והקובץ לא הוחלף (" + again80.note + ")", again80.failed == 1
+                        && again80.note.startsWith(Words.Disk.ALREADY_NAME) && body80.equals(read(new80)));
+                Physical.Result deep80r = Manager.onNewFile(deep80, "ע", Paths.data(), v80, lib80).run(lib80, null, null, false);
+                check("מבנה 80: תיקייה שחסרה מעל הקובץ — נוצרת, כמו שהמסך עשה", deep80r.failed == 0 && "ע".equals(read(deep80)));
+                check("מבנה 80: ההיתר נסגר אחרי כל הרצה", !Permit.held());
+            } finally {
+                Permit.open();
+            }
+            String pui80 = read(new File(code, "masachim/rechivim/PhysicalUi.java"));
+            check("מבנה 80: המסך של הפעולות בכונן אינו כותב עוד קובץ בעצמו; רק דרך המנהל", !pui80.contains("writeAtomic")
+                    && pui80.contains("Manager.onNewFile(f, content"));
+            wipe(d80);
+        }
         // מבנה 55: המכשיר עצר את התוכנה בזמן הרצה — הדוח אומר זאת ואיזו הגדרה פותרת
         List<String> rep55 = new ArrayList<String>();
         Batch.stoppedHint(rep55, 4000);

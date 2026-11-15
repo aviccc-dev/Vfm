@@ -19,10 +19,11 @@ public final class Permit {
 
     /** שמות הפעולות — כמו שהם נאמרים בסירוב וביומן. */
     public static final String DELETE = Words.PermitW.DELETE, TRANSFER = Words.PermitW.TRANSFER, RENAME = Words.PermitW.RENAME,
-            MAKE_FOLDER = Words.PermitW.MAKE_FOLDER, RESTORE = Words.PermitW.RESTORE, FOREVER = Words.PermitW.FOREVER;
+            MAKE_FOLDER = Words.PermitW.MAKE_FOLDER, RESTORE = Words.PermitW.RESTORE, FOREVER = Words.PermitW.FOREVER,
+            WRITE = Words.PermitW.WRITE;
 
     /** הפעולות שכבר עוברות כולן דרך שכבת הניהול: בלי היתר — מסורבות. */
-    private static final java.util.Set<String> STRICT = new java.util.HashSet<String>(java.util.Arrays.asList(DELETE, TRANSFER, RENAME, MAKE_FOLDER));   // מבנה 77: גם העתקה והעברה · 78: שינוי שם · 79: תיקייה חדשה
+    private static final java.util.Set<String> STRICT = new java.util.HashSet<String>(java.util.Arrays.asList(DELETE, TRANSFER, RENAME, MAKE_FOLDER, WRITE));   // מבנה 77: גם העתקה והעברה · 78: שינוי שם · 79: תיקייה חדשה · 80: כתיבת קובץ
 
     private static final ThreadLocal<int[]> DEPTH = new ThreadLocal<int[]>() {
         @Override protected int[] initialValue() { return new int[1]; }
