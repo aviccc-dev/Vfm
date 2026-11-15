@@ -60,14 +60,11 @@ final class DbVerbsUi {
                 Ui.toast(a, Words.DbCmd.NOTE_NEEDS_LIST);
                 return true;
             }
-            long id = write(a, mode, new Job() {
-                @Override public long run(Store s, List<String> p) {
-                    long in = path.isEmpty() ? here : DbPaths.find(s, mode, path);
-                    if (in == 0) return 0;
-                    return title ? s.addTitle(in, text) : s.addNote(in, text);
-                }
-            }, null);
-            if (id == 0) Ui.toast(a, Words.Verb.NOT_FOUND + c.cond);
+            // מבנה 93: דרך המנהל, כפקודה ("צור רעיון %נבחרים%"); כאן נשארות ההודעה והטעינה מחדש
+            Library lib = Library.get(a);
+            Manager.Act act = Manager.onListNote(mode, here, title, text, c.cond, Paths.data(), BatchUi.vars(a, Paths.data()), lib);
+            String said = act.error() != null ? act.error() : act.say(lib);
+            if (act.error() != null || act.failed || act.made == 0) Ui.toast(a, said);
             else if (a instanceof DbListScreen) ((DbListScreen) a).reload();
             return true;
         }

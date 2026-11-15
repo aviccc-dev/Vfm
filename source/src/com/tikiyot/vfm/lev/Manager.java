@@ -208,6 +208,18 @@ final class Manager {
         return new Act(text, Batch.plan(text, here, vars, lib, null, new Batch.Selection(mode, in, name)), null);
     }
 
+    /**
+     * מבנה 93: רעיון או כותרת במסך הרשימות — "צור רעיון %נבחרים%" (ברשימה שמוצגת: in) או "צור רעיון %נבחרים% "דרך"" (ברשימה
+     * שנכתבה: listPath, לא ריק). text — מה שהוקלד, כלשונו.
+     */
+    static Act onListNote(String mode, long in, boolean title, String text, String listPath, java.io.File here,
+                          java.util.Map<String, String> vars, Library lib) {
+        boolean named = listPath != null && !listPath.trim().isEmpty();
+        String line = Verbs.CREATE + " " + (title ? Verbs.TITLE_WORD : Verbs.NOTE_WORD) + " %" + Batch.V_SELECTED + "%"
+                + (named ? " \"" + listPath.trim() + "\"" : "") + "\n";
+        return new Act(line, Batch.plan(line, here, vars, lib, null, new Batch.Selection(mode, named ? 0 : in, text)), null);
+    }
+
     // ---------- התוצאה חוזרת: מה קורה בסוף ההרצה ----------
 
     /** פקודות הפתיחה שבסוף הקובץ רצות רק כשההרצה הלכה חלק (1.13.0; מ0.25). */

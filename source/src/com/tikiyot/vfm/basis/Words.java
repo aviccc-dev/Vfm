@@ -2072,6 +2072,9 @@ public final class Words {
             return (added ? "נוספו ל\"" : "נכתב הקובץ \"") + name + "\" · " + chars + " תווים";
         }
         public static String expectOk(String why) { return "✅ נכשלה, כצפוי — " + why; }
+        /** מבנה 93: בתיאור של רעיון או כותרת מהמסך — לפני ההרצה, כשהרשימה ידועה רק במספר שלה. */
+        public static final String HERE_LIST = "הרשימה שבמסך";
+
         public static String noteAdded(boolean title, String text, String list) {
             return (title ? "כותרת" : "רעיון") + " \"" + text + "\" — נכנס ל\"" + list + "\"";
         }

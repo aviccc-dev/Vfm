@@ -485,6 +485,72 @@ final class DbCmdTests {
                     }
                 }
                 o.check("מבנה 91: אף מסך אינו יוצר רשימה בעצמו; ה־➕ והבורר — דרך המנהל", none91 && ui91.contains("Manager.onListNew(") && ui91.contains("DbVerbsUi.makeList("));
+                // מבנה 93: רעיון וכותרת מהמסך — דרך המנהל; מול הדרך הישנה (המסך כתב בעצמו: addNote / addTitle), על אותן שתי רשימות
+                {
+                    final String[][] c93 = {                                    // {כותרת?, בתוך מה (דרך; ריק — "ישן"/"חדש" עצמן), הטקסט}
+                            {"", "", "רעיון רגיל"}, {"1", "", "כותרת רגילה"}, {"", "בפנים/עמוק", "רעיון בעומק"}, {"", "משותפת", "רעיון ברשימה משותפת"},
+                            {"", "", "רעיון רגיל"}, {"1", "", "כותרת רגילה"}, {"", "", "  רווחים  "}, {"", "", "100% %תאריך% \"מירכאות\" /לוכסן\\ #"},
+                            {"1", "בפנים", "שתי\nשורות"}};
+                    final String[] old93 = new String[c93.length], new93 = new String[c93.length];
+                    for (int i = 0; i < c93.length; i++) {
+                        final int k = i;
+                        final boolean title = !c93[i][0].isEmpty();
+                        final List<String> po = new ArrayList<String>(), pn = new ArrayList<String>();
+                        po.add("ישן");
+                        pn.add("חדש");
+                        for (String x : c93[i][1].split("/")) if (!x.isEmpty()) { po.add(x); pn.add(x); }
+                        final long[] in = {0};
+                        try {
+                            Db.write(Db.app, m91, null, new Db.Use<Void>() {
+                                @Override public Void run(SqlStore st) {
+                                    in[0] = DbPaths.find(st, m91, pn);
+                                    long at = DbPaths.find(st, m91, po);
+                                    long id = title ? st.addTitle(at, c93[k][2]) : st.addNote(at, c93[k][2]);
+                                    old93[k] = id != 0 ? "נוסף" : "לא";
+                                    return null;
+                                }
+                            });
+                        } catch (Throwable t) {
+                            old93[k] = "נכשל";
+                        }
+                        // לסירוגין: פעם לפי המספר של הרשימה שבמסך, פעם לפי הדרך שנכתבה
+                        Manager.Act act = i % 2 == 0 ? Manager.onListNote(m91, in[0], title, c93[i][2], "", here, vars, lib)
+                                : Manager.onListNote(m91, 0, title, c93[i][2], Names.key(pn), here, vars, lib);
+                        if (act.error() != null) new93[i] = "תכנון: " + act.error();
+                        else {
+                            Permit.close();
+                            try {
+                                act.say(lib);
+                                new93[i] = act.failed ? "נכשל" : act.made != 0 ? "נוסף" : "לא";
+                                if (Permit.held()) new93[i] += " (ההיתר נשאר פתוח)";
+                            } finally {
+                                Permit.open();
+                            }
+                        }
+                    }
+                    o.check("מבנה 93: רעיון וכותרת בתשעה מצבים (רגיל, בעומק, ברשימה משותפת, אותו טקסט פעמיים, רווחים, תווים מיוחדים, שתי שורות) — "
+                                    + "הפקודה עונה כמו המסך " + java.util.Arrays.toString(old93) + " " + java.util.Arrays.toString(new93),
+                            java.util.Arrays.equals(old93, new93) && new93[0].equals("נוסף") && new93[7].equals("נוסף"));
+                    List<String> v93 = go("המשך ()\nאופן \"" + m91 + "\"\nודא תוכן ידנית \"ישן\" שווה תוכן ידנית \"חדש\"\n"
+                            + "השווה תוכן ידנית \"ישן\" תוכן ידנית \"חדש\" /הבדלים\n", here, vars, lib);
+                    o.check("מבנה 93: אחרי תשע הפעולות — שתי הרשימות שוות עד הסוף (אותם רעיונות וכותרות, באותו סדר ובאותו טקסט) " + v93,
+                            bad(v93).isEmpty() && String.valueOf(v93).contains("אין הבדלים"));
+                    Manager.Act none93 = Manager.onListNote(m91, 0, false, "בלי רשימה", "", here, vars, lib);
+                    Manager.Act empty93 = Manager.onListNote(m91, home91[0], false, "   ", "", here, vars, lib);
+                    Manager.Act lost93 = Manager.onListNote(m91, 0, false, "לרשימה שאין", "אין/כזו", here, vars, lib);
+                    String saidLost93 = lost93.error() != null ? "תכנון: " + lost93.error() : lost93.say(lib);
+                    Manager.Act gone93 = Manager.onListNote(m91, 987654321L, true, "לרשימה שנמחקה", "", here, vars, lib);
+                    String saidGone93 = gone93.error() != null ? "תכנון: " + gone93.error() : gone93.say(lib);
+                    o.check("מבנה 93: בלי רשימה — \"" + Words.DbCmd.NOTE_NEEDS_LIST + "\"; טקסט ריק — סירוב; דרך שאין — \"לא נמצא\" כמו במסך; רשימה שנמחקה — נאמר ("
+                                    + saidLost93 + " · " + saidGone93 + ")",
+                            Words.DbCmd.NOTE_NEEDS_LIST.equals(none93.error()) && empty93.error() != null
+                                    && saidLost93.equals(Words.Verb.NOT_FOUND + "אין/כזו") && lost93.failed && lost93.made == 0
+                                    && saidGone93.equals(Words.Db.LIST_GONE) && gone93.failed);
+                    List<String> w93 = go("המשך ()\nאופן \"" + m91 + "\"\nצור רעיון \"מקובץ\" \"חדש/בפנים\"\nודא שגיאה\nצור רעיון %נבחרים% \"חדש\"\n", here, vars, lib);
+                    o.check("מבנה 93: \"צור רעיון\" כתובה לא השתנתה; ו־%נבחרים% בלי בחירה של מסך — שגיאה " + w93, bad(w93).isEmpty());
+                    String ui93 = Files.readUtf8(new File(src, "src/com/tikiyot/vfm/masachim/rechivim/DbVerbsUi.java"));
+                    o.check("מבנה 93: המסך אינו כותב עוד רעיון או כותרת בעצמו", !ui93.contains(".addNote(") && !ui93.contains(".addTitle(") && ui93.contains("Manager.onListNote("));
+                }
                 List<String> e92 = go("המשך ()\nאופן \"" + m91 + "\"\nודא שגיאה\nשנה ידנית \"חדש/בפנים\" \"  \"\nודא ידנית \"חדש/בפנים\" קיימת\n"
                         + "ודא ידנית \"חדש/ללא שם\" חסרה\n", here, vars, lib);
                 o.check("מבנה 92: שם שכולו רווחים — סירוב, גם בשינוי שם בפקודה (עד כאן הרשימה קיבלה את השם \"ללא שם\") " + e92, bad(e92).isEmpty());

@@ -829,6 +829,45 @@ final class DbListCmd {
     }
 
     /**
+     * מבנה 93: רעיון או כותרת מהמסך — "צור רעיון %נבחרים%" · "צור כותרת %נבחרים% "דרך"". הטקסט הוא מה שהוקלד (מהבחירה, אינו
+     * מפוענח); הרשימה — זו שמוצגת במסך (המספר שלה), או הדרך שנכתבה אחרי. בלי הדמיה (כמו כל פעולה של %נבחרים% ברשימות), ובלי
+     * גיבוי לפני (רק מוסיפה) — כמו שהמסך עשה. הסירובים — בנוסח של המסך.
+     */
+    private static String planPickedNote(final Batch.Step s, final Verbs.Cmd c, final boolean title, Batch.Sim sim) {
+        final Batch.Selection sel = sim.selected;
+        if (sel == null || sel.ids == null || sel.mode == null || sel.name == null || sel.name.trim().isEmpty()) {
+            s.error = Words.Cmd.NOTHING_SELECTED;
+            return null;
+        }
+        final String mode = sel.mode;
+        if (!Db.dbFile(Db.app, mode).isFile()) { s.error = Words.DbCmd.noMode(mode, sim.modes()); return null; }
+        final List<String> path = Names.parsePath(c.cond);
+        final long here = sel.in;
+        if (path.isEmpty() && here == 0) { s.error = Words.DbCmd.NOTE_NEEDS_LIST; return null; }
+        final String text = sel.name, where = path.isEmpty() ? Words.DbCmd.HERE_LIST : Names.label(path);
+        s.describe = Words.DbCmd.inDb(Words.DbCmd.noteAdded(title, text, where));
+        s.op = new ListCmd.Op() {
+            @Override public String run(Library lib) {
+                Res r = realRes(mode, new Work() {
+                    @Override public Res run(Store t, Finder f) {
+                        long in = path.isEmpty() ? here : DbPaths.find(t, mode, path);
+                        if (in == 0) return Res.err(Words.Verb.NOT_FOUND + c.cond);
+                        Store.Item it = t.item(in);
+                        if (it == null || it.type != Store.LIST) return Res.err(Words.Db.LIST_GONE);
+                        Res ok = Res.ok(Words.DbCmd.noteAdded(title, text, path.isEmpty() ? it.name : where));
+                        ok.made = title ? t.addTitle(in, text) : t.addNote(in, text);
+                        return ok;
+                    }
+                }, false, lib);
+                if (r.error != null) lastFailed = true;
+                s.made = r.made;
+                return r.error != null ? r.error : Words.DbCmd.inDb(r.text);
+            }
+        };
+        return mode;
+    }
+
+    /**
      * מ0.25 (באג 7; המשתמש: "כל הפעלים בפקודות רצים לפי הסדר בו הם כתובים"): החלק הכותב של פועל בעברית — "צור רשימה",
      * "צור רשימה חכמה", "עדכן רשימה חכמה" — הוא שלב רגיל: על העותק בתכנון (שורות מאוחרות רואות אותו), ובהרצה על המסד, במקומו.
      * מחזיר את האופן אם זה פועל כותב (ואז בסוף רק פותחים את המסך), null — אינו כותב (נשאר כולו לסוף).
@@ -839,6 +878,7 @@ final class DbListCmd {
         final boolean smartUpd = c.kind.equals(Verbs.K_SMART) && c.verb.equals(Verbs.UPDATE);
         final boolean note = c.kind.equals(Verbs.K_NOTE), title = c.kind.equals(Verbs.K_TITLE);   // מ0.37
         if (!list && !smartNew && !smartUpd && !note && !title) return null;
+        if ((note || title) && Batch.var(Batch.V_SELECTED).equals(c.arg)) return planPickedNote(s, c, title, sim);   // מבנה 93: מהמסך
         if (sim.modeError != null) { s.error = sim.modeError; return null; }
         final String mode = mode(sim);
         final Store db;
