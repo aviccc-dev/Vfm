@@ -3246,6 +3246,23 @@ public final class Tests {
                 check("מבנה 145: תיקיית התוספים — המעבר מהישן נבדק פעם אחת בהפעלה (קריאה חוזרת אינה סורקת); בהפעלה הבאה — נעשה",
                         once145 && !old145.exists() && new File(r145, "נשאר145.html").isFile());
                 new File(r145, "נשאר145.html").delete();
+                // מבנה 146: ערך שנגזר מקובץ — פעם אחת, עד שהקובץ משתנה (Once); שלושת המטמונים של התפריטים עליו
+                File f146 = mk(d138, "פעם146.vbat", 7);
+                Once<String> o146 = new Once<String>(2);
+                boolean none146 = o146.had(f146, "") == null;
+                o146.put(f146, "", "א");
+                o146.put(f146, "ב", "אחר");
+                boolean kept146 = "א".equals(o146.had(f146, "")) && "אחר".equals(o146.had(f146, "ב"));
+                mk(d138, "פעם146.vbat", 9);                                     // הקובץ השתנה (הגודל)
+                boolean changed146 = o146.had(f146, "") == null;
+                o146.put(f146, "", "1");
+                o146.put(f146, "ב", "2");
+                o146.put(f146, "ג", "3");                                       // התמלא (2) — מתרוקן, והחדש נכנס
+                String m146 = read(new File(code, "lev/Menus.java"));
+                check("מבנה 146: Once — אין לפני; נזכר (גם כמה ערכים לקובץ); קובץ שהשתנה — נשכח; מלא — מתרוקן; והתפריטים אינם מחזיקים מטמון משלהם",
+                        none146 && kept146 && changed146 && o146.had(f146, "") == null && "3".equals(o146.had(f146, "ג"))
+                                && !m146.contains("new HashMap<String, String[]>()") && m146.split("new Once<", -1).length - 1 == 3
+                                && "".equals(Menus.textOf(mk(d138, "ריק146.vbat", 0))) && Menus.look(f146).length == 2);
                 wipe(d138);
             }
             String pui80 = read(new File(code, "masachim/rechivim/PhysicalUi.java"));

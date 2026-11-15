@@ -539,7 +539,7 @@ final class Menus {
         return p.errors == 0;
     }
 
-    private static final Map<String, Boolean> fitCache = new HashMap<String, Boolean>();
+    private static final Once<Boolean> fitCache = new Once<Boolean>(300);
 
     /**
      * האם פקודה מרשימת "בחירה" מתאימה למה שנבחר עכשיו. המשפך: קודם כמה נבחרו מול מה שהפקודה מקבלת (זול, תמיד); ורק אז
@@ -552,11 +552,8 @@ final class Menus {
         if (ar == 0) return true;
         if (ar == 1 && n != 1) return false;
         if (!dirs.isEmpty()) return true;                                     // תיקייה — התכנון שלה סורק את כולה; לא כאן
-        String key = f.getPath() + "\n" + f.lastModified() + "\n" + (n == 1 ? 1 : 2);
-        Boolean had;
-        synchronized (fitCache) {
-            had = fitCache.get(key);
-        }
+        String kind = n == 1 ? "1" : "2";
+        Boolean had = fitCache.had(f, kind);                                  // מבנה 146
         if (had != null) return had;
         boolean ok = true;
         try {
@@ -566,25 +563,17 @@ final class Menus {
         } catch (Throwable t) {
             Log.e("Menus.fits", t);
         }
-        synchronized (fitCache) {
-            if (fitCache.size() > 300) fitCache.clear();
-            fitCache.put(key, ok);
-        }
-        return ok;
+        return fitCache.put(f, kind, ok);
     }
 
-    private static final Map<String, String[]> texts = new HashMap<String, String[]>();
+    private static final Once<String> texts = new Once<String>(300);
 
     /** הטקסט של קובץ פקודות — נקרא פעם אחת, עד שהקובץ משתנה (פס הבחירה שואל בכל שינוי של הבחירה). null — לא נקרא. */
-    static synchronized String textOf(File f) {
-        String k = f.lastModified() + "\n" + f.length();
-        String[] had = texts.get(f.getPath());
-        if (had != null && had[1].equals(k)) return had[0];
+    static String textOf(File f) {
+        String had = texts.had(f, "");
+        if (had != null) return had;
         try {
-            String t = Files.readUtf8(f);
-            if (texts.size() > 300) texts.clear();
-            texts.put(f.getPath(), new String[]{t, k});
-            return t;
+            return texts.put(f, "", Files.readUtf8(f));
         } catch (Throwable e) {
             return null;
         }
@@ -592,17 +581,14 @@ final class Menus {
 
     // ---------- איך כפתור נראה ----------
 
-    private static final Map<String, String[]> looks = new HashMap<String, String[]>();
+    private static final Once<String[]> looks = new Once<String[]>(300);
 
     /** הצלמית והשם של קובץ פקודות (מהכותרת שלו) — נקרא פעם אחת, עד שהקובץ משתנה. */
-    static synchronized String[] look(File f) {
-        String k = f.getPath() + "\n" + f.lastModified() + "\n" + f.length();
-        String[] had = looks.get(f.getPath());
-        if (had != null && had[2].equals(k)) return had;
+    static String[] look(File f) {
+        String[] had = looks.had(f, "");
+        if (had != null) return had;
         Program p = Program.read(f);
-        String[] now = {p.isProgram() ? p.icon : "▶", p.title(f), k};
-        looks.put(f.getPath(), now);
-        return now;
+        return looks.put(f, "", new String[]{p.isProgram() ? p.icon : "▶", p.title(f)});
     }
 
     // ---------- "הפקודות שלי" — מבנה 16: עד כאן ב־Reserved (קומת הפקודות), אבל זו לוגיקה של התפריטים ----------
