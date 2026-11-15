@@ -847,13 +847,13 @@ final class DbListCmd {
         final String name = sel.name.trim(), cond = sel.content;
         final java.util.Map<String, String> props = sel.props;
         final String shown = name.isEmpty() ? Words.SMART_LIST : name;
-        s.describe = Words.DbCmd.inDb(Words.ListCmdW.created(shown));
+        s.describe = Words.DbCmd.inDb(Words.ListCmdW.createdSmart(shown));
         s.op = new ListCmd.Op() {
             @Override public String run(Library lib) {
                 Res r = realRes(mode, new Work() {
                     @Override public Res run(Store t, Finder f) {
                         if (into != 0 && (t.item(into) == null || t.item(into).type != Store.LIST)) return Res.err(Words.Db.LIST_GONE);
-                        Res ok = Res.ok(Words.ListCmdW.created(shown));
+                        Res ok = Res.ok(Words.ListCmdW.createdSmart(shown));
                         ok.made = Lists.saveSmart(t, 0, into, name, cond, props);
                         return ok;
                     }
@@ -950,7 +950,7 @@ final class DbListCmd {
                     long had = DbPaths.smart(t, c.arg);
                     long id = DbPaths.ensureSmart(t, c.arg, c.cond, c.sort);
                     if (id == 0) return Res.err(Words.Verb.NOT_FOUND + c.arg);
-                    return id == had ? Res.same(Words.ListCmdW.exists(c.arg)) : Res.ok(Words.ListCmdW.created(c.arg));
+                    return id == had ? Res.same(Words.ListCmdW.exists(c.arg)) : Res.ok(Words.ListCmdW.createdSmart(c.arg));   // מבנה 98
                 }
                 return DbPaths.updateSmart(t, c.arg, c.cond, c.sort) == 0 ? Res.err(Words.Verb.NOT_FOUND + c.arg)
                         : Res.ok(Words.DbCmd.updated(c.arg));

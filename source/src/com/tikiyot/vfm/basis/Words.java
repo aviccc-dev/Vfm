@@ -1878,6 +1878,11 @@ public final class Words {
             return "רשימה ידנית חדשה: " + label;
         }
 
+        /** מבנה 98: עד כאן גם רשימה חכמה חדשה נאמרה "רשימה ידנית חדשה". */
+        public static String createdSmart(String label) {
+            return "רשימה חכמה חדשה: " + label;
+        }
+
         public static String exists(String label) {
             return "הרשימה " + label + " כבר קיימת — בלי שינוי";
         }

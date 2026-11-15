@@ -37,7 +37,7 @@ final class DbVerbsUi {
             }, null);
             else id = readSmart(a, mode, name);
             if (id == 0) Ui.toast(a, Words.Verb.NOT_FOUND + c.arg);
-            else if (c.noOpen) Ui.toast(a, Words.ListCmdW.created(c.arg));     // מ0.40: /בלי-לפתוח
+            else if (c.noOpen) Ui.toast(a, Words.ListCmdW.createdSmart(c.arg));   // מ0.40: /בלי-לפתוח; מבנה 98: "חכמה", לא "ידנית"
             else openSmart(a, mode, id, sort);
             return true;
         }

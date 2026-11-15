@@ -621,6 +621,8 @@ final class DbCmdTests {
                     o.check("מבנה 97: רשימה שנמחקה — סירוב שנאמר; \"צור רשימה חכמה\" כתובה לא השתנתה (פעמיים — אותה רשימה); %שם-חדש% בלי טופס — שגיאה "
                                     + said97 + " " + w97,
                             gone97.failed && said97.equals(Words.Db.LIST_GONE) && bad(w97).isEmpty() && smarts97(m91, "מקובץ 97") == 1);
+                    o.check("מבנה 98: רשימה חכמה חדשה נאמרת \"רשימה חכמה חדשה\" — לא \"רשימה ידנית חדשה\" " + w97,
+                            String.valueOf(w97).contains(Words.ListCmdW.createdSmart("מקובץ 97")) && !String.valueOf(w97).contains(Words.ListCmdW.created("מקובץ 97")));
                     String ui97 = Files.readUtf8(new File(src, "src/com/tikiyot/vfm/masachim/rechivim/DbVerbsUi.java"))
                             + Files.readUtf8(new File(src, "src/com/tikiyot/vfm/masachim/SearchScreen.java"));
                     o.check("מבנה 97: ה־➕ ומסך החיפוש אינם יוצרים עוד רשימה חכמה בעצמם — דרך המנהל",
