@@ -1838,6 +1838,7 @@ public final class Tests {
             File oe = new File(old, "עורך");
             oe.mkdirs();
             Files.writeAtomic(new File(oe, "3.html"), "<p>");
+            Lab.recheck();                                                  // מבנה 145: המעבר נבדק פעם אחת בהפעלה — כאן, כמו הפעלה חדשה
             File r = Lab.root();
             check("מ0.40: התיקייה \"מעבדה\" עוברת ל\"תוספים\" (פעם אחת), והעמודים — ישר בה", r.getName().equals(Lab.DIR)
                     && new File(r, "תוסף עורך 3.html").isFile() && !new File(r, "עורך").exists() && !old.exists());
@@ -1846,6 +1847,7 @@ public final class Tests {
             File oe2 = new File(old, "ישן");                                        // "תוספים" כבר קיימת (המריץ יצר אותה) — עובר פריט פריט
             oe2.mkdirs();
             Files.writeAtomic(new File(oe2, "1.html"), "<p>");
+            Lab.recheck();                                                  // מבנה 145: המעבר נבדק פעם אחת בהפעלה — כאן, כמו הפעלה חדשה
             r = Lab.root();
             check("מ0.40: \"מעבדה\" שנשארה, כש\"תוספים\" כבר קיימת — מה שבה עובר, והיא נמחקת", new File(r, "תוסף ישן 1.html").isFile() && !old.exists());
             // המריץ העביר מההורדות את אותו עמוד לפני שהתיקייה הישנה עברה — לא נוצר "(2)"; תוכן אחר באותו שם — כן
@@ -1855,6 +1857,7 @@ public final class Tests {
             Files.writeAtomic(new File(o3, "6.html"), "<p>שש ישן</p>");
             Files.writeAtomic(new File(r, "תוסף כפול 5.html"), "<p>חמש</p>");
             Files.writeAtomic(new File(r, "תוסף כפול 6.html"), "<p>שש חדש</p>");
+            Lab.recheck();                                                  // מבנה 145: המעבר נבדק פעם אחת בהפעלה — כאן, כמו הפעלה חדשה
             r = Lab.root();
             check("מ0.40: עמוד ישן שזהה לו כבר בתיקייה — לא מוכפל; שונה באותו שם — \"(2)\"", !new File(r, "תוסף כפול 5 (2).html").exists()
                     && new File(r, "תוסף כפול 6 (2).html").isFile() && Lab.versions(r, "כפול").size() == 3 && !old.exists());
@@ -3232,6 +3235,17 @@ public final class Tests {
                 check("מבנה 141: הדלת, גרסה 1 — 35 הפונקציות, לפי הקבוצות (מידע · קריאה · כתיבה · הרצה · חלונות); התוכנה מוסרת את המספר (info.door) [" + door141.toString().trim() + "]",
                         Bridge.DOOR == 1 && br141.contains("o.put(\"door\", DOOR);")
                                 && door141.toString().trim().equals("info theme places modes dataDir startFile dbStats pathInfo commandMatrix smartLists commandFiles myCommands templates readText listDir toVar expand saveCommandFile writeCommandFile saveTemplate saveText cleanData setReaders load save runCommands runFile pickFolder pickFile pickList smartForm send toast log close"));
+                // מבנה 145: המעבר מהמבנה הישן נבדק פעם אחת בהפעלה, ולא בכל קריאה
+                Lab.recheck();
+                File r145 = Lab.root(), old145 = new File(Paths.dbData(), Lab.OLD_DIR);
+                mk(old145, "נשאר145.html", 5);
+                Lab.root();
+                boolean once145 = new File(old145, "נשאר145.html").isFile();
+                Lab.recheck();
+                Lab.root();
+                check("מבנה 145: תיקיית התוספים — המעבר מהישן נבדק פעם אחת בהפעלה (קריאה חוזרת אינה סורקת); בהפעלה הבאה — נעשה",
+                        once145 && !old145.exists() && new File(r145, "נשאר145.html").isFile());
+                new File(r145, "נשאר145.html").delete();
                 wipe(d138);
             }
             String pui80 = read(new File(code, "masachim/rechivim/PhysicalUi.java"));

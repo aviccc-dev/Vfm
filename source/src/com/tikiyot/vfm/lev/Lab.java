@@ -35,8 +35,19 @@ final class Lab {
      * תיקיית התוספים — בתיקייה של התוכנה החדשה. מ0.40: התיקייה "מעבדה" עוברת לכאן; ואם "תוספים" כבר נוצרה (למשל בשורת
      * "צור תיקייה" של המריץ) — מה שבתוך "מעבדה" עובר פריט פריט, ושם תפוס נשאר במקומו.
      */
+    private static volatile String migrated;
+
+    /** לבדיקות: לשכוח שהמעבר כבר נבדק. */
+    static void recheck() {
+        migrated = null;
+    }
+
     static File root() {
         File r = new File(Paths.dbData(), DIR), old = new File(Paths.dbData(), OLD_DIR);
+        // מבנה 145 (ממצא 1; המשפך — "מה שלא השתנה לא מחושבים שוב"): המעבר מהשם הישן ומהמבנה הישן נבדק פעם אחת לכל תיקייה
+        // בכל הפעלה של התוכנה, ולא בכל קריאה (המסך והגשר קוראים לכאן שוב ושוב, וכל קריאה סרקה את התיקייה).
+        String key = r.getAbsolutePath();
+        if (key.equals(migrated)) return r;
         File z = Paths.dbData();                                               // מבנה 140: האזור — התיקייה של התוכנה; הכול דרך המנהל
         if (old.isDirectory()) {
             if (!r.exists()) {
@@ -48,6 +59,7 @@ final class Lab {
             }
         }
         flatten(r);
+        migrated = key;
         return r;
     }
 
