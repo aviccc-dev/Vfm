@@ -358,26 +358,23 @@ final class PhysicalUi {
     /** שינוי שם של קובץ בכונן: שם חדש, ואז חלון אישור בתבנית של הפעולות הפיזיות (5). */
     public static void askRename(final Activity a, final String path, final Physical.Done done) {
         final File f = new File(path);
-        if (Physical.programFile(path) != null) {
-            Ui.toast(a, Words.Disk.CANT_RENAME + f.getName() + "\": " + Physical.programFile(path));
-            return;
-        }
-        if (!f.isFile()) {
-            Ui.toast(a, Words.FILE_NOT_AT_PATH);
+        final Library lib = Library.get(a);
+        // מבנה 78: שינוי השם מהמסך — דרך הפקודה "שנה %נבחרים% "%שם-חדש%"" (המנהל). הסירובים באים מהתכנון שלה: לפני שמבקשים שם —
+        // "מותר לשנות לקובץ הזה שם?" (התכנית עם השם של היום), ואחרי שהוקלד — השם עצמו (לא תקין, תפוס). כאן: השאלה, האישור, ההודעה.
+        final java.util.Map<String, String> vars = BatchUi.vars(a, Paths.data());
+        String no = Manager.onRename(path, f.getName(), Paths.data(), vars, lib).error();
+        if (no != null) {
+            Ui.toast(a, no);
             return;
         }
         Ui.askText(a, Words.RENAME_ON_DRIVE, f.getName(), Words.Disk.FILE_NAME, new Ui.Text1() {
             @Override
             public void ok(String value) {
                 final String name = value.trim();
-                String bad = Physical.badName(name);
-                if (bad != null) {
-                    Ui.toast(a, bad);
-                    return;
-                }
                 if (name.equals(f.getName())) return;
-                if (!name.equalsIgnoreCase(f.getName()) && new File(f.getParentFile(), name).exists()) {
-                    Ui.toast(a, Words.Disk.ALREADY_IN_FOLDER + name + "\"");
+                final Manager.Act act = Manager.onRename(path, name, Paths.data(), vars, lib);
+                if (act.error() != null) {
+                    Ui.toast(a, act.error());
                     return;
                 }
                 String oldExt = Text.ext(f.getName()), newExt = Text.ext(name);
@@ -387,7 +384,6 @@ final class PhysicalUi {
                         + " ← " + (newExt.isEmpty() ? Words.Disk.WITHOUT : newExt) + Words.Disk.EXT_WARNING : "");
                 String undo = (inLists > 0 ? Words.Disk.LISTS_FOLLOW_OPEN + Words.items(inLists) + ")" : Words.Disk.LISTS_FOLLOW)
                         + Words.Disk.CAN_RENAME_AGAIN;
-                final Library lib = Library.get(a);
                 Ui.ask(a, Words.Disk.RENAME_TITLE + f.getName(), Words.Disk.RENAME_FILE_ITSELF, detail, undo,
                         Words.Disk.RENAME, new Runnable() {
                             @Override
@@ -395,15 +391,7 @@ final class PhysicalUi {
                                 new Thread(new Runnable() {
                                     @Override
                                     public void run() {
-                                        Physical.Result x;
-                                        try {
-                                            x = Physical.rename(lib, path, name);
-                                        } catch (Throwable t) {
-                                            Log.e("שינוי שם בכונן", t);
-                                            x = new Physical.Result();
-                                            x.fail(Words.Disk.ERROR);
-                                        }
-                                        final Physical.Result r = x;
+                                        final Physical.Result r = act.run(lib, null, null, false);   // תקלה — תוצאה עם כישלון, לא חריגה
                                         Ui.afterIndex(a, new Runnable() {
                                             @Override
                                             public void run() {

@@ -132,6 +132,16 @@ final class Manager {
         return new Act(text, Batch.plan(text, here, vars, lib, null, new Batch.Selection(files, dirs, dest)), dest);
     }
 
+    /**
+     * מבנה 78: שינוי שם של קובץ, מהמסך: "שנה %נבחרים% "%שם-חדש%"". name — מה שהוקלד, כמו שהוא. עם השם של היום — התכנית עונה רק על
+     * "מותר לשנות לקובץ הזה שם?" (קובץ של התוכנה, קובץ שכבר איננו), לפני שהמסך מבקש שם.
+     */
+    static Act onRename(String path, String name, java.io.File here, java.util.Map<String, String> vars, Library lib) {
+        String text = Commands.word(Commands.get("REN")) + " %" + Batch.V_SELECTED + "% \"%" + Batch.V_NEW_NAME + "%\"\n";
+        return new Act(text, Batch.plan(text, here, vars, lib, null, new Batch.Selection(java.util.Collections.singletonList(path),
+                java.util.Collections.<String>emptyList(), null, name)), null);
+    }
+
     // ---------- התוצאה חוזרת: מה קורה בסוף ההרצה ----------
 
     /** פקודות הפתיחה שבסוף הקובץ רצות רק כשההרצה הלכה חלק (1.13.0; מ0.25). */

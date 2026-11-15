@@ -2608,8 +2608,8 @@ public final class Tests {
                     Batch.plan("מחק %נבחרים%\nDEL \"תת\\ג.txt\"\n", d73, v73, lib73, null, sel73).errors == 1
                             && Batch.plan("מחק %נבחרים%\nDEL \"נשאר.txt\"\n", d73, v73, lib73, null, sel73).errors == 0);
             check("מבנה 73: בלי בחירה — %נבחרים% אינו מוכר (כמו שהיה)", Batch.plan("מחק %נבחרים%\n", d73, v73, lib73).errors == 1);
-            check("מבנה 73: %נבחרים% — רק לבדו, ורק כמקור של \"מחק\", \"העתק\", \"העבר\" (מבנה 77)",
-                    String.valueOf(Batch.plan("REN %נבחרים% \"x.txt\"\n", d73, v73, lib73, null, sel73).errorText()).contains("לבדו")
+            check("מבנה 73: %נבחרים% — רק לבדו, ורק כמקור של \"מחק\", \"העתק\", \"העבר\", \"שנה\" (מבנה 77, 78)",
+                    String.valueOf(Batch.plan("RD %נבחרים%\n", d73, v73, lib73, null, sel73).errorText()).contains("לבדו")
                             && String.valueOf(Batch.plan("העתק \"א.txt\" %נבחרים%\n", d73, v73, lib73, null, sel73).errorText()).contains("לבדו")
                             && Batch.plan("מחק \"%נבחרים%\\x.txt\"\n", d73, v73, lib73, null, sel73).errors == 1);
             check("מבנה 73: סינון עם תיקייה שנבחרה — שגיאה; עם קבצים בלבד — עובד",
@@ -2709,18 +2709,18 @@ public final class Tests {
                 Batch.Plan p76 = Batch.plan("DEL \"א.txt\"\n", d76, v76, lib76);
                 Batch.run(p76, lib76, null, null);
                 check("מבנה 76: גם המנוע, כשמריצים אותו שלא דרך המנהל — לא מוחק, והשורה נכשלת", new File(d76, "א.txt").isFile() && p76.trouble);
-                check("מבנה 76: פעולה שעוד במעבר (שינוי שם) — נעשית בינתיים, ונרשמת ביומן",
-                        Physical.rename(lib76, new File(d76, "ב.txt").getAbsolutePath(), "ג.txt").failed == 0 && new File(d76, "ג.txt").isFile()
-                                && !Permit.strict(Permit.RENAME) && Permit.strict(Permit.DELETE));
+                check("מבנה 76: פעולה שעוד במעבר (תיקייה חדשה; שינוי השם עבר בצעד 78) — נעשית בינתיים, ונרשמת ביומן",
+                        Physical.makeFolder(lib76, d76, "תיקייה-76") == null && new File(d76, "תיקייה-76").isDirectory()
+                                && !Permit.strict(Permit.MAKE_FOLDER) && Permit.strict(Permit.DELETE));
                 Manager.Act act76 = Manager.onSelected("DEL", a76, new ArrayList<String>(), d76, v76, lib76);
                 Physical.Result yes76 = act76.run(lib76, null, null, false);
                 lib76.flush(5000);
                 check("מבנה 76: דרך המנהל — המחיקה נעשית", yes76.failed == 0 && yes76.done.size() == 1 && !new File(d76, "א.txt").exists());
                 check("מבנה 76: ...וההיתר נסגר אחריה", !Permit.held());
-                Batch.Plan q76 = Batch.plan("DEL \"ג.txt\"\n", d76, v76, lib76);
+                Batch.Plan q76 = Batch.plan("DEL \"ב.txt\"\n", d76, v76, lib76);
                 Manager.run(q76, lib76, null, null, false, null);
                 lib76.flush(5000);
-                check("מבנה 76: קובץ פקודות שהמנהל מריץ — מוחק", !new File(d76, "ג.txt").exists() && !q76.trouble);
+                check("מבנה 76: קובץ פקודות שהמנהל מריץ — מוחק", !new File(d76, "ב.txt").exists() && !q76.trouble);
             } finally {
                 Permit.open();
             }
@@ -2833,6 +2833,71 @@ public final class Tests {
                     && pui77.contains("Manager.onSelected(copy ? \"COPY\" : \"MOVE\"") && pui77.contains("act.run(lib, new DialogAsker(a), busy, grey)"));
             new File(Paths.data(), "הגדרה-77.ini").delete();
             wipe(d77);
+        }
+        // מבנה 78: שינוי השם מהמסך — דרך המנהל, כפקודה "שנה %נבחרים% "%שם-חדש%""
+        {
+            File ext78 = Paths.data().getParentFile(), d78 = new File(ext78, "ניסוי-78");
+            wipe(d78);
+            new File(d78, "תיקייה").mkdirs();
+            write(d78, "א.txt", "1");
+            write(d78, "תפוס.txt", "2");
+            Paths.data().mkdirs();
+            write(Paths.data(), "הגדרה-78.ini", "x");
+            Index ix78 = new Index("78", "78", ext78.getAbsolutePath());
+            ix78.scan(null);
+            Library lib78 = Library.forTests(new ArrayList<Index>(java.util.Collections.singletonList(ix78)));
+            java.util.Map<String, String> v78 = Batch.vars(Paths.data(), ext78.getAbsolutePath(), null);
+            String a78 = new File(d78, "א.txt").getAbsolutePath(), own78 = new File(Paths.data(), "הגדרה-78.ini").getAbsolutePath();
+            Manager.Act can78 = Manager.onRename(a78, "א.txt", Paths.data(), v78, lib78);
+            check("מבנה 78: לפני שמבקשים שם — \"מותר לשנות לקובץ הזה שם?\": כן, ואין מה לעשות (" + can78.error() + ")",
+                    can78.error() == null && can78.plan.steps.size() == 1 && can78.plan.steps.get(0).noop
+                            && can78.text.trim().equals("שנה %נבחרים% \"%שם-חדש%\""));
+            Manager.Act own78a = Manager.onRename(own78, "הגדרה-78.ini", Paths.data(), v78, lib78);
+            check("מבנה 78: קובץ של התוכנה — סירוב מהתכנון, בנוסח של המסך (" + own78a.error() + ")", own78a.error() != null
+                    && own78a.error().equals(Words.Disk.CANT_RENAME + "הגדרה-78.ini\": " + Physical.programFile(own78)));
+            check("מבנה 78: קובץ שכבר איננו — סירוב מהתכנון", Words.FILE_NOT_AT_PATH.equals(Manager.onRename(new File(d78, "אין.txt").getAbsolutePath(), "אין.txt",
+                    Paths.data(), v78, lib78).error()));
+            check("מבנה 78: שם תפוס — סירוב מהתכנון, בנוסח של המסך", (Words.Disk.ALREADY_IN_FOLDER + "תפוס.txt\"").equals(
+                    Manager.onRename(a78, "תפוס.txt", Paths.data(), v78, lib78).error())
+                    && (Words.Disk.ALREADY_IN_FOLDER + "תיקייה\"").equals(Manager.onRename(a78, "תיקייה", Paths.data(), v78, lib78).error()));
+            check("מבנה 78: שם לא תקין — אותו סירוב של הכונן", Physical.badName("א/ב.txt") != null
+                    && Physical.badName("א/ב.txt").equals(Manager.onRename(a78, "א/ב.txt", Paths.data(), v78, lib78).error())
+                    && Manager.onRename(a78, "  ", Paths.data(), v78, lib78).error() != null);
+            check("מבנה 78: במנוע — %נבחרים% של \"שנה\" הוא קובץ אחד בלבד; ותיקייה — לא",
+                    Batch.plan("שנה %נבחרים% \"%שם-חדש%\"\n", d78, v78, lib78, null, new Batch.Selection(java.util.Arrays.asList(a78,
+                            new File(d78, "תפוס.txt").getAbsolutePath()), new ArrayList<String>(), null, "x.txt")).errors == 1
+                            && Batch.plan("שנה %נבחרים% \"%שם-חדש%\"\n", d78, v78, lib78, null, new Batch.Selection(new ArrayList<String>(),
+                            java.util.Collections.singletonList(new File(d78, "תיקייה").getAbsolutePath()), null, "x")).errors == 1
+                            && Batch.plan("שנה %נבחרים% \"x.txt\"\n", d78, v78, lib78, null, new Batch.Selection(java.util.Collections.singletonList(a78),
+                            new ArrayList<String>(), null, "y.txt")).errors == 1);
+            Permit.close();
+            try {
+                Physical.Result no78 = Physical.rename(lib78, a78, "ב.txt");
+                check("מבנה 78: שינוי שם בלי היתר — מסורב, והקובץ בשמו (" + no78.note + ")", no78.failed == 1 && new File(a78).isFile()
+                        && !new File(d78, "ב.txt").exists() && no78.note.contains(Words.PermitW.BYPASS) && Permit.strict(Permit.RENAME));
+                String odd78 = "100% %תאריך% חדש.txt";
+                Manager.Act act78 = Manager.onRename(a78, "  " + odd78 + " ", Paths.data(), v78, lib78);
+                Physical.Result r78 = act78.run(lib78, null, null, false);
+                lib78.flush(5000);
+                check("מבנה 78: דרך המנהל — נעשה; שם עם % ועם טקסט שנראה כמו משתנה נשמר כלשונו (" + act78.error() + " · " + r78.note + ")",
+                        act78.error() == null && r78.failed == 0 && r78.done.size() == 1 && "1".equals(read(new File(d78, odd78))) && !new File(a78).exists());
+                check("מבנה 78: ...והתוצאה אומרת לאן", new File(d78, odd78).getAbsolutePath().equals(r78.to.get(a78)));
+                Physical.Result again78 = act78.run(lib78, null, null, false);
+                check("מבנה 78: הרצה שנייה (הקובץ כבר בשם החדש) — כישלון שמדווח, לא חריגה", again78.failed == 1 && !again78.note.isEmpty());
+                Physical.Result case78 = Manager.onRename(new File(d78, "תפוס.txt").getAbsolutePath(), "תפוס.TXT", Paths.data(), v78, lib78).run(lib78, null, null, false);
+                check("מבנה 78: שינוי של אותיות גדולות וקטנות בלבד — נעשה", case78.failed == 0 && new File(d78, "תפוס.TXT").isFile());
+                check("מבנה 78: ההיתר נסגר אחרי כל הרצה", !Permit.held());
+            } finally {
+                Permit.open();
+            }
+            int direct78 = 0;
+            List<File> all78 = new ArrayList<File>();
+            collect76(new File(code, "masachim"), all78);
+            for (File f : all78) if (read(f).contains("Physical.rename")) direct78++;
+            check("מבנה 78: במסכים — אין עוד שינוי שם ישיר בכונן (" + direct78 + "); רק דרך המנהל", direct78 == 0
+                    && read(new File(code, "masachim/rechivim/PhysicalUi.java")).contains("Manager.onRename(path, name"));
+            new File(Paths.data(), "הגדרה-78.ini").delete();
+            wipe(d78);
         }
         // מבנה 55: המכשיר עצר את התוכנה בזמן הרצה — הדוח אומר זאת ואיזו הגדרה פותרת
         List<String> rep55 = new ArrayList<String>();

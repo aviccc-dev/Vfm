@@ -1397,21 +1397,33 @@ final class Batch {
         final List<String> files, dirs;
         /** מבנה 77: התיקייה שנבחרה כיעד (העתקה, העברה) — %יעד%; null — אין. */
         final String dest;
+        /** מבנה 78: השם שהוקלד במסך (שינוי שם) — %שם-חדש%; null — אין. */
+        final String name;
 
         Selection(List<String> files, List<String> dirs) {
-            this(files, dirs, null);
+            this(files, dirs, null, null);
         }
 
         Selection(List<String> files, List<String> dirs, File dest) {
+            this(files, dirs, dest, null);
+        }
+
+        Selection(List<String> files, List<String> dirs, File dest, String name) {
             this.files = new ArrayList<String>(files);
             this.dirs = new ArrayList<String>(dirs);
             this.dest = dest == null ? null : dest.getAbsolutePath();
+            this.name = name;
         }
     }
 
     static final String V_SELECTED = "נבחרים", SELECTED_MARK = "/\u0000selected";   // תחביר
     /** מבנה 77: היעד שנבחר במסך. נמסר כמשתנה ולא ככתוב — שם של תיקייה יכול להכיל % , והערך של משתנה אינו נפתח שוב. */
     static final String V_DEST = "יעד";   // תחביר
+    /**
+     * מבנה 78: השם שהוקלד במסך. נמסר כסימן, והשם עצמו נלקח מהבחירה — כך הוא אינו מפוענח בכלל: שם של קובץ יכול להכיל % ,
+     * ואפילו טקסט שנראה כמו משתנה ("%תאריך%"), ובשורה כתובה המשתנים שבשם החדש מוחלפים (מבנה 43).
+     */
+    static final String V_NEW_NAME = "שם-חדש", NAME_MARK = "/\u0000name";   // תחביר
 
     static Plan plan(String text, File here, Map<String, String> vars, Library lib, Physical.Progress progress, Selection selected) {
         Plan plan = new Plan();
@@ -1422,6 +1434,7 @@ final class Batch {
             vars = new LinkedHashMap<String, String>(vars);
             vars.put(V_SELECTED, SELECTED_MARK);
             if (selected.dest != null) vars.put(V_DEST, selected.dest);
+            if (selected.name != null) vars.put(V_NEW_NAME, NAME_MARK);
         }
         plan.sim = sim;
         String[] lines = Bidi.strip(text).replace("\r", "").split("\n");          // 204
@@ -1872,6 +1885,10 @@ final class Batch {
                 s.error = Commands.usage(cmd);
                 return;
             }
+            if (paths.get(0).equals(SELECTED_MARK) || paths.get(1).equals(NAME_MARK)) {   // מבנה 78: מה שנבחר במסך, בשם שהוקלד בו
+                renameSelected(s, cmd, paths, sim);
+                return;
+            }
             File f = new File(paths.get(0));
             if (args.get(0).contains("*") || args.get(0).contains("?")) { s.error = Words.Cmd.REN_WILD; return; }
             if (sim.isDir(f)) { s.error = Words.Cmd.REN_FOLDER; return; }                  // 1.22.5
@@ -2215,7 +2232,7 @@ final class Batch {
         for (int i = 0; i < paths.size(); i++) {
             String p = paths.get(i);
             if (p.startsWith(SELECTED_MARK)) {                                  // מבנה 73, 77: %נבחרים% כיחידה — רק לבדו, כמקור של "מחק", "העתק", "העבר"
-                if (!(cmd.equals("DEL") || cmd.equals("COPY") || cmd.equals("MOVE")) || i != 0 || !p.equals(SELECTED_MARK))
+                if (!(cmd.equals("DEL") || cmd.equals("COPY") || cmd.equals("MOVE") || cmd.equals("REN")) || i != 0 || !p.equals(SELECTED_MARK))
                     return Words.Cmd.SELECTED_ONLY_SOURCE;
                 continue;
             }
@@ -2323,6 +2340,38 @@ final class Batch {
         if (!s.dirs.isEmpty()) what.add(Words.folders(s.dirs.size()));
         s.describe = Words.Cmd.transfer(copy, join(what, Words.Cmd.AND), Bidi.path(dest.getAbsolutePath())) + filtered(s);
         s.noop = s.files.isEmpty() && s.dirs.isEmpty() && s.same + s.inPlace > 0;   // הכול כבר במקום — לא שגיאה, ואין מה לעשות
+    }
+
+    /**
+     * מבנה 78: שינוי שם של הקובץ שנבחר במסך, לשם שהוקלד בו. אותה הרצה כמו בשורה כתובה; הסירובים של המסך (קובץ של התוכנה, הקובץ
+     * כבר איננו, שם לא תקין, שם תפוס) נאמרים בתכנון ובנוסח של המסך. שם זהה לקיים — תקין, ואין מה לעשות: כך המסך שואל
+     * "מותר לשנות לקובץ הזה שם?" עוד לפני שהמשתמש מקליד.
+     */
+    private static void renameSelected(Step s, String cmd, List<String> paths, Sim sim) {
+        Selection sel = sim.selected;
+        if (sel == null || !paths.get(0).equals(SELECTED_MARK) || !paths.get(1).equals(NAME_MARK) || sel.name == null) {
+            s.error = Commands.usage(cmd);
+            return;
+        }
+        if (sel.files.isEmpty() && sel.dirs.isEmpty()) { s.error = Words.Cmd.NOTHING_SELECTED; return; }
+        if (!sel.dirs.isEmpty()) { s.error = Words.Cmd.REN_FOLDER; return; }
+        if (sel.files.size() != 1) { s.error = Words.Cmd.SELECTED_ONE; return; }
+        File f = new File(sel.files.get(0));
+        String own = Physical.programFile(f.getAbsolutePath());
+        if (own != null) { s.error = Words.Disk.CANT_RENAME + f.getName() + "\": " + own; return; }
+        if (!sim.isFile(f)) { s.error = Words.FILE_NOT_AT_PATH; return; }
+        String name = sel.name.trim(), bad = Physical.badName(name);
+        if (bad != null) { s.error = bad; return; }
+        File to = new File(f.getParentFile(), name);
+        if (!name.equalsIgnoreCase(f.getName()) && (sim.isFile(to) || sim.isDir(to))) {
+            s.error = Words.Disk.ALREADY_IN_FOLDER + name + "\"";
+            return;
+        }
+        s.files.add(f.getAbsolutePath());
+        s.newName = name;
+        s.describe = Words.Cmd.rename(f.getName(), name);
+        if (name.equals(f.getName())) s.noop = true;
+        else sim.move(f.getAbsolutePath(), to, false);
     }
 
     /**
@@ -2696,6 +2745,7 @@ final class Batch {
                 }
             } else if (s.cmd.equals("REN")) {
                 Physical.Result r = Physical.rename(lib, s.files.get(0), s.newName);
+                s.result = r;                                                   // מבנה 78
                 out = result(r, Words.Cmd.RENAMED);
                 if (r.failed > 0) { plan.trouble = true; fails += r.failed; }
             } else {
