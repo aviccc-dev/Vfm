@@ -330,7 +330,7 @@ public final class Actions {
                 boolean copy = act == COPY_TO_FOLDER;
                 List<String> f = new ArrayList<String>(sel.files()), d = new ArrayList<String>(sel.dirPaths());
                 if (!copy) {
-                    String no = Physical.cannotMove(Library.get(a), f, d);
+                    String no = DiskRules.cannotMove(Library.get(a), f, d);
                     if (no != null) {
                         Ui.toast(a, no);
                         return;

@@ -197,7 +197,7 @@ final class FileCmds {
             return;
         }
         for (String d : s.dirs)                                             // מבנה 43: תיקייה לתוך עצמה — כבר בתכנון (עד כאן: רק בהרצה)
-            if (Physical.inside(dest, new File(d))) { s.error = Words.Disk.NOT_INTO_ITSELF; return; }
+            if (DiskRules.inside(dest, new File(d))) { s.error = Words.Disk.NOT_INTO_ITSELF; return; }
         arrange(s, cmd.equals("COPY"), dest, sim);
     }
 
@@ -215,7 +215,7 @@ final class FileCmds {
         if (args.get(0).contains("*") || args.get(0).contains("?")) { s.error = Words.Cmd.REN_WILD; return; }
         if (sim.isDir(f)) { s.error = Words.Cmd.REN_FOLDER; return; }                  // 1.22.5
         if (!sim.isFile(f)) { s.error = Words.FILE_NOT_FOUND + ": " + args.get(0); return; }
-        String bad = Physical.badName(args.get(1));
+        String bad = DiskRules.badName(args.get(1));
         if (bad != null) { s.error = bad; return; }
         File to = new File(f.getParentFile(), args.get(1));
         if (!to.getName().equalsIgnoreCase(f.getName()) && (sim.isFile(to) || sim.isDir(to))) {   // מבנה 43: גם תיקייה בשם הזה
@@ -268,7 +268,7 @@ final class FileCmds {
         if (parent == null) return false;
         if (dest.equals(parent)) return true;
         Boolean b = asked.get(parent.getAbsolutePath());
-        if (b == null) asked.put(parent.getAbsolutePath(), b = dest.isDirectory() && parent.isDirectory() && Physical.sameFile(dest, parent));
+        if (b == null) asked.put(parent.getAbsolutePath(), b = dest.isDirectory() && parent.isDirectory() && DiskRules.sameFile(dest, parent));
         return b;
     }
 
@@ -287,14 +287,14 @@ final class FileCmds {
             src = src.getParentFile();
         }
         if (src == null || !sim.isDir(src)) { s.error = Words.FOLDER_NOT_FOUND + ": " + args.get(0); return; }
-        if (Physical.inside(dest, src)) { s.error = Words.Disk.NOT_INTO_ITSELF; return; }
+        if (DiskRules.inside(dest, src)) { s.error = Words.Disk.NOT_INTO_ITSELF; return; }
         s.dest = dest;
         s.keepRoot = src.getAbsolutePath();
         walk(s, src, mask, flt, sim, mask == null && flt.none(), true);
         sim.dirs.add(dest.getAbsolutePath());
         for (java.util.Iterator<String> it = s.files.iterator(); it.hasNext(); ) {   // קובץ אחרי קובץ (מ0.40: לשנות-שם)
             String f = it.next();
-            File to = new File(dest, Physical.rel(s.keepRoot, f));
+            File to = new File(dest, DiskRules.rel(s.keepRoot, f));
             if (s.drop(sim, new File(f), to)) { it.remove(); continue; }
             for (File up = to.getParentFile(); up != null && !up.equals(dest); up = up.getParentFile()) sim.dirs.add(up.getAbsolutePath());
             sim.move(f, s.arrive(sim, to), cmd.equals("COPY"));
@@ -304,7 +304,7 @@ final class FileCmds {
         if (!s.dirs.isEmpty()) what.add(Words.Cmd.emptyFolders(s.dirs.size()));
         s.describe = Words.Cmd.transfer(cmd.equals("COPY"), Batch.join(what, Words.Cmd.AND), Bidi.path(dest.getAbsolutePath()))
                 + Words.Cmd.KEEP_PATH + filtered(s);
-        for (String d : s.dirs) sim.dirs.add(new File(dest, Physical.rel(s.keepRoot, d)).getAbsolutePath());
+        for (String d : s.dirs) sim.dirs.add(new File(dest, DiskRules.rel(s.keepRoot, d)).getAbsolutePath());
     }
 
     /** הקבצים בתיקייה ובתיקיות שבתוכה (מוסתרים — רק עם /A:H; קבצים זמניים של העתקה — אף פעם). */
@@ -442,10 +442,10 @@ final class FileCmds {
             s.error = Commands.usage(cmd);
             return;
         }
-        String bad = Physical.badName(sel.name);
+        String bad = DiskRules.badName(sel.name);
         if (bad != null) { s.error = bad; return; }
         File made = new File(parent, sel.name.trim());
-        if (Physical.programFile(made.getAbsolutePath()) != null) { s.error = Words.Disk.NO_FOLDER_IN_APP; return; }
+        if (DiskRules.programFile(made.getAbsolutePath()) != null) { s.error = Words.Disk.NO_FOLDER_IN_APP; return; }
         if (sim.isDir(made) || sim.isFile(made)) { s.error = Words.Disk.ALREADY_HERE_NAME + made.getName() + "\""; return; }
         s.dest = made;
         s.describe = Words.Cmd.newFolder(Bidi.path(made.getAbsolutePath()));
@@ -468,10 +468,10 @@ final class FileCmds {
         if (!sel.dirs.isEmpty()) { s.error = Words.Cmd.REN_FOLDER; return; }
         if (sel.files.size() != 1) { s.error = Words.Cmd.SELECTED_ONE; return; }
         File f = new File(sel.files.get(0));
-        String own = Physical.programFile(f.getAbsolutePath());
+        String own = DiskRules.programFile(f.getAbsolutePath());
         if (own != null) { s.error = Words.Disk.CANT_RENAME + f.getName() + "\": " + own; return; }
         if (!sim.isFile(f)) { s.error = Words.FILE_NOT_AT_PATH; return; }
-        String name = sel.name.trim(), bad = Physical.badName(name);
+        String name = sel.name.trim(), bad = DiskRules.badName(name);
         if (bad != null) { s.error = bad; return; }
         File to = new File(f.getParentFile(), name);
         if (!name.equalsIgnoreCase(f.getName()) && (sim.isFile(to) || sim.isDir(to))) {
@@ -496,13 +496,13 @@ final class FileCmds {
         if (s.recursive || s.stateWhen != Long.MIN_VALUE || paths.get(1).equals(Syntax.SHARE_MARK)) { s.error = Words.Cmd.SELECTED_PLAIN; return; }
         File dest = new File(paths.get(1));
         if (!sim.isDir(dest)) { s.error = Words.Cmd.NO_DEST; return; }
-        String no = sim.lib == null ? null : Physical.noDest(sim.lib, dest);
+        String no = sim.lib == null ? null : DiskRules.noDest(sim.lib, dest);
         if (no != null) { s.error = no; return; }
         s.dest = dest;
         selected(s, flt, sim, cmd);
         if (s.error != null) return;
         for (String d : s.dirs)
-            if (Physical.inside(dest, new File(d))) {
+            if (DiskRules.inside(dest, new File(d))) {
                 s.error = Words.Disk.CANT + (copy ? Words.Disk.TO_COPY : Words.Disk.TO_MOVE) + Words.Disk.FOLDER_INTO_ITSELF;
                 return;
             }
@@ -522,7 +522,7 @@ final class FileCmds {
         for (String p : sel.files) {
             File x = new File(p);
             if (!sim.isFile(x)) { s.error = Words.Cmd.notFound(p); return; }
-            String own = cant == null ? null : Physical.programFile(p);         // מבנה 74: כבר בתכנון — המסך אומר זאת לפני חלון האישור
+            String own = cant == null ? null : DiskRules.programFile(p);         // מבנה 74: כבר בתכנון — המסך אומר זאת לפני חלון האישור
             if (own != null) { s.error = cant + x.getName() + "\": " + own; return; }
             s.total++;
             if (flt.ok(sim.real(x))) s.files.add(x.getAbsolutePath());
@@ -530,7 +530,7 @@ final class FileCmds {
         for (String d : sel.dirs) {
             File x = new File(d);
             if (!sim.isDir(x)) { s.error = Words.FOLDER_NOT_FOUND + ": " + d; return; }
-            String why = cant == null || sim.lib == null ? null : Physical.forbidden(sim.lib, x);
+            String why = cant == null || sim.lib == null ? null : DiskRules.forbidden(sim.lib, x);
             if (why != null) { s.error = cant + x.getName() + "\": " + why; return; }
             s.dirs.add(x.getAbsolutePath());
         }

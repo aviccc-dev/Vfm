@@ -352,7 +352,7 @@ final class Runner {
         int done = 0, failed = 0;
         for (String f : s.files) {
             File src = new File(f);
-            File to = new File(dir, Physical.freeName(dir, src.getName(), false));
+            File to = new File(dir, DiskRules.freeName(dir, src.getName(), false));
             try {
                 Files.copy(src, to);
                 plan.shared.add(to);
@@ -366,7 +366,7 @@ final class Runner {
             File src = new File(d);
             List<File> inside = Files.filesIn(src);
             if (inside.size() > Files.MAX_SEND) {                              // יותר מדי לחלון השיתוף — ארוזה בשמה
-                File zip = new File(dir, Physical.freeName(dir, src.getName() + ".zip", false));
+                File zip = new File(dir, DiskRules.freeName(dir, src.getName() + ".zip", false));
                 Zip.Result r = Zip.pack(src, zip, progress);
                 if (r.error == null && !r.stopped) {
                     plan.shared.add(zip);
@@ -375,7 +375,7 @@ final class Runner {
                 continue;
             }
             for (File x : inside) {
-                File to = new File(dir, Physical.freeName(dir, x.getName(), false));
+                File to = new File(dir, DiskRules.freeName(dir, x.getName(), false));
                 try {
                     Files.copy(x, to);
                     plan.shared.add(to);
@@ -428,7 +428,7 @@ final class Runner {
         for (int k = 0; k < s.files.size(); k++) {
             File f = new File(s.files.get(k));
             File dir = !s.targets.isEmpty() ? new File(s.targets.get(k))
-                    : s.keepRoot != null ? new File(s.dest, Physical.rel(s.keepRoot, f.getAbsolutePath())).getParentFile() : s.dest;
+                    : s.keepRoot != null ? new File(s.dest, DiskRules.rel(s.keepRoot, f.getAbsolutePath())).getParentFile() : s.dest;
             List<File> came = arriving.get(dir.getAbsolutePath());
             if (came == null) arriving.put(dir.getAbsolutePath(), came = new ArrayList<File>());
             if (sameOnDisk(f, dir, came)) {

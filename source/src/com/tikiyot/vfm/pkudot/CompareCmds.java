@@ -28,7 +28,7 @@ final class CompareCmds {
         File a = new File(paths.get(0)), b = new File(paths.get(1));
         if (!a.isDirectory()) { s.error = Words.Cmd.compareNoSource(args.get(0)); return; }
         if (!b.isDirectory() && !sim.isDir(b)) { s.error = Words.Cmd.compareNoDest(args.get(1)); return; }
-        if (Physical.inside(a, b) || Physical.inside(b, a)) { s.error = Words.Disk.NOT_INTO_ITSELF; return; }
+        if (DiskRules.inside(a, b) || DiskRules.inside(b, a)) { s.error = Words.Disk.NOT_INTO_ITSELF; return; }
         Compare.Result r = Compare.byPath(sim.lib, a, sim.underWiped(b.getAbsolutePath()) ? Batch.GHOST : b, s.hidden);   // מ0.27
         r.b = b.getAbsolutePath();
         sim.compare = r;
@@ -85,7 +85,7 @@ final class CompareCmds {
             s.keepRoot = null;
         } else {
             s.keepRoot = a ? r.a : r.b;
-            if (Physical.inside(dest, new File(s.keepRoot))) { s.error = Words.Disk.NOT_INTO_ITSELF; r.broken = true; return; }
+            if (DiskRules.inside(dest, new File(s.keepRoot))) { s.error = Words.Disk.NOT_INTO_ITSELF; r.broken = true; return; }
         }
         int n = Compare.Result.files(s.files, s.dirs), total = a ? r.filesA : r.filesB;
         for (String x : sw)
@@ -119,7 +119,7 @@ final class CompareCmds {
         sim.dirs.add(dest.getAbsolutePath());
         for (java.util.Iterator<String> it = s.files.iterator(); it.hasNext(); ) {   // קובץ אחרי קובץ (מ0.40: לשנות-שם)
             String f = it.next();
-            File to = new File(dest, Physical.rel(s.keepRoot, f));
+            File to = new File(dest, DiskRules.rel(s.keepRoot, f));
             if (s.drop(sim, new File(f), to)) { it.remove(); continue; }
             sim.move(f, s.arrive(sim, to), cmd.equals("COPY"));
         }
@@ -130,7 +130,7 @@ final class CompareCmds {
                 + Words.Cmd.KEEP_PATH + Batch.notes(s);
         boolean move = cmd.equals("MOVE");
         for (String d : s.dirs) {                                               // מבנה 67 (ממצא 38): תיקייה שלמה — עם מה שבתוכה (עד כאן: רק התיקייה עצמה)
-            File to = new File(dest, Physical.rel(s.keepRoot, d));
+            File to = new File(dest, DiskRules.rel(s.keepRoot, d));
             if (move) sim.moveDir(new File(d), to, false);
             else sim.copyDir(new File(d), to);
         }
@@ -156,12 +156,12 @@ final class CompareCmds {
         File root = src;
         while (root != null && !State.isBackupRoot(root)) root = root.getParentFile();
         if (root == null) { s.error = Words.Cmd.notBackup(args.get(0)); return; }
-        String prefix = Physical.rel(root.getAbsolutePath(), src.getAbsolutePath());
+        String prefix = DiskRules.rel(root.getAbsolutePath(), src.getAbsolutePath());
         if (prefix.equals(State.CURRENT) || prefix.startsWith(State.CURRENT + "/") || prefix.equals(State.HISTORY)
                 || prefix.startsWith(State.HISTORY + "/")) { s.error = Words.Cmd.STATE_LOGICAL; return; }
         File dest = new File(paths.get(1));
         if (sim.isFile(dest)) { s.error = Words.Cmd.NO_DEST; return; }
-        if (Physical.inside(dest, root)) { s.error = Words.Disk.NOT_INTO_ITSELF; return; }
+        if (DiskRules.inside(dest, root)) { s.error = Words.Disk.NOT_INTO_ITSELF; return; }
         State st = new State(s.stateWhen);
         java.util.TreeMap<String, State.Where> best = new java.util.TreeMap<String, State.Where>();
         java.util.Map<String, String> phys = new java.util.HashMap<String, String>();

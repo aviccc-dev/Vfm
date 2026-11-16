@@ -130,7 +130,7 @@ public final class Probe5 {
         } catch (Throwable t) {
             say("7. Ui.baseName — לא ניתן להריץ כאן (" + t.getClass().getSimpleName() + ")");
         }
-        say("   Physical.freeName(\"פרק 1.17\" תפוס)=" + freeNameOf("פרק 1.17"));
+        say("   DiskRules.freeName(\"פרק 1.17\" תפוס)=" + freeNameOf("פרק 1.17"));
     }
 
     static String freeNameOf(String n) {
@@ -138,7 +138,7 @@ public final class Probe5 {
             File d = new File(home, "ב7");
             wipe(d);
             mk(d, n, 1);
-            return "\"" + Physical.freeName(d, n, false) + "\"";
+            return "\"" + DiskRules.freeName(d, n, false) + "\"";
         } catch (Throwable t) {
             return "?";
         }

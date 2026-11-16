@@ -753,7 +753,7 @@ public class DupScreen extends Activity {
         final List<Copy> list = new ArrayList<Copy>(selected);
         if (list.isEmpty()) return;
         List<String> paths = selectedPaths(list);                        // 142: ללוח, ומנווטים להדבקה
-        String no = Physical.cannotMove(lib, paths, new ArrayList<String>());
+        String no = DiskRules.cannotMove(lib, paths, new ArrayList<String>());
         if (no != null) {
             Ui.toast(this, no);
             return;

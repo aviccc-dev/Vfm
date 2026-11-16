@@ -87,7 +87,7 @@ final class Lab {
                     Manager.ownDrop(r, f);                                       // אותו עמוד כבר בתיקייה (המריץ העביר אותו מההורדות) — לא מכפילים
                     continue;
                 }
-                if (to.exists()) to = new File(r, Physical.freeName(r, n, false));
+                if (to.exists()) to = new File(r, DiskRules.freeName(r, n, false));
                 if (!Manager.ownMove(r, f, to)) Log.i("Lab.flatten: לא עבר " + f);   // בכונן
             }
             Manager.ownDrop(r, new File(d, OLD_ACTIVE));
@@ -121,7 +121,7 @@ final class Lab {
         if (version(root, nv[0], nv[1]) != null) return null;
         String n = safe(PREFIX + " " + nv[0] + " " + nv[1]) + EXT;
         File to = new File(root, n);
-        if (to.exists()) to = new File(root, Physical.freeName(root, n, false));
+        if (to.exists()) to = new File(root, DiskRules.freeName(root, n, false));
         String no = Manager.ownSave(root, to, html);                            // מבנה 140: דרך המנהל (התיקייה נוצרת בכתיבה)
         if (no != null) Log.i("Lab.addBundled: " + no);
         return no == null ? to : null;

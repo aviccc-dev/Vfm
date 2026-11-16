@@ -179,7 +179,7 @@ final class Compare {
     static String relOf(Library lib, String p) {
         String root = lib.rootOf(p), key = lib.keyOf(p);
         if (root == null || key == null) return null;
-        String rel = Physical.rel(root, p);
+        String rel = DiskRules.rel(root, p);
         if (rel == null) return null;
         return rel.isEmpty() ? key : key + "/" + rel;
     }

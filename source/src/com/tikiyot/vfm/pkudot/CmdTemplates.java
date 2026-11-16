@@ -100,7 +100,7 @@ final class CmdTemplates {
 
     /** שומר שורות כפקודה נפוצה שלי. שם תפוס — מספר בסוף. null — לא נשמר. */
     static File save(String name, List<String> lines) {
-        String n = Physical.badName(name) == null ? name.trim() : name.trim().replaceAll("[\\\\/:*?\"<>|]", "_");
+        String n = DiskRules.badName(name) == null ? name.trim() : name.trim().replaceAll("[\\\\/:*?\"<>|]", "_");
         if (n.isEmpty() || lines.isEmpty()) return null;
         File dir = mineDir();
         dir.mkdirs();

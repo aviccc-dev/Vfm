@@ -202,9 +202,9 @@ final class SmallCmds {
         File out0 = new File(parent, pack ? src.getName() + ".zip" : stem);
         for (int i = 2; sim.isFile(out0) || sim.isDir(out0); i++) out0 = new File(parent, pack ? src.getName() + " (" + i + ").zip" : stem + " (" + i + ")");
         final File out = out0;
-        String own = Physical.programFile(pack ? src.getAbsolutePath() : out.getAbsolutePath());
+        String own = DiskRules.programFile(pack ? src.getAbsolutePath() : out.getAbsolutePath());
         if (own != null) { s.error = pack ? Words.Disk.NO_FILE_IN_APP : Words.Disk.NO_UNPACK_IN_APP; return true; }
-        if (sim.lib != null && Physical.noWriteInto(sim.lib, parent) != null) { s.error = Physical.noWriteInto(sim.lib, parent); return true; }
+        if (sim.lib != null && DiskRules.noWriteInto(sim.lib, parent) != null) { s.error = DiskRules.noWriteInto(sim.lib, parent); return true; }
         if (!pack && src.isFile() && Zip.contents(src) == null) { s.error = Words.Disk.BAD_ZIP; return true; }
         if (pack) sim.added.put(out.getAbsolutePath(), Batch.GHOST);
         else sim.dirs.add(out.getAbsolutePath());                            // מה שבתוכה — נודע רק בהרצה
@@ -339,7 +339,7 @@ final class SmallCmds {
             writeSelected(s, new File(p), append || a.size() != 2 || !a.get(1).equals(Parse.var(Syntax.V_CONTENT)), taken, sim);
             return true;
         }
-        if (Physical.programFile(p) != null) { s.error = Physical.programFile(p); return true; }   // מבנה 45
+        if (DiskRules.programFile(p) != null) { s.error = DiskRules.programFile(p); return true; }   // מבנה 45
         File f0 = new File(p);
         final String text = a.size() == 2 ? Verbs.withVars(a.get(1), vars).replace("\\n", "\n") : "";
         File dir = f0.getParentFile();
@@ -350,7 +350,7 @@ final class SmallCmds {
         if (t == W_FREE) f0 = sim.free(f0);
         final File f = f0;
         final boolean replace = t == W_REPLACE;
-        if (sim.lib != null && Physical.noWriteInto(sim.lib, dir) != null) { s.error = Physical.noWriteInto(sim.lib, dir); return true; }   // מבנה 65: הסל — כבר בתכנון
+        if (sim.lib != null && DiskRules.noWriteInto(sim.lib, dir) != null) { s.error = DiskRules.noWriteInto(sim.lib, dir); return true; }   // מבנה 65: הסל — כבר בתכנון
         final boolean add = append;
         boolean had = sim.isFile(f) && sim.real(f) != Batch.GHOST;                // מבנה 46: קובץ שכבר קיים (לא כזה ששורה קודמת כותבת)
         sim.gone.remove(p);
@@ -363,8 +363,8 @@ final class SmallCmds {
                     String no = Permit.check(Permit.WRITE);                     // מבנה 80: גם "כתוב" שואלת את ההיתר
                     if (no != null) { DbListCmd.lastFailed = true; return no; }
                     // מבנה 65: מותר בכל מקום שמותר להעתיק אליו — גם בשורש הכונן ובתיקיות המשתמש שבתיקיית התוכנה; לא בסל, ולא קובץ של התוכנה
-                    String why0 = Physical.programFile(f.getAbsolutePath());
-                    if (why0 == null && lib != null) why0 = Physical.noWriteInto(lib, f.getParentFile());
+                    String why0 = DiskRules.programFile(f.getAbsolutePath());
+                    if (why0 == null && lib != null) why0 = DiskRules.noWriteInto(lib, f.getParentFile());
                     if (why0 != null) { DbListCmd.lastFailed = true; return why0; }
                     if (f.isDirectory()) { DbListCmd.lastFailed = true; return Words.DbCmd.WRITE_IS_FOLDER; }
                     boolean was = f.isFile(), toTrash = was && !add && lib != null;
@@ -432,10 +432,10 @@ final class SmallCmds {
             s.error = Words.DbCmd.WRITE_USAGE;
             return;
         }
-        String bad = Physical.badName(sel.name);
+        String bad = DiskRules.badName(sel.name);
         if (bad != null) { s.error = bad; return; }
         File f0 = new File(parent, sel.name.trim());
-        if (Physical.programFile(f0.getAbsolutePath()) != null) { s.error = Words.Disk.NO_FILE_IN_APP; return; }
+        if (DiskRules.programFile(f0.getAbsolutePath()) != null) { s.error = Words.Disk.NO_FILE_IN_APP; return; }
         if (sim.isDir(f0)) { s.error = Words.Disk.ALREADY_NAME + f0.getName() + "\""; return; }
         int t = writeTaken(s, f0, false, taken, sim);                          // מבנה 110: אותו כלל כמו בשורה הכתובה
         if (t == W_STOP) return;
@@ -444,7 +444,7 @@ final class SmallCmds {
         final boolean replace = t == W_REPLACE;
         // מבנה 111 (ה6ב): כמו בשורה הכתובה — התיקייה חייבת להיות קיימת (מי שצריך — "צור תיקייה" לפני; המנהל עושה זאת למסך)
         if (!sim.isDir(parent)) { s.error = Words.DbCmd.writeNoFolder(Bidi.path(parent.getAbsolutePath())); return; }
-        if (sim.lib != null && Physical.noWriteInto(sim.lib, parent) != null) { s.error = Physical.noWriteInto(sim.lib, parent); return; }
+        if (sim.lib != null && DiskRules.noWriteInto(sim.lib, parent) != null) { s.error = DiskRules.noWriteInto(sim.lib, parent); return; }
         sim.gone.remove(f.getAbsolutePath());
         sim.added.put(f.getAbsolutePath(), Batch.GHOST);
         s.dest = f;

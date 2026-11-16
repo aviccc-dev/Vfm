@@ -1065,10 +1065,10 @@ public final class Tests {
         eq("82: מהאינדקס — גודל התיקייה", 110L, lib.treeStats(books)[1]);
 
         // אסור
-        check("82: שורש הכונן אסור", Physical.forbidden(lib, root) != null);
-        check("82: סל המחזור אסור", Physical.forbidden(lib, new File(root, Index.TRASH)) != null);
-        check("82: תיקיית התוכנה אסורה", Physical.forbidden(lib, Paths.data()) != null);
-        check("82: תיקייה רגילה מותרת", Physical.forbidden(lib, new File(books)) == null);
+        check("82: שורש הכונן אסור", DiskRules.forbidden(lib, root) != null);
+        check("82: סל המחזור אסור", DiskRules.forbidden(lib, new File(root, Index.TRASH)) != null);
+        check("82: תיקיית התוכנה אסורה", DiskRules.forbidden(lib, Paths.data()) != null);
+        check("82: תיקייה רגילה מותרת", DiskRules.forbidden(lib, new File(books)) == null);
         Physical.Result r = Physical.delete(lib, NONE, P(root.getAbsolutePath()), false);
         check("82: מחיקת שורש נכשלת, והכונן שלם", r.failed == 1 && new File(fb).isFile());
 
@@ -1348,7 +1348,7 @@ public final class Tests {
         Index ix = new Index("בית90", "בית90", home.getAbsolutePath());
         ix.scan(null);
         Library lib = Library.forTests(new ArrayList<Index>(java.util.Collections.singletonList(ix)));
-        check("90: קובץ רגיל אינו קובץ התוכנה", Physical.programFile(book.getAbsolutePath()) == null);
+        check("90: קובץ רגיל אינו קובץ התוכנה", DiskRules.programFile(book.getAbsolutePath()) == null);
         lib.flush(5000);
 
         // 90ב: קובץ קיים שלא נקרא — לא שומרים
@@ -1532,10 +1532,10 @@ public final class Tests {
         tf.delete();
 
         // בדיקת שם
-        eq("84: שם ריק", "צריך שם", Physical.badName("  "));
-        check("84: \"/\" בשם — נדחה", Physical.badName("א/ב.pdf") != null);
-        check("84: נקודה בלבד — נדחה", Physical.badName("..") != null);
-        eq("84: שם תקין בעברית", null, Physical.badName("מסילת ישרים.pdf"));
+        eq("84: שם ריק", "צריך שם", DiskRules.badName("  "));
+        check("84: \"/\" בשם — נדחה", DiskRules.badName("א/ב.pdf") != null);
+        check("84: נקודה בלבד — נדחה", DiskRules.badName("..") != null);
+        eq("84: שם תקין בעברית", null, DiskRules.badName("מסילת ישרים.pdf"));
 
         // שינוי שם
         Physical.Result r = Physical.rename(lib, a.getAbsolutePath(), "מסילת ישרים.pdf");
@@ -1659,7 +1659,7 @@ public final class Tests {
         check("116: \"פריסת ZIP\" רק לקובץ ZIP אחד", Actions.isZip(P("/x/א.zip")) && Actions.isZip(P("/x/א.ZIP"))
                 && !Actions.isZip(P("/x/א.pdf")) && !Actions.isZip(P("/x/א.zip", "/x/ב.zip")));
         check("116: שליחה — גם כמה קבצים וגם תיקיות", !Actions.SHARE.one && Actions.SHARE.folders);
-        check("116: תיקיית האריזות מוגנת (בתוך תיקיית התוכנה)", Physical.programFile(new File(Files.sendDir(), "x.zip").getAbsolutePath()) != null);
+        check("116: תיקיית האריזות מוגנת (בתוך תיקיית התוכנה)", DiskRules.programFile(new File(Files.sendDir(), "x.zip").getAbsolutePath()) != null);
         wipe(root);
     }
 
@@ -2347,7 +2347,7 @@ public final class Tests {
     private static boolean sameViaLink(File f) {
         File l = new File(f.getParentFile().getParentFile(), "קישור-לבדיקה");
         if (!link(l, f.getParentFile())) return true;                          // אין קישורים במערכת הזו — אין מה לבדוק
-        boolean same = Physical.sameFile(f, new File(l, f.getName()));
+        boolean same = DiskRules.sameFile(f, new File(l, f.getName()));
         l.delete();
         return same;
     }
@@ -2422,7 +2422,7 @@ public final class Tests {
         Batch.Plan here42 = Batch.plan("MOVE \"ק42\\קובץ.txt\" \"ק42\\פנים\\..\" /Y\n", r, v, lib42);
         check("מבנה 42: העברה אל התיקייה שהקובץ כבר בה, בכתיב עם נקודות — \"כבר במקום\", לא העברה", here42.errors == 0 && here42.steps.get(0).noop);
         check("מבנה 42: אותו קובץ בשני מסלולים (קישור) — מזוהה", sameViaLink(f42));
-        check("מבנה 42: שני קבצים שונים — לא אותו קובץ", !Physical.sameFile(f42, new File(r, "פתיחה.txt")));
+        check("מבנה 42: שני קבצים שונים — לא אותו קובץ", !DiskRules.sameFile(f42, new File(r, "פתיחה.txt")));
         File link42 = new File(r, "קישור42");
         boolean linked = link(link42, k42);
         if (linked) {
@@ -2441,12 +2441,12 @@ public final class Tests {
             Batch.run(copyLink, lib42, null, null);
             check("מבנה 42: העתקה של קובץ אל עצמו דרך קישור — עותק בשם חדש, והמקור שלם", "תוכן".equals(read(f42)) && k42.list().length == 3);
         }
-        check("מבנה 42: ההגנה על שורש הכונן — גם בכתיב \"תיקייה/..\"", Words.Disk.DRIVE_ROOT.equals(Physical.forbidden(lib42, new File(k42, ".."))));
-        check("מבנה 42: ההגנה על הסל — גם בכתיב עם נקודות", Words.Disk.IS_TRASH.equals(Physical.forbidden(lib42, new File(k42, "../" + Index.TRASH + "/x"))));
+        check("מבנה 42: ההגנה על שורש הכונן — גם בכתיב \"תיקייה/..\"", Words.Disk.DRIVE_ROOT.equals(DiskRules.forbidden(lib42, new File(k42, ".."))));
+        check("מבנה 42: ההגנה על הסל — גם בכתיב עם נקודות", Words.Disk.IS_TRASH.equals(DiskRules.forbidden(lib42, new File(k42, "../" + Index.TRASH + "/x"))));
         String app42 = Paths.data().getAbsolutePath();
-        check("מבנה 42: קובץ של התוכנה — גם דרך תיקייה של המשתמש ו\"..\"", Physical.programFile(app42 + "/" + Paths.USER_DIRS[0] + "/../" + Paths.SETTINGS + "/x.txt") != null
-                && Physical.programFile(app42 + "/" + Paths.USER_DIRS[0] + "/x.txt") == null);
-        check("מבנה 42: \"בתוך\" — גם בכתיב עם נקודות", Physical.inside(new File(k42, "פנים/../פנים"), k42) && !Physical.inside(new File(k42, ".."), k42));
+        check("מבנה 42: קובץ של התוכנה — גם דרך תיקייה של המשתמש ו\"..\"", DiskRules.programFile(app42 + "/" + Paths.USER_DIRS[0] + "/../" + Paths.SETTINGS + "/x.txt") != null
+                && DiskRules.programFile(app42 + "/" + Paths.USER_DIRS[0] + "/x.txt") == null);
+        check("מבנה 42: \"בתוך\" — גם בכתיב עם נקודות", DiskRules.inside(new File(k42, "פנים/../פנים"), k42) && !DiskRules.inside(new File(k42, ".."), k42));
         // מבנה 43: פערים קטנים בין התכנון להרצה
         Batch.Plan p43 = Batch.plan("MD \"ת43\\א\"\nMD \"ת43-יעד\"\nMOVE \"ת43\\א\" \"ת43-יעד\"\nRD \"ת43\"\n", r, v);
         eq("מבנה 43: MD, MOVE של התיקייה החוצה, RD — התיקייה ריקה, בלי שגיאה", 0, p43.errors);
@@ -2552,15 +2552,15 @@ public final class Tests {
             Library lib64 = Library.forTests(new ArrayList<Index>(java.util.Collections.singletonList(ix64)));
             String counter64 = new File(new File(db64, Paths.SYSTEM), "מונה-מזהים.txt").getAbsolutePath();
             check("מבנה 64: התיקייה של המסד, \"גיבוי מסד\" ותיקיית גיבויים של אופן — אסורות למחיקה ולהעברה",
-                    Physical.forbidden(lib64, db64) != null && Physical.forbidden(lib64, bk64.getParentFile()) != null && Physical.forbidden(lib64, bk64) != null
-                            && Physical.forbidden(lib64, new File(db64, Paths.SYSTEM)) != null);
-            check("מבנה 64: התוספים ומה שהם כותבים — של המשתמש", Physical.forbidden(lib64, plug64) == null && Physical.forbidden(lib64, data64) == null
-                    && Physical.programFile(new File(plug64, "תוסף-64.html").getAbsolutePath()) == null
-                    && Physical.programFile(new File(data64, "דוח.txt").getAbsolutePath()) == null);
+                    DiskRules.forbidden(lib64, db64) != null && DiskRules.forbidden(lib64, bk64.getParentFile()) != null && DiskRules.forbidden(lib64, bk64) != null
+                            && DiskRules.forbidden(lib64, new File(db64, Paths.SYSTEM)) != null);
+            check("מבנה 64: התוספים ומה שהם כותבים — של המשתמש", DiskRules.forbidden(lib64, plug64) == null && DiskRules.forbidden(lib64, data64) == null
+                    && DiskRules.programFile(new File(plug64, "תוסף-64.html").getAbsolutePath()) == null
+                    && DiskRules.programFile(new File(data64, "דוח.txt").getAbsolutePath()) == null);
             check("מבנה 64: קובץ המונה וקובץ גיבוי — קבצים של התוכנה; גם דרך \"..\" מתיקיית התוספים",
-                    Physical.programFile(counter64) != null && Physical.programFile(new File(bk64, "א.db").getAbsolutePath()) != null
-                            && Physical.programFile(db64.getAbsolutePath()) != null
-                            && Physical.programFile(plug64.getAbsolutePath() + "/../" + Backups.DIR + "/אופן-64/א.db") != null);
+                    DiskRules.programFile(counter64) != null && DiskRules.programFile(new File(bk64, "א.db").getAbsolutePath()) != null
+                            && DiskRules.programFile(db64.getAbsolutePath()) != null
+                            && DiskRules.programFile(plug64.getAbsolutePath() + "/../" + Backups.DIR + "/אופן-64/א.db") != null);
             java.util.Map<String, String> v64 = Parse.vars(ext64, ext64.getAbsolutePath(), null);
             String bkCmd = "%" + Syntax.V_INTERNAL + "%\\" + Paths.DB_DIR + "\\" + Backups.DIR + "\\אופן-64";
             Batch.Plan del64 = Batch.plan("המשך ()\nמחק תיקייה \"" + bkCmd + "\" /עמוק\nDEL \"" + bkCmd + "\\*.db\"\nMOVE \"" + bkCmd + "\" \"%" + Syntax.V_INTERNAL + "%\\יעד-64\"\n", ext64, v64, lib64);
@@ -2853,7 +2853,7 @@ public final class Tests {
             Manager.Act mo77 = Manager.onSelected("MOVE", java.util.Collections.singletonList(own77), none77, to77, Paths.data(), v77, lib77);
             check("מבנה 77: להעביר קובץ של התוכנה — סירוב מהתכנון (" + mo77.error() + ")", mo77.error() != null
                     && mo77.error().startsWith(Words.Disk.CANT_MOVE + "הגדרה-77.ini"));
-            check("מבנה 77: ...אותו נוסח שהמסך אמר עד כאן", mo77.error().equals(Physical.cannotMove(lib77, java.util.Collections.singletonList(own77), none77)));
+            check("מבנה 77: ...אותו נוסח שהמסך אמר עד כאן", mo77.error().equals(DiskRules.cannotMove(lib77, java.util.Collections.singletonList(own77), none77)));
             check("מבנה 77: להעתיק קובץ של התוכנה — מותר", Manager.onSelected("COPY", java.util.Collections.singletonList(own77), none77, to77, Paths.data(), v77, lib77).error() == null);
             check("מבנה 77: פריט שנבחר וכבר איננו — סירוב מהתכנון", Manager.onSelected("COPY", java.util.Collections.singletonList(new File(d77, "אין.txt").getAbsolutePath()),
                     none77, to77, Paths.data(), v77, lib77).error() != null);
@@ -2923,14 +2923,14 @@ public final class Tests {
                             && can78.text.trim().equals("שנה %נבחרים% \"%שם-חדש%\""));
             Manager.Act own78a = Manager.onRename(own78, "הגדרה-78.ini", Paths.data(), v78, lib78);
             check("מבנה 78: קובץ של התוכנה — סירוב מהתכנון, בנוסח של המסך (" + own78a.error() + ")", own78a.error() != null
-                    && own78a.error().equals(Words.Disk.CANT_RENAME + "הגדרה-78.ini\": " + Physical.programFile(own78)));
+                    && own78a.error().equals(Words.Disk.CANT_RENAME + "הגדרה-78.ini\": " + DiskRules.programFile(own78)));
             check("מבנה 78: קובץ שכבר איננו — סירוב מהתכנון", Words.FILE_NOT_AT_PATH.equals(Manager.onRename(new File(d78, "אין.txt").getAbsolutePath(), "אין.txt",
                     Paths.data(), v78, lib78).error()));
             check("מבנה 78: שם תפוס — סירוב מהתכנון, בנוסח של המסך", (Words.Disk.ALREADY_IN_FOLDER + "תפוס.txt\"").equals(
                     Manager.onRename(a78, "תפוס.txt", Paths.data(), v78, lib78).error())
                     && (Words.Disk.ALREADY_IN_FOLDER + "תיקייה\"").equals(Manager.onRename(a78, "תיקייה", Paths.data(), v78, lib78).error()));
-            check("מבנה 78: שם לא תקין — אותו סירוב של הכונן", Physical.badName("א/ב.txt") != null
-                    && Physical.badName("א/ב.txt").equals(Manager.onRename(a78, "א/ב.txt", Paths.data(), v78, lib78).error())
+            check("מבנה 78: שם לא תקין — אותו סירוב של הכונן", DiskRules.badName("א/ב.txt") != null
+                    && DiskRules.badName("א/ב.txt").equals(Manager.onRename(a78, "א/ב.txt", Paths.data(), v78, lib78).error())
                     && Manager.onRename(a78, "  ", Paths.data(), v78, lib78).error() != null);
             check("מבנה 78: במנוע — %נבחרים% של \"שנה\" הוא קובץ אחד בלבד; ותיקייה — לא",
                     Batch.plan("שנה %נבחרים% \"%שם-חדש%\"\n", d78, v78, lib78, null, new Batch.Selection(java.util.Arrays.asList(a78,
@@ -2986,8 +2986,8 @@ public final class Tests {
             check("מבנה 79: שם שכבר קיים (תיקייה או קובץ) — סירוב מהתכנון, בנוסח של המסך",
                     (Words.Disk.ALREADY_HERE_NAME + "קיימת\"").equals(Manager.onMakeFolder(d79, "קיימת", Paths.data(), v79, lib79).error())
                             && (Words.Disk.ALREADY_HERE_NAME + "קובץ\"").equals(Manager.onMakeFolder(d79, "קובץ", Paths.data(), v79, lib79).error()));
-            check("מבנה 79: שם לא תקין — אותו סירוב של הכונן; גם שם ריק", Physical.badName("א/ב") != null
-                    && Physical.badName("א/ב").equals(Manager.onMakeFolder(d79, "א/ב", Paths.data(), v79, lib79).error())
+            check("מבנה 79: שם לא תקין — אותו סירוב של הכונן; גם שם ריק", DiskRules.badName("א/ב") != null
+                    && DiskRules.badName("א/ב").equals(Manager.onMakeFolder(d79, "א/ב", Paths.data(), v79, lib79).error())
                     && Manager.onMakeFolder(d79, " ", Paths.data(), v79, lib79).error() != null);
             check("מבנה 79: בתוך תיקיית התוכנה — סירוב מהתכנון", Words.Disk.NO_FOLDER_IN_APP.equals(
                     Manager.onMakeFolder(Paths.data(), "חדשה-79", Paths.data(), v79, lib79).error()));
@@ -3047,8 +3047,8 @@ public final class Tests {
             lib80.flush(5000);
             check("מבנה 80: בתוך תיקיית התוכנה — סירוב מהתכנון", Words.Disk.NO_FILE_IN_APP.equals(
                     Manager.onNewFile(new File(Paths.data(), "חדש-80.vbat"), "x", Paths.data(), v80, lib80).error()));
-            check("מבנה 80: שם לא תקין — אותו סירוב של הכונן", Physical.badName("א:ב?.vbat") != null
-                    && Physical.badName("א:ב?.vbat").equals(Manager.onNewFile(new File(d80, "א:ב?.vbat"), "x", Paths.data(), v80, lib80).error()));
+            check("מבנה 80: שם לא תקין — אותו סירוב של הכונן", DiskRules.badName("א:ב?.vbat") != null
+                    && DiskRules.badName("א:ב?.vbat").equals(Manager.onNewFile(new File(d80, "א:ב?.vbat"), "x", Paths.data(), v80, lib80).error()));
             check("מבנה 80: במנוע — %תוכן% עם /הוסף, או בלי השם שמהמסך — שגיאה; \"כתוב\" כתובה על קובץ קיים — שם קיים, ועם /תפוס:להחליף — עוברת (מבנה 110)",
                     Batch.plan("כתוב \"%יעד%\\%שם-חדש%\" \"%תוכן%\" /הוסף\n", d80, v80, lib80, null, new Batch.Selection(new ArrayList<String>(),
                             new ArrayList<String>(), d80, "x.txt", "y")).errors == 1
@@ -4412,9 +4412,9 @@ public final class Tests {
         mk(d, "פרק 1.17", 1);
         mk(d, "ספר.pdf", 1);
         mk(d, ".nomedia", 1);
-        eq("124: שם תפוס — \"פרק 1.17 (2)\"", "פרק 1.17 (2)", Physical.freeName(d, "פרק 1.17", false));
-        eq("124: שם תפוס — \"ספר (2).pdf\"", "ספר (2).pdf", Physical.freeName(d, "ספר.pdf", false));
-        eq("124: שם תפוס — קובץ מוסתר", ".nomedia (2)", Physical.freeName(d, ".nomedia", false));
+        eq("124: שם תפוס — \"פרק 1.17 (2)\"", "פרק 1.17 (2)", DiskRules.freeName(d, "פרק 1.17", false));
+        eq("124: שם תפוס — \"ספר (2).pdf\"", "ספר (2).pdf", DiskRules.freeName(d, "ספר.pdf", false));
+        eq("124: שם תפוס — קובץ מוסתר", ".nomedia (2)", DiskRules.freeName(d, ".nomedia", false));
         wipe(d);
 
         // 123: סוג מורכב, וסוגים נוספים בשם משובש

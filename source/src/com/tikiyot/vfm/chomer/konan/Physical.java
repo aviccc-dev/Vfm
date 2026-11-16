@@ -109,120 +109,6 @@ public final class Physical {
         boolean stopped();
     }
 
-    /** השם החופשי הבא בתיקייה: "ספר (2).pdf", "ספרים (2)". */
-    public static String freeName(File dir, String name, boolean isDir) {
-        String base = isDir ? name : Text.stem(name), ext = isDir ? "" : Text.tail(name);   // 124
-        if (base.isEmpty()) { base = name; ext = ""; }
-        String n = name;
-        for (int i = 2; new File(dir, n).exists(); i++) n = base + " (" + i + ")" + ext;
-        return n;
-    }
-
-    // ================= מה אסור (82) =================
-
-    /** למה אי אפשר למחוק או להעביר את התיקייה הזו, או null אם מותר. */
-    public static String forbidden(Library lib, File dir) {
-        String p = Paths.clean(dir.getAbsolutePath());                          // מבנה 42: גם "תיקייה/.." הוא השורש
-        String why = rootOrTrash(lib, p);
-        if (why != null) return why;
-        String app = appDir();
-        if (app != null && ((app + "/").startsWith(p + "/") || p.startsWith(app + "/"))) return Words.Disk.IS_APP_FOLDER;
-        // מבנה 64 (ממצא 44; המשתמש, 14.11.2026: "כן" — להגן): גם התיקייה של המסד (קובץ המונה, הגיבויים של כל האופנים) — היא עצמה,
-        // תיקייה שמכילה אותה, ומה שבתוכה; חוץ מהתוספים ומה שהם כותבים (Paths.DB_USER_DIRS) — אלה של המשתמש.
-        String db = dbDir();
-        if (db != null && ((db + "/").startsWith(p + "/") || (p.startsWith(db + "/") && !dbUser(db, p)))) return Words.Disk.IS_APP_FOLDER;
-        return null;
-    }
-
-    /**
-     * מבנה 65 (ממצא 40ח): האם אסור לכתוב קובץ חדש בתיקייה הזו — כמו יעד של העתקה: לא בסל. (קובץ של התוכנה — programFile, על
-     * המסלול של הקובץ עצמו.) שורש הכונן ותיקיות המשתמש שבתיקיית התוכנה — מותרים: עד כאן "כתוב" שאל את forbidden, שהיא השאלה
-     * "מותר למחוק או להעביר את התיקייה הזו", וסירב גם להם. null — מותר.
-     */
-    public static String noWriteInto(Library lib, File dir) {
-        String p = Paths.clean(dir.getAbsolutePath()), root = lib.rootOf(p);
-        return root != null && (p + "/").startsWith(new File(root, Index.TRASH).getAbsolutePath() + "/") ? Words.Disk.IS_TRASH : null;
-    }
-
-    /** שורש כונן, או הסל ומה שבתוכו — אסורים תמיד, גם לתוכנה עצמה (deleteOwn). */
-    private static String rootOrTrash(Library lib, String p) {
-        String root = lib.rootOf(p);
-        if (root != null && (p.equals(root) || (p + "/").equals(root))) return Words.Disk.DRIVE_ROOT;
-        for (Index ix : lib.indexes) if (ix.rootPath.equals(p)) return Words.Disk.DRIVE_ROOT;
-        if (root != null && (p + "/").startsWith(new File(root, Index.TRASH).getAbsolutePath() + "/"))
-            return Words.Disk.IS_TRASH;
-        return null;
-    }
-
-    /**
-     * 90: קובץ של התוכנה עצמה (קובצי ההגדרות, הגיבויים, האינדקס) — אסור למחוק או להעביר,
-     * ואסור להעביר או להעתיק לתוך התיקייה שלה. מבנה 64: גם מה שבתיקייה של המסד (קובץ המונה, "גיבוי מסד").
-     */
-    public static String programFile(String path) {
-        path = Paths.clean(path);                                               // מבנה 42
-        String app = appDir();
-        if (app != null && (path.equals(app) || path.startsWith(app + "/"))) {
-            for (String u : Paths.USER_DIRS)                                     // 1.25.6: מה שהמשתמש יצר — שלו
-                if (path.startsWith(app + "/" + u + "/")) return null;
-            return Words.Disk.IS_APP_FILE;
-        }
-        String db = dbDir();
-        if (db != null && (path.equals(db) || path.startsWith(db + "/"))) return dbUser(db, path) ? null : Words.Disk.IS_APP_FILE;
-        return null;
-    }
-
-    private static String appDir() {
-        try {
-            return Paths.data().getAbsolutePath();
-        } catch (Throwable t) {
-            return null;
-        }
-    }
-
-    private static String dbDir() {
-        try {
-            return Paths.dbData().getAbsolutePath();
-        } catch (Throwable t) {
-            return null;
-        }
-    }
-
-    /** מבנה 64: p (נקי) הוא אחת מתיקיות המשתמש שבתיקייה של המסד (תוספים, נתוני תוספים), או בתוכה. */
-    private static boolean dbUser(String db, String p) {
-        for (String u : Paths.DB_USER_DIRS) if (p.equals(db + "/" + u) || p.startsWith(db + "/" + u + "/")) return true;
-        return false;
-    }
-
-    /** מבנה 64: p (נקי) בתוך תיקיית התוכנה או בתוך התיקייה של המסד. */
-    private static boolean ours(String p) {
-        String app = appDir(), db = dbDir();
-        return (app != null && p.startsWith(app + "/")) || (db != null && p.startsWith(db + "/"));
-    }
-
-    /** האם folder היא src עצמה או תיקייה שבתוכה. */
-    static boolean inside(File folder, File src) {
-        String f = Paths.clean(folder.getAbsolutePath()) + "/", s = Paths.clean(src.getAbsolutePath()) + "/";   // מבנה 42
-        return f.startsWith(s);
-    }
-
-    /**
-     * מבנה 42: אותו קובץ בכונן, גם כשהמסלולים כתובים אחרת — קישור (‎/sdcard), או אותיות גדולות וקטנות בכונן שאינו מבדיל
-     * ביניהן. נשאל רק כשהשם ביעד תפוס (המשפך), לפני שמחליפים: "להחליף" קובץ בעצמו שלח אותו לסל, וההעברה נכשלה.
-     */
-    static boolean sameFile(File a, File b) {
-        if (a.equals(b)) return true;
-        try {
-            if (a.getCanonicalFile().equals(b.getCanonicalFile())) return true;
-        } catch (java.io.IOException e) {
-            Log.e("Physical.sameFile", e);
-        }
-        try {
-            return java.nio.file.Files.isSameFile(a.toPath(), b.toPath());      // אנדרואיד 8 ומעלה; לפניו — לפי המסלול בלבד
-        } catch (Throwable t) {
-            return false;
-        }
-    }
-
     // ================= הביצוע (בלי מסכים — נבדק בבדיקות) =================
 
     private static String stamp() {
@@ -256,7 +142,7 @@ public final class Physical {
      */
     public static Result deleteOwn(Library lib, File dir) {
         List<String> one = java.util.Collections.singletonList(dir.getAbsolutePath());
-        return delete(lib, new ArrayList<String>(), one, false, ours(Paths.clean(dir.getAbsolutePath())));
+        return delete(lib, new ArrayList<String>(), one, false, DiskRules.ours(Paths.clean(dir.getAbsolutePath())));
     }
 
     private static Result delete(Library lib, List<String> paths, List<String> dirs, boolean grey, boolean byApp) {
@@ -269,7 +155,7 @@ public final class Physical {
         String stamp = stamp();
         List<String> gone = new ArrayList<String>();
         for (String p : paths) {
-            String own = programFile(p);
+            String own = DiskRules.programFile(p);
             if (own != null) {
                 r.fail(own);
                 continue;
@@ -301,7 +187,7 @@ public final class Physical {
                 r.fail(Words.Disk.FOLDER_GONE_REFRESH);
                 continue;
             }
-            String why = byApp ? rootOrTrash(lib, Paths.clean(f.getAbsolutePath())) : forbidden(lib, f);
+            String why = byApp ? DiskRules.rootOrTrash(lib, Paths.clean(f.getAbsolutePath())) : DiskRules.forbidden(lib, f);
             if (why != null) {
                 r.fail(why);
                 continue;
@@ -348,7 +234,7 @@ public final class Physical {
         dir.mkdirs();
         File target = new File(dir, stamp + " " + f.getName());
         if (target.exists())                                   // אותו שם באותה שנייה — תוספת לשם, לא לזמן
-            target = new File(dir, freeName(dir, target.getName(), isDir));
+            target = new File(dir, DiskRules.freeName(dir, target.getName(), isDir));
         if (!f.renameTo(target)) {
             Log.i("מחיקה נכשלה: " + f);
             r.fail(Words.DELETE_FAILED);
@@ -426,7 +312,7 @@ public final class Physical {
         String base = new File(root).getAbsolutePath();
         List<File> all = new ArrayList<File>(), to = new ArrayList<File>();
         for (File f : topOnly(files, dirs)) {
-            String rel = rel(base, f.getAbsolutePath());
+            String rel = DiskRules.rel(base, f.getAbsolutePath());
             if (rel == null || rel.isEmpty()) {
                 run.r.fail(Words.Disk.NOT_UNDER_ROOT);
                 continue;
@@ -438,7 +324,7 @@ public final class Physical {
         java.util.Set<String> emptied = new java.util.TreeSet<String>(java.util.Collections.reverseOrder());
         if (!copy && pruneEmpty)
             for (File f : all)
-                for (File up = f.getParentFile(); up != null && rel(base, up.getAbsolutePath()) != null
+                for (File up = f.getParentFile(); up != null && DiskRules.rel(base, up.getAbsolutePath()) != null
                         && !up.getAbsolutePath().equals(base); up = up.getParentFile())
                     emptied.add(up.getAbsolutePath());
         go(run, all, to, destRoot);
@@ -466,13 +352,6 @@ public final class Physical {
         return run.r;
     }
 
-    /** המסלול של p יחסית ל־base ("" — הוא עצמו), או null אם אינו בתוכו. */
-    static String rel(String base, String p) {
-        if (p.equals(base)) return "";
-        String b = base.endsWith("/") ? base : base + "/";
-        return p.startsWith(b) ? p.substring(b.length()) : null;
-    }
-
     /** הביצוע עצמו: all[i] אל תוך to[i]. הבדיקות (תיקיית התוכנה, סל, מקום, גודל) — לפי checkFolder. */
     private static void go(Run run, List<File> all, List<File> to, File checkFolder) {
         boolean copy = run.copy;
@@ -487,13 +366,13 @@ public final class Physical {
                 run.totalBytes += f.length();
             }
         }
-        if (programFile(checkFolder.getAbsolutePath()) != null) {
+        if (DiskRules.programFile(checkFolder.getAbsolutePath()) != null) {
             run.r.fail(Words.Disk.DEST_IS_APP);
             run.r.failed = all.size();
             return;
         }
         String droot = lib.rootOf(checkFolder.getAbsolutePath());
-        if (droot != null && inside(checkFolder, new File(droot, Index.TRASH))) {
+        if (droot != null && DiskRules.inside(checkFolder, new File(droot, Index.TRASH))) {
             run.r.fail(Words.Disk.DEST_IS_TRASH);
             run.r.failed = all.size();
             return;
@@ -515,16 +394,16 @@ public final class Physical {
                 run.r.fail(Words.Disk.NOT_FOUND_REFRESH);
                 continue;
             }
-            if (!copy && programFile(p) != null) {
-                run.r.fail(programFile(p));
+            if (!copy && DiskRules.programFile(p) != null) {
+                run.r.fail(DiskRules.programFile(p));
                 continue;
             }
-            if (isDir && inside(folder, f)) {
+            if (isDir && DiskRules.inside(folder, f)) {
                 run.r.fail(Words.Disk.NOT_INTO_ITSELF);
                 continue;
             }
             if (isDir && !copy) {
-                String why = forbidden(lib, f);
+                String why = DiskRules.forbidden(lib, f);
                 if (why != null) {
                     run.r.fail(why);
                     continue;
@@ -627,20 +506,20 @@ public final class Physical {
             if (stop()) return null;
             boolean isDir = src.isDirectory();
             File dst = new File(dir, src.getName());
-            boolean self = dst.equals(src) || (dst.exists() && sameFile(src, dst));   // מבנה 42: אותו קובץ, גם בכתיב אחר
+            boolean self = dst.equals(src) || (dst.exists() && DiskRules.sameFile(src, dst));   // מבנה 42: אותו קובץ, גם בכתיב אחר
             if (self && !copy) {                               // העברה אל המקום שהוא כבר בו — לא "להחליף" אותו בעצמו
                 r.fail(Words.Disk.ALREADY_HERE);
                 return null;
             }
             if (self) {                                        // העתקה לאותה תיקייה: עותק בשם חדש, בלי לשאול
-                dst = new File(dir, freeName(dir, src.getName(), isDir));
+                dst = new File(dir, DiskRules.freeName(dir, src.getName(), isDir));
             } else if (keep && isDir && dst.isDirectory()) {     // 1.19.0: התיקייה כבר קיימת ביעד — ממזגים
                 merge(src, dst);
                 return dst.getAbsolutePath();
             } else if (dst.exists()) {
                 boolean both = isDir && dst.isDirectory();
                 Answer a = both ? forDirs : forFiles;
-                String sug = freeName(dir, src.getName(), isDir);
+                String sug = DiskRules.freeName(dir, src.getName(), isDir);
                 if (a == null) {
                     if (asker == null) {
                         r.fail(Words.NAME_TAKEN_AT_DEST);
@@ -666,11 +545,11 @@ public final class Physical {
                         String n = a.all || a.name == null || a.name.trim().isEmpty() || a.name.contains("/")
                                 ? sug : a.name.trim();
                         dst = new File(dir, n);
-                        if (dst.exists()) dst = new File(dir, freeName(dir, n, isDir));
+                        if (dst.exists()) dst = new File(dir, DiskRules.freeName(dir, n, isDir));
                         break;
                     }
                     case REPLACE: {
-                        if (inside(src, dst)) {
+                        if (DiskRules.inside(src, dst)) {
                             r.fail(Words.Disk.CANT_REPLACE_PARENT);
                             return null;
                         }
@@ -922,34 +801,7 @@ public final class Physical {
         return r;
     }
 
-    // ================= ניסוחים — במקום אחד =================
-
-    // ================= עם חלון אישור והודעה (למסכים) =================
-
-    /** מבנה 77: למה אי אפשר לבחור את התיקייה הזו כיעד של העתקה או העברה (תיקיית התוכנה, הסל) — בנוסח של המסך; null — אפשר. */
-    public static String noDest(Library lib, File folder) {
-        if (programFile(folder.getAbsolutePath()) != null) return Words.Disk.DEST_APP_NOT;
-        String droot = lib.rootOf(folder.getAbsolutePath());
-        return droot != null && inside(folder, new File(droot, Index.TRASH)) ? Words.Disk.DEST_TRASH_NOT : null;
-    }
-
-    /** 142: האם אפשר להעביר את המקורות האלה (קובצי התוכנה, שורש, סל). null = אפשר; אחרת ההסבר. */
-    public static String cannotMove(Library lib, List<String> paths, List<String> dirs) {
-        for (String p : paths)
-            if (programFile(p) != null) return Words.Disk.CANT_MOVE + new File(p).getName() + "\": " + programFile(p);
-        for (String d : dirs) {
-            String why = forbidden(lib, new File(d));
-            if (why != null) return Words.Disk.CANT_MOVE + new File(d).getName() + "\": " + why;
-        }
-        return null;
-    }
-
     // ================= שינוי שם בכונן (84) ומחיקה של תיקייה חדשה (106) =================
-
-    /** בדיקת שם לקובץ או לתיקייה בכונן. null = תקין; אחרת ההסבר. מבנה 9: הבדיקה עצמה — ב־Files (גם הבסיס שואל). */
-    public static String badName(String name) {
-        return Files.badName(name);
-    }
 
     /**
      * שינוי שם של קובץ בכונן, באותה תיקייה (84). האינדקס מתעדכן בתור, והרשימות עוקבות אחרי השם החדש.
@@ -959,13 +811,13 @@ public final class Physical {
         String no = Permit.check(Permit.RENAME);                               // מבנה 76
         if (no != null) return refused(no);
         Result r = new Result();
-        String own = programFile(path);
+        String own = DiskRules.programFile(path);
         if (own != null) {
             r.fail(own);
             return r;
         }
         File f = new File(path);
-        String bad = badName(newName);
+        String bad = DiskRules.badName(newName);
         if (bad != null) {
             r.fail(bad);
             return r;
@@ -1005,15 +857,15 @@ public final class Physical {
         return r;
     }
 
-    // ================= פריסת ZIP (116) =================
+    // ================= תיקייה חדשה, קובץ חדש, וכתיבה באזור של התוכנה =================
 
     /** יצירת תיקייה ריקה בכונן. null = הצליח; אחרת ההסבר. */
     public static String makeFolder(Library lib, File parent, String name) {
         String no = Permit.check(Permit.MAKE_FOLDER);                          // מבנה 76
         if (no != null) return no;
-        String bad = badName(name);
+        String bad = DiskRules.badName(name);
         if (bad != null) return bad;
-        if (programFile(new File(parent, name.trim()).getAbsolutePath()) != null) return Words.Disk.NO_FOLDER_IN_APP;
+        if (DiskRules.programFile(new File(parent, name.trim()).getAbsolutePath()) != null) return Words.Disk.NO_FOLDER_IN_APP;
         File made = new File(parent, name.trim());
         if (made.exists()) return Words.Disk.ALREADY_HERE_NAME + name.trim() + "\"";
         if (!made.mkdirs()) return Words.CANT_CREATE_FOLDER;
@@ -1086,9 +938,9 @@ public final class Physical {
     public static String newFile(Library lib, File f, String content, boolean replace) {
         String no = Permit.check(Permit.WRITE);
         if (no != null) return no;
-        String bad = badName(f.getName());
+        String bad = DiskRules.badName(f.getName());
         if (bad != null) return bad;
-        if (programFile(f.getAbsolutePath()) != null) return Words.Disk.NO_FILE_IN_APP;
+        if (DiskRules.programFile(f.getAbsolutePath()) != null) return Words.Disk.NO_FILE_IN_APP;
         if (f.isDirectory() || (f.exists() && !replace)) return Words.Disk.ALREADY_NAME + f.getName() + "\"";
         if (f.exists() && lib != null) {
             String why = oldToTrash(lib, f);

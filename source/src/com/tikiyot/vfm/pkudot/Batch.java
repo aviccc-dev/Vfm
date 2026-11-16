@@ -214,7 +214,7 @@ final class Batch {
      * עד כאן לא נבדק: "דוח" ו"/יומן:" כתבו לכל מסלול שנכתב בשורה. null — מותר.
      */
     static String noWriteHere(String p) {
-        String why = Physical.programFile(p);
+        String why = DiskRules.programFile(p);
         if (why != null) return why;
         return new File(p).isDirectory() ? Words.DbCmd.WRITE_IS_FOLDER : null;
     }

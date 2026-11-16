@@ -30,7 +30,7 @@ public final class Journal {
     }
 
     void file(File root, File f) {
-        String r = Physical.rel(root.getAbsolutePath(), f.getAbsolutePath());
+        String r = DiskRules.rel(root.getAbsolutePath(), f.getAbsolutePath());
         if (r == null) r = f.getAbsolutePath();
         write(r + "\t" + f.length() + "\n");
         lines++;

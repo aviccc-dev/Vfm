@@ -74,7 +74,7 @@ final class Clip {
     /** האם אפשר להדביק כאן. null = אפשר; אחרת — למה לא (מוצג בפס, במקום הכפתור). */
     static synchronized String cannotPasteInto(File folder) {
         if (folder == null) return Words.ClipW.PICK_FOLDER_FIRST;
-        if (Physical.programFile(folder.getAbsolutePath()) != null) return Words.ClipW.IS_APP_FOLDER;
+        if (DiskRules.programFile(folder.getAbsolutePath()) != null) return Words.ClipW.IS_APP_FOLDER;
         if (folder.getAbsolutePath().contains("/" + Index.TRASH)) return Words.ClipW.IS_TRASH;
         for (String d : dirs) {
             String p = folder.getAbsolutePath();
