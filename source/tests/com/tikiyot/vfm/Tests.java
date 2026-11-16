@@ -3307,6 +3307,16 @@ public final class Tests {
                         copy183.append(f.getName()).append(' ');
                 check("מבנה 183: העתקה / העברה של קובץ (FileCopy) — רק מתוך תיקיית הכונן (" + copy183.toString().trim() + ")",
                         copy183.length() == 0 && readAll(new File(code, "chomer/konan")).contains("FileCopy.copyFile("));
+                // מבנה 184: מנוע ההעתקה וההעברה יצא מ־Physical אל Mover. הכניסות (transfer, transferKeep, transferTo) נשארו ב־Physical,
+                // ושם נשאל ההיתר; למנוע עצמו — רק מתוך תיקיית הכונן.
+                StringBuilder mover184 = new StringBuilder();
+                java.util.regex.Pattern m184 = java.util.regex.Pattern.compile("\\bMover\\.|\\bPhysical\\.(toTrash|stamp)\\(");   // גם מה שנפתח בשביל המנוע
+                for (File f : javaFiles(code))
+                    if (!f.getParentFile().getName().equals("konan") && m184.matcher(read(f)).find()) mover184.append(f.getName()).append(' ');
+                String ph184 = read(new File(code, "chomer/konan/Physical.java"));
+                check("מבנה 184: מנוע ההעברה (Mover) — רק מתוך תיקיית הכונן (" + mover184.toString().trim() + "); הכניסות ב־Physical, והן שואלות את ההיתר",
+                        mover184.length() == 0 && ph184.contains("Mover.go(") && ph184.contains("Permit.check(Permit.TRANSFER)")
+                                && !read(new File(code, "chomer/konan/Mover.java")).contains("Permit."));
                 wipe(r151);
                 wipe(d138);
             }
@@ -5584,9 +5594,9 @@ public final class Tests {
         File box = new File(src, "ארגז");
         mk(new File(box, "פנים"), "1.pdf", 11);
         mk(box, "2.pdf", 22);
-        List<File> top = Physical.topOnly(P(box + "/2.pdf", box + "/פנים/1.pdf"), P(box.getAbsolutePath(), box.getAbsolutePath(), box + "/פנים"));
+        List<File> top = Mover.topOnly(P(box + "/2.pdf", box + "/פנים/1.pdf"), P(box.getAbsolutePath(), box.getAbsolutePath(), box + "/פנים"));
         check("1.18.0: רק העליון — תיקייה אחת", top.size() == 1 && top.get(0).getAbsolutePath().equals(box.getAbsolutePath()));
-        List<File> sib = Physical.topOnly(P(src + "/ארגז2/x.pdf"), P(box.getAbsolutePath()));
+        List<File> sib = Mover.topOnly(P(src + "/ארגז2/x.pdf"), P(box.getAbsolutePath()));
         eq("1.18.0: שם דומה (ארגז / ארגז2) — אינו צאצא", 2, sib.size());
 
         Index ix = built("הגנות", root);

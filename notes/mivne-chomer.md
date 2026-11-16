@@ -60,3 +60,4 @@
 | 181 | היומן של העברה ← `konan/Journal` (75 שורות), מחלקה משלה. פונים: `Runner`, `State`, הבדיקות. **נמצא בדרך, לא שונה:** היומן פותח קובץ וכותב בו בלי לשאול את ההיתר — רשום למטה ב"פתוח" | 1,108 |
 | 182 | הכללים ← `konan/DiskRules` (161 שורות): `forbidden`, `noWriteInto`, `programFile`, `inside`, `sameFile`, `noDest`, `cannotMove`, `badName`, `freeName`, `rel` ועוד. 14 קבצים פונים (הפקודות, המסכים, התוסף) | 963 |
 | 183 | קובץ אחד ← `konan/FileCopy` (121 שורות): `copyFile`, `moveFile`, `partial`, `isPartial`, `digest`. **שומר 183:** `FileCopy.copyFile` / `moveFile` — רק מתוך `chomer/konan` | 858 |
+| 184 | מנוע ההעברה ← `konan/Mover` (325 שורות): `go`, `Run` (שם תפוס, מיזוג, התקדמות, האינדקס והרשימות בסוף), `topOnly`. **שומר 184:** `Mover` ו־`Physical.toTrash` — רק מתוך `chomer/konan`; ב־`Mover` אין היתר, והכניסות ב־`Physical` שואלות | 552 |
