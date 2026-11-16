@@ -3651,14 +3651,23 @@ public final class Tests {
                         {"masachim/itzuv/Design.java", "12", "קובצי העיצוב"},
                         {"masachim/rechivim/Acts.java", "1", "ניקוי עותקים ישנים בתיקיית השליחה של התוכנה"},
                         {"masachim/rechivim/BatchUi.java", "2", "עותק פרטי להצגה"},
+                        // מבנה 193 (המשתמש, 16.11.2026: "מאשר"): גם קומת הפקודות בשומר. מקום חדש שכותב — להביא למשתמש להחלטה.
+                        {"pkudot/CmdMatrix.java", "5", "קובצי הניסיון של הבדיקה \"כל הפקודות\" (בתיקיית הבדיקה שלה)"},
+                        {"pkudot/CmdTemplates.java", "2", "קובץ התבניות של המשתמש"},
+                        {"pkudot/ListOps.java", "2", "יצוא של רשימה לקובץ טקסט"},
+                        {"pkudot/Reserved.java", "4", "קובצי הפקודות השמורות של התוכנה (באזור שלה)"},
+                        {"pkudot/RunReport.java", "2", "הדוח של הרצה (\"דוח\")"},
+                        {"pkudot/Runner.java", "6", "יומן המדידה, ההכנה לשיתוף (עותקים בתיקיית השליחה של התוכנה) והניקוי שלה"},
+                        {"pkudot/Shortcuts.java", "3", "קובצי הקיצורים (\"הפקודות שלי\")"},
+                        {"pkudot/SmallCmds.java", "1", "הפקודה \"כתוב\" עצמה"},
                 };
                 java.util.regex.Pattern w128 = java.util.regex.Pattern.compile(
-                        "Files\\.writeAtomic\\(|\\.delete\\(\\)|\\.renameTo\\(|\\.mkdirs\\(\\)|new FileOutputStream|new FileWriter|saveQuiet\\(\\)|Files\\.(copy|write|append)[A-Za-z]*\\(");
+                        "Files\\.writeAtomic\\(|\\.delete\\(\\)|\\.renameTo\\(|\\.mkdirs\\(\\)|new (?:java\\.io\\.)?FileOutputStream|new (?:java\\.io\\.)?FileWriter|saveQuiet\\(\\)|Files\\.(copy|write|append)[A-Za-z]*\\(");
                 StringBuilder bad128 = new StringBuilder(), now128 = new StringBuilder();
                 String root128 = code.getPath().replace('\\', '/');
                 for (File f : javaFiles(code)) {
                     String rel = f.getPath().replace('\\', '/').substring(root128.length() + 1);
-                    if (!rel.startsWith("lev/") && !rel.startsWith("masachim/")) continue;
+                    if (!rel.startsWith("lev/") && !rel.startsWith("masachim/") && !rel.startsWith("pkudot/")) continue;
                     int n = 0;
                     java.util.regex.Matcher m128 = w128.matcher(read(f));
                     while (m128.find()) n++;
@@ -3668,7 +3677,7 @@ public final class Tests {
                     for (String[] k : known128) if (k[0].equals(rel)) allowed = Integer.parseInt(k[1]);
                     if (n > allowed) bad128.append(rel).append(" (").append(n).append(" > ").append(allowed).append(") ");
                 }
-                check("מבנה 128: בלב ובמסכים — כתיבה או מחיקה ישירה של קובץ רק במקומות הידועים, ולא יותר ממה שנרשם (" + bad128.toString().trim() + ") [" + now128.toString().trim() + "]",
+                check("מבנה 128 (193: גם בפקודות): בלב, במסכים ובפקודות — כתיבה או מחיקה ישירה של קובץ רק במקומות הידועים, ולא יותר ממה שנרשם; מקום חדש — להביא למשתמש להחלטה (" + bad128.toString().trim() + ") [" + now128.toString().trim() + "]",
                         bad128.length() == 0);
             }
             check("מבנה 84: ...ופעולות הכונן — מסורבות כולן (לא חזרו אחורה)", Permit.strict(Permit.DELETE) && Permit.strict(Permit.WRITE));
