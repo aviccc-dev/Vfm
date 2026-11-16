@@ -3456,6 +3456,12 @@ public final class Tests {
                 check("מבנה 154: שמירה על קובץ קיים באזור — התוכן החדש נכתב (" + ok154 + "), והקודם בסל עם התוכן שלו; קובץ חדש — נכתב, בלי סל; מחוץ לאזור — לא",
                         ok154 == null && "גרסה חדשה".equals(read(f154)) && in154 && new154 == null && "x".equals(read(new File(z154, "חדש.vbat")))
                                 && Words.PermitW.NOT_IN_ZONE.equals(Manager.ownSaveKeepOld(z154, new File(r151, "בחוץ.vbat"), "x", lib151)));
+                // מבנה 229 (באג שנמצא בדרך למחיקה מהעורך): אחרי שמירה על קובץ קיים באזור — הקובץ החדש באינדקס, בגודל שלו (עד כאן הקודם
+                // יצא מהאינדקס עם המעבר לסל, והחדש לא נכנס: "מחק" עליו נכשל — "לא באינדקס")
+                lib151.flush(5000);
+                Library.Hit h229 = lib151.find(f154.getAbsolutePath()), n229 = lib151.find(new File(z154, "חדש.vbat").getAbsolutePath());
+                check("מבנה 229: קובץ פקודות שנשמר מחדש בתוך תיקיית התוכנה — נשאר באינדקס, בגודל החדש; קובץ חדש שם — נכנס",
+                        h229 != null && h229.rec != null && !h229.rec.gone && h229.rec.size == f154.length() && n229 != null && n229.rec != null && !n229.rec.gone);
                 // מבנה 164: ההרצה יצאה ל־Runner — הכניסה נשארה Batch.run (רק המנהל קורא לה); ל־Runner.run0 — רק Batch
                 StringBuilder run164 = new StringBuilder();
                 for (File f : javaFiles(code)) if (!f.getName().equals("Batch.java") && read(f).contains("Runner.run0(")) run164.append(f.getName()).append(' ');

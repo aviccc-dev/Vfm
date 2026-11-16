@@ -494,7 +494,9 @@ public final class Physical {
             String why = oldToTrash(lib, f);
             if (why != null) return why;
         }
-        return ownWrite(f, text);
+        String bad = ownWrite(f, text);
+        if (bad == null && lib != null) lib.fileAdded(f);                      // מבנה 229: הקודם יצא מהאינדקס עם המעבר לסל — החדש נכנס
+        return bad;
     }
 
     /** מבנה 139: מחיקה של קובץ באזור שהתוכנה מנהלת (תוצאות ישנות בתיקייה של תוסף) — רק בהיתר. true — נמחק. */
