@@ -582,7 +582,7 @@ final class Batch {
                 String[] err = {null};
                 String p = Parse.path(tk.get(1), here, vars, err);
                 if (p == null) s.error = err[0];
-                else DbListCmd.planVerifyFile(s, new File(p), conds);
+                else ListVerify.planVerifyFile(s, new File(p), conds);
                 if (s.error != null) plan.errors++;
                 plan.steps.add(s);
                 continue;

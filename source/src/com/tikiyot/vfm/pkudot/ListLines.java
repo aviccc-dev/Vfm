@@ -28,7 +28,7 @@ final class ListLines {
                 }
                 ListCmd.resolve(lp.sides.get(0), vars);
                 ListCmd.resolve(lp.sides.get(2), vars);
-                DbListCmd.planVerifySame(s, lp.sides.get(0), lp.sides.get(2), DbListCmd.W_SAME.equals(lp.sides.get(1).raw), sim);
+                ListVerify.planVerifySame(s, lp.sides.get(0), lp.sides.get(2), DbListCmd.W_SAME.equals(lp.sides.get(1).raw), sim);
                 return;
             }
             List<String> conds = new ArrayList<String>(sw);
@@ -39,10 +39,10 @@ final class ListLines {
                 String[] err = {null};
                 String p = Parse.path(a.raw, here, vars, err);
                 if (p == null) { s.error = err[0]; return; }
-                DbListCmd.planVerifyFile(s, new File(p), conds);
+                ListVerify.planVerifyFile(s, new File(p), conds);
                 return;
             }
-            DbListCmd.planVerify(s, a, conds, sim);
+            ListVerify.planVerify(s, a, conds, sim);
             return;
         }
         String bad = listSwitch(cmd, lp, sw);                                 // מ0.40 (ממצא 41): מתג שלא שייך לשורה — שגיאה

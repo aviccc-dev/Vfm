@@ -426,11 +426,11 @@ final class ImportTests {
         ck("בטל לא-משויכים: צד אחד, בלי שם אחריו", x.length == 1 && x[0].kind == ListCmd.LOOSE);
         ck("בטל לא-משויכים: כשאין כאלה — בלי שינוי", DbListCmd.remove(s, M, x[0]).noop);
         String[] found = {""};
-        ck("ודא לא-משויכים /פריטים:0", DbListCmd.verify(s, M, x[0], DbListCmd.expect(Arrays.asList("/פריטים:0")), found));
+        ck("ודא לא-משויכים /פריטים:0", ListVerify.verify(s, M, x[0], ListVerify.expect(Arrays.asList("/פריטים:0")), found));
         DbListCmd.remove(s, M, sides("RD ידנית \"א\"")[0]);                  // 1.txt נשאר בלי רשימה; 2.txt עוד ברשימה ב
-        ck("ודא לא-משויכים /פריטים:1 — אחרי ביטול רשימה", DbListCmd.verify(s, M, x[0], DbListCmd.expect(Arrays.asList("/פריטים:1")), found)
-                && !DbListCmd.verify(s, M, x[0], DbListCmd.expect(Arrays.asList("/פריטים:0")), found) && found[0].endsWith("1"));
-        ck("ודא לא-משויכים חסרה — לא עובר (אין לה קיימת/חסרה)", !DbListCmd.verify(s, M, x[0], DbListCmd.expect(Arrays.asList("חסרה")), found));
+        ck("ודא לא-משויכים /פריטים:1 — אחרי ביטול רשימה", ListVerify.verify(s, M, x[0], ListVerify.expect(Arrays.asList("/פריטים:1")), found)
+                && !ListVerify.verify(s, M, x[0], ListVerify.expect(Arrays.asList("/פריטים:0")), found) && found[0].endsWith("1"));
+        ck("ודא לא-משויכים חסרה — לא עובר (אין לה קיימת/חסרה)", !ListVerify.verify(s, M, x[0], ListVerify.expect(Arrays.asList("חסרה")), found));
         DbListCmd.Res r = DbListCmd.remove(s, M, x[0]);
         ck("בטל לא-משויכים: הרישום נמחק מהמסד, ורק שלו", r.error == null && !r.noop && s.findFile("/s/1.txt") == 0
                 && s.findFile("/s/2.txt") != 0 && s.findFile("/s/3.txt") != 0 && s.unassigned().isEmpty() && filesIn(s, b) == 2);
@@ -639,17 +639,17 @@ final class ImportTests {
         // ודא (מ0.14)
         ListCmd.Side vb = sides("VERIFY ידנית \"ספרים\" קיימת")[0];
         String[] fd = {""};
-        ck("ודא: קיימת — עוברת", DbListCmd.verify(s, M, vb, DbListCmd.expect(Arrays.asList("קיימת")), fd));
-        ck("ודא: חסרה על קיימת — נכשלת, ואומרת מה בפועל", !DbListCmd.verify(s, M, vb, DbListCmd.expect(Arrays.asList("חסרה")), fd)
+        ck("ודא: קיימת — עוברת", ListVerify.verify(s, M, vb, ListVerify.expect(Arrays.asList("קיימת")), fd));
+        ck("ודא: חסרה על קיימת — נכשלת, ואומרת מה בפועל", !ListVerify.verify(s, M, vb, ListVerify.expect(Arrays.asList("חסרה")), fd)
                 && fd[0].equals(Words.DbCmd.WORD_EXISTS));
         DbCount bc = DbCount.of(s, books, null);
-        ck("ודא: מספרים נכונים — עוברת; שגויים — נכשלת", DbListCmd.verify(s, M, vb, DbListCmd.expect(Arrays.asList("/רשימות:" + bc.lists, "/פריטים:" + bc.items)), fd)
-                && !DbListCmd.verify(s, M, vb, DbListCmd.expect(Arrays.asList("/פריטים:" + (bc.items + 1))), fd));
+        ck("ודא: מספרים נכונים — עוברת; שגויים — נכשלת", ListVerify.verify(s, M, vb, ListVerify.expect(Arrays.asList("/רשימות:" + bc.lists, "/פריטים:" + bc.items)), fd)
+                && !ListVerify.verify(s, M, vb, ListVerify.expect(Arrays.asList("/פריטים:" + (bc.items + 1))), fd));
         ListCmd.Side vn = sides("VERIFY ידנית \"אין כזו\" חסרה")[0];
-        ck("ודא: חסרה על חסרה — עוברת; בלי תנאי — קיימת", DbListCmd.verify(s, M, vn, DbListCmd.expect(Arrays.asList("חסרה")), fd)
-                && !DbListCmd.verify(s, M, vn, DbListCmd.expect(new ArrayList<String>()), fd));
-        ck("ודא: תנאי לא מוכר / מספר שגוי — צורה", DbListCmd.expect(Arrays.asList("משהו")).error != null
-                && DbListCmd.expect(Arrays.asList("/פריטים:x")).error != null && DbListCmd.expect(Arrays.asList("חסרה", "/רשימות:1")).error != null);
+        ck("ודא: חסרה על חסרה — עוברת; בלי תנאי — קיימת", ListVerify.verify(s, M, vn, ListVerify.expect(Arrays.asList("חסרה")), fd)
+                && !ListVerify.verify(s, M, vn, ListVerify.expect(new ArrayList<String>()), fd));
+        ck("ודא: תנאי לא מוכר / מספר שגוי — צורה", ListVerify.expect(Arrays.asList("משהו")).error != null
+                && ListVerify.expect(Arrays.asList("/פריטים:x")).error != null && ListVerify.expect(Arrays.asList("חסרה", "/רשימות:1")).error != null);
         ck("ודא: השם בעברית מוכר כפקודה", Syntax.VERIFY.equals(Commands.canonical("ודא")));
 
         // כלול (מ0.15)

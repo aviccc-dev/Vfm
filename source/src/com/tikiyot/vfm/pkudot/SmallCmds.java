@@ -90,7 +90,7 @@ final class SmallCmds {
             return true;
         }
         if (cmd.equals(Syntax.VERIFY) && tk.size() == 2 && tk.get(1).trim().equals(Syntax.W_DB)) {   // מ0.42: ודא מסד
-            DbListCmd.planVerifyDb(s);
+            ListVerify.planVerifyDb(s);
             return true;
         }
         if (cmd.equals(Syntax.VERIFY) && tk.size() == 2 && tk.get(1).trim().equals(Syntax.W_ERROR)) {
