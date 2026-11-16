@@ -331,7 +331,7 @@ final class DbListCmd {
                     s.describe = Words.DbCmd.inDb(pr.text);
                     final Work w = work;
                     s.op = new ListCmd.Op() {
-                        @Override public String run(Library lib) { return real(mode, w, false, lib); }
+                        @Override public String run(Library lib) { return ListRun.real(mode, w, false, lib); }
                     };
                     return;
                 }
@@ -349,7 +349,7 @@ final class DbListCmd {
                 } else s.describe = Words.DbCmd.importLater(Bidi.path(in.getAbsolutePath()));   // ייווצר בשורות שלפני
                 final Work w = work;
                 s.op = new ListCmd.Op() {
-                    @Override public String run(Library lib) { return real(mode, w, false, lib); }
+                    @Override public String run(Library lib) { return ListRun.real(mode, w, false, lib); }
                 };
                 return;
             }
@@ -364,7 +364,7 @@ final class DbListCmd {
                 s.describe = Words.DbCmd.inDb(pr.text);
                 final Work w = work;
                 s.op = new ListCmd.Op() {
-                    @Override public String run(Library lib) { return real(mode, w, false, lib); }
+                    @Override public String run(Library lib) { return ListRun.real(mode, w, false, lib); }
                 };
                 return;
             }
@@ -454,7 +454,7 @@ final class DbListCmd {
         final String before = destructive ? Backups.OP_DELETE : cmd.equals("REN") ? Backups.OP_EDIT : null;
         s.op = new ListCmd.Op() {
             @Override public String run(Library lib) {
-                Res r = realRes(mode, w, before, lib);
+                Res r = ListRun.realRes(mode, w, before, lib);
                 if (r.error != null) lastFailed = true;
                 return r.error != null ? r.error : Words.DbCmd.inDb(r.text);
             }
@@ -497,7 +497,7 @@ final class DbListCmd {
             s.describe = Words.DbCmd.inDb(Words.ListCmdW.created(Names.cleanName(name)));
             s.op = new ListCmd.Op() {
                 @Override public String run(Library lib) {
-                    Res r = realRes(mode, new Work() {
+                    Res r = ListRun.realRes(mode, new Work() {
                         @Override public Res run(Store t, Finder f) {
                             if (into != 0 && (t.item(into) == null || t.item(into).type != Store.LIST)) return Res.err(Words.Db.LIST_GONE);
                             Lists.Made m = Lists.newListChecked(t, into, name);
@@ -526,7 +526,7 @@ final class DbListCmd {
             s.describe = Words.DbCmd.inDb(Words.ListCmdW.copied(ids.size(), 0, null, Words.DbCmd.HERE_LIST));
             s.op = new ListCmd.Op() {
                 @Override public String run(Library lib) {
-                    Res r = realRes(mode, new Work() {
+                    Res r = ListRun.realRes(mode, new Work() {
                         @Override public Res run(Store t, Finder f) {
                             Store.Item li = into == 0 ? null : t.item(into);
                             if (li == null || li.type != Store.LIST) return Res.err(Words.Db.LIST_GONE);
@@ -569,7 +569,7 @@ final class DbListCmd {
                     + Words.ListCmdW.copied(ps.size() + ds.size(), 0, null, Words.DbCmd.HERE_LIST));
             s.op = new ListCmd.Op() {
                 @Override public String run(Library lib) {
-                    Res r = realRes(mode, new Work() {
+                    Res r = ListRun.realRes(mode, new Work() {
                         @Override public Res run(Store t, Finder f) {
                             long dest = into != 0 ? into : DbPaths.home(t);
                             Store.Item li = dest == 0 ? null : t.item(dest);
@@ -605,7 +605,7 @@ final class DbListCmd {
         s.target = a.label();
         s.describe = Words.DbCmd.inDb(Words.DbCmd.removed(Words.DbCmd.items(ids.size())));
         s.op = new ListCmd.Op() {
-            @Override public String run(Library lib) { return real(mode, w, true, lib); }
+            @Override public String run(Library lib) { return ListRun.real(mode, w, true, lib); }
         };
     }
 
@@ -670,98 +670,11 @@ final class DbListCmd {
     }
 
     static Finder finder(final Sim sim) {
-        return over(sim.lib, sim.condFiles);
-    }
-
-    /** הקבצים לפי תנאי מהאינדקס — חיפוש אחד לכל תנאי (cache). */
-    static Finder over(final Library lib, final Map<String, List<String>> cache) {
-        return new Finder() {
-            @Override
-            public List<String> find(String cond) {
-                if (cond == null || cond.trim().isEmpty()) return new ArrayList<String>();
-                if (lib == null || !lib.ready) return null;
-                List<String> had = cache.get(cond);
-                if (had != null) return had;
-                List<String> out = new ArrayList<String>();
-                for (Library.Hit h : lib.list(cond).hits) if (h.rec != null) out.add(h.path());   // מבנה 94: "קבצי חכמה" — רק מה שעונה במלואו
-                cache.put(cond, out);
-                return out;
-            }
-        };
-    }
-
-    /** מבנה 58: עריכה מהמסך שדורסת את מה שהיה (שם, תיאור, תנאי של רשימה חכמה) — גיבוי "לפני עריכה", ואז הפעולה. */
-    static String nowEdit(String mode, Work w) {
-        Res r = realRes(mode, w, Backups.OP_EDIT, null);
-        if (r.error != null) lastFailed = true;
-        return r.error != null ? r.error : Words.DbCmd.inDb(r.text);
-    }
-
-    /** ההרצה: המסד נפתח לרגע; לפני פעולה שמוציאה — גיבוי "לפני פעולה" (נכשל — לא מבצעים). */
-    /** מ0.37: "גבה" — גיבוי ידני של המסד של האופן (עותק וגם טקסט); גיבוי ידני לא נמחק לבד. */
-    static String backupNow(final String mode) {
-        try {
-            return Db.write(Db.app, mode, null, new Db.Use<String>() {
-                @Override
-                public String run(SqlStore s) throws Exception {
-                    List<Backups.Entry> made = Db.backupsOf(Db.app, mode).manual(s, System.currentTimeMillis());
-                    StringBuilder names = new StringBuilder();
-                    for (Backups.Entry e : made) names.append(names.length() > 0 ? ", " : "").append(e.name);
-                    return Words.DbCmd.backedUp(mode, names.toString());
-                }
-            });
-        } catch (Throwable t) {
-            Log.e("DbListCmd.backupNow", t);
-            lastFailed = true;
-            return Words.Db.failed(String.valueOf(t.getMessage()));
-        }
+        return ListRun.over(sim.lib, sim.condFiles);
     }
 
     /** מ0.31: הפעולה האחרונה במסד נכשלה — ההרצה סופרת כישלונות ("המשך"). */
     static volatile boolean lastFailed;
-
-    private static String real(String mode, Work w, boolean before, Library lib) {
-        Res r = realRes(mode, w, before, lib);
-        if (r.error != null) lastFailed = true;
-        return r.error != null ? r.error : Words.DbCmd.inDb(r.text);
-    }
-
-    static Res realRes(String mode, Work w, boolean before, Library lib) {
-        return realRes(mode, w, before ? Backups.OP_DELETE : null, lib);
-    }
-
-    static Res realRes(final String mode, final Work w, String beforeOp, final Library lib) {
-        try {
-            return Db.write(Db.app, mode, beforeOp, new Db.Use<Res>() {   // מבנה 33: דרך שער המסד
-                @Override
-                public Res run(SqlStore s) {
-                    Res r = w.run(s, over(lib, new HashMap<String, List<String>>()));
-                    if (r.error == null && r.renamed != 0) follow(s, mode, r);
-                    return r;
-                }
-            });
-        } catch (Db.BeforeFailed b) {
-            Log.e("DbListCmd.before", b.getCause());
-            return Res.err(Words.DbCmd.beforeFailed(String.valueOf(b.getCause().getMessage())));
-        } catch (Throwable t) {
-            Log.e("DbListCmd.real", t);
-            return Res.err(Words.Db.failed(String.valueOf(t.getMessage())));
-        }
-    }
-
-    /** מ0.42 (ב8): אחרי שינוי שם — קובצי הפקודות שפונים לרשימה מתעדכנים, וההודעה אומרת כמה ואילו. תקלה — נאמרת, לא נבלעת. */
-    private static void follow(Store s, String mode, Res r) {
-        try {
-            List<File> fs = Shortcuts.listRenamed(s, mode, r.renamed, r.renamedFrom, r.renamedTo);
-            if (fs.isEmpty()) return;
-            List<String> names = new ArrayList<String>();
-            for (File f : fs) names.add(Text.stem(f.getName()));
-            r.text = (r.text == null ? "" : r.text) + Words.DbCmd.followed(names);
-        } catch (Throwable t) {
-            Log.e("DbListCmd.follow", t);
-            r.text = (r.text == null ? "" : r.text) + Words.DbCmd.FOLLOW_FAILED;
-        }
-    }
 
     /**
      * מ0.25: תיקיית היעד של קובץ כשמבקשים /מסלול מרשימה — היעד + המסלול המלא של התיקייה שלו בכונן (בלי שורש הכונן):

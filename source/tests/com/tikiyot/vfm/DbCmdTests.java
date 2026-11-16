@@ -770,7 +770,7 @@ final class DbCmdTests {
                                 return null;
                             }
                         });
-                        old99[i] = DbListCmd.nowEdit(m91, new DbListCmd.Work() {           // הדרך הישנה — בדיוק מה שהמסך עשה
+                        old99[i] = ListRun.nowEdit(m91, new DbListCmd.Work() {           // הדרך הישנה — בדיוק מה שהמסך עשה
                             @Override public DbListCmd.Res run(Store t, DbListCmd.Finder fd) {
                                 if (t.item(ids[0]) == null) return DbListCmd.Res.err(Words.Db.ITEM_GONE);
                                 String was = t.item(ids[0]).name;
@@ -974,7 +974,7 @@ final class DbCmdTests {
                         String scr113 = Files.readUtf8(new File(src, "src/com/tikiyot/vfm/masachim/DbListScreen.java"));
                         o.check("מבנה 113: בלי מה לשנות, שם ריק, שם תפוס, רשימה שאין — שגיאה בתכנון; והשומר — המסך אינו עורך רשימה בעצמו",
                                 u113.blocked() && e113.blocked() && x113.blocked() && x113.errorText().contains("תפוס") && m113.blocked()
-                                        && !scr113.contains("Lists.edit(") && !scr113.contains("DbListCmd.nowEdit(") && scr113.contains("Manager.onListEdit("));
+                                        && !scr113.contains("Lists.edit(") && !scr113.contains("ListRun.nowEdit(") && scr113.contains("Manager.onListEdit("));
                     }
                     // מבנה 114: קבצים מהכונן אל רשימה — מהמסך (דרך המנהל) ובשורה כתובה: אותו כלל, ושתי הרשימות שוות
                     {

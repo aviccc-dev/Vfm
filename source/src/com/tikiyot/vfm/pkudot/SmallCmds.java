@@ -308,7 +308,7 @@ final class SmallCmds {
         final String mode = sim.mode != null ? sim.mode : Db.currentMode;
         s.describe = Words.DbCmd.backupWill(mode);
         s.op = new ListCmd.Op() {
-            @Override public String run(Library lib) { return DbListCmd.backupNow(mode); }
+            @Override public String run(Library lib) { return ListRun.backupNow(mode); }
         };
         return true;
     }

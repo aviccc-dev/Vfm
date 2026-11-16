@@ -65,7 +65,7 @@ final class ListVerbs {
         s.describe = Words.DbCmd.inDb(exists && taken == Lists.TAKEN_REPLACE ? Words.ListCmdW.smartReplaced(shown) : Words.ListCmdW.createdSmart(shown));
         s.op = new ListCmd.Op() {
             @Override public String run(Library lib) {
-                DbListCmd.Res r = DbListCmd.realRes(mode, new DbListCmd.Work() {
+                DbListCmd.Res r = ListRun.realRes(mode, new DbListCmd.Work() {
                     @Override public DbListCmd.Res run(Store t, DbListCmd.Finder f) {
                         if (into != 0 && (t.item(into) == null || t.item(into).type != Store.LIST)) return DbListCmd.Res.err(Words.Db.LIST_GONE);
                         return smartMade(Lists.newSmart(t, into, name, cond, props, taken));
@@ -113,7 +113,7 @@ final class ListVerbs {
         s.describe = Words.DbCmd.inDb(Words.DbCmd.saved(name.isEmpty() ? Words.DbCmd.HERE_LIST : name));
         s.op = new ListCmd.Op() {
             @Override public String run(Library lib) {
-                DbListCmd.Res r = DbListCmd.realRes(mode, new DbListCmd.Work() {
+                DbListCmd.Res r = ListRun.realRes(mode, new DbListCmd.Work() {
                     @Override public DbListCmd.Res run(Store t, DbListCmd.Finder f) {
                         Store.Item it = t.item(id);
                         if (it == null || it.type != Store.SMART) return DbListCmd.Res.err(Words.Db.ITEM_GONE);
@@ -174,7 +174,7 @@ final class ListVerbs {
             s.describe = Words.DbCmd.inDb(place ? Words.ListCmdW.ORDERED : Words.ListCmdW.DESIGN_SET);
             s.op = new ListCmd.Op() {
                 @Override public String run(Library lib) {
-                    DbListCmd.Res r = DbListCmd.realRes(m, new DbListCmd.Work() {
+                    DbListCmd.Res r = ListRun.realRes(m, new DbListCmd.Work() {
                         @Override public DbListCmd.Res run(Store t, DbListCmd.Finder f) {
                             if (place) {
                                 if (in == 0 || t.item(in) == null) return DbListCmd.Res.err(Words.Db.LIST_GONE);
@@ -203,7 +203,7 @@ final class ListVerbs {
         s.describe = Words.DbCmd.inDb(Words.DbCmd.saved(sel.name.trim().isEmpty() ? Words.DbCmd.HERE_LIST : sel.name.trim()));
         s.op = new ListCmd.Op() {
             @Override public String run(Library lib) {
-                DbListCmd.Res r = DbListCmd.realRes(mode, new DbListCmd.Work() {
+                DbListCmd.Res r = ListRun.realRes(mode, new DbListCmd.Work() {
                     @Override public DbListCmd.Res run(Store t, DbListCmd.Finder f) {
                         Store.Item it = t.item(id);
                         if (it != null && (it.type == Store.SMART || it.type == Store.FILE)) return DbListCmd.Res.err(Words.DbCmd.FILE_NO_EDIT);
@@ -238,7 +238,7 @@ final class ListVerbs {
         s.describe = Words.DbCmd.inDb(Words.DbCmd.noteAdded(title, text, where));
         s.op = new ListCmd.Op() {
             @Override public String run(Library lib) {
-                DbListCmd.Res r = DbListCmd.realRes(mode, new DbListCmd.Work() {
+                DbListCmd.Res r = ListRun.realRes(mode, new DbListCmd.Work() {
                     @Override public DbListCmd.Res run(Store t, DbListCmd.Finder f) {
                         long in = path.isEmpty() ? here : DbPaths.find(t, mode, path);
                         if (in == 0) return DbListCmd.Res.err(Words.Verb.NOT_FOUND + c.cond);
@@ -345,7 +345,7 @@ final class ListVerbs {
             final String before = r.replaced ? Backups.OP_EDIT : null;          // מבנה 104: דריסה — גיבוי לפני
             s.op = new ListCmd.Op() {
                 @Override public String run(Library lib) {
-                    DbListCmd.Res done = DbListCmd.realRes(mode, work, before, lib);                 // כמו real(), ועוד המספר של מה שנוצר (מבנה 100)
+                    DbListCmd.Res done = ListRun.realRes(mode, work, before, lib);                 // כמו real(), ועוד המספר של מה שנוצר (מבנה 100)
                     if (done.error != null) DbListCmd.lastFailed = true;
                     s.made = done.made;
                     return done.error != null ? done.error : Words.DbCmd.inDb(done.text);
