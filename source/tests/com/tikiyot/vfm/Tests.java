@@ -3123,8 +3123,24 @@ public final class Tests {
                     && "ישן".equals(read(new File(tr110.get(tr110.size() - 1).path()))));
             Batch.run(Batch.plan("רוקן סל \"" + new File(d80, "קיים.vbat").getAbsolutePath() + "\"\n", d80, v80, lib80), lib80, null, null);   // הסל — נקי לבדיקות שאחרי
             lib80.flush(5000);
-            check("מבנה 80: בתוך תיקיית התוכנה — סירוב מהתכנון", Words.Disk.NO_FILE_IN_APP.equals(
-                    Manager.onNewFile(new File(Paths.data(), "חדש-80.vbat"), "x", Paths.data(), v80, lib80).error()));
+            // מבנה 200 (ה10, המשתמש 16.11.2026): הנוסח האחד — של קובץ הפקודות, גם מהמסך
+            String app200 = new File(Paths.data(), "חדש-80.vbat").getAbsolutePath(), wr200 = Commands.word(Commands.get(Syntax.WRITE));
+            check("מבנה 80 / 200: בתוך תיקיית התוכנה — סירוב מהתכנון, בנוסח האחד", DiskRules.programFile(app200) != null
+                    && DiskRules.programFile(app200).equals(Manager.onNewFile(new File(app200), "x", Paths.data(), v80, lib80).error()));
+            {   // מבנה 200 (ה10): השורה הכתובה והמסך — אותו כלל (SmallCmds.writeRule), אותו נוסח, ובתכנון
+                Batch.Plan pBad = Batch.plan(wr200 + " \"" + d80 + "\\א:ב?.vbat\" \"x\"\n", d80, v80, lib80, null);
+                Batch.Plan pApp = Batch.plan(wr200 + " \"" + app200 + "\" \"x\"\n", d80, v80, lib80, null);
+                Batch.Plan pTaken = Batch.plan(wr200 + " \"" + new File(d80, "קיים.vbat").getAbsolutePath() + "\" \"x\"\n", d80, v80, lib80, null);
+                check("מבנה 200: שורה כתובה — שם לא תקין נתפס בתכנון (עד כאן: לא נבדק), והקובץ אינו רץ (" + pBad.steps.get(0).error + ")",
+                        pBad.steps.get(0).error != null && pBad.steps.get(0).error.equals(DiskRules.badName("א:ב?.vbat")) && pBad.blocked());
+                check("מבנה 200: קובץ של התוכנה, וקובץ קיים — אותו נוסח בשורה הכתובה ומהמסך",
+                        pApp.steps.get(0).error != null && pApp.steps.get(0).error.equals(Manager.onNewFile(new File(app200), "x", Paths.data(), v80, lib80).error())
+                                && pTaken.steps.get(0).error != null
+                                && pTaken.steps.get(0).error.equals(Manager.onNewFile(new File(d80, "קיים.vbat"), "x", Paths.data(), v80, lib80).error()));
+                String sc200 = read(new File(System.getProperty("vfm.src"), "src/com/tikiyot/vfm/pkudot/SmallCmds.java"));
+                check("מבנה 200: הבדיקות שלפני \"כתוב\" — במקום אחד (writeRule), לשתי הדרכים",
+                        sc200.split("writeRule\\(s, ", -1).length == 3 && sc200.split("DiskRules\\.programFile\\(f0", -1).length == 2);
+            }
             check("מבנה 80: שם לא תקין — אותו סירוב של הכונן", DiskRules.badName("א:ב?.vbat") != null
                     && DiskRules.badName("א:ב?.vbat").equals(Manager.onNewFile(new File(d80, "א:ב?.vbat"), "x", Paths.data(), v80, lib80).error()));
             check("מבנה 80: במנוע — %תוכן% עם /הוסף, או בלי השם שמהמסך — שגיאה; \"כתוב\" כתובה על קובץ קיים — שם קיים, ועם /תפוס:להחליף — עוברת (מבנה 110)",

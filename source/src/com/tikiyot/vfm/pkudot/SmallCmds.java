@@ -339,18 +339,11 @@ final class SmallCmds {
             writeSelected(s, new File(p), append || a.size() != 2 || !a.get(1).equals(Parse.var(Syntax.V_CONTENT)), taken, sim);
             return true;
         }
-        if (DiskRules.programFile(p) != null) { s.error = DiskRules.programFile(p); return true; }   // מבנה 45
-        File f0 = new File(p);
         final String text = a.size() == 2 ? Verbs.withVars(a.get(1), vars).replace("\\n", "\n") : "";
-        File dir = f0.getParentFile();
-        if (dir == null || !sim.isDir(dir)) { s.error = Words.DbCmd.writeNoFolder(Bidi.path(dir == null ? p : dir.getAbsolutePath())); return true; }
-        if (sim.isDir(f0)) { s.error = Words.DbCmd.WRITE_IS_FOLDER; return true; }
-        int t = writeTaken(s, f0, append, taken, sim);                     // מבנה 110: הכלל האחד של "קובץ קיים"
-        if (t == W_STOP) return true;
-        if (t == W_FREE) f0 = sim.free(f0);
-        final File f = f0;
-        final boolean replace = t == W_REPLACE;
-        if (sim.lib != null && DiskRules.noWriteInto(sim.lib, dir) != null) { s.error = DiskRules.noWriteInto(sim.lib, dir); return true; }   // מבנה 65: הסל — כבר בתכנון
+        boolean[] rep = {false};
+        final File f = writeRule(s, new File(p), append, taken, sim, rep);    // מבנה 200 (ה10): הכלל האחד — גם למסך
+        if (f == null) return true;
+        final boolean replace = rep[0];
         final boolean add = append;
         boolean had = sim.isFile(f) && sim.real(f) != Batch.GHOST;                // מבנה 46: קובץ שכבר קיים (לא כזה ששורה קודמת כותבת)
         sim.gone.remove(p);
@@ -424,6 +417,27 @@ final class SmallCmds {
         return W_STOP;
     }
 
+    /**
+     * מבנה 200 (ה10; הוראות, סעיף 2א): "כתוב" — הבדיקות שלפני הכתיבה, כלל אחד לשורה הכתובה ולמסך. המשתמש (16.11.2026):
+     * "שיעצור מההתחלה תמיד, וייתן הסבר" — הכול נאמר כאן, בתכנון (עד כאן, בשורה כתובה: שם לא תקין לא נבדק); והנוסח — של קובץ
+     * הפקודות. מחזיר את הקובץ שייכתב (אחרי "לשנות שם" — בשם הפנוי), או null כשיש סירוב או דילוג (נאמר ב־s). replace[0] — להחליף קיים.
+     */
+    static File writeRule(Batch.Step s, File f0, boolean append, String taken, Sim sim, boolean[] replace) {
+        String bad = DiskRules.badName(f0.getName());
+        if (bad != null) { s.error = bad; return null; }
+        String own = DiskRules.programFile(f0.getAbsolutePath());
+        if (own != null) { s.error = own; return null; }                       // מבנה 45
+        File dir = f0.getParentFile();
+        if (dir == null || !sim.isDir(dir)) { s.error = Words.DbCmd.writeNoFolder(Bidi.path(dir == null ? f0.getAbsolutePath() : dir.getAbsolutePath())); return null; }
+        if (sim.isDir(f0)) { s.error = Words.DbCmd.WRITE_IS_FOLDER; return null; }
+        int t = writeTaken(s, f0, append, taken, sim);                         // מבנה 110: הכלל האחד של "קובץ קיים"
+        if (t == W_STOP) return null;
+        if (t == W_FREE) f0 = sim.free(f0);
+        replace[0] = t == W_REPLACE;
+        if (sim.lib != null && DiskRules.noWriteInto(sim.lib, dir) != null) { s.error = DiskRules.noWriteInto(sim.lib, dir); return null; }   // מבנה 65: הסל
+        return f0;
+    }
+
     static void writeSelected(final Batch.Step s, File marked, boolean misuse, String taken, Sim sim) {
         final Batch.Selection sel = sim.selected;
         File parent = marked.getParentFile();
@@ -432,19 +446,12 @@ final class SmallCmds {
             s.error = Words.DbCmd.WRITE_USAGE;
             return;
         }
-        String bad = DiskRules.badName(sel.name);
+        String bad = DiskRules.badName(sel.name);                              // השם שהוקלד, כולו — לפני שהוא נעשה מסלול
         if (bad != null) { s.error = bad; return; }
-        File f0 = new File(parent, sel.name.trim());
-        if (DiskRules.programFile(f0.getAbsolutePath()) != null) { s.error = Words.Disk.NO_FILE_IN_APP; return; }
-        if (sim.isDir(f0)) { s.error = Words.Disk.ALREADY_NAME + f0.getName() + "\""; return; }
-        int t = writeTaken(s, f0, false, taken, sim);                          // מבנה 110: אותו כלל כמו בשורה הכתובה
-        if (t == W_STOP) return;
-        if (t == W_FREE) f0 = sim.free(f0);
-        final File f = f0;
-        final boolean replace = t == W_REPLACE;
-        // מבנה 111 (ה6ב): כמו בשורה הכתובה — התיקייה חייבת להיות קיימת (מי שצריך — "צור תיקייה" לפני; המנהל עושה זאת למסך)
-        if (!sim.isDir(parent)) { s.error = Words.DbCmd.writeNoFolder(Bidi.path(parent.getAbsolutePath())); return; }
-        if (sim.lib != null && DiskRules.noWriteInto(sim.lib, parent) != null) { s.error = DiskRules.noWriteInto(sim.lib, parent); return; }
+        boolean[] rep = {false};
+        final File f = writeRule(s, new File(parent, sel.name.trim()), false, taken, sim, rep);   // מבנה 200 (ה10): הכלל האחד, בראשי
+        if (f == null) return;
+        final boolean replace = rep[0];
         sim.gone.remove(f.getAbsolutePath());
         sim.added.put(f.getAbsolutePath(), Batch.GHOST);
         s.dest = f;
