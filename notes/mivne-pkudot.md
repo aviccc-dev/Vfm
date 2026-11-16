@@ -86,6 +86,7 @@
 | 172 | הלולאה של `Batch.plan` (257) פורקה: `planLine` 73, `planMeasure` 37, `planVerbLine` 23, `planEcho` 12, `planCont` 14, `planModeLine` 20, `planRest` 61; `plan` עצמה — 43 | — |
 | 173 | `DbListCmd.plan` (224) פורקה לפונקציה לכל פקודה: `planMd` 14, `planRemove` 24, `planCopy` 85, `planComp` 21, `planRen` 12, `planLink` 18; `plan` — 71 | 746+ |
 | 174 | `planPicked` (140) פורקה: `pickedMake` 26, `pickedXfer` 39, `pickedAdd` 32, `pickedRemove` 15; `planPicked` — 41 | 806 (הכותרות של הפונקציות החדשות) |
+| 175 | המילים של השפה שנשארו ב־`Batch` (מה שנבחר במסך, "הוסף תוסף" שירד) ← `Syntax`. כ־60 פניות, 8 קבצים | `Batch` 777 |
 
 ## איפה התיקייה עומדת (אחרי צעד 171)
 - **`Batch`: 3,359 ← 748** — הטיפוסים, הכניסה לתכנון (הלולאה על השורות) ולהרצה.
@@ -93,4 +94,4 @@
 - **17 קבצים חדשים**, כל אחד נושא אחד: `Syntax`, `Parse`, `Filter`, `Loops`, `Sim`, `FileCmds`, `SmallCmds`, `CompareCmds`, `ListLines`, `Runner`, `RunReport` · `ListVerify`, `ModeCmds`, `ListVerbs`, `ListOps`, `ListRun`.
 - **כל שורה עברה כמו שהיא; אין שינוי בפקודות.** 3,082 בדיקות.
 
-**מה עוד אפשר בתיקייה (לא דחוף):** (א) ~~לפרק את הלולאה של `Batch.plan` (257 שורות) ואת `DbListCmd.plan` (224)~~ — נעשה בצעדים 172–173 — לפונקציה לכל סוג שורה, כמו `small` (צעד 162). (ב) שאלת הקומה של `ListOps` (צעד 170). (ג) מילים של השפה שעוד יושבות ב־`Batch` (`V_SELECTED`, `NAME_TOKEN`…) ← `Syntax`. (ד) ה8–ה11 — ב־`FileCmds`, מחכות למשתמש.
+**מה עוד אפשר בתיקייה (לא דחוף):** (א) ~~לפרק את הלולאה של `Batch.plan` (257 שורות) ואת `DbListCmd.plan` (224)~~ — נעשה בצעדים 172–173 — לפונקציה לכל סוג שורה, כמו `small` (צעד 162). (ב) שאלת הקומה של `ListOps` (צעד 170). (ג) ~~מילים של השפה שעוד יושבות ב־`Batch` ← `Syntax`~~ — נעשה בצעד 175. (ה) ~~`planPicked`~~ — פורקה בצעד 174. (ד) ה8–ה11 — ב־`FileCmds`, מחכות למשתמש.

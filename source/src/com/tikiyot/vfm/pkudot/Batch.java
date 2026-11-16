@@ -363,17 +363,6 @@ final class Batch {
         }
     }
 
-    static final String V_SELECTED = "נבחרים", SELECTED_MARK = "/\u0000selected";   // תחביר
-    /** מבנה 77: היעד שנבחר במסך. נמסר כמשתנה ולא ככתוב — שם של תיקייה יכול להכיל % , והערך של משתנה אינו נפתח שוב. */
-    static final String V_DEST = "יעד";   // תחביר
-    /**
-     * מבנה 78: השם שהוקלד במסך. נמסר כסימן, והשם עצמו נלקח מהבחירה — כך הוא אינו מפוענח בכלל: שם של קובץ יכול להכיל % ,
-     * ואפילו טקסט שנראה כמו משתנה ("%תאריך%"), ובשורה כתובה המשתנים שבשם החדש מוחלפים (מבנה 43).
-     */
-    static final String V_NEW_NAME = "שם-חדש", NAME_TOKEN = "\u0000name", NAME_MARK = "/" + NAME_TOKEN;   // תחביר
-    /** מבנה 80: התוכן של קובץ חדש מהמסך — גם הוא סימן, ונלקח מהבחירה כלשונו (בשורה כתובה, ב"כתוב", המשתנים מוחלפים ו־\n הוא שורה חדשה). */
-    static final String V_CONTENT = "תוכן", CONTENT_MARK = "/\u0000content";   // תחביר
-
     static Plan plan(String text, File here, Map<String, String> vars, Library lib, Physical.Progress progress, Selection selected) {
         Plan plan = new Plan();
         Sim sim = new Sim();
@@ -381,10 +370,10 @@ final class Batch {
         sim.selected = selected;
         if (selected != null) {
             vars = new LinkedHashMap<String, String>(vars);
-            vars.put(V_SELECTED, SELECTED_MARK);
-            if (selected.dest != null) vars.put(V_DEST, selected.dest);
-            if (selected.name != null) vars.put(V_NEW_NAME, NAME_MARK);
-            if (selected.content != null) vars.put(V_CONTENT, CONTENT_MARK);
+            vars.put(Syntax.V_SELECTED, Syntax.SELECTED_MARK);
+            if (selected.dest != null) vars.put(Syntax.V_DEST, selected.dest);
+            if (selected.name != null) vars.put(Syntax.V_NEW_NAME, Syntax.NAME_MARK);
+            if (selected.content != null) vars.put(Syntax.V_CONTENT, Syntax.CONTENT_MARK);
         }
         plan.sim = sim;
         String[] lines = Bidi.strip(text).replace("\r", "").split("\n");          // 204
@@ -775,11 +764,9 @@ final class Batch {
 
     // ---------- הפקודות שירדו: "הוסף תוסף" / "החלף תוסף" (מבנה 11: עד כאן ב־Lab; אלה שורות של פקודות, לא ניהול התוספים) ----------
 
-    /** ירדו במ0.40 — שורה כזו היא שגיאה עם הסבר (ולא "הוסף" של הפעלים). */
-    static final String LAB_ADD = "הוסף תוסף", LAB_SWITCH = "החלף תוסף", LAB_OLD_ADD = "הוסף מעבדה", LAB_OLD_SWITCH = "החלף מעבדה";   // תחביר
-
+    /** ירדו במ0.40 — שורה כזו היא שגיאה עם הסבר (המילים — Syntax.LAB_*). */
     static boolean isLabLine(String line) {
-        for (String w : new String[]{LAB_ADD, LAB_SWITCH, LAB_OLD_ADD, LAB_OLD_SWITCH}) if (line.equals(w) || line.startsWith(w + " ")) return true;
+        for (String w : new String[]{Syntax.LAB_ADD, Syntax.LAB_SWITCH, Syntax.LAB_OLD_ADD, Syntax.LAB_OLD_SWITCH}) if (line.equals(w) || line.startsWith(w + " ")) return true;
         return false;
     }
 

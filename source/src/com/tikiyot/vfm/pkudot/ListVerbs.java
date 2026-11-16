@@ -270,10 +270,10 @@ final class ListVerbs {
         final boolean listUpd = c.kind.equals(Verbs.K_LIST) && c.verb.equals(Verbs.UPDATE);   // מבנה 113: עדכן רשימה
         if (!list && !smartNew && !smartUpd && !note && !title && !listUpd) return null;
         if (listUpd) c.noOpen = true;                                           // השם יכול להשתנות — לא פותחים בסוף
-        if (listUpd && Parse.var(Batch.V_SELECTED).equals(c.arg)) return planPickedEdit(s, c, sim);                  // מבנה 113: מהטופס
-        if ((note || title) && Parse.var(Batch.V_SELECTED).equals(c.arg)) return planPickedNote(s, c, title, sim);   // מבנה 93: מהמסך
-        if (smartNew && Parse.var(Batch.V_NEW_NAME).equals(c.arg)) return planPickedSmart(s, c, sim);                // מבנה 97: מהטופס
-        if (smartUpd && Parse.var(Batch.V_SELECTED).equals(c.arg)) return planPickedSmartEdit(s, c, sim);            // מבנה 99: מהטופס
+        if (listUpd && Parse.var(Syntax.V_SELECTED).equals(c.arg)) return planPickedEdit(s, c, sim);                  // מבנה 113: מהטופס
+        if ((note || title) && Parse.var(Syntax.V_SELECTED).equals(c.arg)) return planPickedNote(s, c, title, sim);   // מבנה 93: מהמסך
+        if (smartNew && Parse.var(Syntax.V_NEW_NAME).equals(c.arg)) return planPickedSmart(s, c, sim);                // מבנה 97: מהטופס
+        if (smartUpd && Parse.var(Syntax.V_SELECTED).equals(c.arg)) return planPickedSmartEdit(s, c, sim);            // מבנה 99: מהטופס
         if (sim.modeError != null) { s.error = sim.modeError; return null; }
         final String mode = DbListCmd.mode(sim);
         final Store db;

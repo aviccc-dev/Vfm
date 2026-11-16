@@ -304,8 +304,8 @@ final class Manager {
     /** מבנה 77: ...אל התיקייה dest ("COPY", "MOVE"): "העתק %נבחרים% "%יעד%"". dest == null — פקודה בלי יעד. */
     static Act onSelected(String cmd, java.util.List<String> files, java.util.List<String> dirs, java.io.File dest, java.io.File here,
                           java.util.Map<String, String> vars, Library lib) {
-        String text = Commands.word(Commands.get(cmd)) + " %" + Batch.V_SELECTED + "%"
-                + (dest == null ? "" : " \"%" + Batch.V_DEST + "%\"") + "\n";
+        String text = Commands.word(Commands.get(cmd)) + " %" + Syntax.V_SELECTED + "%"
+                + (dest == null ? "" : " \"%" + Syntax.V_DEST + "%\"") + "\n";
         return new Act(text, Batch.plan(text, here, vars, lib, null, new Batch.Selection(files, dirs, dest)), dest);
     }
 
@@ -314,14 +314,14 @@ final class Manager {
      * "מותר לשנות לקובץ הזה שם?" (קובץ של התוכנה, קובץ שכבר איננו), לפני שהמסך מבקש שם.
      */
     static Act onRename(String path, String name, java.io.File here, java.util.Map<String, String> vars, Library lib) {
-        String text = Commands.word(Commands.get("REN")) + " %" + Batch.V_SELECTED + "% \"%" + Batch.V_NEW_NAME + "%\"\n";
+        String text = Commands.word(Commands.get("REN")) + " %" + Syntax.V_SELECTED + "% \"%" + Syntax.V_NEW_NAME + "%\"\n";
         return new Act(text, Batch.plan(text, here, vars, lib, null, new Batch.Selection(java.util.Collections.singletonList(path),
                 java.util.Collections.<String>emptyList(), null, name)), null);
     }
 
     /** מבנה 79: תיקייה חדשה, מהמסך — בתיקייה parent, בשם שהוקלד: "צור תיקייה "%יעד%\%שם-חדש%"". */
     static Act onMakeFolder(java.io.File parent, String name, java.io.File here, java.util.Map<String, String> vars, Library lib) {
-        String text = Commands.word(Commands.get("MD")) + " \"%" + Batch.V_DEST + "%\\%" + Batch.V_NEW_NAME + "%\"\n";
+        String text = Commands.word(Commands.get("MD")) + " \"%" + Syntax.V_DEST + "%\\%" + Syntax.V_NEW_NAME + "%\"\n";
         return new Act(text, Batch.plan(text, here, vars, lib, null, new Batch.Selection(java.util.Collections.<String>emptyList(),
                 java.util.Collections.<String>emptyList(), parent, name)), parent);
     }
@@ -336,8 +336,8 @@ final class Manager {
         // מבנה 111 (ה6ב, המשתמש: "כן"): "כתוב" אינו יוצר תיקייה. כשהמסך יוצר קובץ בתיקייה שעוד אין ("פקודה חדשה" בתיקייה
         // שעוד לא נוצרה) — קודם "צור תיקייה … /תפוס:לדלג", ואז "כתוב": שתי פקודות, כל אחת בכלל שלה.
         String md = f.getParentFile() != null && !f.getParentFile().isDirectory()
-                ? Commands.word(Commands.get("MD")) + " \"%" + Batch.V_DEST + "%\" " + Syntax.SW_TAKEN + Syntax.TAKEN_SKIP + "\n" : "";
-        String text = md + Commands.word(Commands.get(Syntax.WRITE)) + " \"%" + Batch.V_DEST + "%\\%" + Batch.V_NEW_NAME + "%\" \"%" + Batch.V_CONTENT + "%\""
+                ? Commands.word(Commands.get("MD")) + " \"%" + Syntax.V_DEST + "%\" " + Syntax.SW_TAKEN + Syntax.TAKEN_SKIP + "\n" : "";
+        String text = md + Commands.word(Commands.get(Syntax.WRITE)) + " \"%" + Syntax.V_DEST + "%\\%" + Syntax.V_NEW_NAME + "%\" \"%" + Syntax.V_CONTENT + "%\""
                 + (taken == null || taken.isEmpty() ? "" : " " + Syntax.SW_TAKEN + taken) + "\n";
         return new Act(text, Batch.plan(text, here, vars, lib, null, new Batch.Selection(java.util.Collections.<String>emptyList(),
                 java.util.Collections.<String>emptyList(), f.getParentFile(), f.getName(), content)), f.getParentFile());
@@ -487,13 +487,13 @@ final class Manager {
      * items — המסלולים של הפריטים בתוך הסל.
      */
     static Act onTrash(boolean restore, java.util.List<String> items, java.io.File here, java.util.Map<String, String> vars, Library lib) {
-        String text = Commands.word(Commands.get(restore ? Syntax.UNTRASH : Syntax.PURGE)) + " %" + Batch.V_SELECTED + "%\n";
+        String text = Commands.word(Commands.get(restore ? Syntax.UNTRASH : Syntax.PURGE)) + " %" + Syntax.V_SELECTED + "%\n";
         return new Act(text, Batch.plan(text, here, vars, lib, null, new Batch.Selection(items, java.util.Collections.<String>emptyList())), null);
     }
 
     /** מבנה 122: אריזה של תיקייה ("ארוז %נבחרים%") או פריסה של קובץ zip ("פרוס %נבחרים%"), מהמסך. path — מה שנבחר. */
     static Act onZip(boolean pack, String path, java.io.File here, java.util.Map<String, String> vars, Library lib) {
-        String text = Commands.word(Commands.get(pack ? Syntax.PACK : Syntax.UNPACK)) + " %" + Batch.V_SELECTED + "%\n";
+        String text = Commands.word(Commands.get(pack ? Syntax.PACK : Syntax.UNPACK)) + " %" + Syntax.V_SELECTED + "%\n";
         java.util.List<String> one = java.util.Collections.singletonList(path), none = java.util.Collections.<String>emptyList();
         return new Act(text, Batch.plan(text, here, vars, lib, null, new Batch.Selection(pack ? none : one, pack ? one : none)), null);
     }
@@ -503,7 +503,7 @@ final class Manager {
      * (מספרים במסד).
      */
     static Act onListRemove(String mode, long in, java.util.List<Long> ids, java.io.File here, java.util.Map<String, String> vars, Library lib) {
-        String text = Commands.HE_UNLIST + " " + ListCmd.MANUAL + " %" + Batch.V_SELECTED + "%\n";
+        String text = Commands.HE_UNLIST + " " + ListCmd.MANUAL + " %" + Syntax.V_SELECTED + "%\n";
         return new Act(text, Batch.plan(text, here, vars, lib, null, new Batch.Selection(mode, in, ids)), null);
     }
 
@@ -512,7 +512,7 @@ final class Manager {
      * יוצרים (מספר במסד; 0 — הבית); name — השם שהוקלד, כלשונו.
      */
     static Act onListNew(String mode, long in, String name, java.io.File here, java.util.Map<String, String> vars, Library lib) {
-        String text = Commands.HE_MD + " " + ListCmd.MANUAL + " %" + Batch.V_SELECTED + "%\n";
+        String text = Commands.HE_MD + " " + ListCmd.MANUAL + " %" + Syntax.V_SELECTED + "%\n";
         return new Act(text, Batch.plan(text, here, vars, lib, null, new Batch.Selection(mode, in, name)), null);
     }
 
@@ -523,7 +523,7 @@ final class Manager {
     static Act onListNote(String mode, long in, boolean title, String text, String listPath, java.io.File here,
                           java.util.Map<String, String> vars, Library lib) {
         boolean named = listPath != null && !listPath.trim().isEmpty();
-        String line = Verbs.CREATE + " " + (title ? Verbs.TITLE_WORD : Verbs.NOTE_WORD) + " %" + Batch.V_SELECTED + "%"
+        String line = Verbs.CREATE + " " + (title ? Verbs.TITLE_WORD : Verbs.NOTE_WORD) + " %" + Syntax.V_SELECTED + "%"
                 + (named ? " \"" + listPath.trim() + "\"" : "") + "\n";
         return new Act(line, Batch.plan(line, here, vars, lib, null, new Batch.Selection(mode, named ? 0 : in, text)), null);
     }
@@ -543,7 +543,7 @@ final class Manager {
      */
     static Act onSmartNew(String mode, long in, String name, String cond, java.util.Map<String, String> props, String taken,
                           java.io.File here, java.util.Map<String, String> vars, Library lib) {
-        String text = Verbs.CREATE + " " + Verbs.LIST + " " + Verbs.SMART_WORD + " %" + Batch.V_NEW_NAME + "% %" + Batch.V_CONTENT + "%"
+        String text = Verbs.CREATE + " " + Verbs.LIST + " " + Verbs.SMART_WORD + " %" + Syntax.V_NEW_NAME + "% %" + Syntax.V_CONTENT + "%"
                 + (taken == null || taken.isEmpty() ? "" : " " + Syntax.SW_TAKEN + taken) + "\n";
         return new Act(text, Batch.plan(text, here, vars, lib, null, new Batch.Selection(mode, in, name, cond, props)), null);
     }
@@ -554,7 +554,7 @@ final class Manager {
      */
     static Act onSmartEdit(String mode, long id, String name, String cond, java.util.Map<String, String> props, java.io.File here,
                            java.util.Map<String, String> vars, Library lib) {
-        String text = Verbs.UPDATE + " " + Verbs.LIST + " " + Verbs.SMART_WORD + " %" + Batch.V_SELECTED + "% %" + Batch.V_CONTENT + "%\n";
+        String text = Verbs.UPDATE + " " + Verbs.LIST + " " + Verbs.SMART_WORD + " %" + Syntax.V_SELECTED + "% %" + Syntax.V_CONTENT + "%\n";
         Batch.Selection sel = new Batch.Selection(mode, 0, name, cond, props);
         sel.ids.add(id);
         return new Act(text, Batch.plan(text, here, vars, lib, null, sel), null);
@@ -579,7 +579,7 @@ final class Manager {
                          java.util.Map<String, String> vars, Library lib) {
         String sw = dirs.isEmpty() ? "" : how == FOLDER_FLAT ? " " + ListCmd.SW_FLAT
                 : (how == FOLDER_LIVE ? " " + ListCmd.SW_LIVE : "") + " " + Syntax.SW_TAKEN + Syntax.TAKEN_RENAME;
-        String text = Commands.word(Commands.get("COPY")) + " %" + Batch.V_SELECTED + "% " + ListCmd.MANUAL + " %" + Batch.V_SELECTED + "%" + sw + "\n";
+        String text = Commands.word(Commands.get("COPY")) + " %" + Syntax.V_SELECTED + "% " + ListCmd.MANUAL + " %" + Syntax.V_SELECTED + "%" + sw + "\n";
         Batch.Selection sel = new Batch.Selection(mode, list, new java.util.ArrayList<Long>());
         sel.files.addAll(paths);
         sel.dirs.addAll(dirs);
@@ -588,13 +588,13 @@ final class Manager {
 
     /** מבנה 121: סדר ידני של מה שנבחר ברשימה in — "עדכן רשימה %נבחרים% /מקום:<איך>". how — DbMore.UP … BOTTOM. */
     static Act onListOrder(String mode, long in, java.util.List<Long> ids, int how, java.io.File here, java.util.Map<String, String> vars, Library lib) {
-        String text = Verbs.UPDATE + " " + Verbs.LIST + " %" + Batch.V_SELECTED + "% " + Verbs.SW_PLACE + Verbs.PLACES[how] + "\n";
+        String text = Verbs.UPDATE + " " + Verbs.LIST + " %" + Syntax.V_SELECTED + "% " + Verbs.SW_PLACE + Verbs.PLACES[how] + "\n";
         return new Act(text, Batch.plan(text, here, vars, lib, null, new Batch.Selection(mode, in, ids)), null);
     }
 
     /** מבנה 121: העיצוב של רשימה — "עדכן רשימה %נבחרים% /עיצוב:%תוכן%". name — שם העיצוב, כלשונו ("" — לרשת). */
     static Act onListDesign(String mode, long list, String name, java.io.File here, java.util.Map<String, String> vars, Library lib) {
-        String text = Verbs.UPDATE + " " + Verbs.LIST + " %" + Batch.V_SELECTED + "% " + Verbs.SW_DESIGN + "%" + Batch.V_CONTENT + "%\n";
+        String text = Verbs.UPDATE + " " + Verbs.LIST + " %" + Syntax.V_SELECTED + "% " + Verbs.SW_DESIGN + "%" + Syntax.V_CONTENT + "%\n";
         Batch.Selection sel = new Batch.Selection(mode, 0, "", name, null);
         sel.ids.add(list);
         return new Act(text, Batch.plan(text, here, vars, lib, null, sel), null);
@@ -619,7 +619,7 @@ final class Manager {
      * מפוענחים. אותו כלל כמו בשורה כתובה (Conf.SETTINGS): הגדרה שאינה מוכרת, או ערך שאינו מתאים — סירוב מהתכנון.
      */
     static Act onSetting(String key, String value, java.io.File here, java.util.Map<String, String> vars, Library lib) {
-        String text = Commands.word(Commands.get(Syntax.SET)) + " \"%" + Batch.V_NEW_NAME + "%\" \"%" + Batch.V_CONTENT + "%\"\n";
+        String text = Commands.word(Commands.get(Syntax.SET)) + " \"%" + Syntax.V_NEW_NAME + "%\" \"%" + Syntax.V_CONTENT + "%\"\n";
         return new Act(text, Batch.plan(text, here, vars, lib, null, new Batch.Selection(java.util.Collections.<String>emptyList(),
                 java.util.Collections.<String>emptyList(), null, key, value)), null);
     }
@@ -650,8 +650,8 @@ final class Manager {
      */
     static Act onListPaste(String mode, boolean move, long from, java.util.List<Long> ids, long dest, java.io.File here,
                            java.util.Map<String, String> vars, Library lib) {
-        String text = Commands.word(Commands.get(move ? "MOVE" : "COPY")) + " " + ListCmd.MANUAL + " %" + Batch.V_SELECTED + "% " + ListCmd.MANUAL
-                + " %" + Batch.V_SELECTED + "%\n";
+        String text = Commands.word(Commands.get(move ? "MOVE" : "COPY")) + " " + ListCmd.MANUAL + " %" + Syntax.V_SELECTED + "% " + ListCmd.MANUAL
+                + " %" + Syntax.V_SELECTED + "%\n";
         Batch.Selection sel = new Batch.Selection(mode, from, ids);
         sel.to = dest;
         return new Act(text, Batch.plan(text, here, vars, lib, null, sel), null);
@@ -663,7 +663,7 @@ final class Manager {
      */
     static Act onListEdit(String mode, long id, String name, java.util.Map<String, String> props, java.io.File here,
                           java.util.Map<String, String> vars, Library lib) {
-        String text = Verbs.UPDATE + " " + Verbs.LIST + " %" + Batch.V_SELECTED + "%\n";
+        String text = Verbs.UPDATE + " " + Verbs.LIST + " %" + Syntax.V_SELECTED + "%\n";
         Batch.Selection sel = new Batch.Selection(mode, 0, name, "", props);
         sel.ids.add(id);
         return new Act(text, Batch.plan(text, here, vars, lib, null, sel), null);

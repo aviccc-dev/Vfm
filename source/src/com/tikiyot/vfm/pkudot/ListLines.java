@@ -54,14 +54,14 @@ final class ListLines {
         for (int i = 0; i < lp.sides.size(); i++) {
             ListCmd.Side x = lp.sides.get(i);
             if (x.list()) {
-                if (Parse.var(Batch.V_SELECTED).equals(x.raw)) x.picked = true;             // מבנה 85: מה שנבחר במסך הרשימות — מספרים, לא דרך של שמות
+                if (Parse.var(Syntax.V_SELECTED).equals(x.raw)) x.picked = true;             // מבנה 85: מה שנבחר במסך הרשימות — מספרים, לא דרך של שמות
                 else ListCmd.resolve(x, vars);
                 continue;
             }
             String[] err = {null};
             String p = Parse.path(x.raw, here, vars, err);
             if (p == null) { s.error = err[0]; return; }
-            if (p.equals(Batch.SELECTED_MARK)) {                                      // מבנה 114: הקבצים שנבחרו במסך — אל רשימה
+            if (p.equals(Syntax.SELECTED_MARK)) {                                      // מבנה 114: הקבצים שנבחרו במסך — אל רשימה
                 Batch.Selection sel = sim.selected;
                 if (i != 0 || sel == null || (sel.files.isEmpty() && sel.dirs.isEmpty())) { s.error = Words.Cmd.NOTHING_SELECTED; return; }
                 if (!sel.dirs.isEmpty() && !dirToList) { s.error = Words.ListCmdW.FOLDER_TO_LIST; return; }

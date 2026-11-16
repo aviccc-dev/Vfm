@@ -230,7 +230,7 @@ final class Verbs {
                     else if (w.startsWith("/") || !c.arg.isEmpty()) c.error = Words.Verb.usage(UPDATE);
                     else c.arg = unquote(w);
                 }
-                boolean picked = Parse.var(Batch.V_SELECTED).equals(c.arg);     // מהמסך — מה שבטופס, מהבחירה
+                boolean picked = Parse.var(Syntax.V_SELECTED).equals(c.arg);     // מהמסך — מה שבטופס, מהבחירה
                 if (c.arg.isEmpty() || (c.edit.isEmpty() && !picked) || (c.edit.containsKey(E_NAME) && c.edit.get(E_NAME).trim().isEmpty())
                         || (c.edit.containsKey(E_PLACE) && place(c.edit.get(E_PLACE)) < 0))
                     c.error = Words.Verb.usage(UPDATE);                          // שם ריק בשורה — שגיאה (ה4); מקום לא מוכר

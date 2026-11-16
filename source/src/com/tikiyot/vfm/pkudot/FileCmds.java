@@ -63,7 +63,7 @@ final class FileCmds {
         if (cmd.equals("MD")) {
             if (paths.size() != 1) { s.error = Commands.usage(cmd); return; }
             File d = new File(paths.get(0));
-            if (d.getName().equals(Batch.NAME_TOKEN)) {                               // מבנה 79: "%יעד%\%שם-חדש%" — תיקייה חדשה מהמסך
+            if (d.getName().equals(Syntax.NAME_TOKEN)) {                               // מבנה 79: "%יעד%\%שם-חדש%" — תיקייה חדשה מהמסך
                 makeSelected(s, cmd, d, sim);
                 return;
             }
@@ -109,7 +109,7 @@ final class FileCmds {
         } else if (cmd.equals("DEL")) {
             if (paths.size() != 1) { s.error = Commands.usage(cmd); return; }
             if (s.recursive) { s.error = Words.Cmd.DEL_S; return; }
-            if (paths.get(0).equals(Batch.SELECTED_MARK)) {                           // מבנה 73: מה שנבחר במסך — קבצים, וגם תיקיות שלמות
+            if (paths.get(0).equals(Syntax.SELECTED_MARK)) {                           // מבנה 73: מה שנבחר במסך — קבצים, וגם תיקיות שלמות
                 selected(s, flt, sim, cmd);
                 if (s.error != null) return;
                 List<String> what = new ArrayList<String>();
@@ -125,7 +125,7 @@ final class FileCmds {
                 sim.gone.add(f);
                 sim.added.remove(f);
             }
-        } else if ((cmd.equals("COPY") || cmd.equals("MOVE")) && !paths.isEmpty() && paths.get(0).equals(Batch.SELECTED_MARK)) {
+        } else if ((cmd.equals("COPY") || cmd.equals("MOVE")) && !paths.isEmpty() && paths.get(0).equals(Syntax.SELECTED_MARK)) {
             fromSelected(s, cmd, paths, flt, sim);                               // מבנה 77: מה שנבחר במסך — אל תיקייה
         } else if (cmd.equals("COPY") && paths.size() == 2 && paths.get(1).equals(Syntax.SHARE_MARK)) {   // 203: לשיתוף
             s.share = true;
@@ -172,7 +172,7 @@ final class FileCmds {
                 s.error = Commands.usage(cmd);
                 return;
             }
-            if (paths.get(0).equals(Batch.SELECTED_MARK) || paths.get(1).equals(Batch.NAME_MARK)) {   // מבנה 78: מה שנבחר במסך, בשם שהוקלד בו
+            if (paths.get(0).equals(Syntax.SELECTED_MARK) || paths.get(1).equals(Syntax.NAME_MARK)) {   // מבנה 78: מה שנבחר במסך, בשם שהוקלד בו
                 renameSelected(s, cmd, paths, sim);
                 return;
             }
@@ -295,8 +295,8 @@ final class FileCmds {
     static String setsMisuse(String cmd, List<String> paths) {
         for (int i = 0; i < paths.size(); i++) {
             String p = paths.get(i);
-            if (p.startsWith(Batch.SELECTED_MARK)) {                                  // מבנה 73, 77: %נבחרים% כיחידה — רק לבדו, כמקור של "מחק", "העתק", "העבר"
-                if (!(cmd.equals("DEL") || cmd.equals("COPY") || cmd.equals("MOVE") || cmd.equals("REN")) || i != 0 || !p.equals(Batch.SELECTED_MARK))
+            if (p.startsWith(Syntax.SELECTED_MARK)) {                                  // מבנה 73, 77: %נבחרים% כיחידה — רק לבדו, כמקור של "מחק", "העתק", "העבר"
+                if (!(cmd.equals("DEL") || cmd.equals("COPY") || cmd.equals("MOVE") || cmd.equals("REN")) || i != 0 || !p.equals(Syntax.SELECTED_MARK))
                     return Words.Cmd.SELECTED_ONLY_SOURCE;
                 continue;
             }
@@ -425,7 +425,7 @@ final class FileCmds {
      */
     static void renameSelected(Batch.Step s, String cmd, List<String> paths, Sim sim) {
         Batch.Selection sel = sim.selected;
-        if (sel == null || !paths.get(0).equals(Batch.SELECTED_MARK) || !paths.get(1).equals(Batch.NAME_MARK) || sel.name == null) {
+        if (sel == null || !paths.get(0).equals(Syntax.SELECTED_MARK) || !paths.get(1).equals(Syntax.NAME_MARK) || sel.name == null) {
             s.error = Commands.usage(cmd);
             return;
         }

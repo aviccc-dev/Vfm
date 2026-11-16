@@ -22,7 +22,7 @@ final class SmallCmds {
     static void planSet(final Batch.Step s, List<String> tk, Map<String, String> vars, Sim sim) {
         if (tk.size() != 3) { s.error = Words.Cmd.SET_USAGE; return; }
         Batch.Selection sel = sim.selected;
-        boolean picked = tk.get(1).equals(Parse.var(Batch.V_NEW_NAME)) && tk.get(2).equals(Parse.var(Batch.V_CONTENT));
+        boolean picked = tk.get(1).equals(Parse.var(Syntax.V_NEW_NAME)) && tk.get(2).equals(Parse.var(Syntax.V_CONTENT));
         if (picked && (sel == null || sel.name == null || sel.content == null)) { s.error = Words.Cmd.NOTHING_SELECTED; return; }
         final String key = picked ? sel.name : Verbs.withVars(tk.get(1), vars).trim();
         String raw = picked ? sel.content : Verbs.withVars(tk.get(2), vars);
@@ -187,7 +187,7 @@ final class SmallCmds {
         String[] err = {null};
         String p = tk.size() == 2 ? Parse.path(tk.get(1), here, vars, err) : null;
         if (p == null) { s.error = err[0] != null ? err[0] : pack ? Words.Cmd.PACK_USAGE : Words.Cmd.UNPACK_USAGE; return true; }
-        if (p.equals(Batch.SELECTED_MARK)) {                                      // מהמסך: התיקייה / הקובץ שנבחרו
+        if (p.equals(Syntax.SELECTED_MARK)) {                                      // מהמסך: התיקייה / הקובץ שנבחרו
             Batch.Selection sel = sim.selected;
             List<String> one = sel == null ? null : pack ? sel.dirs : sel.files;
             if (one == null || one.size() != 1) { s.error = Words.Cmd.NOTHING_SELECTED; return true; }
@@ -334,9 +334,9 @@ final class SmallCmds {
         String[] err = {null};
         String p = Parse.path(a.get(0), here, vars, err);
         if (p == null) { s.error = err[0]; return true; }
-        if (new File(p).getName().equals(Batch.NAME_TOKEN) || (a.size() == 2 && a.get(1).equals(Parse.var(Batch.V_CONTENT)) && sim.selected != null
+        if (new File(p).getName().equals(Syntax.NAME_TOKEN) || (a.size() == 2 && a.get(1).equals(Parse.var(Syntax.V_CONTENT)) && sim.selected != null
                 && sim.selected.content != null)) {                         // מבנה 80: קובץ חדש מהמסך
-            writeSelected(s, new File(p), append || a.size() != 2 || !a.get(1).equals(Parse.var(Batch.V_CONTENT)), taken, sim);
+            writeSelected(s, new File(p), append || a.size() != 2 || !a.get(1).equals(Parse.var(Syntax.V_CONTENT)), taken, sim);
             return true;
         }
         if (Physical.programFile(p) != null) { s.error = Physical.programFile(p); return true; }   // מבנה 45
@@ -427,7 +427,7 @@ final class SmallCmds {
     static void writeSelected(final Batch.Step s, File marked, boolean misuse, String taken, Sim sim) {
         final Batch.Selection sel = sim.selected;
         File parent = marked.getParentFile();
-        if (misuse || sel == null || sel.name == null || sel.content == null || sel.dest == null || !marked.getName().equals(Batch.NAME_TOKEN)
+        if (misuse || sel == null || sel.name == null || sel.content == null || sel.dest == null || !marked.getName().equals(Syntax.NAME_TOKEN)
                 || parent == null || !parent.getAbsolutePath().equals(Paths.clean(sel.dest))) {
             s.error = Words.DbCmd.WRITE_USAGE;
             return;
@@ -469,8 +469,8 @@ final class SmallCmds {
         String[] err = {null};
         final String p = Parse.path(tk.get(1), here, vars, err);
         if (p == null) { s.error = err[0] != null ? err[0] : Words.DbCmd.UNTRASH_USAGE; return; }
-        if (p.startsWith(Batch.SELECTED_MARK)) {                                      // מבנה 81: מה שנבחר במסך הסל
-            if (p.equals(Batch.SELECTED_MARK)) trashSelected(s, sim, true);
+        if (p.startsWith(Syntax.SELECTED_MARK)) {                                      // מבנה 81: מה שנבחר במסך הסל
+            if (p.equals(Syntax.SELECTED_MARK)) trashSelected(s, sim, true);
             else s.error = Words.Cmd.SELECTED_ONLY_SOURCE;
             return;
         }
@@ -514,8 +514,8 @@ final class SmallCmds {
             String[] err = {null};
             p = Parse.path(tk.get(1), here, vars, err);
             if (p == null) { s.error = err[0] != null ? err[0] : Words.DbCmd.PURGE_USAGE; return; }
-            if (p.startsWith(Batch.SELECTED_MARK)) {                                  // מבנה 81: מה שנבחר במסך הסל
-                if (p.equals(Batch.SELECTED_MARK)) trashSelected(s, sim, false);
+            if (p.startsWith(Syntax.SELECTED_MARK)) {                                  // מבנה 81: מה שנבחר במסך הסל
+                if (p.equals(Syntax.SELECTED_MARK)) trashSelected(s, sim, false);
                 else s.error = Words.Cmd.SELECTED_ONLY_SOURCE;
                 return;
             }
