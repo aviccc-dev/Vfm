@@ -739,10 +739,6 @@ public final class Words {
         public static final String CANT_MOVE = "אי אפשר להעביר את \"";
         public static final String DEST_APP_NOT = "אי אפשר לבחור את תיקיית התוכנה כיעד";
         public static final String DEST_TRASH_NOT = "אי אפשר לבחור את סל המחזור כיעד";
-        public static final String CANT = "אי אפשר ";
-        public static final String TO_COPY = "להעתיק";
-        public static final String TO_MOVE = "להעביר";
-        public static final String FOLDER_INTO_ITSELF = " תיקייה לתוך עצמה";
         public static final String NO_ROOM_IN = "אין מספיק מקום ב\"";
         public static final String NEED = "צריך ";
         public static final String FREE = " · פנוי ";
