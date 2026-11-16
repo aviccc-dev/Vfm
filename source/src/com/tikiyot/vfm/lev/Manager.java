@@ -411,6 +411,20 @@ final class Manager {
         }
     }
 
+    /**
+     * מבנה 211: קובץ בתוך האזור — לסל (לא לצמיתות; הוראות, סעיף 4). כאן — הגרסאות הקודמות של תוסף שבא עם התוכנה, ותוספי בדיקה
+     * שירדו (המשתמש, 16.11.2026: "אפשר להוסיף"). null — עבר לסל; אחרת — למה לא.
+     */
+    static String ownTrash(java.io.File zone, java.io.File f, Library lib) {
+        if (!inZone(zone, f)) return Words.PermitW.NOT_IN_ZONE;
+        Permit.open();
+        try {
+            return Physical.oldToTrash(lib, f);
+        } finally {
+            Permit.close();
+        }
+    }
+
     /** מבנה 140: קובץ, או תיקייה ריקה, בתוך האזור — יוצאים. true — יצא. */
     static boolean ownDrop(java.io.File zone, java.io.File f) {
         if (!inZone(zone, f)) return false;

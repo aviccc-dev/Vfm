@@ -101,11 +101,18 @@ public final class LabScreen extends Activity {
             int vc = getPackageManager().getPackageInfo(getPackageName(), 0).versionCode;
             if ((p.getInt("bundled", 0) == vc && !force) || !Files.hasAccess(this)) return;
             String[] names = getAssets().list(Lab.BUNDLED);
+            Library lib = Library.get(this);
+            int old = 0;
             if (names != null) for (String n : names)
                 if (Lab.isHtml(n)) {
-                    File f = Lab.addBundled(Lab.root(), DbExamples.asset(this, Lab.BUNDLED + "/" + n), n);
+                    String html = DbExamples.asset(this, Lab.BUNDLED + "/" + n);
+                    File f = Lab.addBundled(Lab.root(), html, n);
                     if (f != null) Log.i("תוסף מההתקנה: " + f.getName());   // בכונן
+                    String[] nv = Lab.nameOf(html, n);
+                    old += Lab.keepOnly(Lab.root(), nv[0], nv[1], lib);         // מבנה 211: הגרסאות הקודמות — לסל
                 }
+            old += Lab.retire(Lab.root(), lib);                                 // מבנה 211: תוספי בדיקה שירדו — לסל
+            if (old > 0) Log.i("תוספים: גרסאות קודמות ותוספי בדיקה שירדו — לסל: " + old);   // בכונן
             p.edit().putInt("bundled", vc).apply();
         } catch (Throwable t) {
             Log.e("LabScreen.bundled", t);

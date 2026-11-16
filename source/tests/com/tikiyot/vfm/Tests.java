@@ -1791,6 +1791,23 @@ public final class Tests {
             write(d204, "תוסף.txt", "<meta name=\"vfm-plugin\" content=\"שלי\">");
             check("מבנה 204: עמוד שכתוב בו שהוא תוסף (גם בסימון הישן) — תוסף; דף html רגיל וקובץ שאינו html — לא",
                     Lab.isPlugin(plug) && Lab.isPlugin(old) && !Lab.isPlugin(plain) && !Lab.isPlugin(txt) && !Lab.isPlugin(new File(d204, "אין.html")));
+            {   // מבנה 211: תוסף שבא עם התוכנה — רק הגרסה שבאה איתה נשארת; הקודמות ותוספי הבדיקה שירדו — לסל, דרך המנהל
+                File r211 = new File(d204, "תוספים");
+                r211.mkdirs();
+                String[][] pages211 = {{"תוסף עורך 15.html", "עורך", "15"}, {"תוסף עורך 16.html", "עורך", "16"}, {"תוסף עורך 17.html", "עורך", "17"},
+                        {"תוסף בדיקה 4.html", "עורך — בדיקת תפריטים", "4"}, {"תוסף אחר 2.html", "אחר", "2"}};
+                for (String[] pg : pages211)
+                    write(r211, pg[0], "<meta name=\"vfm-plugin\" content=\"" + pg[1] + "\"><meta name=\"vfm-plugin-version\" content=\"" + pg[2] + "\">");
+                Library lib211 = Library.forTests(Collections.singletonList(built("מבנה211", d204)));
+                int kept211 = Lab.keepOnly(r211, "עורך", "17", lib211), gone211 = Lab.retire(r211, lib211);
+                File trash211 = new File(d204, Index.TRASH);
+                String[] inTrash211 = trash211.list();
+                check("מבנה 211: הגרסאות הקודמות של העורך (2) ותוסף הבדיקה (1) — לסל; העורך 17 ותוסף אחר — נשארו (" + kept211 + ", " + gone211 + ")",
+                        kept211 == 2 && gone211 == 1 && new File(r211, "תוסף עורך 17.html").isFile() && new File(r211, "תוסף אחר 2.html").isFile()
+                                && !new File(r211, "תוסף עורך 16.html").exists() && !new File(r211, "תוסף בדיקה 4.html").exists()
+                                && inTrash211 != null && inTrash211.length >= 3);
+                check("מבנה 211: פעם שנייה — אין מה להעביר", Lab.keepOnly(r211, "עורך", "17", lib211) == 0 && Lab.retire(r211, lib211) == 0);
+            }
             check("מבנה 204: השם והגרסה של תוסף מחוץ לתיקיית התוספים — מתוך העמוד", Lab.page(plug, null).name.equals("שלי") && Lab.page(plug, null).ver.equals("2"));
             String ui204 = read(new File(System.getProperty("vfm.src"), "src/com/tikiyot/vfm/masachim/rechivim/Ui.java"));
             String vu204 = read(new File(System.getProperty("vfm.src"), "src/com/tikiyot/vfm/masachim/rechivim/VerbsUi.java"));

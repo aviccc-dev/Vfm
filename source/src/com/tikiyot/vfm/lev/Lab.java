@@ -116,6 +116,31 @@ final class Lab {
      * התוספים — קובץ רגיל שם, כמו כל גרסה אחרת — אם אין שם כבר אותו תוסף באותה גרסה. html — תוכן העמוד; fileName — שמו
      * בהתקנה (לשם ולגרסה, אם אינם כתובים בעמוד). מחזיר את הקובץ שנכתב, או null — כבר יש, או נכשל.
      */
+    /**
+     * מבנה 211 (המשתמש, 16.11.2026, על העורך הישן שנשאר ברשימת התוספים: "אפשר להוסיף"): תוסף שבא עם התוכנה — רק הגרסה שבאה
+     * איתה נשארת; הגרסאות הקודמות שלו עוברות לסל (דרך המנהל; אפשר להחזיר). וגם תוספי בדיקה שירדו (RETIRED) — כולם לסל.
+     * נקרא פעם אחת לכל גרסה של התוכנה, יחד עם ההתקנה של התוספים שבאים איתה. מחזיר כמה עברו לסל.
+     */
+    static int keepOnly(File root, String name, String ver, Library lib) {
+        int n = 0;
+        for (Page p : versions(root, name))
+            if (!p.ver.equals(ver)) {
+                String no = Manager.ownTrash(root, p.file, lib);
+                if (no == null) n++;
+                else Log.i("Lab.keepOnly: " + p.file.getName() + " — " + no);
+            }
+        return n;
+    }
+
+    /** מבנה 211: תוספי בדיקה שהוחלפו בתוסף שבא עם התוכנה — "עורך — בדיקת תפריטים" (העורך 17, צעד 202), "עורך — בדיקת עיצוב". */
+    static final String[] RETIRED = {"עורך — בדיקת תפריטים", "עורך — בדיקת עיצוב"};   // בכונן — השמות שבעמודים
+
+    static int retire(File root, Library lib) {
+        int n = 0;
+        for (String name : RETIRED) n += keepOnly(root, name, "\u0000", lib);   // אין גרסה כזו — כולן יוצאות
+        return n;
+    }
+
     static File addBundled(File root, String html, String fileName) {
         String[] nv = nameOf(html, fileName);
         if (version(root, nv[0], nv[1]) != null) return null;
