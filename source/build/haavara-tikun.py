@@ -2,7 +2,7 @@
 import os
 SRC=os.environ.get('SRC','Batch')
 import io,re,sys,subprocess
-new=sys.argv[1]; P='src/com/tikiyot/vfm/pkudot/'
+new=sys.argv[1]; P='src/com/tikiyot/vfm/'+os.environ.get('DIR','pkudot')+'/'
 for it in range(6):
     r=subprocess.run('javac -encoding UTF-8 -nowarn -Xmaxerrs 500 -d /tmp/jc -cp /home/claude/tools/android.jar $(find src -name "*.java")',shell=True,capture_output=True,text=True)
     errs=r.stdout+r.stderr

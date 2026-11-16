@@ -1,9 +1,10 @@
-"""python3 source/build/haavara.py <קובץ חדש> "<הערת ראש>" שם1,שם2 — מבנה 165: מעביר מ־Batch פונקציות / מחלקות בשמן לקובץ חדש בתיקיית הפקודות, ומחליף את הפניות. להריץ מתוך source."""
+"""python3 source/build/haavara.py <קובץ חדש> "<הערת ראש>" שם1,שם2 — מבנה 165: מעביר מ־Batch פונקציות / מחלקות בשמן לקובץ חדש בתיקיית הפקודות, ומחליף את הפניות. להריץ מתוך source.
+מבנה 178: גם לתיקיות אחרות — DIR=chomer/konan SRC=Physical (ברירת המחדל: pkudot, Batch)."""
 import os
 SRC=os.environ.get('SRC','Batch')
 import io,re,glob,sys
 new,hdr,names=sys.argv[1],sys.argv[2],sys.argv[3].split(',')
-P='src/com/tikiyot/vfm/pkudot/'
+P='src/com/tikiyot/vfm/'+os.environ.get('DIR','pkudot')+'/'
 s=io.open(P+SRC+'.java',encoding='utf-8').read(); L=s.split('\n')
 def start_of(i):
     j=i
@@ -13,7 +14,7 @@ def start_of(i):
 spans=[];i=0
 while i<len(L):
     l=L[i]
-    m=re.match(r'    (?:private\s+)?static\s+(?:final\s+)?(?:(?:class|interface)\s+(\w+)|[\w<>\[\], .]+?\s+(\w+)\s*[(=])',l)
+    m=re.match(r'    (?:private\s+|public\s+)?static\s+(?:final\s+)?(?:(?:class|interface)\s+(\w+)|[\w<>\[\], .]+?\s+(\w+)\s*[(=])',l)
     if m:
         n=m.group(1) or m.group(2); e=i
         if l.rstrip().endswith('{') or (m.group(2) and '(' in l and '=' not in l.split('(')[0]):   # שיטה, גם כשהחתימה בכמה שורות
@@ -36,7 +37,7 @@ for n in fns: s=re.sub(r'(?<![\w.$])'+n+r'\(',new+'.'+n+'(',s)
 for n in caps: s=re.sub(r'(?<![\w.$"])'+n+r'\b',new+'.'+n,s)
 io.open(P+SRC+'.java','w',encoding='utf-8').write(s)
 bt='\n'.join(body).replace('    private static ','    static ')
-for n in ['Step','Plan','Selection','Listener','AsIfRow']:
+for n in (['Step','Plan','Selection','Listener','AsIfRow'] if SRC=='Batch' else []):
     bt=re.sub(r'(?<![\w.])'+n+r'\b(?=[\s.(<>\[\],)])',SRC+'.'+n,bt)
 out='package com.tikiyot.vfm;\n\n'+hdr+'\n\nimport java.io.File;\nimport java.util.ArrayList;\nimport java.util.Arrays;\nimport java.util.HashMap;\nimport java.util.LinkedHashMap;\nimport java.util.List;\nimport java.util.Locale;\nimport java.util.Map;\n\nfinal class '+new+' {\n\n    private '+new+'() { }\n\n'+bt.rstrip()+'\n}\n'
 io.open(P+new+'.java','w',encoding='utf-8').write(out)
