@@ -2972,11 +2972,28 @@ public final class Tests {
             Manager.Act own78a = Manager.onRename(own78, "הגדרה-78.ini", Paths.data(), v78, lib78);
             check("מבנה 78: קובץ של התוכנה — סירוב מהתכנון, בנוסח של המסך (" + own78a.error() + ")", own78a.error() != null
                     && own78a.error().equals(Words.Disk.CANT_RENAME + "הגדרה-78.ini\": " + DiskRules.programFile(own78)));
-            check("מבנה 78: קובץ שכבר איננו — סירוב מהתכנון", Words.FILE_NOT_AT_PATH.equals(Manager.onRename(new File(d78, "אין.txt").getAbsolutePath(), "אין.txt",
+            // מבנה 196 (ה8, המשתמש 16.11.2026): הנוסח האחד — של קובץ הפקודות, גם מהמסך
+            check("מבנה 78 / 196: קובץ שכבר איננו — סירוב מהתכנון, בנוסח האחד", (Words.FILE_NOT_FOUND + ": אין.txt").equals(Manager.onRename(new File(d78, "אין.txt").getAbsolutePath(), "אין.txt",
                     Paths.data(), v78, lib78).error()));
-            check("מבנה 78: שם תפוס — סירוב מהתכנון, בנוסח של המסך", (Words.Disk.ALREADY_IN_FOLDER + "תפוס.txt\"").equals(
+            check("מבנה 78 / 196: שם תפוס — סירוב מהתכנון, בנוסח האחד", Words.Cmd.alreadyHas("תפוס.txt").equals(
                     Manager.onRename(a78, "תפוס.txt", Paths.data(), v78, lib78).error())
-                    && (Words.Disk.ALREADY_IN_FOLDER + "תיקייה\"").equals(Manager.onRename(a78, "תיקייה", Paths.data(), v78, lib78).error()));
+                    && Words.Cmd.alreadyHas("תיקייה").equals(Manager.onRename(a78, "תיקייה", Paths.data(), v78, lib78).error()));
+            {   // מבנה 196 (ה8): השורה הכתובה והמסך — אותו כלל, אותו נוסח, ובאותו רגע: בתכנון, לפני שמשהו רץ
+                String ren196 = Commands.word(Commands.get("REN"));
+                Batch.Plan pOwn = Batch.plan(ren196 + " \"" + own78 + "\" \"אחר-196.ini\"\n", Paths.data(), v78, lib78, null);
+                Batch.Plan pBad = Batch.plan(ren196 + " \"" + a78 + "\" \"א:ב.txt\"\n", Paths.data(), v78, lib78, null);
+                Batch.Plan pTaken = Batch.plan(ren196 + " \"" + a78 + "\" \"תפוס.txt\"\n", Paths.data(), v78, lib78, null);
+                Batch.Plan pSame = Batch.plan(ren196 + " \"" + a78 + "\" \"א.txt\"\n", Paths.data(), v78, lib78, null);
+                String e196 = pOwn.steps.get(0).error;
+                check("מבנה 196: שורה כתובה — קובץ של התוכנה נתפס כבר בתכנון (עד כאן: רק בהרצה), והקובץ אינו רץ (" + e196 + ")",
+                        e196 != null && e196.equals(Manager.onRename(own78, "אחר-196.ini", Paths.data(), v78, lib78).error()) && pOwn.blocked());
+                check("מבנה 196: שורה כתובה — שם לא תקין נתפס בתכנון (" + pBad.steps.get(0).error + ")",
+                        pBad.steps.get(0).error != null && pBad.steps.get(0).error.equals(DiskRules.badName("א:ב.txt")) && pBad.blocked());
+                check("מבנה 196: שם תפוס — אותו נוסח בשורה הכתובה ומהמסך",
+                        Words.Cmd.alreadyHas("תפוס.txt").equals(pTaken.steps.get(0).error));
+                check("מבנה 196: אותו שם — אין מה לעשות, בשתי הדרכים (בלי שגיאה)", pSame.steps.get(0).error == null && pSame.steps.get(0).noop
+                        && Manager.onRename(a78, "א.txt", Paths.data(), v78, lib78).error() == null);
+            }
             check("מבנה 78: שם לא תקין — אותו סירוב של הכונן", DiskRules.badName("א/ב.txt") != null
                     && DiskRules.badName("א/ב.txt").equals(Manager.onRename(a78, "א/ב.txt", Paths.data(), v78, lib78).error())
                     && Manager.onRename(a78, "  ", Paths.data(), v78, lib78).error() != null);

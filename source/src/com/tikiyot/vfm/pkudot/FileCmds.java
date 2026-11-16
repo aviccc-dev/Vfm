@@ -211,21 +211,8 @@ final class FileCmds {
             renameSelected(s, cmd, paths, sim);
             return;
         }
-        File f = new File(paths.get(0));
         if (args.get(0).contains("*") || args.get(0).contains("?")) { s.error = Words.Cmd.REN_WILD; return; }
-        if (sim.isDir(f)) { s.error = Words.Cmd.REN_FOLDER; return; }                  // 1.22.5
-        if (!sim.isFile(f)) { s.error = Words.FILE_NOT_FOUND + ": " + args.get(0); return; }
-        String bad = DiskRules.badName(args.get(1));
-        if (bad != null) { s.error = bad; return; }
-        File to = new File(f.getParentFile(), args.get(1));
-        if (!to.getName().equalsIgnoreCase(f.getName()) && (sim.isFile(to) || sim.isDir(to))) {   // מבנה 43: גם תיקייה בשם הזה
-            s.error = Words.Cmd.alreadyHas(args.get(1));
-            return;
-        }
-        s.files.add(f.getAbsolutePath());
-        s.newName = args.get(1);
-        s.describe = Words.Cmd.rename(f.getName(), s.newName);
-        sim.move(f.getAbsolutePath(), to, false);
+        rename(s, new File(paths.get(0)), args.get(0), args.get(1), sim);
     }
 
     /** מבנה 176: הענף מתוך planFile. */
@@ -458,6 +445,31 @@ final class FileCmds {
      * כבר איננו, שם לא תקין, שם תפוס) נאמרים בתכנון ובנוסח של המסך. שם זהה לקיים — תקין, ואין מה לעשות: כך המסך שואל
      * "מותר לשנות לקובץ הזה שם?" עוד לפני שהמשתמש מקליד.
      */
+    /**
+     * מבנה 196 (ה8; הוראות, סעיף 2א — כל דבר נקבע במקום אחד): שינוי שם של קובץ — הכלל האחד, לשורה הכתובה ולמסך.
+     * המשתמש (16.11.2026): "שיעצור מההתחלה תמיד, וייתן הסבר" — כל סירוב נאמר כבר כאן, בתכנון (עד כאן, בשורה כתובה: קובץ של
+     * התוכנה ושם לא תקין התגלו רק בהרצה); והנוסח — אחד, של קובץ הפקודות ("בסדר"). shown — הקובץ כמו שנכתב (או שמו, מהמסך).
+     * אותו שם — אין מה לעשות (עד כאן, בשורה כתובה: תוכנן כשינוי שם).
+     */
+    static void rename(Batch.Step s, File f, String shown, String name, Sim sim) {
+        if (sim.isDir(f)) { s.error = Words.Cmd.REN_FOLDER; return; }                  // 1.22.5
+        String own = DiskRules.programFile(f.getAbsolutePath());
+        if (own != null) { s.error = Words.Disk.CANT_RENAME + f.getName() + "\": " + own; return; }
+        if (!sim.isFile(f)) { s.error = Words.FILE_NOT_FOUND + ": " + shown; return; }
+        String bad = DiskRules.badName(name);
+        if (bad != null) { s.error = bad; return; }
+        File to = new File(f.getParentFile(), name);
+        if (!to.getName().equalsIgnoreCase(f.getName()) && (sim.isFile(to) || sim.isDir(to))) {   // מבנה 43: גם תיקייה בשם הזה
+            s.error = Words.Cmd.alreadyHas(name);
+            return;
+        }
+        s.files.add(f.getAbsolutePath());
+        s.newName = name;
+        s.describe = Words.Cmd.rename(f.getName(), name);
+        if (name.equals(f.getName())) s.noop = true;
+        else sim.move(f.getAbsolutePath(), to, false);
+    }
+
     static void renameSelected(Batch.Step s, String cmd, List<String> paths, Sim sim) {
         Batch.Selection sel = sim.selected;
         if (sel == null || !paths.get(0).equals(Syntax.SELECTED_MARK) || !paths.get(1).equals(Syntax.NAME_MARK) || sel.name == null) {
@@ -468,21 +480,7 @@ final class FileCmds {
         if (!sel.dirs.isEmpty()) { s.error = Words.Cmd.REN_FOLDER; return; }
         if (sel.files.size() != 1) { s.error = Words.Cmd.SELECTED_ONE; return; }
         File f = new File(sel.files.get(0));
-        String own = DiskRules.programFile(f.getAbsolutePath());
-        if (own != null) { s.error = Words.Disk.CANT_RENAME + f.getName() + "\": " + own; return; }
-        if (!sim.isFile(f)) { s.error = Words.FILE_NOT_AT_PATH; return; }
-        String name = sel.name.trim(), bad = DiskRules.badName(name);
-        if (bad != null) { s.error = bad; return; }
-        File to = new File(f.getParentFile(), name);
-        if (!name.equalsIgnoreCase(f.getName()) && (sim.isFile(to) || sim.isDir(to))) {
-            s.error = Words.Disk.ALREADY_IN_FOLDER + name + "\"";
-            return;
-        }
-        s.files.add(f.getAbsolutePath());
-        s.newName = name;
-        s.describe = Words.Cmd.rename(f.getName(), name);
-        if (name.equals(f.getName())) s.noop = true;
-        else sim.move(f.getAbsolutePath(), to, false);
+        rename(s, f, f.getName(), sel.name.trim(), sim);                       // מבנה 196 (ה8): הכלל האחד — בראשי
     }
 
     /**
