@@ -61,84 +61,15 @@ final class FileCmds {
         }
         if (s.error != null) return;
         if (cmd.equals("MD")) {
-            if (paths.size() != 1) { s.error = Commands.usage(cmd); return; }
-            File d = new File(paths.get(0));
-            if (d.getName().equals(Syntax.NAME_TOKEN)) {                               // מבנה 79: "%יעד%\%שם-חדש%" — תיקייה חדשה מהמסך
-                makeSelected(s, cmd, d, sim);
-                return;
-            }
-            for (String x : sw)                                                 // מבנה 109: "להחליף" / "לשאול" — לא לתיקייה; לא בולעים בשקט
-                if (x.toUpperCase(Locale.ROOT).equals("/Y") || x.equals(Syntax.SW_TAKEN + Syntax.TAKEN_REPLACE) || x.equals(Syntax.SW_TAKEN + Syntax.TAKEN_ASK)) {
-                    s.error = Words.Cmd.MD_TAKEN_ONLY;
-                    return;
-                }
-            if (sim.isDir(d) && s.renameTaken) {                               // מבנה 109: /תפוס:לשנות-שם — בשם פנוי "(2)"
-                File free = d;
-                for (int k = 2; sim.isDir(free) || sim.isFile(free); k++) free = new File(d.getParentFile(), d.getName() + " (" + k + ")");
-                d = free;
-            } else if (sim.isDir(d)) {
-                if (s.skipTaken) {                                              // מבנה 109: /תפוס:לדלג — "המשך לשורה הבאה"
-                    s.noop = true;
-                    s.dest = d;
-                    s.describe = Words.Cmd.folderSkipped(d.getName());
-                    return;
-                }
-                s.error = Words.Cmd.folderTaken(d.getName());                  // מבנה 109 (המשתמש): "סירוב, אלא אם כן יש הוראה להמשיך"
-                return;
-            }
-            if (sim.isFile(d)) { s.error = Words.Cmd.exists(d.getName()); return; }
-            s.dest = d;
-            s.describe = Words.Cmd.newFolder(Bidi.path(d.getAbsolutePath()));
-            sim.dirs.add(d.getAbsolutePath());
-            sim.gone.remove(d.getAbsolutePath());                                // מ0.30 (ממצא 35): RD ואחריו MD לאותה תיקייה — היא קיימת
-            for (File up = d.getParentFile(); up != null && !sim.isDir(up); up = up.getParentFile()) {   // מ0.24: כמו mkdirs —
-                sim.dirs.add(up.getAbsolutePath());                                                    // גם התיקיות שמעל
-                sim.gone.remove(up.getAbsolutePath());
-            }
+            fileMd(s, cmd, args, paths, sw, flt, sim);
         } else if (cmd.equals("RD")) {
-            if (paths.size() != 1) { s.error = Commands.usage(cmd); return; }
-            File d = new File(paths.get(0));
-            if (!sim.isDir(d)) { s.error = Words.FOLDER_NOT_FOUND + ": " + args.get(0); return; }
-            if (!s.recursive && (!sim.files(d).isEmpty() || sim.hasSubdirs(d))) {
-                s.error = Words.Cmd.FOLDER_NOT_EMPTY;
-                return;
-            }
-            s.dirs.add(d.getAbsolutePath());
-            s.describe = Words.Cmd.folderToTrash(Bidi.path(d.getAbsolutePath()));
-            sim.wipe(d.getAbsolutePath());
+            fileRd(s, cmd, args, paths, sw, flt, sim);
         } else if (cmd.equals("DEL")) {
-            if (paths.size() != 1) { s.error = Commands.usage(cmd); return; }
-            if (s.recursive) { s.error = Words.Cmd.DEL_S; return; }
-            if (paths.get(0).equals(Syntax.SELECTED_MARK)) {                           // מבנה 73: מה שנבחר במסך — קבצים, וגם תיקיות שלמות
-                selected(s, flt, sim, cmd);
-                if (s.error != null) return;
-                List<String> what = new ArrayList<String>();
-                if (!s.files.isEmpty() || s.dirs.isEmpty()) what.add(Words.files(s.files.size()));
-                if (!s.dirs.isEmpty()) what.add(Words.folders(s.dirs.size()));
-                s.describe = Words.Cmd.toTrash(Batch.join(what, Words.Cmd.AND)) + filtered(s);
-                for (String d : s.dirs) sim.wipe(d);
-            } else {
-                match(s, paths.get(0), flt, false, sim);
-                if (s.error == null) s.describe = Words.Cmd.toTrash(Words.files(s.files.size())) + filtered(s);
-            }
-            for (String f : s.files) {
-                sim.gone.add(f);
-                sim.added.remove(f);
-            }
+            fileDel(s, cmd, args, paths, sw, flt, sim);
         } else if ((cmd.equals("COPY") || cmd.equals("MOVE")) && !paths.isEmpty() && paths.get(0).equals(Syntax.SELECTED_MARK)) {
             fromSelected(s, cmd, paths, flt, sim);                               // מבנה 77: מה שנבחר במסך — אל תיקייה
         } else if (cmd.equals("COPY") && paths.size() == 2 && paths.get(1).equals(Syntax.SHARE_MARK)) {   // 203: לשיתוף
-            s.share = true;
-            match(s, paths.get(0), flt, true, sim);                          // תיקייה — כמו שהיא (תיארז בשמה)
-            if (s.error != null) return;
-            if (!s.dirs.isEmpty() && !flt.none()) {
-                s.error = Words.Cmd.filterOnFolder(cmd + " \"" + args.get(0) + "\\*.*\" …");
-                return;
-            }
-            List<String> what = new ArrayList<String>();
-            if (!s.files.isEmpty() || s.dirs.isEmpty()) what.add(Words.files(s.files.size()));
-            if (!s.dirs.isEmpty()) what.add(Words.folders(s.dirs.size()));
-            s.describe = Words.Cmd.toShare(Batch.join(what, Words.Cmd.AND)) + filtered(s);
+            fileShare(s, cmd, args, paths, sw, flt, sim);
         } else if (cmd.equals("COPY") && s.stateWhen != Long.MIN_VALUE) {         // 1.21.0: שחזור
             CompareCmds.restore(s, args, paths, flt, sim);
         } else if (cmd.equals("COMP")) {                                      // 1.20.0
@@ -149,83 +80,187 @@ final class FileCmds {
         } else if ((cmd.equals("COPY") || cmd.equals("MOVE")) && s.recursive) {     // 1.19.0: שמירת מסלול
             keep(s, cmd, args, paths, flt, sim);
         } else if (cmd.equals("COPY") || cmd.equals("MOVE")) {
-            if (paths.size() != 2) { s.error = Commands.usage(cmd); return; }
-            File dest = new File(paths.get(1));
-            if (!sim.isDir(dest)) {
-                s.error = Words.Cmd.NO_DEST;
-                return;
-            }
-            s.dest = dest;
-            // מבנה 112 (ה7, המשתמש: "כמו במסך"): שם של תיקייה הוא התיקייה עצמה — גם בהעתקה (עד כאן: בהעתקה — הקבצים שבתוכה;
-            // בהעברה ומהמסך — התיקייה). מה שבתוכה בלבד: "תיקייה\*".
-            match(s, paths.get(0), flt, true, sim);
-            if (s.error != null) return;
-            if (!s.dirs.isEmpty() && !flt.none()) {            // 121: סינון לא חל על תיקייה שלמה
-                s.error = Words.Cmd.filterOnFolder(cmd + " \"" + args.get(0) + "\\*.*\" …");
-                return;
-            }
-            for (String d : s.dirs)                                             // מבנה 43: תיקייה לתוך עצמה — כבר בתכנון (עד כאן: רק בהרצה)
-                if (Physical.inside(dest, new File(d))) { s.error = Words.Disk.NOT_INTO_ITSELF; return; }
-            arrange(s, cmd.equals("COPY"), dest, sim);
+            fileCopy(s, cmd, args, paths, sw, flt, sim);
         } else if (cmd.equals("REN")) {
-            if (paths.size() != 2 || args.get(1).contains("/") || args.get(1).contains("\\")) {
-                s.error = Commands.usage(cmd);
-                return;
-            }
-            if (paths.get(0).equals(Syntax.SELECTED_MARK) || paths.get(1).equals(Syntax.NAME_MARK)) {   // מבנה 78: מה שנבחר במסך, בשם שהוקלד בו
-                renameSelected(s, cmd, paths, sim);
-                return;
-            }
-            File f = new File(paths.get(0));
-            if (args.get(0).contains("*") || args.get(0).contains("?")) { s.error = Words.Cmd.REN_WILD; return; }
-            if (sim.isDir(f)) { s.error = Words.Cmd.REN_FOLDER; return; }                  // 1.22.5
-            if (!sim.isFile(f)) { s.error = Words.FILE_NOT_FOUND + ": " + args.get(0); return; }
-            String bad = Physical.badName(args.get(1));
-            if (bad != null) { s.error = bad; return; }
-            File to = new File(f.getParentFile(), args.get(1));
-            if (!to.getName().equalsIgnoreCase(f.getName()) && (sim.isFile(to) || sim.isDir(to))) {   // מבנה 43: גם תיקייה בשם הזה
-                s.error = Words.Cmd.alreadyHas(args.get(1));
-                return;
-            }
-            s.files.add(f.getAbsolutePath());
-            s.newName = args.get(1);
-            s.describe = Words.Cmd.rename(f.getName(), s.newName);
-            sim.move(f.getAbsolutePath(), to, false);
+            fileRen(s, cmd, args, paths, sw, flt, sim);
         } else if (cmd.equals("START")) {
-            if (paths.isEmpty()) { s.error = Commands.usage(cmd); return; }
-            if (paths.get(paths.size() - 1).equals(Syntax.HOME_MARK)) {      // 1.9.0: START %בית%
-                s.dest = new File(Syntax.HOME_MARK);
-                s.describe = Words.Cmd.HOME_AT_END;
-                return;
-            }
-            File d = new File(paths.get(paths.size() - 1));       // "START "" תיקייה" — הכותרת הריקה יורדת
-            String name = d.getName();
-            if (name.contains("*") || name.contains("?")) {       // 186: תבנית — החדש ביותר מבין המתאימים
-                File dir = d.getParentFile();
-                if (dir == null || !sim.isDir(dir)) { s.error = Words.FOLDER_NOT_FOUND + ": " + (dir == null ? name : dir.getAbsolutePath()); return; }
-                File best = null;
-                int n = 0;
-                for (File x : sim.files(dir))
-                    if (Parse.wild(name, x.getName()) && Batch.visible(s, x)) {
-                        n++;
-                        if (best == null || sim.real(x).lastModified() > sim.real(best).lastModified()) best = x;
-                    }
-                if (best == null) { s.error = Words.Cmd.noMatch(name); return; }
-                s.dest = best;
-                s.describe = Words.Cmd.openAtEnd(Bidi.path(best.getAbsolutePath())) + (n > 1 ? Words.Cmd.newestOf(n) : "");
-                return;
-            }
-            if (sim.isFile(d)) {                                   // 186: קובץ — נפתח בסוף (apk — התקנה)
-                s.dest = d;
-                s.describe = Words.Cmd.openAtEnd(Bidi.path(d.getAbsolutePath()));
-                return;
-            }
-            if (!sim.isDir(d)) { s.error = Words.FOLDER_NOT_FOUND; return; }
-            s.dest = d;
-            s.describe = Words.Cmd.openAtEnd(Bidi.path(d.getAbsolutePath()));
+            fileStart(s, cmd, args, paths, sw, flt, sim);
         } else {
             s.error = Words.Cmd.unknownCommand(cmd) + " (" + Batch.join(java.util.Arrays.asList(Commands.fileNames()), " ") + ")";
         }
+    }
+
+    /** מבנה 176: הענף מתוך planFile. */
+    private static void fileMd(Batch.Step s, String cmd, List<String> args, List<String> paths, List<String> sw, Filter flt, Sim sim) {
+        if (paths.size() != 1) { s.error = Commands.usage(cmd); return; }
+        File d = new File(paths.get(0));
+        if (d.getName().equals(Syntax.NAME_TOKEN)) {                               // מבנה 79: "%יעד%\%שם-חדש%" — תיקייה חדשה מהמסך
+            makeSelected(s, cmd, d, sim);
+            return;
+        }
+        for (String x : sw)                                                 // מבנה 109: "להחליף" / "לשאול" — לא לתיקייה; לא בולעים בשקט
+            if (x.toUpperCase(Locale.ROOT).equals("/Y") || x.equals(Syntax.SW_TAKEN + Syntax.TAKEN_REPLACE) || x.equals(Syntax.SW_TAKEN + Syntax.TAKEN_ASK)) {
+                s.error = Words.Cmd.MD_TAKEN_ONLY;
+                return;
+            }
+        if (sim.isDir(d) && s.renameTaken) {                               // מבנה 109: /תפוס:לשנות-שם — בשם פנוי "(2)"
+            File free = d;
+            for (int k = 2; sim.isDir(free) || sim.isFile(free); k++) free = new File(d.getParentFile(), d.getName() + " (" + k + ")");
+            d = free;
+        } else if (sim.isDir(d)) {
+            if (s.skipTaken) {                                              // מבנה 109: /תפוס:לדלג — "המשך לשורה הבאה"
+                s.noop = true;
+                s.dest = d;
+                s.describe = Words.Cmd.folderSkipped(d.getName());
+                return;
+            }
+            s.error = Words.Cmd.folderTaken(d.getName());                  // מבנה 109 (המשתמש): "סירוב, אלא אם כן יש הוראה להמשיך"
+            return;
+        }
+        if (sim.isFile(d)) { s.error = Words.Cmd.exists(d.getName()); return; }
+        s.dest = d;
+        s.describe = Words.Cmd.newFolder(Bidi.path(d.getAbsolutePath()));
+        sim.dirs.add(d.getAbsolutePath());
+        sim.gone.remove(d.getAbsolutePath());                                // מ0.30 (ממצא 35): RD ואחריו MD לאותה תיקייה — היא קיימת
+        for (File up = d.getParentFile(); up != null && !sim.isDir(up); up = up.getParentFile()) {   // מ0.24: כמו mkdirs —
+            sim.dirs.add(up.getAbsolutePath());                                                    // גם התיקיות שמעל
+            sim.gone.remove(up.getAbsolutePath());
+        }
+    }
+
+    /** מבנה 176: הענף מתוך planFile. */
+    private static void fileRd(Batch.Step s, String cmd, List<String> args, List<String> paths, List<String> sw, Filter flt, Sim sim) {
+        if (paths.size() != 1) { s.error = Commands.usage(cmd); return; }
+        File d = new File(paths.get(0));
+        if (!sim.isDir(d)) { s.error = Words.FOLDER_NOT_FOUND + ": " + args.get(0); return; }
+        if (!s.recursive && (!sim.files(d).isEmpty() || sim.hasSubdirs(d))) {
+            s.error = Words.Cmd.FOLDER_NOT_EMPTY;
+            return;
+        }
+        s.dirs.add(d.getAbsolutePath());
+        s.describe = Words.Cmd.folderToTrash(Bidi.path(d.getAbsolutePath()));
+        sim.wipe(d.getAbsolutePath());
+    }
+
+    /** מבנה 176: הענף מתוך planFile. */
+    private static void fileDel(Batch.Step s, String cmd, List<String> args, List<String> paths, List<String> sw, Filter flt, Sim sim) {
+        if (paths.size() != 1) { s.error = Commands.usage(cmd); return; }
+        if (s.recursive) { s.error = Words.Cmd.DEL_S; return; }
+        if (paths.get(0).equals(Syntax.SELECTED_MARK)) {                           // מבנה 73: מה שנבחר במסך — קבצים, וגם תיקיות שלמות
+            selected(s, flt, sim, cmd);
+            if (s.error != null) return;
+            List<String> what = new ArrayList<String>();
+            if (!s.files.isEmpty() || s.dirs.isEmpty()) what.add(Words.files(s.files.size()));
+            if (!s.dirs.isEmpty()) what.add(Words.folders(s.dirs.size()));
+            s.describe = Words.Cmd.toTrash(Batch.join(what, Words.Cmd.AND)) + filtered(s);
+            for (String d : s.dirs) sim.wipe(d);
+        } else {
+            match(s, paths.get(0), flt, false, sim);
+            if (s.error == null) s.describe = Words.Cmd.toTrash(Words.files(s.files.size())) + filtered(s);
+        }
+        for (String f : s.files) {
+            sim.gone.add(f);
+            sim.added.remove(f);
+        }
+    }
+
+    /** 203: לשיתוף — מבנה 176: הענף מתוך planFile. */
+    private static void fileShare(Batch.Step s, String cmd, List<String> args, List<String> paths, List<String> sw, Filter flt, Sim sim) {
+        s.share = true;
+        match(s, paths.get(0), flt, true, sim);                          // תיקייה — כמו שהיא (תיארז בשמה)
+        if (s.error != null) return;
+        if (!s.dirs.isEmpty() && !flt.none()) {
+            s.error = Words.Cmd.filterOnFolder(cmd + " \"" + args.get(0) + "\\*.*\" …");
+            return;
+        }
+        List<String> what = new ArrayList<String>();
+        if (!s.files.isEmpty() || s.dirs.isEmpty()) what.add(Words.files(s.files.size()));
+        if (!s.dirs.isEmpty()) what.add(Words.folders(s.dirs.size()));
+        s.describe = Words.Cmd.toShare(Batch.join(what, Words.Cmd.AND)) + filtered(s);
+    }
+
+    /** מבנה 176: הענף מתוך planFile. */
+    private static void fileCopy(Batch.Step s, String cmd, List<String> args, List<String> paths, List<String> sw, Filter flt, Sim sim) {
+        if (paths.size() != 2) { s.error = Commands.usage(cmd); return; }
+        File dest = new File(paths.get(1));
+        if (!sim.isDir(dest)) {
+            s.error = Words.Cmd.NO_DEST;
+            return;
+        }
+        s.dest = dest;
+        // מבנה 112 (ה7, המשתמש: "כמו במסך"): שם של תיקייה הוא התיקייה עצמה — גם בהעתקה (עד כאן: בהעתקה — הקבצים שבתוכה;
+        // בהעברה ומהמסך — התיקייה). מה שבתוכה בלבד: "תיקייה\*".
+        match(s, paths.get(0), flt, true, sim);
+        if (s.error != null) return;
+        if (!s.dirs.isEmpty() && !flt.none()) {            // 121: סינון לא חל על תיקייה שלמה
+            s.error = Words.Cmd.filterOnFolder(cmd + " \"" + args.get(0) + "\\*.*\" …");
+            return;
+        }
+        for (String d : s.dirs)                                             // מבנה 43: תיקייה לתוך עצמה — כבר בתכנון (עד כאן: רק בהרצה)
+            if (Physical.inside(dest, new File(d))) { s.error = Words.Disk.NOT_INTO_ITSELF; return; }
+        arrange(s, cmd.equals("COPY"), dest, sim);
+    }
+
+    /** מבנה 176: הענף מתוך planFile. */
+    private static void fileRen(Batch.Step s, String cmd, List<String> args, List<String> paths, List<String> sw, Filter flt, Sim sim) {
+        if (paths.size() != 2 || args.get(1).contains("/") || args.get(1).contains("\\")) {
+            s.error = Commands.usage(cmd);
+            return;
+        }
+        if (paths.get(0).equals(Syntax.SELECTED_MARK) || paths.get(1).equals(Syntax.NAME_MARK)) {   // מבנה 78: מה שנבחר במסך, בשם שהוקלד בו
+            renameSelected(s, cmd, paths, sim);
+            return;
+        }
+        File f = new File(paths.get(0));
+        if (args.get(0).contains("*") || args.get(0).contains("?")) { s.error = Words.Cmd.REN_WILD; return; }
+        if (sim.isDir(f)) { s.error = Words.Cmd.REN_FOLDER; return; }                  // 1.22.5
+        if (!sim.isFile(f)) { s.error = Words.FILE_NOT_FOUND + ": " + args.get(0); return; }
+        String bad = Physical.badName(args.get(1));
+        if (bad != null) { s.error = bad; return; }
+        File to = new File(f.getParentFile(), args.get(1));
+        if (!to.getName().equalsIgnoreCase(f.getName()) && (sim.isFile(to) || sim.isDir(to))) {   // מבנה 43: גם תיקייה בשם הזה
+            s.error = Words.Cmd.alreadyHas(args.get(1));
+            return;
+        }
+        s.files.add(f.getAbsolutePath());
+        s.newName = args.get(1);
+        s.describe = Words.Cmd.rename(f.getName(), s.newName);
+        sim.move(f.getAbsolutePath(), to, false);
+    }
+
+    /** מבנה 176: הענף מתוך planFile. */
+    private static void fileStart(Batch.Step s, String cmd, List<String> args, List<String> paths, List<String> sw, Filter flt, Sim sim) {
+        if (paths.isEmpty()) { s.error = Commands.usage(cmd); return; }
+        if (paths.get(paths.size() - 1).equals(Syntax.HOME_MARK)) {      // 1.9.0: START %בית%
+            s.dest = new File(Syntax.HOME_MARK);
+            s.describe = Words.Cmd.HOME_AT_END;
+            return;
+        }
+        File d = new File(paths.get(paths.size() - 1));       // "START "" תיקייה" — הכותרת הריקה יורדת
+        String name = d.getName();
+        if (name.contains("*") || name.contains("?")) {       // 186: תבנית — החדש ביותר מבין המתאימים
+            File dir = d.getParentFile();
+            if (dir == null || !sim.isDir(dir)) { s.error = Words.FOLDER_NOT_FOUND + ": " + (dir == null ? name : dir.getAbsolutePath()); return; }
+            File best = null;
+            int n = 0;
+            for (File x : sim.files(dir))
+                if (Parse.wild(name, x.getName()) && Batch.visible(s, x)) {
+                    n++;
+                    if (best == null || sim.real(x).lastModified() > sim.real(best).lastModified()) best = x;
+                }
+            if (best == null) { s.error = Words.Cmd.noMatch(name); return; }
+            s.dest = best;
+            s.describe = Words.Cmd.openAtEnd(Bidi.path(best.getAbsolutePath())) + (n > 1 ? Words.Cmd.newestOf(n) : "");
+            return;
+        }
+        if (sim.isFile(d)) {                                   // 186: קובץ — נפתח בסוף (apk — התקנה)
+            s.dest = d;
+            s.describe = Words.Cmd.openAtEnd(Bidi.path(d.getAbsolutePath()));
+            return;
+        }
+        if (!sim.isDir(d)) { s.error = Words.FOLDER_NOT_FOUND; return; }
+        s.dest = d;
+        s.describe = Words.Cmd.openAtEnd(Bidi.path(d.getAbsolutePath()));
     }
 
     /** מבנה 48: היעד הוא התיקייה שהפריט כבר בה — לפי המסלול, ואם לא — לפי הכונן (Physical.sameFile), פעם אחת לכל תיקייה. */
