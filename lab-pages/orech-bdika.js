@@ -61,5 +61,16 @@ try{
   click([...d.querySelectorAll('#sheetIn .it')].find(b=>b.textContent.trim().startsWith('צור רשימה חכמה')));
   const row58=d.querySelectorAll('#ed .row')[0].textContent,toast58=(d.querySelector('.toast')||{textContent:''}).textContent;
   say('החלפה: ההגדרות של "פתח כלי" לא נעשו שם של רשימה חכמה, ונאמר שירדו',row58.indexOf('אופן')<0&&toast58.includes('/אופן'));
+  // גרסה 19: "כפולים…" ליד התנאי של רשימה חכמה — בחירה, ותנאי אחד של כפולים (בחירה שנייה מחליפה)
+  pick('view','רגילה');
+  const ta59=d.querySelector('textarea');ta59.value='צור רשימה חכמה "כפ" לפי vbat\n';ta59.dispatchEvent(new w.Event('input',{bubbles:true}));
+  pick('view','אינטראקטיבית');click(d.querySelectorAll('#ed .row')[0]);
+  const dupChip=()=>[...d.querySelectorAll('#ed .chip')].find(b=>b.textContent==='כפולים…');
+  say('ליד התנאי של רשימה חכמה — "כפולים…"',!!dupChip());
+  click(dupChip());click([...d.querySelectorAll('#sheetIn .it')].find(b=>b.textContent.startsWith('תוכן')));
+  click(d.querySelectorAll('#ed .row')[0]);click(dupChip());
+  click([...d.querySelectorAll('#sheetIn .it')].find(b=>b.textContent.startsWith('שם וגודל')));
+  pick('view','רגילה');const t59=d.querySelector('textarea').value.trim();pick('view','אינטראקטיבית');
+  say('כפולים בתנאי — אחד, האחרון שנבחר: '+t59,t59==='צור רשימה חכמה "כפ" לפי vbat כפולים:שם-וגודל');
 }catch(e){out.push('❌ חריגה: '+e.message);}
 console.log(out.join('\n'));if(errs.length)console.log('שגיאות עמוד:\n'+errs.join('\n'));

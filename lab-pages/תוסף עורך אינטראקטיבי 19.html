@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="vfm-plugin" content="עורך אינטראקטיבי">
-<meta name="vfm-plugin-version" content="18">
+<meta name="vfm-plugin-version" content="19">
 <meta name="vfm-lab" content="עורך אינטראקטיבי">
 <meta name="vfm-lab-version" content="8">
 <title>עורך אינטראקטיבי</title>
@@ -787,6 +787,10 @@ function renderFlow(box){
       // המשתמש (12.11.2026): "בפקודה צור רשימה חכמה אין טופס לאפשרויות. הטופס הקיים היום ליצירת רשימה חכמה מהתוכנה מתאים לשם"
       if(kind==='cond'&&!blocked&&can('smartForm')&&(def.form==='smart'||def.form==='find'))
         u.append(B('chip btn2','טופס…',()=>smartForm(k),{'aria-label':'הטופס של רשימה חכמה — ממלא את התנאי והמיון'}));
+      // גרסה 19 — המשתמש (16.11): "הכפולים לא נמצאו שם". "כפולים:" בתנאי (מבנה 207) — בחירה, לא לנחש את המילה. ניסוי ממשק בתוסף (הוראות, 1: קודם פקודה, אחר כך תוסף)
+      if(kind==='cond'&&!blocked&&(def.form==='smart'||def.form==='find'))
+        u.append(B('chip btn2','כפולים…',()=>openSheet({kind:'choose',slot:k,title:'רק קבצים שיש להם כפיל — זהה לפי',items:DUPS_BY,
+          make:x=>({kind:'cond',raw:withDups(M.vals[k]&&M.vals[k].raw||'',x)})}),{'aria-label':'רק קבצים שיש להם כפיל ביניהם'}));
     }else if(filled){const s=Mo.shown(v);u.append(B('chip val',s.kl?[E('span','kl',s.kl),document.createTextNode(s.t)]:s.t,()=>openPick(k)));}
     else if(blocked)u.append(E('span','chip dim',label||'בורר'));
     else u.append(B('chip btn2',kind==='word'||kind==='mode'?label:'בורר'+(sl.opt?' (לא חובה)':''),()=>openPick(k)));
@@ -985,7 +989,7 @@ const A={
   asif:{t:'הרצה בכאילו',s:'▶ בכאילו',f:()=>{real=false;run();},on:()=>!!file},
   real:{t:'הרצה אמיתית…',s:'▶ אמיתית',f:()=>{real=true;run();},on:()=>!!file,cls:'real'},
   cmds:{t:'רשימת הפקודות',f:()=>{if(view==='inter'&&file&&act<0)newLineAfter();openSheet({kind:'cmd'});},on:()=>view==='inter'&&!!file},
-  about:{t:'על העורך',f:()=>toast('עורך אינטראקטיבי 18')}
+  about:{t:'על העורך',f:()=>toast('עורך אינטראקטיבי 19')}
 };
 const MENUS={file:['new','open','-','save','saveas','savetpl','-','close'],
   edit:['undo','redo','-','cut','copy','paste','del','-','line','dup','up','down','-','find'],
@@ -1262,6 +1266,13 @@ function insertTpl(t){
   closeSheet();
   const ls=lines.slice();ls.splice(at,cur?1:0,...t.lines);
   parseAll(ls.join('\n')+'\n');upd();draw();toast('נכנסה: '+t.name);
+}
+// גרסה 19: "כפולים:" בתנאי — אותם שמות של מסך הכפולים (Words.Dup); רווח ← מקף. "בלי כפולים" — מוריד
+const DUPS_BY=['שם וגודל','שם','גודל','תוכן','שם ותוכן','גודל ושם דומה','תוכן ושם דומה','בלי כפולים'];
+function withDups(cond,by){
+  const rest=String(cond||'').split(/\s+/).filter(t=>t&&!/^כפולים:/.test(t));
+  if(by!=='בלי כפולים')rest.push('כפולים:'+by.replace(/ /g,'-'));
+  return rest.join(' ');
 }
 // גרסה 9 — המשתמש: "איפה שכתוב 'הפקודה כתוב' — כתיקייה ותת־תיקייה". הקבוצה של הפקודה בתפריט ← הפקודה
 function groupName(k){const g=Mo.menu().find(([g,ks])=>ks.indexOf(k)>=0);return g?g[0]:null;}
