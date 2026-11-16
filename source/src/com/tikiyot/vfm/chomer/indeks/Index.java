@@ -3,13 +3,7 @@ package com.tikiyot.vfm;
 // אינדקס של כונן אחד. אחראי: טבלת תיקיות וטבלת קבצים, סריקה, רענון, שמירה וטעינה.
 // אסור לו: לשנות קבצים בכונן.
 
-import java.io.BufferedInputStream;
-import java.io.BufferedOutputStream;
-import java.io.DataInputStream;
-import java.io.DataOutputStream;
 import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
 import java.io.IOException;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
@@ -19,8 +13,6 @@ import java.util.Set;
 
 public final class Index {
 
-    private static final int MAGIC = 0x56464D31;   // VFM1
-    private static final int VERSION = 3;          // 189: "נוסף"; 190: חתימת תוכן (גרסאות 1–2 — נקראות, בלי מה שחסר בהן)
 
     /** תיקיית המחיקות בשורש כל כונן. נכללת באינדקס אף שמתחילה בנקודה, ומסומנת כסל. */
     public static final String TRASH = ".נמחקו";  // בכונן
@@ -1044,110 +1036,13 @@ public final class Index {
 
     // ---------- קובץ ----------
 
-    /**
-     * 184: שמירה בלי לשנות את האינדקס — מה שנעלם פשוט לא נכתב, והמזהים מכווצים בדרך. כך אפשר לשמור
-     * את התמונה המוצגת עצמה, בלי להעתיק קודם את כל האינדקס (במיליון קבצים — כפל זיכרון בכל שמירה).
-     */
+    /** מבנה 187: השמירה והטעינה עצמן — ב־IndexFile. 184: השמירה אינה משנה את האינדקס. */
     public void save() throws IOException {
-        int nDirs = dirs.size();
-        int[] map = new int[nDirs];
-        int keptDirs = 0;
-        for (int i = 0; i < nDirs; i++) {
-            Dir x = dirs.get(i);
-            boolean lost = x.gone || (x.parent >= 0 && (x.parent >= i || map[x.parent] < 0));
-            map[i] = lost ? -2 : keptDirs++;
-        }
-        int keptFiles = 0;
-        for (Rec r : files) if (kept(r, map)) keptFiles++;
-        File target = Paths.index(key);
-        File tmp = new File(target.getParentFile(), "." + target.getName() + "." + System.nanoTime() + ".tmp");
-        FileOutputStream fos = new FileOutputStream(tmp);
-        DataOutputStream d = new DataOutputStream(new BufferedOutputStream(fos, 1 << 16));
-        try {
-            d.writeInt(MAGIC);
-            d.writeInt(VERSION);
-            d.writeUTF(rootPath);
-            d.writeUTF(label);
-            d.writeLong(built);
-            d.writeInt(keptDirs);
-            for (int i = 0; i < nDirs; i++) {
-                if (map[i] < 0) continue;
-                Dir x = dirs.get(i);
-                d.writeInt(x.parent < 0 ? x.parent : map[x.parent]);
-                d.writeLong(x.mtime);
-                d.writeUTF(x.name);
-            }
-            d.writeInt(keptFiles);
-            for (Rec r : files) {
-                if (!kept(r, map)) continue;
-                d.writeInt(r.dir < 0 ? r.dir : map[r.dir]);
-                d.writeLong(r.size);
-                d.writeLong(r.mtime);
-                d.writeLong(r.added);
-                d.writeLong(r.sig);
-                d.writeUTF(r.name);
-            }
-            d.flush();
-            fos.getFD().sync();
-        } finally {
-            d.close();
-        }
-        if (!tmp.renameTo(target)) {
-            target.delete();
-            if (!tmp.renameTo(target)) throw new IOException(Words.Idx.CANT_SAVE_INDEX);
-        }
-    }
-
-    private static boolean kept(Rec r, int[] map) {
-        return !r.gone && (r.dir < 0 || (r.dir < map.length && map[r.dir] >= 0));
+        IndexFile.save(this);
     }
 
     /** null אם אין קובץ, אם הגרסה שונה או אם הוא פגום. */
     public static Index load(String key) {
-        File f = Paths.index(key);
-        if (!f.exists()) return null;
-        DataInputStream d = null;
-        try {
-            d = new DataInputStream(new BufferedInputStream(new FileInputStream(f), 1 << 16));
-            if (d.readInt() != MAGIC) return null;
-            int version = d.readInt();
-            if (version < 1 || version > VERSION) return null;
-            Index ix = new Index(key, "", d.readUTF());
-            ix.noAdded = version < 2;
-            ix.label = d.readUTF();
-            ix.built = d.readLong();
-            int nd = d.readInt();
-            ix.dirs.ensureCapacity(nd);
-            for (int i = 0; i < nd; i++) {
-                Dir x = new Dir();
-                x.parent = d.readInt();
-                x.mtime = d.readLong();
-                x.name = d.readUTF();
-                x.trash = x.parent < 0 ? x.name.equals(TRASH)
-                        : x.parent < ix.dirs.size() && ix.dirs.get(x.parent).trash;
-                x.hidden = x.name.startsWith(".")
-                        || (x.parent >= 0 && x.parent < ix.dirs.size() && ix.dirs.get(x.parent).hidden);
-                ix.dirs.add(x);
-            }
-            int nf = d.readInt();
-            ix.files.ensureCapacity(nf);
-            for (int i = 0; i < nf; i++) {
-                Rec r = new Rec();
-                r.dir = d.readInt();
-                r.size = d.readLong();
-                r.mtime = d.readLong();
-                if (version >= 2) r.added = d.readLong();
-                if (version >= 3) r.sig = d.readLong();
-                r.name = d.readUTF();
-                ix.files.add(r);
-            }
-            ix.fillNorms();                                         // 184: בכל הליבות
-            return ix;
-        } catch (Throwable t) {
-            Log.e("טעינת אינדקס " + key, t);
-            return null;
-        } finally {
-            if (d != null) try { d.close(); } catch (IOException ignored) { }
-        }
+        return IndexFile.load(key);
     }
 }

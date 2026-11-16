@@ -104,3 +104,4 @@
 | 184 | מנוע ההעברה ← `konan/Mover` (325 שורות): `go`, `Run` (שם תפוס, מיזוג, התקדמות, האינדקס והרשימות בסוף), `topOnly`. **שומר 184:** `Mover` ו־`Physical.toTrash` — רק מתוך `chomer/konan`; ב־`Mover` אין היתר, והכניסות ב־`Physical` שואלות | 552 |
 | 185 | סיכום תיקיית הכונן; המפות של `Library` ושל `Index`, והסדר לפיצול שלהם (למעלה) | 552 |
 | 186 | **`Library`:** החיפוש ← `indeks/Search` (278 שורות): `run` (הגוף של `search`), `emptyDirs`, `addLoose`, `addPartial`, `term`, `match…`. הפונקציות נעשו בלי מצב — מקבלות את הצילום של רשימת האינדקסים במקום לקרוא אותו מהשדה. **שומר 186:** `Search.run` — רק מ־`Library`; ב־`Search` אין מצב ואין נעילה | `Library` 1,210 |
+| 187 | **`Index`:** השמירה והטעינה ← `indeks/IndexFile` (129 שורות): `save`, `load`, `kept`, והגרסה של הקובץ. הכניסות — `ix.save()`, `Index.load(key)` — נשארו | `Index` 1,048 |
