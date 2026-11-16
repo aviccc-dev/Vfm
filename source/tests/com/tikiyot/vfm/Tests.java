@@ -5538,6 +5538,19 @@ public final class Tests {
         // 1. העתקה עם שמירת מסלול, ויומן
         File dest = new File(root, "גיבוי/נוכחי");
         File jf = new File(root, "גיבוי/יומן/1.txt");
+        {   // מבנה 194: היומן שואל את ההיתר — בלי היתר של שכבת הניהול הוא אינו נפתח ואינו כותב, והוא "נכשל"
+            File no194 = new File(jf.getParentFile(), "בלי-היתר-194.txt");
+            no194.delete();
+            Permit.close();
+            Journal j194;
+            try {
+                j194 = new Journal(no194, "בלי היתר");
+                j194.close();
+            } finally {
+                Permit.open();
+            }
+            check("מבנה 194: יומן של העברה בלי היתר של שכבת הניהול — לא נפתח, לא נכתב, ו\"נכשל\"", j194.failed() && !no194.exists());
+        }
         Journal j = new Journal(jf, "בדיקה");
         Physical.Result r = Physical.transferKeep(lib, src.getAbsolutePath(),
                 P(src + "/א/1.pdf", src + "/ב/ג/2.pdf", src + "/3.txt"), P(src + "/ריקה/פנימית"), dest, true, null, null, false, j);

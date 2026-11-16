@@ -18,6 +18,12 @@ public final class Journal {
 
     public Journal(File file, String title) {
         this.file = file;
+        // מבנה 194 (נמצא בצעד 181): היומן פותח קובץ וכותב בו — ולכן שואל את ההיתר של שכבת הניהול, כמו כל פעולה שמשנה משהו
+        // (הוראות, סעיף 2). בלי היתר — לא נפתח, ו"נכשל" נאמר בדוח של השורה (לא בולעים בשקט).
+        if (Permit.check(Permit.WRITE) != null) {
+            failed = true;
+            return;
+        }
         try {
             File d = file.getParentFile();
             if (d != null) d.mkdirs();
