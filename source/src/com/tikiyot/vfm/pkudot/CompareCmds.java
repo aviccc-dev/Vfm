@@ -176,7 +176,7 @@ final class CompareCmds {
             if (start.exists()) known = true;
             // מבנה 61 (ממצא 40ב): קובץ אחד בשם מפורש ("<גיבוי>\מסמכים\א.txt") — עד כאן נמצאו 0 קבצים, בלי שגיאה (החיפוש היה רק בתיקייה)
             if (mask == null && start.isFile()) {
-                if (Batch.visible(s, start) && !Physical.isPartial(start.getName())) found.add(start.getAbsolutePath());
+                if (Batch.visible(s, start) && !FileCopy.isPartial(start.getName())) found.add(start.getAbsolutePath());
             } else collect(s, start, mask, found);
             for (String f : found) {
                 Library.Hit hit = sim.lib == null ? null : sim.lib.find(f);
@@ -219,7 +219,7 @@ final class CompareCmds {
         if (k == null) return;
         java.util.Arrays.sort(k);
         for (File x : k) {
-            if (!Batch.visible(s, x) || Physical.isPartial(x.getName())) continue;
+            if (!Batch.visible(s, x) || FileCopy.isPartial(x.getName())) continue;
             if (x.isDirectory()) collect(s, x, mask, out);
             else if (mask == null || Parse.wild(mask, x.getName())) out.add(x.getAbsolutePath());
         }

@@ -131,7 +131,7 @@ final class Compare {
         List<File> out = new ArrayList<File>();
         for (File x : k) {
             String n = x.getName();
-            if (Physical.isPartial(n)) continue;
+            if (FileCopy.isPartial(n)) continue;
             if (!hidden && n.startsWith(".")) continue;
             out.add(x);
         }
@@ -146,7 +146,7 @@ final class Compare {
         File[] k = d.listFiles();
         if (k == null) return 0;
         int n = 0;
-        for (File x : k) n += x.isDirectory() ? countFiles(x) : (Physical.isPartial(x.getName()) ? 0 : 1);
+        for (File x : k) n += x.isDirectory() ? countFiles(x) : (FileCopy.isPartial(x.getName()) ? 0 : 1);
         return n;
     }
 
@@ -163,7 +163,7 @@ final class Compare {
 
     /** מ0.25: קובץ אחד למקור (לרשימה מהמסד — DbListCmd.compSource). */
     static void addFile(Library lib, Source src, File f, String skip) {
-        if (f.isFile() && !Physical.isPartial(f.getName())) add(lib, src, f, skip);
+        if (f.isFile() && !FileCopy.isPartial(f.getName())) add(lib, src, f, skip);
     }
 
     private static void add(Library lib, Source src, File f, String skip) {

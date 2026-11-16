@@ -311,7 +311,7 @@ final class FileCmds {
     static boolean walk(Batch.Step s, File dir, String mask, Filter flt, Sim sim, boolean empties, boolean top) {
         boolean any = false;
         for (File x : sim.files(dir)) {
-            if (!Batch.visible(s, x) || Physical.isPartial(x.getName())) continue;
+            if (!Batch.visible(s, x) || FileCopy.isPartial(x.getName())) continue;
             any = true;
             if (mask != null && !Parse.wild(mask, x.getName())) continue;
             s.total++;

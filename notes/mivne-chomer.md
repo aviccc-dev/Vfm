@@ -59,3 +59,4 @@
 | 180 | מה הכונן אומר ← `konan/DiskInfo` (96 שורות): `fsType`, `fsTypeIn`, `typeAt`, `maxFileSize`, `free`, `count`. פונים: `SmallCmds`, `PhysicalUi`, הבדיקות | 1,183 |
 | 181 | היומן של העברה ← `konan/Journal` (75 שורות), מחלקה משלה. פונים: `Runner`, `State`, הבדיקות. **נמצא בדרך, לא שונה:** היומן פותח קובץ וכותב בו בלי לשאול את ההיתר — רשום למטה ב"פתוח" | 1,108 |
 | 182 | הכללים ← `konan/DiskRules` (161 שורות): `forbidden`, `noWriteInto`, `programFile`, `inside`, `sameFile`, `noDest`, `cannotMove`, `badName`, `freeName`, `rel` ועוד. 14 קבצים פונים (הפקודות, המסכים, התוסף) | 963 |
+| 183 | קובץ אחד ← `konan/FileCopy` (121 שורות): `copyFile`, `moveFile`, `partial`, `isPartial`, `digest`. **שומר 183:** `FileCopy.copyFile` / `moveFile` — רק מתוך `chomer/konan` | 858 |

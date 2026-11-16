@@ -3299,6 +3299,14 @@ public final class Tests {
                 for (File f : javaFiles(code)) if (!f.getName().equals("Batch.java") && read(f).contains("Runner.run0(")) run164.append(f.getName()).append(' ');
                 check("מבנה 164: ההרצה עצמה (Runner.run0) — רק מהכניסה Batch.run (" + run164.toString().trim() + ")",
                         run164.length() == 0 && read(new File(code, "pkudot/Batch.java")).contains("Runner.run0("));
+                // מבנה 183: העתקת קובץ יצאה מ־Physical אל FileCopy. היא כותבת לכונן ואינה שואלת היתר בעצמה — ולכן מותר לקרוא לה
+                // רק מתוך תיקיית הכונן, מאחורי כניסה של Physical ששאלה (הוראות, סעיף 2).
+                StringBuilder copy183 = new StringBuilder();
+                for (File f : javaFiles(code))
+                    if (!f.getParentFile().getName().equals("konan") && (read(f).contains("FileCopy.copyFile(") || read(f).contains("FileCopy.moveFile(")))
+                        copy183.append(f.getName()).append(' ');
+                check("מבנה 183: העתקה / העברה של קובץ (FileCopy) — רק מתוך תיקיית הכונן (" + copy183.toString().trim() + ")",
+                        copy183.length() == 0 && readAll(new File(code, "chomer/konan")).contains("FileCopy.copyFile("));
                 wipe(r151);
                 wipe(d138);
             }
@@ -3701,13 +3709,13 @@ public final class Tests {
         } catch (java.io.IOException e) {
             throw new RuntimeException(e);
         }
-        String da = Physical.digest(ma);
-        check("מבנה 39: חתימה מלאה — בית אחד שונה באותו גודל נתפס", da != null && ma.length() == mc.length() && !da.equals(Physical.digest(mc)));
+        String da = FileCopy.digest(ma);
+        check("מבנה 39: חתימה מלאה — בית אחד שונה באותו גודל נתפס", da != null && ma.length() == mc.length() && !da.equals(FileCopy.digest(mc)));
         String[] got = new String[1];
-        check("מבנה 39: ההעתקה מוסרת את חתימת המקור בלי קריאה נוספת, והעותק זהה", Physical.copyFile(ma, mb, got) && da.equals(got[0]) && da.equals(Physical.digest(mb)));
+        check("מבנה 39: ההעתקה מוסרת את חתימת המקור בלי קריאה נוספת, והעותק זהה", FileCopy.copyFile(ma, mb, got) && da.equals(got[0]) && da.equals(FileCopy.digest(mb)));
         mb.delete();
-        check("מבנה 39: העברה בין כוננים — העותק נבדק, ורק אז המקור נמחק", Physical.moveFile(ma, mb, false) && !ma.exists() && da.equals(Physical.digest(mb)));
-        check("מבנה 39: קובץ שאינו נקרא — אין חתימה (ולכן אין מחיקה של מקור)", Physical.digest(new File(r, "אין-קובץ-כזה")) == null);
+        check("מבנה 39: העברה בין כוננים — העותק נבדק, ורק אז המקור נמחק", FileCopy.moveFile(ma, mb, false) && !ma.exists() && da.equals(FileCopy.digest(mb)));
+        check("מבנה 39: קובץ שאינו נקרא — אין חתימה (ולכן אין מחיקה של מקור)", FileCopy.digest(new File(r, "אין-קובץ-כזה")) == null);
         // מבנה 38: הדופק — כמה זמן התוכנה לא רצה
         Runner.Pulse pulse = new Runner.Pulse();
         try { Thread.sleep(1300); } catch (InterruptedException e) { throw new RuntimeException(e); }
@@ -5514,10 +5522,10 @@ public final class Tests {
         p = Batch.plan("COPY מקור\\*.pdf גיבוי3 /מסלול", root, vars);
         check("1.19.0: /מסלול עם תבנית", p.errors == 0 && p.steps.get(0).files.size() == 3 && p.steps.get(0).dirs.isEmpty());
         // קובץ זמני של העתקה — לא נכלל
-        mk(new File(src, "א"), Physical.partial(new File(src, "א/5.pdf")).getName(), 3);
+        mk(new File(src, "א"), FileCopy.partial(new File(src, "א/5.pdf")).getName(), 3);
         p = Batch.plan("COPY מקור גיבוי4 /S /A:H", root, vars);
         boolean partial = false;
-        for (String f : p.steps.get(0).files) if (Physical.isPartial(new File(f).getName())) partial = true;
+        for (String f : p.steps.get(0).files) if (FileCopy.isPartial(new File(f).getName())) partial = true;
         check("1.19.0: קובץ זמני — לא נכלל גם עם /A:H", !partial);
         // לתוך עצמו — שגיאה; /יומן: ב־DEL — שגיאה; /יומן: בלי שם — שגיאה
         check("1.19.0: COPY /S לתוך עצמו — שגיאה", Batch.plan("COPY מקור מקור\\בפנים /S", root, vars).errors == 1);
@@ -5546,28 +5554,28 @@ public final class Tests {
 
         // 1. שם זמני: אחרי הצלחה — אין קובץ זמני, התאריך נשמר
         File d1 = new File(dest, "א.pdf");
-        check("1.18.0: העתקה — הצליחה", Physical.copyFile(a, d1) && d1.length() == 30);
-        check("1.18.0: העתקה — אין קובץ זמני", !Physical.partial(d1).exists());
+        check("1.18.0: העתקה — הצליחה", FileCopy.copyFile(a, d1) && d1.length() == 30);
+        check("1.18.0: העתקה — אין קובץ זמני", !FileCopy.partial(d1).exists());
         eq("1.18.0: העתקה — התאריך נשמר", 1500000000000L, d1.lastModified());
-        check("1.18.0: השם הזמני — מוסתר ומזוהה", Physical.partial(d1).getName().startsWith(".")
-                && Physical.isPartial(Physical.partial(d1).getName()) && !Physical.isPartial("א.pdf"));
+        check("1.18.0: השם הזמני — מוסתר ומזוהה", FileCopy.partial(d1).getName().startsWith(".")
+                && FileCopy.isPartial(FileCopy.partial(d1).getName()) && !FileCopy.isPartial("א.pdf"));
         // שארית מהפסקה קודמת — נמחקת, ולא נשאר קובץ בשם האמיתי לפני הסוף
         File d2 = new File(dest, "ב.pdf");
-        File left = mk(dest, Physical.partial(d2).getName(), 7);
+        File left = mk(dest, FileCopy.partial(d2).getName(), 7);
         check("1.18.0: שארית — קיימת לפני", left.isFile() && !d2.exists());
-        check("1.18.0: שארית — ההעתקה מצליחה ומנקה", Physical.copyFile(a, d2) && d2.length() == 30 && !left.exists());
+        check("1.18.0: שארית — ההעתקה מצליחה ומנקה", FileCopy.copyFile(a, d2) && d2.length() == 30 && !left.exists());
         // יעד תפוס — לא נוגעים
-        check("1.18.0: יעד תפוס — לא נדרס", !Physical.copyFile(mk(src, "ג.pdf", 5), d1) && d1.length() == 30);
+        check("1.18.0: יעד תפוס — לא נדרס", !FileCopy.copyFile(mk(src, "ג.pdf", 5), d1) && d1.length() == 30);
         // מקור שאינו קובץ — אין שארית זמנית
         File d3 = new File(dest, "ד.pdf");
-        check("1.18.0: מקור חסר — נכשל בלי שארית", !Physical.copyFile(new File(src, "אין.pdf"), d3)
-                && !d3.exists() && !Physical.partial(d3).exists());
+        check("1.18.0: מקור חסר — נכשל בלי שארית", !FileCopy.copyFile(new File(src, "אין.pdf"), d3)
+                && !d3.exists() && !FileCopy.partial(d3).exists());
         // שם ארוך מאוד — השם הזמני מתקצר
         StringBuilder lng = new StringBuilder();
         for (int i = 0; i < 120; i++) lng.append('ש');
         File longDst = new File(dest, lng + ".pdf");
         try {
-            check("1.18.0: שם ארוך — השם הזמני עד 255 בתים", Physical.partial(longDst).getName().getBytes("UTF-8").length <= 255);
+            check("1.18.0: שם ארוך — השם הזמני עד 255 בתים", FileCopy.partial(longDst).getName().getBytes("UTF-8").length <= 255);
         } catch (Exception e) {
             check("1.18.0: שם ארוך", false);
         }
@@ -5609,7 +5617,7 @@ public final class Tests {
             DiskInfo.maxFileForTests = 0;
         }
         check("1.18.0: קובץ גדול מהמותר — נכשל, השאר הועתק", r.failed == 1 && !new File(fat, "גדול.bin").exists()
-                && new File(fat, "קטן.bin").isFile() && !Physical.partial(new File(fat, "גדול.bin")).exists());
+                && new File(fat, "קטן.bin").isFile() && !FileCopy.partial(new File(fat, "גדול.bin")).exists());
         check("1.18.0: הודעה — 4GB", r.note.contains("4GB"));
         // סוג מערכת הקבצים מ-/proc/mounts
         List<String[]> m = new ArrayList<String[]>();
