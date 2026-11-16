@@ -2529,7 +2529,8 @@ public final class Tests {
         Db.hold("מאחור-63", -1);
         check("מבנה 63: כולם סגרו — לא בשימוש (וסגירה מיותרת לא מקלקלת)", !Db.inUse("מאחור-63"));
         Db.currentMode = was63;
-        String dlc63 = read(new File(code, "pkudot/DbListCmd.java")), dbs63 = read(new File(code, "masachim/DbScreen.java"));
+        String dlc63 = read(new File(code, "pkudot/ModeCmds.java")),   // מבנה 168: "מחק אופן" עבר מ־DbListCmd ל־ModeCmds — אותה בדיקה
+                dbs63 = read(new File(code, "masachim/DbScreen.java"));
         check("מבנה 63: \"בטל אופן\" שואל את השער גם בתכנון וגם בהרצה, ומסך המסד נרשם וסוגר דרכו",
                 dlc63.split("Db\\.inUse\\(name\\)", -1).length == 3 && !dlc63.contains("name.equals(Db.currentMode)")
                         && dbs63.contains("Db.openHeld(this, mode)") && dbs63.contains("Db.closeHeld(store, heldMode)") && !dbs63.contains("store.close()"));
@@ -2621,7 +2622,8 @@ public final class Tests {
         eq("מבנה 66: מה שבמכשיר, בלי מה שהקובץ ביטל, ועם מה שהוא יצר (גם אחרי ביטול)", "[א, ב, חדש]",
                 Sim.modes(java.util.Arrays.asList("א", "ב", "ג"), made66, gone66).toString());
         String b66 = read(new File(code, "pkudot/Batch.java")), d66 = read(new File(code, "pkudot/DbListCmd.java"));
-        check("מבנה 66: שתי ההודעות שואלות את ההדמיה, לא את המכשיר", !b66.contains("noMode(m, Db.dbModes") && !d66.contains("noMode(fromMode, Db.dbModes")
+        String all66 = readAll(new File(code, "pkudot"));                   // מבנה 168: מה שאסור — בכל תיקיית הפקודות, לא רק בשני הקבצים (הקוד מתפצל)
+        check("מבנה 66: שתי ההודעות שואלות את ההדמיה, לא את המכשיר", !all66.contains("noMode(m, Db.dbModes") && !all66.contains("noMode(fromMode, Db.dbModes")
                 && b66.contains("noMode(m, sim.modes())") && d66.contains("noMode(fromMode, sim.modes())"));
         // מבנה 67 (ממצאים 38, 40ו): העברה והעתקה מתוך השוואה — תיקייה שלמה עם מה שבתוכה; ו־MOVE שני על אותה השוואה אינו מנסה שוב
         {
@@ -3426,7 +3428,7 @@ public final class Tests {
             check("מבנה 126: ...ולעטיפה של המסכים (DbVerbsUi.write) — רק השורה העליונה (" + wrap126.toString().trim() + ")", wrap126.toString().trim().equals("TopRow.java"));
             String run126 = read(new File(code, "masachim/RunScreen.java"));
             check("מבנה 126: מסך ההרצה אינו מנקה רשימות בעצמו; רק דרך המנהל", run126.contains("Manager.onRunClean(") && !run126.contains("DbListCmd.")
-                    && !read(new File(code, "pkudot/DbListCmd.java")).contains("removeLists("));
+                    && !readAll(new File(code, "pkudot")).contains("removeLists("));   // מבנה 168: בכל תיקיית הפקודות
             // מבנה 127: "הגדר" — הגדרה של התוכנה בפקודה; המסכים קובעים דרך המנהל; בלי היתר — מסורב
             {
                 Library lib127 = Library.forTests(new ArrayList<Index>());
@@ -5400,6 +5402,14 @@ public final class Tests {
         check("1.20.0: יעד חסר בלי MD — שגיאה", Batch.plan("COMP מסמכים אין-כזה", root, vars).errors == 1);
         check("1.20.0: /עד: לא מספר — שגיאה", Batch.plan("COMP מסמכים גיבוי\nMOVE %רק-ביעד% ה /עד:הרבה", root, vars).errors == 1);
         check("1.20.0: /תפוס:לעצור — מוכר", Batch.plan("COPY מסמכים\\*.* גיבוי /תפוס:לעצור", root, vars).errors == 0);
+    }
+
+    /** מבנה 168: כל קובצי הקוד שבתיקייה, ברצף — לשומרים שבודקים "אסור" (הקוד מתפצל לקבצים). */
+    static String readAll(File dir) {
+        StringBuilder sb = new StringBuilder();
+        File[] k = dir.listFiles();
+        if (k != null) for (File f : k) if (f.getName().endsWith(".java")) sb.append(read(f)).append('\n');
+        return sb.toString();
     }
 
     private static String read(File f) {

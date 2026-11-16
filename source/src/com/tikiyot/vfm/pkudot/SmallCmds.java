@@ -60,7 +60,7 @@ final class SmallCmds {
                                  Map<String, String> vars, final Sim sim) {
         if (cmd.equals(Syntax.DROP_MODE)) {                                            // מ0.45: מחק אופן
             if (tk.size() != 2 || tk.get(1).trim().isEmpty()) { s.error = Words.DbCmd.DROP_MODE_USAGE; return true; }
-            DbListCmd.planDropMode(s, Verbs.withVars(tk.get(1).trim(), vars), sim);
+            ModeCmds.planDropMode(s, Verbs.withVars(tk.get(1).trim(), vars), sim);
             return true;
         }
         if (cmd.equals(Syntax.EXAMPLES)) return planExamples(plan, s, cmd, tk, here, vars, sim);   // מבנה 123: שחזר דוגמאות (מה שהמסך עשה בעצמו)
