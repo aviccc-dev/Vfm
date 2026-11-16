@@ -2050,7 +2050,7 @@ public final class Words {
         }
 
         public static final String NO_HOME = "אין בית במסד הזה", SAME_NAME = "כבר יש שם רשימה בשם הזה",
-                ALREADY = "כבר בה", MENU_PLUGIN_DIAG = "🔬 אבחון — בדיקות, דוחות, תקלות",
+                ALREADY = "כבר בה", MENU_PLUGIN_DIAG = "🔬 אבחון — בדיקות, דוחות, תקלות", MENU_EDITOR = "📝 עורך פקודות",
                 TEST_MODE = "בדיקות מערכת";  // בכונן
 
         public static String removed(String what) {

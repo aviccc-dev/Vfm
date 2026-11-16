@@ -4071,6 +4071,10 @@ public final class Tests {
         eq("מ0.41: \"בחירה\" — כמו שהיא", Menus.SELECT_PATH, Menus.relative(Names.parsePath("בחירה")));
         check("מ0.41: הפקודה של העורך האינטראקטיבי — בין הכלים, ופותחת את התוסף", toolLine(Words.DbCmd.TOOL_EDITOR).equals("פתח תוסף \"עורך אינטראקטיבי\"")
                 && Verbs.parse(toolLine(Words.DbCmd.TOOL_EDITOR)).error == null && Verbs.S_PLUGINS.equals(Verbs.parse(toolLine(Words.DbCmd.TOOL_EDITOR)).arg));
+        // מבנה 203 (המשתמש, 16.11.2026: "הרצת העורך אמורה להיות מובנת בתוכנה"): כניסה קבועה לעורך בתפריט, ישר — בלי קובץ פקודות באמצע
+        String dls203 = read(new File(System.getProperty("vfm.src"), "src/com/tikiyot/vfm/masachim/DbListScreen.java"));
+        check("מבנה 203: \"עורך פקודות\" — כניסה קבועה בתפריט של התוכנה, ישר לעורך",
+                dls203.contains("menu.add(0, MENU_EDITOR, 0, Words.DbCmd.MENU_EDITOR)") && dls203.contains("if (id == MENU_EDITOR) LabScreen.edit(this, null);"));
     }
 
     private static void m041select() {
