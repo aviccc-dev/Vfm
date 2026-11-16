@@ -54,3 +54,4 @@
 | צעד | מה | `Physical` אחרי |
 |---|---|---|
 | 178 | המפה הזו; כלי ההעברה (`haavara.py`, `haavara-tikun.py`) עובדים מעכשיו בכל תיקייה (`DIR=chomer/konan SRC=Physical`) | 1,323 |
+| 179 | הנוסחים ← `konan/DiskSay` (79 שורות): `what`, `whatAll`, `namesOf`, `message`, `names`. פונים: `PhysicalUi`, הבדיקות | 1,261 |

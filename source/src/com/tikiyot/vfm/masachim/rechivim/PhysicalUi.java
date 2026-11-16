@@ -81,8 +81,8 @@ final class PhysicalUi {
             files = Words.Disk.FOLDER_AND + (inner == 1 ? Words.Disk.ITS_FILE : inner + Words.Disk.ITS_FILES) + Words.Disk.GO_TO_TRASH;
         else files = Words.Disk.ALL_INCLUDING + Words.files(inner) + Words.Disk.IN_FOLDERS_TO_TRASH;
         String undo = dirs.isEmpty() ? Words.Disk.UNDO_FROM_TRASH : Words.Disk.UNDO_FOLDER_FROM_TRASH;
-        Ui.ask(a, Words.Disk.DELETE_TITLE + Physical.whatAll(paths, dirs), files,
-                Files.size(size) + Words.Disk.SPACE_ON_EMPTY + (warning == null ? "" : "\n" + warning) + Physical.namesOf(paths, dirs, 12),   // 141; 102: מתי המקום מתפנה
+        Ui.ask(a, Words.Disk.DELETE_TITLE + DiskSay.whatAll(paths, dirs), files,
+                Files.size(size) + Words.Disk.SPACE_ON_EMPTY + (warning == null ? "" : "\n" + warning) + DiskSay.namesOf(paths, dirs, 12),   // 141; 102: מתי המקום מתפנה
                 undo + lists, Words.Disk.DELETE_ON_DRIVE, new Runnable() {
                     @Override
                     public void run() {
@@ -130,7 +130,7 @@ final class PhysicalUi {
                     });
             return;
         }
-        String what = Physical.whatAll(paths, dirs);
+        String what = DiskSay.whatAll(paths, dirs);
         String files = copy ? Words.Disk.SOURCE_UNCHANGED
                 : (paths.size() + dirs.size() == 1 ? (dirs.isEmpty() ? Words.Disk.FILE_MOVES : Words.Disk.FOLDER_MOVES)
                 : Words.Disk.ALL_MOVES) + Words.Disk.ON_DRIVE_TO + folder.getName();
@@ -138,7 +138,7 @@ final class PhysicalUi {
                 + (inner > 0 ? " · " + inner + Words.Disk.FILES_IN_FOLDERS : "")
                 + (across && !copy ? Words.Disk.ACROSS_DRIVES : "")
                 + (warning == null ? "" : "\n" + warning)
-                + Physical.namesOf(paths, dirs, 12);                                       // 141
+                + DiskSay.namesOf(paths, dirs, 12);                                       // 141
         int inLists = copy ? 0 : Physical.listsCount(all);
         String undo = copy ? Words.Disk.COPIES_NOT_IN_LISTS
                 : (inLists > 0 ? Words.Disk.LISTS_FOLLOW_OPEN + Words.items(inLists) + ")" : Words.Disk.LISTS_FOLLOW)
@@ -334,7 +334,7 @@ final class PhysicalUi {
             if (it.original == null) unknown++;
             shown.add(TrashScreen.shownName(it.name()));
         }
-        Ui.ask(a, Words.Disk.RESTORE_TITLE + Physical.what(shown), Words.Disk.RESTORE_FILES_BACK,
+        Ui.ask(a, Words.Disk.RESTORE_TITLE + DiskSay.what(shown), Words.Disk.RESTORE_FILES_BACK,
                 list.size() == 1 && list.get(0).original != null ? list.get(0).original
                         : (unknown > 0 ? unknown + Words.Disk.UNKNOWN_STAY : Words.Disk.TAKEN_RESTORED),
                 Words.Disk.RESTORE_NOT_LISTS, Words.Disk.RESTORE, new Runnable() {
@@ -360,7 +360,7 @@ final class PhysicalUi {
             size += it.size;
             shown.add(TrashScreen.shownName(it.name()));
         }
-        Ui.ask(a, Words.Disk.PURGE_TITLE + Physical.what(shown), Words.Disk.PURGE_FILES,
+        Ui.ask(a, Words.Disk.PURGE_TITLE + DiskSay.what(shown), Words.Disk.PURGE_FILES,
                 Files.size(size) + Words.Disk.PURGE_GREY,
                 Words.Disk.NO_UNDO, Words.Disk.PURGE, new Runnable() {
                     @Override
@@ -648,7 +648,7 @@ final class PhysicalUi {
                 Ui.afterIndex(a, new Runnable() {
                     @Override
                     public void run() {
-                        Ui.toast(a, Physical.message(verb, listsVerb, r[0]));
+                        Ui.toast(a, DiskSay.message(verb, listsVerb, r[0]));
                         if (done != null) done.done(r[0]);
                     }
                 });

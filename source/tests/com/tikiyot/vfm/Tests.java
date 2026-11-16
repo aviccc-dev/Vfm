@@ -988,7 +988,7 @@ public final class Tests {
         // קובץ שאינו באינדקס — לא נמחק, וההודעה אומרת למה
         r = Physical.delete(lib, Arrays.asList(new File(root, "אין.pdf").getAbsolutePath()), false);
         eq("מחיקה של קובץ לא ידוע נכשלת", 1, r.failed);
-        check("הודעה: הסיבה", Physical.message("נמחקו", "הוסרו", r).contains("לא נמצא"));
+        check("הודעה: הסיבה", DiskSay.message("נמחקו", "הוסרו", r).contains("לא נמצא"));
 
         // העברה לתיקייה: הקובץ זז, האינדקס בשני הקצוות, הרשימות עוקבות
         File dest = new File(root, "יעד");
@@ -1078,7 +1078,7 @@ public final class Tests {
         check("82: מחיקת תיקייה — בסל", !new File(books).exists() && new File(r.to.get(books), "משנה/א.pdf").isFile());
         check("82: מחיקת תיקייה — האינדקס בשני הקצוות", !has(lib, fa) && has(lib, r.to.get(books) + "/משנה/א.pdf"));
         check("82: קובץ מתוך תיקייה שנמחקה — \"בסל\"", Trash.isInTrash(lib, fa));
-        eq("82: הודעה", "נמחקה תיקייה אחת (2 קבצים)", Physical.message("נמחקו", "הוסרו", r));
+        eq("82: הודעה", "נמחקה תיקייה אחת (2 קבצים)", DiskSay.message("נמחקו", "הוסרו", r));
         Trash.Item it = trashItem(lib, books);
         check("82: בסל — שורה אחת לתיקייה", it != null && it.dir && it.files == 2 && it.size == 110);
         int trashRows = 0;
@@ -1141,7 +1141,7 @@ public final class Tests {
         Script sc = new Script(ans(Physical.Choice.RENAME, null, false), ans(Physical.Choice.CANCEL, null, false));
         r = Physical.transfer(lib, three, NONE, dst2, true, sc, null, false);
         check("82: ביטול — עצר", r.cancelled && r.done.size() == 1 && !new File(dst2, "3 (2).pdf").exists());
-        check("82: ביטול — הודעה", Physical.message("הועתקו", "הוסרו", r).contains("בוטל"));
+        check("82: ביטול — הודעה", DiskSay.message("הועתקו", "הוסרו", r).contains("בוטל"));
 
         // "אותו דבר לכל השאר" — שואל פעם אחת
         sc = new Script(ans(Physical.Choice.RENAME, null, true));
@@ -2723,7 +2723,7 @@ public final class Tests {
             lib74.flush(5000);
             check("מבנה 74: ההרצה מחזירה למסך את מה שיצא — שני פריטים, בלי כישלון", r74.failed == 0 && r74.done.size() == 2
                     && !new File(d74, "א.txt").exists() && !new File(d74, "תיקייה").exists());
-            check("מבנה 74: הודעת המסך נבנית מאותה תוצאה", Physical.message(Words.Disk.DELETED, Words.Disk.REMOVED, r74).contains(Words.folders(1)) && r74.dirs == 1);
+            check("מבנה 74: הודעת המסך נבנית מאותה תוצאה", DiskSay.message(Words.Disk.DELETED, Words.Disk.REMOVED, r74).contains(Words.folders(1)) && r74.dirs == 1);
             Physical.Result again74 = act74.run(lib74, null, null, false);
             check("מבנה 74: הרצה שנייה של אותה פעולה (הקבצים כבר אינם) — כישלון שמדווח, לא חריגה", again74.failed > 0 || again74.done.isEmpty());
             String pui74 = read(new File(code, "masachim/rechivim/PhysicalUi.java"));
@@ -2871,7 +2871,7 @@ public final class Tests {
                 check("מבנה 77: ההעתקה נעשית — שלושה פריטים, התיקייה שלמה, והמקור במקומו (" + rc77.note + ")", rc77.failed == 0 && rc77.done.size() == 3
                         && "1".equals(read(new File(to77, "א.txt"))) && "3".equals(read(new File(to77, "תיקייה/ג.txt")))
                         && new File(to77, "תיקייה/פנים").isDirectory() && new File(a77).isFile() && new File(dir77, "ג.txt").isFile());
-                check("מבנה 77: הודעת המסך נבנית מאותה תוצאה", rc77.dirs == 1 && Physical.message(Words.Disk.COPIED, Words.Disk.REMOVED, rc77).contains(Words.folders(1)));
+                check("מבנה 77: הודעת המסך נבנית מאותה תוצאה", rc77.dirs == 1 && DiskSay.message(Words.Disk.COPIED, Words.Disk.REMOVED, rc77).contains(Words.folders(1)));
                 Physical.Result again77 = Manager.onSelected("COPY", java.util.Collections.singletonList(a77), none77, to77, Paths.data(), v77, lib77).run(lib77, null, null, false);
                 check("מבנה 77: שם תפוס, ואין את מי לשאול — כישלון שמדווח, והקובץ שביעד לא נדרס", again77.failed == 1 && again77.done.isEmpty()
                         && "1".equals(read(new File(to77, "א.txt"))));
@@ -4587,11 +4587,11 @@ public final class Tests {
         check("128: התנאי מובן לחיפוש", c.unknown.isEmpty() && c.tests.size() == 3);
 
         // 141: שמות בחלון האישור
-        String n = Physical.namesOf(P("/x/א.pdf", "/x/ב.pdf"), P("/x/ספרים"), 12);
+        String n = DiskSay.namesOf(P("/x/א.pdf", "/x/ב.pdf"), P("/x/ספרים"), 12);
         check("141: תיקייה קודם, ואחריה הקבצים", n.indexOf("📁 ספרים") < n.indexOf("א.pdf") && n.contains("ב.pdf"));
         List<String> many = new ArrayList<String>();
         for (int i = 0; i < 30; i++) many.add("/x/ק" + i + ".pdf");
-        String m = Physical.namesOf(many, new ArrayList<String>(), 12);
+        String m = DiskSay.namesOf(many, new ArrayList<String>(), 12);
         check("141: עד 12, ואחר כך \"ועוד 18\"", m.contains("ק11.pdf") && !m.contains("ק12.pdf") && m.contains("ועוד 18"));
     }
 
