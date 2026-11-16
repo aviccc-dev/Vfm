@@ -1570,6 +1570,20 @@ public final class Words {
         public static String rowNew(String side, int n) {
             return "➕ שורה חדשה: " + side + " " + n;
         }
+
+        /** מבנה 206 (המשתמש, 16.11.2026: "להשאיר גם את השיטה הישנה… היא יותר אינטואיטיבית"): עריכה במקום — דרך הרשימה. */
+        public static final String B_EDIT = "✏ עריכת הפקודה", B_RIGHT = "→ ימינה", B_LEFT = "← שמאלה", B_REMOVE = "🗑 הסרה מהשורה",
+                B_LIST = "☰ הרשימה של השורה", REMOVE_TITLE = "הסרה מהשורה", REMOVE_YES = "להסיר";
+
+        public static String removeQuestion(String name) {
+            return "\"" + name + "\" ייצא מהשורה. הקובץ עצמו נשאר.";
+        }
+
+        public static String rowAddButton(String side, int n, String where) {
+            return "➕ כפתור חדש — " + side + " " + n + " · " + where;
+        }
+
+        public static final String ALL_SCREENS = "בכל המסכים";
     }
 
     /** 1.10.0: בכאילו — קובץ פקודות בהדמיה */

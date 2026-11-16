@@ -135,10 +135,10 @@ final class TopRow {
                     @Override public void onClick(View x) { CmdMenu.found(a, it.e.label, it.e.cond == null ? "" : it.e.cond, null); }
                 });
             }
-            v.setOnLongClickListener(new View.OnLongClickListener() {              // העריכה — ברשימה שהכפתור בה
+            v.setOnLongClickListener(new View.OnLongClickListener() {              // מבנה 206: העריכה — במקום, דרך הרשימה
                 @Override
                 public boolean onLongClick(View x) {
-                    DbListScreen.open(a, it.mode, it.list);
+                    buttonMenu(row, it);
                     return true;
                 }
             });
@@ -200,6 +200,12 @@ final class TopRow {
             public void onClick(View x) {
                 final List<String> labels = new ArrayList<String>();
                 final List<Runnable> runs = new ArrayList<Runnable>();
+                labels.add(Words.Top.rowAddButton(side, n, Words.Top.ALL_SCREENS));   // מבנה 206: כפתור חדש — ישר בשורה
+                runs.add(new Runnable() { @Override public void run() { addButton(null, side, n); } });
+                if (screen != null) {
+                    labels.add(Words.Top.rowAddButton(side, n, screen));
+                    runs.add(new Runnable() { @Override public void run() { addButton(screen, side, n); } });
+                }
                 labels.add(Words.Top.rowAll(side, n));
                 runs.add(new Runnable() { @Override public void run() { arrange(null, side, n); } });
                 if (screen != null) {
@@ -227,8 +233,85 @@ final class TopRow {
         return 0;
     }
 
-    /** פותח את הרשימה של השורה באופן "שמור לתוכנה" (נוצרת אם חסרה). */
-    private void arrange(final String ofScreen, final String side, final int n) {
+    /**
+     * מבנה 206 (המשתמש, 16.11.2026: "את השורה החדשה והכפתורים העברנו לרשימה בשמור לתוכנה. חשבתי שעדיף להשאיר גם את השיטה הישנה,
+     * רק שהיא תעבור בדרך הזו של שמור לתוכנה — היא יותר אינטואיטיבית"). נגיעה ארוכה על כפתור — התפריט של עד מ0.40 (עריכה, ימינה,
+     * שמאלה, הסרה), אבל שום דבר לא נשמר כאן: כל שינוי הוא פקודה על הרשימה של השורה, דרך המנהל — המקום האחד נשאר הרשימה.
+     */
+    private void buttonMenu(Menus.Row row, final Menus.Item it) {
+        int at = -1, of = 0;
+        for (Menus.Item x : row.items)
+            if (x.list == it.list) {
+                if (x == it) at = of;
+                of++;
+            }
+        final List<String> labels = new ArrayList<String>();
+        final List<Runnable> runs = new ArrayList<Runnable>();
+        if (it.e.kind == DbMore.E_FILE) {
+            labels.add(Words.Top.B_EDIT);
+            runs.add(new Runnable() { @Override public void run() { LabScreen.edit(a, new File(it.e.path)); } });
+        }
+        if (at > 0) {
+            labels.add(Words.Top.B_RIGHT);
+            runs.add(new Runnable() { @Override public void run() { order(it, DbMore.UP); } });
+        }
+        if (at >= 0 && at < of - 1) {
+            labels.add(Words.Top.B_LEFT);
+            runs.add(new Runnable() { @Override public void run() { order(it, DbMore.DOWN); } });
+        }
+        labels.add(Words.Top.B_REMOVE);
+        runs.add(new Runnable() { @Override public void run() { remove(it); } });
+        labels.add(Words.Top.B_LIST);
+        runs.add(new Runnable() { @Override public void run() { DbListScreen.open(a, it.mode, it.list); } });
+        Ui.list(a, it.e.label, labels, new DialogInterface.OnClickListener() {
+            @Override public void onClick(DialogInterface d, int w) { runs.get(w).run(); }
+        });
+    }
+
+    /** מבנה 206: ימינה / שמאלה — "עדכן רשימה %נבחרים% /מקום:…" על הרשימה של השורה (Manager.onListOrder). */
+    private void order(Menus.Item it, int how) {
+        Library lib = Library.get(a);
+        Manager.Act act = Manager.onListOrder(it.mode, it.list, java.util.Collections.singletonList(it.e.id), how, Paths.data(), BatchUi.vars(a, Paths.data()), lib);
+        String said = act.error() != null ? act.error() : act.say(lib);
+        if (act.error() != null || act.failed) Ui.toast(a, said);
+        build();
+    }
+
+    /** מבנה 206: הסרה מהשורה — "בטל ידנית %נבחרים%" על הרשימה של השורה (Manager.onListRemove), אחרי אישור. הקובץ נשאר. */
+    private void remove(final Menus.Item it) {
+        final Library lib = Library.get(a);
+        final Manager.Act act = Manager.onListRemove(it.mode, it.list, java.util.Collections.singletonList(it.e.id), Paths.data(), BatchUi.vars(a, Paths.data()), lib);
+        if (act.error() != null) {
+            Ui.toast(a, act.error());
+            return;
+        }
+        Ui.confirm(a, Words.Top.REMOVE_TITLE, Words.Top.removeQuestion(it.e.label), Words.Top.REMOVE_YES, new Runnable() {
+            @Override
+            public void run() {
+                String said = act.say(lib);
+                if (act.failed) Ui.toast(a, said);
+                build();
+            }
+        });
+    }
+
+    /** מבנה 206: ➕ — כפתור חדש בשורה הזו, בלי לפתוח את הרשימה: בוחרים פקודה, והיא נכנסת לרשימה של השורה (דרך המנהל), והשורה נבנית מחדש. */
+    private void addButton(final String ofScreen, final String side, final int n) {
+        long id = rowList(ofScreen, side, n);
+        if (id == 0) return;
+        final long in = id;
+        CmdMenu.show(a, null, new CmdMenu.Picked() {                             // אותה בחירה כמו ב־➕ שברשימה (DbVerbsUi.addCommand)
+            @Override
+            public void ok(String icon, String name, String line, File file) {
+                File f = file != null ? file : Shortcuts.write(icon, name, line);
+                DbVerbsUi.addToList(a, Menus.MODE, in, java.util.Collections.singletonList(f.getAbsolutePath()), false);   // מבנה 114: דרך המנהל
+                build();
+            }
+        });
+    }
+
+    /** הרשימה של השורה באופן "שמור לתוכנה" (נוצרת אם חסרה). 0 — לא נוצרה. */
+    private long rowList(final String ofScreen, final String side, final int n) {
         long id;
         boolean sys = Permit.systemOpen(Permit.SYS_TOP_ROW);                      // מבנה 124: פעולה של המערכת (התפריטים), רשומה אצל המנהל
         try {
@@ -241,6 +324,12 @@ final class TopRow {
         } finally {
             Permit.systemClose(sys);
         }
+        return id;
+    }
+
+    /** פותח את הרשימה של השורה באופן "שמור לתוכנה" (נוצרת אם חסרה). */
+    private void arrange(final String ofScreen, final String side, final int n) {
+        long id = rowList(ofScreen, side, n);
         if (id == 0) return;
         Ui.toast(a, Words.Top.ROW_HINT);
         DbListScreen.open(a, Menus.MODE, id);

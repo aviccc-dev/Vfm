@@ -4091,6 +4091,11 @@ public final class Tests {
                 && Verbs.parse(toolLine(Words.DbCmd.TOOL_EDITOR)).error == null && Verbs.S_PLUGINS.equals(Verbs.parse(toolLine(Words.DbCmd.TOOL_EDITOR)).arg));
         // מבנה 203 (המשתמש, 16.11.2026: "הרצת העורך אמורה להיות מובנת בתוכנה"): כניסה קבועה לעורך בתפריט, ישר — בלי קובץ פקודות באמצע
         String dls203 = read(new File(System.getProperty("vfm.src"), "src/com/tikiyot/vfm/masachim/DbListScreen.java"));
+        // מבנה 206 (המשתמש, 16.11.2026): שורות הכפתורים — עריכה במקום (התפריט של עד מ0.40), אבל כל שינוי הוא פקודה על הרשימה של השורה
+        String tr206 = read(new File(System.getProperty("vfm.src"), "src/com/tikiyot/vfm/masachim/rechivim/TopRow.java"));
+        check("מבנה 206: נגיעה ארוכה על כפתור — עריכה, ימינה / שמאלה, הסרה, הרשימה; וכל שינוי דרך המנהל (בלי לכתוב בעצמו)",
+                tr206.contains("buttonMenu(row, it);") && tr206.contains("Manager.onListOrder(") && tr206.contains("Manager.onListRemove(")
+                        && tr206.contains("DbVerbsUi.addToList(") && !tr206.contains("Lists.") && !tr206.contains("Db.write("));
         String dbs205 = read(new File(System.getProperty("vfm.src"), "src/com/tikiyot/vfm/masachim/DbScreen.java"));
         check("מבנה 205 (ממצא 55): פותחי המסכים נרשמים אצל המנהל כבר בהפעלה — מיד אחרי פעולות המערכת",
                 dbs205.contains("Manager.boot();") && dbs205.indexOf("VerbsUi.boot();") > dbs205.indexOf("Manager.boot();"));
