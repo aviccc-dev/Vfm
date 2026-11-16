@@ -106,20 +106,7 @@ final class Runner {
         int mark = 0;
         long t0 = System.nanoTime();
         for (int si = 0; si <= plan.steps.size(); si++) {
-            if (prev != null && plan.measure) {                                  // 1.25.0: מדידה — זמן השורה הקודמת
-                prev.ms = (System.nanoTime() - t0) / 1000000;
-                if (report.size() > mark) {
-                    String last = report.get(report.size() - 1) + Words.Loop.took(prev.ms);
-                    if (plan.lineLimit > 0 && prev.ms > plan.lineLimit) {           // מ0.45: חרגה מהזמן — ❌, ונספרת עם "ודא" שנכשלו
-                        String head = Words.Cmd.line(prev.label(), "");
-                        last = last.startsWith(head) ? head + Words.Loop.tooSlow(plan.lineLimit) + last.substring(head.length())
-                                : Words.Loop.tooSlow(plan.lineLimit) + last;
-                        prev.verified = Boolean.FALSE;
-                        plan.trouble = true;
-                    }
-                    report.set(report.size() - 1, last);
-                }
-            }
+            if (prev != null && plan.measure) measureLine(plan, prev, report, mark, t0);   // 1.25.0: מדידה — זמן השורה הקודמת
             if (prev != null && listen != null) listen.after(prev, report.size() > mark ? report.get(report.size() - 1) : null);
             mark = report.size();
             t0 = System.nanoTime();
@@ -165,7 +152,6 @@ final class Runner {
                 continue;
             }
             if (s.contains != null) containsAtRun(s);                          // מ0.40: /מכיל: — מול התוכן של עכשיו
-            String out;
             if (s.noop) {                                                       // 1.27.0: גם מה שלא השתנה — נאמר
                 if (s.cmd.equals(Syntax.SECTION)) sectionFails = fails;
                 report.add(Words.Cmd.line(s.label(), s.describe));
@@ -180,85 +166,16 @@ final class Runner {
             }
             if (s.cmd.equals("ECHO") || s.cmd.equals("START") || (s.cmd.equals(Syntax.OPEN) && s.op == null)) continue;
             if (s.op != null) {                                                // 1.24.0: רשימות
-                DbListCmd.lastFailed = false;
-                String got = s.op.run(lib);
-                s.said = got;                                                   // מבנה 85
-                s.saidFailed = DbListCmd.lastFailed;
-                report.add(Words.Cmd.line(s.label(), got));
-                if (s.cmd.equals(Syntax.WRITE) && s.dest != null) {                    // מבנה 80: מה שיצא — גם למסך שהריץ את השורה
-                    s.result = new Physical.Result();
-                    if (DbListCmd.lastFailed) s.result.fail(got);
-                    else s.result.done.add(s.dest.getAbsolutePath());
-                }
-                if (DbListCmd.lastFailed) {
-                    plan.trouble = true;
-                    fails++;
-                }
+                fails += runOp(plan, s, lib, report);
                 continue;
             }
             if (s.cmd.equals("COMP")) {                                       // 1.20.0: חושב בתכנון — רק בדוח
                 report.add(Words.Cmd.line(s.label(), s.describe));
                 continue;
             }
-            if (s.cmd.equals("MD")) {
-                String why = Physical.makeFolder(lib, s.dest.getParentFile(), s.dest.getName());
-                out = why == null ? Words.Cmd.created(s.dest.getName()) : why;
-                s.result = new Physical.Result();                               // מבנה 79
-                if (why == null) s.result.done.add(s.dest.getAbsolutePath());
-                else s.result.fail(why);
-                if (why != null) { plan.trouble = true; fails++; }
-            } else if (s.cmd.equals("RD") || s.cmd.equals("DEL")) {
-                if (s.files.isEmpty() && s.dirs.isEmpty()) out = Words.Cmd.NO_FILES;
-                else {
-                    known(lib, s.files);
-                    Physical.Result r = Physical.delete(lib, s.files, s.dirs, grey);
-                    s.result = r;
-                    out = result(r, Words.Cmd.TRASHED);
-                    if (r.failed > 0) { plan.trouble = true; fails += r.failed; }
-                }
-            } else if (s.share) {                                          // 203
-                if (s.files.isEmpty() && s.dirs.isEmpty()) out = Words.Cmd.NO_FILES;
-                else out = stage(plan, s, progress);
-            } else if (s.cmd.equals("COPY") || s.cmd.equals("MOVE")) {
-                if (s.renameTaken) sameAtRun(s);                                // מ0.40: "יש כבר זהה" — שוב, מול הכונן של עכשיו
-                if (s.files.isEmpty() && s.dirs.isEmpty()) {
-                    out = Batch.notes(s).isEmpty() ? Words.Cmd.NO_FILES : Batch.notes(s).substring(3);
-                    s.result = new Physical.Result();                           // מבנה 77: לא נעשה דבר — וזו התוצאה, לא תקלה
-                } else {
-                    boolean copy = s.cmd.equals("COPY");
-                    Physical.Journal j = s.journal == null ? null : new Physical.Journal(new File(s.journal), s.text);   // 1.19.0
-                    Physical.Asker ask = s.replace ? Batch.REPLACE_ALL : s.renameTaken ? Batch.RENAME_ALL   // מ0.40: /תפוס:לשנות-שם
-                            : s.failTaken ? null : asker;                                    // 1.20.0: /תפוס:לעצור
-                    Physical.Result r = !s.targets.isEmpty()                           // 1.21.0 שחזור, 1.22.0 רשימה (מ0.40: גם העברה)
-                            ? Physical.transferTo(lib, s.files, s.targets, s.dest, copy, ask, progress, grey, j)
-                            : s.keepRoot != null
-                            ? Physical.transferKeep(lib, s.keepRoot, s.files, s.dirs, s.dest, copy, ask, progress, grey, j,
-                                    !s.fromCompare)
-                            : Physical.transfer(lib, s.files, s.dirs, s.dest, copy, ask, progress, grey, j);
-                    s.result = r;                                               // מבנה 77
-                    out = result(r, copy ? Words.Cmd.COPIED : Words.Cmd.MOVED);
-                    out += Batch.notes(s);
-                    if (j != null) {
-                        j.close();
-                        if (j.failed()) {
-                            out += Words.Cmd.JOURNAL_FAILED;
-                            plan.trouble = true;
-                            fails++;
-                        }
-                    }
-                    if (r.failed > 0) { plan.trouble = true; fails += r.failed; }
-                }
-            } else if (s.cmd.equals("REN")) {
-                Physical.Result r = Physical.rename(lib, s.files.get(0), s.newName);
-                s.result = r;                                                   // מבנה 78
-                out = result(r, Words.Cmd.RENAMED);
-                if (r.failed > 0) { plan.trouble = true; fails += r.failed; }
-            } else {
-                out = Words.Cmd.NOT_DONE;
-                plan.trouble = true;
-                fails++;
-            }
-            report.add(Words.Cmd.line(s.label(), out));
+            Done d = disk(plan, s, lib, asker, progress, grey);
+            fails += d.fails;
+            report.add(Words.Cmd.line(s.label(), d.out));
         }
         if (plan.measure) measured(plan, report, (System.nanoTime() - all0) / 1000000);
         // מבנה 40 (ממצא 25): כישלונות שאינם "ודא" — שורה שנכשלה וההרצה המשיכה ("המשך") — נאמרים גם בסיכום, לא רק בשורה שלהם.
@@ -269,6 +186,115 @@ final class Runner {
         if (ok + bad > 0) report.add(Words.DbCmd.verifySummary(ok, bad));
         RunReport.write(plan, report);
         return report;
+    }
+
+    /** מבנה 177: מה שיצא משורה של הכונן — ההודעה, וכמה כישלונות להוסיף. */
+    private static final class Done {
+        String out;
+        int fails;
+    }
+
+    /** מבנה 177 (עד כאן — בתוך הלולאה של run0): פעולה אחת על הכונן — צור תיקייה, מחק, שיתוף, העתק / העבר, שנה שם. */
+    private static Done disk(Batch.Plan plan, Batch.Step s, Library lib, Physical.Asker asker, Physical.Progress progress, boolean grey) {
+        String out;
+        int fails = 0;
+        if (s.cmd.equals("MD")) {
+            String why = Physical.makeFolder(lib, s.dest.getParentFile(), s.dest.getName());
+            out = why == null ? Words.Cmd.created(s.dest.getName()) : why;
+            s.result = new Physical.Result();                               // מבנה 79
+            if (why == null) s.result.done.add(s.dest.getAbsolutePath());
+            else s.result.fail(why);
+            if (why != null) { plan.trouble = true; fails++; }
+        } else if (s.cmd.equals("RD") || s.cmd.equals("DEL")) {
+            if (s.files.isEmpty() && s.dirs.isEmpty()) out = Words.Cmd.NO_FILES;
+            else {
+                known(lib, s.files);
+                Physical.Result r = Physical.delete(lib, s.files, s.dirs, grey);
+                s.result = r;
+                out = result(r, Words.Cmd.TRASHED);
+                if (r.failed > 0) { plan.trouble = true; fails += r.failed; }
+            }
+        } else if (s.share) {                                          // 203
+            if (s.files.isEmpty() && s.dirs.isEmpty()) out = Words.Cmd.NO_FILES;
+            else out = stage(plan, s, progress);
+        } else if (s.cmd.equals("COPY") || s.cmd.equals("MOVE")) {
+            if (s.renameTaken) sameAtRun(s);                                // מ0.40: "יש כבר זהה" — שוב, מול הכונן של עכשיו
+            if (s.files.isEmpty() && s.dirs.isEmpty()) {
+                out = Batch.notes(s).isEmpty() ? Words.Cmd.NO_FILES : Batch.notes(s).substring(3);
+                s.result = new Physical.Result();                           // מבנה 77: לא נעשה דבר — וזו התוצאה, לא תקלה
+            } else {
+                boolean copy = s.cmd.equals("COPY");
+                Physical.Journal j = s.journal == null ? null : new Physical.Journal(new File(s.journal), s.text);   // 1.19.0
+                Physical.Asker ask = s.replace ? Batch.REPLACE_ALL : s.renameTaken ? Batch.RENAME_ALL   // מ0.40: /תפוס:לשנות-שם
+                        : s.failTaken ? null : asker;                                    // 1.20.0: /תפוס:לעצור
+                Physical.Result r = !s.targets.isEmpty()                           // 1.21.0 שחזור, 1.22.0 רשימה (מ0.40: גם העברה)
+                        ? Physical.transferTo(lib, s.files, s.targets, s.dest, copy, ask, progress, grey, j)
+                        : s.keepRoot != null
+                        ? Physical.transferKeep(lib, s.keepRoot, s.files, s.dirs, s.dest, copy, ask, progress, grey, j,
+                                !s.fromCompare)
+                        : Physical.transfer(lib, s.files, s.dirs, s.dest, copy, ask, progress, grey, j);
+                s.result = r;                                               // מבנה 77
+                out = result(r, copy ? Words.Cmd.COPIED : Words.Cmd.MOVED);
+                out += Batch.notes(s);
+                if (j != null) {
+                    j.close();
+                    if (j.failed()) {
+                        out += Words.Cmd.JOURNAL_FAILED;
+                        plan.trouble = true;
+                        fails++;
+                    }
+                }
+                if (r.failed > 0) { plan.trouble = true; fails += r.failed; }
+            }
+        } else if (s.cmd.equals("REN")) {
+            Physical.Result r = Physical.rename(lib, s.files.get(0), s.newName);
+            s.result = r;                                                   // מבנה 78
+            out = result(r, Words.Cmd.RENAMED);
+            if (r.failed > 0) { plan.trouble = true; fails += r.failed; }
+        } else {
+            out = Words.Cmd.NOT_DONE;
+            plan.trouble = true;
+            fails++;
+        }
+        Done d = new Done();
+        d.out = out;
+        d.fails = fails;
+        return d;
+    }
+
+    /** מבנה 177 (עד כאן — בתוך הלולאה של run0): שורה של רשימות (במסד). מחזירה 1 כשנכשלה. */
+    private static int runOp(Batch.Plan plan, Batch.Step s, Library lib, List<String> report) {
+        DbListCmd.lastFailed = false;
+        String got = s.op.run(lib);
+        s.said = got;                                                   // מבנה 85
+        s.saidFailed = DbListCmd.lastFailed;
+        report.add(Words.Cmd.line(s.label(), got));
+        if (s.cmd.equals(Syntax.WRITE) && s.dest != null) {                    // מבנה 80: מה שיצא — גם למסך שהריץ את השורה
+            s.result = new Physical.Result();
+            if (DbListCmd.lastFailed) s.result.fail(got);
+            else s.result.done.add(s.dest.getAbsolutePath());
+        }
+        if (DbListCmd.lastFailed) {
+            plan.trouble = true;
+            return 1;
+        }
+        return 0;
+    }
+
+    /** מבנה 177 (עד כאן — בתוך הלולאה של run0): הזמן של השורה הקודמת, ו"חרגה מהזמן". */
+    private static void measureLine(Batch.Plan plan, Batch.Step prev, List<String> report, int mark, long t0) {
+        prev.ms = (System.nanoTime() - t0) / 1000000;
+        if (report.size() > mark) {
+            String last = report.get(report.size() - 1) + Words.Loop.took(prev.ms);
+            if (plan.lineLimit > 0 && prev.ms > plan.lineLimit) {           // מ0.45: חרגה מהזמן — ❌, ונספרת עם "ודא" שנכשלו
+                String head = Words.Cmd.line(prev.label(), "");
+                last = last.startsWith(head) ? head + Words.Loop.tooSlow(plan.lineLimit) + last.substring(head.length())
+                        : Words.Loop.tooSlow(plan.lineLimit) + last;
+                prev.verified = Boolean.FALSE;
+                plan.trouble = true;
+            }
+            report.set(report.size() - 1, last);
+        }
     }
 
     /** 1.26.0: מה שורה עושה — לתצוגה המקדימה ולסיכום. */
