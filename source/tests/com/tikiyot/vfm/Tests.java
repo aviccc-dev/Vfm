@@ -432,6 +432,54 @@ public final class Tests {
             check("מבנה 96: ברשימה החכמה — בכל שמונה הדרכים לכתוב את זה, רק \"שיעור 12 כללים.pdf\"", only96);
             wipe(r96);
         }
+        // מבנה 190: מי כפול של מי (Dups) — עד כאן בתוך מסך הכפולים, בלי אף בדיקת מחשב; לפיו המשתמש מוחק קבצים
+        {
+            File r190 = new File(home, "מבנה190");
+            wipe(r190);
+            File a190 = new File(r190, "A"), b190 = new File(r190, "B");
+            mk(a190, "ספר.pdf", 10);
+            mk(a190, "ספר (1).pdf", 10);
+            mk(a190, "אחר.pdf", 10);
+            mk(a190, "יחיד.txt", 7);
+            mk(a190, "ריק.txt", 0);
+            mk(b190, "ספר.pdf", 10);
+            mk(b190, "רק-בב.doc", 33);
+            mk(b190, "אחר.pdf", 12);
+            Index ix190 = built("מבנה190", r190);
+            Library lib190 = Library.forTests(Collections.singletonList(ix190));
+            List<Library.Hit> all190 = Dups.group(lib190, ""), in190a = new ArrayList<Library.Hit>(), in190b = new ArrayList<Library.Hit>();
+            for (Library.Hit x : all190) (x.path().contains("/A/") ? in190a : in190b).add(x);
+            check("מבנה 190: נבדקים כל הקבצים חוץ מהריקים (7 מ־8), וגם \"כל הכונן\" — הכול (" + all190.size() + ")",
+                    all190.size() == 7 && Dups.group(lib190, Words.Dup.WHOLE_DRIVE).size() == 7 && Dups.group(lib190, null).size() == 7);
+            DupMode ns190 = DupMode.parse(null), sim190 = DupMode.parse(Words.Dup.SIZE_SIMILAR), nm190 = DupMode.parse(Words.Dup.NAME),
+                    ct190 = DupMode.parse(Words.Dup.CONTENT);
+            List<List<Library.Hit>> w190 = Dups.within(ns190, all190);
+            check("מבנה 190: שם וגודל — קבוצה אחת: \"ספר.pdf\" בשני המקומות; \"אחר.pdf\" בגודל אחר ו\"ספר (1).pdf\" — לא",
+                    w190.size() == 1 && w190.get(0).size() == 2 && w190.get(0).get(0).name().equals("ספר.pdf") && w190.get(0).get(1).name().equals("ספר.pdf")
+                            && !Dups.doubt(ns190, w190.get(0)));
+            List<List<Library.Hit>> s190 = Dups.within(sim190, all190);
+            check("מבנה 190: גודל ושם דומה — \"ספר (1).pdf\" מצטרף (שלושה), הקבוצה \"בספק\"; \"אחר.pdf\" באותו גודל — לא נכנס",
+                    s190.size() == 1 && s190.get(0).size() == 3 && Dups.doubt(sim190, s190.get(0)));
+            check("מבנה 190: שם בלבד — שתי קבוצות (גם \"אחר.pdf\", אף שהגודל שונה)", Dups.within(nm190, all190).size() == 2);
+            Dups.Versus v190 = Dups.versus(ns190, in190a, in190b);
+            check("מבנה 190: בין שני מקומות — בשניהם: \"ספר.pdf\" (הקובץ של א׳ ואחריו העותק שבב׳); רק בא׳ — 3; רק בב׳ — 2",
+                    v190.both.size() == 1 && v190.both.get(0).size() == 2 && v190.both.get(0).get(0).path().contains("/A/")
+                            && v190.both.get(0).get(1).path().contains("/B/") && v190.onlyA.size() == 3 && v190.onlyB.size() == 2);
+            Dups.Versus self190 = Dups.versus(ns190, in190a, in190a);
+            check("מבנה 190: מקום מול עצמו — הקובץ עצמו אינו עותק של עצמו: אין \"בשניהם\", ואין \"רק בב׳\"",
+                    self190.both.isEmpty() && self190.onlyA.size() == in190a.size() && self190.onlyB.isEmpty());
+            check("מבנה 190: לפי התוכן, בלי חתימות — אין כפולים (קובץ בלי חתימה עומד לבד); 4 קבצים באותו גודל מחכים לחתימה",
+                    Dups.within(ct190, all190).isEmpty() && Dups.unsigned(all190) == 4 && Dups.needSig(all190).size() == 4);
+            for (Library.Hit x : all190) if (x.name().equals("ספר.pdf")) x.rec.sig = 5; else if (x.name().equals("ספר (1).pdf")) x.rec.sig = 6;
+            List<List<Library.Hit>> c190 = Dups.within(ct190, all190);
+            check("מבנה 190: לפי התוכן, עם חתימות — רק שני הקבצים שהחתימה שלהם זהה; אותו גודל בחתימה אחרת — לא; נשאר אחד בלי חתימה",
+                    c190.size() == 1 && c190.get(0).size() == 2 && Dups.unsigned(all190) == 1 && Dups.needSig(all190).size() == 1);
+            String ds190 = read(new File(System.getProperty("vfm.src"), "src/com/tikiyot/vfm/masachim/DupScreen.java"));
+            check("מבנה 190: מסך הכפולים אינו מחשב בעצמו מי כפול — הוא שואל את Dups (אין בו מפתח, פיצול או השוואת שמות משלו)",
+                    ds190.contains("Dups.within(") && ds190.contains("Dups.versus(") && ds190.contains("Dups.group(lib, ")
+                            && !ds190.contains("similarNames") && !ds190.contains("rec.norm") && !ds190.contains("rec.sig"));
+            wipe(r190);
+        }
         Smarts.Result sm94 = Smarts.over(lib).find("ספר מוגה", "", 100);
         check("מבנה 94: הספירה של הרשימה החכמה ושורותיה — לפי ההתאמה המלאה (" + sm94.count + ")", sm94.count == list94.hits.size());
         String src94 = read(new File(System.getProperty("vfm.src"), "src/com/tikiyot/vfm/chomer/indeks/Smarts.java"))

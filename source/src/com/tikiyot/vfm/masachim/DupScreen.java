@@ -30,7 +30,6 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -263,17 +262,12 @@ public class DupScreen extends Activity {
         onlyB.clear();
         selected.clear();
         buildListsOf();
-        List<Library.Hit> a = group(scope);
-        unsigned = 0;
-        if (contentMode()) {                                                   // 194: מה לא נבדק בתוכן
-            Map<Long, Integer> sz = new HashMap<Long, Integer>();
-            for (Library.Hit x : a) sz.put(x.rec.size, sz.containsKey(x.rec.size) ? sz.get(x.rec.size) + 1 : 1);
-            for (Library.Hit x : a) if (x.rec.sig == 0 && sz.get(x.rec.size) > 1) unsigned++;
-        }
+        List<Library.Hit> a = Dups.group(lib, scope);
+        unsigned = contentMode() ? Dups.unsigned(a) : 0;                       // 194: מה לא נבדק בתוכן (מבנה 190: החישוב — Dups)
         boolean same = between && Sources.fromCond(scope).equals(Sources.fromCond(against))
                 && Sources.rest(scope).equals(Sources.rest(against));
         if (!between || same) within(a);
-        else versus(a, group(against));
+        else versus(a, Dups.group(lib, against));
         String head = !between || same ? Words.Dup.DUPS_IN + Sources.describe(scope)
                 : Words.Dup.A_COLON + Sources.describe(scope) + Words.Dup.B_COLON + Sources.describe(against);
         if (same) head += Words.Dup.A_B_SAME;
@@ -291,21 +285,6 @@ public class DupScreen extends Activity {
         if (DbLists.on(this)) listsOf.putAll(DbLists.whereListed(this));    // מ0.23: עובדים במסד — הרשימות של המסד
     }
 
-    private List<Library.Hit> group(String spec) {
-        List<Library.Hit> out = new ArrayList<Library.Hit>();
-        String sp = spec == null ? "" : spec.trim();
-        Cond cond = sp.isEmpty() || sp.equals(Words.Dup.WHOLE_DRIVE) ? null : Cond.parse(sp);
-        for (Index ix : lib.indexes)
-            for (Index.Rec r : ix.files) {
-                if (r.gone) continue;
-                if (r.size == 0) continue;                        // 96: קבצים ריקים אינם עותקים זה של זה
-                if (Library.hide(ix, r, cond)) continue;          // הסל והמוסתרים לא נחשבים עותקים
-                if (cond != null && !cond.matches(ix, r)) continue;
-                out.add(Library.hit(ix, r));
-            }
-        return out;
-    }
-
     /** 195: השם, הגודל והתוכן — מתוך "השוואה". */
     private DupMode dm() {
         if (dmCache == null || !mode.equals(dmFor)) {
@@ -317,10 +296,6 @@ public class DupScreen extends Activity {
 
     private DupMode dmCache;
     private String dmFor;
-
-    private boolean similarMode() {
-        return dm().name == DupMode.NAME_SIMILAR;
-    }
 
     /** 190: לפי התוכן — אותו גודל ואותה חתימה. */
     private boolean contentMode() {
@@ -340,17 +315,9 @@ public class DupScreen extends Activity {
     private boolean needSigs() {
         if (signing) return true;
         if (signTried) return false;
-        List<Library.Hit> all = new ArrayList<Library.Hit>(group(scope));
-        if (between) all.addAll(group(against));
-        Map<Long, Integer> sizes = new HashMap<Long, Integer>();
-        for (Library.Hit x : all) {
-            Integer n = sizes.get(x.rec.size);
-            sizes.put(x.rec.size, n == null ? 1 : n + 1);
-        }
-        final List<Library.Hit> todo = new ArrayList<Library.Hit>();
-        Set<Index.Rec> seen = new HashSet<Index.Rec>();
-        for (Library.Hit x : all)
-            if (x.rec.sig == 0 && sizes.get(x.rec.size) > 1 && seen.add(x.rec)) todo.add(x);
+        List<Library.Hit> all = new ArrayList<Library.Hit>(Dups.group(lib, scope));
+        if (between) all.addAll(Dups.group(lib, against));
+        final List<Library.Hit> todo = Dups.needSig(all);
         if (todo.isEmpty()) return false;
         signing = true;
         signTried = true;
@@ -377,64 +344,14 @@ public class DupScreen extends Activity {
         return true;
     }
 
-    private boolean alike(Library.Hit x, Library.Hit y) {
-        return !similarMode() || Text.similarNames(x.name(), y.name());
-    }
-
-    /** קבוצה של אותו גודל — מפוצלת לקבוצות של שמות דומים (כל מי שדומה לאחד מהקבוצה נכנס אליה). */
-    private List<List<Library.Hit>> split(List<Library.Hit> g) {
-        List<List<Library.Hit>> out = new ArrayList<List<Library.Hit>>();
-        if (!similarMode()) {
-            out.add(g);
-            return out;
-        }
-        for (Library.Hit x : g) {
-            List<Library.Hit> home = null;
-            for (java.util.Iterator<List<Library.Hit>> it = out.iterator(); it.hasNext(); ) {
-                List<Library.Hit> c = it.next();
-                boolean near = false;
-                for (Library.Hit y : c) if (alike(x, y)) { near = true; break; }
-                if (!near) continue;
-                if (home == null) home = c;
-                else {                                    // x מחבר שתי קבוצות — מאחדים
-                    home.addAll(c);
-                    it.remove();
-                }
-            }
-            if (home == null) out.add(home = new ArrayList<Library.Hit>());
-            home.add(x);
-        }
-        return out;
-    }
-
-    private String key(Library.Hit hit) {
-        DupMode d = dm();                                                      // 195: כל שילוב
-        StringBuilder k = new StringBuilder();
-        if (d.name == DupMode.NAME_SAME) k.append(hit.rec.norm);
-        k.append('|');
-        if (d.size) k.append(hit.rec.size);
-        k.append('|');
-        if (d.content) k.append(hit.rec.sig != 0 ? Long.toHexString(hit.rec.sig) : "?" + hit.path());   // 190: בלי חתימה — לבד
-        return k.toString();
-    }
-
+    /** מבנה 190: מי כפול של מי — Dups (בחומר, נבדק במחשב); כאן רק מה שמוצג: הקבוצות, הסדר, והסיכום. */
     private void within(List<Library.Hit> all) {
-        Map<String, List<Library.Hit>> m = new LinkedHashMap<String, List<Library.Hit>>();
-        for (Library.Hit x : all) {
-            List<Library.Hit> g = m.get(key(x));
-            if (g == null) m.put(key(x), g = new ArrayList<Library.Hit>());
-            g.add(x);
-        }
         long waste = 0;
         int files = 0;
-        for (List<Library.Hit> big : m.values()) {
-            if (big.size() < 2) continue;
-            for (List<Library.Hit> g : split(big)) {
-                if (g.size() < 2) continue;
-                groups.add(makeGroup(g, -1));
-                files += g.size();
-                for (int i = 1; i < g.size(); i++) waste += g.get(i).rec.size;
-            }
+        for (List<Library.Hit> g : Dups.within(dm(), all)) {
+            groups.add(makeGroup(g, -1));
+            files += g.size();
+            for (int i = 1; i < g.size(); i++) waste += g.get(i).rec.size;
         }
         sortGroups();
         summary = Files.count(all.size()) + Words.Dup.FILES_CHECKED + groups.size() + Words.Dup.FILES_WITH_COPIES
@@ -442,44 +359,19 @@ public class DupScreen extends Activity {
     }
 
     private void versus(List<Library.Hit> a, List<Library.Hit> b) {
-        Map<String, List<Library.Hit>> inA = new HashMap<String, List<Library.Hit>>(), inB = new HashMap<String, List<Library.Hit>>();
-        for (Library.Hit x : a) put(inA, x);
-        for (Library.Hit y : b) put(inB, y);
+        Dups.Versus v = Dups.versus(dm(), a, b);
         long both = 0;
-        for (Library.Hit x : a) {
-            List<Library.Hit> copies = new ArrayList<Library.Hit>();
-            List<Library.Hit> g = inB.get(key(x));
-            if (g != null) for (Library.Hit y : g) if (y.rec != x.rec && alike(x, y)) copies.add(y);   // הקובץ עצמו אינו עותק
-            if (copies.isEmpty()) {
-                onlyA.add(single(x, Words.Dup.A));
-            } else {
-                List<Library.Hit> all = new ArrayList<Library.Hit>();
-                all.add(x);
-                all.addAll(copies);
-                Group gr = makeGroup(all, 1);
-                gr.inB = copies.size();
-                groups.add(gr);
-                both += x.rec.size;
-            }
+        for (List<Library.Hit> all : v.both) {
+            Group gr = makeGroup(all, 1);
+            gr.inB = all.size() - 1;
+            groups.add(gr);
+            both += all.get(0).rec.size;
         }
-        Set<Index.Rec> aRecs = new HashSet<Index.Rec>();
-        for (Library.Hit x : a) aRecs.add(x.rec);
-        for (Library.Hit y : b) {
-            if (aRecs.contains(y.rec)) continue;
-            List<Library.Hit> g = inA.get(key(y));
-            boolean has = false;
-            if (g != null) for (Library.Hit x : g) if (x.rec != y.rec && alike(x, y)) has = true;
-            if (!has) onlyB.add(single(y, Words.Dup.B));
-        }
+        for (Library.Hit x : v.onlyA) onlyA.add(single(x, Words.Dup.A));
+        for (Library.Hit y : v.onlyB) onlyB.add(single(y, Words.Dup.B));
         sortGroups();
         summary = Files.count(a.size()) + Words.Dup.IN_A + Files.count(b.size()) + Words.Dup.IN_B_BOTH + groups.size()
                 + " (" + Files.size(both) + Words.Dup.FREE_FROM_A;
-    }
-
-    private void put(Map<String, List<Library.Hit>> m, Library.Hit x) {
-        List<Library.Hit> g = m.get(key(x));
-        if (g == null) m.put(key(x), g = new ArrayList<Library.Hit>());
-        g.add(x);
     }
 
     private void sortGroups() {
@@ -504,8 +396,7 @@ public class DupScreen extends Activity {
     private Group makeGroup(List<Library.Hit> g, int sideSplit) {
         Group gr = new Group();
         gr.name = g.get(0).name();
-        if (similarMode())
-            for (Library.Hit x : g) if (!x.rec.norm.equals(g.get(0).rec.norm)) gr.doubt = true;
+        gr.doubt = Dups.doubt(dm(), g);
         gr.type = Ui.typeLabel(gr.name, false);
         gr.size = g.get(0).rec.size;
         long newest = 0, oldest = Long.MAX_VALUE;
