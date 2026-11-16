@@ -87,11 +87,14 @@
 | 173 | `DbListCmd.plan` (224) פורקה לפונקציה לכל פקודה: `planMd` 14, `planRemove` 24, `planCopy` 85, `planComp` 21, `planRen` 12, `planLink` 18; `plan` — 71 | 746+ |
 | 174 | `planPicked` (140) פורקה: `pickedMake` 26, `pickedXfer` 39, `pickedAdd` 32, `pickedRemove` 15; `planPicked` — 41 | 806 (הכותרות של הפונקציות החדשות) |
 | 175 | המילים של השפה שנשארו ב־`Batch` (מה שנבחר במסך, "הוסף תוסף" שירד) ← `Syntax`. כ־60 פניות, 8 קבצים | `Batch` 777 |
+| 176 | `FileCmds.planFile` (209) פורקה: המתגים — נשארו בה; `fileMd` 36, `fileRd` 12, `fileDel` 20, `fileShare` 13, `fileCopy` 20, `fileRen` 25, `fileStart` 33; `planFile` — 71 | — |
+| 177 | `Runner.run0` (185) פורקה: `disk` 66 (פעולה על הכונן), `runOp` 17 (שורה של רשימות), `measureLine` 14; `run0` — 102. הספירה של הכישלונות — בלולאה בלבד | — |
 
-## איפה התיקייה עומדת (אחרי צעד 171)
-- **`Batch`: 3,359 ← 748** — הטיפוסים, הכניסה לתכנון (הלולאה על השורות) ולהרצה.
-- **`DbListCmd`: 2,108 ← 746** — הטיפוסים (`Res`, `Work`, `Finder`), המציאה, העותק להדמיה, והתכנון (`plan` 224, `planPicked` 140, `toFolder`).
+## איפה התיקייה עומדת (אחרי צעד 177)
+- **`Batch`: 3,359 ← 777** — הטיפוסים, הכניסה לתכנון (`plan` 43, `planLine` 73) ולהרצה.
+- **`DbListCmd`: 2,108 ← 806** — הטיפוסים (`Res`, `Work`, `Finder`), המציאה, העותק להדמיה, והתכנון (`plan` 71, `planPicked` 41, ופונקציה לכל פקודה).
 - **17 קבצים חדשים**, כל אחד נושא אחד: `Syntax`, `Parse`, `Filter`, `Loops`, `Sim`, `FileCmds`, `SmallCmds`, `CompareCmds`, `ListLines`, `Runner`, `RunReport` · `ListVerify`, `ModeCmds`, `ListVerbs`, `ListOps`, `ListRun`.
+- **הפונקציות הגדולות פורקו (צעדים 172–177):** היו חמש של 140–257 שורות (`Batch.plan`, `DbListCmd.plan`, `planPicked`, `FileCmds.planFile`, `Runner.run0`); עכשיו הגדולה בתיקייה — `Verbs.parse` (124), ואחריה `run0` (102). כל המילים של השפה — ב־`Syntax`.
 - **כל שורה עברה כמו שהיא; אין שינוי בפקודות.** 3,082 בדיקות.
 
 **מה עוד אפשר בתיקייה (לא דחוף):** (א) ~~לפרק את הלולאה של `Batch.plan` (257 שורות) ואת `DbListCmd.plan` (224)~~ — נעשה בצעדים 172–173 — לפונקציה לכל סוג שורה, כמו `small` (צעד 162). (ב) שאלת הקומה של `ListOps` (צעד 170). (ג) ~~מילים של השפה שעוד יושבות ב־`Batch` ← `Syntax`~~ — נעשה בצעד 175. (ה) ~~`planPicked`~~ — פורקה בצעד 174. (ד) ה8–ה11 — ב־`FileCmds`, מחכות למשתמש.
