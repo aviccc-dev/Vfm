@@ -412,224 +412,266 @@ final class Batch {
             Loops.Ln ln = all.get(li);
             prev = ln;
             if (clock.skip(plan, ln.loops, ln.rounds)) continue;               // לולאה שעברה את הגבול — גם בתכנון
-            int n = ln.num - 1;
-            final String shown = Parse.clean(ln.text);                                 // מ0.38: מה שנכתב (לדוח) — גם כשהוא בעברית
-            String line = Commands.normal(shown);
-            if (ln.error != null) {
-                Step s = new Step();
-                s.line = ln.num;
-                s.text = shown;
-                s.cmd = Syntax.LOOP;
-                s.error = ln.error;
-                plan.errors++;
-                plan.steps.add(s);
-                continue;
-            }
-            if (line.isEmpty() || line.startsWith("::")) continue;
-            if (line.equals(Syntax.AS_IF) || line.equals(Syntax.AS_IF2)) {                  // 1.10.0: שורת כותרת — כל הקובץ בהדמיה
-                plan.asIf = true;
-                continue;
-            }
-            if (line.equals(Syntax.CHECK)) continue;                                  // 1.28.0: שורת כותרת — מסך ההרצה (BatchUi)
-            if (line.equals(Syntax.MEASURE) || line.startsWith(Syntax.MEASURE + " ")) {     // 1.25.0: שורת כותרת — מדידה
-                plan.measure = true;
-                List<String> mt = Parse.tokens(line);
-                for (int k = 0; k < mt.size(); k++) {
-                    String x = mt.get(k);
-                    if (x.startsWith(Syntax.SW_JOURNAL)) {
-                        String[] err = {null};
-                        plan.measureJournal = Parse.path(x.substring(Syntax.SW_JOURNAL.length()).trim(), here, vars, err);
-                        if (plan.measureJournal != null && (err[0] = noWriteHere(plan.measureJournal)) != null) plan.measureJournal = null;   // מבנה 45
-                        if (plan.measureJournal == null) {                           // מבנה 43: מסלול שגוי — שגיאה, לא "בלי יומן" בשקט
-                            Step s = new Step();
-                            s.line = n + 1;
-                            s.text = shown;
-                            s.cmd = Syntax.MEASURE;
-                            s.error = err[0];
-                            plan.errors++;
-                            plan.steps.add(s);
-                        }
-                    } else if (x.startsWith(Syntax.SW_LIMIT)) {                         // מ0.45: מגבלת זמן לכל שורה
-                        String v = x.substring(Syntax.SW_LIMIT.length());
-                        if (k + 1 < mt.size() && !mt.get(k + 1).isEmpty() && !Character.isDigit(mt.get(k + 1).charAt(0))
-                                && !mt.get(k + 1).startsWith("/") && Loops.limitMs(v + mt.get(k + 1)) > 0) v += mt.get(++k);   // "/עד:2 דקות"
-                        plan.lineLimit = Loops.limitMs(v);
-                        if (plan.lineLimit <= 0) {
-                            plan.lineLimit = 0;
-                            Step s = new Step();
-                            s.line = n + 1;
-                            s.text = shown;
-                            s.cmd = Syntax.MEASURE;
-                            s.error = Words.Loop.LIMIT_USAGE;
-                            plan.errors++;
-                            plan.steps.add(s);
-                        }
-                    }
-                }
-                continue;
-            }
-            if (Program.isHeader(line)) continue;                             // 1.13.0: צלמית / שם / למה — כותרת התוכנה
-            if (isLabLine(line)) {                                           // מ0.38: הוסף/החלף מעבדה (לפני הפועל "הוסף"); מ0.40: ירדו — שגיאה עם הסבר
-                Step s = new Step();
-                s.line = n + 1;
-                s.text = shown;
-                s.cmd = Syntax.LAB;
-                planLabLine(s);
-                if (s.error != null) plan.errors++;
-                plan.steps.add(s);
-                continue;
-            }
-            if (Verbs.isVerb(line)) {                                         // 1.13.0: פקודות הפתיחה בעברית — נפתחות בסוף
-                Step s = new Step();
-                s.line = n + 1;
-                s.text = shown;
-                s.cmd = Syntax.OPEN;
-                s.open = Verbs.withVars(line, vars);
-                Verbs.Cmd vc = Verbs.parse(s.open);
-                s.error = vc.error;
-                s.describe = Verbs.describe(vc);
-                String doneIn = null;
-                if (s.error == null && Verbs.K_MODE.equals(vc.kind)) ModeCmds.planMode(s, vc.arg, vc.fromBackup, sim);   // מ0.42: צור אופן
-                else if (s.error == null && DbVerbs.active()) doneIn = ListVerbs.planVerb(s, vc, sim);   // מ0.25: החלק הכותב — בסדר השורות
-                // מ0.30 (ממצא 39): "פתח רשימה / רשימה חכמה" אחרי "אופן X" — נפתחת באופן של הקובץ, לא באופן שפתוח במסך
-                if (s.error == null && doneIn == null && sim.mode != null && Verbs.OPEN.equals(vc.verb) && vc.arg != null && !vc.arg.trim().isEmpty()
-                        && (Verbs.K_LIST.equals(vc.kind) || Verbs.K_SMART.equals(vc.kind))) doneIn = sim.mode;
-                if (s.error != null) plan.errors++;
-                else if (!Verbs.K_NOTE.equals(vc.kind) && !Verbs.K_TITLE.equals(vc.kind) && !Verbs.K_MODE.equals(vc.kind) && !vc.noOpen) {   // מ0.37: רעיון / כותרת; מ0.40: /בלי-לפתוח; מ0.42: אופן
-                    plan.open = s.open;
-                    plan.opens.add(new String[]{s.open, doneIn});
-                }
-                plan.steps.add(s);
-                continue;
-            }
-            List<String> tk = Parse.tokens(line);
-            if (tk.isEmpty()) continue;
-            String cmd = Commands.canonical(tk.get(0));                       // 1.22.5: שמות נרדפים — מההגדרה האחת
-            if (cmd.equals("REM")) continue;
-            Step s = new Step();
-            s.line = n + 1;
-            s.text = shown;
-            if (cmd.equals("ECHO.")) cmd = "ECHO";                   // 139: שורה ריקה, כמו ב-bat
-            s.cmd = cmd;
-            if (cmd.equals("ECHO")) {
-                int w0 = 0;                                                      // מ0.38: אחרי המילה הראשונה (ECHO או "הודעה")
-                while (w0 < line.length() && !Character.isWhitespace(line.charAt(w0))) w0++;
-                String rest = cmd.equals("ECHO") && tk.get(0).toUpperCase(Locale.ROOT).startsWith("ECHO.") ? line.substring(4).trim()
-                        : line.substring(w0).trim();
-                if (rest.equalsIgnoreCase("OFF") || rest.equalsIgnoreCase("ON")) continue;
-                rest = Verbs.withVars(rest, vars);                               // מ0.30 (ממצא 46): גם ב־ECHO המשתנים מוחלפים
-                plan.echoes.add(rest.startsWith(".") ? rest.substring(1) : rest);
-                s.describe = Words.Cmd.echo(rest);
-                plan.steps.add(s);
-                continue;
-            }
-            if (cmd.equals(Syntax.CALL)) {                                             // מ0.15: לא נכלל (לא נמצא / מעגל / עומק)
-                s.error = Words.DbCmd.CALL_FAILED;
-                plan.errors++;
-                plan.steps.add(s);
-                continue;
-            }
-            if (cmd.equals(Syntax.CONT)) {                                             // מ0.30: המשך [N] — הקובץ רץ גם כשיש שורות שגיאה
-                int allow = Parse.allowOf(line);
-                if (allow < 0) {
-                    s.error = Words.DbCmd.CONT_USAGE;
-                    plan.errors++;
-                } else {
-                    plan.allowErrors = allow;
-                    s.noop = true;
-                    s.describe = allow == Integer.MAX_VALUE ? Words.DbCmd.CONT_ALWAYS : Words.DbCmd.contUpTo(allow);
-
-                }
-                plan.steps.add(s);
-                continue;
-            }
-            if (SmallCmds.small(plan, s, cmd, tk, here, vars, sim)) {                // מ0.37: הפקודות הקטנות
-                if (s.error != null) plan.errors++;
-                plan.steps.add(s);
-                continue;
-            }
-            if (cmd.equals(Syntax.MODE)) {                                             // מ0.15: אופן — מכאן והלאה, במסד
-                String m = tk.size() == 2 ? tk.get(1).trim() : "";
-                if (m.isEmpty()) s.error = Words.DbCmd.MODE_USAGE;
-                else if (!DbVerbs.active()) s.error = Words.DbCmd.VERIFY_DB_ONLY;
-                else if (!sim.hasMode(m))   // מ0.42: גם מה ש"צור אופן" שלפניו יצר; מ0.45: בלי מה ש"מחק אופן" מחק
-                    s.error = sim.modeError = Words.DbCmd.noMode(m, sim.modes());   // מבנה 66: עם מה שהקובץ עצמו יצר, בלי מה שביטל
-                else {
-                    sim.dbs.put(sim.mode == null ? "" : sim.mode, sim.db);          // מ0.32: עותק לכל אופן
-                    sim.mode = m;
-                    sim.modeError = null;
-                    sim.db = sim.dbs.get(m);
-                    plan.modeFrom.add(plan.steps.size());
-                    plan.modeName.add(m);
-                    s.noop = true;
-                    s.describe = Words.DbCmd.modeNow(m);
-                }
-                if (s.error != null) plan.errors++;
-                plan.steps.add(s);
-                continue;
-            }
-            List<String> args = new ArrayList<String>(), sw = new ArrayList<String>();
-            List<String> lsw = new ArrayList<String>();
-            ListCmd.Parsed lp = ListCmd.parse(line, lsw);                      // 1.24.0: מילות סוג — רשימות
-            if (lp != null && lp.error == null && lp.anyList()) {
-                ListLines.planList(s, cmd, lp, lsw, here, vars, sim);
-                if (s.error != null) plan.errors++;
-                plan.steps.add(s);
-                continue;
-            }
-            if (lp == null && cmd.equals(Syntax.VERIFY) && tk.size() >= 2) {          // מ0.18: ודא "קובץ" קיים — בלי מילת סוג
-                List<String> conds = new ArrayList<String>(tk.subList(2, tk.size()));
-                String[] err = {null};
-                String p = Parse.path(tk.get(1), here, vars, err);
-                if (p == null) s.error = err[0];
-                else ListVerify.planVerifyFile(s, new File(p), conds);
-                if (s.error != null) plan.errors++;
-                plan.steps.add(s);
-                continue;
-            }
-            if (lp != null && lp.error != null) {
-                s.error = lp.error;
-                plan.errors++;
-                plan.steps.add(s);
-                continue;
-            }
-            if (lp != null) {                                                  // רק "תיקייה" — שורה רגילה בלי המילים
-                sw.addAll(lsw);
-                for (ListCmd.Side x : lp.sides) args.add(x.raw);
-            } else
-            for (int i = 1; i < tk.size(); i++) (Parse.isSwitch(tk.get(i)) ? sw : args).add(tk.get(i));
-            String[] err = {null};
-            List<String> paths = new ArrayList<String>();
-            for (String a : args) {
-                String p = Parse.path(a, here, vars, err);
-                if (p == null) break;
-                paths.add(p);
-            }
-            if (err[0] == null)                                                // 1.19.0: /יומן:<קובץ>
-                for (String x : sw) {
-                    if (!x.startsWith(Syntax.SW_JOURNAL)) continue;
-                    String v = x.substring(Syntax.SW_JOURNAL.length()).trim();
-                    if (v.isEmpty() || !(cmd.equals("COPY") || cmd.equals("MOVE"))) {
-                        err[0] = Words.Cmd.JOURNAL_USAGE;
-                        break;
-                    }
-                    s.journal = Parse.path(v, here, vars, err);
-                    if (s.journal == null) break;
-                    if ((err[0] = noWriteHere(s.journal)) != null) break;       // מבנה 45
-                }
-            if (err[0] == null) err[0] = FileCmds.setsMisuse(cmd, paths);            // 1.20.0
-            if (err[0] == null) err[0] = FileCmds.shareMisuse(cmd, paths);           // 203
-            if (err[0] == null) err[0] = FileCmds.homeMisuse(cmd, paths);            // 1.9.0
-            if (err[0] == null && cmd.equals("REN") && args.size() == 2 && args.get(1).indexOf('%') >= 0)
-                args.set(1, Verbs.withVars(args.get(1), vars));                 // מבנה 43: גם בשם החדש המשתנים מוחלפים (עד כאן: נכתב "%שם%" כלשונו)
-            if (err[0] != null) s.error = err[0];
-            else FileCmds.planFile(s, cmd, args, paths, sw, sim);
-            if (s.error != null) plan.errors++;
-            if (cmd.equals("START") && s.error == null) plan.start = s.dest;
-            plan.steps.add(s);
+            planLine(plan, sim, ln, here, vars);
         }
         RunReport.expectErrors(plan);                                                    // מ0.37: "ודא שגיאה"
         return plan;
+    }
+
+    /**
+     * מבנה 172 (סידור תיקיית הפקודות): שורה אחת של הקובץ — מה היא, ואיך מתכננים אותה. עד כאן — גוף הלולאה של plan (257 שורות).
+     */
+    private static void planLine(Plan plan, Sim sim, Loops.Ln ln, File here, Map<String, String> vars) {
+        int n = ln.num - 1;
+        final String shown = Parse.clean(ln.text);                                 // מ0.38: מה שנכתב (לדוח) — גם כשהוא בעברית
+        String line = Commands.normal(shown);
+        if (ln.error != null) {
+            Step s = new Step();
+            s.line = ln.num;
+            s.text = shown;
+            s.cmd = Syntax.LOOP;
+            s.error = ln.error;
+            plan.errors++;
+            plan.steps.add(s);
+            return;
+        }
+        if (line.isEmpty() || line.startsWith("::")) return;
+        if (line.equals(Syntax.AS_IF) || line.equals(Syntax.AS_IF2)) {                  // 1.10.0: שורת כותרת — כל הקובץ בהדמיה
+            plan.asIf = true;
+            return;
+        }
+        if (line.equals(Syntax.CHECK)) return;                                  // 1.28.0: שורת כותרת — מסך ההרצה (BatchUi)
+        if (line.equals(Syntax.MEASURE) || line.startsWith(Syntax.MEASURE + " ")) {
+            planMeasure(plan, sim, n, shown, line, here, vars);
+            return;
+        }
+        if (Program.isHeader(line)) return;                             // 1.13.0: צלמית / שם / למה — כותרת התוכנה
+        if (isLabLine(line)) {                                           // מ0.38: הוסף/החלף מעבדה (לפני הפועל "הוסף"); מ0.40: ירדו — שגיאה עם הסבר
+            Step s = new Step();
+            s.line = n + 1;
+            s.text = shown;
+            s.cmd = Syntax.LAB;
+            planLabLine(s);
+            if (s.error != null) plan.errors++;
+            plan.steps.add(s);
+            return;
+        }
+        if (Verbs.isVerb(line)) {
+            planVerbLine(plan, sim, n, shown, line, here, vars);
+            return;
+        }
+        List<String> tk = Parse.tokens(line);
+        if (tk.isEmpty()) return;
+        String cmd = Commands.canonical(tk.get(0));                       // 1.22.5: שמות נרדפים — מההגדרה האחת
+        if (cmd.equals("REM")) return;
+        Step s = new Step();
+        s.line = n + 1;
+        s.text = shown;
+        if (cmd.equals("ECHO.")) cmd = "ECHO";                   // 139: שורה ריקה, כמו ב-bat
+        s.cmd = cmd;
+        if (cmd.equals("ECHO")) {
+            planEcho(plan, sim, s, cmd, tk, line, here, vars);
+            return;
+        }
+        if (cmd.equals(Syntax.CALL)) {                                             // מ0.15: לא נכלל (לא נמצא / מעגל / עומק)
+            s.error = Words.DbCmd.CALL_FAILED;
+            plan.errors++;
+            plan.steps.add(s);
+            return;
+        }
+        if (cmd.equals(Syntax.CONT)) {
+            planCont(plan, sim, s, cmd, tk, line, here, vars);
+            return;
+        }
+        if (SmallCmds.small(plan, s, cmd, tk, here, vars, sim)) {                // מ0.37: הפקודות הקטנות
+            if (s.error != null) plan.errors++;
+            plan.steps.add(s);
+            return;
+        }
+        if (cmd.equals(Syntax.MODE)) {
+            planModeLine(plan, sim, s, cmd, tk, line, here, vars);
+            return;
+        }
+        planRest(plan, sim, s, cmd, tk, line, here, vars);
+    }
+
+    /** 1.25.0: שורת כותרת — מדידה */
+    private static void planMeasure(Plan plan, Sim sim, int n, String shown, String line, File here, Map<String, String> vars) {
+        plan.measure = true;
+        List<String> mt = Parse.tokens(line);
+        for (int k = 0; k < mt.size(); k++) {
+            String x = mt.get(k);
+            if (x.startsWith(Syntax.SW_JOURNAL)) {
+                String[] err = {null};
+                plan.measureJournal = Parse.path(x.substring(Syntax.SW_JOURNAL.length()).trim(), here, vars, err);
+                if (plan.measureJournal != null && (err[0] = noWriteHere(plan.measureJournal)) != null) plan.measureJournal = null;   // מבנה 45
+                if (plan.measureJournal == null) {                           // מבנה 43: מסלול שגוי — שגיאה, לא "בלי יומן" בשקט
+                    Step s = new Step();
+                    s.line = n + 1;
+                    s.text = shown;
+                    s.cmd = Syntax.MEASURE;
+                    s.error = err[0];
+                    plan.errors++;
+                    plan.steps.add(s);
+                }
+            } else if (x.startsWith(Syntax.SW_LIMIT)) {                         // מ0.45: מגבלת זמן לכל שורה
+                String v = x.substring(Syntax.SW_LIMIT.length());
+                if (k + 1 < mt.size() && !mt.get(k + 1).isEmpty() && !Character.isDigit(mt.get(k + 1).charAt(0))
+                        && !mt.get(k + 1).startsWith("/") && Loops.limitMs(v + mt.get(k + 1)) > 0) v += mt.get(++k);   // "/עד:2 דקות"
+                plan.lineLimit = Loops.limitMs(v);
+                if (plan.lineLimit <= 0) {
+                    plan.lineLimit = 0;
+                    Step s = new Step();
+                    s.line = n + 1;
+                    s.text = shown;
+                    s.cmd = Syntax.MEASURE;
+                    s.error = Words.Loop.LIMIT_USAGE;
+                    plan.errors++;
+                    plan.steps.add(s);
+                }
+            }
+        }
+        return;
+    }
+
+    /** 1.13.0: פקודות הפתיחה בעברית — נפתחות בסוף */
+    private static void planVerbLine(Plan plan, Sim sim, int n, String shown, String line, File here, Map<String, String> vars) {
+        Step s = new Step();
+        s.line = n + 1;
+        s.text = shown;
+        s.cmd = Syntax.OPEN;
+        s.open = Verbs.withVars(line, vars);
+        Verbs.Cmd vc = Verbs.parse(s.open);
+        s.error = vc.error;
+        s.describe = Verbs.describe(vc);
+        String doneIn = null;
+        if (s.error == null && Verbs.K_MODE.equals(vc.kind)) ModeCmds.planMode(s, vc.arg, vc.fromBackup, sim);   // מ0.42: צור אופן
+        else if (s.error == null && DbVerbs.active()) doneIn = ListVerbs.planVerb(s, vc, sim);   // מ0.25: החלק הכותב — בסדר השורות
+        // מ0.30 (ממצא 39): "פתח רשימה / רשימה חכמה" אחרי "אופן X" — נפתחת באופן של הקובץ, לא באופן שפתוח במסך
+        if (s.error == null && doneIn == null && sim.mode != null && Verbs.OPEN.equals(vc.verb) && vc.arg != null && !vc.arg.trim().isEmpty()
+                && (Verbs.K_LIST.equals(vc.kind) || Verbs.K_SMART.equals(vc.kind))) doneIn = sim.mode;
+        if (s.error != null) plan.errors++;
+        else if (!Verbs.K_NOTE.equals(vc.kind) && !Verbs.K_TITLE.equals(vc.kind) && !Verbs.K_MODE.equals(vc.kind) && !vc.noOpen) {   // מ0.37: רעיון / כותרת; מ0.40: /בלי-לפתוח; מ0.42: אופן
+            plan.open = s.open;
+            plan.opens.add(new String[]{s.open, doneIn});
+        }
+        plan.steps.add(s);
+        return;
+    }
+
+    /** planEcho */
+    private static void planEcho(Plan plan, Sim sim, Step s, String cmd, List<String> tk, String line, File here, Map<String, String> vars) {
+        int w0 = 0;                                                      // מ0.38: אחרי המילה הראשונה (ECHO או "הודעה")
+        while (w0 < line.length() && !Character.isWhitespace(line.charAt(w0))) w0++;
+        String rest = cmd.equals("ECHO") && tk.get(0).toUpperCase(Locale.ROOT).startsWith("ECHO.") ? line.substring(4).trim()
+                : line.substring(w0).trim();
+        if (rest.equalsIgnoreCase("OFF") || rest.equalsIgnoreCase("ON")) return;
+        rest = Verbs.withVars(rest, vars);                               // מ0.30 (ממצא 46): גם ב־ECHO המשתנים מוחלפים
+        plan.echoes.add(rest.startsWith(".") ? rest.substring(1) : rest);
+        s.describe = Words.Cmd.echo(rest);
+        plan.steps.add(s);
+        return;
+    }
+
+    /** מ0.30: המשך [N] — הקובץ רץ גם כשיש שורות שגיאה */
+    private static void planCont(Plan plan, Sim sim, Step s, String cmd, List<String> tk, String line, File here, Map<String, String> vars) {
+        int allow = Parse.allowOf(line);
+        if (allow < 0) {
+            s.error = Words.DbCmd.CONT_USAGE;
+            plan.errors++;
+        } else {
+            plan.allowErrors = allow;
+            s.noop = true;
+            s.describe = allow == Integer.MAX_VALUE ? Words.DbCmd.CONT_ALWAYS : Words.DbCmd.contUpTo(allow);
+
+        }
+        plan.steps.add(s);
+        return;
+    }
+
+    /** מ0.15: אופן — מכאן והלאה, במסד */
+    private static void planModeLine(Plan plan, Sim sim, Step s, String cmd, List<String> tk, String line, File here, Map<String, String> vars) {
+        String m = tk.size() == 2 ? tk.get(1).trim() : "";
+        if (m.isEmpty()) s.error = Words.DbCmd.MODE_USAGE;
+        else if (!DbVerbs.active()) s.error = Words.DbCmd.VERIFY_DB_ONLY;
+        else if (!sim.hasMode(m))   // מ0.42: גם מה ש"צור אופן" שלפניו יצר; מ0.45: בלי מה ש"מחק אופן" מחק
+            s.error = sim.modeError = Words.DbCmd.noMode(m, sim.modes());   // מבנה 66: עם מה שהקובץ עצמו יצר, בלי מה שביטל
+        else {
+            sim.dbs.put(sim.mode == null ? "" : sim.mode, sim.db);          // מ0.32: עותק לכל אופן
+            sim.mode = m;
+            sim.modeError = null;
+            sim.db = sim.dbs.get(m);
+            plan.modeFrom.add(plan.steps.size());
+            plan.modeName.add(m);
+            s.noop = true;
+            s.describe = Words.DbCmd.modeNow(m);
+        }
+        if (s.error != null) plan.errors++;
+        plan.steps.add(s);
+        return;
+    }
+
+    /** השורות של הקבצים והרשימות: הפרמטרים, המסלולים, ושורה של רשימות / "ודא" קובץ / שורת קבצים. */
+    private static void planRest(Plan plan, Sim sim, Step s, String cmd, List<String> tk, String line, File here, Map<String, String> vars) {
+        List<String> args = new ArrayList<String>(), sw = new ArrayList<String>();
+        List<String> lsw = new ArrayList<String>();
+        ListCmd.Parsed lp = ListCmd.parse(line, lsw);                      // 1.24.0: מילות סוג — רשימות
+        if (lp != null && lp.error == null && lp.anyList()) {
+            ListLines.planList(s, cmd, lp, lsw, here, vars, sim);
+            if (s.error != null) plan.errors++;
+            plan.steps.add(s);
+            return;
+        }
+        if (lp == null && cmd.equals(Syntax.VERIFY) && tk.size() >= 2) {          // מ0.18: ודא "קובץ" קיים — בלי מילת סוג
+            List<String> conds = new ArrayList<String>(tk.subList(2, tk.size()));
+            String[] err = {null};
+            String p = Parse.path(tk.get(1), here, vars, err);
+            if (p == null) s.error = err[0];
+            else ListVerify.planVerifyFile(s, new File(p), conds);
+            if (s.error != null) plan.errors++;
+            plan.steps.add(s);
+            return;
+        }
+        if (lp != null && lp.error != null) {
+            s.error = lp.error;
+            plan.errors++;
+            plan.steps.add(s);
+            return;
+        }
+        if (lp != null) {                                                  // רק "תיקייה" — שורה רגילה בלי המילים
+            sw.addAll(lsw);
+            for (ListCmd.Side x : lp.sides) args.add(x.raw);
+        } else
+        for (int i = 1; i < tk.size(); i++) (Parse.isSwitch(tk.get(i)) ? sw : args).add(tk.get(i));
+        String[] err = {null};
+        List<String> paths = new ArrayList<String>();
+        for (String a : args) {
+            String p = Parse.path(a, here, vars, err);
+            if (p == null) break;
+            paths.add(p);
+        }
+        if (err[0] == null)                                                // 1.19.0: /יומן:<קובץ>
+            for (String x : sw) {
+                if (!x.startsWith(Syntax.SW_JOURNAL)) continue;
+                String v = x.substring(Syntax.SW_JOURNAL.length()).trim();
+                if (v.isEmpty() || !(cmd.equals("COPY") || cmd.equals("MOVE"))) {
+                    err[0] = Words.Cmd.JOURNAL_USAGE;
+                    break;
+                }
+                s.journal = Parse.path(v, here, vars, err);
+                if (s.journal == null) break;
+                if ((err[0] = noWriteHere(s.journal)) != null) break;       // מבנה 45
+            }
+        if (err[0] == null) err[0] = FileCmds.setsMisuse(cmd, paths);            // 1.20.0
+        if (err[0] == null) err[0] = FileCmds.shareMisuse(cmd, paths);           // 203
+        if (err[0] == null) err[0] = FileCmds.homeMisuse(cmd, paths);            // 1.9.0
+        if (err[0] == null && cmd.equals("REN") && args.size() == 2 && args.get(1).indexOf('%') >= 0)
+            args.set(1, Verbs.withVars(args.get(1), vars));                 // מבנה 43: גם בשם החדש המשתנים מוחלפים (עד כאן: נכתב "%שם%" כלשונו)
+        if (err[0] != null) s.error = err[0];
+        else FileCmds.planFile(s, cmd, args, paths, sw, sim);
+        if (s.error != null) plan.errors++;
+        if (cmd.equals("START") && s.error == null) plan.start = s.dest;
+        plan.steps.add(s);
     }
 
     /** /עד:20% או /עד:20 — המספר; -1 אם אינו מספר בין 0 ל־100. */

@@ -83,6 +83,7 @@
 | 169 | פעולות המסכים על רשימות ← `pkudot/ListVerbs` (357 שורות): `planVerb`, `planPickedSmart`, `planPickedSmartEdit`, `planPickedEdit`, `planPickedNote`, `smartMade`, `edited`. שומר 60 הופנה ל־`ListVerbs`; שומר 102 קורא את שני הקבצים; שומר 94 ("אסור `lib.search`") — את כל תיקיית הפקודות | 1,225 |
 | 170 | הפעולות של הרשימות על המסד ← `pkudot/ListOps` (411 שורות). **שאלה של מבנה, לא של התנהגות — לסקירה:** לפי חמש הקומות מקום הפעולות בחומר (`chomer/masad`); הן נשענות על `ListCmd.Side` ועל `Res` שבקומת הפקודות, ולכן נשארו כאן — להעביר רק אם יוחלט, יחד עם שני אלה. שומר 102 קורא עכשיו גם את `ListOps`. כלי ההעברה: חתימה בכמה שורות, ומחלקות של ספריית ג׳אווה — תוקנו (הניסיון הראשון נכשל בהידור, והוחזר לפני שנשמר) | 833 |
 | 171 | ההרצה של שורת רשימות על המסד ← `pkudot/ListRun` (105 שורות): `backupNow`, `real`, `realRes`, `follow`, `over`, `nowEdit` | 746 |
+| 172 | הלולאה של `Batch.plan` (257) פורקה: `planLine` 73, `planMeasure` 37, `planVerbLine` 23, `planEcho` 12, `planCont` 14, `planModeLine` 20, `planRest` 61; `plan` עצמה — 43 | — |
 
 ## איפה התיקייה עומדת (אחרי צעד 171)
 - **`Batch`: 3,359 ← 748** — הטיפוסים, הכניסה לתכנון (הלולאה על השורות) ולהרצה.
