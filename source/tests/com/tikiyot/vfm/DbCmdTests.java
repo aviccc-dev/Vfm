@@ -529,7 +529,8 @@ final class DbCmdTests {
                         + "MD ידנית \"חדש/בפנים\" /תפוס:לשנות-שם\nודא ידנית \"חדש/בפנים (2)\" קיימת\n", here, vars, lib);
                 o.check("מבנה 109: רשימה קיימת — /תפוס:לדלג: ממשיכים (ונאמר), /תפוס:לשנות-שם: \"(2)\" " + sk109,
                         bad(sk109).isEmpty() && String.valueOf(sk109).contains(Words.ListCmdW.listSkipped("\"חדש/בפנים\"")));
-                String dlc102 = Files.readUtf8(new File(src, "src/com/tikiyot/vfm/pkudot/DbListCmd.java"));
+                String dlc102 = Files.readUtf8(new File(src, "src/com/tikiyot/vfm/pkudot/DbListCmd.java"))   // מבנה 169: פעולות המסך עברו ל־ListVerbs —
+                        + Files.readUtf8(new File(src, "src/com/tikiyot/vfm/pkudot/ListVerbs.java"));   // אותה בדיקה, על שני הקבצים
                 int md102at = dlc102.indexOf("static Res md(Store s, String mode, ListCmd.Side a, int taken)");   // מבנה 109: עם המתג
                 o.check("מבנה 102: שומר — הכלל האחד: \"צור תיקייה ידנית\" ו\"צור רשימה\" — דרך Lists.newListAt; ה־➕ — דרך Lists.newListChecked; ואין עוד \"כבר קיימת — בלי שינוי\" לרשימה",
                         md102at > 0 && dlc102.indexOf("Lists.newListAt(", md102at) > md102at && dlc102.indexOf("Lists.newListAt(", md102at) < dlc102.indexOf("\n    }\n", md102at)

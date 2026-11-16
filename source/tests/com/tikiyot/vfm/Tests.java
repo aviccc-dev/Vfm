@@ -436,8 +436,7 @@ public final class Tests {
         check("מבנה 94: הספירה של הרשימה החכמה ושורותיה — לפי ההתאמה המלאה (" + sm94.count + ")", sm94.count == list94.hits.size());
         String src94 = read(new File(System.getProperty("vfm.src"), "src/com/tikiyot/vfm/chomer/indeks/Smarts.java"))
                 + read(new File(System.getProperty("vfm.src"), "src/com/tikiyot/vfm/chomer/masad/ListCount.java"))
-                + read(new File(System.getProperty("vfm.src"), "src/com/tikiyot/vfm/pkudot/DbListCmd.java"))
-                + read(new File(System.getProperty("vfm.src"), "src/com/tikiyot/vfm/pkudot/Verbs.java"));
+                + readAll(new File(System.getProperty("vfm.src"), "src/com/tikiyot/vfm/pkudot"));   // מבנה 169: כל תיקיית הפקודות (הקוד מתפצל)
         String scr94 = read(new File(System.getProperty("vfm.src"), "src/com/tikiyot/vfm/masachim/SearchScreen.java"));
         check("מבנה 94: שומר — מי שמחשב רשימה חכמה (הספירה, הקבצים לפקודות, המסך כשהיא פתוחה) — דרך lib.list, לא דרך החיפוש",
                 !src94.contains("lib.search(") && scr94.contains("fixed ? lib.list(q)"));
@@ -3734,10 +3733,10 @@ public final class Tests {
                 dls.contains("if (!(gone instanceof android.database.SQLException) && !(gone instanceof IllegalStateException)) throw gone;")
                         && dls.contains("if (missing && !stale)"));
         // מבנה 99: הטופס של הרשימה החכמה עבר לפקודה — ההגנה עברה איתו (planPickedSmartEdit), ונבדקת שם גם בהרצה (DbCmdTests, מבנה 99)
-        String dlc60 = read(new File(code, "pkudot/DbListCmd.java"));
-        int at60 = dlc60.indexOf("private static String planPickedSmartEdit(");
+        String dlc60 = read(new File(code, "pkudot/ListVerbs.java"));   // מבנה 169: הטפסים עברו מ־DbListCmd ל־ListVerbs — אותה בדיקה
+        int at60 = dlc60.indexOf("static String planPickedSmartEdit(");
         // מבנה 113: גם הטופס של הרשימה עבר לפקודה — ההגנה עברה איתו (edited, שגם השורה הכתובה עוברת בו), ונבדקת בהרצה (DbCmdTests, מבנה 113)
-        int ed60 = dlc60.indexOf("private static Res edited(");
+        int ed60 = dlc60.indexOf("static DbListCmd.Res edited(");
         check("מבנה 60: עריכה של פריט שנמחק בזמן שהטופס פתוח — הודעה ברורה (בשני הטפסים, שניהם בפקודה: הרשימה — מבנה 113; החכמה — מבנה 99)",
                 at60 > 0 && ed60 > 0
                         && dlc60.indexOf("Words.Db.ITEM_GONE", at60) > at60 && dlc60.indexOf("Words.Db.ITEM_GONE", at60) < dlc60.indexOf("\n    }\n", at60)
