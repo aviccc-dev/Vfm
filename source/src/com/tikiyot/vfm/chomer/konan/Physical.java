@@ -467,14 +467,6 @@ public final class Physical {
     }
 
     /**
-     * מבנה 80: קובץ טקסט חדש בכונן (עד כאן נכתב בקוד של המסך עצמו). אינו מחליף קובץ קיים; מבנה 111: התיקייה חייבת להיות קיימת.
-     * null — נוצר; אחרת הסיבה.
-     */
-    public static String newFile(Library lib, File f, String content) {
-        return newFile(lib, f, content, false);
-    }
-
-    /**
      * מבנה 139: כתיבה של קובץ באזור שהתוכנה מנהלת בעצמה (התיקייה של תוסף, עותק פרטי של קובץ שרץ, קובץ פקודות בתוך תיקיית
      * התוכנה) — לא קובץ של המשתמש, ולכן בלי סל ובלי שאלה; אבל רק בהיתר של שכבת הניהול. null — נכתב; אחרת — למה לא.
      */
@@ -526,27 +518,45 @@ public final class Physical {
         return left != null && left.length == 0 && Permit.check(Permit.OWN) == null && d.delete();
     }
 
-    /** מבנה 110: replace — קובץ קיים עובר קודם לסל (oldToTrash), ואז נכתב החדש; בלי — קובץ קיים הוא סירוב. */
-    public static String newFile(Library lib, File f, String content, boolean replace) {
+    /**
+     * מבנה 221 (ה10; הוראות, סעיף 2א): הכתיבה של "כתוב" — מקום אחד לשורה הכתובה, לקובץ חדש מהמסך ולשמירה של תוסף (שלושתם
+     * עוברים בפקודה, דרך המנהל). עד כאן — שני קטעי קוד: אחד בפקודה ואחד כאן (newFile), עם בדיקות, נוסח ועדכון אינדקס שונים.
+     * append — להוסיף בסוף; replace — קובץ קיים מוחלף, והקודם עובר לסל (הוראות, סעיף 4). מה שנבדק בתכנון נבדק כאן שוב, כי
+     * בין התכנון להרצה הכונן יכול להשתנות (קובץ שנוצר בינתיים — לא מוחלף בלי הוראה). האינדקס מתעדכן ומחכים לו, כדי שהשורה
+     * הבאה תראה את הקובץ. null — נכתב; אחרת — למה לא. had[0] — היה קובץ קודם; trashed[0] — הוא עבר לסל.
+     */
+    public static String write(Library lib, File f, String text, boolean append, boolean replace, boolean[] had, boolean[] trashed) {
         String no = Permit.check(Permit.WRITE);
         if (no != null) return no;
-        String bad = DiskRules.badName(f.getName());
-        if (bad != null) return bad;
-        if (DiskRules.programFile(f.getAbsolutePath()) != null) return Words.Disk.NO_FILE_IN_APP;
-        if (f.isDirectory() || (f.exists() && !replace)) return Words.Disk.ALREADY_NAME + f.getName() + "\"";
-        if (f.exists() && lib != null) {
-            String why = oldToTrash(lib, f);
-            if (why != null) return why;
-        }
+        // מבנה 65: מותר בכל מקום שמותר להעתיק אליו — גם בשורש הכונן ובתיקיות המשתמש שבתיקיית התוכנה; לא בסל, ולא קובץ של התוכנה
+        String why = DiskRules.programFile(f.getAbsolutePath());
+        if (why == null && lib != null) why = DiskRules.noWriteInto(lib, f.getParentFile());
+        if (why != null) return why;
+        if (f.isDirectory()) return Words.DbCmd.WRITE_IS_FOLDER;
+        File dir = f.getParentFile();
+        if (dir == null || !dir.isDirectory())                                  // מבנה 111: "כתוב" אינה יוצרת תיקייה
+            return Words.DbCmd.writeNoFolder(Bidi.path(dir == null ? f.getAbsolutePath() : dir.getAbsolutePath()));
+        boolean was = f.isFile();
+        if (had != null) had[0] = was;
+        if (was && !append && !replace) return Words.Cmd.fileTaken(f.getName());   // מבנה 110: נוצר בינתיים — לא מחליפים בלי הוראה
+        boolean toTrash = was && !append && lib != null;
         try {
-            if (!f.getParentFile().isDirectory()) return Words.DbCmd.writeNoFolder(f.getParent());   // מבנה 111: לא יוצרים תיקייה כאן
-            Files.writeAtomic(f, content);
+            if (toTrash) {                                                      // מבנה 46: הקובץ הקודם — לסל, לא נדרס
+                String w = oldToTrash(lib, f);
+                if (w != null) return w;
+                if (trashed != null) trashed[0] = true;
+            }
+            Files.writeAtomic(f, append && was ? Files.readUtf8(f) + text : text);
         } catch (Throwable t) {
-            Log.e("קובץ חדש", t);
-            return Words.Disk.CANT_CREATE_FILE;
+            Log.e("Physical.write", t);
+            return Words.Db.failed(String.valueOf(t.getMessage()));
         }
-        if (lib != null) lib.dirChanged(f.getParent());                         // האינדקס לומד עליו (וגם על תיקייה שנוצרה)
-        Log.i("נוצר קובץ בכונן: " + f);
+        if (lib != null) {
+            if (was && !toTrash) lib.fileRemoved(f.getAbsolutePath());
+            lib.fileAdded(f);
+            lib.flush(5000);   // מ0.45: שורה שאחריה (מחק, העבר) — מול הגודל החדש, לא "הקובץ השתנה מאז הסריקה"
+        }
+        Log.i((append && was ? "נוסף לקובץ בכונן: " : "נוצר קובץ בכונן: ") + f);   // כמו תיקייה חדשה ומחיקה — היומן יודע מה השתנה בכונן
         return null;
     }
 }

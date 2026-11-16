@@ -350,44 +350,7 @@ final class SmallCmds {
         if (!sim.isFile(f)) sim.added.put(p, Batch.GHOST);
         s.dest = f;
         s.describe = Words.DbCmd.writeWill(f.getName(), text.length(), add) + (!add && had ? Words.DbCmd.OLD_TO_TRASH_WILL : "");
-        s.op = new ListCmd.Op() {
-            @Override public String run(Library lib) {
-                try {
-                    String no = Permit.check(Permit.WRITE);                     // מבנה 80: גם "כתוב" שואלת את ההיתר
-                    if (no != null) { DbListCmd.lastFailed = true; return no; }
-                    // מבנה 65: מותר בכל מקום שמותר להעתיק אליו — גם בשורש הכונן ובתיקיות המשתמש שבתיקיית התוכנה; לא בסל, ולא קובץ של התוכנה
-                    String why0 = DiskRules.programFile(f.getAbsolutePath());
-                    if (why0 == null && lib != null) why0 = DiskRules.noWriteInto(lib, f.getParentFile());
-                    if (why0 != null) { DbListCmd.lastFailed = true; return why0; }
-                    if (f.isDirectory()) { DbListCmd.lastFailed = true; return Words.DbCmd.WRITE_IS_FOLDER; }
-                    boolean was = f.isFile(), toTrash = was && !add && lib != null;
-                    if (was && !add && !replace) {                              // מבנה 110: נוצר בינתיים — לא מחליפים בלי הוראה
-                        DbListCmd.lastFailed = true;
-                        return Words.Cmd.fileTaken(f.getName());
-                    }
-                    if (toTrash) {                                              // מבנה 46: הקובץ הקודם — לסל, לא נדרס
-                        String why = Physical.oldToTrash(lib, f);
-                        if (why != null) { DbListCmd.lastFailed = true; return why; }
-                    }
-                    Files.writeAtomic(f, add && was ? Files.readUtf8(f) + text : text);
-                    if (toTrash) {
-                        lib.fileAdded(f);
-                        lib.flush(5000);
-                        return Words.DbCmd.written(f.getName(), text.length(), false) + Words.DbCmd.OLD_TO_TRASH;
-                    }
-                    if (lib != null) {
-                        if (was) lib.fileRemoved(f.getAbsolutePath());
-                        lib.fileAdded(f);
-                        lib.flush(5000);   // מ0.45: שורה שאחריה (מחק, העבר) — מול הגודל החדש, לא "הקובץ השתנה מאז הסריקה"
-                    }
-                    return Words.DbCmd.written(f.getName(), text.length(), add && was);
-                } catch (Throwable t) {
-                    Log.e("Batch.write", t);
-                    DbListCmd.lastFailed = true;
-                    return Words.Db.failed(String.valueOf(t.getMessage()));
-                }
-            }
-        };
+        s.op = writeOp(f, text, add, replace);                                // מבנה 221 (ה10): הכתיבה — במקום אחד
         return true;
     }
 
@@ -456,12 +419,17 @@ final class SmallCmds {
         sim.added.put(f.getAbsolutePath(), Batch.GHOST);
         s.dest = f;
         s.describe = Words.DbCmd.writeWill(f.getName(), sel.content.length(), false) + (replace ? Words.DbCmd.OLD_TO_TRASH_WILL : "");
-        s.op = new ListCmd.Op() {
+        s.op = writeOp(f, sel.content, false, replace);                       // מבנה 221 (ה10): אותה כתיבה כמו בשורה הכתובה
+    }
+
+    /** מבנה 221 (ה10): ההרצה של "כתוב" — לשורה הכתובה ולקובץ חדש מהמסך; הכתיבה עצמה — Physical.write. */
+    static ListCmd.Op writeOp(final File f, final String text, final boolean add, final boolean replace) {
+        return new ListCmd.Op() {
             @Override public String run(Library lib) {
-                boolean was = f.isFile();
-                String why = Physical.newFile(lib, f, sel.content, replace);
+                boolean[] had = {false}, trashed = {false};
+                String why = Physical.write(lib, f, text, add, replace, had, trashed);
                 if (why != null) { DbListCmd.lastFailed = true; return why; }
-                return Words.DbCmd.written(f.getName(), sel.content.length(), false) + (was ? Words.DbCmd.OLD_TO_TRASH : "");
+                return Words.DbCmd.written(f.getName(), text.length(), add && had[0]) + (trashed[0] ? Words.DbCmd.OLD_TO_TRASH : "");
             }
         };
     }

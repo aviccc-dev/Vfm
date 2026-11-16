@@ -3219,7 +3219,7 @@ public final class Tests {
                             && Batch.plan("כתוב \"קיים.vbat\" \"חדש\" /תפוס:להחליף\n", d80, v80, lib80).errors == 0);
             Permit.close();
             try {
-                String no80 = Physical.newFile(lib80, new File(d80, "עוקף.txt"), "x");
+                String no80 = Physical.write(lib80, new File(d80, "עוקף.txt"), "x", false, false, null, null);
                 check("מבנה 80: קובץ חדש בלי היתר — מסורב, ולא נכתב (" + no80 + ")", no80 != null && no80.contains(Words.PermitW.BYPASS)
                         && !new File(d80, "עוקף.txt").exists() && Permit.strict(Permit.WRITE));
                 Batch.Plan w80 = Batch.plan("כתוב \"בפקודה.txt\" \"א\"\n", d80, v80, lib80);
@@ -3231,9 +3231,10 @@ public final class Tests {
                 Physical.Result r80 = act80.run(lib80, null, null, false);
                 check("מבנה 80: דרך המנהל — הקובץ נוצר, והתוכן כלשונו: משתנים, מירכאות ו־\\n לא פוענחו (" + r80.note + ")", r80.failed == 0
                         && r80.done.size() == 1 && body80.equals(read(new80)));
+                check("מבנה 221 (ה10): הקובץ החדש מהמסך — באינדקס מיד, כמו בשורה כתובה (אותה כתיבה: Physical.write)", lib80.find(new80.getAbsolutePath()) != null);
                 Physical.Result again80 = act80.run(lib80, null, null, false);
                 check("מבנה 80: הרצה שנייה (כבר קיים) — כישלון שמדווח, והקובץ לא הוחלף (" + again80.note + ")", again80.failed == 1
-                        && again80.note.startsWith(Words.Disk.ALREADY_NAME) && body80.equals(read(new80)));
+                        && again80.note.contains(Words.Cmd.fileTaken(new80.getName())) && body80.equals(read(new80)));
                 Physical.Result deep80r = Manager.onNewFile(deep80, "ע", Paths.data(), v80, lib80).run(lib80, null, null, false);
                 check("מבנה 80: תיקייה שחסרה מעל הקובץ — נוצרת, כמו שהמסך עשה", deep80r.failed == 0 && "ע".equals(read(deep80)));
                 File deep111 = new File(d80, "תיקייה 111/ק.vbat");
@@ -3244,7 +3245,7 @@ public final class Tests {
                         Batch.plan("כתוב \"אין-111\\א.txt\" \"x\"\n", d80, v80, lib80).errors == 1
                         && Batch.plan("כתוב \"%יעד%\\%שם-חדש%\" \"%תוכן%\"\n", d80, v80, lib80, null, new Batch.Selection(new ArrayList<String>(),
                                 new ArrayList<String>(), new File(d80, "אין-111"), "א.txt", "y")).errors == 1
-                        && Physical.newFile(lib80, new File(d80, "אין-111/א.txt"), "x") != null && !new File(d80, "אין-111").exists());
+                        && Physical.write(lib80, new File(d80, "אין-111/א.txt"), "x", false, false, null, null) != null && !new File(d80, "אין-111").exists());
                 // מבנה 122: אריזה ופריסה של zip — כפקודות ("ארוז", "פרוס"), והמסך דרך המנהל
                 File z122 = new File(d80, "לארוז 122");
                 new File(z122, "תת").mkdirs();
@@ -3576,7 +3577,7 @@ public final class Tests {
             }
             check("מבנה 81: במסכים — אין עוד שחזור או מחיקה לצמיתות ישירים (" + direct81 + "); רק דרך המנהל", direct81 == 0 && pui81.contains("Manager.onTrash("));
             check("מבנה 81: המסך של הפעולות בכונן אינו קורא עוד לאף פעולה שמשנה בכונן — רק שאלות (שמות, מקום פנוי, ספירה)",
-                    !java.util.regex.Pattern.compile("Physical\\.(delete|deleteOwn|transfer|transferKeep|transferTo|rename|makeFolder|newFile|restore|deleteForever|oldToTrash)\\(").matcher(pui81).find());
+                    !java.util.regex.Pattern.compile("Physical\\.(delete|deleteOwn|transfer|transferKeep|transferTo|rename|makeFolder|newFile|write|restore|deleteForever|oldToTrash)\\(").matcher(pui81).find());
             Physical.deleteForever(lib81, Trash.list(lib81));
             wipe(d81);
         }
@@ -3772,7 +3773,6 @@ public final class Tests {
                         {"pkudot/RunReport.java", "2", "הדוח של הרצה (\"דוח\")"},
                         {"pkudot/Runner.java", "6", "יומן המדידה, ההכנה לשיתוף (עותקים בתיקיית השליחה של התוכנה) והניקוי שלה"},
                         {"pkudot/Shortcuts.java", "3", "קובצי הקיצורים (\"הפקודות שלי\")"},
-                        {"pkudot/SmallCmds.java", "1", "הפקודה \"כתוב\" עצמה"},
                 };
                 java.util.regex.Pattern w128 = java.util.regex.Pattern.compile(
                         "Files\\.writeAtomic\\(|\\.delete\\(\\)|\\.renameTo\\(|\\.mkdirs\\(\\)|new (?:java\\.io\\.)?FileOutputStream|new (?:java\\.io\\.)?FileWriter|saveQuiet\\(\\)|Files\\.(copy|write|append)[A-Za-z]*\\(");
