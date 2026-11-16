@@ -86,14 +86,6 @@ final class DbSmartForm {
         return r;
     }
 
-    /**
-     * שומר בעסקה אחת: smart = 0 — נוצרת (בתוך into, אם לא 0). מחזיר את מספר הזיהוי. מבנה 97: השמירה עצמה — בחומר
-     * (Lists.saveSmart); כאן נשארה רק עריכה של רשימה קיימת, עד שגם היא תעבור.
-     */
-    static long save(Store s, final long smart, final long into, final Result r) {
-        return Lists.saveSmart(s, smart, into, r.name, r.cond, props(r));
-    }
-
     /** מבנה 97: מה שבטופס, מלבד השם והתנאי — לפי Lists.SMART_FORM. */
     static java.util.Map<String, String> props(Result r) {
         java.util.Map<String, String> m = new java.util.HashMap<String, String>();

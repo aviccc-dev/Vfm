@@ -658,7 +658,7 @@ final class DbCmdTests {
                                 // מבנה 103 (המשתמש): שם קיים — עוצרים; הדרך "הישנה" כאן היא הכלל שהמשתמש קבע, כדי ששתי הרשימות יישארו שוות
                                 if (Lists.smartTaken(st, at != 0 ? at : DbPaths.home(st), f97.name.trim().isEmpty() ? Words.SMART_LIST : f97.name.trim()))
                                     old97[k] = "תכנון: " + Words.ListCmdW.smartTaken(f97.name.trim());
-                                else old97[k] = DbSmartForm.save(st, 0, at, f97) != 0 ? "נוצרה" : "לא";
+                                else old97[k] = Lists.saveSmart(st, 0, at, f97.name, f97.cond, DbSmartForm.props(f97)) != 0 ? "נוצרה" : "לא";
                                 return null;
                             }
                         });
@@ -690,7 +690,7 @@ final class DbCmdTests {
                             @Override public Void run(SqlStore st) {
                                 in103[0] = DbPaths.find(st, m91, java.util.Arrays.asList("חדש"));
                                 long oldIn = DbPaths.find(st, m91, java.util.Arrays.asList("ישן"));
-                                DbSmartForm.save(st, Lists.smartIn(st, oldIn, f103.name), 0, f103);   // הצד השני — אותה דריסה
+                                Lists.saveSmart(st, Lists.smartIn(st, oldIn, f103.name), 0, f103.name, f103.cond, DbSmartForm.props(f103));   // הצד השני — אותה דריסה
                                 in103[1] = Lists.smartIn(st, in103[0], f103.name);
                                 return null;
                             }
@@ -775,14 +775,15 @@ final class DbCmdTests {
                                 return null;
                             }
                         });
-                        old99[i] = ListRun.nowEdit(m91, new DbListCmd.Work() {           // הדרך הישנה — בדיוק מה שהמסך עשה
+                        DbListCmd.Res r99 = ListRun.realRes(m91, new DbListCmd.Work() {   // הדרך הישנה — מה שהמסך עשה (מבנה 217: בלי העטיפות שירדו)
                             @Override public DbListCmd.Res run(Store t, DbListCmd.Finder fd) {
                                 if (t.item(ids[0]) == null) return DbListCmd.Res.err(Words.Db.ITEM_GONE);
                                 String was = t.item(ids[0]).name;
-                                DbSmartForm.save(t, ids[0], 0, f);
+                                Lists.saveSmart(t, ids[0], 0, f.name, f.cond, DbSmartForm.props(f));
                                 return DbListCmd.Res.ok(Words.DbCmd.saved(f.name.isEmpty() ? was : f.name)).renamed(ids[0], was, t.item(ids[0]).name);
                             }
-                        });
+                        }, Backups.OP_EDIT, null);
+                        old99[i] = r99.error != null ? r99.error : Words.DbCmd.inDb(r99.text);
                         Manager.Act act = Manager.onSmartEdit(m91, ids[1], f.name, f.cond, DbSmartForm.props(f), here, vars, lib);
                         Permit.close();
                         try {

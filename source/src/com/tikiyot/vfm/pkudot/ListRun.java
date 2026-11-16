@@ -33,13 +33,6 @@ final class ListRun {
         };
     }
 
-    /** מבנה 58: עריכה מהמסך שדורסת את מה שהיה (שם, תיאור, תנאי של רשימה חכמה) — גיבוי "לפני עריכה", ואז הפעולה. */
-    static String nowEdit(String mode, DbListCmd.Work w) {
-        DbListCmd.Res r = realRes(mode, w, Backups.OP_EDIT, null);
-        if (r.error != null) DbListCmd.lastFailed = true;
-        return r.error != null ? r.error : Words.DbCmd.inDb(r.text);
-    }
-
     /** ההרצה: המסד נפתח לרגע; לפני פעולה שמוציאה — גיבוי "לפני פעולה" (נכשל — לא מבצעים). */
     /** מ0.37: "גבה" — גיבוי ידני של המסד של האופן (עותק וגם טקסט); גיבוי ידני לא נמחק לבד. */
     static String backupNow(final String mode) {

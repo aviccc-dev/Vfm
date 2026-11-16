@@ -220,13 +220,13 @@ final class ImportTests {
         r.sort = "שם";
         r.view = "ברצף";
         r.why = "למה כך";
-        long fs = DbSmartForm.save(s, 0, home, r);
+        long fs = Lists.saveSmart(s, 0, home, r.name, r.cond, DbSmartForm.props(r));
         ck("טופס חכמה: נוצרת בבית עם כל השדות", s.item(fs).type == Store.SMART && s.listsOf(fs).equals(Arrays.asList(home))
                 && "סוג:ספרים".equals(s.prop(fs, Store.P_COND)) && "ברצף".equals(s.prop(fs, Store.P_VIEW)) && "למה כך".equals(s.prop(fs, Store.P_WHY)));
         r.name = "";
         r.cond = "סוג:תמונות";
         r.why = "";
-        ck("טופס חכמה: עריכה — אותו פריט, שם נשאר כשריק, שדה שנמחק נמחק", DbSmartForm.save(s, fs, 0, r) == fs
+        ck("טופס חכמה: עריכה — אותו פריט, שם נשאר כשריק, שדה שנמחק נמחק", Lists.saveSmart(s, fs, 0, r.name, r.cond, DbSmartForm.props(r)) == fs
                 && s.item(fs).name.equals("מהטופס") && "סוג:תמונות".equals(s.prop(fs, Store.P_COND)) && s.prop(fs, Store.P_WHY) == null);
         ck("פקודות: המסד תקין", s.check() == null);
     }
