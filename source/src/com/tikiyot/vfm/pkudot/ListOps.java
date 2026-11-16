@@ -304,7 +304,7 @@ final class ListOps {
         long when = System.currentTimeMillis();
         DbExport.Out o;
         String name;
-        if (a.filesOf) {
+        if (a.filesOf || a.kind == ListCmd.SMART_LIST) {                     // מבנה 208: רשימה חכמה — מה שהיא מוצאת (קבצים), ישר לקובץ
             String[] err = {null};
             List<String> ps = DbListCmd.files(s, mode, a, f, err);
             if (ps == null) return DbListCmd.Res.err(err[0]);

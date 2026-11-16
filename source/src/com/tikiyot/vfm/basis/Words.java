@@ -2096,7 +2096,7 @@ public final class Words {
                 REL_SEPARATE = "רשימות נפרדות", REL_SIMILAR = " (דומות, לא שוות)", REL_CONTENT_EQUAL = "התוכן שווה",
                 WORD_EXISTS = "קיימת", WORD_MISSING = "חסרה", WORD_EXISTS_M = "קיים", WORD_MISSING_M = "חסר", SW_LISTS = "/רשימות:", SW_ITEMS = "/פריטים:";  // תחביר
 
-        public static final String USAGE_EXPORT = "צורה: COPY ידנית \"א\" קובץ \"*\" (או שם/מסלול) · גם קבצי ידנית \"א\", ידנית \"*\" (הבית — כל האופן)",
+        public static final String USAGE_EXPORT = "צורה: COPY ידנית \"א\" קובץ \"*\" (או שם/מסלול) · גם קבצי ידנית \"א\", חכמה \"א\" (מה שהיא מוצאת), ידנית \"*\" (הבית — כל האופן)",
                 EXPORT_DIR = "יצוא";  // בכונן
 
         public static String exportHeader(int format, String date, String what, int lists, int files, int skipped) {

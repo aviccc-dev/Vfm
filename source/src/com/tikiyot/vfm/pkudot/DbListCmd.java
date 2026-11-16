@@ -407,7 +407,7 @@ final class DbListCmd {
             return null;
         }
         if (b.kind == ListCmd.EXPORT) {                                  // מ0.18: יצוא לקובץ טקסט
-            if (a.kind == ListCmd.SMART_LIST || a.content || a.mask != null || !a.list()) { s.error = Words.DbCmd.USAGE_EXPORT; return null; }
+            if (a.content || a.mask != null || !a.list()) { s.error = Words.DbCmd.USAGE_EXPORT; return null; }   // מבנה 208: גם רשימה חכמה — הקבצים שהיא מוצאת
             work = new Work() {
                 @Override public Res run(Store t, Finder f) { return ListOps.export(t, mode, a, b, f, !(t instanceof MemStore)); }
             };
