@@ -122,7 +122,7 @@ final class PhysicalUi {
         for (String p : all.isEmpty() ? dirs : all)
             if (to == null || !to.equals(lib.rootOf(p))) across = true;
         long need = copy || across ? size : 0;
-        long free = Physical.free(folder);
+        long free = DiskInfo.free(folder);
         if (need > 0 && free < need) {
             Ui.ask(a, Words.Disk.NO_ROOM_IN + folder.getName() + "\"", Words.NO_TOUCH_FILES,
                     Words.Disk.NEED + Files.size(need) + Words.Disk.FREE + Files.size(free), null, Words.Disk.GOT_IT, new Runnable() {
@@ -241,7 +241,7 @@ final class PhysicalUi {
 
         private static String describe(File f) {
             if (f.isDirectory()) {
-                long[] c = Physical.count(f);
+                long[] c = DiskInfo.count(f);
                 return Words.Disk.FOLDER_DOT + Files.count(c[0]) + Words.Disk.FILES_DOT + Files.size(c[1]);
             }
             return Files.size(f.length()) + " · " + Ui.date(f.lastModified());
@@ -445,7 +445,7 @@ final class PhysicalUi {
             Ui.toast(a, Words.Disk.BAD_ZIP);
             return;
         }
-        long free = Physical.free(zip.getParentFile());
+        long free = DiskInfo.free(zip.getParentFile());
         if (c[1] > 0 && free < c[1]) {
             Ui.ask(a, Words.Disk.NO_ROOM_UNPACK, Words.NO_TOUCH_FILES,
                     Words.Disk.NEED + Files.size(c[1]) + Words.Disk.FREE + Files.size(free), null, Words.Disk.GOT_IT, new Runnable() {

@@ -5602,11 +5602,11 @@ public final class Tests {
         File small = mk(src, "קטן.bin", 10);
         File fat = new File(root, "כרטיס");
         fat.mkdirs();
-        Physical.maxFileForTests = 50;
+        DiskInfo.maxFileForTests = 50;
         try {
             r = Physical.transfer(lib, P(big.getAbsolutePath(), small.getAbsolutePath()), NONE, fat, true, null, null, false);
         } finally {
-            Physical.maxFileForTests = 0;
+            DiskInfo.maxFileForTests = 0;
         }
         check("1.18.0: קובץ גדול מהמותר — נכשל, השאר הועתק", r.failed == 1 && !new File(fat, "גדול.bin").exists()
                 && new File(fat, "קטן.bin").isFile() && !Physical.partial(new File(fat, "גדול.bin")).exists());
@@ -5619,10 +5619,10 @@ public final class Tests {
         m.add(new String[]{"/mnt/media_rw/ABCD-1234", "vfat"});
         m.add(new String[]{"/storage/EF01-2345", "fuse"});
         m.add(new String[]{"/mnt/media_rw/EF01-2345", "exfat"});
-        eq("1.18.0: כרטיס FAT32", "vfat", Physical.fsTypeIn(m, "/storage/ABCD-1234/גיבוי/נוכחי"));
-        eq("1.18.0: כרטיס exFAT", "exfat", Physical.fsTypeIn(m, "/storage/EF01-2345"));
-        eq("1.18.0: פנימי", "fuse", Physical.fsTypeIn(m, "/storage/emulated/0/Download"));
-        eq("1.18.0: נקודה דומה אינה תואמת", "ext4", Physical.typeAt(m, "/storage/emulatedX"));
+        eq("1.18.0: כרטיס FAT32", "vfat", DiskInfo.fsTypeIn(m, "/storage/ABCD-1234/גיבוי/נוכחי"));
+        eq("1.18.0: כרטיס exFAT", "exfat", DiskInfo.fsTypeIn(m, "/storage/EF01-2345"));
+        eq("1.18.0: פנימי", "fuse", DiskInfo.fsTypeIn(m, "/storage/emulated/0/Download"));
+        eq("1.18.0: נקודה דומה אינה תואמת", "ext4", DiskInfo.typeAt(m, "/storage/emulatedX"));
     }
 
 

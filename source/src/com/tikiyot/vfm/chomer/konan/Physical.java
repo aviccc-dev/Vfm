@@ -479,7 +479,7 @@ public final class Physical {
         Library lib = run.lib;
         for (File f : all) {
             if (f.isDirectory()) {
-                long[] st = count(f);
+                long[] st = DiskInfo.count(f);
                 run.total += st[0];
                 run.totalBytes += st[1];
             } else {
@@ -499,13 +499,13 @@ public final class Physical {
             return;
         }
         long need = run.needed(all, checkFolder);
-        if (need > 0 && free(checkFolder) < need) {
-            run.r.fail(Words.Disk.NO_ROOM_NEED + Files.size(need) + Words.Disk.NO_ROOM_FREE + Files.size(free(checkFolder)) + ")");
+        if (need > 0 && DiskInfo.free(checkFolder) < need) {
+            run.r.fail(Words.Disk.NO_ROOM_NEED + Files.size(need) + Words.Disk.NO_ROOM_FREE + Files.size(DiskInfo.free(checkFolder)) + ")");
             run.r.failed = all.size();
             return;
         }
         checkFolder.mkdirs();
-        run.maxFile = maxFileSize(checkFolder);
+        run.maxFile = DiskInfo.maxFileSize(checkFolder);
         for (int k = 0; k < all.size(); k++) {
             if (run.r.cancelled) break;
             File f = all.get(k), folder = to.get(k);
@@ -551,23 +551,6 @@ public final class Physical {
         }
     }
 
-    static long[] count(File dir) {
-        long[] s = {0, 0};
-        File[] all = dir.listFiles();
-        if (all == null) return s;
-        for (File f : all) {
-            if (f.isDirectory()) {
-                long[] c = count(f);
-                s[0] += c[0];
-                s[1] += c[1];
-            } else {
-                s[0]++;
-                s[1] += f.length();
-            }
-        }
-        return s;
-    }
-
     /**
      * 1.18.0: רק הפריטים העליונים — פריט שתיקייה שמעליו כבר ברשימה יוצא (הוא עובר איתה), וכפילויות יוצאות.
      * בלי זה: תיקייה עוברת שלמה, ואחריה הקובץ שבתוכה "לא נמצא" (בהעברה) או מועתק שוב, שטוח, ליעד (בהעתקה).
@@ -584,67 +567,6 @@ public final class Physical {
             if (!under) out.add(new File(p));
         }
         return out;
-    }
-
-    /** לבדיקות: גודל קובץ מרבי ביעד במקום מה שנקרא ממערכת הקבצים (0 — בלי). */
-    static long maxFileForTests = 0;
-    static final long FAT_MAX = 0xFFFFFFFFL;   // FAT32: עד 4GB פחות בית
-
-    /** 1.18.0: הקובץ הגדול ביותר שאפשר לכתוב בתיקייה — FAT32: 4GB פחות בית; אחרת (או לא ידוע) — בלי הגבלה. */
-    static long maxFileSize(File folder) {
-        if (maxFileForTests > 0) return maxFileForTests;
-        String t = fsType(folder.getAbsolutePath());
-        return t != null && (t.equals("vfat") || t.equals("msdos") || t.equals("fat")) ? FAT_MAX : Long.MAX_VALUE;
-    }
-
-    /** סוג מערכת הקבצים לפי /proc/mounts: נקודת העגינה הארוכה ביותר שמכילה את המסלול. בכרטיס (fuse) — לפי /mnt/media_rw. */
-    static String fsType(String path) {
-        List<String[]> m = new ArrayList<String[]>();
-        java.io.BufferedReader in = null;
-        try {
-            in = new java.io.BufferedReader(new java.io.FileReader("/proc/mounts"));
-            String line;
-            while ((line = in.readLine()) != null) {
-                String[] f = line.split(" ");
-                if (f.length >= 3) m.add(new String[]{f[1].replace("\\040", " "), f[2]});
-            }
-        } catch (Throwable t) {
-            return null;
-        } finally {
-            try { if (in != null) in.close(); } catch (Throwable ignored) { }
-        }
-        return fsTypeIn(m, path);
-    }
-
-    /** מתוך רשימת עגינות {נקודה, סוג}. */
-    static String fsTypeIn(List<String[]> m, String path) {
-        String t = typeAt(m, path);
-        if (t != null && (t.equals("fuse") || t.equals("sdcardfs")) && path.startsWith("/storage/")) {
-            List<String[]> rw = new ArrayList<String[]>();
-            for (String[] x : m) if (x[0].startsWith("/mnt/media_rw/")) rw.add(x);
-            String under = typeAt(rw, "/mnt/media_rw/" + path.substring("/storage/".length()));
-            if (under != null) return under;
-        }
-        return t;
-    }
-
-    static String typeAt(List<String[]> mounts, String path) {
-        String best = null, type = null;
-        for (String[] x : mounts) {
-            String mp = x[0];
-            boolean in = path.equals(mp) || path.startsWith(mp.endsWith("/") ? mp : mp + "/");
-            if (in && (best == null || mp.length() > best.length())) {
-                best = mp;
-                type = x[1];
-            }
-        }
-        return type;
-    }
-
-    static long free(File folder) {
-        File f = folder;
-        while (f != null && !f.exists()) f = f.getParentFile();
-        return f == null ? Long.MAX_VALUE : f.getUsableSpace();
     }
 
     /** ריצה אחת של העברה/העתקה: מה נזכר ("אותו דבר לכל השאר"), ההתקדמות, והשינויים לאינדקס ולרשימות. */
@@ -684,7 +606,7 @@ public final class Physical {
             String to = lib.rootOf(folder.getAbsolutePath());
             for (File f : all) {
                 if (!copy && to != null && to.equals(lib.rootOf(f.getAbsolutePath()))) continue;
-                n += f.isDirectory() ? count(f)[1] : f.length();
+                n += f.isDirectory() ? DiskInfo.count(f)[1] : f.length();
             }
             return n;
         }
@@ -782,7 +704,7 @@ public final class Physical {
             if (src.isDirectory()) {
                 if (!copy) {
                     List<String> rel = Trash.relFiles(src);
-                    long bytes = count(src)[1];
+                    long bytes = DiskInfo.count(src)[1];
                     List<Library.Hit> was = new ArrayList<Library.Hit>();
                     if (same(src, dst)) for (String x : rel) was.add(lib.find(src + "/" + x));
                     if (same(src, dst) && src.renameTo(dst)) {  // אותו כונן: רגע אחד

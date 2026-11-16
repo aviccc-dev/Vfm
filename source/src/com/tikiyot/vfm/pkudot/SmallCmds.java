@@ -218,7 +218,7 @@ final class SmallCmds {
                     if (!pack) {
                         long[] c = Zip.contents(src);
                         if (c == null) { DbListCmd.lastFailed = true; return Words.Disk.BAD_ZIP; }
-                        long free = Physical.free(parent);
+                        long free = DiskInfo.free(parent);
                         if (c[1] > 0 && free < c[1]) { DbListCmd.lastFailed = true; return Words.Cmd.noRoom(Files.size(c[1]), Files.size(free)); }
                     }
                     Zip.Result r = pack ? Zip.pack(src, out, plan.asked) : Zip.unpack(src, out, plan.asked);
