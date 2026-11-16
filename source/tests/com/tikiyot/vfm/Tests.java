@@ -4135,11 +4135,11 @@ public final class Tests {
         long h = DbPaths.ensureHome(s), a = s.createList("א", h), b = s.createList("ב", h), in = s.createList("פנימית", a);
         ListCmd.Side side = new ListCmd.Side();
         side.path = java.util.Collections.singletonList("פנימית");
-        eq("מ0.30 (40): רשימה שאינה בבית — יוצאת מהרשימה שהיא בה", a, DbListCmd.parentOf(s, "x", side, in));
+        eq("מ0.30 (40): רשימה שאינה בבית — יוצאת מהרשימה שהיא בה", a, ListOps.parentOf(s, "x", side, in));
         s.addMember(b, in);
-        eq("מ0.30 (40): בכמה רשימות ובלי דרך — צריך דרך מלאה", -1L, DbListCmd.parentOf(s, "x", side, in));
+        eq("מ0.30 (40): בכמה רשימות ובלי דרך — צריך דרך מלאה", -1L, ListOps.parentOf(s, "x", side, in));
         s.addMember(h, in);
-        eq("מ0.30 (40): גם בבית — מהבית", h, DbListCmd.parentOf(s, "x", side, in));
+        eq("מ0.30 (40): גם בבית — מהבית", h, ListOps.parentOf(s, "x", side, in));
         Lists.deleteWhole(s, a);
         check("מ0.30 (מ20): מחיקת רשימה מכל מקום — נמחקה, ומה שנשאר במקום אחר נשאר", s.item(a) == null && s.item(in) != null);
     }

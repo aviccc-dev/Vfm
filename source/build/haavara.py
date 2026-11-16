@@ -16,7 +16,7 @@ while i<len(L):
     m=re.match(r'    (?:private\s+)?static\s+(?:final\s+)?(?:(?:class|interface)\s+(\w+)|[\w<>\[\], .]+?\s+(\w+)\s*[(=])',l)
     if m:
         n=m.group(1) or m.group(2); e=i
-        if l.rstrip().endswith('{'):
+        if l.rstrip().endswith('{') or (m.group(2) and '(' in l and '=' not in l.split('(')[0]):   # שיטה, גם כשהחתימה בכמה שורות
             while L[e]!='    }': e+=1
         else:
             while not L[e].split('//')[0].rstrip().endswith(';'): e+=1

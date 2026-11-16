@@ -315,7 +315,7 @@ final class ListVerbs {
                 // מבנה 100: המספר של מה שנוצר / עודכן חוזר (DbListCmd.Res.made ← DbListCmd.Step.made) — כפתור שמריץ את השורה פותח בדיוק אותו
                 if (list) {                                                      // מבנה 102: "צור רשימה" — הכלל האחד; שם קיים — סירוב
                     if (path == null || path.isEmpty()) return DbListCmd.Res.err(Words.Verb.NOT_FOUND + c.arg);
-                    return DbListCmd.listMade(Lists.newListAt(t, mode, path, DbListCmd.taken(c.taken)), Names.label(path));   // מבנה 109: /תפוס:
+                    return ListOps.listMade(Lists.newListAt(t, mode, path, DbListCmd.taken(c.taken)), Names.label(path));   // מבנה 109: /תפוס:
                 }
                 if (smartNew) {                                                  // מבנה 103–104: הכלל האחד (Lists.newSmart) — בבית
                     java.util.Map<String, String> props = new java.util.HashMap<String, String>();

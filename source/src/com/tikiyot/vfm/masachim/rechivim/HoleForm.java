@@ -96,7 +96,7 @@ final class HoleForm {
                             @Override public void onClick(DialogInterface d, int which) { e.setText(names.get(which)); }
                         });
                     } else if (kind == CmdTemplates.HOLE_FILE) {               // מ0.31: הקבצים שבתיקיית היצוא, החדש קודם
-                        File[] k = DbListCmd.exportDir().listFiles();
+                        File[] k = ListOps.exportDir().listFiles();
                         final List<File> fs = new ArrayList<File>();
                         if (k != null) for (File x : k) if (x.isFile()) fs.add(x);
                         java.util.Collections.sort(fs, new java.util.Comparator<File>() {
