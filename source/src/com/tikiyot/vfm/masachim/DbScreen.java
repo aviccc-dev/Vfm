@@ -88,6 +88,7 @@ public class DbScreen extends Activity {
         String m = a.getSharedPreferences(Db.PREFS, MODE_PRIVATE).getString(Db.PREF_MODE, "");
         if (m.isEmpty()) m = Db.defaultMode(a);
         Manager.boot();                                                        // מבנה 124: הרישום של פעולות המערכת
+        VerbsUi.boot();                                                        // מבנה 205 (ממצא 55): ופותחי המסכים — כבר בהפעלה
         long home;
         boolean sys = Permit.systemOpen(Permit.SYS_START);                       // מבנה 124: פעולה של המערכת, רשומה אצל המנהל
         try {
