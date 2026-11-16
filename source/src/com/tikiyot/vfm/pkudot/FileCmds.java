@@ -143,6 +143,7 @@ final class FileCmds {
             return;
         }
         s.dirs.add(d.getAbsolutePath());
+        if (!sourcesAllowed(s, Words.Disk.CANT_DELETE, sim)) { s.dirs.clear(); return; }   // מבנה 201 (ה11): תיקייה מוגנת — כבר בתכנון
         s.describe = Words.Cmd.folderToTrash(Bidi.path(d.getAbsolutePath()));
         sim.wipe(d.getAbsolutePath());
     }
@@ -161,6 +162,7 @@ final class FileCmds {
             for (String d : s.dirs) sim.wipe(d);
         } else {
             match(s, paths.get(0), flt, false, sim);
+            if (s.error == null && !sourcesAllowed(s, Words.Disk.CANT_DELETE, sim)) return;   // מבנה 201 (ה11)
             if (s.error == null) s.describe = Words.Cmd.toTrash(Words.files(s.files.size())) + filtered(s);
         }
         for (String f : s.files) {
@@ -192,11 +194,14 @@ final class FileCmds {
             s.error = Words.Cmd.NO_DEST;
             return;
         }
+        String noDest = sim.lib == null ? null : DiskRules.noDest(sim.lib, dest);   // מבנה 201 (ה11): יעד בתיקיית התוכנה או בסל — כבר בתכנון
+        if (noDest != null) { s.error = noDest; return; }
         s.dest = dest;
         // מבנה 112 (ה7, המשתמש: "כמו במסך"): שם של תיקייה הוא התיקייה עצמה — גם בהעתקה (עד כאן: בהעתקה — הקבצים שבתוכה;
         // בהעברה ומהמסך — התיקייה). מה שבתוכה בלבד: "תיקייה\*".
         match(s, paths.get(0), flt, true, sim);
         if (s.error != null) return;
+        if (!sourcesAllowed(s, cmd.equals("MOVE") ? Words.Disk.CANT_MOVE : null, sim)) return;   // מבנה 201 (ה11)
         if (!s.dirs.isEmpty() && !flt.none()) {            // 121: סינון לא חל על תיקייה שלמה
             s.error = Words.Cmd.filterOnFolder(cmd + " \"" + args.get(0) + "\\*.*\" …");
             return;
@@ -501,7 +506,7 @@ final class FileCmds {
         if (s.error != null) return;
         for (String d : s.dirs)
             if (DiskRules.inside(dest, new File(d))) {
-                s.error = Words.Disk.CANT + (copy ? Words.Disk.TO_COPY : Words.Disk.TO_MOVE) + Words.Disk.FOLDER_INTO_ITSELF;
+                s.error = Words.Disk.NOT_INTO_ITSELF;                           // מבנה 201 (ה11): הנוסח האחד — של קובץ הפקודות
                 return;
             }
         arrange(s, copy, dest, sim);
@@ -511,6 +516,27 @@ final class FileCmds {
      * מבנה 73: המקור הוא מה שנבחר במסך. קובץ או תיקייה שכבר אינם — שגיאה (המסך הראה משהו שאיננו); סינון (גיל, גודל…) חל
      * על הקבצים; תיקייה — שלמה, ולכן סינון עם תיקייה שנבחרה הוא שגיאה, כמו בתיקייה שנכתבת במפורש (121).
      */
+    /**
+     * מבנה 201 (ה11; הוראות, סעיף 2א): מה שאסור למחוק או להעביר — קובץ של התוכנה, תיקייה מוגנת — כלל אחד, לשורה הכתובה ולמסך.
+     * המשתמש (16.11.2026): "שיעצור מההתחלה תמיד, וייתן הסבר" — נאמר כבר בתכנון (עד כאן, בשורה כתובה: רק בהרצה).
+     * cant — הפתיח של הסירוב ("אי אפשר למחוק" / "להעביר"); null — העתקה: המקור אינו משתנה, ומותר.
+     */
+    static boolean allowed(Batch.Step s, String cant, File x, boolean dir, Sim sim) {
+        if (cant == null) return true;
+        String why = dir ? (sim.lib == null ? null : DiskRules.forbidden(sim.lib, x)) : DiskRules.programFile(x.getAbsolutePath());
+        if (why == null) return true;
+        s.error = cant + x.getName() + "\": " + why;
+        return false;
+    }
+
+    /** מבנה 201: אותו כלל — על כל מה שהשורה אספה (קבצים ותיקיות). */
+    static boolean sourcesAllowed(Batch.Step s, String cant, Sim sim) {
+        if (cant == null) return true;
+        for (String p : s.files) if (!allowed(s, cant, new File(p), false, sim)) return false;
+        for (String d : s.dirs) if (!allowed(s, cant, new File(d), true, sim)) return false;
+        return true;
+    }
+
     static void selected(Batch.Step s, Filter flt, Sim sim, String cmd) {
         // מבנה 77: מה שאסור למחוק אסור גם להעביר; להעתיק — מותר (המקור אינו משתנה).
         String cant = cmd.equals("DEL") ? Words.Disk.CANT_DELETE : cmd.equals("MOVE") ? Words.Disk.CANT_MOVE : null;
@@ -520,16 +546,14 @@ final class FileCmds {
         for (String p : sel.files) {
             File x = new File(p);
             if (!sim.isFile(x)) { s.error = Words.Cmd.notFound(p); return; }
-            String own = cant == null ? null : DiskRules.programFile(p);         // מבנה 74: כבר בתכנון — המסך אומר זאת לפני חלון האישור
-            if (own != null) { s.error = cant + x.getName() + "\": " + own; return; }
+            if (!allowed(s, cant, x, false, sim)) return;                       // מבנה 74 / 201: כבר בתכנון; הכלל — אחד
             s.total++;
             if (flt.ok(sim.real(x))) s.files.add(x.getAbsolutePath());
         }
         for (String d : sel.dirs) {
             File x = new File(d);
             if (!sim.isDir(x)) { s.error = Words.FOLDER_NOT_FOUND + ": " + d; return; }
-            String why = cant == null || sim.lib == null ? null : DiskRules.forbidden(sim.lib, x);
-            if (why != null) { s.error = cant + x.getName() + "\": " + why; return; }
+            if (!allowed(s, cant, x, true, sim)) return;
             s.dirs.add(x.getAbsolutePath());
         }
     }

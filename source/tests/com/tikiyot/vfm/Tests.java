@@ -2897,7 +2897,22 @@ public final class Tests {
             check("מבנה 77: יעד בסל — סירוב מהתכנון (" + tr77.error() + ")", Words.Disk.DEST_TRASH_NOT.equals(tr77.error()));
             Manager.Act in77 = Manager.onSelected("MOVE", none77, dirs77, new File(dir77, "פנים"), Paths.data(), v77, lib77);
             check("מבנה 77: תיקייה לתוך עצמה — סירוב מהתכנון (" + in77.error() + ")",
-                    (Words.Disk.CANT + Words.Disk.TO_MOVE + Words.Disk.FOLDER_INTO_ITSELF).equals(in77.error()));
+                    Words.Disk.NOT_INTO_ITSELF.equals(in77.error()));                // מבנה 201 (ה11): הנוסח האחד — של קובץ הפקודות
+            {   // מבנה 201 (ה11, המשתמש 16.11.2026): השורה הכתובה — אותם סירובים כמו מהמסך, כבר בתכנון, ובאותו נוסח
+                String mv201 = Commands.word(Commands.get("MOVE")), del201 = Commands.word(Commands.get("DEL")), cp201 = Commands.word(Commands.get("COPY"));
+                Batch.Plan pTrash = Batch.plan(mv201 + " \"" + f77.get(0) + "\" \"" + trash77.getAbsolutePath() + "\"\n", Paths.data(), v77, lib77, null);
+                Batch.Plan pOwn = Batch.plan(mv201 + " \"" + own77 + "\" \"" + to77.getAbsolutePath() + "\"\n", Paths.data(), v77, lib77, null);
+                Batch.Plan pDel = Batch.plan(del201 + " \"" + own77 + "\"\n", Paths.data(), v77, lib77, null);
+                Batch.Plan pCopy = Batch.plan(cp201 + " \"" + own77 + "\" \"" + to77.getAbsolutePath() + "\"\n", Paths.data(), v77, lib77, null);
+                check("מבנה 201: שורה כתובה — יעד בסל נתפס בתכנון (עד כאן: רק בהרצה), באותו נוסח כמו מהמסך (" + pTrash.steps.get(0).error + ")",
+                        tr77.error() != null && tr77.error().equals(pTrash.steps.get(0).error) && pTrash.blocked());
+                check("מבנה 201: שורה כתובה — להעביר קובץ של התוכנה: נתפס בתכנון, באותו נוסח כמו מהמסך (" + pOwn.steps.get(0).error + ")",
+                        pOwn.steps.get(0).error != null && pOwn.steps.get(0).error.equals(Manager.onSelected("MOVE", java.util.Collections.singletonList(own77),
+                                none77, to77, Paths.data(), v77, lib77).error()) && pOwn.blocked());
+                check("מבנה 201: שורה כתובה — למחוק קובץ של התוכנה: נתפס בתכנון (" + pDel.steps.get(0).error + ")",
+                        pDel.steps.get(0).error != null && pDel.steps.get(0).error.startsWith(Words.Disk.CANT_DELETE + "הגדרה-77.ini") && pDel.blocked());
+                check("מבנה 201: להעתיק קובץ של התוכנה — מותר, גם בשורה כתובה", pCopy.steps.get(0).error == null);
+            }
             Manager.Act mo77 = Manager.onSelected("MOVE", java.util.Collections.singletonList(own77), none77, to77, Paths.data(), v77, lib77);
             check("מבנה 77: להעביר קובץ של התוכנה — סירוב מהתכנון (" + mo77.error() + ")", mo77.error() != null
                     && mo77.error().startsWith(Words.Disk.CANT_MOVE + "הגדרה-77.ini"));
