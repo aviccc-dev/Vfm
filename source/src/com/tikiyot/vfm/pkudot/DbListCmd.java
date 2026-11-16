@@ -274,165 +274,19 @@ final class DbListCmd {
         }
         final Finder find = finder(sim);
         final List<ListCmd.Side> sd = p.sides;
-        Work work = null;
-        boolean destructive = false;
-        if (cmd.equals("MD")) {
-            if (sd.size() != 1) { s.error = Commands.usage(cmd); return; }
-            final ListCmd.Side a = sd.get(0);
-            if (a.kind == ListCmd.SMART_LIST) { s.error = Words.ListCmdW.MD_SMART; return; }
-            if (a.kind != ListCmd.LIST || a.content || a.filesOf || a.home || a.mask != null) { s.error = Words.ListCmdW.USAGE_MD; return; }
-            s.listPath = a.path;
-            final int taken = ListOps.takenOf(sw);                                       // מבנה 109
-            work = new Work() {
-                @Override public Res run(Store t, Finder f) { return ListOps.md(t, mode, a, taken); }
-            };
-        } else if (cmd.equals("RD") || cmd.equals("DEL")) {
-            if (sd.size() != 1) { s.error = Commands.usage(cmd); return; }
-            final ListCmd.Side a = sd.get(0);
-            if (a.filesOf) {                                                 // הקבצים עצמם — לסל (הביצוע הרגיל)
-                if (cmd.equals("RD")) { s.error = Words.ListCmdW.RD_FILES; return; }
-                String[] err = {null};
-                List<String> fs = files(db, mode, a, find, err);
-                if (fs == null) { s.error = err[0]; return; }
-                for (String x : fs) if (sim.isFile(new File(x))) s.files.add(new File(x).getAbsolutePath());
-                s.describe = Words.Cmd.toTrash(Words.files(s.files.size())) + Words.ListCmdW.FROM_DISK;
-                for (String x : s.files) {
-                    sim.gone.add(x);
-                    sim.added.remove(x);
-                }
-                s.target = a.label();
-                return;
-            }
-            destructive = true;
-            work = new Work() {
-                @Override public Res run(Store t, Finder f) { return ListOps.remove(t, mode, a); }
-            };
-        } else if (cmd.equals("COPY")) {
-            if (sd.size() != 2) { s.error = Words.ListCmdW.USAGE; return; }
-            final ListCmd.Side a = sd.get(0), b = sd.get(1);
-            if (b.content || b.filesOf) { s.error = Words.ListCmdW.USAGE; return; }
-            if (b.kind == ListCmd.SMART_LIST) { s.error = Words.ListCmdW.INTO_SMART; return; }
-            String fromMode = a.path == null || a.path.isEmpty() || !a.path.get(0).startsWith(Words.DbCmd.MODE_PREFIX) ? null
-                    : a.path.get(0).substring(Words.DbCmd.MODE_PREFIX.length()).trim();
-            if (fromMode != null) {                                          // מ0.22: מאופן אחר — "אופן:X/א\ב"
-                a.path = new ArrayList<String>(a.path.subList(1, a.path.size()));
-                if (a.path.isEmpty()) { s.error = Words.DbCmd.USAGE_FROM_MODE; return; }
-                if (!fromMode.equals(mode)) {
-                    if (!Db.dbModes(Db.app).contains(fromMode)) { s.error = Words.DbCmd.noMode(fromMode, sim.modes()); return; }
-                    if (a.kind != ListCmd.LIST || a.filesOf || a.mask != null || b.kind != ListCmd.LIST) { s.error = Words.DbCmd.USAGE_FROM_MODE; return; }
-                    final String src = fromMode;
-                    work = new Work() {
-                        @Override public Res run(Store t, Finder f) { return ListOps.copyFromMode(t, mode, src, a, b); }
-                    };
-                    s.target = b.label();
-                    Res pr;
-                    try { pr = work.run(db, find); } catch (Store.Failure e) { pr = Res.err(Words.Db.failed(e.getMessage())); }
-                    if (pr.error != null) { s.error = pr.error; return; }
-                    s.describe = Words.DbCmd.inDb(pr.text);
-                    final Work w = work;
-                    s.op = new ListCmd.Op() {
-                        @Override public String run(Library lib) { return ListRun.real(mode, w, false, lib); }
-                    };
-                    return;
-                }
-            }
-            if (a.kind == ListCmd.EXPORT) {                                  // מ0.22: ייבוא מקובץ טקסט לרשימה
-                final File in = ListOps.importFile(a.raw);
-                work = new Work() {
-                    @Override public Res run(Store t, Finder f) { return ListOps.importFrom(t, mode, in, b); }
-                };
-                s.target = b.label();
-                if (in.isFile()) {
-                    Res pr = work.run(db, find);
-                    if (pr.error != null) { s.error = pr.error; return; }
-                    s.describe = Words.DbCmd.inDb(pr.text);
-                } else s.describe = Words.DbCmd.importLater(Bidi.path(in.getAbsolutePath()));   // ייווצר בשורות שלפני
-                final Work w = work;
-                s.op = new ListCmd.Op() {
-                    @Override public String run(Library lib) { return ListRun.real(mode, w, false, lib); }
-                };
-                return;
-            }
-            if (b.kind == ListCmd.EXPORT) {                                  // מ0.18: יצוא לקובץ טקסט
-                if (a.kind == ListCmd.SMART_LIST || a.content || a.mask != null || !a.list()) { s.error = Words.DbCmd.USAGE_EXPORT; return; }
-                work = new Work() {
-                    @Override public Res run(Store t, Finder f) { return ListOps.export(t, mode, a, b, f, !(t instanceof MemStore)); }
-                };
-                s.target = b.label();
-                Res pr = work.run(db, find);
-                if (pr.error != null) { s.error = pr.error; return; }
-                s.describe = Words.DbCmd.inDb(pr.text);
-                final Work w = work;
-                s.op = new ListCmd.Op() {
-                    @Override public String run(Library lib) { return ListRun.real(mode, w, false, lib); }
-                };
-                return;
-            }
-            if (b.kind == ListCmd.FS) {                                      // מרשימה לתיקייה — הקבצים עצמם (הביצוע הרגיל)
-                toFolder(s, cmd, a, db, mode, find, sw, sim, fsDest);
-                return;
-            }
-            final boolean live = sw.contains(ListCmd.SW_LIVE), flat = sw.contains(ListCmd.SW_FLAT);
-            if ((live || flat) && (a.list() || fsDirs.isEmpty() || (live && flat))) { s.error = Words.ListCmdW.FOLDER_SW_ONLY; return; }
-            if (!a.list() && !fsDirs.isEmpty()) {                               // מבנה 115: תיקייה שלמה מהכונן אל רשימה
-                final List<Tree.Node> nodes = new ArrayList<Tree.Node>();
-                if (!live) for (String d : fsDirs) nodes.add(ListLines.scan(sim, s, new File(d), !flat));
-                final int taken = ListOps.takenOf(sw);
-                work = new Work() {
-                    @Override public Res run(Store t, Finder f) {
-                        long dest = b.home ? DbPaths.home(t) : b.mask != null ? 0 : DbPaths.find(t, mode, b.path);
-                        if (dest == 0) return Res.err(listWhy(t, mode, b));
-                        return ListOps.addFolders(t, dest, b.label(), fsDirs, nodes, fsFiles, live, flat, taken);
-                    }
-                };
-            } else work = new Work() {
-                @Override public Res run(Store t, Finder f) { return ListOps.copy(t, mode, a, b, fsFiles, f); }
-            };
-        } else if (cmd.equals("COMP")) {
-            if (sd.size() != 2) { s.error = Words.ListCmdW.USAGE_COMP; return; }
-            final ListCmd.Side a = sd.get(0), b = sd.get(1);
-            if (!a.list() || !b.list()) { s.error = Words.ListCmdW.COMP_FS; return; }
-            if (sw.contains(ListCmd.SW_DIFF)) {                                  // מבנה 90: כל ההבדלים בין שתי רשימות ידניות
-                ListVerify.planDiff(s, a, b, sw, mode);
-                return;
-            }
-            if (a.content || b.content) { s.error = Words.ListCmdW.USAGE_COMP; return; }
-            final boolean conds = sw.contains(ListCmd.SW_CONDS);
-            if (conds && (a.kind != ListCmd.SMART_LIST || b.kind != ListCmd.SMART_LIST || a.filesOf || b.filesOf)) {
-                s.error = Words.ListCmdW.CONDS_SMART;
-                return;
-            }
-            Res r = ListOps.comp(db, mode, a, b, conds, find);
-            if (r.error != null) s.error = r.error;
-            else s.describe = Words.DbCmd.inDb(r.text);
-            return;
-        } else if (cmd.equals("REN")) {                                       // מ0.21: שינוי שם לרשימה — במסד
-            if (sd.size() != 2) { s.error = Words.DbCmd.USAGE_REN; return; }
-            final ListCmd.Side a = sd.get(0);
-            final String name = sd.get(1).raw == null ? "" : sd.get(1).raw.trim();
-            if (!a.list() || a.content || a.filesOf || a.home || a.mask != null || sd.get(1).list()) { s.error = Words.DbCmd.USAGE_REN; return; }
-            work = new Work() {
-                @Override public Res run(Store t, Finder f) { return ListOps.rename(t, mode, a, name); }
-            };
-        } else if (cmd.equals("MOVE") || cmd.equals(Syntax.LINK)) {           // מ0.17: העברה וקישור — במסד
-            if (sd.size() != 2) { s.error = Words.DbCmd.USAGE_LINK; return; }
-            final ListCmd.Side a = sd.get(0), b = sd.get(1);
-            if (cmd.equals("MOVE") && a.list() && b.kind == ListCmd.FS && !b.content && !b.filesOf) {   // מ0.40: הקבצים עצמם — לתיקייה
-                toFolder(s, cmd, a, db, mode, find, sw, sim, fsDest);
-                return;
-            }
-            if (!a.list() && cmd.equals("MOVE")) { s.error = Words.ListCmdW.MOVE_TO_LIST; return; }
-            if (!a.list() || a.filesOf || b.content || b.filesOf || b.kind == ListCmd.FS) { s.error = Words.DbCmd.USAGE_LINK; return; }
-            if (b.kind == ListCmd.SMART_LIST) { s.error = Words.ListCmdW.INTO_SMART; return; }
-            final boolean move = cmd.equals("MOVE");
-            destructive = move;
-            work = new Work() {
-                @Override public Res run(Store t, Finder f) { return ListOps.link(t, mode, a, b, move); }
-            };
-        } else {
+        Work work;
+        if (cmd.equals("MD")) work = planMd(s, cmd, sd, sw, sim, db, mode, find, fsDest, fsFiles, fsDirs);
+        else if (cmd.equals("RD") || cmd.equals("DEL")) work = planRemove(s, cmd, sd, sw, sim, db, mode, find, fsDest, fsFiles, fsDirs);
+        else if (cmd.equals("COPY")) work = planCopy(s, cmd, sd, sw, sim, db, mode, find, fsDest, fsFiles, fsDirs);
+        else if (cmd.equals("COMP")) work = planComp(s, cmd, sd, sw, sim, db, mode, find, fsDest, fsFiles, fsDirs);
+        else if (cmd.equals("REN")) work = planRen(s, cmd, sd, sw, sim, db, mode, find, fsDest, fsFiles, fsDirs);
+        else if (cmd.equals("MOVE") || cmd.equals(Syntax.LINK)) work = planLink(s, cmd, sd, sw, sim, db, mode, find, fsDest, fsFiles, fsDirs);
+        else {
             s.error = Words.ListCmdW.notYet(cmd);
             return;
         }
+        if (work == null) return;
+        boolean destructive = cmd.equals("RD") || cmd.equals("DEL") || cmd.equals("MOVE");   // מבנה 173: מה שהיה בענפים — רק שם נוצרת work
         s.target = sd.get(sd.size() - 1).label();
         Res r;
         try {
@@ -459,6 +313,191 @@ final class DbListCmd {
                 return r.error != null ? r.error : Words.DbCmd.inDb(r.text);
             }
         };
+    }
+
+    /** מבנה 173: הענף של "cmd.equals(MD)" מתוך plan. */
+    private static Work planMd(final Batch.Step s, final String cmd, final List<ListCmd.Side> sd, final List<String> sw, final Sim sim, final Store db,
+                                final String mode, final Finder find, final File fsDest, final List<String> fsFiles, final List<String> fsDirs) {
+        Work work = null;
+        if (sd.size() != 1) { s.error = Commands.usage(cmd); return null; }
+        final ListCmd.Side a = sd.get(0);
+        if (a.kind == ListCmd.SMART_LIST) { s.error = Words.ListCmdW.MD_SMART; return null; }
+        if (a.kind != ListCmd.LIST || a.content || a.filesOf || a.home || a.mask != null) { s.error = Words.ListCmdW.USAGE_MD; return null; }
+        s.listPath = a.path;
+        final int taken = ListOps.takenOf(sw);                                       // מבנה 109
+        work = new Work() {
+            @Override public Res run(Store t, Finder f) { return ListOps.md(t, mode, a, taken); }
+        };
+        return work;
+    }
+
+    /** מבנה 173: הענף של "cmd.equals(RD) || cmd.equals(DEL)" מתוך plan. */
+    private static Work planRemove(final Batch.Step s, final String cmd, final List<ListCmd.Side> sd, final List<String> sw, final Sim sim, final Store db,
+                                final String mode, final Finder find, final File fsDest, final List<String> fsFiles, final List<String> fsDirs) {
+        Work work = null;
+        if (sd.size() != 1) { s.error = Commands.usage(cmd); return null; }
+        final ListCmd.Side a = sd.get(0);
+        if (a.filesOf) {                                                 // הקבצים עצמם — לסל (הביצוע הרגיל)
+            if (cmd.equals("RD")) { s.error = Words.ListCmdW.RD_FILES; return null; }
+            String[] err = {null};
+            List<String> fs = files(db, mode, a, find, err);
+            if (fs == null) { s.error = err[0]; return null; }
+            for (String x : fs) if (sim.isFile(new File(x))) s.files.add(new File(x).getAbsolutePath());
+            s.describe = Words.Cmd.toTrash(Words.files(s.files.size())) + Words.ListCmdW.FROM_DISK;
+            for (String x : s.files) {
+                sim.gone.add(x);
+                sim.added.remove(x);
+            }
+            s.target = a.label();
+            return null;
+        }
+        work = new Work() {
+            @Override public Res run(Store t, Finder f) { return ListOps.remove(t, mode, a); }
+        };
+        return work;
+    }
+
+    /** מבנה 173: הענף של "cmd.equals(COPY)" מתוך plan. */
+    private static Work planCopy(final Batch.Step s, final String cmd, final List<ListCmd.Side> sd, final List<String> sw, final Sim sim, final Store db,
+                                final String mode, final Finder find, final File fsDest, final List<String> fsFiles, final List<String> fsDirs) {
+        Work work = null;
+        if (sd.size() != 2) { s.error = Words.ListCmdW.USAGE; return null; }
+        final ListCmd.Side a = sd.get(0), b = sd.get(1);
+        if (b.content || b.filesOf) { s.error = Words.ListCmdW.USAGE; return null; }
+        if (b.kind == ListCmd.SMART_LIST) { s.error = Words.ListCmdW.INTO_SMART; return null; }
+        String fromMode = a.path == null || a.path.isEmpty() || !a.path.get(0).startsWith(Words.DbCmd.MODE_PREFIX) ? null
+                : a.path.get(0).substring(Words.DbCmd.MODE_PREFIX.length()).trim();
+        if (fromMode != null) {                                          // מ0.22: מאופן אחר — "אופן:X/א\ב"
+            a.path = new ArrayList<String>(a.path.subList(1, a.path.size()));
+            if (a.path.isEmpty()) { s.error = Words.DbCmd.USAGE_FROM_MODE; return null; }
+            if (!fromMode.equals(mode)) {
+                if (!Db.dbModes(Db.app).contains(fromMode)) { s.error = Words.DbCmd.noMode(fromMode, sim.modes()); return null; }
+                if (a.kind != ListCmd.LIST || a.filesOf || a.mask != null || b.kind != ListCmd.LIST) { s.error = Words.DbCmd.USAGE_FROM_MODE; return null; }
+                final String src = fromMode;
+                work = new Work() {
+                    @Override public Res run(Store t, Finder f) { return ListOps.copyFromMode(t, mode, src, a, b); }
+                };
+                s.target = b.label();
+                Res pr;
+                try { pr = work.run(db, find); } catch (Store.Failure e) { pr = Res.err(Words.Db.failed(e.getMessage())); }
+                if (pr.error != null) { s.error = pr.error; return null; }
+                s.describe = Words.DbCmd.inDb(pr.text);
+                final Work w = work;
+                s.op = new ListCmd.Op() {
+                    @Override public String run(Library lib) { return ListRun.real(mode, w, false, lib); }
+                };
+                return null;
+            }
+        }
+        if (a.kind == ListCmd.EXPORT) {                                  // מ0.22: ייבוא מקובץ טקסט לרשימה
+            final File in = ListOps.importFile(a.raw);
+            work = new Work() {
+                @Override public Res run(Store t, Finder f) { return ListOps.importFrom(t, mode, in, b); }
+            };
+            s.target = b.label();
+            if (in.isFile()) {
+                Res pr = work.run(db, find);
+                if (pr.error != null) { s.error = pr.error; return null; }
+                s.describe = Words.DbCmd.inDb(pr.text);
+            } else s.describe = Words.DbCmd.importLater(Bidi.path(in.getAbsolutePath()));   // ייווצר בשורות שלפני
+            final Work w = work;
+            s.op = new ListCmd.Op() {
+                @Override public String run(Library lib) { return ListRun.real(mode, w, false, lib); }
+            };
+            return null;
+        }
+        if (b.kind == ListCmd.EXPORT) {                                  // מ0.18: יצוא לקובץ טקסט
+            if (a.kind == ListCmd.SMART_LIST || a.content || a.mask != null || !a.list()) { s.error = Words.DbCmd.USAGE_EXPORT; return null; }
+            work = new Work() {
+                @Override public Res run(Store t, Finder f) { return ListOps.export(t, mode, a, b, f, !(t instanceof MemStore)); }
+            };
+            s.target = b.label();
+            Res pr = work.run(db, find);
+            if (pr.error != null) { s.error = pr.error; return null; }
+            s.describe = Words.DbCmd.inDb(pr.text);
+            final Work w = work;
+            s.op = new ListCmd.Op() {
+                @Override public String run(Library lib) { return ListRun.real(mode, w, false, lib); }
+            };
+            return null;
+        }
+        if (b.kind == ListCmd.FS) {                                      // מרשימה לתיקייה — הקבצים עצמם (הביצוע הרגיל)
+            toFolder(s, cmd, a, db, mode, find, sw, sim, fsDest);
+            return null;
+        }
+        final boolean live = sw.contains(ListCmd.SW_LIVE), flat = sw.contains(ListCmd.SW_FLAT);
+        if ((live || flat) && (a.list() || fsDirs.isEmpty() || (live && flat))) { s.error = Words.ListCmdW.FOLDER_SW_ONLY; return null; }
+        if (!a.list() && !fsDirs.isEmpty()) {                               // מבנה 115: תיקייה שלמה מהכונן אל רשימה
+            final List<Tree.Node> nodes = new ArrayList<Tree.Node>();
+            if (!live) for (String d : fsDirs) nodes.add(ListLines.scan(sim, s, new File(d), !flat));
+            final int taken = ListOps.takenOf(sw);
+            work = new Work() {
+                @Override public Res run(Store t, Finder f) {
+                    long dest = b.home ? DbPaths.home(t) : b.mask != null ? 0 : DbPaths.find(t, mode, b.path);
+                    if (dest == 0) return Res.err(listWhy(t, mode, b));
+                    return ListOps.addFolders(t, dest, b.label(), fsDirs, nodes, fsFiles, live, flat, taken);
+                }
+            };
+        } else work = new Work() {
+            @Override public Res run(Store t, Finder f) { return ListOps.copy(t, mode, a, b, fsFiles, f); }
+        };
+        return work;
+    }
+
+    /** מבנה 173: הענף של "cmd.equals(COMP)" מתוך plan. */
+    private static Work planComp(final Batch.Step s, final String cmd, final List<ListCmd.Side> sd, final List<String> sw, final Sim sim, final Store db,
+                                final String mode, final Finder find, final File fsDest, final List<String> fsFiles, final List<String> fsDirs) {
+        if (sd.size() != 2) { s.error = Words.ListCmdW.USAGE_COMP; return null; }
+        final ListCmd.Side a = sd.get(0), b = sd.get(1);
+        if (!a.list() || !b.list()) { s.error = Words.ListCmdW.COMP_FS; return null; }
+        if (sw.contains(ListCmd.SW_DIFF)) {                                  // מבנה 90: כל ההבדלים בין שתי רשימות ידניות
+            ListVerify.planDiff(s, a, b, sw, mode);
+            return null;
+        }
+        if (a.content || b.content) { s.error = Words.ListCmdW.USAGE_COMP; return null; }
+        final boolean conds = sw.contains(ListCmd.SW_CONDS);
+        if (conds && (a.kind != ListCmd.SMART_LIST || b.kind != ListCmd.SMART_LIST || a.filesOf || b.filesOf)) {
+            s.error = Words.ListCmdW.CONDS_SMART;
+            return null;
+        }
+        Res r = ListOps.comp(db, mode, a, b, conds, find);
+        if (r.error != null) s.error = r.error;
+        else s.describe = Words.DbCmd.inDb(r.text);
+        return null;
+    }
+
+    /** מ0.21: שינוי שם לרשימה — במסד — מבנה 173: הענף של "cmd.equals(REN)" מתוך plan. */
+    private static Work planRen(final Batch.Step s, final String cmd, final List<ListCmd.Side> sd, final List<String> sw, final Sim sim, final Store db,
+                                final String mode, final Finder find, final File fsDest, final List<String> fsFiles, final List<String> fsDirs) {
+        Work work = null;
+        if (sd.size() != 2) { s.error = Words.DbCmd.USAGE_REN; return null; }
+        final ListCmd.Side a = sd.get(0);
+        final String name = sd.get(1).raw == null ? "" : sd.get(1).raw.trim();
+        if (!a.list() || a.content || a.filesOf || a.home || a.mask != null || sd.get(1).list()) { s.error = Words.DbCmd.USAGE_REN; return null; }
+        work = new Work() {
+            @Override public Res run(Store t, Finder f) { return ListOps.rename(t, mode, a, name); }
+        };
+        return work;
+    }
+
+    /** מ0.17: העברה וקישור — במסד — מבנה 173: הענף של "cmd.equals(MOVE) || cmd.equals(Syntax.LINK)" מתוך plan. */
+    private static Work planLink(final Batch.Step s, final String cmd, final List<ListCmd.Side> sd, final List<String> sw, final Sim sim, final Store db,
+                                final String mode, final Finder find, final File fsDest, final List<String> fsFiles, final List<String> fsDirs) {
+        Work work = null;
+        if (sd.size() != 2) { s.error = Words.DbCmd.USAGE_LINK; return null; }
+        final ListCmd.Side a = sd.get(0), b = sd.get(1);
+        if (cmd.equals("MOVE") && a.list() && b.kind == ListCmd.FS && !b.content && !b.filesOf) {   // מ0.40: הקבצים עצמם — לתיקייה
+            toFolder(s, cmd, a, db, mode, find, sw, sim, fsDest);
+            return null;
+        }
+        if (!a.list() && cmd.equals("MOVE")) { s.error = Words.ListCmdW.MOVE_TO_LIST; return null; }
+        if (!a.list() || a.filesOf || b.content || b.filesOf || b.kind == ListCmd.FS) { s.error = Words.DbCmd.USAGE_LINK; return null; }
+        if (b.kind == ListCmd.SMART_LIST) { s.error = Words.ListCmdW.INTO_SMART; return null; }
+        final boolean move = cmd.equals("MOVE");
+        work = new Work() {
+            @Override public Res run(Store t, Finder f) { return ListOps.link(t, mode, a, b, move); }
+        };
+        return work;
     }
 
     /**
