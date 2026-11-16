@@ -95,14 +95,19 @@ final class FileCmds {
         if (paths.size() != 1) { s.error = Commands.usage(cmd); return; }
         File d = new File(paths.get(0));
         if (d.getName().equals(Syntax.NAME_TOKEN)) {                               // מבנה 79: "%יעד%\%שם-חדש%" — תיקייה חדשה מהמסך
-            makeSelected(s, cmd, d, sim);
-            return;
+            d = makeSelected(s, cmd, d, sim);                                  // מבנה 197 (ה9): רק השם מהבחירה; הכלל — אחד, כאן
+            if (d == null) return;
         }
         for (String x : sw)                                                 // מבנה 109: "להחליף" / "לשאול" — לא לתיקייה; לא בולעים בשקט
             if (x.toUpperCase(Locale.ROOT).equals("/Y") || x.equals(Syntax.SW_TAKEN + Syntax.TAKEN_REPLACE) || x.equals(Syntax.SW_TAKEN + Syntax.TAKEN_ASK)) {
                 s.error = Words.Cmd.MD_TAKEN_ONLY;
                 return;
             }
+        // מבנה 197 (ה9; המשתמש, 16.11.2026: "שיעצור מההתחלה תמיד, וייתן הסבר"): שם לא תקין, ותיקייה בתוך תיקיית התוכנה — נתפסים
+        // כבר כאן, גם בשורה כתובה (עד כאן — רק בהרצה). אותן שתי בדיקות, ובאותו סדר, כמו בביצוע עצמו (Physical.makeFolder).
+        String bad = DiskRules.badName(d.getName());
+        if (bad != null) { s.error = bad; return; }
+        if (DiskRules.programFile(d.getAbsolutePath()) != null) { s.error = Words.Disk.NO_FOLDER_IN_APP; return; }
         if (sim.isDir(d) && s.renameTaken) {                               // מבנה 109: /תפוס:לשנות-שם — בשם פנוי "(2)"
             File free = d;
             for (int k = 2; sim.isDir(free) || sim.isFile(free); k++) free = new File(d.getParentFile(), d.getName() + " (" + k + ")");
@@ -422,22 +427,17 @@ final class FileCmds {
      * "צור תיקייה" כתובה (שבה תיקייה קיימת היא "בלי שינוי", ומסלול יוצר גם את מה שמעליו) — כאן, כמו שהמסך עשה: שם אחד,
      * ושם שכבר קיים הוא סירוב. הסירובים (שם לא תקין, תיקיית התוכנה, כבר קיים) — בתכנון ובנוסח של המסך.
      */
-    static void makeSelected(Batch.Step s, String cmd, File d, Sim sim) {
+    /** מבנה 79 / 197 (ה9): התיקייה החדשה שנבחרה במסך — התיקייה שמוצגת, והשם שהוקלד כלשונו. null — שימוש שגוי (ונאמר). הכלל עצמו — ב־fileMd. */
+    static File makeSelected(Batch.Step s, String cmd, File d, Sim sim) {
         Batch.Selection sel = sim.selected;
         File parent = d.getParentFile();
         if (sel == null || sel.name == null || sel.dest == null || parent == null || !parent.getAbsolutePath().equals(Paths.clean(sel.dest))) {
             s.error = Commands.usage(cmd);
-            return;
+            return null;
         }
-        String bad = DiskRules.badName(sel.name);
-        if (bad != null) { s.error = bad; return; }
-        File made = new File(parent, sel.name.trim());
-        if (DiskRules.programFile(made.getAbsolutePath()) != null) { s.error = Words.Disk.NO_FOLDER_IN_APP; return; }
-        if (sim.isDir(made) || sim.isFile(made)) { s.error = Words.Disk.ALREADY_HERE_NAME + made.getName() + "\""; return; }
-        s.dest = made;
-        s.describe = Words.Cmd.newFolder(Bidi.path(made.getAbsolutePath()));
-        sim.dirs.add(made.getAbsolutePath());
-        sim.gone.remove(made.getAbsolutePath());
+        String bad = DiskRules.badName(sel.name);                              // השם שהוקלד, כולו (גם "א/ב", גם ריק) — לפני שהוא נעשה מסלול
+        if (bad != null) { s.error = bad; return null; }
+        return new File(parent, sel.name.trim());
     }
 
     /**

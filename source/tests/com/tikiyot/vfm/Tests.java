@@ -3048,9 +3048,22 @@ public final class Tests {
             check("מבנה 79: הפקודה שהמסך מריץ — \"צור תיקייה \"%יעד%\\%שם-חדש%\"\", בלי סירוב (" + act79.error() + ")", act79.error() == null
                     && act79.text.trim().equals("צור תיקייה \"%יעד%\\%שם-חדש%\"") && act79.plan.steps.size() == 1
                     && new File(d79, "חדשה 100% %תאריך%").equals(act79.plan.steps.get(0).dest));
-            check("מבנה 79: שם שכבר קיים (תיקייה או קובץ) — סירוב מהתכנון, בנוסח של המסך",
-                    (Words.Disk.ALREADY_HERE_NAME + "קיימת\"").equals(Manager.onMakeFolder(d79, "קיימת", Paths.data(), v79, lib79).error())
-                            && (Words.Disk.ALREADY_HERE_NAME + "קובץ\"").equals(Manager.onMakeFolder(d79, "קובץ", Paths.data(), v79, lib79).error()));
+            // מבנה 197 (ה9, המשתמש 16.11.2026): הנוסח האחד — של קובץ הפקודות, גם מהמסך
+            check("מבנה 79 / 197: שם שכבר קיים (תיקייה או קובץ) — סירוב מהתכנון, בנוסח האחד",
+                    Words.Cmd.folderTaken("קיימת").equals(Manager.onMakeFolder(d79, "קיימת", Paths.data(), v79, lib79).error())
+                            && Words.Cmd.exists("קובץ").equals(Manager.onMakeFolder(d79, "קובץ", Paths.data(), v79, lib79).error()));
+            {   // מבנה 197 (ה9): השורה הכתובה — שם לא תקין ותיקיית התוכנה נתפסים בתכנון, באותו נוסח כמו מהמסך
+                String md197 = Commands.word(Commands.get("MD"));
+                Batch.Plan pBad = Batch.plan(md197 + " \"" + d79 + "\\א:ב\"\n", Paths.data(), v79, lib79, null);
+                Batch.Plan pApp = Batch.plan(md197 + " \"" + new File(Paths.data(), "בפנים-197").getAbsolutePath() + "\"\n", Paths.data(), v79, lib79, null);
+                Batch.Plan pTaken = Batch.plan(md197 + " \"" + d79 + "\\קיימת\"\n", Paths.data(), v79, lib79, null);
+                check("מבנה 197: שורה כתובה — שם לא תקין נתפס בתכנון (עד כאן: רק בהרצה), והקובץ אינו רץ (" + pBad.steps.get(0).error + ")",
+                        pBad.steps.get(0).error != null && pBad.steps.get(0).error.equals(DiskRules.badName("א:ב")) && pBad.blocked());
+                check("מבנה 197: שורה כתובה — תיקייה בתוך תיקיית התוכנה נתפסת בתכנון, כמו מהמסך (" + pApp.steps.get(0).error + ")",
+                        Words.Disk.NO_FOLDER_IN_APP.equals(pApp.steps.get(0).error) && pApp.blocked());
+                check("מבנה 197: תיקייה קיימת — אותו נוסח בשורה הכתובה ומהמסך",
+                        pTaken.steps.get(0).error != null && pTaken.steps.get(0).error.equals(Manager.onMakeFolder(d79, "קיימת", Paths.data(), v79, lib79).error()));
+            }
             check("מבנה 79: שם לא תקין — אותו סירוב של הכונן; גם שם ריק", DiskRules.badName("א/ב") != null
                     && DiskRules.badName("א/ב").equals(Manager.onMakeFolder(d79, "א/ב", Paths.data(), v79, lib79).error())
                     && Manager.onMakeFolder(d79, " ", Paths.data(), v79, lib79).error() != null);
@@ -3221,7 +3234,7 @@ public final class Tests {
                     prog132 = Manager.saveFile(Conf.file(), "x", true, lib80);
                     File sc132 = new File(Shortcuts.dir(), "קיצור 132.vbat");
                     check("מבנה 132: \"כתוב\" אינה כותבת בתוך תיקיית התוכנה (הקיצורים) — ולכן שם הגשר כותב כמו שהיה, ורק קובץ פקודות",
-                            Words.Disk.NO_FILE_IN_APP.equals(Manager.saveFile(sc132, "ECHO", false, lib80)) && !sc132.exists());
+                            in132(Manager.saveFile(sc132, "ECHO", false, lib80)) && !sc132.exists());   // מבנה 197: התיקייה שעוד אין שם — מסורבת קודם
                     check("מבנה 132: תוסף שומר קובץ חדש — נכתב כלשונו (" + new132 + "); שוב בלי \"להחליף\" — מסורב, והקובץ לא נגע (" + again132 + ")",
                             new132 == null && body132.equals(first132) && again132 != null);
                 } finally {
@@ -5522,6 +5535,11 @@ public final class Tests {
         check("1.20.0: יעד חסר בלי MD — שגיאה", Batch.plan("COMP מסמכים אין-כזה", root, vars).errors == 1);
         check("1.20.0: /עד: לא מספר — שגיאה", Batch.plan("COMP מסמכים גיבוי\nMOVE %רק-ביעד% ה /עד:הרבה", root, vars).errors == 1);
         check("1.20.0: /תפוס:לעצור — מוכר", Batch.plan("COPY מסמכים\\*.* גיבוי /תפוס:לעצור", root, vars).errors == 0);
+    }
+
+    /** מבנה 132 / 197: סירוב של "בתוך תיקיית התוכנה" — על הקובץ, או (כשהתיקייה עוד לא קיימת) על התיקייה שהייתה נוצרת בשבילו. */
+    private static boolean in132(String no) {
+        return Words.Disk.NO_FILE_IN_APP.equals(no) || Words.Disk.NO_FOLDER_IN_APP.equals(no);
     }
 
     /** מבנה 168: כל קובצי הקוד שבתיקייה, ברצף — לשומרים שבודקים "אסור" (הקוד מתפצל לקבצים). */
