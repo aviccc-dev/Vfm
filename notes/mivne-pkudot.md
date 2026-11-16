@@ -85,6 +85,7 @@
 | 171 | ההרצה של שורת רשימות על המסד ← `pkudot/ListRun` (105 שורות): `backupNow`, `real`, `realRes`, `follow`, `over`, `nowEdit` | 746 |
 | 172 | הלולאה של `Batch.plan` (257) פורקה: `planLine` 73, `planMeasure` 37, `planVerbLine` 23, `planEcho` 12, `planCont` 14, `planModeLine` 20, `planRest` 61; `plan` עצמה — 43 | — |
 | 173 | `DbListCmd.plan` (224) פורקה לפונקציה לכל פקודה: `planMd` 14, `planRemove` 24, `planCopy` 85, `planComp` 21, `planRen` 12, `planLink` 18; `plan` — 71 | 746+ |
+| 174 | `planPicked` (140) פורקה: `pickedMake` 26, `pickedXfer` 39, `pickedAdd` 32, `pickedRemove` 15; `planPicked` — 41 | 806 (הכותרות של הפונקציות החדשות) |
 
 ## איפה התיקייה עומדת (אחרי צעד 171)
 - **`Batch`: 3,359 ← 748** — הטיפוסים, הכניסה לתכנון (הלולאה על השורות) ולהרצה.
