@@ -186,11 +186,7 @@ final class ListOps {
             long src = DbListCmd.list(s, mode, a);
             if (src == 0) return DbListCmd.Res.err(DbListCmd.listWhy(s, mode, a));
             if (a.home || a.content || a.mask != null) {
-                for (Store.Member m : s.members(src)) {
-                    if (a.mask != null) {
-                        String p = DbListCmd.pathOf(s, m.item);
-                        if (p == null || !Parse.wild(a.mask, new File(p).getName())) continue;
-                    }
+                for (Store.Member m : picked(s, src, a.mask)) {
                     if (m.item.type == Store.LIST && (m.item.id == dest || s.contains(m.item.id, dest))) {
                         self.add(m.item.name);                               // היעד עצמו (או מה שהוא בתוכו) — לא לתוך עצמו
                         continue;
@@ -209,6 +205,19 @@ final class ListOps {
         String selfText = self.isEmpty() ? "" : Words.ListCmdW.notIntoSelf(self);
         return DbListCmd.Res.ok(Words.ListCmdW.copy(label, b.label()) + names(what) + selfText + " · "
                 + Words.ListCmdW.copied(c.done, c.skipped, c.why, b.label()) + nowIn(s, dest));
+    }
+
+    /** מבנה 219: מה שבתוך src שנכנס לפעולה — הכול, או רק מה ששמו מתאים לתבנית ("*.pdf"). כלל אחד להעתקה, להעברה ולקישור. */
+    static List<Store.Member> picked(Store s, long src, String mask) {
+        List<Store.Member> out = new ArrayList<Store.Member>();
+        for (Store.Member m : s.members(src)) {
+            if (mask != null) {
+                String p = DbListCmd.pathOf(s, m.item);
+                if (p == null || !Parse.wild(mask, new File(p).getName())) continue;
+            }
+            out.add(m);
+        }
+        return out;
     }
 
     static String nowIn(Store s, long list) {
@@ -276,13 +285,7 @@ final class ListOps {
             long src = DbListCmd.list(s, mode, a);
             if (src == 0) return DbListCmd.Res.err(DbListCmd.listWhy(s, mode, a));
             if (a.home || a.content || a.mask != null) {
-                for (Store.Member m : s.members(src)) {
-                    if (a.mask != null) {
-                        String p = DbListCmd.pathOf(s, m.item);
-                        if (p == null || !Parse.wild(a.mask, new File(p).getName())) continue;
-                    }
-                    ids.add(m.item.id);
-                }
+                for (Store.Member m : picked(s, src, a.mask)) ids.add(m.item.id);
                 from = src;
                 label = a.mask != null ? Words.files(ids.size()) : a.home ? Words.DbCmd.homeContent(ids.size())
                         : Words.ListCmdW.contentOf(ids.size(), a.label());
