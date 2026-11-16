@@ -278,7 +278,7 @@ final class ImportTests {
         DbClip.put("x", a, Arrays.asList(s.item(f2)), DbClip.MOVE, true);
         ck("לוח: אופן אחר — אי אפשר להדביק", DbClip.cannot("y") != null && DbClip.cannot("x") == null);
 
-        Lists.Copied r = DbClip.paste(s, b);
+        Lists.Copied r = paste(s, b);
         ck("לוח: הדבקה — כולם נכנסים ליעד", r.done == 3 && s.contains(b, f1) && s.contains(b, f2));
         ck("לוח: \"העבר\" — יצא מהמקור; \"העתק\" — נשאר במקור", !s.contains(a, f2) && s.contains(a, f1));
         long subCopy = 0;
@@ -286,18 +286,18 @@ final class ImportTests {
         ck("לוח: רשימה בהעתקה — עותק עצמאי (גם כשהיא בשני מקומות)", subCopy != 0 && subCopy != sub && s.listsOf(sub).size() == 2);
         ck("לוח: אחרי הדבקה — \"העבר\" יצאו מהלוח, \"העתק\" נשארו", DbClip.items().size() == 2 && !DbClip.anyMove());
 
-        r = DbClip.paste(s, c);
+        r = paste(s, c);
         ck("לוח: אפשר להדביק שוב במקום נוסף", r.done == 2 && s.contains(c, f1));
         DbClip.clear();
         long gone = s.createList("זמנית", home);
         DbClip.put("x", home, Arrays.asList(s.item(gone)), DbClip.COPY, false);
         Lists.removeFrom(s, home, gone);
-        r = DbClip.paste(s, c);
+        r = paste(s, c);
         ck("לוח: המקור נמחק לפני ההדבקה — לא נכנס, \"המקור כבר לא קיים\"", r.done == 0 && r.skipped == 1
                 && Words.DbClipW.GONE.equals(r.why));
         DbClip.clear();
         DbClip.put("x", home, Arrays.asList(s.item(a)), DbClip.MOVE, false);
-        r = DbClip.paste(s, sub);
+        r = paste(s, sub);
         ck("לוח: העברת רשימה לתוך עצמה — לא נכנסת, ונשארת בלוח", r.done == 0 && r.skipped == 1 && DbClip.items().size() == 1
                 && s.contains(home, a));
         DbClip.clear();
@@ -993,4 +993,29 @@ final class ImportTests {
         ck("כונן: לא מזוהה", DbPaths.driveOf("/mnt/x").equals(DbPaths.UNKNOWN_DRIVE) && DbPaths.driveOf("/storage/self/p").equals(DbPaths.UNKNOWN_DRIVE));
     }
 
+    /**
+     * מבנה 218: ההדבקה מהלוח — כמו שהיא נעשית היום: כל פריט נכנס ליעד (העתקה — עותק עצמאי; העברה — יוצא מהמקור), ו"העבר"
+     * שנכנס יוצא מהלוח (DbClip.moved). הדרך הישנה (DbClip.paste) ירדה מהקוד; בתוכנה ההדבקה היא פקודה, דרך המנהל
+     * (מבנה 116, נבדק ב־DbCmdTests). כאן — הכללים של הלוח ושל הרשימות, בלי המנהל.
+     */
+    private static Lists.Copied paste(Store t, long dest) {
+        Lists.Copied all = new Lists.Copied();
+        for (DbClip.Item it : DbClip.items()) {
+            Lists.Copied one;
+            if (t.item(it.id) == null) {
+                one = new Lists.Copied();
+                one.skipped = 1;
+                one.why = Words.DbClipW.GONE;
+            } else if (it.how == DbClip.MOVE) {
+                one = Lists.moveTo(t, java.util.Collections.singletonList(it.id), it.from, dest);
+                if (one.done == 1) DbClip.moved(it.from, java.util.Collections.singletonList(it.id));
+            } else {
+                one = Lists.copyIds(t, java.util.Collections.singletonList(it.id), dest);
+            }
+            all.done += one.done;
+            all.skipped += one.skipped;
+            if (all.why == null) all.why = one.why;
+        }
+        return all;
+    }
 }

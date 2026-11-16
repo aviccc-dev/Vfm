@@ -87,36 +87,6 @@ final class DbClip {
         return mode != null && !mode.equals(here) ? Words.DbClipW.otherMode(mode) : null;
     }
 
-    /**
-     * ההדבקה לתוך dest, בעסקה של מי שקורא (DbListCmd.now): כל פריט לפי הפעולה שלו. פריט שכבר לא קיים — לא נכנס
-     * ("המקור כבר לא קיים"). "העבר" שנכנס — יוצא מהלוח; השאר נשארים.
-     */
-    static Lists.Copied paste(Store t, long dest) {
-        Lists.Copied all = new Lists.Copied();
-        List<Item> done = new ArrayList<Item>();
-        for (Item it : items()) {
-            Lists.Copied one;
-            if (t.item(it.id) == null) {
-                one = new Lists.Copied();
-                one.skipped = 1;
-                one.why = Words.DbClipW.GONE;
-            } else if (it.how == MOVE) {
-                one = Lists.moveTo(t, java.util.Collections.singletonList(it.id), it.from, dest);
-                if (one.done == 1) done.add(it);
-            } else {
-                one = Lists.copyIds(t, java.util.Collections.singletonList(it.id), dest);
-            }
-            all.done += one.done;
-            all.skipped += one.skipped;
-            if (all.why == null) all.why = one.why;
-        }
-        synchronized (DbClip.class) {
-            items.removeAll(done);
-            if (items.isEmpty()) mode = null;
-        }
-        return all;
-    }
-
     /** מבנה 116: פריטים של "העבר" שנכנסו ליעד (ההדבקה נעשתה בפקודה, דרך המנהל) — יוצאים מהלוח. */
     static synchronized void moved(long from, List<Long> entered) {
         if (entered == null) return;
