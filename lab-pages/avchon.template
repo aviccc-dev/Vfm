@@ -423,15 +423,19 @@ function header(){
 function saveCheck(){
   try{
     if(!can('saveCommandFile')||!can('listDir'))return '';
-    const key='savecheck',ver=String(info.versionCode||''),had=J(pref(key,null),null);
+    const key='savecheck2',ver=String(info.versionCode||''),had=J(pref(key,null),null);
     if(had&&had.v===ver)return had.t+'\n';
-    const n='בדיקת שמירה (אפשר למחוק).vbat',trash='%פנימי%\\.נמחקו';
-    const count=()=>{const l=J(V.listDir(trash),null);return l?l.filter(x=>x.name.indexOf(n)>=0).length:-1;};
-    const p=V.saveText(n,'הערה ראשון',false),before=count();
-    const r=p?V.saveCommandFile(p,'הערה שני\n',true):'לא נכתב';
-    const after=count(),now=p?V.readText(p):null;
-    const ok=r===''&&now==='הערה שני\n'&&before>=0&&after===before+1;
-    const t='בדיקת שמירה (קובץ פקודות קיים — הקודם לסל): '+(ok?'✅':'❌ השמירה: '+(r===''?'נשמר':r)+' · התוכן החדש: '+(now==='הערה שני\n'?'כן':'לא')+' · בסל לפני '+before+', אחרי '+after);
+    const trash='%פנימי%\\.נמחקו';
+    // אבחון 16 (המשתמש, 16.11: "בדקתי שוב במקום אחר ולא הופיע בסל"): שני המקרים — בתוך התיקייה של התוכנה, ובתיקייה רגילה (הורדות).
+    const one=(where,n,dl)=>{
+      const count=()=>{const l=J(V.listDir(trash),null);return l?l.filter(x=>x.name.indexOf(n)>=0).length:-1;};
+      const p=V.saveText(n,'הערה ראשון',dl),before=count();
+      const r=p?V.saveCommandFile(p,'הערה שני\n',true):'לא נכתב';
+      const after=count(),now=p?V.readText(p):null;
+      const ok=r===''&&now==='הערה שני\n'&&before>=0&&after===before+1;
+      return 'בדיקת שמירה — '+where+' (קובץ פקודות קיים — הקודם לסל): '+(ok?'✅':'❌ השמירה: '+(r===''?'נשמר':r)+' · התוכן החדש: '+(now==='הערה שני\n'?'כן':'לא')+' · בסל לפני '+before+', אחרי '+after);
+    };
+    const t=one('בתיקייה של התוכנה','בדיקת שמירה (אפשר למחוק).vbat',false)+'\n'+one('בתיקיית ההורדות','בדיקת שמירה בהורדות (אפשר למחוק).vbat',true);
     setPref(key,JSON.stringify({v:ver,t:t}));
     return t+'\n';
   }catch(e){return 'בדיקת שמירה: ❌ '+e.message+'\n';}
