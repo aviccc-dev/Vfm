@@ -106,7 +106,8 @@ final class Dups {
     /** כפולים בתוך מקום אחד: הקבוצות (שני קבצים ומעלה), בסדר שבו נמצאו. */
     static List<List<Library.Hit>> within(DupMode d, List<Library.Hit> all) {
         Map<String, List<Library.Hit>> m = new LinkedHashMap<String, List<Library.Hit>>();
-        for (Library.Hit x : all) put(d, m, x);
+        Set<String> seen = new HashSet<String>();                              // מבנה 207: אותו קובץ פעמיים (אותו מסלול) — אינו כפיל של עצמו
+        for (Library.Hit x : all) if (seen.add(x.path())) put(d, m, x);
         List<List<Library.Hit>> out = new ArrayList<List<Library.Hit>>();
         for (List<Library.Hit> big : m.values()) {
             if (big.size() < 2) continue;

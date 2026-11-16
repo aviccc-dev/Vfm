@@ -461,10 +461,26 @@ public final class Tests {
             check("מבנה 190: גודל ושם דומה — \"ספר (1).pdf\" מצטרף (שלושה), הקבוצה \"בספק\"; \"אחר.pdf\" באותו גודל — לא נכנס",
                     s190.size() == 1 && s190.get(0).size() == 3 && Dups.doubt(sim190, s190.get(0)));
             check("מבנה 190: שם בלבד — שתי קבוצות (גם \"אחר.pdf\", אף שהגודל שונה)", Dups.within(nm190, all190).size() == 2);
+            {   // מבנה 207: "כפולים:" בתנאי של רשימה חכמה — אותו חישוב, דרך החיפוש (ולכן גם הספירה ו"קבצי חכמה")
+                java.util.List<String> d1 = names(lib190.list("כפולים:")), d2 = names(lib190.list("כפולים:גודל-ושם-דומה")),
+                        d3 = names(lib190.list("כפולים:שם")), d4 = names(lib190.list("סוג:pdf כפולים:")), d5 = names(lib190.list("ספר כפולים:"));
+                check("מבנה 207: \"כפולים:\" (שם וגודל) — רק שני העותקים של \"ספר.pdf\" " + d1, d1.size() == 2 && d1.get(0).equals("ספר.pdf") && d1.get(1).equals("ספר.pdf"));
+                check("מבנה 207: \"כפולים:גודל-ושם-דומה\" — גם \"ספר (1).pdf\" " + d2, d2.size() == 3 && d2.contains("ספר (1).pdf"));
+                check("מבנה 207: \"כפולים:שם\" — גם \"אחר.pdf\" בשני הגדלים " + d3, d3.size() == 4 && d3.contains("אחר.pdf"));
+                check("מבנה 207: עם שאר התנאי — הכפולים מתוך מה שנמצא " + d4 + " " + d5, d4.size() == 2 && d5.size() == 2);
+                Library.Result bad207 = lib190.search("כפולים:בלה", false, false);
+                check("מבנה 207: \"לפי מה\" שאינו מוכר — נאמר (\"לא הובן\"), ולא מתבצע בשקט", bad207.note != null && bad207.note.contains("בלה") && bad207.hits.isEmpty());
+                check("מבנה 207: הספירה של רשימה חכמה — אותו מספר", lib190.list("כפולים:").total == 2);
+            }
             Dups.Versus v190 = Dups.versus(ns190, in190a, in190b);
             check("מבנה 190: בין שני מקומות — בשניהם: \"ספר.pdf\" (הקובץ של א׳ ואחריו העותק שבב׳); רק בא׳ — 3; רק בב׳ — 2",
                     v190.both.size() == 1 && v190.both.get(0).size() == 2 && v190.both.get(0).get(0).path().contains("/A/")
                             && v190.both.get(0).get(1).path().contains("/B/") && v190.onlyA.size() == 3 && v190.onlyB.size() == 2);
+            {   // מבנה 207 (נמצא בבדיקה של תוסף האבחון במחשב): אותו קובץ פעמיים ברשימת הקבצים (אותו מסלול) — אינו כפיל של עצמו
+                List<Library.Hit> twice = new ArrayList<Library.Hit>(all190);
+                for (Library.Hit x : all190) if (x.name().equals("יחיד.txt")) twice.add(x);
+                check("מבנה 207: קובץ שמופיע פעמיים באותו מסלול — אינו כפיל של עצמו", Dups.within(ns190, twice).size() == 1);
+            }
             Dups.Versus self190 = Dups.versus(ns190, in190a, in190a);
             check("מבנה 190: מקום מול עצמו — הקובץ עצמו אינו עותק של עצמו: אין \"בשניהם\", ואין \"רק בב׳\"",
                     self190.both.isEmpty() && self190.onlyA.size() == in190a.size() && self190.onlyB.isEmpty());
@@ -2215,7 +2231,7 @@ public final class Tests {
                 if (Syntax.VERIFY.equals(x.cmd) || "EXPECT".equals(x.cmd)) verifies++;   // גם "ודא שגיאה" נספרת בסיכום
             }
             check("מ0.43: \"הכול\" של התוסף — כל החלקים נכללים (" + sp.steps.size() + " שורות)", calls == 0 && sp.steps.size() > 200);
-            eq("מ0.43: \"הכול\" — כמה \"ודא\" יש בחלקים (הכללית 88, לחץ 19, שני אופנים 4, עומס 4; מ0.45: +14 — אופן חדש והסל; מבנה 48: +6 — ממשיך מגיבוי, כתיב אחר; מבנה 51: +4 — ארבע השורות שצפויות להידחות מסומנות \"ודא שגיאה\"; מבנה 59: -2 — \"ממשיך מגיבוי\" עבר לקבוצה משלו בתוסף; מבנה 102: +1 — רשימה שכבר קיימת: \"ודא שגיאה\")", 124, verifies);
+            eq("מ0.43: \"הכול\" — כמה \"ודא\" יש בחלקים (הכללית 88, לחץ 19, שני אופנים 4, עומס 4; מ0.45: +14 — אופן חדש והסל; מבנה 48: +6 — ממשיך מגיבוי, כתיב אחר; מבנה 51: +4 — ארבע השורות שצפויות להידחות מסומנות \"ודא שגיאה\"; מבנה 59: -2 — \"ממשיך מגיבוי\" עבר לקבוצה משלו בתוסף; מבנה 102: +1 — רשימה שכבר קיימת: \"ודא שגיאה\"; מבנה 207: +2 — כפולים ברשימה חכמה)", 126, verifies);
             // מ0.41: הקטע החדש של הכללית — השורות שאינן של המסד מתוכננות בלי שגיאה; "ודא שגיאה" תופס את %נבחרים%
             String m042 = all.substring(all.indexOf(":: מ0.42"), all.indexOf(":: מ0.45 — אופן חדש"));   // נבדק לבד (m042cmds)
             String m045 = all.substring(all.indexOf(":: מ0.45 — אופן חדש"), all.indexOf(":: מ0.41 — הבדיקה מנקה"));   // נבדק לבד (למטה)
@@ -2225,12 +2241,13 @@ public final class Tests {
             int fsBad = 0, dbLines = 0;
             boolean caught = false;
             for (Batch.Step x : np.steps) {
-                boolean db = x.text.contains("ידנית") || x.text.contains(ListCmd.LOOSE_WORD) || x.text.startsWith("אופן") || x.text.startsWith("צור רשימה");
+                boolean db = x.text.contains("ידנית") || x.text.contains(ListCmd.LOOSE_WORD) || x.text.startsWith("אופן") || x.text.startsWith("צור רשימה")
+                        || x.text.startsWith("בטל חכמה");                                     // מבנה 207
                 if (db) dbLines++;
                 else if (x.error != null) fsBad++;
                 if (x.text.contains("%נבחרים%")) caught = x.error == null && Boolean.TRUE.equals(x.verified);
             }
-            check("מ0.41: הקטע החדש של הכללית — שורות הכונן בלי שגיאה (" + fsBad + "), ושורות המסד מזוהות (" + dbLines + ")", fsBad == 0 && dbLines == 15);
+            check("מ0.41: הקטע החדש של הכללית — שורות הכונן בלי שגיאה (" + fsBad + "), ושורות המסד מזוהות (" + dbLines + ")", fsBad == 0 && dbLines == 22);   // מבנה 207: +7 — בדיקת הכפולים
             check("מ0.41: ...ו\"ודא שגיאה\" תופס את %נבחרים% שמחוץ לרשימת \"בחירה\"", caught);
             // מ0.42: הקטע של הגרסה — שורות הכונן והאינדקס, בלי שורות המסד (צור אופן "בדיקות מערכת", ודא מסד): כל ה"ודא" עוברים
             StringBuilder fs42 = new StringBuilder();

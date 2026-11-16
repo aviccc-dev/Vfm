@@ -86,7 +86,7 @@ final class Search {
             res.ms = (System.nanoTime() - t0) / 1_000_000.0;
             return res;
         }
-        if (terms.isEmpty() && cond.tests.isEmpty()) return res;
+        if (terms.isEmpty() && cond.tests.isEmpty() && cond.dups == null) return res;   // מבנה 207: "כפולים:" לבד — גם תנאי
 
         String rankWord = terms.isEmpty() ? "" : terms.get(0).plain;
         boolean onlyFilters = terms.isEmpty();
@@ -158,11 +158,35 @@ final class Search {
         for (int i = 0; i < 4; i++) res.hits.addAll(buckets[i]);
         res.hits.addAll(noPrefix);
 
+        if (cond.dups != null) {                                            // מבנה 207: "כפולים:" — מתוך מה שנמצא, רק מה שיש לו כפיל
+            onlyDups(res, cond.dups);
+            res.ms = (System.nanoTime() - t0) / 1_000_000.0;
+            return res;
+        }
         if (!strict && loose && res.total < 10 && !terms.isEmpty()) addLoose(res, cond, terms, seen, snap);
         if (!strict && terms.size() > 1) addPartial(res, cond, terms, seen, snap);   // מבנה 94: רשימה — בלי "רק חלק מהמילים"
 
         res.ms = (System.nanoTime() - t0) / 1_000_000.0;
         return res;
+    }
+
+    /**
+     * מבנה 207: "כפולים:" — מתוך ההתאמות המלאות, רק קבצים שיש להם כפיל ביניהם, לפי אותו חישוב של מסך הכפולים (Dups.within).
+     * קבצים ריקים — אינם עותקים זה של זה (כמו במסך). תיקיות — לא. "אולי התכוונת" — לא (זו רשימה של מה שנמצא).
+     */
+    private static void onlyDups(Library.Result res, DupMode d) {
+        List<Library.Hit> files = new ArrayList<Library.Hit>();
+        for (Library.Hit h : res.hits) if (h.rec != null && h.section == Library.FULL && h.rec.size > 0) files.add(h);
+        java.util.Set<Index.Rec> twin = new java.util.HashSet<Index.Rec>();
+        for (List<Library.Hit> g : Dups.within(d, files)) for (Library.Hit h : g) twin.add(h.rec);
+        List<Library.Hit> keep = new ArrayList<Library.Hit>();
+        java.util.Set<String> paths = new java.util.HashSet<String>();
+        for (Library.Hit h : files) if (twin.contains(h.rec) && paths.add(h.path())) keep.add(h);   // כל קובץ פעם אחת
+        res.hits.clear();
+        res.hits.addAll(keep);
+        res.total = keep.size();
+        java.util.Arrays.fill(res.counts, 0);
+        res.counts[Library.FULL] = keep.size();
     }
 
     /** 78: מעט תוצאות — גם בכתיב חסר (בלי יו"ד ווי"ו באמצע מילה), כקבוצה נפרדת. */

@@ -42,7 +42,8 @@ public final class Cond {
     public static final String TYPE = "סוג", FOLDER = "תיקייה", DRIVE = "כונן", SOURCE = "מקור",  // תחביר
             SIZE = "גודל", DATE = "תאריך",  // תחביר
             ADDED = "נוסף",  // 189: מתי האינדקס ראה את הקובץ לראשונה // תחביר
-            STATE = "מצב", STATE2 = "מצב-בתאריך";  // 1.21.0: מצב הגיבוי בזמן נבחר // תחביר
+            STATE = "מצב", STATE2 = "מצב-בתאריך",  // 1.21.0: מצב הגיבוי בזמן נבחר // תחביר
+            DUPS = "כפולים";  // מבנה 207: רק קבצים שיש להם כפיל // תחביר
     /** 175: רק תיקיות ריקות — תיקיות במקום קבצים. */
     public static final String EMPTY = "תיקיות:ריקות";  // תחביר
 
@@ -54,6 +55,12 @@ public final class Cond {
 
     /** 175: מבקשים תיקיות ריקות (ולא קבצים). */
     public boolean emptyDirs;
+    /**
+     * מבנה 207 (המשתמש, 16.11.2026: "אתה יכול ליצור רשימה חכמה עם כפולים בפקודה" — "בדיוק"): "כפולים:<לפי מה>" — מכל מה ששאר התנאי
+     * מצא, רק קבצים שיש להם כפיל ביניהם. "לפי מה" — אותם שמות של מסך הכפולים (DupMode; מקף במקום רווח: "שם-וגודל"); בלי — שם וגודל.
+     * החישוב — Dups, אותו חישוב של מסך הכפולים. null — בלי.
+     */
+    public DupMode dups;
     /** 175: תנאי הסוג — לא חלים על תיקייה. */
     private final List<Test> kindTests = new ArrayList<Test>();
 
@@ -149,6 +156,12 @@ public final class Cond {
             else if (is(key, SIZE)) t = size(value);
             else if (is(key, DATE)) t = date(value);
             else if (is(key, ADDED)) t = date(value, true);
+            else if (is(key, DUPS)) {
+                DupMode d = dupMode(value);
+                if (d == null) c.unknown.add(token);
+                else c.dups = d;
+                continue;
+            }
             else if (is(key, STATE) || is(key, STATE2)) {
                 t = state(value);
                 c.backup = true;
@@ -160,6 +173,16 @@ public final class Cond {
             if (t != null) c.tests.add(t); else c.unknown.add(token);
         }
         return c;
+    }
+
+    /** מבנה 207: "לפי מה" של "כפולים:" — רק שם שמסך הכפולים מכיר (מקף או קו תחתון במקום רווח); ריק — שם וגודל. null — לא הובן. */
+    static DupMode dupMode(String value) {
+        String v = value == null ? "" : value.replace('-', ' ').replace('_', ' ').trim();
+        if (v.isEmpty()) return DupMode.parse(null);
+        for (String k : new String[]{Words.Dup.NAME_SIZE, Words.Dup.SIZE_SIMILAR, Words.Dup.SIZE, Words.Dup.NAME, Words.Dup.CONTENT,
+                Words.Dup.NAME_CONTENT, Words.Dup.CONTENT_SIMILAR})
+            if (Text.norm(k).equals(Text.norm(v))) return DupMode.parse(k);    // התנאי מגיע מנורמל (אותיות סופיות)
+        return null;
     }
 
     public boolean matches(Index ix, Index.Rec r) {
