@@ -428,7 +428,10 @@ function saveCheck(){
     const trash='%פנימי%\\.נמחקו';
     // אבחון 16 (המשתמש, 16.11: "בדקתי שוב במקום אחר ולא הופיע בסל"): שני המקרים — בתוך התיקייה של התוכנה, ובתיקייה רגילה (הורדות).
     const one=(where,n,dl)=>{
-      const count=()=>{const l=J(V.listDir(trash),null);return l?l.filter(x=>x.name.indexOf(n)>=0).length:-1;};
+      // אבחון 18 (נ0.14: "בסל לפני 2, אחרי 2"): שתי שמירות באותה שנייה — הסל נותן לשנייה שם פנוי ("… (2).vbat"), והשם המלא כבר לא נמצא בו.
+      // לכן סופרים לפי השם בלי הסיומת.
+      const stem=n.replace(/\.vbat$/,'');
+      const count=()=>{const l=J(V.listDir(trash),null);return l?l.filter(x=>x.name.indexOf(stem)>=0).length:-1;};
       const p=V.saveText(n,'הערה ראשון',dl),before=count();
       const r=p?V.saveCommandFile(p,'הערה שני\n',true):'לא נכתב';
       const after=count(),now=p?V.readText(p):null;
