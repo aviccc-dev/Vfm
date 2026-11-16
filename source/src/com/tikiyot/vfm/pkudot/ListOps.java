@@ -186,13 +186,7 @@ final class ListOps {
             long src = DbListCmd.list(s, mode, a);
             if (src == 0) return DbListCmd.Res.err(DbListCmd.listWhy(s, mode, a));
             if (a.home || a.content || a.mask != null) {
-                for (Store.Member m : picked(s, src, a.mask)) {
-                    if (m.item.type == Store.LIST && (m.item.id == dest || s.contains(m.item.id, dest))) {
-                        self.add(m.item.name);                               // היעד עצמו (או מה שהוא בתוכו) — לא לתוך עצמו
-                        continue;
-                    }
-                    what.add(m.item);
-                }
+                for (Store.Member m : picked(s, src, a.mask, dest, self)) what.add(m.item);
                 label = a.mask != null ? Words.files(what.size()) : a.home ? Words.DbCmd.homeContent(what.size())
                         : Words.ListCmdW.contentOf(what.size(), a.label());
             } else {
@@ -207,13 +201,20 @@ final class ListOps {
                 + Words.ListCmdW.copied(c.done, c.skipped, c.why, b.label()) + nowIn(s, dest));
     }
 
-    /** מבנה 219: מה שבתוך src שנכנס לפעולה — הכול, או רק מה ששמו מתאים לתבנית ("*.pdf"). כלל אחד להעתקה, להעברה ולקישור. */
-    static List<Store.Member> picked(Store s, long src, String mask) {
+    /**
+     * מבנה 219: מה שבתוך src שנכנס לפעולה — הכול, או רק מה ששמו מתאים לתבנית ("*.pdf"). מבנה 220 (ה12, המשתמש: "בסדר"):
+     * רשימה שהיא היעד עצמו (או שהיעד בתוכה) — לא נכנסת, ושמה נרשם ב־self ("בלי … — היעד עצמו"). כלל אחד להעתקה, להעברה ולקישור.
+     */
+    static List<Store.Member> picked(Store s, long src, String mask, long dest, List<String> self) {
         List<Store.Member> out = new ArrayList<Store.Member>();
         for (Store.Member m : s.members(src)) {
             if (mask != null) {
                 String p = DbListCmd.pathOf(s, m.item);
                 if (p == null || !Parse.wild(mask, new File(p).getName())) continue;
+            }
+            if (m.item.type == Store.LIST && (m.item.id == dest || s.contains(m.item.id, dest))) {
+                self.add(m.item.name);                                       // היעד עצמו (או מה שהוא בתוכו) — לא לתוך עצמו
+                continue;
             }
             out.add(m);
         }
@@ -273,6 +274,7 @@ final class ListOps {
         long dest = b.home ? DbPaths.home(s) : b.mask != null ? 0 : DbPaths.find(s, mode, b.path);
         if (dest == 0) return DbListCmd.Res.err(DbListCmd.listWhy(s, mode, b));
         List<Long> ids = new ArrayList<Long>();
+        final List<String> self = new ArrayList<String>();
         long from;
         String label;
         if (a.kind == ListCmd.SMART_LIST) {
@@ -285,7 +287,7 @@ final class ListOps {
             long src = DbListCmd.list(s, mode, a);
             if (src == 0) return DbListCmd.Res.err(DbListCmd.listWhy(s, mode, a));
             if (a.home || a.content || a.mask != null) {
-                for (Store.Member m : picked(s, src, a.mask)) ids.add(m.item.id);
+                for (Store.Member m : picked(s, src, a.mask, dest, self)) ids.add(m.item.id);   // מבנה 220 (ה12): כמו בהעתקה
                 from = src;
                 label = a.mask != null ? Words.files(ids.size()) : a.home ? Words.DbCmd.homeContent(ids.size())
                         : Words.ListCmdW.contentOf(ids.size(), a.label());
@@ -298,7 +300,8 @@ final class ListOps {
             }
         }
         Lists.Copied c = move ? Lists.moveTo(s, ids, from, dest) : Lists.linkInto(s, ids, dest);
-        return DbListCmd.Res.ok((move ? Words.DbCmd.moved(label, b.label()) : Words.DbCmd.linked(label, b.label())) + " · "
+        String selfText = self.isEmpty() ? "" : Words.ListCmdW.notIntoSelf(self);
+        return DbListCmd.Res.ok((move ? Words.DbCmd.moved(label, b.label()) : Words.DbCmd.linked(label, b.label())) + selfText + " · "
                 + Words.ListCmdW.copied(c.done, c.skipped, c.why, b.label()) + nowIn(s, dest));
     }
 
