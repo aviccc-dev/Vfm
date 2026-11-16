@@ -11,7 +11,7 @@ import java.util.List;
 
 final class Shortcuts {
 
-    static final String DIR = "קיצורים";  // בכונן
+    static final String DIR = Paths.SHORTCUTS;
 
     private Shortcuts() { }
 

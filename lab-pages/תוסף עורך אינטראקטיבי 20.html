@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="vfm-plugin" content="עורך אינטראקטיבי">
-<meta name="vfm-plugin-version" content="19">
+<meta name="vfm-plugin-version" content="20">
 <meta name="vfm-lab" content="עורך אינטראקטיבי">
 <meta name="vfm-lab-version" content="8">
 <title>עורך אינטראקטיבי</title>
@@ -968,6 +968,7 @@ const A={
   save:{t:'שמירה',f:()=>save(),on:()=>!!dirty()},
   saveas:{t:'שמירה בשם…',s:'שמירה בשם',f:()=>openSheet({kind:'newfile',saveAs:true}),on:()=>!!file},
   savetpl:{t:'שמירה כפקודה נפוצה…',s:'☆ נפוצה',f:()=>openSheet({kind:'name',title:'שם הפקודה הנפוצה',ph:'למשל גיבוי שבועי',ok:n=>{commit();toast(V.saveTemplate(n,text())?'נשמרה בפקודות הנפוצות שלי':'לא נשמרה');}}),on:()=>!!file&&lines.length>0&&can('saveTemplate')},
+  delfile:{t:'מחיקת הקובץ…',f:()=>openSheet({kind:'delfile'}),on:()=>!!file&&!!file.path&&can('deleteCommandFile')},   // גרסה 20
   close:{t:'סגירה',f:()=>{if(dirty())openSheet({kind:'leave'});else V.close();}},
   undo:{t:'ביטול',s:'↶ ביטול',f:undo,on:()=>view==='inter'&&hi>0},
   redo:{t:'חזרה',s:'↷ חזרה',f:redo,on:()=>view==='inter'&&hi<hist.length-1},
@@ -989,9 +990,9 @@ const A={
   asif:{t:'הרצה בכאילו',s:'▶ בכאילו',f:()=>{real=false;run();},on:()=>!!file},
   real:{t:'הרצה אמיתית…',s:'▶ אמיתית',f:()=>{real=true;run();},on:()=>!!file,cls:'real'},
   cmds:{t:'רשימת הפקודות',f:()=>{if(view==='inter'&&file&&act<0)newLineAfter();openSheet({kind:'cmd'});},on:()=>view==='inter'&&!!file},
-  about:{t:'על העורך',f:()=>toast('עורך אינטראקטיבי 19')}
+  about:{t:'על העורך',f:()=>toast('עורך אינטראקטיבי 20')}
 };
-const MENUS={file:['new','open','-','save','saveas','savetpl','-','close'],
+const MENUS={file:['new','open','-','save','saveas','savetpl','-','delfile','-','close'],
   edit:['undo','redo','-','cut','copy','paste','del','-','line','dup','up','down','-','find'],
   view:['vinter','vplain','-','lhe','len','-','tb','tbedit'],run:['asif','real'],help:['cmds','about']};
 const TB_DEFAULT=['save','undo','redo','line','asif'];
@@ -1099,7 +1100,7 @@ function top(title){const t=E('div','sh-top');t.append(E('div','sh-title',title)
 function drawSheet(){
   sheetIn.textContent='';
   ({fixed:drawFixed,pick:drawPick,det:drawDet,cmd:drawCmds,cmdmenu:drawCmdMenu,files:drawFiles,newfile:drawNewFile,raw:drawRaw,leave:drawLeave,
-    exists:drawExists,oldsave:drawOldSave,choose:drawChoose,name:drawName,vars:drawVars,cmdfile:drawCmdFile,find:drawFind,tbedit:drawTbEdit})[sh.kind]();
+    exists:drawExists,oldsave:drawOldSave,choose:drawChoose,name:drawName,vars:drawVars,cmdfile:drawCmdFile,find:drawFind,tbedit:drawTbEdit,delfile:drawDelFile})[sh.kind]();
 }
 function openPick(k){
   const def=CMDS[M.cmd],sl=def.slots[k];
@@ -1391,6 +1392,24 @@ function drawFixed(){
   sheetIn.appendChild(E('div','grp','הקובץ עוד לא נשמר. "שמירה" — כך יישאר; "בטל" כאן רק סוגר את ההודעה.'));
   sheetIn.appendChild(B('primary','שמירה',()=>{hideSheet();save();draw();}));
 }
+// גרסה 20 — המשתמש (16.11): "מחיקת קובץ פקודות מתוך העורך" · "גם אם הוא בתוך ספריית התוכנה". המחיקה — של התוכנה (הפקודה
+// "מחק", דרך שכבת הניהול): לסל, ואפשר להחזיר; מה שאסור — התוכנה אומרת למה, וכאן רק מראים
+function drawDelFile(){
+  const nm=file.name.replace(/\.vbat$/,'');
+  top('מחיקת הקובץ');
+  sheetIn.appendChild(E('div',null,'"'+nm+'" יעבור לסל. אפשר להחזיר אותו משם.'+(dirty()?' השינויים שלא נשמרו — לא יישמרו.':'')));
+  const go=B('primary','למחוק',()=>{
+    const r=V.deleteCommandFile(file.path);
+    hideSheet();
+    if(r){toast(r);return;}
+    file=null;lines=[];models=[];saved='';act=-1;M=null;hist=[];hi=-1;setPref('file','');
+    if(view==='plain')plain.value='';
+    draw();toast('"'+nm+'" עבר לסל');
+  });
+  go.style.background='var(--err)';
+  sheetIn.appendChild(go);
+  sheetIn.appendChild(B('secondary','ביטול',closeSheet));
+}
 function drawLeave(){
   const then=sh.then||(()=>V.close());
   top('לא נשמר');
@@ -1443,6 +1462,7 @@ function demoBridge(){
     readText:p=>files[p]==null?null:files[p],
     saveCommandFile:(p,t,rep)=>{const path=p.startsWith('/')?p:'/k/'+(p.endsWith('.vbat')?p:p+'.vbat');if(files[path]!=null&&!rep)return 'exists';files[path]=t;window.__saved=t;return '';},
     writeCommandFile:(n,t)=>{files['/k/'+n]=t;window.__saved=t;return '';},
+    deleteCommandFile:p=>{if(files[p]==null)return 'הקובץ לא נמצא';delete files[p];window.__deleted=p;return '';},
     toVar:p=>p.replace(/^\/storage\/emulated\/0\/Download/,'%הורדות%').replace(/^\/storage\/1234-5678/,'%כרטיס%').replace(/\//g,'\\'),
     pickFolder:(id)=>later(id,'/storage/1234-5678/ארכיון'),
     listDir:p=>JSON.stringify([{name:'גיבוי.vbat',dir:false,size:10,time:2},{name:'תמונה.jpg',dir:false,size:10,time:3},{name:'ישן.vbat',dir:false,size:10,time:1},{name:'תת',dir:true,size:0,time:4},{name:'תוסף.html',dir:false,size:10,time:5}]),

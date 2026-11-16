@@ -155,7 +155,7 @@ public final class Physical {
         String stamp = stamp();
         List<String> gone = new ArrayList<String>();
         for (String p : paths) {
-            String own = DiskRules.programFile(p);
+            String own = DiskRules.cantRemove(p);                              // מבנה 230
             if (own != null) {
                 r.fail(own);
                 continue;

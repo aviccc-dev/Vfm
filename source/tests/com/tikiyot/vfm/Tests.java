@@ -2706,6 +2706,43 @@ public final class Tests {
                     Batch.plan("כתוב \"" + in65 + "\\" + Index.TRASH + "\\x.txt\" \"א\"\n", ext64, v64, lib64).errors == 1);
             check("מבנה 65: \"כתוב\" על קובץ הגדרות של התוכנה — שגיאה (כמו קודם)",
                     Batch.plan("כתוב \"" + in65 + "\\" + Paths.APP_DIR + "\\x.txt\" \"א\"\n", ext64, v64, lib64).errors == 1);
+            // מבנה 230 (המשתמש, 16.11.2026: "מחיקת קובץ פקודות מתוך העורך" · "גם אם הוא בתוך ספריית התוכנה"): קובץ פקודות
+            // ב"הפקודות שלי" — של המשתמש; כל השאר בתיקיית התוכנה — מוגן, כמו קודם
+            File sc230 = Shortcuts.dir();
+            boolean had230 = sc230.isDirectory();
+            sc230.mkdirs();
+            String sp230 = Paths.clean(sc230.getAbsolutePath());
+            check("מבנה 230: קובץ פקודות ב\"הפקודות שלי\" — מותר להוציא (למחוק, להעביר); קובץ אחר שם, בתת־תיקייה שלה, בהגדרות ובקובצי המערכת — לא; לכתוב שם — כמו קודם (קובץ של התוכנה)",
+                    DiskRules.cantRemove(sp230 + "/שלי.vbat") == null && DiskRules.programFile(sp230 + "/שלי.vbat") != null
+                            && DiskRules.cantRemove(sp230 + "/שלי.txt") != null
+                            && DiskRules.cantRemove(sp230 + "/תת/שלי.vbat") != null
+                            && DiskRules.cantRemove(Paths.clean(Paths.settings().getAbsolutePath()) + "/שלי.vbat") != null
+                            && DiskRules.cantRemove(Paths.clean(Paths.system().getAbsolutePath()) + "/שלי.vbat") != null
+                            && DiskRules.cantRemove(sp230 + "/../שלי.vbat") != null
+                            && DiskRules.cantRemove(sp230) != null);
+            File f230 = new File(sc230, "למחיקה-230.vbat"), keep230 = new File(Paths.settings(), "הגדרה-230.vbat");
+            try {
+                Files.writeAtomic(f230, "הודעה א\n");
+                Files.writeAtomic(keep230, "x\n");
+            } catch (java.io.IOException e) {
+                throw new RuntimeException(e);
+            }
+            ix64.scan(null);
+            check("מבנה 230: \"מחק\" בקובץ פקודות על קובץ ב\"הפקודות שלי\" — בלי שגיאה; על קובץ של התוכנה — שגיאה, כמו קודם",
+                    Batch.plan("מחק \"" + f230.getAbsolutePath() + "\"\n", ext64, v64, lib64).errors == 0
+                            && Batch.plan("מחק \"" + keep230.getAbsolutePath() + "\"\n", ext64, v64, lib64).errors == 1);
+            String del230 = Manager.trashFile(f230, lib64);
+            lib64.flush(5000);
+            boolean tr230 = false;
+            File[] t230 = new File(ext64, Index.TRASH).listFiles();
+            if (t230 != null) for (File t : t230) if (t.getName().endsWith("למחיקה-230.vbat") && "הודעה א\n".equals(read(t))) tr230 = true;
+            String no230 = Manager.trashFile(keep230, lib64);
+            check("מבנה 230: מחיקת קובץ פקודות מ\"הפקודות שלי\" (כמו מהעורך) — הפקודה \"מחק\" דרך המנהל: לסל, עם התוכן (" + del230
+                            + "); קובץ של התוכנה — מסורב (" + no230 + ") ונשאר",
+                    del230 == null && !f230.exists() && tr230 && no230 != null && keep230.isFile());
+            keep230.delete();
+            if (t230 != null) for (File t : t230) if (t.getName().endsWith("למחיקה-230.vbat")) t.delete();   // הסל — כמו שהיה, לבדיקות שאחרי
+            if (!had230) sc230.delete();                                        // וגם תיקיית הקיצורים (מבנה 132 בודק אותה כשאין)
             new File(ext64, "שורש-65.txt").delete();
             new File(user65, "שלי-65.txt").delete();
             wipe(bk64);
@@ -3395,9 +3432,9 @@ public final class Tests {
                 StringBuilder door141 = new StringBuilder();
                 java.util.regex.Matcher m141 = java.util.regex.Pattern.compile("@JavascriptInterface\\s+public \\S+ (\\w+)\\(").matcher(br141);
                 while (m141.find()) door141.append(m141.group(1)).append(' ');
-                check("מבנה 141: הדלת, גרסה 1 — 36 הפונקציות (35, ועוד commandFolders — מבנה 151; תוספת אינה מעלה את המספר), לפי הקבוצות (מידע · קריאה · כתיבה · הרצה · חלונות); התוכנה מוסרת את המספר (info.door) [" + door141.toString().trim() + "]",
+                check("מבנה 141: הדלת, גרסה 1 — 37 הפונקציות (35, ועוד commandFolders — מבנה 151, ו־deleteCommandFile — מבנה 230; תוספת אינה מעלה את המספר), לפי הקבוצות (מידע · קריאה · כתיבה · הרצה · חלונות); התוכנה מוסרת את המספר (info.door) [" + door141.toString().trim() + "]",
                         Bridge.DOOR == 1 && br141.contains("o.put(\"door\", DOOR);")
-                                && door141.toString().trim().equals("info theme places modes dataDir startFile dbStats pathInfo commandMatrix smartLists commandFiles commandFolders myCommands templates readText listDir toVar expand saveCommandFile writeCommandFile saveTemplate saveText cleanData setReaders load save runCommands runFile pickFolder pickFile pickList smartForm send toast log close"));
+                                && door141.toString().trim().equals("info theme places modes dataDir startFile dbStats pathInfo commandMatrix smartLists commandFiles commandFolders myCommands templates readText listDir toVar expand saveCommandFile writeCommandFile deleteCommandFile saveTemplate saveText cleanData setReaders load save runCommands runFile pickFolder pickFile pickList smartForm send toast log close"));
                 // מבנה 145: המעבר מהמבנה הישן נבדק פעם אחת בהפעלה, ולא בכל קריאה
                 Lab.recheck();
                 File r145 = Lab.root(), old145 = new File(Paths.dbData(), Lab.OLD_DIR);

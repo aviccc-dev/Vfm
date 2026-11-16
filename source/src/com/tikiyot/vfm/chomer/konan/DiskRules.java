@@ -77,6 +77,27 @@ final class DiskRules {
         return null;
     }
 
+    /**
+     * מבנה 230 (המשתמש, 16.11.2026, על מחיקת קובץ פקודות מהעורך: "גם אם הוא בתוך ספריית התוכנה"): למה אסור להוציא את הקובץ
+     * הזה ממקומו — למחוק (לסל) או להעביר (מבנה 77: מה שאסור למחוק — אסור גם להעביר); null — מותר. כמו programFile, חוץ מקובץ
+     * פקודות ב"הפקודות שלי" של אופן עבודה: אותו מותר, מכל מקום (מסך, עורך, קובץ פקודות). לכתוב שם, לשנות שם ולהכניס לשם —
+     * כמו קודם (programFile).
+     */
+    public static String cantRemove(String path) {
+        String why = programFile(path);
+        if (why == null) return null;
+        String app = appDir(), p = Paths.clean(path);
+        return app != null && myCommand(app, p) ? null : why;
+    }
+
+    /** מבנה 230: p (נקי) — קובץ פקודות בתיקיית "הפקודות שלי" של אופן (אופני עבודה / האופן / הגדרות / קיצורים), לא בתת־תיקייה. */
+    static boolean myCommand(String app, String p) {
+        if (!p.startsWith(app + "/")) return false;
+        String[] k = p.substring(app.length() + 1).split("/");
+        return k.length == 5 && k[0].equals(Modes.DIR) && !k[1].startsWith(".") && k[2].equals(Paths.SETTINGS)
+                && k[3].equals(Paths.SHORTCUTS) && Files.isCmdFile(k[4]);
+    }
+
     static String appDir() {
         try {
             return Paths.data().getAbsolutePath();
@@ -146,7 +167,7 @@ final class DiskRules {
     /** 142: האם אפשר להעביר את המקורות האלה (קובצי התוכנה, שורש, סל). null = אפשר; אחרת ההסבר. */
     public static String cannotMove(Library lib, List<String> paths, List<String> dirs) {
         for (String p : paths)
-            if (programFile(p) != null) return Words.Disk.CANT_MOVE + new File(p).getName() + "\": " + programFile(p);
+            if (cantRemove(p) != null) return Words.Disk.CANT_MOVE + new File(p).getName() + "\": " + cantRemove(p);   // מבנה 230
         for (String d : dirs) {
             String why = forbidden(lib, new File(d));
             if (why != null) return Words.Disk.CANT_MOVE + new File(d).getName() + "\": " + why;

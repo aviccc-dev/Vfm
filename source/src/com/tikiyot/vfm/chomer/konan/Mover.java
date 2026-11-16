@@ -59,8 +59,8 @@ final class Mover {
                 run.r.fail(Words.Disk.NOT_FOUND_REFRESH);
                 continue;
             }
-            if (!copy && DiskRules.programFile(p) != null) {
-                run.r.fail(DiskRules.programFile(p));
+            if (!copy && DiskRules.cantRemove(p) != null) {                     // מבנה 230
+                run.r.fail(DiskRules.cantRemove(p));
                 continue;
             }
             if (isDir && DiskRules.inside(folder, f)) {

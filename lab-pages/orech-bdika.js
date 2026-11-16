@@ -13,7 +13,7 @@ const tb=()=>[...$('tbar').querySelectorAll('button')].map(b=>b.textContent+(b.d
 try{
   say('חמישה תפריטים, בסדר של חלונות',[...d.querySelectorAll('#mbar button[data-m]')].map(b=>b.textContent).join(' ')==='קובץ עריכה תצוגה הרצה עזרה');
   say('סרגל ברירת המחדל: '+tb().join(' | '),tb().length===5);
-  openM('file');say('תפריט קובץ: '+menuItems().map(b=>b.textContent.trim()).join(' · '),menuItems().length===6&&!$('menu').hidden);
+  openM('file');say('תפריט קובץ: '+menuItems().map(b=>b.textContent.trim()).join(' · '),menuItems().length===7&&!$('menu').hidden);
   openM('file');say('נגיעה שנייה סוגרת',$('menu').hidden);
   const n0=rows();say('קובץ נטען בדוגמה ('+n0+' שורות)',n0>0);
   click(d.querySelectorAll('#ed .row')[0]);
@@ -72,5 +72,14 @@ try{
   click([...d.querySelectorAll('#sheetIn .it')].find(b=>b.textContent.startsWith('שם וגודל')));
   pick('view','רגילה');const t59=d.querySelector('textarea').value.trim();pick('view','אינטראקטיבית');
   say('כפולים בתנאי — אחד, האחרון שנבחר: '+t59,t59==='צור רשימה חכמה "כפ" לפי vbat כפולים:שם-וגודל');
+  // גרסה 20: מחיקת הקובץ — אישור; "ביטול" לא נוגע; "למחוק" — דרך התוכנה, והעורך בלי קובץ פתוח
+  const path20='/k/גיבוי שבועי.vbat';
+  say('קובץ ← "מחיקת הקובץ…" — פעיל כשיש קובץ',pick('file','מחיקת הקובץ…')&&d.querySelector('#sheetIn').textContent.includes('יעבור לסל'));
+  click([...d.querySelectorAll('#sheetIn button')].find(b=>b.textContent==='ביטול'));
+  say('ביטול — הקובץ נשאר פתוח',!w.__deleted&&rows()>0);
+  pick('file','מחיקת הקובץ…');
+  click([...d.querySelectorAll('#sheetIn button')].find(b=>b.textContent==='למחוק'));
+  say('למחוק — נמחק דרך התוכנה ('+w.__deleted+'), ונאמר',w.__deleted===path20&&(d.querySelector('.toast')||{textContent:''}).textContent.includes('עבר לסל'));
+  say('אחרי המחיקה — אין קובץ פתוח, ו"מחיקת הקובץ" כבויה',!!d.querySelector('#ed .empty')&&pick('file','מחיקת הקובץ…')===false);
 }catch(e){out.push('❌ חריגה: '+e.message);}
 console.log(out.join('\n'));if(errs.length)console.log('שגיאות עמוד:\n'+errs.join('\n'));

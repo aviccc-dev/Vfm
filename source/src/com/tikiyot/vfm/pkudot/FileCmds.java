@@ -523,7 +523,7 @@ final class FileCmds {
      */
     static boolean allowed(Batch.Step s, String cant, File x, boolean dir, Sim sim) {
         if (cant == null) return true;
-        String why = dir ? (sim.lib == null ? null : DiskRules.forbidden(sim.lib, x)) : DiskRules.programFile(x.getAbsolutePath());
+        String why = dir ? (sim.lib == null ? null : DiskRules.forbidden(sim.lib, x)) : DiskRules.cantRemove(x.getAbsolutePath());   // מבנה 230
         if (why == null) return true;
         s.error = cant + x.getName() + "\": " + why;
         return false;

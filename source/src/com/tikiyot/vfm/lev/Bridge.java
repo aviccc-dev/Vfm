@@ -474,6 +474,24 @@ final class Bridge {
         return EXISTS.equals(r) ? Words.Lab.EXISTS_OLD : r;
     }
 
+    /**
+     * מבנה 230 (המשתמש, 16.11.2026: "מחיקת קובץ פקודות מתוך העורך" · "גם אם הוא בתוך ספריית התוכנה"): מחיקה של קובץ פקודות —
+     * דרך המנהל, כפקודה "מחק": לסל, ואפשר להחזיר. רק קובץ פקודות, במסלול מלא. "" — עבר לסל; אחרת — למה לא.
+     */
+    @JavascriptInterface
+    public String deleteCommandFile(String path) {
+        try {
+            String raw = path == null ? "" : path.trim();
+            File f = new File(raw);
+            if (!raw.startsWith("/") || !Batch.isBatch(f.getName())) return Words.Lab.ONLY_COMMANDS_DEL;
+            String no = Manager.trashFile(f, Library.get(screen));
+            return no == null ? "" : no;
+        } catch (Throwable t) {
+            Log.e("Lab.deleteCommandFile", t);
+            return Words.Db.failed(String.valueOf(t.getMessage()));
+        }
+    }
+
     /** מ0.45+: לשמור כפקודה נפוצה שלי. */
     @JavascriptInterface
     public boolean saveTemplate(String name, String text) {

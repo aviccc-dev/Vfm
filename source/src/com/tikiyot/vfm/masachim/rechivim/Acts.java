@@ -165,7 +165,7 @@ public final class Acts {
     }
 
     public static boolean deletedStaysGrey() {
-        return Conf.DELETED_GREY.equals(Conf.get(Conf.GENERAL, Conf.DELETED, Conf.DELETED_REMOVE));
+        return Manager.deletedStaysGrey();                                      // מבנה 230: הכלל — במנהל
     }
 
 }

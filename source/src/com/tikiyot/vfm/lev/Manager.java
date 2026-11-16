@@ -496,6 +496,25 @@ final class Manager {
         return r.failed > 0 ? (r.note == null || r.note.isEmpty() ? Words.SAVE_FAILED : r.note) : null;
     }
 
+    /** מבנה 230: ההגדרה "קובץ שנמחק — נשאר באפור ברשימות". הכלל — כאן (עד כאן — במסכים, Acts); המסכים לוקחים ממנו. */
+    static boolean deletedStaysGrey() {
+        return Conf.DELETED_GREY.equals(Conf.get(Conf.GENERAL, Conf.DELETED, Conf.DELETED_REMOVE));
+    }
+
+    /**
+     * מבנה 230 (המשתמש, 16.11.2026: "מחיקת קובץ פקודות מתוך העורך" · "גם אם הוא בתוך ספריית התוכנה"): קובץ שתוסף מוחק — כפקודה
+     * "מחק", כמו מכל מקום אחר: לסל (אפשר להחזיר), באותן בדיקות ובאותה הגדרה של הרשימות. null — עבר לסל; אחרת — למה לא.
+     */
+    static String trashFile(java.io.File f, Library lib) {
+        java.io.File here = f.getParentFile() != null ? f.getParentFile() : Paths.work();
+        Act act = onSelected("DEL", java.util.Collections.singletonList(f.getAbsolutePath()), java.util.Collections.<String>emptyList(), here,
+                new java.util.HashMap<String, String>(), lib);
+        String no = act.error();
+        if (no != null) return no;
+        Physical.Result r = act.run(lib, null, null, deletedStaysGrey());
+        return r.failed > 0 ? (r.note == null || r.note.isEmpty() ? Words.DELETE_FAILED : r.note) : null;
+    }
+
     /**
      * מבנה 81: פעולה של מסך הסל על הפריטים שנבחרו בו — restore: "שחזר מהסל %נבחרים%"; אחרת "רוקן סל %נבחרים%" (מחיקה לצמיתות).
      * items — המסלולים של הפריטים בתוך הסל.
