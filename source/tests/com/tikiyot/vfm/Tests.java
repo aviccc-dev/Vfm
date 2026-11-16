@@ -3317,6 +3317,13 @@ public final class Tests {
                 check("מבנה 184: מנוע ההעברה (Mover) — רק מתוך תיקיית הכונן (" + mover184.toString().trim() + "); הכניסות ב־Physical, והן שואלות את ההיתר",
                         mover184.length() == 0 && ph184.contains("Mover.go(") && ph184.contains("Permit.check(Permit.TRANSFER)")
                                 && !read(new File(code, "chomer/konan/Mover.java")).contains("Permit."));
+                // מבנה 186: החיפוש יצא מ־Library אל Search — בלי מצב משלו: עובד על הצילום שהוא מקבל. הכניסות (search, list) — ב־Library.
+                StringBuilder search186 = new StringBuilder();
+                for (File f : javaFiles(code)) if (!f.getName().equals("Library.java") && read(f).contains("Search.run(")) search186.append(f.getName()).append(' ');
+                String se186 = read(new File(code, "chomer/indeks/Search.java"));
+                check("מבנה 186: החיפוש (Search.run) — רק מהכניסות שב־Library (" + search186.toString().trim() + "); בלי מצב משלו, ובלי לגעת ברשימת האינדקסים",
+                        search186.length() == 0 && read(new File(code, "chomer/indeks/Library.java")).contains("Search.run(indexes, ")
+                                && !se186.contains("synchronized") && !se186.contains(".indexes") && !se186.contains("volatile"));
                 wipe(r151);
                 wipe(d138);
             }
@@ -3483,7 +3490,7 @@ public final class Tests {
                 Manager.Act same127 = Manager.onSetting(Conf.DELETED, Conf.DELETED_GREY, r, v, lib127);
                 check("מבנה 127: אותו ערך שוב — \"כבר כך\", בלי כישלון", same127.say(lib127).contains(Words.Cmd.SET_SAME) && !same127.failed);
                 String scr127 = read(new File(code, "masachim/SettingsScreen.java")), tr127 = read(new File(code, "masachim/rechivim/Transfer.java")),
-                        bar127 = read(new File(code, "masachim/rechivim/DbPasteBar.java")), lib127src = read(new File(code, "chomer/indeks/Library.java"));
+                        bar127 = read(new File(code, "masachim/rechivim/DbPasteBar.java")), lib127src = readAll(new File(code, "chomer/indeks"));   // מבנה 186: כל תיקיית האינדקס — Library מתפצל
                 check("מבנה 127: מסך ההגדרות, יעד השליחה והצירוף ללוח אינם כותבים הגדרה בעצמם — רק דרך המנהל (Acts.setting)",
                         !scr127.contains("Conf.set(") && !tr127.contains("Conf.set(") && !bar127.contains("Conf.set") && scr127.contains("Acts.setting(")
                                 && tr127.contains("Acts.setting(") && bar127.contains("Acts.setting(") && !lib127src.contains("setUpdateLevel") && !lib127src.contains("setPeriodicMinutes")
