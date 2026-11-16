@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="vfm-plugin" content="עורך אינטראקטיבי">
-<meta name="vfm-plugin-version" content="17">
+<meta name="vfm-plugin-version" content="18">
 <meta name="vfm-lab" content="עורך אינטראקטיבי">
 <meta name="vfm-lab-version" content="8">
 <title>עורך אינטראקטיבי</title>
@@ -985,7 +985,7 @@ const A={
   asif:{t:'הרצה בכאילו',s:'▶ בכאילו',f:()=>{real=false;run();},on:()=>!!file},
   real:{t:'הרצה אמיתית…',s:'▶ אמיתית',f:()=>{real=true;run();},on:()=>!!file,cls:'real'},
   cmds:{t:'רשימת הפקודות',f:()=>{if(view==='inter'&&file&&act<0)newLineAfter();openSheet({kind:'cmd'});},on:()=>view==='inter'&&!!file},
-  about:{t:'על העורך',f:()=>toast('עורך אינטראקטיבי 17')}
+  about:{t:'על העורך',f:()=>toast('עורך אינטראקטיבי 18')}
 };
 const MENUS={file:['new','open','-','save','saveas','savetpl','-','close'],
   edit:['undo','redo','-','cut','copy','paste','del','-','line','dup','up','down','-','find'],
@@ -1268,9 +1268,10 @@ function groupName(k){const g=Mo.menu().find(([g,ks])=>ks.indexOf(k)>=0);return 
 function drawCmdMenu(){
   const g=groupName(M.cmd);
   top(g?g+' › '+M.cmd:'הפקודה "'+M.cmd+'"');
-  sheetIn.appendChild(E('div','grp','להחליף בפקודה אחרת. מה שמתאים נשאר'));
+  // גרסה 18 — המשתמש (16.11): "להחליף או למחוק פקודה בעורך החדש מסורבל". המחיקה — ראשונה, לא אחרי כל העץ
+  sheetIn.appendChild(B('it danger',M.cmd==='לולאה'?'🗑 מחיקת הלולאה (חזור וסוף; מה שבפנים נשאר)':'🗑 מחיקת השורה',()=>{const i=act;act=-1;M=null;hideSheet();removeLine(i);}));
+  sheetIn.appendChild(E('div','grp','⇄ להחליף בפקודה אחרת. מה שמתאים נשאר'));
   cmdTree(replaceCmd,M.cmd);
-  sheetIn.appendChild(B('it danger',M.cmd==='לולאה'?'מחיקת הלולאה (חזור וסוף; מה שבפנים נשאר)':'מחיקת השורה',()=>{const i=act;act=-1;M=null;hideSheet();removeLine(i);}));
 }
 function replaceCmd(k){
   const old=M,def=CMDS[k],m=Mo.blank(k),dropped=[];
@@ -1278,10 +1279,12 @@ function replaceCmd(k){
   else if(!CMDS[old.cmd].text){
     const pool=(old.vals||[]).filter(Mo.has);
     def.slots.forEach((sl,j)=>{
-      const i=pool.findIndex(v=>sl.kind==='pick'?Mo.pickOf(v).some(p=>sl.pk.indexOf(p)>=0):(sl.kind===v.kind||(['name','text'].indexOf(sl.kind)>=0&&['name','text'].indexOf(v.kind)>=0)));
+      // גרסה 18 (ממצא 58): טקסט חופשי אינו נעשה שם — ההגדרות של "פתח כלי" נכנסו לשם של רשימה חכמה. שם ← טקסט — כן
+      const i=pool.findIndex(v=>sl.kind==='pick'?Mo.pickOf(v).some(p=>sl.pk.indexOf(p)>=0):(sl.kind===v.kind||(sl.kind==='text'&&v.kind==='name')));
       if(i>=0){m.vals[j]=Object.assign({},pool[i]);if(sl.kind==='name'||sl.kind==='text')m.vals[j].kind=sl.kind;pool.splice(i,1);}
     });
     (old.dets||[]).forEach(d=>{if(def.det.indexOf(d.d)>=0)Mo.addDet(m.dets,d);else dropped.push(d.d);});
+    pool.forEach(v=>{const r=String(v.raw||'');if(r)dropped.push('"'+(r.length>30?r.slice(0,30)+'…':r)+'"');});   // גרסה 18: מה שלא עבר — נאמר
   }
   const loopEnd=old.cmd==='לולאה'?pairOf(act):-1;
   M=m;Mo.pruneVals(M);const g=Mo.prune(M);commit();

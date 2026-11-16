@@ -48,5 +48,18 @@ try{
   click($('shade'));
   say('הרצה בכאילו',pick('run','הרצה בכאילו'));
   say('עזרה ← על העורך',pick('help','על העורך')&&!!d.querySelector('.toast'));
+  // גרסה 18 (ממצא 58): בגיליון של הפקודה — המחיקה ראשונה; בהחלפה — טקסט חופשי אינו נעשה שם, ומה שירד — נאמר
+  click($('shade'));
+  click(d.querySelectorAll('#ed .row')[0]);click(d.querySelector('#ed .chip.cmd'));
+  say('גיליון הפקודה — "מחיקת השורה" ראשונה',([...d.querySelectorAll('#sheetIn .it')][0]||{textContent:''}).textContent.includes('מחיקת'));
+  click($('shade'));
+  pick('view','רגילה');
+  const ta58=d.querySelector('textarea');ta58.value='פתח כלי כפולים /אופן:"בתוך" /השוואה:"שם וגודל"\n';ta58.dispatchEvent(new w.Event('input',{bubbles:true}));
+  pick('view','אינטראקטיבית');
+  click(d.querySelectorAll('#ed .row')[0]);click(d.querySelector('#ed .chip.cmd'));
+  click([...d.querySelectorAll('#sheetIn .it')].find(b=>b.textContent.startsWith('רשימות')));
+  click([...d.querySelectorAll('#sheetIn .it')].find(b=>b.textContent.trim().startsWith('צור רשימה חכמה')));
+  const row58=d.querySelectorAll('#ed .row')[0].textContent,toast58=(d.querySelector('.toast')||{textContent:''}).textContent;
+  say('החלפה: ההגדרות של "פתח כלי" לא נעשו שם של רשימה חכמה, ונאמר שירדו',row58.indexOf('אופן')<0&&toast58.includes('/אופן'));
 }catch(e){out.push('❌ חריגה: '+e.message);}
 console.log(out.join('\n'));if(errs.length)console.log('שגיאות עמוד:\n'+errs.join('\n'));
