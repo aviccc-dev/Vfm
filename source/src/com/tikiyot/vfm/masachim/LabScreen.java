@@ -60,6 +60,11 @@ public final class LabScreen extends Activity {
     }
 
     /** מ0.40: ver — גרסה מסוימת ("פתח תוסף "<שם>" "<גרסה>""); file — עמוד מסוים (מבחירת הגרסה). שניהם null — החדש. */
+    /** מבנה 204: עמוד של תוסף, מכל מקום בכונן — נגיעה בקובץ, או "הרץ" עליו (Ui.openPlugin). */
+    static void openFile(Activity a, File f) {
+        open(a, Lab.page(f, null).name, null, f);
+    }
+
     static void open(Activity a, String exp, String ver, File file) {
         Intent i = new Intent(a, LabScreen.class);
         if (exp != null && !exp.trim().isEmpty()) i.putExtra(EXTRA, exp.trim());
@@ -80,6 +85,7 @@ public final class LabScreen extends Activity {
         if (Lab.newest(root, exp) == null) bundled(true);                     // מ0.42: תוסף שבא עם התוכנה ונמחק — חוזר כשפותחים אותו
         String ver = getIntent().getStringExtra(EXTRA_VER), file = getIntent().getStringExtra(EXTRA_FILE);
         if (file != null) for (Lab.Page p : Lab.versions(root, exp)) if (p.file.getAbsolutePath().equals(file)) page = p;
+        if (page == null && file != null && Lab.isPlugin(new File(file))) page = Lab.page(new File(file), null);   // מבנה 204: מחוץ לתיקיית התוספים
         if (page == null && ver != null) {
             page = Lab.version(root, exp, ver);
             if (page == null) Ui.toast(this, Words.Lab.noVersion(exp, ver));

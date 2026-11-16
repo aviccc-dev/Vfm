@@ -428,6 +428,17 @@ public final class Ui {
         return MimeTypeMap.getSingleton().getMimeTypeFromExtension(e);
     }
 
+    /**
+     * מבנה 204 (המשתמש, 16.11.2026: "במקום פתח תוסף מספיק להריץ את הקובץ כמו הרצת פקודה"): הכלל האחד — לנגיעה בקובץ ול"הרץ".
+     * עמוד של תוסף (Lab.isPlugin) — נפתח במסך התוספים, מכל מקום, בלי שאלה ("מי מכיר בכלל את התוכנה הזו שיכתוב לה תוסף");
+     * לא מהסל. true — נפתח.
+     */
+    static boolean openPlugin(Activity a, File f) {
+        if (f.getAbsolutePath().contains("/" + Index.TRASH + "/") || !Lab.isPlugin(f)) return false;
+        LabScreen.openFile(a, f);
+        return true;
+    }
+
     public static void open(Context c, File f) {
         if (!f.exists()) {
             toast(c, Words.FILE_NOT_AT_PATH);
@@ -456,6 +467,7 @@ public final class Ui {
                     });
             return;
         }
+        if (c instanceof Activity && openPlugin((Activity) c, f)) return;     // מבנה 204: תוסף — נפתח, כמו שקובץ פקודות רץ
         if (Text.ext(f.getName()).equals("apk") && !f.getAbsolutePath().contains("/" + Index.TRASH + "/")) {   // 186
             install(c, f);
             return;

@@ -173,6 +173,16 @@ final class Lab {
         return new String[]{exp, ver};
     }
 
+    /**
+     * מבנה 204 (המשתמש, 16.11.2026: "צריך לאפשר פתיחת תוסף כמו הרצת פקודה, בלחיצה על הקובץ"): האם הקובץ הוא עמוד של תוסף.
+     * "לא כל קובץ html הוא תוסף" — רק עמוד שכתוב בו שהוא תוסף (vfm-plugin, או vfm-lab הישן). עמוד html אחר — נפתח כמו עד כאן.
+     */
+    static boolean isPlugin(File f) {
+        if (f == null || !f.isFile() || !isHtml(f.getName())) return false;
+        String h = head(f), n = meta2(h, META, OLD_META);
+        return n != null && !n.isEmpty();
+    }
+
     static boolean isHtml(String name) {
         String n = name.toLowerCase(Locale.ROOT);
         return n.endsWith(EXT) || n.endsWith(".htm");

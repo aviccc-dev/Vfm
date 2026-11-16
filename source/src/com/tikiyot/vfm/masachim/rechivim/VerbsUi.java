@@ -95,7 +95,8 @@ final class VerbsUi {
             @Override void go(Activity a, Verbs.Cmd c, File here) {
                 File f = new File(c.arg);
                 if (!f.isAbsolute() && here != null) f = new File(here, c.arg);
-                if (f.isFile()) BatchUi.run(a, f); else Ui.toast(a, Words.Verb.NOT_FOUND + f.getName());
+                if (!f.isFile()) Ui.toast(a, Words.Verb.NOT_FOUND + f.getName());
+                else if (!Ui.openPlugin(a, f)) BatchUi.run(a, f);              // מבנה 204: "הרץ" על תוסף — פותח אותו
             }
         });
         // המסכים — כל אחד בשמו. זה המקום האחד שבו כתוב איזה מסך נפתח לכל שם.

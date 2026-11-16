@@ -1764,6 +1764,24 @@ public final class Tests {
         a = Lab.nameOf("<p>", "מעבדה.html");
         check("מ0.38: בלי שם בכלל — \"תוסף\", וגרסה \"?\" (מ0.40: קבועה, לא לפי הזמן)", a[0].equals(Words.Lab.UNNAMED) && a[1].equals("?"));
         eq("מ0.38: שם לא תקין — מתוקן לדומה", "א-ב (ג) חו״ל", Lab.safe("א/ב <ג> חו\"ל*"));
+        {   // מבנה 204 (המשתמש, 16.11.2026: "לא כל קובץ html הוא תוסף"): תוסף — רק עמוד שכתוב בו שהוא תוסף
+            File d204 = new File(home, "מבנה204");
+            wipe(d204);
+            d204.mkdirs();
+            File plug = new File(d204, "משהו.html"), old = new File(d204, "ישן.htm"), plain = new File(d204, "דף.html"), txt = new File(d204, "תוסף.txt");
+            write(d204, "משהו.html", "<html><head><meta name=\"vfm-plugin\" content=\"שלי\"><meta name=\"vfm-plugin-version\" content=\"2\"></head></html>");
+            write(d204, "ישן.htm", "<meta name=\"vfm-lab\" content=\"ישן\">");
+            write(d204, "דף.html", "<html><head><title>דף רגיל</title></head><body>שלום</body></html>");
+            write(d204, "תוסף.txt", "<meta name=\"vfm-plugin\" content=\"שלי\">");
+            check("מבנה 204: עמוד שכתוב בו שהוא תוסף (גם בסימון הישן) — תוסף; דף html רגיל וקובץ שאינו html — לא",
+                    Lab.isPlugin(plug) && Lab.isPlugin(old) && !Lab.isPlugin(plain) && !Lab.isPlugin(txt) && !Lab.isPlugin(new File(d204, "אין.html")));
+            check("מבנה 204: השם והגרסה של תוסף מחוץ לתיקיית התוספים — מתוך העמוד", Lab.page(plug, null).name.equals("שלי") && Lab.page(plug, null).ver.equals("2"));
+            String ui204 = read(new File(System.getProperty("vfm.src"), "src/com/tikiyot/vfm/masachim/rechivim/Ui.java"));
+            String vu204 = read(new File(System.getProperty("vfm.src"), "src/com/tikiyot/vfm/masachim/rechivim/VerbsUi.java"));
+            check("מבנה 204: נגיעה בקובץ ו\"הרץ\" — אותו כלל (Ui.openPlugin), ותוסף נפתח בשניהם",
+                    ui204.contains("if (c instanceof Activity && openPlugin((Activity) c, f)) return;") && vu204.contains("else if (!Ui.openPlugin(a, f)) BatchUi.run(a, f);"));
+            wipe(d204);
+        }
         File dl = new File(home, "הורדות-038");
         wipe(dl);
         dl.mkdirs();
