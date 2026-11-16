@@ -128,7 +128,7 @@ final class State {
             if (!n.endsWith(".txt")) continue;
             long t = stamp(n.substring(0, n.length() - 4));
             if (t == Long.MIN_VALUE) continue;
-            for (String[] row : Physical.Journal.read(j)) {
+            for (String[] row : Journal.read(j)) {
                 List<Long> x = m.get(row[0]);
                 if (x == null) m.put(row[0], x = new ArrayList<Long>());
                 x.add(t);

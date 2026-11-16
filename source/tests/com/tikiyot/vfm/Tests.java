@@ -5350,7 +5350,7 @@ public final class Tests {
         lib.flush(5000);
         check("1.20.0: גיבוי ראשון — המראה זהה למקור", treeOf(docs).equals(treeOf(cur)));
         String t1 = vars.get(Syntax.V_NOW);
-        eq("1.20.0: גיבוי ראשון — יומן", 10, Physical.Journal.read(new File(back, "יומן/" + t1 + ".txt")).size());
+        eq("1.20.0: גיבוי ראשון — יומן", 10, Journal.read(new File(back, "יומן/" + t1 + ".txt")).size());
         check("1.20.0: גיבוי ראשון — הדוח כולל את ההשוואה", rep.size() == 4 && rep.get(1).contains("השוואה"));
 
         // 3. שינויים: עריכה, מחיקה, שינוי שם, תיקייה ריקה חדשה, תיקייה שנמחקה
@@ -5372,7 +5372,7 @@ public final class Tests {
         check("1.20.0: היסטוריה — מה שנמחק ומה ששמו שונה", new File(h2, "3.txt").isFile() && new File(h2, "ב/ג/2.txt").isFile());
         check("1.20.0: היסטוריה — תיקייה ריקה שנמחקה", new File(h2, "ריקה").isDirectory());
         check("1.20.0: המראה — תיקיות שקיימות במקור לא נמחקו", new File(cur, "ב/ג").isDirectory() && new File(cur, "א").isDirectory());
-        eq("1.20.0: יומן שני — רק מה שהגיע", 3, Physical.Journal.read(new File(back, "יומן/0002.txt")).size());
+        eq("1.20.0: יומן שני — רק מה שהגיע", 3, Journal.read(new File(back, "יומן/0002.txt")).size());
 
         // 4. בלי שינוי — כלום לא זז
         vars.put(Syntax.V_NOW, "0003");
@@ -5434,7 +5434,7 @@ public final class Tests {
         // 1. העתקה עם שמירת מסלול, ויומן
         File dest = new File(root, "גיבוי/נוכחי");
         File jf = new File(root, "גיבוי/יומן/1.txt");
-        Physical.Journal j = new Physical.Journal(jf, "בדיקה");
+        Journal j = new Journal(jf, "בדיקה");
         Physical.Result r = Physical.transferKeep(lib, src.getAbsolutePath(),
                 P(src + "/א/1.pdf", src + "/ב/ג/2.pdf", src + "/3.txt"), P(src + "/ריקה/פנימית"), dest, true, null, null, false, j);
         j.close();
@@ -5443,7 +5443,7 @@ public final class Tests {
                 && new File(dest, "ב/ג/2.pdf").length() == 20 && new File(dest, "3.txt").isFile());
         check("1.19.0: שמירת מסלול — תיקייה ריקה", new File(dest, "ריקה/פנימית").isDirectory());
         check("1.19.0: שמירת מסלול — המקור נשאר", new File(src, "א/1.pdf").isFile());
-        List<String[]> lines = Physical.Journal.read(jf);
+        List<String[]> lines = Journal.read(jf);
         eq("1.19.0: יומן — שורה לכל קובץ", 3, lines.size());
         check("1.19.0: יומן — מסלול יחסי וגודל", lines.size() == 3 && lines.get(1)[0].equals("ב/ג/2.pdf") && lines.get(1)[1].equals("20"));
         String head = "";
@@ -5509,7 +5509,7 @@ public final class Tests {
         lib.flush(5000);
         File g2 = new File(root, "גיבוי2/" + now);
         check("1.19.0: COPY /S — בוצע", new File(g2, "ב/ג/2.pdf").isFile() && new File(g2, "ריקה/פנימית").isDirectory());
-        eq("1.19.0: /יומן: — נכתב בשם עם %תאריך%", 4, Physical.Journal.read(new File(root, "גיבוי2/יומן/" + now + ".txt")).size());
+        eq("1.19.0: /יומן: — נכתב בשם עם %תאריך%", 4, Journal.read(new File(root, "גיבוי2/יומן/" + now + ".txt")).size());
         // תבנית עם /מסלול — רק pdf, בכל העומק, בלי תיקיות ריקות
         p = Batch.plan("COPY מקור\\*.pdf גיבוי3 /מסלול", root, vars);
         check("1.19.0: /מסלול עם תבנית", p.errors == 0 && p.steps.get(0).files.size() == 3 && p.steps.get(0).dirs.isEmpty());

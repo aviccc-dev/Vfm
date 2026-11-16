@@ -224,7 +224,7 @@ final class Runner {
                 s.result = new Physical.Result();                           // מבנה 77: לא נעשה דבר — וזו התוצאה, לא תקלה
             } else {
                 boolean copy = s.cmd.equals("COPY");
-                Physical.Journal j = s.journal == null ? null : new Physical.Journal(new File(s.journal), s.text);   // 1.19.0
+                Journal j = s.journal == null ? null : new Journal(new File(s.journal), s.text);   // 1.19.0
                 Physical.Asker ask = s.replace ? Batch.REPLACE_ALL : s.renameTaken ? Batch.RENAME_ALL   // מ0.40: /תפוס:לשנות-שם
                         : s.failTaken ? null : asker;                                    // 1.20.0: /תפוס:לעצור
                 Physical.Result r = !s.targets.isEmpty()                           // 1.21.0 שחזור, 1.22.0 רשימה (מ0.40: גם העברה)
