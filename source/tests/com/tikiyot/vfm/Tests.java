@@ -3372,6 +3372,28 @@ public final class Tests {
                 check("מבנה 186: החיפוש (Search.run) — רק מהכניסות שב־Library (" + search186.toString().trim() + "); בלי מצב משלו, ובלי לגעת ברשימת האינדקסים",
                         search186.length() == 0 && read(new File(code, "chomer/indeks/Library.java")).contains("Search.run(indexes, ")
                                 && !se186.contains("synchronized") && !se186.contains(".indexes") && !se186.contains("volatile"));
+                // מבנה 192: שומר על גודל. המשתמש (16.11.2026): "אם הוא עובר את האלף שורות — צריך להביא אותו לדיון ולקבל החלטה מפורשת."
+                // ההחלטה — לפצל, או לאשר: קובץ שאושר נרשם כאן, עם הסיבה ועם תקרה (0 — בלי תקרה). להוסיף שורה — רק באישור המשתמש.
+                {
+                    String[][] big192 = {
+                            {"basis/Words.java", "0", "המילון — כל טקסט שהמשתמש רואה במקום אחד (הוראות, סעיף 8); גדל עם כל טקסט"},
+                            {"chomer/indeks/Library.java", "1300", "ההפעלה, הבנייה, הרענון והתור — נושא אחד תחת מנעול אחד (צעד 188)"},
+                            {"chomer/indeks/Index.java", "1100", "הטבלאות והסריקה של אינדקס אחד (צעד 188)"},
+                    };
+                    StringBuilder over192 = new StringBuilder();
+                    String root192 = code.getPath().replace('\\', '/');
+                    for (File f : javaFiles(code)) {
+                        int n = read(f).split("\n", -1).length;
+                        if (n <= 1000) continue;
+                        String rel = f.getPath().replace('\\', '/').substring(root192.length() + 1);
+                        int cap = -1;
+                        for (String[] b : big192) if (b[0].equals(rel)) cap = Integer.parseInt(b[1]);
+                        if (cap == 0 || (cap > 0 && n <= cap)) continue;
+                        over192.append(rel).append(" (").append(n).append(cap > 0 ? " > " + cap : "").append(") ");
+                    }
+                    check("מבנה 192: קובץ קוד שעבר 1,000 שורות — להביא למשתמש לדיון ולהחלטה מפורשת: לפצל, או לאשר ולרשום (" + over192.toString().trim() + ")",
+                            over192.length() == 0);
+                }
                 wipe(r151);
                 wipe(d138);
             }
