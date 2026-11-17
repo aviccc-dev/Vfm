@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="vfm-plugin" content="עיצוב">
-<meta name="vfm-plugin-version" content="5">
+<meta name="vfm-plugin-version" content="6">
 <title>עיצוב</title>
 <style>
 /* תוסף "עיצוב" — הלוח (claude/tosaf-itzuv.md, ההחלטות של 17.11.2026): מקום אחד שבו משנים את כל מה שאפשר — כמו לוח עם
@@ -14,6 +14,8 @@
    גרסה 4 (מבנה 250; המשתמש: "אפשרות לקבוע נוסח — ידנית · סביבת עבודה · ידנית כסביבת עבודה"): נוסח משלך לכל סוג.
    גרסה 5 (מבנה 251; המשתמש: "כן" — לנסות קודם בתצוגה · "ותכין גם שמות… לאפשר לשמור שילוב מוצלח בשם"): הניסוי — רעיונות למראה
    מהצילומים שנאספו, ושילובים בשמות. רק בתצוגה המקדימה: לא נכנס לפקודה ולא לרשימות.
+   גרסה 6 (מבנה 252; המשתמש, על 5: "פתחתי במנהל קבצים וירטואלי… הוא מוצג ולא זז"): שגיאה בעמוד — נאמרת על המסך, בכרטיס אדום
+   ("אין מצב שיש שגיאה והקובץ רץ ואף אחד לא יודע"), וגם ליומן של התוכנה.
    הצבעים של העמוד — מהתוכנה (vfm.theme), כאן רק ברירת מחדל. */
 :root{
   --bg:#FFFFFF; --soft:#F4F5F6; --fg:#202124; --muted:#5F6368; --ghost:#9AA0A6; --chip:#E8F0FE; --chip-fg:#174EA6;
@@ -126,7 +128,17 @@ summary{cursor:pointer;padding:6px 0;font-weight:600;font-size:.92rem}
 .sheet h3{margin:0 0 8px;font-size:1rem}
 .sheet p{margin:6px 0;font-size:.92rem}
 [hidden]{display:none!important}
+.oops{border-color:var(--err);color:var(--err);font-size:.9rem;direction:rtl}
 </style>
+<script>
+// מבנה 252: שגיאה בעמוד — נאמרת על המסך, ולא רק ביומן. כתוב בצורה הישנה, כדי שירוץ גם כשהעמוד עצמו לא נקרא.
+window.vfmOops=function(m,line){try{
+  var b=document.body;if(!b){document.addEventListener('DOMContentLoaded',function(){window.vfmOops(m,line);});return;}
+  var e=document.getElementById('oops');if(!e){e=document.createElement('div');e.id='oops';e.className='card oops';b.insertBefore(e,b.firstChild);}
+  var d=document.createElement('div');d.textContent='שגיאה בלוח: '+m+(line?' (שורה '+line+')':'');e.appendChild(d);
+}catch(x){}};
+window.onerror=function(m,src,line){window.vfmOops(m,line);};
+</script>
 </head>
 <body>
 <div class="top">
@@ -540,7 +552,7 @@ function drawPreview(){
     if(o.card&&!o.grid)items.style.padding='6px';
     const tile=(W-(cols-1)*o.gapPx)/cols;
     o.gal=o.grid&&X.thumbs&&X.noNames;
-    o.icPx=o.gal?Math.floor(tile):o.grid?Math.min(tile*(o.side?.35:.9),Math.round(tile*Math.min(o.icon,100)/100)):Math.round(NM.size*o.icon/100);
+    o.icPx=o.gal?Math.floor(tile):o.grid?Math.min(tile*(o.side?0.35:0.9),Math.round(tile*Math.min(o.icon,100)/100)):Math.round(NM.size*o.icon/100);
     const k=o.grid?cols:2,fold=X.fold&&o.last&&list.length>k;
     (fold&&!foldOpen?list.slice(0,k):list).forEach(([x,n,hid])=>items.appendChild(item(x,n,hid,o)));
     if(fold){const mo=E('button','more',foldOpen?'פחות':'עוד '+(list.length-k)+' ›');mo.style.color=c['הדגשה'];mo.style.gridColumn='1 / -1';

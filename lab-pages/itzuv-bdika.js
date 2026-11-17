@@ -179,6 +179,12 @@ const run=async()=>{
     say('נמחק — "שלי" כבר לא בין השילובים',!tc().querySelector('#trySaved'));
     say('כל הניסוי — בלי פקודה ובלי "החלה"',clean());
     say('תצוגה — הסתרת הניסוי',pick('view','ניסוי רעיונות')&&tc().hidden);
+    // ---------- שגיאה בעמוד — נאמרת על המסך (מבנה 252) ----------
+    const dom2=new JSDOM(html,{runScripts:'dangerously',pretendToBeVisual:true,virtualConsole:new VirtualConsole(),beforeParse(x){
+      x.vfm={info:()=>JSON.stringify({features:'design'}),theme:()=>null,load:()=>null,save:()=>{},design:()=>{throw new Error('תקלה לבדיקה');}};}});
+    const ob=dom2.window.document.getElementById('oops');
+    say('שגיאה בעמוד — כרטיס אדום בראש המסך, עם ההודעה',!!ob&&ob.textContent.includes('שגיאה בלוח')&&ob.textContent.includes('תקלה לבדיקה')&&dom2.window.document.body.firstChild===ob);
+    say('בלי שגיאה — אין כרטיס',!d.getElementById('oops'));
   }catch(e){out.push('❌ חריגה: '+e.stack.split('\n').slice(0,3).join(' | '));}
   const bad=errs.filter(e=>!/Not implemented: (window\.scrollTo|navigator\.clipboard)/.test(e));
   if(bad.length)out.push('❌ שגיאות בעמוד: '+bad.join(' || '));
