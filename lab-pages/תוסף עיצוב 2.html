@@ -4,11 +4,12 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="vfm-plugin" content="עיצוב">
-<meta name="vfm-plugin-version" content="1">
+<meta name="vfm-plugin-version" content="2">
 <title>עיצוב</title>
 <style>
 /* תוסף "עיצוב" — הלוח (claude/tosaf-itzuv.md, ההחלטות של 17.11.2026): מקום אחד שבו משנים את כל מה שאפשר — כמו לוח עם
    כפתורים ובוררים. כל שינוי נעשה בפקודה "עצב", דרך שכבת הניהול (vfm.shape); מה שנקבע ומה שנראה — מהתוכנה (vfm.design).
+   גרסה 2 (מבנה 246; המשתמש: "עצב אופן/רשימה/תת רשימה — אופן הוא הבית"): הדרך בפקודה מתחילה באופן.
    הצבעים של העמוד — מהתוכנה (vfm.theme), כאן רק ברירת מחדל. */
 :root{
   --bg:#FFFFFF; --soft:#F4F5F6; --fg:#202124; --muted:#5F6368; --ghost:#9AA0A6; --chip:#E8F0FE; --chip-fg:#174EA6;
@@ -125,7 +126,7 @@ let S=null;          // מה שהתוכנה אמרה (vfm.design): מה שנקב
 let P={};            // השינויים שעוד לא הוחלו: design · cols · gap · icon · look · c:<צבע> · <סוג כתב> ← {size,weight,font}
 let hist=[],fut=[];  // ביטול / חזרה של השינויים שעוד לא הוחלו
 let done=[];         // מה שהוחל — לביטול ההחלה האחרונה: {what,target,line}
-let started=null;    // הרשימה שממנה באו (מהתוכנה), אם יש
+let started=null;    // הרשימה שממנה באו (מהתוכנה), אם יש — הדרך המלאה, מהאופן
 const VIEW={pv:pref('pv','1')!=='0',cmd:pref('cmd','1')!=='0',tbar:pref('tbar','1')!=='0'};
 const I=()=>S.info, K=()=>S.info.keys;
 const isList=()=>S&&S.what===I().list, isProgram=()=>S&&S.what===I().program;
@@ -140,7 +141,7 @@ function load(what,target){
   }
   $('whoErr').hidden=true;
   S=r;P={};hist=[];fut=[];
-  if(isList()&&!started)started=S.target;
+  if(isList()&&!started)started=S.path;
   draw();return true;
 }
 
@@ -181,7 +182,7 @@ const q=v=>'"'+String(v)+'"';
 function head(){
   const i=I();
   if(isProgram())return i.verb+' '+i.program;
-  return i.verb+' '+(isList()?i.list:i.modeWord)+' '+q(S.target);
+  return i.verb+' '+q(S.path);                                     // הדרך מתחילה באופן: "<אופן>" או "<אופן>\<רשימה>…"
 }
 function sw(k,v){
   const s=I().switches;
@@ -212,9 +213,9 @@ function apply(){
   const back=switches(cur,own);
   const no=can('shape')?V.shape(l):'התוכנה הזו אינה מכירה את לוח העיצוב';
   if(no){toast(no);return false;}
-  done.push({what:S.what,target:S.target,line:head()+' '+back.join(' ')});
+  done.push({what:S.what,path:S.path,line:head()+' '+back.join(' ')});
   toast('הוחל');
-  load(S.what,S.target);
+  load(S.what,S.path);
   if(!isList())retheme();
   return true;
 }
@@ -223,7 +224,7 @@ function undoApplied(){
   const no=V.shape(d.line);
   if(no){done.push(d);toast(no);return;}
   toast('ההחלה האחרונה בוטלה');
-  load(d.what,d.target);
+  load(d.what,d.path);
   if(!isList())retheme();
 }
 
@@ -257,7 +258,7 @@ function effColors(){
 }
 // העמוד עצמו — בצבעים של האופן שעל המסך, אחרי החלה של צבעים (המסכים של התוכנה — כשחוזרים אליהם)
 function retheme(){
-  const m=J(V.design(I().modeWord,S.mode),null);if(!m||m.error||!m.shown)return;
+  const m=J(V.design(I().modeWord,S.current),null);if(!m||m.error||!m.shown)return;
   const c=m.shown.colors,R=I().roles.map(r=>c[r[0]]);
   const r=document.documentElement.style,set=(k,v)=>{if(v)r.setProperty(k,v);};
   set('--fg',R[0]);set('--muted',R[1]);set('--ghost',R[2]);set('--on',R[3]);set('--bg',R[4]);set('--soft',R[5]);
@@ -290,10 +291,10 @@ function drawWho(){
   const add=(t,on,fn)=>w.appendChild(B('chip'+(on?' on':''),t,fn));
   add('כל התוכנה',isProgram(),()=>leave(()=>load(i.program,'')));
   add('האופן "'+S.mode+'"',S.what===i.modeWord,()=>leave(()=>load(i.modeWord,S.mode)));
-  if(started)add('הרשימה "'+last(started)+'"',isList()&&S.target===started,()=>leave(()=>load(i.list,started)));
-  if(isList()&&S.target!==started)add('הרשימה "'+last(S.target)+'"',true,()=>{});
+  if(started)add('הרשימה "'+last(started)+'"',isList()&&S.path===started,()=>leave(()=>load(i.list,started)));
+  if(isList()&&S.path!==started)add('הרשימה "'+last(S.path)+'"',true,()=>{});
   add('בחירת רשימה…',false,()=>leave(pickList));
-  $('fn').textContent=isProgram()?'כל התוכנה':S.what===i.modeWord?'האופן '+S.mode:'רשימה: '+S.target.replace(/\\/g,' › ');
+  $('fn').textContent=isProgram()?'כל התוכנה':S.what===i.modeWord?'האופן '+S.mode:S.path.replace(/\\/g,' › ');
 }
 const last=p=>String(p).split(/[\\/]/).filter(Boolean).pop()||p;
 // יש שינויים שלא הוחלו — שואלים (בגיליון של העמוד, לא בחלון של הדפדפן)
@@ -314,8 +315,7 @@ function pickList(){
   if(!can('pickList')){toast('אין כאן בחירת רשימה');return;}
   const id='pl'+(++pickN);
   WAIT[id]=v=>{const o=J(v,null);if(!o)return;
-    if(o.mode&&o.mode!==S.mode){toast('רק רשימה באופן שעל המסך — "'+S.mode+'"');return;}
-    load(I().list,o.path);};
+    load(I().list,(o.mode||S.mode)+'\\'+o.path);};               // הדרך מתחילה באופן — גם רשימה באופן אחר
   V.pickList(id,'איזו רשימה לעצב?');
 }
 const WAIT={};
@@ -328,7 +328,7 @@ function drawPreview(){
   const font=f=>!f||f===K().system?'var(--f)':'"'+f+'",var(--f)';
   const style=(e,x,color)=>{e.style.fontSize=x.size+'px';e.style.fontWeight=x.weight;e.style.fontFamily=font(x.font);if(color)e.style.color=color;};
   pv.style.background=c['רקע'];pv.style.borderColor=c['קו בין חלקים'];
-  const ph=E('div','ph',isList()?last(S.target):'ספרים');ph.style.background=c['רקע הכותרת'];style(ph,t[i.texts[0]],c['טקסט']);pv.appendChild(ph);
+  const ph=E('div','ph',isList()?last(S.path):'ספרים');ph.style.background=c['רקע הכותרת'];style(ph,t[i.texts[0]],c['טקסט']);pv.appendChild(ph);
   const grp=E('div','grp','פרקים');grp.style.background=c['כותרת קבוצה'];style(grp,t[i.texts[3]],c['טקסט']);pv.appendChild(grp);
   const items=E('div','items');pv.appendChild(items);
   const W=Math.max(220,(pv.clientWidth||320)-12),cols=d.grid?Math.max(1,d.cols):1;
@@ -505,7 +505,7 @@ const info=J(can('info')?V.info():null,{});
 if(window.vfm&&!(String(info.features||'').split(' ').includes('design'))){
   $('main').appendChild(E('div','card','התוכנה הזו אינה מכירה את לוח העיצוב — צריך גרסה חדשה יותר.'));
 }else load('','');
-window.vfmResume=function(){if(S&&!Object.keys(P).length)load(S.what,S.target);};
+window.vfmResume=function(){if(S&&!Object.keys(P).length)load(S.what,S.path);};
 
 // ---------- דוגמה לבדיקה בדפדפן (בתוכנה — הגשר האמיתי) ----------
 function demoBridge(){
@@ -529,20 +529,22 @@ function demoBridge(){
     ranges:{cols:[1,8],gap:[0,200],icon:[0,1000],size:[6,60],weight:[100,900]},designs:Object.keys(P0),presets:P0,fonts:['דוד.ttf'],
     roles:ROLES,groups:['טקסט:4','רקעים:4','בחירה והדגשה:4','סימון ואזהרה:4','צלמיות וקווים:2']};
   const state=(w,t)=>{
-    const prog=fold(null,db['תוכנה']),mode=fold(prog,db['אופן']);
-    if(w==='רשימה'){if(t!=='ספרים\\קודש'&&t!=='לקוחות\\פעילים')return {what:w,target:t,mode:'עבודה',error:'אין רשימה ידנית: "'+t+'"',info};
-      return {what:w,target:t,mode:'עבודה',error:'',own:db['רשימה'],shown:json(fold(mode,db['רשימה']),[db['תוכנה'].look,db['אופן'].look]),above:json(mode,[db['תוכנה'].look,db['אופן'].look]),info};}
-    if(w==='אופן')return {what:w,target:'עבודה',mode:'עבודה',error:'',own:db['אופן'],shown:json(mode,[db['תוכנה'].look,db['אופן'].look]),above:json(prog,[db['תוכנה'].look]),info};
-    return {what:'תוכנה',target:'',mode:'עבודה',error:'',own:db['תוכנה'],shown:json(prog,[db['תוכנה'].look]),above:json(null,[]),info};
+    const prog=fold(null,db['תוכנה']),mode=fold(prog,db['אופן']),way=String(t||'').split(/[\\/]/).filter(Boolean);
+    if(w==='תוכנה'||!way.length)return {what:'תוכנה',path:'',mode:'עבודה',current:'עבודה',error:'',own:db['תוכנה'],shown:json(prog,[db['תוכנה'].look]),above:json(null,[]),info};
+    if(way[0]!=='עבודה')return {what:'אופן',path:t,mode:way[0],current:'עבודה',error:'אין אופן כזה: "'+way[0]+'"',info};
+    const p=way.join('\\');
+    if(way.length>1){if(p!=='עבודה\\ספרים\\קודש'&&p!=='עבודה\\לקוחות\\פעילים')return {what:'רשימה',path:p,mode:'עבודה',current:'עבודה',error:'אין רשימה ידנית: "'+p+'"',info};
+      return {what:'רשימה',path:p,mode:'עבודה',current:'עבודה',error:'',own:db['רשימה'],shown:json(fold(mode,db['רשימה']),[db['תוכנה'].look,db['אופן'].look]),above:json(mode,[db['תוכנה'].look,db['אופן'].look]),info};}
+    return {what:'אופן',path:'עבודה',mode:'עבודה',current:'עבודה',error:'',own:db['אופן'],shown:json(mode,[db['תוכנה'].look,db['אופן'].look]),above:json(prog,[db['תוכנה'].look]),info};
   };
   const store={};window.__shaped=[];
   // הפקודה — כמו בתוכנה, בקירוב: המתגים נכתבים על מה שנקבע
   const shape=l=>{
     window.__shaped.push(l);
     if(l.includes('\n'))return 'מתוסף העיצוב רצה רק שורה אחת של "עצב"';
-    const m=l.match(/^עצב (תוכנה|אופן|רשימה)(?: "([^"]*)")?(.*)$/);if(!m)return 'מתוסף העיצוב רצה רק שורה אחת של "עצב"';
+    const m=l.match(/^עצב (?:(תוכנה)|"([^"]*)")(.*)$/);if(!m)return 'מתוסף העיצוב רצה רק שורה אחת של "עצב"';
     if(/\/טורים:(9|0)\b/.test(m[3]))return 'הערך מחוץ לטווח — מ־1 עד 8';
-    const o=db[m[1]],toks=m[3].match(/\/[^\s"]+(?:"[^"]*")?(?:=(?:"[^"]*"|\S+))?[^\s]*/g)||[];
+    const o=db[m[1]?'תוכנה':m[2].split(/[\\/]/).length>1?'רשימה':'אופן'],toks=m[3].match(/\/[^\s"]+(?:"[^"]*")?(?:=(?:"[^"]*"|\S+))?[^\s]*/g)||[];
     toks.forEach(tk=>{
       const un=v=>v.replace(/^"|"$/g,'');
       let r;
@@ -558,7 +560,7 @@ function demoBridge(){
   };
   return {
     info:()=>JSON.stringify({features:'design'}),theme:()=>null,load:k=>store[k]!=null?store[k]:null,save:(k,v)=>{store[k]=v;},
-    design:(w,t)=>JSON.stringify(w===''&&window.__start?state('רשימה',window.__start):state(w,t)),shape,
+    design:(w,t)=>JSON.stringify(w===''&&t===''&&window.__start?state('רשימה',window.__start):state(w,t)),shape,
     pickList:(id)=>setTimeout(()=>window.vfmResult(id,JSON.stringify({mode:'עבודה',path:'לקוחות\\פעילים'})),20),
     close:()=>{window.__closed=true;},toast:()=>{},log:()=>{}
   };

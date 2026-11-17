@@ -171,8 +171,8 @@ final class Bridge {
 
     /**
      * מבנה 243 (תוסף העיצוב — הלוח; המשתמש, 17.11.2026: "מקום מרוכז שבו משנים את כל הפרמטרים האלה — כמו לוח עם כפתורים
-     * ובוררים"): מה שנקבע ומה שנראה — לרשימה (what = "רשימה", target — הדרך באופן שעל המסך), לאופן ("אופן", target — השם;
-     * "" — האופן שעל המסך) ולכל התוכנה ("תוכנה"). הקריאה — במקום אחד (ShapeCmds.state, כמו "ודא עיצוב"); ועם זה — מה שהלוח
+     * ובוררים"): מה שנקבע ומה שנראה — לכל התוכנה (what = "תוכנה"), או לפי הדרך (target), שמתחילה באופן (מבנה 246): "<אופן>"
+     * — האופן (הבית); "<אופן>\<רשימה>…" — רשימה. what ו־target ריקים — מה שהמסך ביקש כשפתח את הלוח. הקריאה — במקום אחד (ShapeCmds.state, כמו "ודא עיצוב"); ועם זה — מה שהלוח
      * צריך כדי לכתוב את השורה של "עצב": המילים, המתגים, הטווחים, העיצובים, הגופנים והצבעים. אינה משנה דבר.
      */
     @JavascriptInterface
@@ -187,15 +187,19 @@ final class Bridge {
                     t = st.substring(tab + 1);
                 }
             }
-            String kind = w.equals(Verbs.LIST) ? Verbs.K_LIST : w.equals(Verbs.MODE_WORD) ? Verbs.K_MODE : Verbs.K_PROGRAM;
-            if (kind.equals(Verbs.K_PROGRAM)) w = Verbs.PROGRAM_WORD;
-            String m = kind.equals(Verbs.K_MODE) && !t.isEmpty() ? t : String.valueOf(Db.currentMode);
-            if (kind.equals(Verbs.K_MODE)) t = m;
-            ShapeCmds.State st = ShapeCmds.state(kind, t, m);
+            // מבנה 246 (המשתמש: "עצב אופן/רשימה/תת רשימה — אופן הוא הבית"): target — הדרך, מהאופן ("" — האופן שעל המסך)
+            boolean program = w.equals(Verbs.PROGRAM_WORD) || (w.isEmpty() && t.isEmpty());
+            java.util.List<String> way = Names.parsePath(t);
+            if (!program && way.isEmpty()) way.add(String.valueOf(Db.currentMode));
+            String kind = program ? Verbs.K_PROGRAM : way.size() > 1 ? Verbs.K_LIST : Verbs.K_MODE;
+            String m = program ? String.valueOf(Db.currentMode) : way.get(0);
+            String in = way.size() > 1 ? Names.pathText(way.subList(1, way.size())) : m;
+            ShapeCmds.State st = ShapeCmds.state(kind, in, m);
             JSONObject o = new JSONObject();
-            o.put("what", w);
-            o.put("target", kind.equals(Verbs.K_PROGRAM) ? "" : t);
-            o.put("mode", String.valueOf(Db.currentMode));
+            o.put("what", program ? Verbs.PROGRAM_WORD : kind.equals(Verbs.K_LIST) ? Verbs.LIST : Verbs.MODE_WORD);
+            o.put("path", program ? "" : Names.pathText(way));                  // כמו שנכתב בפקודה: "<אופן>\<רשימה>…"
+            o.put("mode", m);
+            o.put("current", String.valueOf(Db.currentMode));
             o.put("error", st.error == null ? "" : st.error);
             if (st.error == null) {
                 JSONObject own = new JSONObject();

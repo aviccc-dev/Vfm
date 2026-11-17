@@ -1,7 +1,8 @@
 package com.tikiyot.vfm;
 
 // מבנה 241: "עצב" — במקום אחד (הפועל של העיצוב; המשתמש, 17.11.2026: "אולי עצב"): הכלל (lookErrors — מה מותר ומה אומרים
-// כשלא), הקביעה (shapeOn — על פריט אחד: רשימה, או הבית של אופן), "עצב אופן" / "עצב תוכנה" (planShapeAll), ו"ודא עיצוב"
+// כשלא), הקביעה (shapeOn — על פריט אחד: רשימה, או הבית של אופן), "עצב "<אופן>"" / "עצב תוכנה" (planShapeAll), רשימה באופן
+// אחר (planShapeList), ו"ודא עיצוב"
 // (planVerify — מה שנראה בפועל, אחרי הירושה, מול מה שנכתב). התחביר — ב־Verbs; העיצוב עצמו והירושה — ב־Design ו־Palette.
 
 import java.util.List;
@@ -39,8 +40,8 @@ final class ShapeCmds {
     }
 
     /**
-     * מבנה 236 (המשתמש, 17.11.2026: "אחת בסיסית על כל התוכנה" · "וניתן לשינוי לכל אופן כמו לכל רשימה ותת רשימה"): "עצב אופן
-     * "<שם>"" — העיצוב והמראה שמעל כל הרשימות של האופן (על הבית שלו); "עצב תוכנה" — מעל כל האופנים (על הבית של אופן התפריטים,
+     * מבנה 236 (המשתמש, 17.11.2026: "אחת בסיסית על כל התוכנה" · "וניתן לשינוי לכל אופן כמו לכל רשימה ותת רשימה"): "עצב
+     * "<אופן>"" (מבנה 246; עד כאן "עצב אופן") — העיצוב והמראה שמעל כל הרשימות של האופן (על הבית שלו); "עצב תוכנה" — מעל כל האופנים (על הבית של אופן התפריטים,
      * "שמור לתוכנה"). הכלל — כמו ברשימה (lookErrors, shapeOn). בהרצה — על המסד של האופן, דרך המנהל.
      */
     static String planShapeAll(final Batch.Step s, final Verbs.Cmd c, Sim sim) {
@@ -71,14 +72,55 @@ final class ShapeCmds {
     }
 
     /**
-     * מבנה 241 (המשתמש, 17.11.2026: "קבצים שמנים לפי כל הפרמטרים, עם בדיקות"): "ודא עיצוב רשימה "<דרך>" …" · "ודא עיצוב אופן
-     * "<שם>" …" · "ודא עיצוב תוכנה …" — אותם מתגים כמו ב"עצב", ונבדק מה שנראה בפועל (אחרי הירושה): העיצוב, הטורים, הריווח,
-     * הצלמית, הכתב, והצבעים (לאופן ולתוכנה). tk — המילים של השורה (ודא, עיצוב, …).
+     * מבנה 246 (המשתמש, 17.11.2026: "כל המסלול או חלק ממנו"): רשימה באופן אחר מזה של הקובץ — בלי העותק של ההרצה (הוא של האופן
+     * של הקובץ): הרשימה נבדקת במסד של האופן שלה, ובהרצה — עליו, דרך המנהל. הכלל — אותו כלל (lookErrors, shapeOn).
+     */
+    static String planShapeList(final Batch.Step s, final Verbs.Cmd c, Sim sim) {
+        final String m = c.cond;
+        if (!Db.dbFile(Db.app, m).isFile()) { s.error = Words.DbCmd.noMode(m, sim.modes()); return null; }
+        if ((s.error = lookErrors(c)) != null) return null;
+        c.noOpen = true;
+        final List<String> at = Names.parsePath(c.arg);
+        final DbListCmd.Work work = new DbListCmd.Work() {
+            @Override public DbListCmd.Res run(Store t, DbListCmd.Finder f) {
+                DbPaths.Found u = DbPaths.listAt(t, m, at);
+                if (u.error != null || u.id == 0) return DbListCmd.Res.err(u.ambiguous ? u.error : Words.ListCmdW.noList(Names.label(at)));
+                shapeOn(t, u.id, c.edit, Store.P_DESIGN, Store.P_LOOK);
+                return DbListCmd.Res.ok(Words.ListCmdW.DESIGN_SET);
+            }
+        };
+        String no;
+        try {
+            no = Db.read(Db.app, m, new Db.Use<String>() {                      // בתכנון — רק לבדוק שהרשימה שם
+                @Override public String run(SqlStore st) {
+                    DbPaths.Found u = DbPaths.listAt(st, m, at);
+                    return u.error != null || u.id == 0 ? (u.ambiguous ? u.error : Words.ListCmdW.noList(Names.label(at))) : null;
+                }
+            });
+        } catch (Throwable t) {
+            no = Words.Db.failed(String.valueOf(t.getMessage()));
+        }
+        if (no != null) { s.error = no; return null; }
+        s.describe = Words.DbCmd.inDb(Words.ListCmdW.DESIGN_SET);
+        s.op = new ListCmd.Op() {
+            @Override public String run(Library lib) {
+                DbListCmd.Res r = ListRun.realRes(m, work, null, lib);
+                if (r.error != null) DbListCmd.lastFailed = true;
+                return r.error != null ? r.error : Words.DbCmd.inDb(r.text);
+            }
+        };
+        return m;
+    }
+
+    /**
+     * מבנה 241 (המשתמש, 17.11.2026: "קבצים שמנים לפי כל הפרמטרים, עם בדיקות"), 246: "ודא עיצוב "<אופן>\<רשימה>…" …" · "ודא
+     * עיצוב "<אופן>" …" · "ודא עיצוב תוכנה …" — אותם מתגים כמו ב"עצב", ונבדק מה שנראה בפועל (אחרי הירושה): העיצוב, הטורים,
+     * הריווח, הצלמית, הכתב, והצבעים (לאופן ולתוכנה). tk — המילים של השורה (ודא, עיצוב, …).
      */
     static void planVerify(final Batch.Step s, List<String> tk, Map<String, String> vars, Sim sim) {
         if (!DbVerbs.active()) { s.error = Words.DbCmd.VERIFY_DB_ONLY; return; }   // כמו כל "ודא" של המסד
         StringBuilder line = new StringBuilder(Verbs.SHAPE);
-        for (int i = 2; i < tk.size(); i++) line.append(' ').append(quoted(tk.get(i), i == 2));
+        for (int i = 2; i < tk.size(); i++) line.append(' ').append(quoted(tk.get(i), i == 2 && tk.get(i).equals(Verbs.PROGRAM_WORD)));
         final Verbs.Cmd c = Verbs.parse(Verbs.withVars(line.toString(), vars));
         boolean empty = false;
         if (c.edit != null) for (String v : c.edit.values()) if (v.trim().isEmpty()) empty = true;
@@ -88,10 +130,10 @@ final class ShapeCmds {
         }
         if ((s.error = lookErrors(c)) != null) return;
         final boolean program = c.kind.equals(Verbs.K_PROGRAM), mode = c.kind.equals(Verbs.K_MODE);
-        final String m = program ? Db.MENUS_MODE : mode ? c.arg : DbListCmd.mode(sim);
-        if (!program && mode && !Db.dbFile(Db.app, m).isFile()) { s.error = Words.DbCmd.noMode(m, sim.modes()); return; }
-        if (!program && !mode && sim.modeError != null) { s.error = sim.modeError; return; }
-        final String what = Words.DbCmd.shapeWhat(program ? null : mode ? Words.DbCmd.modeOf(m) : c.arg);
+        final String m = program ? Db.MENUS_MODE : mode ? c.arg : c.cond != null ? c.cond : DbListCmd.mode(sim);   // מבנה 246: האופן — מהדרך
+        if (!program && (mode || c.cond != null) && !Db.dbFile(Db.app, m).isFile()) { s.error = Words.DbCmd.noMode(m, sim.modes()); return; }
+        if (!program && !mode && c.cond == null && sim.modeError != null) { s.error = sim.modeError; return; }
+        final String what = Words.DbCmd.shapeWhat(program ? null : mode ? Words.DbCmd.modeOf(m) : Names.label(Names.parsePath(m + "\\" + c.arg)));
         s.target = what;
         s.describe = Words.DbCmd.verifyWill(what);
         s.op = new ListCmd.Op() {

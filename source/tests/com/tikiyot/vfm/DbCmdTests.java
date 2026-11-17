@@ -1180,7 +1180,7 @@ final class DbCmdTests {
                     {
                         String o121 = "אופן \"" + m91 + "\"\n";
                         List<String> w121 = go(o121 + "MD ידנית \"סדר 121/א\"\nMD ידנית \"סדר 121/ב\"\nMD ידנית \"סדר 121/ג\"\n"
-                                + "עדכן רשימה \"סדר 121/ג\" /מקום:לראש\nעצב רשימה \"סדר 121/ב\" /עיצוב:\"" + Design.WORDS + "\"\n", here, vars, lib);   // מבנה 240: עיצוב שקיים (שאין — שגיאה)
+                                + "עדכן רשימה \"סדר 121/ג\" /מקום:לראש\nעצב \"" + m91 + "/סדר 121/ב\" /עיצוב:\"" + Design.WORDS + "\"\n", here, vars, lib);   // מבנה 240: עיצוב שקיים (שאין — שגיאה)
                         final long[] id121 = new long[3];
                         final String[] got121 = new String[4];
                         final Db.Use<Void> read121 = new Db.Use<Void>() {
@@ -1212,13 +1212,13 @@ final class DbCmdTests {
                                         && !scr121.contains("DbMore.order(") && !scr121.contains("DbVerbsUi.write(") && !scr121.contains("DbListCmd.now(")
                                         && scr121.contains("Manager.onListOrder(") && scr121.contains("Manager.onListDesign("));
                         // מבנה 233 (המשתמש, 17.11.2026: "אולי עצב" · "אין צורך לשמור לקבצים ישנים"): /עיצוב: — רק של "עצב"
-                        o.check("מבנה 233: \"עדכן רשימה … /עיצוב:\" — שגיאה (העיצוב עבר ל\"עצב\"); \"עצב רשימה\" בלי מתג, או לרשימה חכמה — שגיאה; "
+                        o.check("מבנה 233: \"עדכן רשימה … /עיצוב:\" — שגיאה (העיצוב עבר ל\"עצב\"); \"עצב\" בלי מתג, או בצורה הקודמת (\"עצב רשימה\", מבנה 246) — שגיאה; "
                                         + "המסך שולח \"עצב\"",
                                 Batch.plan(o121 + "עדכן רשימה \"סדר 121/ב\" /עיצוב:\"" + Design.WORDS + "\"\n", here, vars, lib).blocked()
-                                        && Batch.plan(o121 + "עצב רשימה \"סדר 121/ב\"\n", here, vars, lib).blocked()
-                                        && Batch.plan(o121 + "עצב רשימה חכמה \"x\" /עיצוב:\"" + Design.WORDS + "\"\n", here, vars, lib).blocked()
-                                        && !Batch.plan(o121 + "עצב רשימה \"סדר 121/ב\" /עיצוב:\"\"\n", here, vars, lib).blocked()
-                                        && de121.text.startsWith("עצב רשימה "));
+                                        && Batch.plan(o121 + "עצב \"" + m91 + "/סדר 121/ב\"\n", here, vars, lib).blocked()
+                                        && Batch.plan(o121 + "עצב רשימה \"סדר 121/ב\" /עיצוב:\"" + Design.WORDS + "\"\n", here, vars, lib).blocked()   // מבנה 246: הצורה הקודמת — שגיאה
+                                        && !Batch.plan(o121 + "עצב \"" + m91 + "/סדר 121/ב\" /עיצוב:\"\"\n", here, vars, lib).blocked()
+                                        && de121.text.startsWith("עצב %"));
                         // מבנה 234: המראה של רשימה (P_LOOK) מעל העיצוב שלה, והירושה מלמעלה למטה (רשימה שבחרה עיצוב — מתחילה ממנו)
                         final Design[] d234 = new Design[5];
                         Db.write(Db.app, m91, null, new Db.Use<Void>() {
@@ -1243,7 +1243,7 @@ final class DbCmdTests {
                                 d234[1] != null && d234[1].cols == 2 && d234[1].nameT.size == 15 && d234[2] == null
                                         && d234[3] != null && d234[3].cols == 3 && Design.get(Design.FILES).cols == 3);
                         // מבנה 235: המראה בפקודה — "עצב רשימה … /טורים: /ריווח: /גודל-צלמית: /כתב-…:"; רק מה שנכתב משתנה; "" — לרשת
-                        List<String> w235 = go(o121 + "עצב רשימה \"מראה 234/ב\" /טורים:4 /ריווח:12 /גודל-צלמית:60 /כתב-שם:18,מודגש,מערכת /כתב-כותרת:\"\"\n",
+                        List<String> w235 = go(o121 + "עצב \"" + m91 + "/מראה 234/ב\" /טורים:4 /ריווח:12 /גודל-צלמית:60 /כתב-שם:18,מודגש,מערכת /כתב-כותרת:\"\"\n",
                                 here, vars, lib);
                         final String[] look235 = new String[2];
                         final Design[] d235 = new Design[1];
@@ -1262,20 +1262,20 @@ final class DbCmdTests {
                                         && l235.contains("שם: גודל = 18") && l235.contains("שם: משקל = מודגש") && l235.contains("שם: גופן = מערכת")
                                         && !l235.contains("כותרת:") && !l235.contains("לא מובן") && d235[0] != null && d235[0].cols == 4
                                         && d235[0].icon == 60 && d235[0].nameT.size == 18 && d235[0].nameT.weight == 700);
-                        Batch.Plan out235 = Batch.plan(o121 + "עצב רשימה \"מראה 234/ב\" /טורים:9\n", here, vars, lib);
-                        Batch.Plan nan235 = Batch.plan(o121 + "עצב רשימה \"מראה 234/ב\" /ריווח:הרבה\n", here, vars, lib);
-                        Batch.Plan font235 = Batch.plan(o121 + "עצב רשימה \"מראה 234/ב\" /כתב-נתונים:12,\"אין גופן כזה 235\"\n", here, vars, lib);
+                        Batch.Plan out235 = Batch.plan(o121 + "עצב \"" + m91 + "/מראה 234/ב\" /טורים:9\n", here, vars, lib);
+                        Batch.Plan nan235 = Batch.plan(o121 + "עצב \"" + m91 + "/מראה 234/ב\" /ריווח:הרבה\n", here, vars, lib);
+                        Batch.Plan font235 = Batch.plan(o121 + "עצב \"" + m91 + "/מראה 234/ב\" /כתב-נתונים:12,\"אין גופן כזה 235\"\n", here, vars, lib);
                         o.check("מבנה 235: מחוץ לטווח, לא מספר, גופן שאין — שגיאה בתכנון, עם הסיבה; ולא נכתב כלום",
                                 out235.blocked() && nan235.blocked() && font235.blocked()
                                         && errs235(out235).contains(Words.DesignW.outOfRange("9", Design.COLS[0], Design.COLS[1]))
                                         && errs235(font235).contains(Words.DesignW.noFont("אין גופן כזה 235")));
-                        List<String> back235 = go(o121 + "עצב רשימה \"מראה 234/ב\" /טורים:\"\" /כתב-שם:\"\"\n", here, vars, lib);
+                        List<String> back235 = go(o121 + "עצב \"" + m91 + "/מראה 234/ב\" /טורים:\"\" /כתב-שם:\"\"\n", here, vars, lib);
                         Db.read(Db.app, m91, read235);
                         String b235 = look235[0] == null ? "" : look235[0];
                         o.check("מבנה 235: \"\" — חוזרים לרשת (" + b235 + ")", bad(back235).isEmpty() && !b235.contains("טורים") && !b235.contains("שם:")
                                 && b235.contains("ריווח = 12") && d235[0].cols == 3);
                         // מבנה 236: "עצב אופן" — מעל כל הרשימות של האופן; "עצב תוכנה" — מעל כל האופנים; הבית — גם הוא תחתם
-                        List<String> w236 = go("עצב אופן \"" + m91 + "\" /טורים:6 /כתב-שם:22\nעצב תוכנה /כתב-נתונים:13\n", here, vars, lib);
+                        List<String> w236 = go("עצב \"" + m91 + "\" /טורים:6 /כתב-שם:22\nעצב תוכנה /כתב-נתונים:13\n", here, vars, lib);
                         final Design[] d236 = new Design[3];
                         final String[] p236 = new String[1];
                         Db.read(Db.app, m91, new Db.Use<Void>() {
@@ -1296,14 +1296,14 @@ final class DbCmdTests {
                                         && d236[1] != null && d236[1].grid && d236[1].cols == 3 && d236[2].grid && d236[2].cols == 6
                                         && Design.NONE.equals(d236[2].around));
                         o.check("מבנה 236: אופן שאין — שגיאה; \"עצב תוכנה\" עם שם — שגיאה; \"צור אופן\" — כמו קודם (לא נבלע ב\"עצב\")",
-                                Batch.plan("עצב אופן \"אין כזה 236\" /טורים:2\n", here, vars, lib).blocked()
+                                Batch.plan("עצב \"אין כזה 236\" /טורים:2\n", here, vars, lib).blocked()
                                         && Batch.plan("עצב תוכנה \"x\" /טורים:2\n", here, vars, lib).blocked()
-                                        && Batch.plan("עצב אופן \"" + m91 + "\"\n", here, vars, lib).blocked());
-                        List<String> back236 = go("עצב אופן \"" + m91 + "\" /טורים:\"\" /כתב-שם:\"\"\nעצב תוכנה /כתב-נתונים:\"\"\n", here, vars, lib);
+                                        && Batch.plan("עצב \"" + m91 + "\"\n", here, vars, lib).blocked());
+                        List<String> back236 = go("עצב \"" + m91 + "\" /טורים:\"\" /כתב-שם:\"\"\nעצב תוכנה /כתב-נתונים:\"\"\n", here, vars, lib);
                         o.check("מבנה 236: \"\" — מתנקה (האופן והתוכנה בלי מראה)", bad(back236).isEmpty()
                                 && (Design.programProps()[1] == null || Design.programProps()[1].isEmpty()));
                         // מבנה 237: הצבעים — /מראה:בהיר|כהה, /צבע:"<תפקיד>"=#RRGGBB; לתוכנה ולאופן בלבד; הסדר: הערכה ← התוכנה ← האופן
-                        List<String> w237 = go("עצב תוכנה /מראה:כהה /צבע:\"טקסט משני\"=#123456\nעצב אופן \"" + m91 + "\" /צבע:\"הדגשה\"=#ABCDEF\n",
+                        List<String> w237 = go("עצב תוכנה /מראה:כהה /צבע:\"טקסט משני\"=#123456\nעצב \"" + m91 + "\" /צבע:\"הדגשה\"=#ABCDEF\n",
                                 here, vars, lib);
                         final String[] mode237 = new String[1];
                         Db.read(Db.app, m91, new Db.Use<Void>() {
@@ -1317,16 +1317,16 @@ final class DbCmdTests {
                                 bad(w237).isEmpty() && Palette.dark(prog237, mode237[0]) && c237[txt] == 0xFFE8EAED && c237[sub] == 0xFF123456
                                         && c237[acc] == 0xFFABCDEF && Palette.resolve()[txt] == 0xFF202124 && Palette.ROLES.length == 18);
                         o.check("מבנה 237: צבעים לרשימה — שגיאה; תפקיד שאין, צבע לא כתוב נכון, מראה לא מוכר — שגיאה, עם הסיבה",
-                                errs235(Batch.plan(o121 + "עצב רשימה \"מראה 234/ב\" /מראה:כהה\n", here, vars, lib)).contains(Words.DesignW.COLORS_ALL_ONLY)
+                                errs235(Batch.plan(o121 + "עצב \"" + m91 + "/מראה 234/ב\" /מראה:כהה\n", here, vars, lib)).contains(Words.DesignW.COLORS_ALL_ONLY)
                                         && errs235(Batch.plan("עצב תוכנה /צבע:\"אין כזה\"=#111111\n", here, vars, lib)).contains(Words.DesignW.noRole("אין כזה"))
                                         && errs235(Batch.plan("עצב תוכנה /צבע:\"רקע\"=כחול\n", here, vars, lib)).contains(Words.DesignW.badColor("כחול"))
                                         && errs235(Batch.plan("עצב תוכנה /מראה:אפור\n", here, vars, lib)).contains(Words.DesignW.badMode("אפור")));
-                        List<String> back237 = go("עצב תוכנה /מראה:\"\" /צבע:\"טקסט משני\"=\"\"\nעצב אופן \"" + m91 + "\" /צבע:\"הדגשה\"=\"\"\n",
+                        List<String> back237 = go("עצב תוכנה /מראה:\"\" /צבע:\"טקסט משני\"=\"\"\nעצב \"" + m91 + "\" /צבע:\"הדגשה\"=\"\"\n",
                                 here, vars, lib);
                         o.check("מבנה 237: \"\" — חוזרים לערכה (" + Design.programProps()[1] + ")", bad(back237).isEmpty()
                                 && !Palette.dark(Design.programProps()[1]) && Palette.resolve(Design.programProps()[1])[sub] == 0xFF5F6368);
                         // מבנה 239: כותרת קבוצה — סוג כתב רביעי; בלי שנקבע — כמו השם (כמו שהיה)
-                        List<String> w239 = go(o121 + "עצב רשימה \"מראה 234/ב\" /כתב-קבוצה:15,מודגש\n", here, vars, lib);
+                        List<String> w239 = go(o121 + "עצב \"" + m91 + "/מראה 234/ב\" /כתב-קבוצה:15,מודגש\n", here, vars, lib);
                         Db.read(Db.app, m91, read235);
                         Design p239 = Design.parse("x", "[אמצע]\nשם: גודל = 17\nשם: משקל = דק\nקבוצה: גודל = 14\n");
                         Design dd239 = Design.get(Design.DEFAULT);
@@ -1336,7 +1336,7 @@ final class DbCmdTests {
                                         && p239.groupText().size == 14 && p239.groupText().weight == 300
                                         && dd239.groupText() == dd239.nameT);
                         // מבנה 240: השמות החדשים; השם הקודם — עדיין מובן, ונכתב בשם החדש; עיצוב שאין — שגיאה
-                        List<String> w240 = go(o121 + "עצב רשימה \"מראה 234/ב/ג\" /עיצוב:\"תוכנת ניהול קבצים\"\n", here, vars, lib);
+                        List<String> w240 = go(o121 + "עצב \"" + m91 + "/מראה 234/ב/ג\" /עיצוב:\"תוכנת ניהול קבצים\"\n", here, vars, lib);
                         final String[] n240 = new String[1];
                         Db.read(Db.app, m91, new Db.Use<Void>() {
                             @Override public Void run(SqlStore st) {
@@ -1344,7 +1344,7 @@ final class DbCmdTests {
                                 return null;
                             }
                         });
-                        Batch.Plan no240 = Batch.plan(o121 + "עצב רשימה \"מראה 234/ב/ג\" /עיצוב:\"אין עיצוב כזה 240\"\n", here, vars, lib);
+                        Batch.Plan no240 = Batch.plan(o121 + "עצב \"" + m91 + "/מראה 234/ב/ג\" /עיצוב:\"אין עיצוב כזה 240\"\n", here, vars, lib);
                         o.check("מבנה 240: \"" + Design.DEFAULT + "\" · \"" + Design.FILES + "\" · \"" + Design.WORDS + "\"; שם קודם — נכתב בשם החדש ("
                                         + n240[0] + "); עיצוב שאין — שגיאה " + w240,
                                 Design.DEFAULT.equals("רשימת קבצים") && Design.FILES.equals("מנהל קבצים עם צלמיות") && bad(w240).isEmpty()
@@ -1360,24 +1360,24 @@ final class DbCmdTests {
                             old240.delete();
                         }
                         // מבנה 241: "ודא עיצוב" — מה שנראה בפועל (אחרי הירושה) מול מה שנכתב; ברשימה, באופן ובתוכנה
-                        List<String> w241 = go(o121 + "עצב רשימה \"מראה 234/ב/ג\" /עיצוב:\"מילים וצבע\" /טורים:3 /כתב-שם:17,מודגש\n"
-                                + "ודא עיצוב רשימה \"מראה 234/ב/ג\" /עיצוב:\"מילים וצבע\" /טורים:3 /כתב-שם:17,מודגש /כתב-נתונים:11\n"
-                                + "עצב אופן \"" + m91 + "\" /מראה:כהה /צבע:\"טקסט משני\"=#123456\n"
-                                + "ודא עיצוב אופן \"" + m91 + "\" /מראה:כהה /צבע:\"טקסט משני\"=#123456 /צבע:\"רקע\"=#202124\n"
+                        List<String> w241 = go(o121 + "עצב \"" + m91 + "/מראה 234/ב/ג\" /עיצוב:\"מילים וצבע\" /טורים:3 /כתב-שם:17,מודגש\n"
+                                + "ודא עיצוב \"" + m91 + "/מראה 234/ב/ג\" /עיצוב:\"מילים וצבע\" /טורים:3 /כתב-שם:17,מודגש /כתב-נתונים:11\n"
+                                + "עצב \"" + m91 + "\" /מראה:כהה /צבע:\"טקסט משני\"=#123456\n"
+                                + "ודא עיצוב \"" + m91 + "\" /מראה:כהה /צבע:\"טקסט משני\"=#123456 /צבע:\"רקע\"=#202124\n"
                                 + "ודא עיצוב תוכנה /מראה:בהיר /עיצוב:\"" + Design.DEFAULT + "\"\n"
-                                + "עצב אופן \"" + m91 + "\" /מראה:\"\" /צבע:\"טקסט משני\"=\"\"\n", here, vars, lib);
-                        List<String> no241 = go(o121 + "ודא עיצוב רשימה \"מראה 234/ב/ג\" /טורים:5\n", here, vars, lib);
+                                + "עצב \"" + m91 + "\" /מראה:\"\" /צבע:\"טקסט משני\"=\"\"\n", here, vars, lib);
+                        List<String> no241 = go(o121 + "ודא עיצוב \"" + m91 + "/מראה 234/ב/ג\" /טורים:5\n", here, vars, lib);
                         o.check("מבנה 241: ודא עיצוב — מה שנקבע נמצא; אופן — הצבעים אחרי הירושה; תוכנה — בהיר; ומה שלא נקבע — נכשל, עם מה שנמצא "
                                         + w241 + " " + no241,
                                 bad(w241).isEmpty() && count(w241, "✅") >= 3 && !bad(no241).isEmpty() && String.valueOf(no241).contains("טורים 3"));
                         o.check("מבנה 241: ודא עיצוב בלי מתג, או עם ערך ריק — שגיאה בתכנון",
-                                Batch.plan(o121 + "ודא עיצוב רשימה \"מראה 234/ב/ג\"\n", here, vars, lib).blocked()
-                                        && Batch.plan(o121 + "ודא עיצוב רשימה \"מראה 234/ב/ג\" /טורים:\"\"\n", here, vars, lib).blocked());
+                                Batch.plan(o121 + "ודא עיצוב \"" + m91 + "/מראה 234/ב/ג\"\n", here, vars, lib).blocked()
+                                        && Batch.plan(o121 + "ודא עיצוב \"" + m91 + "/מראה 234/ב/ג\" /טורים:\"\"\n", here, vars, lib).blocked());
                         // מבנה 243: תוסף העיצוב — מה שנקבע ומה שנראה (ShapeCmds.state), הדרך מהרשימה (DbPaths.pathOf), ו"עצב" מיד דרך המנהל
                         String wasMode243 = Db.currentMode;
                         Db.currentMode = m91;                                   // הלוח פועל באופן שעל המסך — כמו בתוכנה
                         try {
-                            String no243 = Manager.shape("עצב רשימה \"מראה 234/ב\" /טורים:5 /כתב-נתונים:12", lib);
+                            String no243 = Manager.shape("עצב \"" + m91 + "/מראה 234/ב\" /טורים:5 /כתב-נתונים:12", lib);
                             ShapeCmds.State s243 = ShapeCmds.state(Verbs.K_LIST, "מראה 234/ב", m91);
                             ShapeCmds.State c243 = ShapeCmds.state(Verbs.K_LIST, "מראה 234/ב/ג", m91);
                             final List<String> path243 = new ArrayList<String>();
@@ -1393,18 +1393,18 @@ final class DbCmdTests {
                                             && s243.shown.data.size == 12 && s243.above.cols != 5 && Design.lookMap(s243.look).get("נתונים: גודל").equals("12")
                                             && c243.error == null && c243.above.data.size == 12 && c243.own.equals(Design.WORDS)
                                             && path243.equals(java.util.Arrays.asList("מראה 234", "ב", "ג")));
-                            Manager.shape("עצב אופן \"" + m91 + "\" /מראה:כהה /צבע:\"רקע\"=#101010", lib);
+                            Manager.shape("עצב \"" + m91 + "\" /מראה:כהה /צבע:\"רקע\"=#101010", lib);
                             ShapeCmds.State mo243 = ShapeCmds.state(Verbs.K_MODE, m91, m91);
                             ShapeCmds.State pr243 = ShapeCmds.state(Verbs.K_PROGRAM, "", m91);
                             int bg = Palette.role("רקע");
                             o.check("מבנה 243: אופן — מה שנקבע (" + mo243.look + "), הצבעים שנראים (כהה, הרקע) ומה שמעליו (בהיר); כל התוכנה — בלי מה שמעליה",
                                     mo243.error == null && Palette.dark(mo243.looks) && Palette.resolve(mo243.looks)[bg] == 0xFF101010
                                             && !Palette.dark(mo243.aboveLooks) && pr243.error == null && pr243.aboveLooks.length == 0);
-                            Manager.shape("עצב אופן \"" + m91 + "\" /מראה:\"\" /צבע:\"רקע\"=\"\"", lib);
-                            Manager.shape("עצב רשימה \"מראה 234/ב\" /טורים:\"\" /כתב-נתונים:\"\"", lib);
-                            String two243 = Manager.shape("עצב רשימה \"מראה 234/ב\" /טורים:2\nמחק \"x\"", lib);
+                            Manager.shape("עצב \"" + m91 + "\" /מראה:\"\" /צבע:\"רקע\"=\"\"", lib);
+                            Manager.shape("עצב \"" + m91 + "/מראה 234/ב\" /טורים:\"\" /כתב-נתונים:\"\"", lib);
+                            String two243 = Manager.shape("עצב \"" + m91 + "/מראה 234/ב\" /טורים:2\nמחק \"x\"", lib);
                             String other243 = Manager.shape("מחק \"" + new File(here, "אין-243.txt").getAbsolutePath() + "\"", lib);
-                            String bad243 = Manager.shape("עצב רשימה \"מראה 234/ב\" /טורים:9", lib);
+                            String bad243 = Manager.shape("עצב \"" + m91 + "/מראה 234/ב\" /טורים:9", lib);
                             ShapeCmds.State gone243 = ShapeCmds.state(Verbs.K_LIST, "אין רשימה 243", m91);
                             o.check("מבנה 243: מהלוח רצה רק שורה אחת של \"עצב\" — שתי שורות, או פקודה אחרת — מסורבות; ערך מחוץ לטווח — הסיבה; רשימה שאין — נאמר (" + bad243 + " · " + gone243.error + "); \"\" — מה שנקבע מהלוח יצא",
                                     Words.DesignW.ONLY_SHAPE.equals(two243) && Words.DesignW.ONLY_SHAPE.equals(other243)
@@ -1416,6 +1416,34 @@ final class DbCmdTests {
                                             && new java.util.HashSet<String>(Design.names()).size() == Design.names().size());
                         } finally {
                             Db.currentMode = wasMode243;
+                        }
+                        // מבנה 246 (המשתמש, 17.11.2026: "עצב אופן/רשימה/תת רשימה — אופן הוא הבית" · "כל המסלול או חלק ממנו"): הדרך מתחילה באופן
+                        Verbs.Cmd l246 = Verbs.parse("עצב \"" + m91 + "\\מראה 234\\ב\" /טורים:3");
+                        Verbs.Cmd m246 = Verbs.parse("עצב \"" + m91 + "\" /טורים:3");
+                        Verbs.Cmd p246 = Verbs.parse("עצב תוכנה /טורים:3");
+                        Verbs.Cmd s246 = Verbs.parse("עצב %נבחרים% /עיצוב:\"" + Design.WORDS + "\"");
+                        o.check("מבנה 246: \"עצב\" — הדרך מתחילה באופן: אופן\\רשימה\\… — רשימה (האופן — הראשון); אופן לבד — האופן (הבית); \"תוכנה\" — כל התוכנה; "
+                                        + "%נבחרים% — מהמסך; הצורה הקודמת (\"עצב רשימה\" / \"עצב אופן\") — שגיאה",
+                                l246.error == null && Verbs.K_LIST.equals(l246.kind) && m91.equals(l246.cond) && "מראה 234\\ב".equals(l246.arg)
+                                        && m246.error == null && Verbs.K_MODE.equals(m246.kind) && m91.equals(m246.arg)
+                                        && p246.error == null && Verbs.K_PROGRAM.equals(p246.kind)
+                                        && s246.error == null && Verbs.K_LIST.equals(s246.kind) && s246.cond == null
+                                        && Verbs.parse("עצב רשימה \"" + m91 + "\" /טורים:3").error != null
+                                        && Verbs.parse("עצב אופן \"" + m91 + "\" /טורים:3").error != null
+                                        && Verbs.parse("עצב \"\" /טורים:3").error != null);
+                        String was246 = Db.currentMode;
+                        Db.currentMode = "אופן אחר 246";                          // הקובץ — באופן אחר; הרשימה — באופן שבדרך
+                        try {
+                            List<String> w246 = go("עצב \"" + m91 + "/מראה 234/ב\" /טורים:7\n", here, vars, lib);
+                            int cols246 = ShapeCmds.state(Verbs.K_LIST, "מראה 234/ב", m91).shown.cols;
+                            Batch.Plan no246 = Batch.plan("עצב \"" + m91 + "/אין רשימה 246\" /טורים:2\n", here, vars, lib);
+                            Batch.Plan nm246 = Batch.plan("עצב \"אין אופן 246/א\" /טורים:2\n", here, vars, lib);
+                            go("עצב \"" + m91 + "/מראה 234/ב\" /טורים:\"\"\n", here, vars, lib);
+                            o.check("מבנה 246: רשימה באופן אחר מזה של הקובץ — לפי הדרך (" + cols246 + " " + w246 + "); רשימה שאין, ואופן שאין — שגיאה, לפני ההרצה",
+                                    cols246 == 7 && no246.blocked() && errs235(no246).contains("אין רשימה 246") && nm246.blocked()
+                                            && ShapeCmds.state(Verbs.K_LIST, "מראה 234/ב", m91).shown.cols != 7);
+                        } finally {
+                            Db.currentMode = was246;
                         }
                     }
                     // מבנה 123: "שחזר דוגמאות" כפקודה; ו"צור אופן" על אופן שיש בו רשימות ואין בו בית — מתקן

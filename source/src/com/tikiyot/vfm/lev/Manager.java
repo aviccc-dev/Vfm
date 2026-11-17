@@ -642,9 +642,9 @@ final class Manager {
         return new Act(text, Batch.plan(text, here, vars, lib, null, new Batch.Selection(mode, in, ids)), null);
     }
 
-    /** מבנה 121, 233: העיצוב של רשימה — "עצב רשימה %נבחרים% /עיצוב:%תוכן%". name — שם העיצוב, כלשונו ("" — לרשת). */
+    /** מבנה 121, 233, 246: העיצוב של רשימה — "עצב %נבחרים% /עיצוב:%תוכן%". name — שם העיצוב, כלשונו ("" — לרשת). */
     static Act onListDesign(String mode, long list, String name, java.io.File here, java.util.Map<String, String> vars, Library lib) {
-        String text = Verbs.SHAPE + " " + Verbs.LIST + " %" + Syntax.V_SELECTED + "% " + Verbs.SW_DESIGN + "%" + Syntax.V_CONTENT + "%\n";
+        String text = Verbs.SHAPE + " %" + Syntax.V_SELECTED + "% " + Verbs.SW_DESIGN + "%" + Syntax.V_CONTENT + "%\n";
         Batch.Selection sel = new Batch.Selection(mode, 0, "", name, null);
         sel.ids.add(list);
         return new Act(text, Batch.plan(text, here, vars, lib, null, sel), null);

@@ -923,6 +923,7 @@ public class DbListScreen extends ListScreen<Store.Member> {
             design();
             return;
         }
+        path.add(0, mode);                                                       // מבנה 246: הדרך מתחילה באופן
         LabScreen.design(this, Verbs.LIST, Names.pathText(path));
     }
 
@@ -942,7 +943,7 @@ public class DbListScreen extends ListScreen<Store.Member> {
                 cur == null || cur.isEmpty() ? "" : null, true, new DesignUi.Done() {
             @Override
             public void chosen(final String name) {
-                // מבנה 121, 233: דרך המנהל, כפקודה ("עצב רשימה %נבחרים% /עיצוב:…"); "" — לרשת (המאפיין נמחק)
+                // מבנה 121, 233: דרך המנהל, כפקודה ("עצב %נבחרים% /עיצוב:…", מבנה 246); "" — לרשת (המאפיין נמחק)
                 Library lib = Library.get(DbListScreen.this);
                 Manager.Act act = Manager.onListDesign(mode, listId, name, Paths.data(), BatchUi.vars(DbListScreen.this, Paths.data()), lib);
                 String said = act.error() != null ? act.error() : act.say(lib);

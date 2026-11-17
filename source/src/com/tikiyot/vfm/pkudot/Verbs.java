@@ -26,11 +26,11 @@ final class Verbs {
     static final String OPEN = "פתח", CREATE = "צור", UPDATE = "עדכן", FIND = "מצא", BACK = "חזור",   // תחביר
             RUN = "הרץ", ADD = "הוסף";   // תחביר
     /**
-     * מבנה 233 (המשתמש, 17.11.2026: "אולי עצב" · "אין צורך לשמור לקבצים ישנים"): "עצב" — הפועל של העיצוב, לבד: "עצב רשימה
-     * "<דרך>" /עיצוב:"<שם>"…". הכלל האחד של העיצוב — כאן ובשלבים שלו; /עיצוב: יצא מ"עדכן" (שמשנה פרטים של רשימה).
+     * מבנה 233 (המשתמש, 17.11.2026: "אולי עצב" · "אין צורך לשמור לקבצים ישנים"): "עצב" — הפועל של העיצוב, לבד; /עיצוב: יצא
+     * מ"עדכן" (שמשנה פרטים של רשימה). מבנה 246: "עצב "<אופן>\<רשימה>\…" /עיצוב:"<שם>"…" — הדרך מתחילה באופן ("אופן הוא הבית").
      */
     static final String SHAPE = "עצב";   // תחביר
-    /** מבנה 236: "עצב תוכנה /…" — מעל כל האופנים; "עצב אופן "<שם>" /…" — מעל כל הרשימות של האופן. */
+    /** מבנה 236: "עצב תוכנה /…" — מעל כל האופנים; "עצב "<אופן>" /…" — מעל כל הרשימות של האופן (מבנה 246). */
     static final String PROGRAM_WORD = "תוכנה";   // תחביר
     static final String SCREEN = "מסך", LIST = "רשימה", SMART_WORD = "חכמה", FOLDER = "תיקייה";   // תחביר
     /** 1.17.0: "פתח תפריט <רשימה ב'שמור לתוכנה'>" · "צור פקודה" (המילון, 23). */
@@ -280,12 +280,14 @@ final class Verbs {
                 c.kind = K_MODE;
                 c.arg = unquote(after(rest, MODE_WORD));
                 if (c.arg.isEmpty()) c.error = Words.Verb.usage(c.verb);
-            } else if (c.verb.equals(SHAPE) && (starts(rest, LIST) || starts(rest, MODE_WORD) || rest.trim().equals(PROGRAM_WORD)
-                    || starts(rest, PROGRAM_WORD))) {                            // מבנה 233, 236: עצב רשימה / אופן / תוכנה
-                boolean program = starts(rest, PROGRAM_WORD) || rest.trim().equals(PROGRAM_WORD);
-                c.kind = program ? K_PROGRAM : starts(rest, LIST) ? K_LIST : K_MODE;
+            } else if (c.verb.equals(SHAPE)) {
+                // מבנה 246 (המשתמש, 17.11.2026: "עצב אופן/רשימה/תת רשימה — אופן הוא הבית" · "כל המסלול או חלק ממנו"): הדרך מתחילה
+                // באופן — "<אופן>" (הבית, ומה שמעל כל הרשימות שלו) · "<אופן>\<רשימה>" · "<אופן>\<רשימה>\<תת רשימה>"; "תוכנה" —
+                // מעל כל האופנים; %נבחרים% — הרשימה שנבחרה על המסך (באופן שעל המסך). ברשימה: arg — הדרך בתוך האופן, cond — האופן.
+                boolean program = false;
+                c.cond = null;                                                  // רק ברשימה מהדרך — האופן שלה
                 c.edit = new java.util.LinkedHashMap<String, String>();
-                for (String w : Parse.tokens(after(rest, program ? PROGRAM_WORD : c.kind.equals(K_LIST) ? LIST : MODE_WORD))) {
+                for (String w : Parse.tokens(rest)) {
                     String look = lookKey(w);
                     if (w.startsWith(SW_MODE_LOOK)) c.edit.put(E_LOOK + Palette.K_MODE, unquote(w.substring(SW_MODE_LOOK.length())));   // מבנה 237
                     else if (w.startsWith(SW_COLOR)) {                         // מבנה 237: /צבע:<תפקיד>=<צבע>
@@ -297,9 +299,16 @@ final class Verbs {
                     else if (look != null && look.endsWith(":")) putText(c.edit, look, w.substring(w.indexOf(':') + 1));   // מבנה 235
                     else if (look != null) c.edit.put(E_LOOK + look, unquote(w.substring(w.indexOf(':') + 1)));
                     else if (w.startsWith("/") || !c.arg.isEmpty() || program) c.error = Words.Verb.usage(SHAPE);
+                    else if (unquote(w).equals(PROGRAM_WORD)) program = true;
                     else c.arg = unquote(w);
                 }
                 boolean pickedShape = Parse.var(Syntax.V_SELECTED).equals(c.arg);   // מהמסך — רק /עיצוב: לרשימה (החלון)
+                List<String> way = program || pickedShape ? null : Names.parsePath(c.arg);
+                c.kind = program ? K_PROGRAM : pickedShape || way.size() > 1 ? K_LIST : K_MODE;
+                if (way != null && way.size() > 1) {                            // מבנה 246: האופן — הראשון בדרך; הרשימה — מה שאחריו
+                    c.cond = way.get(0);
+                    c.arg = Names.pathText(way.subList(1, way.size()));
+                } else if (way != null && way.size() == 1) c.arg = way.get(0);
                 if ((c.arg.isEmpty() && !program) || c.edit.isEmpty()
                         || (pickedShape && (!c.kind.equals(K_LIST) || c.edit.size() != 1 || !c.edit.containsKey(Store.P_DESIGN))))
                     c.error = Words.Verb.usage(SHAPE);

@@ -58,7 +58,7 @@ public final class Ui {
     private static boolean darkNow;
 
     /**
-     * מבנה 238 (העיצוב): בתחילת כל מסך, לפני super.onCreate (שומר). הצבעים — מהעיצוב, כשמה שנקבע השתנה (עצב תוכנה / עצב אופן,
+     * מבנה 238 (העיצוב): בתחילת כל מסך, לפני super.onCreate (שומר). הצבעים — מהעיצוב, כשמה שנקבע השתנה (עצב תוכנה / עצב "<אופן>",
      * מעבר אופן); כהה — גם הערכה של אנדרואיד (החלונות, השדות). dialog — מסך בצורת חלון.
      */
     public static void begin(Activity a, boolean dialog) {

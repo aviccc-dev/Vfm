@@ -70,7 +70,7 @@ const run=async()=>{
     click(chip('#who','האופן'));
     say('האופן — "כמו כל התוכנה"',chip('#main','כמו כל התוכנה')!=null&&$('fn').textContent.includes('האופן'));
     setNum(d.querySelectorAll('#main .card')[1].querySelectorAll('.num')[1],12);
-    say('ריווח באופן ← '+cmd(),cmd()==='עצב אופן "עבודה" /ריווח:12');
+    say('ריווח באופן ← '+cmd(),cmd()==='עצב "עבודה" /ריווח:12');
     // עזיבה עם שינויים — שואלים
     click(chip('#who','כל התוכנה'));
     const ask=d.querySelector('.sheet');
@@ -84,12 +84,12 @@ const run=async()=>{
     say('ברשימה — בלי צבעים',d.querySelectorAll('#main .cl').length===0&&d.querySelector('#main').textContent.includes('לכל התוכנה או לאופן'));
     say('ברשימה — "כמו הרשימה שמעליה"',!!chip('#main','כמו הרשימה שמעליה'));
     setNum(d.querySelectorAll('#main .card')[1].querySelector('.num'),2);
-    say('רשימה ← '+cmd(),cmd()==='עצב רשימה "לקוחות\\פעילים" /טורים:2');
+    say('רשימה — הדרך מתחילה באופן ← '+cmd(),cmd()==='עצב "עבודה\\לקוחות\\פעילים" /טורים:2');
     // כתב שחלק ממנו חוזר לרשת
     const t2=d.querySelectorAll('#main .tx')[2];
     setNum(t2.querySelector('.num'),13);click(d.querySelector('#apply'));
     click(d.querySelectorAll('#main .tx')[2].querySelector('.re'));
-    say('כתב חוזר לרשת ← '+cmd(),cmd()==='עצב רשימה "לקוחות\\פעילים" /כתב-נתונים:""');
+    say('כתב חוזר לרשת ← '+cmd(),cmd()==='עצב "עבודה\\לקוחות\\פעילים" /כתב-נתונים:""');
     // שגיאה מהתוכנה — נאמרת, ולא נשמר
     pick('edit','ביטול כל השינויים');
     w.__shaped.length=0;
@@ -101,7 +101,7 @@ const run=async()=>{
     pick('view','תצוגה מקדימה');
     say('עזרה — על הלוח',pick('help','על הלוח')&&!!d.querySelector('.sheet h3'));
     // מהמסך של רשימה
-    w=page('ספרים\\קודש');d=w.document;
+    w=page('עבודה\\ספרים\\קודש');d=w.document;
     say('נפתח מרשימה — הלוח עליה, והבורר מציע אותה',d.getElementById('fn').textContent.includes('קודש')&&[...d.querySelectorAll('#who .chip')].some(b=>b.textContent.includes('"קודש"')&&b.classList.contains('on')));
     say('הרשימה בחרה "מנהל קבצים עם צלמיות" וטורים 4 — כך נראה',[...d.querySelectorAll('#main .chip.on')].some(b=>b.textContent==='מנהל קבצים עם צלמיות')&&d.querySelectorAll('#main .card')[1].querySelector('.num').value==='4');
   }catch(e){out.push('❌ חריגה: '+e.stack.split('\n').slice(0,3).join(' | '));}
