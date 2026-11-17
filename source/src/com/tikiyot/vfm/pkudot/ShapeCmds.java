@@ -23,6 +23,11 @@ final class ShapeCmds {
             if (colors && c.kind.equals(Verbs.K_LIST)) return Words.DesignW.COLORS_ALL_ONLY;
             if (colors && key.startsWith(Palette.K_COLOR + ":") && Palette.role(key.substring(key.indexOf(':') + 1)) < 0)
                 return Palette.error(key, e.getValue());                         // תפקיד שאין — גם כשמנקים
+            if (key.startsWith(Design.K_WORDING + ":") && e.getValue().isEmpty()) {   // מבנה 250: סוג שאין — גם כשמנקים
+                String why = Design.wordingError(key.substring(key.indexOf(':') + 1).trim(), "");
+                if (why != null) return why;
+                continue;
+            }
             if (e.getValue().isEmpty()) continue;
             String why = colors ? Palette.error(key, e.getValue()) : Design.lookError(key, e.getValue());
             if (why != null) return why;
@@ -123,7 +128,8 @@ final class ShapeCmds {
         for (int i = 2; i < tk.size(); i++) line.append(' ').append(quoted(tk.get(i), i == 2 && tk.get(i).equals(Verbs.PROGRAM_WORD)));
         final Verbs.Cmd c = Verbs.parse(Verbs.withVars(line.toString(), vars));
         boolean empty = false;
-        if (c.edit != null) for (String v : c.edit.values()) if (v.trim().isEmpty()) empty = true;
+        if (c.edit != null) for (Map.Entry<String, String> e : c.edit.entrySet())   // מבנה 250: נוסח "" — "כמו במילון", ונבדק
+            if (e.getValue().trim().isEmpty() && !e.getKey().startsWith(Verbs.E_LOOK + Design.K_WORDING + ":")) empty = true;
         if (c.error != null || c.edit == null || empty || Parse.var(Syntax.V_SELECTED).equals(c.arg)) {
             s.error = Words.DbCmd.VERIFY_SHAPE_USAGE;
             return;
@@ -255,6 +261,10 @@ final class ShapeCmds {
                     got = Palette.hex(colors[Palette.role(what)]);
                     Integer w = Palette.color(want);
                     same = w != null && w == colors[Palette.role(what)];
+                } else if (who.equals(Design.K_WORDING)) {                   // מבנה 250: הנוסח שייראה ("" — כמו במילון)
+                    String w = d.wording.get(what);
+                    got = w == null ? "" : w;
+                    same = got.equals(want);
                 } else if (key.equals(Design.K_COLS) || key.equals(Design.K_GAP) || key.equals(Design.K_ICON)) {
                     int v = key.equals(Design.K_COLS) ? d.cols : key.equals(Design.K_GAP) ? d.gap : d.icon;
                     got = String.valueOf(v);

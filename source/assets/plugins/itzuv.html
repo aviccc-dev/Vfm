@@ -4,13 +4,14 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="vfm-plugin" content="עיצוב">
-<meta name="vfm-plugin-version" content="3">
+<meta name="vfm-plugin-version" content="4">
 <title>עיצוב</title>
 <style>
 /* תוסף "עיצוב" — הלוח (claude/tosaf-itzuv.md, ההחלטות של 17.11.2026): מקום אחד שבו משנים את כל מה שאפשר — כמו לוח עם
    כפתורים ובוררים. כל שינוי נעשה בפקודה "עצב", דרך שכבת הניהול (vfm.shape); מה שנקבע ומה שנראה — מהתוכנה (vfm.design).
    גרסה 2 (מבנה 246; המשתמש: "עצב אופן/רשימה/תת רשימה — אופן הוא הבית"): הדרך בפקודה מתחילה באופן.
    גרסה 3 (מבנה 249; המשתמש: "להקטין ידנית ולהגדיל את השם"): תווית הסוג — כתב חמישי.
+   גרסה 4 (מבנה 250; המשתמש: "אפשרות לקבוע נוסח — ידנית · סביבת עבודה · ידנית כסביבת עבודה"): נוסח משלך לכל סוג.
    הצבעים של העמוד — מהתוכנה (vfm.theme), כאן רק ברירת מחדל. */
 :root{
   --bg:#FFFFFF; --soft:#F4F5F6; --fg:#202124; --muted:#5F6368; --ghost:#9AA0A6; --chip:#E8F0FE; --chip-fg:#174EA6;
@@ -157,12 +158,13 @@ function own(k){
   if(k==='icon')return L[k2.icon]||'';
   if(k==='look')return L[k2.look]||'';
   if(k.startsWith('c:'))return L[k2.color+': '+k.slice(2)]||'';
+  if(k.startsWith('w:'))return L[k2.wording+': '+k.slice(2)]||'';
   return {size:L[k+': '+k2.size]||'',weight:L[k+': '+k2.weight]||'',font:L[k+': '+k2.font]||''};
 }
 const cur=k=>k in P?P[k]:own(k);
 const same=(a,b)=>JSON.stringify(a)===JSON.stringify(b);
 const TEXTS=()=>I().texts;
-const KEYS=()=>['design','cols','gap','icon'].concat(TEXTS()).concat(isList()?[]:['look'].concat(I().roles.map(r=>'c:'+r[0])));
+const KEYS=()=>['design','cols','gap','icon'].concat(TEXTS()).concat((I().kinds||[]).map(k=>'w:'+k)).concat(isList()?[]:['look'].concat(I().roles.map(r=>'c:'+r[0])));
 
 function change(k,v){
   const before=JSON.stringify(P);
@@ -193,6 +195,7 @@ function sw(k,v){
   if(k==='cols'||k==='gap'||k==='icon')return s[k]+(v===''?'""':v);
   if(k==='look')return s.look+(v===''?'""':v);
   if(k.startsWith('c:'))return s.color+q(k.slice(2))+'='+(v===''?'""':v);
+  if(k.startsWith('w:'))return s.wording+q(k.slice(2))+'='+q(v);
   const parts=[v.size,v.weight,v.font?q(v.font):''].filter(x=>x!=='');
   return s[k]+(parts.length?parts.join(','):'""');
 }
@@ -341,7 +344,8 @@ function drawPreview(){
   const tile=(W-(cols-1)*gapPx)/cols;
   const icPx=d.grid?Math.min(tile*.9,Math.round(tile*Math.min(d.icon,100)/100)):Math.round(t[i.texts[1]].size*d.icon/100);
   const tint=['#E8F0FE','#E6F4EA','#FEF7E0','#FCE8E6','#F3E8FD','#E4F7FB'];
-  const KIND=[['ידנית','#0F6E56'],['חכמה','#534AB7'],null,null,null,['פקודה','#185FA5']];
+  const wd=k=>cur('w:'+k)||((d.design===S.above.design&&!cur('design'))?(S.above.wording||{})[k]:'')||'';   // הנוסח — שלך, או מה שמעליו
+  const KIND=[[wd('רשימה ידנית')||'ידנית','#0F6E56'],[wd('רשימה חכמה')||'חכמה','#534AB7'],null,null,null,[wd('פקודה')||'פקודה','#185FA5']];
   const tagT=t[i.texts[4]],tagPx=d.tagOwn?+tagT.size:Math.max(11,Math.round(icPx*.16));   // בלי שנקבע — לפי הצלמית, כמו בתוכנה
   [['📁','הלכות','12 קבצים'],['📚','מוסר','5 רשימות'],['📄','מסילת ישרים.pdf','2.1 MB · 14.11'],['📄','דרך ה׳.pdf','1.4 MB · 02.11'],['🖼','שער.jpg','380 KB · 30.10'],['▶','העתקה לטאבלט','6 קבצים']].forEach((x,n)=>{
     const it=E('div','it'+(d.grid?' g':''));
@@ -414,6 +418,18 @@ function drawMain(){
   });
   if(!i.fonts.length)c3.appendChild(E('p','note','גופן נוסף — קובץ בתיקיית "גופנים" של האופן.'));
   m.appendChild(c3);
+  // הנוסח של התוויות — לכל סוג (מבנה 250)
+  if((i.kinds||[]).length){
+    const c5=E('div','card');c5.appendChild(E('h2',null)).appendChild(E('span','k','נוסח התוויות'));
+    i.kinds.forEach(k=>{
+      const key='w:'+k,r=E('div','row');r.appendChild(E('div','lb',k));
+      const f=E('input','hex');f.style.width='auto';f.style.flex='1';f.style.direction='rtl';f.style.textAlign='start';
+      f.value=cur(key);f.placeholder='כמו במילון';f.setAttribute('aria-label','הנוסח של '+k);
+      f.addEventListener('change',()=>{const v=f.value.trim();if(v.length>30||/[·=]/.test(v)){f.classList.add('bad');toast('עד 30 תווים, בלי "·" ובלי "="');return;}change(key,v);});
+      r.appendChild(f);r.appendChild(reBtn(key,''));c5.appendChild(r);
+    });
+    m.appendChild(c5);
+  }
   // הצבעים — לכל התוכנה ולאופן
   const c4=E('div','card');c4.appendChild(E('h2',null)).appendChild(E('span','k','צבעים'));
   if(isList()){c4.appendChild(E('p','note','הצבעים נקבעים לכל התוכנה או לאופן — בבורר למעלה.'));m.appendChild(c4);return;}
@@ -532,10 +548,11 @@ function demoBridge(){
     return x;};
   const json=(x,looks)=>{const d=x?JSON.parse(JSON.stringify(x)):JSON.parse(JSON.stringify(P0['רשימת קבצים']));d.set=!!x;if(looks){const c=colorsOf(looks);d.dark=c.dark;d.colors=c.colors;}return d;};
   const info={verb:'עצב',list:'רשימה',modeWord:'אופן',program:'תוכנה',
-    switches:{design:'/עיצוב:',cols:'/טורים:',gap:'/ריווח:',icon:'/גודל-צלמית:','כותרת':'/כתב-כותרת:','שם':'/כתב-שם:','נתונים':'/כתב-נתונים:','קבוצה':'/כתב-קבוצה:','תווית':'/כתב-תווית:',look:'/מראה:',color:'/צבע:'},
-    keys:{cols:'טורים',gap:'ריווח',icon:'צלמית',size:'גודל',weight:'משקל',font:'גופן',look:'מראה',color:'צבע',light:'בהיר',dark:'כהה',system:'מערכת'},
+    switches:{design:'/עיצוב:',cols:'/טורים:',gap:'/ריווח:',icon:'/גודל-צלמית:','כותרת':'/כתב-כותרת:','שם':'/כתב-שם:','נתונים':'/כתב-נתונים:','קבוצה':'/כתב-קבוצה:','תווית':'/כתב-תווית:',wording:'/תווית:',look:'/מראה:',color:'/צבע:'},
+    keys:{cols:'טורים',gap:'ריווח',icon:'צלמית',size:'גודל',weight:'משקל',font:'גופן',look:'מראה',color:'צבע',light:'בהיר',dark:'כהה',system:'מערכת',wording:'נוסח'},
     texts:['כותרת','שם','נתונים','קבוצה','תווית'],weights:['דק','רגיל','בינוני','מודגש'],weightValues:{'דק':300,'רגיל':400,'בינוני':500,'מודגש':700},
     ranges:{cols:[1,8],gap:[0,200],icon:[0,1000],size:[6,60],weight:[100,900]},designs:Object.keys(P0),presets:P0,fonts:['דוד.ttf'],
+    kinds:['רשימה ידנית','רשימה חכמה','תיקייה אמיתית','פקודה','קישור','כונן פנימי','כרטיס זיכרון'],
     roles:ROLES,groups:['טקסט:4','רקעים:4','בחירה והדגשה:4','סימון ואזהרה:4','צלמיות וקווים:2']};
   const state=(w,t)=>{
     const prog=fold(null,db['תוכנה']),mode=fold(prog,db['אופן']),way=String(t||'').split(/[\\/]/).filter(Boolean);
@@ -560,6 +577,7 @@ function demoBridge(){
       if((r=tk.match(/^\/עיצוב:(.*)$/)))o.design=un(r[1]);
       else if((r=tk.match(/^\/(טורים|ריווח|גודל-צלמית):(.*)$/))){const k=r[1]==='גודל-צלמית'?'צלמית':r[1];const v=un(r[2]);if(v)o.look[k]=v;else delete o.look[k];}
       else if((r=tk.match(/^\/מראה:(.*)$/))){const v=un(r[1]);if(v)o.look['מראה']=v;else delete o.look['מראה'];}
+      else if((r=tk.match(/^\/תווית:"([^"]+)"=(.*)$/))){const v=un(r[2]);if(v)o.look['נוסח: '+r[1]]=v;else delete o.look['נוסח: '+r[1]];}
       else if((r=tk.match(/^\/צבע:"([^"]+)"=(.*)$/))){const v=un(r[2]);if(v)o.look['צבע: '+r[1]]=v;else delete o.look['צבע: '+r[1]];}
       else if((r=tk.match(/^\/כתב-(כותרת|שם|נתונים|קבוצה|תווית):(.*)$/))){const t=r[1],v=r[2];
         if(un(v)===''){['גודל','משקל','גופן'].forEach(f=>delete o.look[t+': '+f]);}

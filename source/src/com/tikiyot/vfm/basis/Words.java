@@ -1616,6 +1616,15 @@ public final class Words {
             return "\"" + v + "\" — לא מספר ולא משקל (דק · רגיל · בינוני · מודגש)";
         }
 
+        /** מבנה 250: נוסח לתווית של סוג שאין, או נוסח שאי אפשר לשמור. */
+        public static String noKind(String kind, java.util.List<String> kinds) {
+            return "אין סוג כזה: \"" + kind + "\" — יש: " + String.join(" · ", kinds);
+        }
+
+        public static String badWording(String v) {
+            return "נוסח לתווית: עד 30 תווים, בלי \"·\" ובלי \"=\" (\"" + v + "\")";
+        }
+
         /** מבנה 243: תוסף העיצוב מריץ ישר (בלי מסך ההרצה) רק שורה אחת של "עצב". */
         public static final String ONLY_SHAPE = "מתוסף העיצוב רצה רק שורה אחת של \"עצב\" (עצב \"אופן\\רשימה\" · עצב \"אופן\" · עצב תוכנה)";
 

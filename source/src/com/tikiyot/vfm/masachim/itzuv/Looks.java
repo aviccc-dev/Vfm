@@ -181,7 +181,8 @@ final class Looks {
                 String txt = title.getText().toString();
                 if (!own.isEmpty() && txt.startsWith(own + "  ")) title.setText(txt.substring(own.length() + 2));
                 if (strip != null) {
-                    strip.setText(Ui.tagShort(kind));
+                    String w = d.wordingOf(Ui.tag(kind));                       // מבנה 250: הנוסח שנקבע, או המילה הקצרה
+                    strip.setText(w != null ? w : Ui.tagShort(kind));
                     strip.setBackgroundColor(Ui.kindColor(kind));
                     if (d.tag != null) text(strip, d.tag, d.tag.size);             // מבנה 249: הכתב של התווית — כמו שנקבע
                     else strip.setTextSize(TypedValue.COMPLEX_UNIT_PX, Math.max(sp(c, 11), px * 0.16f));
@@ -193,6 +194,8 @@ final class Looks {
                 bg = 0;
             } else {                                                          // א': התווית במקומה, הצלמית לפני השם
                 kindBg = bg;
+                String w = d.wordingOf(Ui.tag(kind));                           // מבנה 250: הנוסח שנקבע
+                if (w != null) box.setText(w);
                 if (own.contains(".")) {
                     Drawable img = image(c, own, (int) sp(c, d.nameT.size * 1.2f));
                     if (img != null) title.setCompoundDrawablesRelative(img, null, null, null);

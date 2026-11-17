@@ -239,6 +239,9 @@ final class Bridge {
         texts.put(Design.T_GROUP, textJson(d.groupText()));
         texts.put(Design.T_TAG, textJson(d.tagText()));                         // מבנה 249
         o.put("tagOwn", d.tag != null);                                          // בלי — לפי גודל הצלמית
+        JSONObject wording = new JSONObject();                                    // מבנה 250: הנוסח של התוויות
+        for (Map.Entry<String, String> w : d.wording.entrySet()) wording.put(w.getKey(), w.getValue());
+        o.put("wording", wording);
         o.put("texts", texts);
         o.put("groupOwn", d.group != null);                                     // בלי — כותרת הקבוצה הולכת אחרי השם
         if (looks == null) return o;                                            // עיצוב מוכן — בלי הצבעים (הם של התוכנה והאופן)
@@ -278,6 +281,7 @@ final class Bridge {
         sw.put(Design.T_TAG, Verbs.SW_T_TAG);
         sw.put("look", Verbs.SW_MODE_LOOK);
         sw.put("color", Verbs.SW_COLOR);
+        sw.put("wording", Verbs.SW_WORDING);
         o.put("switches", sw);
         JSONObject keys = new JSONObject();
         keys.put("cols", Design.K_COLS);
@@ -291,6 +295,7 @@ final class Bridge {
         keys.put("light", Palette.LIGHT);
         keys.put("dark", Palette.DARK);
         keys.put("system", Design.SYSTEM);
+        keys.put("wording", Design.K_WORDING);
         o.put("keys", keys);
         o.put("texts", new JSONArray(java.util.Arrays.asList(Design.T_TITLE, Design.T_NAME, Design.T_DATA, Design.T_GROUP, Design.T_TAG)));
         o.put("weights", new JSONArray(java.util.Arrays.asList(Design.W_LIGHT, Design.W_REG, Design.W_MED, Design.W_BOLD)));
@@ -313,6 +318,7 @@ final class Bridge {
         for (String[] r : Palette.ROLES) roles.put(new JSONArray(java.util.Arrays.asList(r)));
         o.put("roles", roles);
         o.put("groups", new JSONArray(java.util.Arrays.asList(Palette.GROUPS)));
+        o.put("kinds", new JSONArray(java.util.Arrays.asList(Design.tagKinds())));   // מבנה 250
         return o;
     }
 

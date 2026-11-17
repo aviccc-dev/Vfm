@@ -1458,6 +1458,20 @@ final class DbCmdTests {
                                 before249.tag == null && d249.tag != null && d249.tag.size == 9 && d249.nameT.size == 20 && !t249.toString().contains("❌")
                                         && big249.blocked() && back249.tag == null && !d249.signature().equals(back249.signature())
                                         && Design.get(Design.DEFAULT).copy().tagText().size == 11);
+                        // מבנה 250 (המשתמש, 17.11.2026: "אפשרות לקבוע נוסח — ידנית · סביבת עבודה · ידנית כסביבת עבודה")
+                        List<String> w250 = go(o121 + "עצב \"" + m91 + "/מראה 234/ב\" /תווית:\"רשימה ידנית\"=\"ידנית כסביבת עבודה\" /תווית:\"פקודה\"=\"הרצה\"\n"
+                                + "ודא עיצוב \"" + m91 + "/מראה 234/ב\" /תווית:\"רשימה ידנית\"=\"ידנית כסביבת עבודה\" /תווית:\"רשימה חכמה\"=\"\"\n", here, vars, lib);
+                        Design d250 = ShapeCmds.state(Verbs.K_LIST, "מראה 234/ב", m91).shown;
+                        Batch.Plan nk250 = Batch.plan(o121 + "עצב \"" + m91 + "/מראה 234/ב\" /תווית:\"תיקייה מתעדכנת\"=\"x\"\n", here, vars, lib);
+                        Batch.Plan bw250 = Batch.plan(o121 + "עצב \"" + m91 + "/מראה 234/ב\" /תווית:\"פקודה\"=\"א · ב\"\n", here, vars, lib);
+                        go(o121 + "עצב \"" + m91 + "/מראה 234/ב\" /תווית:\"רשימה ידנית\"=\"\" /תווית:\"פקודה\"=\"\"\n", here, vars, lib);
+                        Design b250 = ShapeCmds.state(Verbs.K_LIST, "מראה 234/ב", m91).shown;
+                        o.check("מבנה 250: נוסח משלך לתווית — /תווית:\"<סוג>\"=\"<נוסח>\"; נבדק ב\"ודא עיצוב\"; סוג שאין (\"תיקייה מתעדכנת\") ונוסח עם \"·\" — שגיאה; \"\" — כמו במילון " + w250,
+                                "ידנית כסביבת עבודה".equals(d250.wordingOf(Words.Tags.MANUAL)) && "הרצה".equals(d250.wordingOf(Words.Tags.CMD))
+                                        && d250.wordingOf(Words.Tags.SMART) == null && !w250.toString().contains("❌")
+                                        && nk250.blocked() && errs235(nk250).contains("אין סוג כזה") && bw250.blocked()
+                                        && b250.wording.isEmpty() && java.util.Arrays.asList(Design.tagKinds()).equals(java.util.Arrays.asList(
+                                                "רשימה ידנית", "רשימה חכמה", "תיקייה אמיתית", "פקודה", "קישור", "כונן פנימי", "כרטיס זיכרון")));
                     }
                     // מבנה 123: "שחזר דוגמאות" כפקודה; ו"צור אופן" על אופן שיש בו רשימות ואין בו בית — מתקן
                     {

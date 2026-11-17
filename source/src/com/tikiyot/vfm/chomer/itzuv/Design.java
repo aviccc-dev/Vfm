@@ -56,6 +56,28 @@ final class Design {
     static final String T_GROUP = "קבוצה";  // תחביר
     /** מבנה 249 (המשתמש, 17.11.2026: "להקטין ידנית ולהגדיל את השם"): הכתב של תווית הסוג ("ידנית", "פקודה"…). */
     static final String T_TAG = "תווית";  // תחביר
+    /** מבנה 250 (המשתמש, 17.11.2026: "אפשרות לקבוע נוסח — ידנית · סביבת עבודה · ידנית כסביבת עבודה"): הנוסח של תווית הסוג. */
+    static final String K_WORDING = "נוסח";  // תחביר
+
+    /** מבנה 250: הסוגים שיש להם תווית — בשמם המלא (כמו בפקודה: "רשימה ידנית"); התווית עצמה — מהמילון. */
+    static String[] tagKinds() {
+        String[] t = {Words.Tags.MANUAL, Words.Tags.SMART, Words.Tags.FOLDER, Words.Tags.CMD, Words.Tags.LINK, Words.Tags.INTERNAL, Words.Tags.CARD};
+        String[] out = new String[t.length];
+        for (int i = 0; i < t.length; i++) out[i] = kindName(t[i]);
+        return out;
+    }
+
+    /** "רשימה\nידנית" ← "רשימה ידנית"; "↪\nקישור" ← "קישור". */
+    static String kindName(String tag) {
+        return tag.replace("↪", "").replace('\n', ' ').trim();
+    }
+
+    /** מבנה 250: נוסח של תווית — עד 30 תווים, בלי "·" ובלי שורה חדשה (הם מפרידים את המראה). null — תקין. */
+    static String wordingError(String kind, String v) {
+        if (!java.util.Arrays.asList(tagKinds()).contains(kind)) return Words.DesignW.noKind(kind, java.util.Arrays.asList(tagKinds()));
+        if (v.length() > 30 || v.contains("·") || v.contains("\n") || v.contains("=")) return Words.DesignW.badWording(v);
+        return null;
+    }
     static final String YES = "כן", NO = "לא", SYSTEM = "מערכת";  // תחביר
     static final String W_LIGHT = "דק", W_REG = "רגיל", W_MED = "בינוני", W_BOLD = "מודגש";  // תחביר
     static final String P_ICON = "צלמית", P_COLOR = "צבע", P_SEP = "·";  // תחביר
@@ -100,6 +122,13 @@ final class Design {
      * שהיה עד כאן).
      */
     Text tag;
+    /** מבנה 250: נוסח משלך לתווית — סוג (בשמו המלא) ← הנוסח; מה שאין כאן — מהמילון. */
+    final Map<String, String> wording = new LinkedHashMap<String, String>();
+
+    /** מבנה 250: התווית של הסוג (tag — כמו במילון): הנוסח שנקבע, או null (המילון). */
+    String wordingOf(String tag) {
+        return tag == null ? null : wording.get(kindName(tag));
+    }
 
     /** מבנה 249: הכתב של תווית הסוג כמו שייראה — שלה, או הכתב הקטן שהתווית מתחילה ממנו (לבדיקה ולתוסף). */
     Text tagText() {
@@ -135,6 +164,7 @@ final class Design {
         d.data = data.copy();
         d.group = group == null ? null : group.copy();
         d.tag = tag == null ? null : tag.copy();
+        d.wording.putAll(wording);
         d.fit = fit;
         d.min = min;
         d.lines = lines;
@@ -273,6 +303,7 @@ final class Design {
     static String lookError(String key, String v) {
         int c = key.indexOf(':');
         String what = c > 0 ? key.substring(c + 1).trim() : key;
+        if (c > 0 && key.substring(0, c).trim().equals(K_WORDING)) return wordingError(what, v);   // מבנה 250
         try {
             if (key.equals(K_COLS)) return range(v, COLS);
             if (key.equals(K_ICON)) return range(v, ICON);
@@ -347,7 +378,7 @@ final class Design {
         return grid + "|" + cols + "|" + icon + "|" + gap + "|" + showIcon + "|" + around + "|" + tint + "|" + showData
                 + "|" + dataBelow + "|" + nameT.size + nameT.weight + nameT.font + "|" + data.size + data.weight + data.font
                 + "|" + fit + "|" + min + "|" + lines + "|" + (group == null ? "" : group.size + "" + group.weight + group.font)
-                + "|" + (tag == null ? "" : tag.size + "" + tag.weight + tag.font);
+                + "|" + (tag == null ? "" : tag.size + "" + tag.weight + tag.font) + "|" + wording;
     }
 
     // ---------- קריאה ----------
@@ -410,6 +441,9 @@ final class Design {
             else if (who.equals(T_GROUP)) {                                  // מבנה 239: מתחיל מהשם, ומשתנה רק מה שנכתב
                 if (group == null) group = nameT.copy();
                 text(group, what, v);
+            } else if (who.equals(K_WORDING)) {                             // מבנה 250: הנוסח של תווית
+                if (v.isEmpty()) wording.remove(what);
+                else wording.put(what, v);
             } else if (who.equals(T_TAG)) {                                  // מבנה 249: מתחיל מכתב קטן, ומשתנה רק מה שנכתב
                 if (tag == null) tag = new Text(11, 700, SYSTEM);   // כמו התווית של היום — מודגשת
                 text(tag, what, v);
@@ -683,6 +717,8 @@ final class Design {
                 text = withKey(text, S_MID, T_GROUP + ": " + K_WEIGHT, weightName(d.group.weight));
                 text = withKey(text, S_MID, T_GROUP + ": " + K_FONT, d.group.font);
             }
+            for (Map.Entry<String, String> w : d.wording.entrySet())          // מבנה 250
+                text = withKey(text, S_MID, K_WORDING + ": " + w.getKey(), w.getValue());
             if (d.tag != null) {                                              // מבנה 249
                 text = withKey(text, S_MID, T_TAG + ": " + K_SIZE, num(d.tag.size));
                 text = withKey(text, S_MID, T_TAG + ": " + K_WEIGHT, weightName(d.tag.weight));

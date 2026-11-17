@@ -46,6 +46,13 @@ const run=async()=>{
     say('תווית הסוג 8 ← '+cmd(),cmd().includes('/כתב-תווית:8'));
     const tg=$('pv').querySelector('.tg')||[...$('pv').querySelectorAll('.ic')].find(e=>e.textContent==='ידנית');
     say('התצוגה המקדימה — התווית בגודל 8',!!tg&&tg.style.fontSize==='8px');
+    // הנוסח של התוויות
+    const wrow=[...d.querySelectorAll('#main .row')].find(r=>r.textContent.startsWith('רשימה ידנית'));
+    setNum(wrow.querySelector('input'),'סביבת עבודה');
+    say('נוסח לתווית ← '+cmd(),cmd().includes('/תווית:"רשימה ידנית"="סביבת עבודה"'));
+    say('התצוגה המקדימה — "סביבת עבודה" בפס',[...$('pv').querySelectorAll('.tg')].some(e=>e.textContent==='סביבת עבודה'));
+    setNum([...d.querySelectorAll('#main .row')].find(r=>r.textContent.startsWith('פקודה')).querySelector('input'),'א · ב');
+    say('נוסח עם "·" — לא נכנס',!cmd().includes('/תווית:"פקודה"'));
     // צבעים
     const rows=()=>[...d.querySelectorAll('#main .cl')];
     const hx=rows().find(r=>r.textContent.includes('טקסט משני')).querySelector('.hex');

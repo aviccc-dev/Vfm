@@ -2279,7 +2279,7 @@ public final class Tests {
                 if (Syntax.VERIFY.equals(x.cmd) || "EXPECT".equals(x.cmd)) verifies++;   // גם "ודא שגיאה" נספרת בסיכום
             }
             check("מ0.43: \"הכול\" של התוסף — כל החלקים נכללים (" + sp.steps.size() + " שורות)", calls == 0 && sp.steps.size() > 200);
-            eq("מ0.43: \"הכול\" — כמה \"ודא\" יש בחלקים (הכללית 88, לחץ 19, שני אופנים 4, עומס 4; מ0.45: +14 — אופן חדש והסל; מבנה 48: +6 — ממשיך מגיבוי, כתיב אחר; מבנה 51: +4 — ארבע השורות שצפויות להידחות מסומנות \"ודא שגיאה\"; מבנה 59: -2 — \"ממשיך מגיבוי\" עבר לקבוצה משלו בתוסף; מבנה 102: +1 — רשימה שכבר קיימת: \"ודא שגיאה\"; מבנה 207: +2 — כפולים ברשימה חכמה; מבנה 242: +21 — העיצוב; מבנה 249: +3 — תווית הסוג)", 150, verifies);
+            eq("מ0.43: \"הכול\" — כמה \"ודא\" יש בחלקים (הכללית 88, לחץ 19, שני אופנים 4, עומס 4; מ0.45: +14 — אופן חדש והסל; מבנה 48: +6 — ממשיך מגיבוי, כתיב אחר; מבנה 51: +4 — ארבע השורות שצפויות להידחות מסומנות \"ודא שגיאה\"; מבנה 59: -2 — \"ממשיך מגיבוי\" עבר לקבוצה משלו בתוסף; מבנה 102: +1 — רשימה שכבר קיימת: \"ודא שגיאה\"; מבנה 207: +2 — כפולים ברשימה חכמה; מבנה 242: +21 — העיצוב; מבנה 249: +3 — תווית הסוג; מבנה 250: +3 — הנוסח של התוויות)", 153, verifies);
             // מ0.41: הקטע החדש של הכללית — השורות שאינן של המסד מתוכננות בלי שגיאה; "ודא שגיאה" תופס את %נבחרים%
             String m042 = all.substring(all.indexOf(":: מ0.42"), all.indexOf(":: מ0.45 — אופן חדש"));   // נבדק לבד (m042cmds)
             String m045 = all.substring(all.indexOf(":: מ0.45 — אופן חדש"), all.indexOf(":: מ0.41 — הבדיקה מנקה"));   // נבדק לבד (למטה)
@@ -4315,7 +4315,7 @@ public final class Tests {
                             && !html.contains("V.deleteCommandFile("));
             List<String> miss = new ArrayList<String>();
             for (String sw : new String[]{Verbs.SW_DESIGN, Verbs.SW_COLS, Verbs.SW_GAP, Verbs.SW_ICON_SIZE, Verbs.SW_T_TITLE, Verbs.SW_T_NAME,
-                    Verbs.SW_T_DATA, Verbs.SW_T_GROUP, Verbs.SW_T_TAG, Verbs.SW_MODE_LOOK, Verbs.SW_COLOR})
+                    Verbs.SW_T_DATA, Verbs.SW_T_GROUP, Verbs.SW_T_TAG, Verbs.SW_MODE_LOOK, Verbs.SW_COLOR, Verbs.SW_WORDING})
                 if (!html.contains("'" + sw + "'")) miss.add(sw);
             for (String[] r : Palette.ROLES) if (!html.contains("[\"" + r[0] + "\",\"" + r[1] + "\",\"" + r[2] + "\"]")) miss.add(r[0]);
             for (String d : new String[]{Design.DEFAULT, Design.FILES, Design.WORDS}) if (!html.contains("'" + d + "':{design:'" + d + "'")) miss.add(d);

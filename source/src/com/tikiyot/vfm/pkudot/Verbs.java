@@ -96,6 +96,8 @@ final class Verbs {
             SW_T_TAG = "/כתב-תווית:";   // תחביר — מבנה 249: תווית הסוג
     /** מבנה 237: הצבעים — רק לכל התוכנה ולאופן: /מראה:בהיר|כהה · /צבע:"<תפקיד>"=#RRGGBB ("" אחרי = — לרשת). */
     static final String SW_MODE_LOOK = "/מראה:", SW_COLOR = "/צבע:";   // תחביר
+    /** מבנה 250: /תווית:"<סוג>"="<נוסח>" — הנוסח של תווית הסוג; "" — כמו במילון. */
+    static final String SW_WORDING = "/תווית:";   // תחביר
     /** ב־Cmd.edit: מפתח של המראה — "look:" ואחריו המפתח של קובץ העיצוב. */
     static final String E_LOOK = "look:";
 
@@ -297,6 +299,11 @@ final class Verbs {
                         int eq = v.lastIndexOf('=');
                         if (eq <= 0) c.error = Words.Verb.usage(SHAPE);
                         else c.edit.put(E_LOOK + Palette.K_COLOR + ": " + v.substring(0, eq).trim(), unquote(v.substring(eq + 1)));
+                    } else if (w.startsWith(SW_WORDING)) {                     // מבנה 250: /תווית:"<סוג>"="<נוסח>"
+                        String v = w.substring(SW_WORDING.length());
+                        int eq = v.indexOf('=');                               // הנוסח — בלי "=" (Design.wordingError)
+                        if (eq <= 0) c.error = Words.Verb.usage(SHAPE);
+                        else c.edit.put(E_LOOK + Design.K_WORDING + ": " + unquote(v.substring(0, eq).trim()), unquote(v.substring(eq + 1)));
                     } else if (w.startsWith(SW_DESIGN)) c.edit.put(Store.P_DESIGN, unquote(w.substring(SW_DESIGN.length())));
                     else if (look != null && look.endsWith(":")) putText(c.edit, look, w.substring(w.indexOf(':') + 1));   // מבנה 235
                     else if (look != null) c.edit.put(E_LOOK + look, unquote(w.substring(w.indexOf(':') + 1)));
