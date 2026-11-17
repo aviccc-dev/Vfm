@@ -1,0 +1,54 @@
+קבוצות ותגיות · קובץ מפה
+<?xml version="1.0" encoding="UTF-8"?>
+<opml version="2.0">
+  <head>
+    <title>הנושאים שהפקודות פונות אליהם</title>
+    <kv version="2" absolute="yes"/>
+    <kvAspects>
+      <kvAspect id="b1" name="הנושא"/>
+    </kvAspects>
+    <kvSheets>
+      <kvSheet id="s1" kind="start" name="התחלת נושא"/>
+      <kvSheet id="s2" kind="free" name="סיעור מוחות"/>
+      <kvSheet id="s3" kind="map" name="מפה" absolute="yes" body="yes"/>
+    </kvSheets>
+  </head>
+  <body>
+    <outline text="הנושאים שהפקודות פונות אליהם">
+      <kvInfo kind="user" name="הגדרה">מה הם האובייקטים, הנושא שאליו הפקודות פונות — מה הוא העסק שבו הן עוסקות</kvInfo>
+      <kvInfo kind="user" name="הערה">מה שעלה בתחילת השיחה, כמו שהוא — מעורבב. הפקודות שבסוגריים הן של היום</kvInfo>
+      <outline kvDivision="yes" text="הנושא" kvAspect="b1">
+        <outline text="מה שבתוך התוכנה">
+          <outline text="החומר">
+            <outline text="הקבצים, עם כל המסלול שלהם (הפיזי)">
+              <outline text="מה שבתוך קובץ (כתוב, /מכיל:, ארוז, פרוס)"/>
+            </outline>
+            <outline text="הרשימות, עם כל החלקים שלהן">
+              <outline text="האופן — השורש של מסלול הרשימות (אופן, בטל אופן)"/>
+            </outline>
+            <outline text="המיכל והתרשים">
+              <outline text="המסד — המיכל של הרשימות (גבה)"/>
+              <outline text="האינדקס — התרשים של הקבצים (רענן)"/>
+            </outline>
+            <outline text="הסל — מצב של קובץ או של רשימה (שחזר מהסל, רוקן סל)"/>
+          </outline>
+          <outline text="התוכנה עצמה">
+            <outline text="מסכים ותפריטים (פתח, חזור)"/>
+            <outline text="הגדרות התוכנה (הגדר)"/>
+            <outline text="הדוגמאות (שחזר דוגמאות)"/>
+            <outline text="עיצובים ותוספים — אין פקודה שפונה אליהם"/>
+          </outline>
+          <outline text="קובץ הפקודות וההרצה שלו">
+            <outline text="הלוגיקה — תנאים, לולאות"/>
+            <outline text="ההרצה עצמה (כלול, קטע, דוח, כאילו, ודא, המשך)"/>
+            <outline text="המשתמש — הפקודה פונה לאדם (הודעה, לשאול)"/>
+            <outline text="הזמן (המתן, תאריכים בסינון)"/>
+          </outline>
+        </outline>
+        <outline text="מה שמבחוץ">
+          <outline text="תוכנה אחרת (הפעל)"/>
+        </outline>
+      </outline>
+    </outline>
+  </body>
+</opml>

@@ -1,0 +1,68 @@
+קבוצות ותגיות · קובץ מפה
+<?xml version="1.0" encoding="UTF-8"?>
+<opml version="2.0">
+  <head>
+    <title>מפה חדשה</title>
+    <kv version="2" absolute="yes"/>
+    <kvAspects>
+      <kvAspect id="b1" name="בחינת בדיקה"/>
+    </kvAspects>
+    <kvSheets>
+      <kvSheet id="s1" kind="start" name="התחלת נושא"/>
+      <kvSheet id="s2" kind="free" name="סיעור מוחות"/>
+      <kvSheet id="s3" kind="map" name="מפה" absolute="yes" body="yes"/>
+    </kvSheets>
+  </head>
+  <body>
+    <outline text="פקודות מנהל קבצים וירטואלי">
+      <outline kvDivision="yes" text="בחינת בדיקה" kvAspect="b1">
+        <outline text="השייכות לתוכנה">
+          <outline text="לפעולות הנצרכות עצמם">
+            <outline text="פעולות שלשמם התוכנה נוצרה">
+              <outline text="האופן">
+                <kvInfo kind="user" name="הגדרה">המשך ישיר של הרשימה, והשורש של המסלול שלה: האופן, הרשימה, מה שבתוך הרשימה, והקבצים. כמו מסלול בתיקיות — וכמו שיש תת־תיקייה ותת־תת־תיקייה, כך גם ברשימה. בעיקרון אפשר להציג את הרשימות כמו תיקיות לכל דבר</kvInfo>
+              </outline>
+              <outline text="רשימה ידנית">
+                <kvInfo kind="user" name="הגדרה">קביעת מסגרת להכלת תוכן כלשהו. עם שם ולעיתים עם תיאור. התוכן יכול להיות רשימה חכמה קבצים תיקיות או סתם רעיונות. וגם רשימה ידנית אחרת (רשימת משנה): הראשית מחזיקה פריטים משלה, ורשימת המשנה — פריטים נוספים הקשורים לנושא הראשי, גם כשאינה תת־נושא שלו</kvInfo>
+                <kvInfo kind="user" name="הערה">הפשטות שלה מטעה לחשוב שהיא משהו שולי, והיא ממש לא. היא המסגרת של כל השאר, ורק בה שמור שיקול הדעת של המשתמש — אין ממה לשחזר אותה</kvInfo>
+                <outline text="המאפיינים — שם, צלמית, תיאור, למה, מקום, עיצוב"/>
+              </outline>
+              <outline text="רשימה חכמה">
+                <kvInfo kind="user" name="הגדרה">הגדרת חיפוש עם מאפיינים קבועים והכלת כל הקבצים העונים לתנאי החיפוש המוגדר</kvInfo>
+                <outline text="התנאי — המהות של הרשימה"/>
+              </outline>
+              <outline text="קבצים ישירות">
+                <outline text="הפקודות המקובלות לקבצים">
+                  <outline text="העתק"/>
+                  <outline text="העבר"/>
+                  <outline text="מחק"/>
+                  <outline text="שנה שם"/>
+                  <outline text="צור תיקייה"/>
+                  <outline text="מחק תיקייה"/>
+                </outline>
+                <outline text="אופנים נוספים">
+                  <outline text="בצעדים, דרך הלוח">
+                    <outline text="העתקה ללוח"/>
+                    <outline text="מעבר למקום מסוים"/>
+                    <outline text="פתיחת תיקייה חדשה"/>
+                    <outline text="הדבקה לשם"/>
+                  </outline>
+                </outline>
+              </outline>
+            </outline>
+            <outline text="פעולות שמשרתות את העיקריות">
+              <outline text="המסד — המיכל של הרשימות"/>
+              <outline text="האינדקס — התרשים של הקבצים"/>
+              <outline text="הסל — מה שנמחק ואפשר להחזיר"/>
+              <outline text="הגדרות התוכנה — משרתות את התוכנה, המשרתת את העיקריות"/>
+            </outline>
+          </outline>
+          <outline text="לממשק למסכים ולתפריטים"/>
+        </outline>
+        <outline text="מחוץ לתוכנה">
+          <outline text="בן ב 2"/>
+        </outline>
+      </outline>
+    </outline>
+  </body>
+</opml>
