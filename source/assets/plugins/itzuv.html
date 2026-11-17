@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="vfm-plugin" content="עיצוב">
-<meta name="vfm-plugin-version" content="4">
+<meta name="vfm-plugin-version" content="5">
 <title>עיצוב</title>
 <style>
 /* תוסף "עיצוב" — הלוח (claude/tosaf-itzuv.md, ההחלטות של 17.11.2026): מקום אחד שבו משנים את כל מה שאפשר — כמו לוח עם
@@ -12,6 +12,8 @@
    גרסה 2 (מבנה 246; המשתמש: "עצב אופן/רשימה/תת רשימה — אופן הוא הבית"): הדרך בפקודה מתחילה באופן.
    גרסה 3 (מבנה 249; המשתמש: "להקטין ידנית ולהגדיל את השם"): תווית הסוג — כתב חמישי.
    גרסה 4 (מבנה 250; המשתמש: "אפשרות לקבוע נוסח — ידנית · סביבת עבודה · ידנית כסביבת עבודה"): נוסח משלך לכל סוג.
+   גרסה 5 (מבנה 251; המשתמש: "כן" — לנסות קודם בתצוגה · "ותכין גם שמות… לאפשר לשמור שילוב מוצלח בשם"): הניסוי — רעיונות למראה
+   מהצילומים שנאספו, ושילובים בשמות. רק בתצוגה המקדימה: לא נכנס לפקודה ולא לרשימות.
    הצבעים של העמוד — מהתוכנה (vfm.theme), כאן רק ברירת מחדל. */
 :root{
   --bg:#FFFFFF; --soft:#F4F5F6; --fg:#202124; --muted:#5F6368; --ghost:#9AA0A6; --chip:#E8F0FE; --chip-fg:#174EA6;
@@ -89,6 +91,35 @@ summary{cursor:pointer;padding:6px 0;font-weight:600;font-size:.92rem}
 .pv .nm2{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .pv .dt{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .pv .selbar{padding:6px 12px;font-size:.85rem}
+/* הניסוי — רק בתצוגה */
+.pv .tabs{display:flex}
+.pv .tab{flex:1;text-align:center;padding:8px 4px;border-bottom:2px solid transparent}
+.pv .wide{display:flex;align-items:center;gap:12px;margin:8px;padding:12px 14px;border-radius:16px}
+.pv .ring{flex:none;width:52px;height:52px;border-radius:50%;border:4px solid;display:flex;align-items:center;justify-content:center;font-size:.8rem;font-weight:700}
+.pv .grp.gm{display:flex;align-items:center}
+.pv .grp.gm span:first-child{flex:1}
+.pv .gdots{padding:0 4px;font-weight:700}
+.pv .car{display:flex;gap:8px;overflow-x:auto;padding:6px}
+.pv .cc{flex:none;border-radius:16px;padding:8px 10px;min-width:0}
+.pv .cov{position:absolute;inset-inline-start:4px;bottom:3px;line-height:1}
+.pv .bd{position:absolute;inset-inline-end:0;bottom:0;border-radius:50%;border:1px solid;display:flex;align-items:center;justify-content:center;line-height:1}
+.pv .it.g .tt{align-self:stretch;max-width:100%}
+.pv .tt.side{display:flex;gap:8px;align-items:baseline}
+.pv .tt.side .nm2{flex:1;min-width:0}
+.pv .tt.side .dt{flex:none}
+.pv .bw{flex:none;width:4.2em;display:flex;flex-direction:column;gap:2px;text-align:center}
+.pv .bw.full{width:100%}
+.pv .btr{height:6px;border-radius:3px;overflow:hidden}
+.pv .bf{height:100%}
+.pv .more{font:inherit;font-weight:600;border:0;background:transparent;padding:6px;cursor:pointer;text-align:center}
+.tsec{padding:2px 0 6px}
+.tl{font-size:.92rem;font-weight:600;margin:4px 0}
+.tln{display:flex;gap:8px;align-items:flex-start;padding:4px 0}
+.tl2{flex:none;width:6.2em;font-size:.88rem;padding-top:6px}
+.chips.tog{padding:6px 0}
+.chip.mineC{border-style:dashed}
+.acts{display:flex;gap:8px;flex-wrap:wrap;padding-top:8px}
+.nmIn{width:100%;font:inherit;padding:8px;border:1px solid var(--rule);border-radius:8px;background:var(--bg);color:var(--fg);margin:6px 0}
 .toast{position:fixed;bottom:calc(84px + env(safe-area-inset-bottom,0px));inset-inline:14px;z-index:20;background:#323232;color:#fff;border-radius:8px;padding:10px 14px;font-size:.92rem;box-shadow:0 4px 14px rgba(0,0,0,.3)}
 .sheet{position:fixed;inset:0;z-index:30;background:rgba(32,33,36,.38);display:flex;align-items:flex-end}
 .sheet .in{background:var(--bg);width:100%;max-height:80vh;overflow:auto;border-radius:14px 14px 0 0;padding:14px 16px}
@@ -108,6 +139,7 @@ summary{cursor:pointer;padding:6px 0;font-weight:600;font-size:.92rem}
 </div>
 <div class="card"><h2><span class="k">מה מעצבים</span></h2><div class="chips" id="who"></div><div class="err" id="whoErr" hidden></div></div>
 <div class="card" id="pvCard"><h2><span class="k">תצוגה מקדימה</span><span class="mine" id="pvNote"></span></h2><div class="pv" id="pv"></div></div>
+<div class="card" id="tryCard" hidden></div>
 <div id="main"></div>
 <div class="card" id="cmdCard"><h2><span class="k">הפקודה שתרוץ</span><button class="btn" id="copy">העתקה</button></h2><div class="cmd none" id="cmd"></div></div>
 <div class="foot"><button class="btn main" id="apply">✓ החלה</button><button class="btn" id="discard">ביטול השינויים</button></div>
@@ -131,7 +163,7 @@ let P={};            // השינויים שעוד לא הוחלו: design · col
 let hist=[],fut=[];  // ביטול / חזרה של השינויים שעוד לא הוחלו
 let done=[];         // מה שהוחל — לביטול ההחלה האחרונה: {what,target,line}
 let started=null;    // הרשימה שממנה באו (מהתוכנה), אם יש — הדרך המלאה, מהאופן
-const VIEW={pv:pref('pv','1')!=='0',cmd:pref('cmd','1')!=='0',tbar:pref('tbar','1')!=='0'};
+const VIEW={pv:pref('pv','1')!=='0',tryc:pref('tryc','1')!=='0',cmd:pref('cmd','1')!=='0',tbar:pref('tbar','1')!=='0'};
 const I=()=>S.info, K=()=>S.info.keys;
 const isList=()=>S&&S.what===I().list, isProgram=()=>S&&S.what===I().program;
 
@@ -291,7 +323,7 @@ const okHex=v=>/^#[0-9A-Fa-f]{6}$/.test(v);
 // ---------- הציור ----------
 function draw(){
   if(!S)return;
-  drawWho();drawPreview();drawMain();drawCmd();drawBars();
+  drawWho();drawPreview();drawTry();drawMain();drawCmd();drawBars();
 }
 function drawWho(){
   const i=I(),w=$('who');w.textContent='';
@@ -329,44 +361,201 @@ const WAIT={};
 const prevResult=window.vfmResult;
 window.vfmResult=function(id,v){if(WAIT[id]){const f=WAIT[id];delete WAIT[id];f(v);}else if(prevResult)prevResult(id,v);};
 
+// ---------- הניסוי (מבנה 251; המשתמש, 17.11.2026: "כן" — לנסות קודם בתצוגה של התוסף · "ותכין גם שמות לעיצובים האלה… לאפשר
+// לשמור שילוב מוצלח בשם"): רעיונות למראה שעוד אין בתוכנה, מהצילומים שנאספו. רק בתצוגה המקדימה — לא נכנס לפקודה, לא ל"החלה"
+// ולא לרשימות. מה שימצא חן — ייבנה בתוכנה (קודם פקודה). השילובים השמורים — בלוח בלבד.
+const T0={grid:'',cols:'',iconBg:'',card:false,side:false,tight:false,noStrip:false,hidden:false,thumbs:false,badge:false,bar:false,noNames:false,noData:false,dataSide:false,
+  two:false,fold:false,gmenu:false,carousel:false,tabs:false,wide:false};
+const TOG_ITEM=[['card','רקע לכל פריט'],['side','צלמית לצד השם'],['tight','צמוד, בלי ריווח'],['noStrip','בלי פס הסוג'],['hidden','מוסתר — חיוור'],['thumbs','תמונה ממוזערת'],
+  ['badge','סמל קטן על הצלמית'],['bar','פס ואחוז בקצה'],['noNames','בלי שמות'],['noData','בלי נתונים'],['dataSide','נתונים בצד']];
+const TOG_SCREEN=[['two','שני סגנונות לפי קבוצה'],['fold','קבוצה מקופלת עם "עוד"'],['gmenu','⋮ לכותרת קבוצה'],['carousel','שורת כרטיסים לצד'],['tabs','לשוניות'],['wide','כרטיס רחב']];
+const ICON_BG=['בלי','מסגרת','ריבוע רך','ריבוע חי','עיגול חי'];
+const COMBOS={
+  'כרטיסי קטגוריות':{grid:'רשת',cols:'2',card:true,side:true,iconBg:'בלי',noStrip:true,gmenu:true,carousel:true},
+  'שורות רכות':{grid:'שורות',iconBg:'ריבוע רך',hidden:true},
+  'אריחים':{grid:'רשת',cols:'3',card:true,iconBg:'בלי',noData:true,noStrip:true,hidden:true},
+  'עיגולים צבעוניים':{grid:'רשת',cols:'4',iconBg:'עיגול חי',noData:true,noStrip:true},
+  'ריבועים צבעוניים':{grid:'רשת',cols:'4',iconBg:'ריבוע חי',noStrip:true,wide:true},
+  'תיקיות עם סמל':{grid:'רשת',cols:'4',thumbs:true,badge:true,noData:true},
+  'גלריה':{grid:'רשת',cols:'3',thumbs:true,noNames:true,tight:true,noStrip:true},
+  'תמונות עם שמות':{grid:'רשת',cols:'3',thumbs:true,noStrip:true},
+  'ניתוח מקום':{grid:'שורות',card:true,bar:true,iconBg:'ריבוע רך',wide:true},
+  'שני חלקים':{two:true,fold:true,gmenu:true,tabs:true}
+};
+let TRY=Object.assign({},T0,J(pref('try',''),{}));
+let SAVED=J(pref('try-saved',''),{});
+let foldOpen=false;
+const tryOn=()=>Object.keys(T0).some(k=>TRY[k]!==T0[k]);
+const sameTry=o=>Object.keys(T0).every(k=>(o[k]===undefined?T0[k]:o[k])===TRY[k]);
+function setTry(o){TRY=Object.assign({},T0,o);foldOpen=false;setPref('try',JSON.stringify(TRY));drawPreview();drawTry();}
+function flip(k){const o=Object.assign({},TRY);o[k]=!o[k];setTry(o);}
+function pickTry(k,v){const o=Object.assign({},TRY);o[k]=v;setTry(o);}
+function drawTry(){
+  const c=$('tryCard');c.hidden=!VIEW.tryc;if(!VIEW.tryc)return;c.textContent='';
+  const h=c.appendChild(E('h2',null));h.appendChild(E('span','k','ניסוי — רק בתצוגה'));
+  const clr=B('btn','ניקוי',()=>setTry({}));clr.disabled=!tryOn();h.appendChild(clr);
+  c.appendChild(E('p','note','מה שכאן משנה רק את התצוגה המקדימה — לא נכנס לפקודה, ל"החלה" ולרשימות. מה שימצא חן — ייבנה בתוכנה.'));
+  const s1=E('div','tsec');s1.appendChild(E('div','tl','שילובים'));
+  const ch=E('div','chips');ch.id='tryCombos';
+  Object.keys(COMBOS).forEach(n=>ch.appendChild(B('chip'+(tryOn()&&sameTry(COMBOS[n])?' on':''),n,()=>setTry(COMBOS[n]))));
+  s1.appendChild(ch);
+  const mine=Object.keys(SAVED);
+  if(mine.length){const ch2=E('div','chips');ch2.id='trySaved';mine.forEach(n=>ch2.appendChild(B('chip mineC'+(sameTry(SAVED[n])?' on':''),n,()=>setTry(SAVED[n]))));s1.appendChild(ch2);}
+  const ac=E('div','acts');
+  const sv=B('btn','שמירה בשם…',saveTry);sv.disabled=!tryOn();ac.appendChild(sv);
+  const now=mine.find(n=>sameTry(SAVED[n]));
+  if(now)ac.appendChild(B('btn','מחיקת "'+now+'"',()=>delTry(now)));
+  s1.appendChild(ac);c.appendChild(s1);
+  const d1=E('details');d1.open=true;d1.appendChild(E('summary',null,'מראה הפריט'));
+  const radio=(lb,k,vals)=>{const r=E('div','tln');r.appendChild(E('span','tl2',lb));const g=E('div','chips');
+    [['','כמו העיצוב']].concat(vals.map(v=>[v,v])).forEach(([v,t])=>g.appendChild(B('chip'+(TRY[k]===v?' on':''),t,()=>pickTry(k,v))));r.appendChild(g);return r;};
+  d1.appendChild(radio('סגנון','grid',['רשת','שורות']));
+  d1.appendChild(radio('טורים','cols',['2','3','4','5']));
+  d1.appendChild(radio('רקע לצלמית','iconBg',ICON_BG));
+  const g1=E('div','chips tog');TOG_ITEM.forEach(([k,t])=>g1.appendChild(B('chip'+(TRY[k]?' on':''),t,()=>flip(k))));d1.appendChild(g1);
+  c.appendChild(d1);
+  const d2=E('details');d2.open=true;d2.appendChild(E('summary',null,'מבנה המסך'));
+  const g2=E('div','chips tog');TOG_SCREEN.forEach(([k,t])=>g2.appendChild(B('chip'+(TRY[k]?' on':''),t,()=>flip(k))));d2.appendChild(g2);
+  c.appendChild(d2);
+}
+function sheetOf(title,text){
+  const sh=E('div','sheet'),inn=E('div','in');sh.appendChild(inn);
+  inn.appendChild(E('h3',null,title));if(text)inn.appendChild(E('p',null,text));
+  sh.addEventListener('click',e=>{if(e.target===sh)sh.remove();});document.body.appendChild(sh);
+  return [sh,inn];
+}
+function saveTry(){
+  const [sh,inn]=sheetOf('שמירת השילוב בשם','נשמר בלוח בלבד, לניסוי. כדי ששילוב ישמש ברשימות — צריך פקודה (בהמשך).');
+  const inp=E('input','nmIn');inp.type='text';inp.maxLength=30;inp.setAttribute('aria-label','השם');
+  const was=Object.keys(SAVED).find(n=>sameTry(SAVED[n]));if(was)inp.value=was;
+  inn.appendChild(inp);const er=E('div','err');er.hidden=true;inn.appendChild(er);
+  const ok=B('btn main','שמירה',()=>{
+    const n=inp.value.trim();
+    const bad=!n?'צריך שם':n.length>30?'עד 30 תווים':COMBOS[n]?'זה שם של שילוב מוכן — צריך שם אחר':'';
+    if(bad){er.textContent=bad;er.hidden=false;return;}
+    if(SAVED[n]&&!sameTry(SAVED[n])&&ok.dataset.sure!=='1'){er.textContent='כבר יש שילוב בשם "'+n+'". "להחליף" — והקודם יוחלף.';er.hidden=false;ok.dataset.sure='1';ok.textContent='להחליף';return;}
+    SAVED[n]=Object.assign({},TRY);setPref('try-saved',JSON.stringify(SAVED));sh.remove();toast('נשמר: "'+n+'"');drawTry();
+  });
+  inp.addEventListener('input',()=>{ok.dataset.sure='';ok.textContent='שמירה';er.hidden=true;});
+  const ac=E('div','acts');ac.appendChild(ok);ac.appendChild(B('btn','ביטול',()=>sh.remove()));inn.appendChild(ac);
+  try{inp.focus();}catch(e){}
+}
+function delTry(n){
+  const [sh,inn]=sheetOf('למחוק את השילוב "'+n+'"?','השילוב יימחק מהלוח. מה שעל התצוגה — נשאר.');
+  const ac=E('div','acts');
+  ac.appendChild(B('btn main','מחיקה',()=>{delete SAVED[n];setPref('try-saved',JSON.stringify(SAVED));sh.remove();toast('נמחק: "'+n+'"');drawTry();}));
+  ac.appendChild(B('btn','ביטול',()=>sh.remove()));inn.appendChild(ac);
+}
+
 function drawPreview(){
   $('pvCard').hidden=!VIEW.pv;if(!VIEW.pv)return;
-  const d=eff(),c=d.colors,t=d.texts,i=I(),pv=$('pv');pv.textContent='';
+  const d=eff(),c=d.colors,t=d.texts,i=I(),pv=$('pv'),X=TRY;pv.textContent='';
+  if(X.grid&&d.grid!==(X.grid==='רשת')){        // הניסוי — רק כאן, על מה שנראה. סגנון אחר — עם הריווח והצלמית של עיצוב מוכן באותו סגנון
+    d.grid=X.grid==='רשת';const pr=Object.values(i.presets).find(p=>p.grid===d.grid&&p.showIcon);
+    if(pr){d.gap=pr.gap;d.icon=pr.icon;if(!d.grid)d.cols=1;}
+  }
+  if(X.cols)d.cols=+X.cols;
+  if(X.tight)d.gap=0;
+  if(X.noData)d.showData=false;
   const font=f=>!f||f===K().system?'var(--f)':'"'+f+'",var(--f)';
   const style=(e,x,color)=>{e.style.fontSize=x.size+'px';e.style.fontWeight=x.weight;e.style.fontFamily=font(x.font);if(color)e.style.color=color;};
+  const NM=t[i.texts[1]],DT=t[i.texts[2]],tagT=t[i.texts[4]];
   pv.style.background=c['רקע'];pv.style.borderColor=c['קו בין חלקים'];
   const ph=E('div','ph',isList()?last(S.path):'ספרים');ph.style.background=c['רקע הכותרת'];style(ph,t[i.texts[0]],c['טקסט']);pv.appendChild(ph);
-  const grp=E('div','grp','פרקים');grp.style.background=c['כותרת קבוצה'];style(grp,t[i.texts[3]],c['טקסט']);pv.appendChild(grp);
-  const items=E('div','items');pv.appendChild(items);
-  const W=Math.max(220,(pv.clientWidth||320)-12),cols=d.grid?Math.max(1,d.cols):1;
-  const gapPx=d.grid?Math.round((W/cols)*d.gap/100):Math.round(t[i.texts[1]].size*d.gap/100);
-  items.style.gridTemplateColumns='repeat('+cols+',minmax(0,1fr))';items.style.gap=(d.grid?gapPx:0)+'px';
-  const tile=(W-(cols-1)*gapPx)/cols;
-  const icPx=d.grid?Math.min(tile*.9,Math.round(tile*Math.min(d.icon,100)/100)):Math.round(t[i.texts[1]].size*d.icon/100);
+  const W=Math.max(220,(pv.clientWidth||320)-12);
+  if(X.tabs){const tb=E('div','tabs');tb.style.borderBottom='1px solid '+c['קו בין חלקים'];
+    ['רשימות','קבצים','תמונות'].forEach((n,k)=>{const b=E('span','tab'+(k?'':' on'),n);style(b,NM,k?c['טקסט משני']:c['הדגשה']);if(!k)b.style.borderBottomColor=c['הדגשה'];tb.appendChild(b);});
+    pv.appendChild(tb);}
+  if(X.wide){const wc=E('div','wide');wc.style.background=c['הדגשה'];
+    const ring=E('div','ring','62%');ring.style.borderColor=c['טקסט על צבע'];ring.style.color=c['טקסט על צבע'];wc.appendChild(ring);
+    const tx=E('div','tt');const a=E('div','nm2','כונן פנימי');style(a,NM,c['טקסט על צבע']);a.style.fontWeight=700;
+    const b2=E('div','dt','38 GB פנויים מתוך 128');style(b2,DT,c['טקסט על צבע']);tx.appendChild(a);tx.appendChild(b2);wc.appendChild(tx);pv.appendChild(wc);}
+  const ghead=n=>{const g=E('div','grp');g.style.background=c['כותרת קבוצה'];style(g,t[i.texts[3]],c['טקסט']);
+    if(X.gmenu){g.classList.add('gm');g.appendChild(E('span',null,n));const m=E('span','gdots','⋮');m.style.color=c['טקסט משני'];g.appendChild(m);}else g.textContent=n;
+    pv.appendChild(g);};
+  if(X.carousel){ghead('אחרונים');const car=E('div','car');
+    [['הלכות',['שבת','ברכות','תפילה']],['מוסר',['מסילת ישרים','שערי תשובה','חובות הלבבות']],['הורדות',['שער.jpg','סיכום.pdf','רשימה.txt']],['סריקות',['חשבון 1','חשבון 2','קבלה']]].forEach(([n,l])=>{
+      const k=E('div','cc');k.style.background=c['רקע רך'];k.style.width=Math.round(W*.58)+'px';
+      const a=E('div','nm2',n);style(a,NM,c['טקסט']);a.style.fontWeight=600;k.appendChild(a);
+      l.forEach(x=>{const r=E('div','dt','📄 '+x);style(r,DT,c['טקסט משני']);k.appendChild(r);});car.appendChild(k);});
+    pv.appendChild(car);}
   const tint=['#E8F0FE','#E6F4EA','#FEF7E0','#FCE8E6','#F3E8FD','#E4F7FB'];
+  const VIVID=['#F08C00','#7048E8','#E03131','#1971C2','#2F9E44','#0C8599','#868E96'];
+  const PIC=['linear-gradient(160deg,#FFD8A8,#F76707 55%,#5C2A0B)','linear-gradient(160deg,#A5D8FF,#1C7ED6 60%,#0B3D91)','linear-gradient(160deg,#B2F2BB,#2F9E44 60%,#1B4332)',
+    'linear-gradient(160deg,#FCC2D7,#C2255C 60%,#5C0F2E)','linear-gradient(160deg,#D0BFFF,#6741D9 60%,#2B1A66)'];
+  const PAGE='repeating-linear-gradient(180deg,#FFFFFF 0 7px,#DEE2E6 7px 8px)';
   const wd=k=>cur('w:'+k)||((d.design===S.above.design&&!cur('design'))?(S.above.wording||{})[k]:'')||'';   // הנוסח — שלך, או מה שמעליו
   const KIND=[[wd('רשימה ידנית')||'ידנית','#0F6E56'],[wd('רשימה חכמה')||'חכמה','#534AB7'],null,null,null,[wd('פקודה')||'פקודה','#185FA5']];
-  const tagT=t[i.texts[4]],tagPx=d.tagOwn?+tagT.size:Math.max(11,Math.round(icPx*.16));   // בלי שנקבע — לפי הצלמית, כמו בתוכנה
-  [['📁','הלכות','12 קבצים'],['📚','מוסר','5 רשימות'],['📄','מסילת ישרים.pdf','2.1 MB · 14.11'],['📄','דרך ה׳.pdf','1.4 MB · 02.11'],['🖼','שער.jpg','380 KB · 30.10'],['▶','העתקה לטאבלט','6 קבצים']].forEach((x,n)=>{
-    const it=E('div','it'+(d.grid?' g':''));
+  const ITEMS=[['📁','הלכות','12 קבצים',38,'📄'],['📚','מוסר','5 רשימות',22,'★'],['📄','מסילת ישרים.pdf','2.1 MB · 14.11',15],['📄','דרך ה׳.pdf','1.4 MB · 02.11',9],
+    ['🖼','שער.jpg','380 KB · 30.10',6],['▶','העתקה לטאבלט','6 קבצים',2]];
+  const barOf=(p,full)=>{const w=E('div','bw'+(full?' full':''));const tr=E('div','btr');tr.style.background=c['קו בין חלקים'];
+    const f=E('div','bf');f.style.width=p+'%';f.style.background=c['הדגשה'];tr.appendChild(f);w.appendChild(tr);
+    const pc=E('div','bp',p+'%');style(pc,DT,c['טקסט משני']);w.appendChild(pc);return w;};
+  function item(x,n,hid,o){
+    const it=E('div','it'+(o.grid?' g':''));
+    if(o.grid&&o.side){it.style.flexDirection='row';it.style.textAlign='start';}
     if(n===2)it.style.background=c['שורה שנבחרה'];
+    else if(o.card)it.style.background=c['רקע רך'];
     else if(!d.showIcon)it.style.background=tint[n%tint.length];
-    it.style.padding=d.grid?Math.max(4,Math.round(gapPx/2))+'px':Math.max(2,gapPx)+'px 8px';
-    if(!d.grid)it.style.borderBottom='1px solid '+c['קו בין חלקים'];
+    if(o.card)it.style.borderRadius='14px';
+    if(hid)it.style.opacity='0.45';
+    it.style.padding=o.gal?'0':o.grid?Math.max(o.card?8:4,Math.round(o.gapPx/2))+'px':Math.max(2,o.gapPx)+'px 8px';
+    if(!o.grid&&!o.card)it.style.borderBottom='1px solid '+c['קו בין חלקים'];
+    const kind=!X.noStrip&&!hid&&KIND[n];
+    const icPx=o.icPx,tagPx=d.tagOwn?+tagT.size:Math.max(11,Math.round(icPx*.16));   // בלי שנקבע — לפי הצלמית, כמו בתוכנה
+    const thumb=X.thumbs?(hid?PIC[1]:n===4?PIC[0]:n===0?PIC[2]:n===1?PIC[4]:(n===2||n===3)?PAGE:null):null;
     if(d.showIcon&&icPx>0){
-      const ic=E('div','ic',x[0]);ic.style.width=ic.style.height=icPx+'px';ic.style.fontSize=Math.round(icPx*.62)+'px';ic.style.color=c['צלמיות'];
-      if(d.around==='ריבוע צבעוני')ic.style.background=c['רקע רך'];else if(d.around==='מסגרת')ic.style.border='1px solid '+c['קו בין חלקים'];
+      const ic=E('div','ic',thumb?'':x[0]);ic.style.width=ic.style.height=icPx+'px';ic.style.fontSize=Math.round(icPx*.62)+'px';ic.style.color=c['צלמיות'];
+      const bg=o.iconBg||(d.around==='ריבוע צבעוני'?'ריבוע רך':d.around==='מסגרת'?'מסגרת':'בלי');
+      if(thumb){ic.classList.add('th');ic.style.background=thumb;ic.style.position='relative';if(thumb===PAGE)ic.style.border='1px solid '+c['קו בין חלקים'];if(o.gal&&X.tight)ic.style.borderRadius='0';
+        if(n<2||hid){const s=E('span','cov',x[0]);s.style.fontSize=Math.max(10,Math.round(icPx*.24))+'px';ic.appendChild(s);}}   // כריכה לתיקייה
+      else if(bg==='ריבוע רך')ic.style.background=c['רקע רך'];
+      else if(bg==='מסגרת')ic.style.border='1px solid '+c['קו בין חלקים'];
+      else if(bg==='ריבוע חי'||bg==='עיגול חי'){ic.style.background=VIVID[n%VIVID.length];ic.style.fontSize=Math.round(icPx*.5)+'px';ic.style.borderRadius=bg==='עיגול חי'?'50%':'22%';}
       it.appendChild(ic);
-      if(KIND[n]&&!d.grid){ic.textContent=KIND[n][0];ic.style.background=KIND[n][1];ic.style.color='#fff';style(ic,tagT);ic.style.fontSize=(d.tagOwn?tagPx:Math.max(8,Math.round(icPx*.28)))+'px';ic.style.lineHeight='1.05';}
+      if(kind&&!o.grid){ic.textContent=kind[0];ic.style.background=kind[1];ic.style.color='#fff';style(ic,tagT);ic.style.fontSize=(d.tagOwn?tagPx:Math.max(8,Math.round(icPx*.28)))+'px';ic.style.lineHeight='1.05';}
+      if(X.badge&&x[4]){ic.style.position='relative';ic.style.overflow='visible';const bs=Math.max(12,Math.round(icPx*.38));
+        const bd=E('span','bd',x[4]);bd.style.width=bd.style.height=bs+'px';bd.style.fontSize=Math.round(bs*.6)+'px';bd.style.background=c['רקע'];bd.style.borderColor=c['קו בין חלקים'];ic.appendChild(bd);}
     }
-    if(KIND[n]&&d.grid){const st=E('div','tg',KIND[n][0]);st.style.background=KIND[n][1];st.style.color='#fff';st.style.alignSelf='stretch';
-      style(st,tagT);st.style.fontSize=tagPx+'px';it.appendChild(st);}            // ברשת — הפס עם הסוג, גם בלי צלמית
-    const tt=E('div','tt');const nm=E('div','nm2',x[1]);style(nm,t[i.texts[1]],c['טקסט']);tt.appendChild(nm);
-    if(d.showData){const dt=E('div','dt',x[2]);style(dt,t[i.texts[2]],c['טקסט משני']);tt.appendChild(dt);}
-    it.appendChild(tt);items.appendChild(it);
-  });
+    let st=null;
+    if(kind&&o.grid){st=E('div','tg',kind[0]);st.style.background=kind[1];st.style.color='#fff';st.style.alignSelf='stretch';
+      style(st,tagT);st.style.fontSize=tagPx+'px';if(!o.side)it.appendChild(st);}            // ברשת — הפס עם הסוג, גם בלי צלמית
+    if(!X.noNames){
+      const tt=E('div','tt'+(X.dataSide&&d.showData?' side':''));const nm=E('div','nm2',x[1]);style(nm,NM,c['טקסט']);tt.appendChild(nm);
+      if(d.showData){const dt=E('div','dt',x[2]);style(dt,DT,c['טקסט משני']);tt.appendChild(dt);}
+      if(st&&o.side)tt.appendChild(st);
+      if(X.bar&&o.grid)tt.appendChild(barOf(x[3],true));
+      if(X.bar&&!o.grid||o.side)tt.style.flex='1';
+      it.appendChild(tt);
+    }else if(st&&o.side)it.appendChild(st);
+    if(X.bar&&!o.grid)it.appendChild(barOf(x[3],false));
+    return it;
+  }
+  function group(name,list,o){
+    ghead(name);
+    const items=E('div','items');pv.appendChild(items);
+    const cols=o.grid?Math.max(1,o.cols):1;
+    o.gapPx=o.grid?Math.round((W/cols)*o.gap/100):Math.round(NM.size*o.gap/100);
+    items.style.gridTemplateColumns='repeat('+cols+',minmax(0,1fr))';items.style.gap=(o.grid?o.gapPx:(o.card?6:0))+'px';
+    if(o.card&&!o.grid)items.style.padding='6px';
+    const tile=(W-(cols-1)*o.gapPx)/cols;
+    o.gal=o.grid&&X.thumbs&&X.noNames;
+    o.icPx=o.gal?Math.floor(tile):o.grid?Math.min(tile*(o.side?.35:.9),Math.round(tile*Math.min(o.icon,100)/100)):Math.round(NM.size*o.icon/100);
+    const k=o.grid?cols:2,fold=X.fold&&o.last&&list.length>k;
+    (fold&&!foldOpen?list.slice(0,k):list).forEach(([x,n,hid])=>items.appendChild(item(x,n,hid,o)));
+    if(fold){const mo=E('button','more',foldOpen?'פחות':'עוד '+(list.length-k)+' ›');mo.style.color=c['הדגשה'];mo.style.gridColumn='1 / -1';
+      mo.addEventListener('click',()=>{foldOpen=!foldOpen;drawPreview();});items.appendChild(mo);}
+  }
+  const all=ITEMS.map((x,n)=>[x,n,false]);
+  if(X.hidden)all.splice(2,0,[['📁','.גיבוי','3 קבצים',8],6,true]);
+  const base={grid:d.grid,cols:d.cols,gap:d.gap,icon:d.icon,card:X.card,side:X.side,iconBg:X.iconBg,last:true};
+  const LISTS=[0,1,5];
+  if(X.two){
+    group('רשימות',all.filter(a=>LISTS.includes(a[1])),{grid:true,cols:2,gap:4,icon:100,card:true,side:true,iconBg:X.iconBg||'ריבוע רך'});
+    group('קבצים',all.filter(a=>!LISTS.includes(a[1])),base);
+  }else group('פרקים',all,base);
   const sb=E('div','selbar','נבחר 1 · פס הבחירה');sb.style.background=c['פס הבחירה'];sb.style.color=c['הדגשה כהה'];pv.appendChild(sb);
-  $('pvNote').textContent=(d.grid?'רשת · '+cols+' טורים':'שורות')+(Object.keys(P).length?' · עם השינויים':'');
+  $('pvNote').textContent=(d.grid?'רשת · '+Math.max(1,d.cols)+' טורים':'שורות')+(Object.keys(P).length?' · עם השינויים':'')+(tryOn()?' · ניסוי':'');
 }
 
 function reBtn(k,empty){const o=cur(k);const b=B('re','↺',()=>change(k,empty),'כמו '+aboveWord());b.disabled=same(o,empty);return b;}
@@ -474,11 +663,12 @@ const A={
   inherit:{t:'הכול כמו שמעליו',k:'ברירת מחדל',run:inheritAll,on:()=>KEYS().some(k=>{const o=cur(k);return typeof o==='string'?o!=='':(o.size+o.weight+o.font)!=='';})},
   copy:{t:'העתקת הפקודה',run:copyCmd,on:()=>!!line()},
   pv:{t:'תצוגה מקדימה',run:()=>toggle('pv'),mark:()=>VIEW.pv},
+  tryc:{t:'ניסוי רעיונות',run:()=>toggle('tryc'),mark:()=>VIEW.tryc},
   cmd:{t:'הפקודה שתרוץ',run:()=>toggle('cmd'),mark:()=>VIEW.cmd},
   tbar:{t:'סרגל קיצורים',run:()=>toggle('tbar'),mark:()=>VIEW.tbar},
   about:{t:'על הלוח',run:about}
 };
-const MENUS={file:['apply','-','close'],edit:['undo','redo','-','discard','undoApplied','-','inherit','copy'],view:['pv','cmd','tbar'],help:['about']};
+const MENUS={file:['apply','-','close'],edit:['undo','redo','-','discard','undoApplied','-','inherit','copy'],view:['pv','tryc','cmd','tbar'],help:['about']};
 const TBAR=['undo','redo','inherit','apply'];
 function toggle(k){VIEW[k]=!VIEW[k];setPref(k,VIEW[k]?'1':'0');draw();}
 let openMenu=null;
@@ -512,7 +702,8 @@ function about(){
   ['בוחרים למעלה מה מעצבים: כל התוכנה, האופן, או רשימה. הסדר: כל התוכנה ← האופן ← הרשימה ← הרשימות שבתוכה — כל אחת מקבלת ממה שמעליה, ומה שנקבע לה גובר.',
    'כל שינוי נראה מיד בתצוגה המקדימה, ונשמר רק ב"החלה". "↺" — חוזרים לקבל ממה שמעליו.',
    'ב"החלה" רצה הפקודה "עצב" — אותה פקודה שאפשר לכתוב בקובץ פקודות, דרך שכבת הניהול. היא כתובה בתחתית: "הפקודה שתרוץ".',
-   'הצבעים והמראה (בהיר / כהה) — לכל התוכנה או לאופן. המסכים שכבר פתוחים מתעדכנים כשחוזרים אליהם.'].forEach(t=>inn.appendChild(E('p',null,t)));
+   'הצבעים והמראה (בהיר / כהה) — לכל התוכנה או לאופן. המסכים שכבר פתוחים מתעדכנים כשחוזרים אליהם.',
+   'הניסוי (מתחת לתצוגה המקדימה) — רעיונות למראה שעוד אין בתוכנה, ושילובים מוכנים בשמות. הוא משנה רק את התצוגה המקדימה: לא נכנס לפקודה ולא לרשימות. שילוב שמצא חן — אפשר לשמור בשם, בלוח בלבד.'].forEach(t=>inn.appendChild(E('p',null,t)));
   inn.appendChild(B('btn main','סגירה',()=>sh.remove()));
   sh.addEventListener('click',e=>{if(e.target===sh)sh.remove();});
   document.body.appendChild(sh);
