@@ -157,11 +157,17 @@ final class ListVerbs {
      */
     /** מבנה 235: הערכים של המראה — בטווח, והגופן קיים (הכלל — ב־Design). null — הכול תקין; אחרת — למה לא. */
     static String lookErrors(Verbs.Cmd c) {
-        for (java.util.Map.Entry<String, String> e : c.edit.entrySet())
-            if (e.getKey().startsWith(Verbs.E_LOOK) && !e.getValue().isEmpty()) {
-                String why = Design.lookError(e.getKey().substring(Verbs.E_LOOK.length()), e.getValue());
-                if (why != null) return why;
-            }
+        for (java.util.Map.Entry<String, String> e : c.edit.entrySet()) {
+            if (!e.getKey().startsWith(Verbs.E_LOOK)) continue;
+            String key = e.getKey().substring(Verbs.E_LOOK.length());
+            boolean colors = key.equals(Palette.K_MODE) || key.startsWith(Palette.K_COLOR + ":");   // מבנה 237
+            if (colors && c.kind.equals(Verbs.K_LIST)) return Words.DesignW.COLORS_ALL_ONLY;
+            if (colors && key.startsWith(Palette.K_COLOR + ":") && Palette.role(key.substring(key.indexOf(':') + 1)) < 0)
+                return Palette.error(key, e.getValue());                         // תפקיד שאין — גם כשמנקים
+            if (e.getValue().isEmpty()) continue;
+            String why = colors ? Palette.error(key, e.getValue()) : Design.lookError(key, e.getValue());
+            if (why != null) return why;
+        }
         return null;
     }
 
@@ -198,6 +204,7 @@ final class ListVerbs {
                     }
                 }, false, lib);
                 if (program) Design.forgetProgram();
+                Palette.forget();                                               // מבנה 237: הצבעים — לקרוא מחדש
                 if (r.error != null) DbListCmd.lastFailed = true;
                 return r.error != null ? r.error : Words.DbCmd.inDb(r.text);
             }

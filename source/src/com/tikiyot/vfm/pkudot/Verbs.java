@@ -93,6 +93,8 @@ final class Verbs {
      */
     static final String SW_COLS = "/טורים:", SW_GAP = "/ריווח:", SW_ICON_SIZE = "/גודל-צלמית:", SW_T_TITLE = "/כתב-כותרת:",   // תחביר
             SW_T_NAME = "/כתב-שם:", SW_T_DATA = "/כתב-נתונים:";   // תחביר
+    /** מבנה 237: הצבעים — רק לכל התוכנה ולאופן: /מראה:בהיר|כהה · /צבע:"<תפקיד>"=#RRGGBB ("" אחרי = — לרשת). */
+    static final String SW_MODE_LOOK = "/מראה:", SW_COLOR = "/צבע:";   // תחביר
     /** ב־Cmd.edit: מפתח של המראה — "look:" ואחריו המפתח של קובץ העיצוב. */
     static final String E_LOOK = "look:";
 
@@ -285,7 +287,13 @@ final class Verbs {
                 c.edit = new java.util.LinkedHashMap<String, String>();
                 for (String w : Parse.tokens(after(rest, program ? PROGRAM_WORD : c.kind.equals(K_LIST) ? LIST : MODE_WORD))) {
                     String look = lookKey(w);
-                    if (w.startsWith(SW_DESIGN)) c.edit.put(Store.P_DESIGN, unquote(w.substring(SW_DESIGN.length())));
+                    if (w.startsWith(SW_MODE_LOOK)) c.edit.put(E_LOOK + Palette.K_MODE, unquote(w.substring(SW_MODE_LOOK.length())));   // מבנה 237
+                    else if (w.startsWith(SW_COLOR)) {                         // מבנה 237: /צבע:<תפקיד>=<צבע>
+                        String v = w.substring(SW_COLOR.length());
+                        int eq = v.lastIndexOf('=');
+                        if (eq <= 0) c.error = Words.Verb.usage(SHAPE);
+                        else c.edit.put(E_LOOK + Palette.K_COLOR + ": " + v.substring(0, eq).trim(), unquote(v.substring(eq + 1)));
+                    } else if (w.startsWith(SW_DESIGN)) c.edit.put(Store.P_DESIGN, unquote(w.substring(SW_DESIGN.length())));
                     else if (look != null && look.endsWith(":")) putText(c.edit, look, w.substring(w.indexOf(':') + 1));   // מבנה 235
                     else if (look != null) c.edit.put(E_LOOK + look, unquote(w.substring(w.indexOf(':') + 1)));
                     else if (w.startsWith("/") || !c.arg.isEmpty() || program) c.error = Words.Verb.usage(SHAPE);

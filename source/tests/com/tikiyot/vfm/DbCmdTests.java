@@ -1302,6 +1302,29 @@ final class DbCmdTests {
                         List<String> back236 = go("עצב אופן \"" + m91 + "\" /טורים:\"\" /כתב-שם:\"\"\nעצב תוכנה /כתב-נתונים:\"\"\n", here, vars, lib);
                         o.check("מבנה 236: \"\" — מתנקה (האופן והתוכנה בלי מראה)", bad(back236).isEmpty()
                                 && (Design.programProps()[1] == null || Design.programProps()[1].isEmpty()));
+                        // מבנה 237: הצבעים — /מראה:בהיר|כהה, /צבע:"<תפקיד>"=#RRGGBB; לתוכנה ולאופן בלבד; הסדר: הערכה ← התוכנה ← האופן
+                        List<String> w237 = go("עצב תוכנה /מראה:כהה /צבע:\"טקסט משני\"=#123456\nעצב אופן \"" + m91 + "\" /צבע:\"הדגשה\"=#ABCDEF\n",
+                                here, vars, lib);
+                        final String[] mode237 = new String[1];
+                        Db.read(Db.app, m91, new Db.Use<Void>() {
+                            @Override public Void run(SqlStore st) { mode237[0] = st.prop(DbPaths.home(st), Store.P_ALL_LOOK); return null; }
+                        });
+                        String prog237 = Design.programProps()[1];
+                        int[] c237 = Palette.resolve(prog237, mode237[0]);
+                        int sub = Palette.role("טקסט משני"), acc = Palette.role("הדגשה"), txt = Palette.role("טקסט");
+                        o.check("מבנה 237: עצב תוכנה /מראה:כהה /צבע:… ועצב אופן /צבע:… — נשמרו (" + prog237 + " · " + mode237[0] + "), והצבעים: "
+                                        + "ערכה כהה, משני מהתוכנה, הדגשה מהאופן " + w237,
+                                bad(w237).isEmpty() && Palette.dark(prog237, mode237[0]) && c237[txt] == 0xFFE8EAED && c237[sub] == 0xFF123456
+                                        && c237[acc] == 0xFFABCDEF && Palette.resolve()[txt] == 0xFF202124 && Palette.ROLES.length == 18);
+                        o.check("מבנה 237: צבעים לרשימה — שגיאה; תפקיד שאין, צבע לא כתוב נכון, מראה לא מוכר — שגיאה, עם הסיבה",
+                                errs235(Batch.plan(o121 + "עצב רשימה \"מראה 234/ב\" /מראה:כהה\n", here, vars, lib)).contains(Words.DesignW.COLORS_ALL_ONLY)
+                                        && errs235(Batch.plan("עצב תוכנה /צבע:\"אין כזה\"=#111111\n", here, vars, lib)).contains(Words.DesignW.noRole("אין כזה"))
+                                        && errs235(Batch.plan("עצב תוכנה /צבע:\"רקע\"=כחול\n", here, vars, lib)).contains(Words.DesignW.badColor("כחול"))
+                                        && errs235(Batch.plan("עצב תוכנה /מראה:אפור\n", here, vars, lib)).contains(Words.DesignW.badMode("אפור")));
+                        List<String> back237 = go("עצב תוכנה /מראה:\"\" /צבע:\"טקסט משני\"=\"\"\nעצב אופן \"" + m91 + "\" /צבע:\"הדגשה\"=\"\"\n",
+                                here, vars, lib);
+                        o.check("מבנה 237: \"\" — חוזרים לערכה (" + Design.programProps()[1] + ")", bad(back237).isEmpty()
+                                && !Palette.dark(Design.programProps()[1]) && Palette.resolve(Design.programProps()[1])[sub] == 0xFF5F6368);
                     }
                     // מבנה 123: "שחזר דוגמאות" כפקודה; ו"צור אופן" על אופן שיש בו רשימות ואין בו בית — מתקן
                     {
