@@ -237,6 +237,8 @@ final class Bridge {
         texts.put(Design.T_NAME, textJson(d.nameT));
         texts.put(Design.T_DATA, textJson(d.data));
         texts.put(Design.T_GROUP, textJson(d.groupText()));
+        texts.put(Design.T_TAG, textJson(d.tagText()));                         // מבנה 249
+        o.put("tagOwn", d.tag != null);                                          // בלי — לפי גודל הצלמית
         o.put("texts", texts);
         o.put("groupOwn", d.group != null);                                     // בלי — כותרת הקבוצה הולכת אחרי השם
         if (looks == null) return o;                                            // עיצוב מוכן — בלי הצבעים (הם של התוכנה והאופן)
@@ -273,6 +275,7 @@ final class Bridge {
         sw.put(Design.T_NAME, Verbs.SW_T_NAME);
         sw.put(Design.T_DATA, Verbs.SW_T_DATA);
         sw.put(Design.T_GROUP, Verbs.SW_T_GROUP);
+        sw.put(Design.T_TAG, Verbs.SW_T_TAG);
         sw.put("look", Verbs.SW_MODE_LOOK);
         sw.put("color", Verbs.SW_COLOR);
         o.put("switches", sw);
@@ -289,7 +292,7 @@ final class Bridge {
         keys.put("dark", Palette.DARK);
         keys.put("system", Design.SYSTEM);
         o.put("keys", keys);
-        o.put("texts", new JSONArray(java.util.Arrays.asList(Design.T_TITLE, Design.T_NAME, Design.T_DATA, Design.T_GROUP)));
+        o.put("texts", new JSONArray(java.util.Arrays.asList(Design.T_TITLE, Design.T_NAME, Design.T_DATA, Design.T_GROUP, Design.T_TAG)));
         o.put("weights", new JSONArray(java.util.Arrays.asList(Design.W_LIGHT, Design.W_REG, Design.W_MED, Design.W_BOLD)));
         JSONObject ranges = new JSONObject();
         ranges.put("cols", new JSONArray(java.util.Arrays.asList(Design.COLS[0], Design.COLS[1])));

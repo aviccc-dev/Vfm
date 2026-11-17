@@ -37,10 +37,15 @@ const run=async()=>{
     say('התצוגה המקדימה — רשת, 4 טורים',$('pv').querySelector('.items').style.gridTemplateColumns.startsWith('repeat(4'));
     // כתב
     const tx=[...d.querySelectorAll('#main .tx')];
-    say('ארבעה סוגי כתב',tx.length===4&&tx[3].textContent.includes('כותרת קבוצה'));
+    say('חמישה סוגי כתב — החמישי: תווית הסוג',tx.length===5&&tx[3].textContent.includes('כותרת קבוצה')&&tx[4].textContent.includes('תווית הסוג'));
     click([...tx[1].querySelectorAll('.seg button')].find(b=>b.textContent==='מודגש'));
     setNum(d.querySelectorAll('#main .tx')[1].querySelector('.num'),18);
     say('שם: 18, מודגש ← '+cmd(),cmd().includes('/כתב-שם:18,מודגש'));
+    // תווית הסוג — קטנה יותר
+    setNum(d.querySelectorAll('#main .tx')[4].querySelector('.num'),8);
+    say('תווית הסוג 8 ← '+cmd(),cmd().includes('/כתב-תווית:8'));
+    const tg=$('pv').querySelector('.tg')||[...$('pv').querySelectorAll('.ic')].find(e=>e.textContent==='ידנית');
+    say('התצוגה המקדימה — התווית בגודל 8',!!tg&&tg.style.fontSize==='8px');
     // צבעים
     const rows=()=>[...d.querySelectorAll('#main .cl')];
     const hx=rows().find(r=>r.textContent.includes('טקסט משני')).querySelector('.hex');

@@ -261,7 +261,7 @@ final class ShapeCmds {
                     same = got.equals(want.replace("%", "").trim());
                 } else {
                     Design.Text t = who.equals(Design.T_TITLE) ? d.title : who.equals(Design.T_NAME) ? d.nameT
-                            : who.equals(Design.T_DATA) ? d.data : d.groupText();
+                            : who.equals(Design.T_DATA) ? d.data : who.equals(Design.T_TAG) ? d.tagText() : d.groupText();
                     if (what.equals(Design.K_SIZE)) {
                         got = t.size == (int) t.size ? String.valueOf((int) t.size) : String.valueOf(t.size);
                         same = got.equals(want);

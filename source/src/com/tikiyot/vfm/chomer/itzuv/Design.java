@@ -54,6 +54,8 @@ final class Design {
     static final String T_NAME = "שם", T_DATA = "נתונים", K_SIZE = "גודל", K_WEIGHT = "משקל", K_FONT = "גופן";  // תחביר
     /** מבנה 239 (המשתמש, 17.11.2026: "כן" — סוג כתב רביעי): כותרת של קבוצה בתוך רשימה ("צור כותרת"). */
     static final String T_GROUP = "קבוצה";  // תחביר
+    /** מבנה 249 (המשתמש, 17.11.2026: "להקטין ידנית ולהגדיל את השם"): הכתב של תווית הסוג ("ידנית", "פקודה"…). */
+    static final String T_TAG = "תווית";  // תחביר
     static final String YES = "כן", NO = "לא", SYSTEM = "מערכת";  // תחביר
     static final String W_LIGHT = "דק", W_REG = "רגיל", W_MED = "בינוני", W_BOLD = "מודגש";  // תחביר
     static final String P_ICON = "צלמית", P_COLOR = "צבע", P_SEP = "·";  // תחביר
@@ -93,6 +95,17 @@ final class Design {
     /** מבנה 239: הכתב של כותרת קבוצה; null — כמו השם (כמו שהיה עד כאן). */
     Text group;
 
+    /**
+     * מבנה 249: הכתב של תווית הסוג — בפס שמתחת לצלמית (ברשת) ובתווית שבמקום הצלמית (בשורות); null — לפי גודל הצלמית (כמו
+     * שהיה עד כאן).
+     */
+    Text tag;
+
+    /** מבנה 249: הכתב של תווית הסוג כמו שייראה — שלה, או הכתב הקטן שהתווית מתחילה ממנו (לבדיקה ולתוסף). */
+    Text tagText() {
+        return tag != null ? tag : new Text(11, 700, SYSTEM);
+    }
+
     /** מבנה 239: הכתב של כותרת קבוצה — שלה, או של השם. */
     Text groupText() {
         return group != null ? group : nameT;
@@ -121,6 +134,7 @@ final class Design {
         d.nameT = nameT.copy();
         d.data = data.copy();
         d.group = group == null ? null : group.copy();
+        d.tag = tag == null ? null : tag.copy();
         d.fit = fit;
         d.min = min;
         d.lines = lines;
@@ -332,7 +346,8 @@ final class Design {
     String signature() {
         return grid + "|" + cols + "|" + icon + "|" + gap + "|" + showIcon + "|" + around + "|" + tint + "|" + showData
                 + "|" + dataBelow + "|" + nameT.size + nameT.weight + nameT.font + "|" + data.size + data.weight + data.font
-                + "|" + fit + "|" + min + "|" + lines + "|" + (group == null ? "" : group.size + "" + group.weight + group.font);
+                + "|" + fit + "|" + min + "|" + lines + "|" + (group == null ? "" : group.size + "" + group.weight + group.font)
+                + "|" + (tag == null ? "" : tag.size + "" + tag.weight + tag.font);
     }
 
     // ---------- קריאה ----------
@@ -395,6 +410,9 @@ final class Design {
             else if (who.equals(T_GROUP)) {                                  // מבנה 239: מתחיל מהשם, ומשתנה רק מה שנכתב
                 if (group == null) group = nameT.copy();
                 text(group, what, v);
+            } else if (who.equals(T_TAG)) {                                  // מבנה 249: מתחיל מכתב קטן, ומשתנה רק מה שנכתב
+                if (tag == null) tag = new Text(11, 700, SYSTEM);   // כמו התווית של היום — מודגשת
+                text(tag, what, v);
             }
         }
     }
@@ -664,6 +682,11 @@ final class Design {
                 text = withKey(text, S_MID, T_GROUP + ": " + K_SIZE, num(d.group.size));
                 text = withKey(text, S_MID, T_GROUP + ": " + K_WEIGHT, weightName(d.group.weight));
                 text = withKey(text, S_MID, T_GROUP + ": " + K_FONT, d.group.font);
+            }
+            if (d.tag != null) {                                              // מבנה 249
+                text = withKey(text, S_MID, T_TAG + ": " + K_SIZE, num(d.tag.size));
+                text = withKey(text, S_MID, T_TAG + ": " + K_WEIGHT, weightName(d.tag.weight));
+                text = withKey(text, S_MID, T_TAG + ": " + K_FONT, d.tag.font);
             }
             return Physical.ownDir(dir()) && Physical.ownWrite(f, text) == null;   // מבנה 232: רק בהיתר
         } catch (Throwable t) {

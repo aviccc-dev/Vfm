@@ -183,7 +183,8 @@ final class Looks {
                 if (strip != null) {
                     strip.setText(Ui.tagShort(kind));
                     strip.setBackgroundColor(Ui.kindColor(kind));
-                    strip.setTextSize(TypedValue.COMPLEX_UNIT_PX, Math.max(sp(c, 11), px * 0.16f));
+                    if (d.tag != null) text(strip, d.tag, d.tag.size);             // מבנה 249: הכתב של התווית — כמו שנקבע
+                    else strip.setTextSize(TypedValue.COMPLEX_UNIT_PX, Math.max(sp(c, 11), px * 0.16f));
                     strip.setVisibility(View.VISIBLE);
                 }
                 icon = !own.isEmpty() ? own : Ui.tag(kind) != null ? kind : "📄";
@@ -217,6 +218,7 @@ final class Looks {
         CharSequence label = box.getText();
         boolean emoji = label.length() > 0 && label.length() <= 4 && !Character.isLetterOrDigit(label.charAt(0));   // 🗂️ — עם בורר צורה
         if (emoji && d.grid) box.setTextSize(TypedValue.COMPLEX_UNIT_PX, px * 0.5f);
+        else if (d.tag != null && kind != null && !d.grid && !emoji) text(box, d.tag, d.tag.size);   // מבנה 249: התווית בשורות — כמו שנקבע
         else box.setTextSize(TypedValue.COMPLEX_UNIT_PX, box.getTextSize() * scale);
         float r = Ui.dp(c, d.grid ? 12 : 6);
         if (Design.FILL.equals(d.around)) {

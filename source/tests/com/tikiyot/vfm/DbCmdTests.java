@@ -1445,6 +1445,19 @@ final class DbCmdTests {
                         } finally {
                             Db.currentMode = was246;
                         }
+                        // מבנה 249 (המשתמש, 17.11.2026: "להקטין ידנית ולהגדיל את השם"): תווית הסוג — סוג כתב חמישי
+                        Design before249 = ShapeCmds.state(Verbs.K_LIST, "מראה 234/ב", m91).shown;
+                        List<String> t249 = go(o121 + "עצב \"" + m91 + "/מראה 234/ב\" /כתב-תווית:9,רגיל /כתב-שם:20\n"
+                                + "ודא עיצוב \"" + m91 + "/מראה 234/ב\" /כתב-תווית:9,רגיל /כתב-שם:20\n"
+                                + "ודא עיצוב \"" + m91 + "/מראה 234/ב/ג\" /כתב-תווית:11\n", here, vars, lib);   // ג בחרה עיצוב — מתחילה מחדש
+                        Design d249 = ShapeCmds.state(Verbs.K_LIST, "מראה 234/ב", m91).shown;
+                        Batch.Plan big249 = Batch.plan(o121 + "עצב \"" + m91 + "/מראה 234/ב\" /כתב-תווית:99\n", here, vars, lib);
+                        go(o121 + "עצב \"" + m91 + "/מראה 234/ב\" /כתב-תווית:\"\" /כתב-שם:\"\"\n", here, vars, lib);
+                        Design back249 = ShapeCmds.state(Verbs.K_LIST, "מראה 234/ב", m91).shown;
+                        o.check("מבנה 249: \"תווית הסוג\" — /כתב-תווית: (גודל, משקל); רשימה שבחרה עיצוב — מתחילה מחדש; נבדקת ב\"ודא עיצוב\"; מחוץ לטווח — שגיאה; \"\" — חוזרת לגודל הצלמית " + t249,
+                                before249.tag == null && d249.tag != null && d249.tag.size == 9 && d249.nameT.size == 20 && !t249.toString().contains("❌")
+                                        && big249.blocked() && back249.tag == null && !d249.signature().equals(back249.signature())
+                                        && Design.get(Design.DEFAULT).copy().tagText().size == 11);
                     }
                     // מבנה 123: "שחזר דוגמאות" כפקודה; ו"צור אופן" על אופן שיש בו רשימות ואין בו בית — מתקן
                     {
