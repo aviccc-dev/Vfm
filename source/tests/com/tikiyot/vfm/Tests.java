@@ -3805,7 +3805,6 @@ public final class Tests {
                 String[][] known128 = {
                         {"masachim/IniEditScreen.java", "1", "עורך קובצי ההגדרות"},
                         {"masachim/LabScreen.java", "2", "עותק פרטי של עמוד התוסף שרץ"},
-                        {"masachim/itzuv/Design.java", "12", "קובצי העיצוב"},
                         {"masachim/rechivim/Acts.java", "1", "ניקוי עותקים ישנים בתיקיית השליחה של התוכנה"},
                         {"masachim/rechivim/BatchUi.java", "2", "עותק פרטי להצגה"},
                         // מבנה 193 (המשתמש, 16.11.2026: "מאשר"): גם קומת הפקודות בשומר. מקום חדש שכותב — להביא למשתמש להחלטה.
