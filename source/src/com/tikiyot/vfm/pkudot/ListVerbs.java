@@ -157,7 +157,7 @@ final class ListVerbs {
      */
     static String planPickedEdit(final Batch.Step s, final Verbs.Cmd c, Sim sim) {
         final Batch.Selection sel = sim.selected;
-        // מבנה 121: סדר ידני ("/מקום:") של הפריטים שנבחרו, בתוך הרשימה שמוצגת; ועיצוב ("/עיצוב:%תוכן%") לרשימה. בלי גיבוי — כמו במסך.
+        // מבנה 121: סדר ידני ("/מקום:") של הפריטים שנבחרו, בתוך הרשימה שמוצגת; ועיצוב ("עצב רשימה … /עיצוב:%תוכן%" — מבנה 233) לרשימה. בלי גיבוי — כמו במסך.
         final boolean place = c.edit != null && c.edit.containsKey(Verbs.E_PLACE), design = c.edit != null && c.edit.containsKey(Store.P_DESIGN);
         if (place || design) {
             if (sel == null || sel.mode == null || sel.ids == null || sel.ids.isEmpty() || (place && design) || c.edit.size() != 1
@@ -268,9 +268,10 @@ final class ListVerbs {
         final boolean smartUpd = c.kind.equals(Verbs.K_SMART) && c.verb.equals(Verbs.UPDATE);
         final boolean note = c.kind.equals(Verbs.K_NOTE), title = c.kind.equals(Verbs.K_TITLE);   // מ0.37
         final boolean listUpd = c.kind.equals(Verbs.K_LIST) && c.verb.equals(Verbs.UPDATE);   // מבנה 113: עדכן רשימה
-        if (!list && !smartNew && !smartUpd && !note && !title && !listUpd) return null;
-        if (listUpd) c.noOpen = true;                                           // השם יכול להשתנות — לא פותחים בסוף
-        if (listUpd && Parse.var(Syntax.V_SELECTED).equals(c.arg)) return planPickedEdit(s, c, sim);                  // מבנה 113: מהטופס
+        final boolean listShape = c.kind.equals(Verbs.K_LIST) && c.verb.equals(Verbs.SHAPE);   // מבנה 233: עצב רשימה
+        if (!list && !smartNew && !smartUpd && !note && !title && !listUpd && !listShape) return null;
+        if (listUpd || listShape) c.noOpen = true;                              // השם יכול להשתנות — לא פותחים בסוף
+        if ((listUpd || listShape) && Parse.var(Syntax.V_SELECTED).equals(c.arg)) return planPickedEdit(s, c, sim);   // מבנה 113, 233: מהמסך
         if ((note || title) && Parse.var(Syntax.V_SELECTED).equals(c.arg)) return planPickedNote(s, c, title, sim);   // מבנה 93: מהמסך
         if (smartNew && Parse.var(Syntax.V_NEW_NAME).equals(c.arg)) return planPickedSmart(s, c, sim);                // מבנה 97: מהטופס
         if (smartUpd && Parse.var(Syntax.V_SELECTED).equals(c.arg)) return planPickedSmartEdit(s, c, sim);            // מבנה 99: מהטופס
@@ -309,8 +310,14 @@ final class ListVerbs {
                         if (parent == 0) return DbListCmd.Res.err(Words.DbCmd.needFullWay(Names.label(at)));
                         DbMore.order(t, parent, java.util.Collections.singletonList(u.id), Verbs.place(c.edit.get(Verbs.E_PLACE)));
                     }
-                    if (c.edit.containsKey(Store.P_DESIGN)) t.setProp(u.id, Store.P_DESIGN, c.edit.get(Store.P_DESIGN).trim());   // "" — לרשת
                     return edited(t, u.id, c.edit.get(Verbs.E_NAME), c.edit.get(Store.P_ICON), c.edit.get(Store.P_DESC), c.edit.get(Store.P_WHY));
+                }
+                if (listShape) {                                                 // מבנה 233: עצב רשימה — הרשימה לפי הדרך; רק מה שנכתב משתנה
+                    List<String> at = Names.parsePath(c.arg);
+                    DbPaths.Found u = DbPaths.listAt(t, mode, at);
+                    if (u.error != null || u.id == 0) return DbListCmd.Res.err(u.ambiguous ? u.error : Words.ListCmdW.noList(Names.label(at)));
+                    if (c.edit.containsKey(Store.P_DESIGN)) t.setProp(u.id, Store.P_DESIGN, c.edit.get(Store.P_DESIGN).trim());   // "" — לרשת
+                    return DbListCmd.Res.ok(Words.ListCmdW.DESIGN_SET);
                 }
                 // מבנה 100: המספר של מה שנוצר / עודכן חוזר (DbListCmd.Res.made ← DbListCmd.Step.made) — כפתור שמריץ את השורה פותח בדיוק אותו
                 if (list) {                                                      // מבנה 102: "צור רשימה" — הכלל האחד; שם קיים — סירוב

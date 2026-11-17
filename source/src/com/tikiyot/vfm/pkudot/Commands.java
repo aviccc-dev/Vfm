@@ -341,6 +341,7 @@ final class Commands {
             verb(Verbs.OPEN, Words.Def.W_OPEN),
             verb(Verbs.CREATE, Words.Def.W_CREATE),
             verb(Verbs.UPDATE, Words.Def.W_UPDATE),
+            verb(Verbs.SHAPE, Words.Def.W_SHAPE),
             verb(Verbs.FIND, Words.Def.W_FIND),
             verb(Verbs.BACK, Words.Def.W_BACK),
             verb(Verbs.RUN, Words.Def.W_RUN),

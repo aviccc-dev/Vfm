@@ -1176,11 +1176,11 @@ final class DbCmdTests {
                                 ok120 && !st120.contains("lib.refreshAsked(") && !st120.contains("lib.deepRefresh(") && !st120.contains("lib.build(")
                                         && st120.contains("Manager.onIndex("));
                     }
-                    // מבנה 121: סדר ידני ועיצוב לרשימה — "עדכן רשימה … /מקום: /עיצוב:", בקובץ ומהמסך
+                    // מבנה 121: סדר ידני ועיצוב לרשימה — "עדכן רשימה … /מקום:" ו"עצב רשימה … /עיצוב:" (מבנה 233), בקובץ ומהמסך
                     {
                         String o121 = "אופן \"" + m91 + "\"\n";
                         List<String> w121 = go(o121 + "MD ידנית \"סדר 121/א\"\nMD ידנית \"סדר 121/ב\"\nMD ידנית \"סדר 121/ג\"\n"
-                                + "עדכן רשימה \"סדר 121/ג\" /מקום:לראש\nעדכן רשימה \"סדר 121/ב\" /עיצוב:\"כחול 121\"\n", here, vars, lib);
+                                + "עדכן רשימה \"סדר 121/ג\" /מקום:לראש\nעצב רשימה \"סדר 121/ב\" /עיצוב:\"כחול 121\"\n", here, vars, lib);
                         final long[] id121 = new long[3];
                         final String[] got121 = new String[4];
                         final Db.Use<Void> read121 = new Db.Use<Void>() {
@@ -1211,6 +1211,14 @@ final class DbCmdTests {
                                 Batch.plan(o121 + "עדכן רשימה \"סדר 121/א\" /מקום:הצידה\n", here, vars, lib).blocked()
                                         && !scr121.contains("DbMore.order(") && !scr121.contains("DbVerbsUi.write(") && !scr121.contains("DbListCmd.now(")
                                         && scr121.contains("Manager.onListOrder(") && scr121.contains("Manager.onListDesign("));
+                        // מבנה 233 (המשתמש, 17.11.2026: "אולי עצב" · "אין צורך לשמור לקבצים ישנים"): /עיצוב: — רק של "עצב"
+                        o.check("מבנה 233: \"עדכן רשימה … /עיצוב:\" — שגיאה (העיצוב עבר ל\"עצב\"); \"עצב רשימה\" בלי מתג, או לרשימה חכמה — שגיאה; "
+                                        + "המסך שולח \"עצב\"",
+                                Batch.plan(o121 + "עדכן רשימה \"סדר 121/ב\" /עיצוב:\"כחול 121\"\n", here, vars, lib).blocked()
+                                        && Batch.plan(o121 + "עצב רשימה \"סדר 121/ב\"\n", here, vars, lib).blocked()
+                                        && Batch.plan(o121 + "עצב רשימה חכמה \"x\" /עיצוב:\"כחול 121\"\n", here, vars, lib).blocked()
+                                        && !Batch.plan(o121 + "עצב רשימה \"סדר 121/ב\" /עיצוב:\"\"\n", here, vars, lib).blocked()
+                                        && de121.text.startsWith("עצב רשימה "));
                     }
                     // מבנה 123: "שחזר דוגמאות" כפקודה; ו"צור אופן" על אופן שיש בו רשימות ואין בו בית — מתקן
                     {

@@ -25,6 +25,11 @@ final class Verbs {
 
     static final String OPEN = "פתח", CREATE = "צור", UPDATE = "עדכן", FIND = "מצא", BACK = "חזור",   // תחביר
             RUN = "הרץ", ADD = "הוסף";   // תחביר
+    /**
+     * מבנה 233 (המשתמש, 17.11.2026: "אולי עצב" · "אין צורך לשמור לקבצים ישנים"): "עצב" — הפועל של העיצוב, לבד: "עצב רשימה
+     * "<דרך>" /עיצוב:"<שם>"…". הכלל האחד של העיצוב — כאן ובשלבים שלו; /עיצוב: יצא מ"עדכן" (שמשנה פרטים של רשימה).
+     */
+    static final String SHAPE = "עצב";   // תחביר
     static final String SCREEN = "מסך", LIST = "רשימה", SMART_WORD = "חכמה", FOLDER = "תיקייה";   // תחביר
     /** 1.17.0: "פתח תפריט <רשימה ב'שמור לתוכנה'>" · "צור פקודה" (המילון, 23). */
     static final String MENU = "תפריט", CMD_WORD = "פקודה";   // תחביר
@@ -76,7 +81,7 @@ final class Verbs {
     /** מבנה 113: "עדכן רשימה "<דרך>" /שם:… /צלמית:… /תיאור:… /למה:…" — המתגים. */
     static final String SW_NAME = "/שם:", SW_ICON = "/צלמית:", SW_DESC = "/תיאור:", SW_WHY = "/למה:";   // תחביר
     static final String E_NAME = "name";
-    /** מבנה 121: /מקום:למעלה|למטה|לראש|לסוף — המקום של הרשימה בתוך הרשימה שהיא בה (סדר ידני); /עיצוב:"<שם>" — העיצוב שלה ("" — לרשת). */
+    /** מבנה 121: /מקום:למעלה|למטה|לראש|לסוף — המקום של הרשימה בתוך הרשימה שהיא בה (סדר ידני). מבנה 233: /עיצוב:"<שם>" — של "עצב" ("" — לרשת). */
     static final String SW_PLACE = "/מקום:", SW_DESIGN = "/עיצוב:", E_PLACE = "place";   // תחביר
     static final String[] PLACES = {"למעלה", "למטה", "לראש", "לסוף"};   // תחביר — לפי הסדר של DbMore.UP … BOTTOM
 
@@ -92,7 +97,7 @@ final class Verbs {
     static boolean isVerb(String line) {
         String w = first(line);
         return w.equals(OPEN) || w.equals(CREATE) || w.equals(UPDATE) || w.equals(FIND) || w.equals(BACK)
-                || w.equals(RUN) || w.equals(ADD);
+                || w.equals(RUN) || w.equals(ADD) || w.equals(SHAPE);
     }
 
     private static String first(String line) {
@@ -213,8 +218,8 @@ final class Verbs {
                 c.error = Words.Verb.usage(OPEN);
             }
             if (c.error == null && !c.kind.equals(K_SCREEN) && c.arg.isEmpty()) c.error = Words.Verb.usage(OPEN);
-        } else if (c.verb.equals(CREATE) || c.verb.equals(UPDATE)) {
-            if (starts(rest, LIST + " " + SMART_WORD)) {
+        } else if (c.verb.equals(CREATE) || c.verb.equals(UPDATE) || c.verb.equals(SHAPE)) {
+            if (!c.verb.equals(SHAPE) && starts(rest, LIST + " " + SMART_WORD)) {   // מבנה 233: רשימה חכמה — מוצגת במסך החיפוש (העיצוב הכללי)
                 c.kind = K_SMART;
                 String[] nr = nameAndRest(takeSort(c, after(rest, LIST + " " + SMART_WORD)));
                 c.arg = nr[0];
@@ -225,7 +230,7 @@ final class Verbs {
                 c.edit = new java.util.LinkedHashMap<String, String>();
                 for (String w : Parse.tokens(after(rest, LIST))) {
                     String key = w.startsWith(SW_NAME) ? E_NAME : w.startsWith(SW_ICON) ? Store.P_ICON : w.startsWith(SW_DESC) ? Store.P_DESC
-                            : w.startsWith(SW_WHY) ? Store.P_WHY : w.startsWith(SW_PLACE) ? E_PLACE : w.startsWith(SW_DESIGN) ? Store.P_DESIGN : null;
+                            : w.startsWith(SW_WHY) ? Store.P_WHY : w.startsWith(SW_PLACE) ? E_PLACE : null;
                     if (key != null) c.edit.put(key, w.substring(w.indexOf(':') + 1));
                     else if (w.startsWith("/") || !c.arg.isEmpty()) c.error = Words.Verb.usage(UPDATE);
                     else c.arg = unquote(w);
@@ -238,6 +243,15 @@ final class Verbs {
                 c.kind = K_MODE;
                 c.arg = unquote(after(rest, MODE_WORD));
                 if (c.arg.isEmpty()) c.error = Words.Verb.usage(c.verb);
+            } else if (c.verb.equals(SHAPE) && starts(rest, LIST)) {          // מבנה 233: עצב רשימה "<דרך>" /עיצוב:"<שם>"
+                c.kind = K_LIST;
+                c.edit = new java.util.LinkedHashMap<String, String>();
+                for (String w : Parse.tokens(after(rest, LIST))) {
+                    if (w.startsWith(SW_DESIGN)) c.edit.put(Store.P_DESIGN, unquote(w.substring(SW_DESIGN.length())));
+                    else if (w.startsWith("/") || !c.arg.isEmpty()) c.error = Words.Verb.usage(SHAPE);
+                    else c.arg = unquote(w);
+                }
+                if (c.arg.isEmpty() || c.edit.isEmpty()) c.error = Words.Verb.usage(SHAPE);
             } else if (c.verb.equals(CREATE) && (starts(rest, NOTE_WORD) || starts(rest, TITLE_WORD))) {   // מ0.37
                 boolean title = starts(rest, TITLE_WORD);
                 c.kind = title ? K_TITLE : K_NOTE;
@@ -256,7 +270,8 @@ final class Verbs {
         } else {
             c.error = Words.Verb.usage(OPEN);
         }
-        if (c.noOpen && c.error == null && !((c.verb.equals(CREATE) || c.verb.equals(UPDATE)) && (c.kind.equals(K_LIST) || c.kind.equals(K_SMART))))
+        if (c.noOpen && c.error == null && !((c.verb.equals(CREATE) || c.verb.equals(UPDATE) || c.verb.equals(SHAPE))
+                && (c.kind.equals(K_LIST) || c.kind.equals(K_SMART))))
             c.error = Words.Verb.NO_OPEN_ONLY;                                  // רק לפועל שכותב רשימה
         if (c.fromBackup && c.error == null && !K_MODE.equals(c.kind)) c.error = Words.Verb.FROM_BACKUP_ONLY;
         return c;
