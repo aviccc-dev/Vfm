@@ -63,6 +63,9 @@ public class SettingsScreen extends Activity {
         button(root, Words.Prefs.QUICK_REFRESH, new Runnable() {
             @Override public void run() { refresh(); }
         });
+        button(root, Words.DesignW.PANEL, new Runnable() {                               // מבנה 245: לוח העיצוב — כל התוכנה
+            @Override public void run() { LabScreen.design(SettingsScreen.this, Verbs.PROGRAM_WORD, ""); }
+        });
         button(root, Words.DesignW.MANAGE, new Runnable() {                              // 1.12.1
             @Override public void run() { DesignUi.manage(SettingsScreen.this); }
         });

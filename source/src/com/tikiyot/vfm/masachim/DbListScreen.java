@@ -23,7 +23,7 @@ public class DbListScreen extends ListScreen<Store.Member> {
     static final String EXTRA_MODE = "mode", EXTRA_LIST = "list", EXTRA_SORT = "sort";
     /** מ0.22: מיון מהפקודה ("פתח רשימה … מיין:…"); ריק — הסדר של הרשימה. */
     private String sortBy = "";
-    private static final int MENU_DESIGN = 2, MENU_SETTINGS = 3, MENU_CMDS = 5, MENU_PLUGIN_DIAG = 9, MENU_EDITOR = 10;
+    private static final int MENU_DESIGN = 2, MENU_SETTINGS = 3, MENU_CMDS = 5, MENU_PLUGIN_DIAG = 9, MENU_EDITOR = 10, MENU_DESIGN_OLD = 11;
 
     private String mode;
     private long listId;
@@ -886,6 +886,7 @@ public class DbListScreen extends ListScreen<Store.Member> {
         menu.add(0, MENU_CMDS, 0, Words.BATCH_MENU);
         menu.add(0, MENU_SETTINGS, 0, Words.Main.SETTINGS);
         menu.add(0, MENU_DESIGN, 0, Words.DesignW.MENU);
+        menu.add(0, MENU_DESIGN_OLD, 0, Words.DesignW.MENU_OLD);                  // מבנה 245: עד שהלוח יעבוד במכשיר
         // מ0.35 (המשתמש, 11.11.2026, על הגיבויים: "בינתיים שתעבור להגדרות. היא לא צריכה להיות במקום כזה מרכזי") — הכניסה בהגדרות
         // מ0.37: "⚙ מסד" ירדה מהתפריט — במסך המסד נשארו רק הגיבויים, והכניסה אליהם מההגדרות
         // מ0.42: תוסף האבחון — הבדיקות, הדוחות והתקלות (claude/tosaf-bdikot.md). מ0.43: במקום "בדיקת הפקודות" ו"דוח אבחון"
@@ -899,14 +900,33 @@ public class DbListScreen extends ListScreen<Store.Member> {
     protected boolean item(int id) {
         if (id == MENU_CMDS) CmdMenu.show(this, null);
         else if (id == MENU_SETTINGS) startActivity(new Intent(this, SettingsScreen.class));
-        else if (id == MENU_DESIGN) design();
+        else if (id == MENU_DESIGN) panel();
+        else if (id == MENU_DESIGN_OLD) design();
         else if (id == MENU_EDITOR) LabScreen.edit(this, null);
         else if (id == MENU_PLUGIN_DIAG) LabScreen.open(this, Words.DbCmd.TOOL_DIAG);
         else return false;
         return true;
     }
 
-    /** עיצוב: בבית — של מסך הבית (כמו בבית הישן); ברשימה — שלה (נשמר במסד). */
+    /**
+     * מבנה 245: "🎨 עיצוב" — לוח העיצוב (התוסף), על הרשימה שעל המסך; בבית — על האופן (מה שמעל כל הרשימות שלו). הדרך — כמו
+     * שהפקודה מוצאת אותה (DbPaths.pathOf); רשימה שהדרך שלה מובילה לאחרת (כמה באותה דרך) — בינתיים החלון הישן.
+     */
+    private void panel() {
+        if (atHome || store == null) {
+            LabScreen.design(this, Verbs.MODE_WORD, mode);
+            return;
+        }
+        java.util.List<String> path = DbPaths.pathOf(store, listId);
+        if (path.isEmpty() || DbPaths.find(store, mode, path) != listId) {
+            Ui.toast(this, Words.DesignW.PANEL_NO_PATH);
+            design();
+            return;
+        }
+        LabScreen.design(this, Verbs.LIST, Names.pathText(path));
+    }
+
+    /** עיצוב (החלון הישן): בבית — של מסך הבית (כמו בבית הישן); ברשימה — שלה (נשמר במסד). */
     private void design() {
         if (atHome) {
             String cur = Design.homeName();

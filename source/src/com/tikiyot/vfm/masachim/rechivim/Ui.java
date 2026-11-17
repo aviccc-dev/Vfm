@@ -70,6 +70,11 @@ public final class Ui {
         if (darkNow) a.setTheme(dialog ? android.R.style.Theme_DeviceDefault_Dialog : android.R.style.Theme_DeviceDefault);
     }
 
+    /** מבנה 245: המספר של הצבעים שבשימוש — מסך שנבנה במספר אחר נבנה מחדש כשחוזרים אליו (ListScreen). */
+    static synchronized int painted() {
+        return painted;
+    }
+
     /** הצבעים מהעיצוב — רק כשמה שנקבע השתנה. true — השתנו. */
     static synchronized boolean freshColors() {
         String[] l = Palette.looks();

@@ -34,7 +34,19 @@ import java.util.Map;
 
 public final class LabScreen extends Activity {
 
-    static final String EXTRA = "exp", EXTRA_VER = "ver", EXTRA_FILE = "file", EXTRA_CMD = "cmd";
+    static final String EXTRA = "exp", EXTRA_VER = "ver", EXTRA_FILE = "file", EXTRA_CMD = "cmd", EXTRA_TARGET = "target";
+    /** מבנה 245: מה הלוח של העיצוב מעצב כשהוא נפתח ("רשימה" / "אופן" / "תוכנה", ואחרי טאב — הדרך או השם) — פעם אחת. */
+    private String startTarget;
+
+    /**
+     * מבנה 245 (המשתמש, 17.11.2026: "מקום מרוכז שבו משנים את כל הפרמטרים האלה" · "או בורר שבוחר רשימה"): לוח העיצוב — התוסף,
+     * על מה שהמסך מבקש: what — "רשימה" (target — הדרך), "אופן" (target — השם), או "תוכנה".
+     */
+    static void design(Activity a, String what, String target) {
+        Intent i = new Intent(a, LabScreen.class).putExtra(EXTRA, Words.DbCmd.TOOL_DESIGN);
+        if (what != null && !what.isEmpty()) i.putExtra(EXTRA_TARGET, what + "\t" + (target == null ? "" : target));
+        a.startActivity(i);
+    }
     /** מ0.45+: קובץ הפקודות שהעורך האינטראקטיבי פותח (startFile — פעם אחת). */
     private String startCmd;
 
@@ -79,6 +91,7 @@ public final class LabScreen extends Activity {
         super.onCreate(b);
         exp = getIntent().getStringExtra(EXTRA);
         startCmd = getIntent().getStringExtra(EXTRA_CMD);
+        startTarget = getIntent().getStringExtra(EXTRA_TARGET);
         vars = BatchUi.vars(this, Shortcuts.dir());
         bundled(false);
         if (exp == null) { showList(); return; }
@@ -311,6 +324,13 @@ public final class LabScreen extends Activity {
             String p = startCmd;
             startCmd = null;
             return p;
+        }
+
+        @Override
+        public String startTarget() {
+            String t = startTarget;
+            startTarget = null;
+            return t;
         }
 
         @Override public void toast(String text) { Ui.toast(LabScreen.this, text); }

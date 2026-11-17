@@ -31,6 +31,9 @@ final class Bridge {
         /** קובץ הפקודות לפתוח בעורך (מרשימה, מהפס הצף) — פעם אחת; null — אין. */
         String startFile();
 
+        /** מבנה 245: מה הלוח של העיצוב מעצב כשנפתח — "רשימה"/"אופן"/"תוכנה", טאב, הדרך או השם — פעם אחת; null — אין. */
+        String startTarget();
+
         // --- מבנה 15: מה שהגשר מבקש מהמסך — ההודעות, הבוררים, הטופס, ההרצה, השליחה והצבעים. נקראות על חוט המסך (חוץ מ־colors). ---
 
         /** הודעה קצרה. */
@@ -176,6 +179,14 @@ final class Bridge {
     public String design(String what, String target) {
         try {
             String w = what == null ? "" : what.trim(), t = target == null ? "" : target.trim();
+            if (w.isEmpty()) {                                                   // מבנה 245: מה שהמסך ביקש כשפתח את הלוח
+                String st = host.startTarget();
+                int tab = st == null ? -1 : st.indexOf('\t');
+                if (tab > 0) {
+                    w = st.substring(0, tab);
+                    t = st.substring(tab + 1);
+                }
+            }
             String kind = w.equals(Verbs.LIST) ? Verbs.K_LIST : w.equals(Verbs.MODE_WORD) ? Verbs.K_MODE : Verbs.K_PROGRAM;
             if (kind.equals(Verbs.K_PROGRAM)) w = Verbs.PROGRAM_WORD;
             String m = kind.equals(Verbs.K_MODE) && !t.isEmpty() ? t : String.valueOf(Db.currentMode);

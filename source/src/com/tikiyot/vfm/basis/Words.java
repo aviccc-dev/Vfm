@@ -1648,6 +1648,11 @@ public final class Words {
         public static final String LISTS_NOTE = "צלמית וצבע לכל רשימה, לפי המסלול שלה, למשל: לימוד/הערות = צלמית 📚 · צבע ירוק. בסביבה אחרת — רק כשיש רשימה באותו מסלול";
         public static final String EXISTS = "כבר יש עיצוב בשם הזה";
         public static final String MENU = "🎨 עיצוב";
+        /** מבנה 245: החלון הישן — עד שהלוח יעבוד במכשיר (המשתמש, 17.11.2026: "אחרי שהכל יעבוד נמחק מהקוד הראשי"). */
+        public static final String MENU_OLD = "🎨 עיצוב — החלון הישן";
+        public static final String PANEL = "🎨 לוח העיצוב";
+        /** מבנה 245: רשימה שהלוח עוד לא יודע להגיע אליה בדרך שלה (כמה רשימות באותה דרך). */
+        public static final String PANEL_NO_PATH = "ללוח העיצוב אין דרך ברורה לרשימה הזו (יש כמה באותה דרך) — בינתיים: החלון הישן";
         public static final String TITLE_LIST = "עיצוב לרשימה הזו";
         public static final String TITLE_HOME = "עיצוב למסך הבית";
         public static final String INHERIT = "↑ כמו הרשימה שמעליה";
@@ -2093,6 +2098,8 @@ public final class Words {
         public static final String TOOL_EDITOR = "עורך אינטראקטיבי";   // בכונן
         /** מ0.42: תוסף האבחון (בא עם התוכנה). */
         public static final String TOOL_DIAG = "אבחון";   // בכונן
+        /** מבנה 245: תוסף העיצוב — הלוח (בא עם התוכנה). */
+        public static final String TOOL_DESIGN = "עיצוב";   // בכונן
         public static final String TOOL_EXPORT = "יצוא רשימה", TOOL_IMPORT = "ייבוא רשימה",   // בכונן
                 HOLE_EXPORT = "רשימה-לייצוא", HOLE_FILE = "שם-הקובץ-בתיקיית-יצוא", HOLE_INTO = "לתוך-רשימה";   // תחביר
 

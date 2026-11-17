@@ -4306,6 +4306,20 @@ public final class Tests {
             for (String[] r : Palette.ROLES) if (!html.contains("[\"" + r[0] + "\",\"" + r[1] + "\",\"" + r[2] + "\"]")) miss.add(r[0]);
             for (String d : new String[]{Design.DEFAULT, Design.FILES, Design.WORDS}) if (!html.contains("'" + d + "':{design:'" + d + "'")) miss.add(d);
             check("מבנה 244: הגשר לדוגמה שבעמוד — באותן מילים, צבעים ועיצובים כמו בתוכנה (" + miss + ")", miss.isEmpty());
+            // מבנה 245: הכניסה — "🎨 עיצוב" פותח את הלוח על הרשימה שעל המסך (בבית — על האופן); מההגדרות — על כל התוכנה; החלון הישן —
+            // בפריט משלו עד שהלוח יעבוד במכשיר; מסך שנבנה בצבעים אחרים — נבנה מחדש כשחוזרים אליו
+            File code = new File(src, "src/com/tikiyot/vfm");
+            String dbl = read(new File(code, "masachim/DbListScreen.java")), set = read(new File(code, "masachim/SettingsScreen.java")),
+                    ls = read(new File(code, "masachim/ListScreen.java")), lab = read(new File(code, "masachim/LabScreen.java")),
+                    br = read(new File(code, "lev/Bridge.java"));
+            check("מבנה 245: \"🎨 עיצוב\" — הלוח (על הרשימה, בדרך שהפקודה מוצאת; בבית — על האופן); מההגדרות — על כל התוכנה; החלון הישן — בפריט משלו; "
+                            + "הלוח מתחיל במה שהמסך ביקש; מסך שהצבעים שלו השתנו — נבנה מחדש",
+                    Words.DbCmd.TOOL_DESIGN.equals(nv[0]) && dbl.contains("MENU_DESIGN) panel();") && dbl.contains("MENU_DESIGN_OLD) design();")
+                            && dbl.contains("LabScreen.design(this, Verbs.LIST, Names.pathText(path))") && dbl.contains("DbPaths.find(store, mode, path) != listId")
+                            && dbl.contains("LabScreen.design(this, Verbs.MODE_WORD, mode)")
+                            && set.contains("LabScreen.design(SettingsScreen.this, Verbs.PROGRAM_WORD, \"\")")
+                            && lab.contains("putExtra(EXTRA, Words.DbCmd.TOOL_DESIGN)") && br.contains("host.startTarget()") && html.contains("load('','')")
+                            && ls.contains("if (paint != Ui.painted())") && ls.contains("recreate();"));
         } catch (Exception e) {
             check("מבנה 244: " + e, false);
         }

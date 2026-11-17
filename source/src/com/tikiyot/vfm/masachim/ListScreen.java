@@ -30,8 +30,12 @@ abstract class ListScreen<T> extends Activity {
     @Override
     protected void onCreate(android.os.Bundle saved) {
         Ui.begin(this, false);
+        paint = Ui.painted();
         super.onCreate(saved);
     }
+
+    /** מבנה 245: הצבעים שהמסך נבנה בהם — השתנו בינתיים (לוח העיצוב, "עצב תוכנה / אופן") — נבנה מחדש כשחוזרים. */
+    private int paint;
 
 
     /** מספרי התפריט של השלד (שלא יתנגשו במספרים של המסך). */
@@ -276,6 +280,11 @@ abstract class ListScreen<T> extends Activity {
     @Override
     protected void onResume() {
         super.onResume();
+        Ui.freshColors();
+        if (paint != Ui.painted()) {                                            // מבנה 245: הצבעים השתנו — נבנה מחדש
+            recreate();
+            return;
+        }
         lib.start(null);
         watch.on();
         refresh();
