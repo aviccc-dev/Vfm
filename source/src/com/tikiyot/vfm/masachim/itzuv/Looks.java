@@ -177,10 +177,10 @@ final class Looks {
         if (kind != null) {                                                   // 1.17.0: הסוג תמיד, והצלמית בנוסף (המילון, 24)
             String own = Ui.userIconOf(v);
             if (own.isEmpty() && icon != null) own = icon;
-            if (d.grid) {                                                     // ב': הצלמית באריח, הסוג בפס מתחת
+            if (d.grid || !d.showTag) {                                       // ב': הצלמית באריח, הסוג בפס מתחת (מבנה 256: בלי תווית — גם בשורות)
                 String txt = title.getText().toString();
                 if (!own.isEmpty() && txt.startsWith(own + "  ")) title.setText(txt.substring(own.length() + 2));
-                if (strip != null) {
+                if (strip != null && d.showTag) {                             // מבנה 256: "הצג תווית = לא" — בלי הפס
                     String w = d.wordingOf(Ui.tag(kind));                       // מבנה 250: הנוסח שנקבע, או המילה הקצרה
                     strip.setText(w != null ? w : Ui.tagShort(kind));
                     strip.setBackgroundColor(Ui.kindColor(kind));
@@ -223,8 +223,10 @@ final class Looks {
         if (emoji && d.grid) box.setTextSize(TypedValue.COMPLEX_UNIT_PX, px * 0.5f);
         else if (d.tag != null && kind != null && !d.grid && !emoji) text(box, d.tag, d.tag.size);   // מבנה 249: התווית בשורות — כמו שנקבע
         else box.setTextSize(TypedValue.COMPLEX_UNIT_PX, box.getTextSize() * scale);
-        float r = Ui.dp(c, d.grid ? 12 : 6);
-        if (Design.FILL.equals(d.around)) {
+        boolean circle = Design.CIRCLE.equals(d.around);                    // מבנה 256: עיגול — כמו ריבוע צבעוני, עגול
+        float r = circle ? px / 2f : Ui.dp(c, d.grid ? 12 : 6);
+        box.setMinHeight(circle && !d.grid ? px : 0);                         // בשורות — גובה כרוחב, כדי שיהיה עיגול
+        if (Design.FILL.equals(d.around) || circle) {
             box.setTextColor(Ui.ON_COLOR);
             box.setBackground(bg == 0 ? null : rounded(bg, r, 0, 0));
         } else {
@@ -258,6 +260,8 @@ final class Looks {
         int tint = kindBg != 0 ? own : bg;                                    // הצבע של המשתמש — לרקע הפריט
         v.setBackground(d.tint ? rounded(tint == 0 ? Ui.BG_SOFT : soft(tint), Ui.dp(c, 10), 0, 0) : null);
         if (d.tint && tint != 0) title.setTextColor(darker(tint));
+        // מבנה 256: פריט מוסתר (שמו מתחיל בנקודה) — חיוור; השורה חוזרת לשימוש, ולכן תמיד נקבע
+        v.setAlpha(d.fade && title.getText().toString().trim().startsWith(".") ? 0.45f : 1f);
     }
 
     /** אחרי apply: הבחירה (או ההתאמה) — גוברת על צבע הרקע של העיצוב, בלי לאבד את הפינות. */

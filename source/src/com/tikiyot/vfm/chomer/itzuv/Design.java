@@ -50,7 +50,14 @@ final class Design {
             K_GAP = "ריווח", K_SHOW_ICON = "הצג צלמית", K_AROUND = "סביב הצלמית", K_TINT = "צבע רקע לפריט",  // תחביר
             K_SHOW_DATA = "הצג נתונים", K_DATA_AT = "מקום הנתונים", BELOW = "מתחת", SIDE = "בצד",  // תחביר
             K_FIT = "התאם למקום", K_MIN = "גודל מזערי", K_LINES = "שורות לשם";  // תחביר
+    /**
+     * מבנה 256 (מה שעלה מהצילומים, קבוצה ב — "תבנה מה שהכי קל ומתאים ונראה לך"): להסתיר את תווית הסוג (ברשת — הפס; בשורות —
+     * הצלמית במקום התווית) · פריט מוסתר (שמו מתחיל בנקודה) — חיוור.
+     */
+    static final String K_SHOW_TAG = "הצג תווית", K_FADE = "מוסתר חיוור";  // תחביר
     static final String NONE = "בלי", FRAME = "מסגרת", FILL = "ריבוע צבעוני";  // תחביר
+    /** מבנה 256: סביב הצלמית — עיגול צבעוני (כמו "ריבוע צבעוני", בפינות עגולות לגמרי). */
+    static final String CIRCLE = "עיגול";  // תחביר
     static final String T_NAME = "שם", T_DATA = "נתונים", K_SIZE = "גודל", K_WEIGHT = "משקל", K_FONT = "גופן";  // תחביר
     /** מבנה 239 (המשתמש, 17.11.2026: "כן" — סוג כתב רביעי): כותרת של קבוצה בתוך רשימה ("צור כותרת"). */
     static final String T_GROUP = "קבוצה";  // תחביר
@@ -111,6 +118,8 @@ final class Design {
     boolean showIcon = true;
     String around = FILL;
     boolean tint;
+    /** מבנה 256: תווית הסוג נראית (כמו עד כאן); פריט מוסתר — חיוור (לא — כמו עד כאן). */
+    boolean showTag = true, fade;
     boolean showData = true;
     boolean dataBelow = true;
     Text title = new Text(12, 400, SYSTEM), nameT = new Text(16, 400, SYSTEM), data = new Text(11, 400, SYSTEM);
@@ -157,6 +166,8 @@ final class Design {
         d.showIcon = showIcon;
         d.around = around;
         d.tint = tint;
+        d.showTag = showTag;
+        d.fade = fade;
         d.showData = showData;
         d.dataBelow = dataBelow;
         d.title = title.copy();
@@ -381,7 +392,7 @@ final class Design {
         return grid + "|" + cols + "|" + icon + "|" + gap + "|" + showIcon + "|" + around + "|" + tint + "|" + showData
                 + "|" + dataBelow + "|" + nameT.size + nameT.weight + nameT.font + "|" + data.size + data.weight + data.font
                 + "|" + fit + "|" + min + "|" + lines + "|" + (group == null ? "" : group.size + "" + group.weight + group.font)
-                + "|" + (tag == null ? "" : tag.size + "" + tag.weight + tag.font) + "|" + wording;
+                + "|" + (tag == null ? "" : tag.size + "" + tag.weight + tag.font) + "|" + wording + "|" + showTag + "|" + fade;
     }
 
     // ---------- קריאה ----------
@@ -428,16 +439,19 @@ final class Design {
      * מבנה 254 (המשתמש, 18.11.2026, על מה שעלה מהצילומים: "תבנה מה שהכי קל ומתאים ונראה לך" — קבוצה א: מה שכבר בעיצוב ואין לו
      * מתג): המפתחות של "אמצע" שנקבעים ב"עצב" מעבר לטורים, ריווח וצלמית — לפי הסדר. המתג — שם המפתח, עם "-" במקום רווח.
      */
-    static final String[] SHAPE_KEYS = {K_STYLE, K_SHOW_ICON, K_AROUND, K_TINT, K_SHOW_DATA, K_DATA_AT, K_LINES, K_FIT, K_MIN};
+    static final String[] SHAPE_KEYS = {K_STYLE, K_SHOW_ICON, K_AROUND, K_TINT, K_SHOW_DATA, K_DATA_AT, K_LINES, K_FIT, K_MIN,
+            K_SHOW_TAG, K_FADE};   // מבנה 256
     /** מבנה 255: לכל מפתח — שם קבוע ללוח העיצוב (מה הוא מצייר), באותו סדר. בערכים — הראשון הוא ה"כן" (רשת, כן, מתחת). */
-    static final String[] SHAPE_IDS = {"grid", "showIcon", "around", "tint", "showData", "dataBelow", "lines", "fit", "min"};
+    static final String[] SHAPE_IDS = {"grid", "showIcon", "around", "tint", "showData", "dataBelow", "lines", "fit", "min",
+            "showTag", "fade"};
 
     /** מבנה 254: הערכים שהמפתח הזה מקבל; null — מספר בטווח (shapeRange). */
     static String[] choices(String key) {
         if (key.equals(K_STYLE)) return new String[]{GRID, ROWS};
-        if (key.equals(K_AROUND)) return new String[]{NONE, FRAME, FILL};
+        if (key.equals(K_AROUND)) return new String[]{NONE, FRAME, FILL, CIRCLE};
         if (key.equals(K_DATA_AT)) return new String[]{BELOW, SIDE};
-        if (key.equals(K_SHOW_ICON) || key.equals(K_TINT) || key.equals(K_SHOW_DATA) || key.equals(K_FIT)) return new String[]{YES, NO};
+        if (key.equals(K_SHOW_ICON) || key.equals(K_TINT) || key.equals(K_SHOW_DATA) || key.equals(K_FIT) || key.equals(K_SHOW_TAG)
+                || key.equals(K_FADE)) return new String[]{YES, NO};
         return null;
     }
 
@@ -457,6 +471,8 @@ final class Design {
         if (key.equals(K_LINES)) return String.valueOf(lines);
         if (key.equals(K_FIT)) return fit ? YES : NO;
         if (key.equals(K_MIN)) return String.valueOf(min);
+        if (key.equals(K_SHOW_TAG)) return showTag ? YES : NO;
+        if (key.equals(K_FADE)) return fade ? YES : NO;
         return null;
     }
 
@@ -466,7 +482,9 @@ final class Design {
         else if (key.equals(K_ICON)) icon = clamp(num(v), ICON[0], ICON[1]);
         else if (key.equals(K_GAP)) gap = clamp(num(v), GAP[0], GAP[1]);
         else if (key.equals(K_SHOW_ICON)) showIcon = !v.equals(NO);
-        else if (key.equals(K_AROUND)) around = v.equals(NONE) || v.equals(FRAME) ? v : FILL;
+        else if (key.equals(K_AROUND)) around = v.equals(NONE) || v.equals(FRAME) || v.equals(CIRCLE) ? v : FILL;
+        else if (key.equals(K_SHOW_TAG)) showTag = !v.equals(NO);
+        else if (key.equals(K_FADE)) fade = v.equals(YES);
         else if (key.equals(K_TINT)) tint = v.equals(YES);
         else if (key.equals(K_SHOW_DATA)) showData = !v.equals(NO);
         else if (key.equals(K_DATA_AT)) dataBelow = !v.equals(SIDE);
@@ -751,7 +769,8 @@ final class Design {
                     {T_NAME + ": " + K_SIZE, num(d.nameT.size)}, {T_NAME + ": " + K_WEIGHT, weightName(d.nameT.weight)},
                     {T_NAME + ": " + K_FONT, d.nameT.font}, {T_DATA + ": " + K_SIZE, num(d.data.size)},
                     {T_DATA + ": " + K_WEIGHT, weightName(d.data.weight)}, {T_DATA + ": " + K_FONT, d.data.font},
-                    {K_FIT, d.fit ? YES : NO}, {K_MIN, "" + d.min}, {K_LINES, "" + d.lines}};
+                    {K_FIT, d.fit ? YES : NO}, {K_MIN, "" + d.min}, {K_LINES, "" + d.lines},
+                    {K_SHOW_TAG, d.showTag ? YES : NO}, {K_FADE, d.fade ? YES : NO}};   // מבנה 256
             for (String[] kv : mid) text = withKey(text, S_MID, kv[0], kv[1]);
             if (d.group != null) {                                            // מבנה 239
                 text = withKey(text, S_MID, T_GROUP + ": " + K_SIZE, num(d.group.size));
@@ -892,6 +911,8 @@ final class Design {
         line(sb, K_FIT, files || words ? YES : NO);
         line(sb, K_MIN, "11");
         line(sb, K_LINES, files ? "2" : words ? "2" : "2");
+        line(sb, K_SHOW_TAG, YES);                                              // מבנה 256
+        line(sb, K_FADE, NO);
         sb.append('\n').append('[').append(S_LISTS).append("]\n");
         sb.append("; ").append(Words.DesignW.LISTS_NOTE).append('\n');
         return sb.toString();

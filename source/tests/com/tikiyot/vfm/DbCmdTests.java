@@ -1482,7 +1482,7 @@ final class DbCmdTests {
                         List<String> v254 = go(o121 + "ודא עיצוב \"" + m91 + "/מראה 234/ב\" /שורות-לשם:2\n", here, vars, lib);
                         Batch.Plan st254 = Batch.plan(o121 + "עצב \"" + m91 + "/מראה 234/ב\" /סגנון:עמודות\n", here, vars, lib);
                         Batch.Plan ln254 = Batch.plan(o121 + "עצב \"" + m91 + "/מראה 234/ב\" /שורות-לשם:9\n", here, vars, lib);
-                        Batch.Plan ar254 = Batch.plan(o121 + "עצב \"" + m91 + "/מראה 234/ב\" /סביב-הצלמית:עיגול\n", here, vars, lib);
+                        Batch.Plan ar254 = Batch.plan(o121 + "עצב \"" + m91 + "/מראה 234/ב\" /סביב-הצלמית:משושה\n", here, vars, lib);
                         go(o121 + "עצב \"" + m91 + "/מראה 234/ב\" /סגנון:\"\" /הצג-צלמית:\"\" /סביב-הצלמית:\"\" /צבע-רקע-לפריט:\"\" /הצג-נתונים:\"\""
                                 + " /מקום-הנתונים:\"\" /שורות-לשם:\"\" /התאם-למקום:\"\" /גודל-מזערי:\"\"\n", here, vars, lib);
                         Design b254 = ShapeCmds.state(Verbs.K_LIST, "מראה 234/ב", m91).shown;
@@ -1492,7 +1492,19 @@ final class DbCmdTests {
                                         && d254.lines == 1 && d254.fit && d254.min == 9 && !s254.toString().contains("❌") && v254.toString().contains("❌")
                                         && st254.blocked() && errs235(st254).contains("לא אחד מאלה") && ln254.blocked() && errs235(ln254).contains("מחוץ לטווח")
                                         && ar254.blocked() && b254.signature().equals(before254.signature())
-                                        && Verbs.shapeSwitch(Design.K_AROUND).equals("/סביב-הצלמית:") && Design.SHAPE_KEYS.length == 9);
+                                        && Verbs.shapeSwitch(Design.K_AROUND).equals("/סביב-הצלמית:") && Design.SHAPE_KEYS.length == 11);
+                        // מבנה 256: קבוצה ב, הקל — בלי תווית הסוג · עיגול סביב הצלמית · פריט מוסתר חיוור
+                        String b256 = " /הצג-תווית:לא /סביב-הצלמית:עיגול /מוסתר-חיוור:כן";
+                        List<String> s256 = go(o121 + "עצב \"" + m91 + "/מראה 234/ב\"" + b256 + "\n"
+                                + "ודא עיצוב \"" + m91 + "/מראה 234/ב\"" + b256 + "\n", here, vars, lib);
+                        Design d256 = ShapeCmds.state(Verbs.K_LIST, "מראה 234/ב", m91).shown;
+                        go(o121 + "עצב \"" + m91 + "/מראה 234/ב\" /הצג-תווית:\"\" /סביב-הצלמית:\"\" /מוסתר-חיוור:\"\"\n", here, vars, lib);
+                        Design e256 = ShapeCmds.state(Verbs.K_LIST, "מראה 234/ב", m91).shown;
+                        Design f256 = Design.parse("בדיקה", Design.builtInText(Design.FILES));
+                        o.check("מבנה 256: /הצג-תווית:לא · /סביב-הצלמית:עיגול · /מוסתר-חיוור:כן — נקבעים, נבדקים, וחוזרים; בלי שנקבע — כמו עד כאן (תווית, לא חיוור) " + s256,
+                                !d256.showTag && Design.CIRCLE.equals(d256.around) && d256.fade && !s256.toString().contains("❌")
+                                        && e256.showTag && !e256.fade && !Design.CIRCLE.equals(e256.around) && e256.signature().equals(before254.signature())
+                                        && f256.showTag && !f256.fade);
                     }
                     // מבנה 123: "שחזר דוגמאות" כפקודה; ו"צור אופן" על אופן שיש בו רשימות ואין בו בית — מתקן
                     {

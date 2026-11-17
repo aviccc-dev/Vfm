@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="vfm-plugin" content="עיצוב">
-<meta name="vfm-plugin-version" content="8">
+<meta name="vfm-plugin-version" content="9">
 <title>עיצוב</title>
 <style>
 /* תוסף "עיצוב" — הלוח (claude/tosaf-itzuv.md, ההחלטות של 17.11.2026): מקום אחד שבו משנים את כל מה שאפשר — כמו לוח עם
@@ -20,6 +20,7 @@
    תוכנה שאינה מכירה את תווית הסוג ואת הנוסח (מבנה 249–250) — לפי מה שהתוכנה אומרת שהיא יודעת (info), בלי לנחש.
    גרסה 8 (מבנה 255; המשתמש: "תבנה מה שהכי קל ומתאים ונראה לך" — קבוצה א): כרטיס "הפריט" — סגנון, הצג צלמית, סביב הצלמית,
    צבע רקע לפריט, הצג נתונים, מקום הנתונים, שורות לשם, התאם למקום, גודל מזערי. באמת — בפקודה "עצב"; רק כשהתוכנה מכירה (info.shape).
+   גרסה 9 (מבנה 256; קבוצה ב, הקל): הצג תווית · מוסתר חיוור · "עיגול" סביב הצלמית — מהתוכנה, בלי שינוי בכרטיס.
    הצבעים של העמוד — מהתוכנה (vfm.theme), כאן רק ברירת מחדל. */
 :root{
   --bg:#FFFFFF; --soft:#F4F5F6; --fg:#202124; --muted:#5F6368; --ghost:#9AA0A6; --chip:#E8F0FE; --chip-fg:#174EA6;
@@ -533,15 +534,15 @@ function drawPreview(){
     if(hid)it.style.opacity='0.45';
     it.style.padding=o.gal?'0':o.grid?Math.max(o.card?8:4,Math.round(o.gapPx/2))+'px':Math.max(2,o.gapPx)+'px 8px';
     if(!o.grid&&!o.card)it.style.borderBottom='1px solid '+c['קו בין חלקים'];
-    const kind=!X.noStrip&&!hid&&KIND[n];
+    const kind=!X.noStrip&&d.showTag!==false&&!hid&&KIND[n];   // מבנה 256: הצג תווית
     const icPx=o.icPx,tagPx=d.tagOwn?+tagT.size:Math.max(11,Math.round(icPx*.16));   // בלי שנקבע — לפי הצלמית, כמו בתוכנה
     const thumb=X.thumbs?(hid?PIC[1]:n===4?PIC[0]:n===0?PIC[2]:n===1?PIC[4]:(n===2||n===3)?PAGE:null):null;
     if(d.showIcon&&icPx>0){
       const ic=E('div','ic',thumb?'':x[0]);ic.style.width=ic.style.height=icPx+'px';ic.style.fontSize=Math.round(icPx*.62)+'px';ic.style.color=c['צלמיות'];
-      const bg=o.iconBg||(d.around==='ריבוע צבעוני'?'ריבוע רך':d.around==='מסגרת'?'מסגרת':'בלי');
+      const bg=o.iconBg||(d.around==='ריבוע צבעוני'?'ריבוע רך':d.around==='עיגול'?'עיגול רך':d.around==='מסגרת'?'מסגרת':'בלי');
       if(thumb){ic.classList.add('th');ic.style.background=thumb;ic.style.position='relative';if(thumb===PAGE)ic.style.border='1px solid '+c['קו בין חלקים'];if(o.gal&&X.tight)ic.style.borderRadius='0';
         if(n<2||hid){const s=E('span','cov',x[0]);s.style.fontSize=Math.max(10,Math.round(icPx*.24))+'px';ic.appendChild(s);}}   // כריכה לתיקייה
-      else if(bg==='ריבוע רך')ic.style.background=c['רקע רך'];
+      else if(bg==='ריבוע רך'||bg==='עיגול רך'){ic.style.background=c['רקע רך'];if(bg==='עיגול רך')ic.style.borderRadius='50%';}
       else if(bg==='מסגרת')ic.style.border='1px solid '+c['קו בין חלקים'];
       else if(bg==='ריבוע חי'||bg==='עיגול חי'){ic.style.background=VIVID[n%VIVID.length];ic.style.fontSize=Math.round(icPx*.5)+'px';ic.style.borderRadius=bg==='עיגול חי'?'50%':'22%';}
       it.appendChild(ic);
@@ -580,7 +581,7 @@ function drawPreview(){
       mo.addEventListener('click',()=>{foldOpen=!foldOpen;drawPreview();});items.appendChild(mo);}
   }
   const all=ITEMS.map((x,n)=>[x,n,false]);
-  if(X.hidden)all.splice(2,0,[['📁','.גיבוי','3 קבצים',8],6,true]);
+  if(X.hidden||d.fade)all.splice(2,0,[['📁','.גיבוי','3 קבצים',8],6,true]);   // מבנה 256: מוסתר חיוור — נראה בפריט לדוגמה
   const base={grid:d.grid,cols:d.cols,gap:d.gap,icon:d.icon,card:X.card||!!d.tint,side:X.side,iconBg:X.iconBg,last:true};
   const LISTS=[0,1,5];
   if(X.two){
@@ -783,15 +784,16 @@ window.vfmResume=function(){if(S&&!Object.keys(P).length)load(S.what,S.path);};
 function demoBridge(){
   const ROLES=[["טקסט","#202124","#E8EAED"],["טקסט משני","#5F6368","#BDC1C6"],["טקסט חלש","#9AA0A6","#80868B"],["טקסט על צבע","#FFFFFF","#FFFFFF"],["רקע","#FFFFFF","#202124"],["רקע רך","#F4F5F6","#2A2B2E"],["רקע הכותרת","#F1F3F4","#303134"],["כותרת קבוצה","#E8EAED","#3C4043"],["פס הבחירה","#E8F0FE","#1F3A5F"],["שורה שנבחרה","#D2E3FC","#28456E"],["הדגשה","#1A73E8","#8AB4F8"],["הדגשה כהה","#174EA6","#AECBFA"],["סימון התאמה","#FFF2A8","#5C4A00"],["בספק","#FFF1C2","#4A3D10"],["בספק חזק","#F2B52B","#F2B52B"],["אזהרה ומחיקה","#C5221F","#F28B82"],["צלמיות","#5F6368","#BDC1C6"],["קו בין חלקים","#E0E0E0","#3C4043"]];
   const T=(s,w,f)=>({size:String(s),weight:w,weightName:w<=300?'דק':w<500?'רגיל':w<600?'בינוני':'מודגש',font:f||'מערכת'});
-  const SHP=[['סגנון','/סגנון:',['רשת','שורות'],'grid'],['הצג צלמית','/הצג-צלמית:',['כן','לא'],'showIcon'],['סביב הצלמית','/סביב-הצלמית:',['בלי','מסגרת','ריבוע צבעוני'],'around'],
+  const SHP=[['סגנון','/סגנון:',['רשת','שורות'],'grid'],['הצג צלמית','/הצג-צלמית:',['כן','לא'],'showIcon'],['סביב הצלמית','/סביב-הצלמית:',['בלי','מסגרת','ריבוע צבעוני','עיגול'],'around'],
     ['צבע רקע לפריט','/צבע-רקע-לפריט:',['כן','לא'],'tint'],['הצג נתונים','/הצג-נתונים:',['כן','לא'],'showData'],['מקום הנתונים','/מקום-הנתונים:',['מתחת','בצד'],'dataBelow'],
-    ['שורות לשם','/שורות-לשם:',[1,6],'lines'],['התאם למקום','/התאם-למקום:',['כן','לא'],'fit'],['גודל מזערי','/גודל-מזערי:',[6,40],'min']];
+    ['שורות לשם','/שורות-לשם:',[1,6],'lines'],['התאם למקום','/התאם-למקום:',['כן','לא'],'fit'],['גודל מזערי','/גודל-מזערי:',[6,40],'min'],
+    ['הצג תווית','/הצג-תווית:',['כן','לא'],'showTag'],['מוסתר חיוור','/מוסתר-חיוור:',['כן','לא'],'fade']];
   const setSV=(x,k,v)=>{const e=SHP.find(y=>y[0]===k);x.shape[k]=v;if(e[3]==='around')x.around=v;else if(e[3]==='lines'||e[3]==='min')x[e[3]]=+v;else x[e[3]]=(v===e[2][0]);};
   const P0={'רשימת קבצים':{design:'רשימת קבצים',grid:false,cols:1,gap:50,icon:340,showIcon:true,around:'ריבוע צבעוני',showData:true,dataBelow:true,groupOwn:false,texts:{'כותרת':T(12,400),'שם':T(16,400),'נתונים':T(11,400),'קבוצה':T(16,400),'תווית':T(11,700)}},
     'מנהל קבצים עם צלמיות':{design:'מנהל קבצים עם צלמיות',grid:true,cols:3,gap:8,icon:60,showIcon:true,around:'מסגרת',showData:true,dataBelow:true,groupOwn:false,texts:{'כותרת':T(12,400),'שם':T(14,400),'נתונים':T(11,400),'קבוצה':T(14,400),'תווית':T(11,700)}},
     'מילים וצבע':{design:'מילים וצבע',grid:true,cols:2,gap:6,icon:0,showIcon:false,around:'בלי',showData:false,dataBelow:true,groupOwn:false,texts:{'כותרת':T(12,400),'שם':T(15,700),'נתונים':T(11,400),'קבוצה':T(15,700),'תווית':T(11,700)}}};
-  [['רשימת קבצים',['שורות','כן','ריבוע צבעוני','לא','כן','מתחת','2','לא','11']],['מנהל קבצים עם צלמיות',['רשת','כן','מסגרת','לא','כן','מתחת','2','כן','11']],
-   ['מילים וצבע',['רשת','לא','בלי','כן','לא','מתחת','2','כן','11']]].forEach(([n,v])=>{P0[n].shape={};SHP.forEach((x,i)=>setSV(P0[n],x[0],v[i]));});
+  [['רשימת קבצים',['שורות','כן','ריבוע צבעוני','לא','כן','מתחת','2','לא','11','כן','לא']],['מנהל קבצים עם צלמיות',['רשת','כן','מסגרת','לא','כן','מתחת','2','כן','11','כן','לא']],
+   ['מילים וצבע',['רשת','לא','בלי','כן','לא','מתחת','2','כן','11','כן','לא']]].forEach(([n,v])=>{P0[n].shape={};SHP.forEach((x,i)=>setSV(P0[n],x[0],v[i]));});
   const db={'תוכנה':{design:'',look:{}},'אופן':{design:'',look:{}},'רשימה':{design:'מנהל קבצים עם צלמיות',look:{'טורים':'4'}}};
   const colorsOf=looks=>{let dark=false;looks.forEach(l=>{if(l['מראה'])dark=l['מראה']==='כהה';});const o={};ROLES.forEach(r=>{o[r[0]]=r[dark?2:1];looks.forEach(l=>{if(l['צבע: '+r[0]])o[r[0]]=l['צבע: '+r[0]];});});return {dark,colors:o};};
   const fold=(d,own)=>{let x=own.design?JSON.parse(JSON.stringify(P0[own.design])):d?JSON.parse(JSON.stringify(d)):null;

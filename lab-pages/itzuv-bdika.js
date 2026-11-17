@@ -183,7 +183,7 @@ const run=async()=>{
     w=page(null);d=w.document;
     const sc=()=>$('shapeCard'),srow=t=>[...sc().querySelectorAll('.row')].find(r=>r.querySelector('.lb').textContent===t);
     const sbtn=(t,v)=>[...srow(t).querySelectorAll('.seg button')].find(b=>b.textContent===v);
-    say('כרטיס "הפריט" — תשעה, מהתוכנה',!!sc()&&sc().querySelectorAll('.row').length===9&&!!srow('סביב הצלמית')&&!!srow('שורות לשם'));
+    say('כרטיס "הפריט" — אחד־עשר, מהתוכנה',!!sc()&&sc().querySelectorAll('.row').length===11&&!!srow('סביב הצלמית')&&!!srow('שורות לשם')&&!!srow('הצג תווית'));
     say('מה שנראה מסומן (רשימת קבצים: שורות, ריבוע צבעוני)',sbtn('סגנון','שורות').classList.contains('on')&&sbtn('סביב הצלמית','ריבוע צבעוני').classList.contains('on'));
     click(sbtn('סגנון','רשת'));
     say('סגנון: רשת — עם הטורים, הריווח והצלמית של רשת ← '+cmd(),cmd()==='עצב תוכנה /טורים:3 /ריווח:8 /גודל-צלמית:60 /סגנון:רשת'&&$('pv').querySelectorAll('.it.g').length===6);
@@ -209,6 +209,14 @@ const run=async()=>{
     say('אחרי החלה — נקרא מחדש מהתוכנה: "נקבע כאן"',cmd().startsWith('אין שינויים')&&sbtn('סגנון','רשת').classList.contains('on')&&srow('סגנון').textContent.includes('נקבע כאן'));
     click(srow('סגנון').querySelector('.re'));
     say('↺ אחרי החלה ← '+cmd(),cmd()==='עצב תוכנה /סגנון:""');
+    // מבנה 256: הצג תווית · מוסתר חיוור · עיגול
+    w=page(null);d=w.document;
+    click(sbtn('הצג תווית','לא'));
+    say('הצג תווית: לא ← '+cmd()+' — בלי התווית בתצוגה',cmd()==='עצב תוכנה /הצג-תווית:לא'&&![...$('pv').querySelectorAll('.ic')].some(e=>e.textContent==='ידנית')&&!$('pv').querySelector('.tg'));
+    click(sbtn('מוסתר חיוור','כן'));
+    say('מוסתר חיוור: כן — פריט מוסתר חיוור בתצוגה',cmd().includes('/מוסתר-חיוור:כן')&&[...$('pv').querySelectorAll('.it')].some(e=>e.style.opacity==='0.45'&&e.textContent.includes('.גיבוי')));
+    click(sbtn('סביב הצלמית','עיגול'));
+    say('סביב הצלמית: עיגול ← '+cmd(),cmd().includes('/סביב-הצלמית:עיגול')&&[...$('pv').querySelectorAll('.ic')].some(e=>e.style.borderRadius==='50%'));
     // ---------- שגיאה בעמוד — נאמרת על המסך (מבנה 252) ----------
     const dom2=new JSDOM(html,{runScripts:'dangerously',pretendToBeVisual:true,virtualConsole:new VirtualConsole(),beforeParse(x){
       x.vfm={info:()=>JSON.stringify({features:'design'}),theme:()=>null,load:()=>null,save:()=>{},design:()=>{throw new Error('תקלה לבדיקה');}};}});
