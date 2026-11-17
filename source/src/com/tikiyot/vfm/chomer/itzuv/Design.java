@@ -72,6 +72,79 @@ final class Design {
     /** החלק הפרטי: מסלול הרשימה באופן ("לימוד/הערות") ← {צלמית, צבע}. */
     final Map<String, String[]> lists = new LinkedHashMap<String, String[]>();
 
+    /** מבנה 234: עותק — לשינוי מעל עיצוב שבזיכרון (המקור נשאר כמו שהוא). */
+    Design copy() {
+        Design d = new Design();
+        d.name = name;
+        d.file = file;
+        d.grid = grid;
+        d.cols = cols;
+        d.icon = icon;
+        d.gap = gap;
+        d.showIcon = showIcon;
+        d.around = around;
+        d.tint = tint;
+        d.showData = showData;
+        d.dataBelow = dataBelow;
+        d.title = title.copy();
+        d.nameT = nameT.copy();
+        d.data = data.copy();
+        d.fit = fit;
+        d.min = min;
+        d.lines = lines;
+        d.lists.putAll(lists);
+        return d;
+    }
+
+    // ---------- מבנה 234: המראה של רשימה — שינויים מעל העיצוב שלה, והירושה ----------
+
+    /** בין השורות של המראה (Store.P_LOOK). */
+    static final String LOOK_SEP = " " + P_SEP + " ";
+    /** בשורות המראה: הכתב של כותרת המסך ("כותרת: גודל = 15"); השאר — כמו בקבוצה "אמצע" של הקובץ. */
+    static final String T_TITLE = "כותרת";  // תחביר
+
+    /** השינויים שבמראה (look) — על העיצוב הזה. שורה לא מובנת — מדולגת, כמו בקובץ. */
+    void overlay(String look) {
+        if (look == null) return;
+        for (String part : look.split(java.util.regex.Pattern.quote(P_SEP))) {
+            int eq = part.indexOf('=');
+            if (eq <= 0) continue;
+            String key = part.substring(0, eq).trim(), value = part.substring(eq + 1).trim();
+            if (value.isEmpty()) continue;
+            try {
+                int c = key.indexOf(':');
+                if (c > 0 && key.substring(0, c).trim().equals(T_TITLE)) text(title, key.substring(c + 1).trim(), value);
+                else mid(key, value);
+            } catch (RuntimeException ignored) {                             // ערך לא מובן — נשאר מהעיצוב
+            }
+        }
+    }
+
+    /**
+     * המראה של רשימה: מלמעלה למטה — מהרשימה העליונה (שמתחת לבית) עד הרשימה הזו. רשימה שבחרה עיצוב — מתחילה ממנו מחדש; מה
+     * שהיא שינתה (P_LOOK) — עליו. null — לא נקבע כלום בדרך (המסך מצייר כמו תמיד). הדרך למעלה — דרך הרשימה הראשונה שהיא בה.
+     */
+    static Design forList(Store t, long id) {
+        List<Long> chain = new ArrayList<Long>();
+        java.util.Set<Long> seen = new java.util.HashSet<Long>();
+        for (long at = id; at != 0 && seen.add(at); ) {
+            if ("1".equals(t.prop(at, Store.P_HOME))) break;                  // הבית — לבד (העיצוב של מסך הבית)
+            chain.add(0, at);
+            List<Long> up = t.listsOf(at);
+            at = up.isEmpty() ? 0 : up.get(0);
+        }
+        Design d = null;
+        for (long x : chain) {
+            String name = t.prop(x, Store.P_DESIGN), look = t.prop(x, Store.P_LOOK);
+            if (name != null && !name.trim().isEmpty()) d = get(name.trim()).copy();
+            if (look != null && !look.trim().isEmpty()) {
+                if (d == null) d = get(DEFAULT).copy();
+                d.overlay(look);
+            }
+        }
+        return d;
+    }
+
     /** סימן לזיהוי שינוי (המסך נבנה מחדש רק כשהמראה השתנה). */
     String signature() {
         return grid + "|" + cols + "|" + icon + "|" + gap + "|" + showIcon + "|" + around + "|" + tint + "|" + showData

@@ -78,7 +78,7 @@ final class DbListCmd {
     }
 
     private static final String[] ALL_PROPS = {Store.P_ICON, Store.P_DESC, Store.P_DESIGN, Store.P_WHY, Store.P_COND,
-            Store.P_SORT, Store.P_DIR, Store.P_VIEW, Store.P_GROUP, Store.P_HOME};
+            Store.P_SORT, Store.P_DIR, Store.P_VIEW, Store.P_GROUP, Store.P_HOME, Store.P_LOOK};   // מבנה 234
 
     // ---------- מציאה ----------
 

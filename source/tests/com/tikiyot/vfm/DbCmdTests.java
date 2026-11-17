@@ -1219,6 +1219,29 @@ final class DbCmdTests {
                                         && Batch.plan(o121 + "עצב רשימה חכמה \"x\" /עיצוב:\"כחול 121\"\n", here, vars, lib).blocked()
                                         && !Batch.plan(o121 + "עצב רשימה \"סדר 121/ב\" /עיצוב:\"\"\n", here, vars, lib).blocked()
                                         && de121.text.startsWith("עצב רשימה "));
+                        // מבנה 234: המראה של רשימה (P_LOOK) מעל העיצוב שלה, והירושה מלמעלה למטה (רשימה שבחרה עיצוב — מתחילה ממנו)
+                        final Design[] d234 = new Design[5];
+                        Db.write(Db.app, m91, null, new Db.Use<Void>() {
+                            @Override public Void run(SqlStore st) {
+                                long a = st.createList("מראה 234", 0), b = st.createList("ב", a), c = st.createList("ג", b),
+                                        e = st.createList("ה", b), z = st.createList("בלי 234", 0);
+                                st.setProp(a, Store.P_DESIGN, Design.FILES);
+                                st.setProp(b, Store.P_LOOK, "טורים = 5 · שם: גודל = 20 · כותרת: גודל = 18 · לא מובן · ריווח = x");
+                                st.setProp(e, Store.P_DESIGN, Design.WORDS);
+                                d234[0] = Design.forList(st, c);
+                                d234[1] = Design.forList(st, e);
+                                d234[2] = Design.forList(st, z);
+                                d234[3] = Design.forList(st, a);
+                                return null;
+                            }
+                        });
+                        o.check("מבנה 234: רשימה בתוך רשימה — יורשת את העיצוב ואת המראה שמעליה (רשת, 5 טורים, שם 20, כותרת 18); שורה לא מובנת — מדולגת",
+                                d234[0] != null && d234[0].grid && d234[0].cols == 5 && d234[0].nameT.size == 20 && d234[0].title.size == 18
+                                        && d234[0].gap == Design.get(Design.FILES).gap);
+                        o.check("מבנה 234: רשימה שבחרה עיצוב — מתחילה ממנו (מילים וצבע: 2 טורים, שם 15); בלי כלום בדרך — המסך כמו תמיד (null); "
+                                        + "העיצוב שבזיכרון לא השתנה",
+                                d234[1] != null && d234[1].cols == 2 && d234[1].nameT.size == 15 && d234[2] == null
+                                        && d234[3] != null && d234[3].cols == 3 && Design.get(Design.FILES).cols == 3);
                     }
                     // מבנה 123: "שחזר דוגמאות" כפקודה; ו"צור אופן" על אופן שיש בו רשימות ואין בו בית — מתקן
                     {

@@ -442,11 +442,11 @@ public class DbListScreen extends ListScreen<Store.Member> {
                 });
     }
 
-    /** העיצוב: של הרשימה; בבית — של מסך הבית, ואם לא נבחר — רשת (כמו האריחים בבית). */
+    /** העיצוב: של הרשימה, עם מה שירשה ממה שמעליה (מבנה 234); בבית — של מסך הבית, ואם לא נבחר — רשת (כמו האריחים בבית). */
     private Design designOf(boolean home) {
+        if (!home) return Design.forList(store, listId);
         String name = store.prop(listId, Store.P_DESIGN);
         if (name != null && !name.isEmpty()) return Design.get(name);
-        if (!home) return null;
         String h = Design.homeName();
         if (!h.isEmpty()) return Design.get(h);
         Design d = Design.get(Design.FILES);                                  // כמו האריחים בבית הישן: בלי מסגרת לצלמית
