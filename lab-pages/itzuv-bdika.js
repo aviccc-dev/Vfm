@@ -185,6 +185,16 @@ const run=async()=>{
     const ob=dom2.window.document.getElementById('oops');
     say('שגיאה בעמוד — כרטיס אדום בראש המסך, עם ההודעה',!!ob&&ob.textContent.includes('שגיאה בלוח')&&ob.textContent.includes('תקלה לבדיקה')&&dom2.window.document.body.firstChild===ob);
     say('בלי שגיאה — אין כרטיס',!d.getElementById('oops'));
+    // ---------- תוכנה שאינה מכירה את תווית הסוג ואת הנוסח (כמו מ0.47) — הלוח עובד (מבנה 253) ----------
+    const errs0=errs.length;
+    w=new JSDOM(html,{runScripts:'dangerously',pretendToBeVisual:true,virtualConsole:vc,beforeParse(x){x.__old=true;}}).window;d=w.document;
+    say('תוכנה ישנה — אין כרטיס אדום, ואין שגיאות',!d.getElementById('oops')&&errs.length===errs0);
+    say('תוכנה ישנה — ארבעה סוגי כתב, בלי "תווית הסוג" ובלי נוסח',d.querySelectorAll('#main .tx').length===4&&!d.querySelector('#main').textContent.includes('נוסח התוויות'));
+    say('תוכנה ישנה — התצוגה המקדימה מלאה (6 פריטים, והתווית בגודל הרגיל)',$('pv').querySelectorAll('.it').length===6&&[...$('pv').querySelectorAll('.ic')].some(e=>e.textContent==='ידנית'));
+    click([...d.querySelectorAll('#tryCombos .chip')].find(b=>b.textContent==='כרטיסי קטגוריות'));
+    say('תוכנה ישנה — גם הניסוי עובד',$('pv').querySelectorAll('.car .cc').length===4&&errs.length===errs0);
+    setNum(d.querySelectorAll('#main .card')[1].querySelector('.num'),3);
+    say('תוכנה ישנה — הפקודה כמו קודם: '+cmd(),cmd()==='עצב תוכנה /טורים:3');
   }catch(e){out.push('❌ חריגה: '+e.stack.split('\n').slice(0,3).join(' | '));}
   const bad=errs.filter(e=>!/Not implemented: (window\.scrollTo|navigator\.clipboard)/.test(e));
   if(bad.length)out.push('❌ שגיאות בעמוד: '+bad.join(' || '));

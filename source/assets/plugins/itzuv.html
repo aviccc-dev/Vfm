@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="vfm-plugin" content="עיצוב">
-<meta name="vfm-plugin-version" content="6">
+<meta name="vfm-plugin-version" content="7">
 <title>עיצוב</title>
 <style>
 /* תוסף "עיצוב" — הלוח (claude/tosaf-itzuv.md, ההחלטות של 17.11.2026): מקום אחד שבו משנים את כל מה שאפשר — כמו לוח עם
@@ -16,6 +16,8 @@
    מהצילומים שנאספו, ושילובים בשמות. רק בתצוגה המקדימה: לא נכנס לפקודה ולא לרשימות.
    גרסה 6 (מבנה 252; המשתמש, על 5: "פתחתי במנהל קבצים וירטואלי… הוא מוצג ולא זז"): שגיאה בעמוד — נאמרת על המסך, בכרטיס אדום
    ("אין מצב שיש שגיאה והקובץ רץ ואף אחד לא יודע"), וגם ליומן של התוכנה.
+   גרסה 7 (מבנה 253; הכרטיס האדום במכשיר, במ0.47: "Cannot read properties of undefined (reading 'size')"): הלוח עובד גם עם
+   תוכנה שאינה מכירה את תווית הסוג ואת הנוסח (מבנה 249–250) — לפי מה שהתוכנה אומרת שהיא יודעת (info), בלי לנחש.
    הצבעים של העמוד — מהתוכנה (vfm.theme), כאן רק ברירת מחדל. */
 :root{
   --bg:#FFFFFF; --soft:#F4F5F6; --fg:#202124; --muted:#5F6368; --ghost:#9AA0A6; --chip:#E8F0FE; --chip-fg:#174EA6;
@@ -470,8 +472,8 @@ function drawPreview(){
   if(X.tight)d.gap=0;
   if(X.noData)d.showData=false;
   const font=f=>!f||f===K().system?'var(--f)':'"'+f+'",var(--f)';
-  const style=(e,x,color)=>{e.style.fontSize=x.size+'px';e.style.fontWeight=x.weight;e.style.fontFamily=font(x.font);if(color)e.style.color=color;};
-  const NM=t[i.texts[1]],DT=t[i.texts[2]],tagT=t[i.texts[4]];
+  const style=(e,x,color)=>{if(!x)return;e.style.fontSize=x.size+'px';e.style.fontWeight=x.weight;e.style.fontFamily=font(x.font);if(color)e.style.color=color;};
+  const NM=t[i.texts[1]],DT=t[i.texts[2]],tagT=t[i.texts[4]]||{size:'11',weight:700,font:''};   // תוכנה שאינה מכירה את תווית הסוג — כמו שהיא מציירת
   pv.style.background=c['רקע'];pv.style.borderColor=c['קו בין חלקים'];
   const ph=E('div','ph',isList()?last(S.path):'ספרים');ph.style.background=c['רקע הכותרת'];style(ph,t[i.texts[0]],c['טקסט']);pv.appendChild(ph);
   const W=Math.max(220,(pv.clientWidth||320)-12);
@@ -749,7 +751,7 @@ function demoBridge(){
       if(L['טורים'])x.cols=+L['טורים'];if(L['ריווח'])x.gap=+L['ריווח'];if(L['צלמית'])x.icon=+L['צלמית'];
       ['כותרת','שם','נתונים','קבוצה','תווית'].forEach(t=>{if(L[t+': גודל'])x.texts[t].size=L[t+': גודל'];if(L[t+': משקל'])x.texts[t].weightName=L[t+': משקל'];if(L[t+': גופן'])x.texts[t].font=L[t+': גופן'];});}
     return x;};
-  const json=(x,looks)=>{const d=x?JSON.parse(JSON.stringify(x)):JSON.parse(JSON.stringify(P0['רשימת קבצים']));d.set=!!x;if(looks){const c=colorsOf(looks);d.dark=c.dark;d.colors=c.colors;}return d;};
+  const json=(x,looks)=>{const d=x?JSON.parse(JSON.stringify(x)):JSON.parse(JSON.stringify(P0['רשימת קבצים']));d.set=!!x;if(window.__old){delete d.texts['תווית'];delete d.wording;delete d.tagOwn;}if(looks){const c=colorsOf(looks);d.dark=c.dark;d.colors=c.colors;}return d;};
   const info={verb:'עצב',list:'רשימה',modeWord:'אופן',program:'תוכנה',
     switches:{design:'/עיצוב:',cols:'/טורים:',gap:'/ריווח:',icon:'/גודל-צלמית:','כותרת':'/כתב-כותרת:','שם':'/כתב-שם:','נתונים':'/כתב-נתונים:','קבוצה':'/כתב-קבוצה:','תווית':'/כתב-תווית:',wording:'/תווית:',look:'/מראה:',color:'/צבע:'},
     keys:{cols:'טורים',gap:'ריווח',icon:'צלמית',size:'גודל',weight:'משקל',font:'גופן',look:'מראה',color:'צבע',light:'בהיר',dark:'כהה',system:'מערכת',wording:'נוסח'},
@@ -766,6 +768,10 @@ function demoBridge(){
       return {what:'רשימה',path:p,mode:'עבודה',current:'עבודה',error:'',own:db['רשימה'],shown:json(fold(mode,db['רשימה']),[db['תוכנה'].look,db['אופן'].look]),above:json(mode,[db['תוכנה'].look,db['אופן'].look]),info};}
     return {what:'אופן',path:'עבודה',mode:'עבודה',current:'עבודה',error:'',own:db['אופן'],shown:json(mode,[db['תוכנה'].look,db['אופן'].look]),above:json(prog,[db['תוכנה'].look]),info};
   };
+  if(window.__old){                                    // כמו מ0.47 — בלי תווית הסוג ובלי הנוסח (מבנה 249–250)
+    info.texts=info.texts.slice(0,4);delete info.kinds;delete info.switches['תווית'];delete info.switches.wording;delete info.keys.wording;
+    Object.values(P0).forEach(x=>{delete x.texts['תווית'];});
+  }
   const store={};window.__shaped=[];
   // הפקודה — כמו בתוכנה, בקירוב: המתגים נכתבים על מה שנקבע
   const shape=l=>{
