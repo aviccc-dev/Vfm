@@ -72,6 +72,20 @@ public final class Tests {
         run("מ0.41: בטל לא-משויכים, קובץ של פקודת פתיחה אחת, שמות המסכים", new Runnable() { public void run() { m041(); } });
         run("מ0.41: העורך האינטראקטיבי בא עם התוכנה", new Runnable() { public void run() { m041bundled(); } });
         run("מבנה 244: תוסף העיצוב — הלוח", new Runnable() { public void run() { m244panel(); } });
+        run("מבנה 248: תוויות הסוג", new Runnable() { public void run() {
+            // מבנה 248 (המשתמש, 17.11.2026: "תיקייה מתעדכנת בוטל"): כל תווית במילון — של סוג שיש בתוכנה (אין תווית בלי סוג)
+            List<String> dead = new ArrayList<String>();
+            String[] icons = {Ui.FOLDER, Ui.LINK, Ui.CMD, Ui.SMART, Ui.MANUAL, Drive.icon(true), Drive.icon(false)};
+            try {
+                for (java.lang.reflect.Field f : Words.Tags.class.getFields()) {
+                    String v = (String) f.get(null);
+                    boolean used = false;
+                    for (String i : icons) if (v.equals(Ui.tag(i))) used = true;
+                    if (!used) dead.add(f.getName());
+                }
+            } catch (Exception e) { dead.add(String.valueOf(e)); }
+            check("מבנה 248: כל תווית של סוג — של סוג שיש בתוכנה (\"תיקייה מתעדכנת\" — ירדה) " + dead, dead.isEmpty() && Words.Tags.class.getFields().length == 7);
+        } });
         run("מ0.41: קובץ הדוגמה של רשימת \"בחירה\"", new Runnable() { public void run() { m041example(); } });
         run("מ0.41: רשימת \"בחירה\" — %נבחרים%, כמה קבצים הפקודה מקבלת, והתכנון שקובע", new Runnable() { public void run() { m041select(); } });
         run("מ0.37: הפקודות הקטנות — כתוב, ודא (תיקייה, מכיל, קבצים, שגיאה), דוח, המתן, משתנים, רעיון וכותרת", new Runnable() { public void run() { m037(); } });

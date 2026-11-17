@@ -224,15 +224,11 @@ public final class Ui {
     /** 1.17.0: עוד שני סוגים עם תווית — קישור ↪ ופקודה (המילון, 24: "צריך שיהיה אפשר מיידית לזהות כל פריט מה הוא"). */
     static final String LINK = "↪", CMD = "▶";
 
-    /** 1.13.0: צלמיות ברירת המחדל ברשימה ידנית — במקום תווית הטקסט (המשתמש: "מתאים"). */
-    static final String LIVE = "🔄";                                        // תיקייה מתעדכנת
-
     /** התווית (בשתי שורות) — או null, אם זה סמל רגיל. */
     public static String tag(String icon) {
         if (FOLDER.equals(icon)) return Words.Tags.FOLDER;
         if (LINK.equals(icon)) return Words.Tags.LINK;
         if (CMD.equals(icon)) return Words.Tags.CMD;
-        if (LIVE.equals(icon)) return Words.Tags.LIVE;
         if (SMART.equals(icon)) return Words.Tags.SMART;
         if (MANUAL.equals(icon)) return Words.Tags.MANUAL;
         if (Drive.icon(true).equals(icon)) return Words.Tags.INTERNAL;
@@ -246,7 +242,6 @@ public final class Ui {
         if (MANUAL.equals(icon)) return 0xFF0F6E56;                         // ירוק
         if (LINK.equals(icon)) return 0xFF993C1D;                           // 1.17.0: כתום־אדמדם
         if (CMD.equals(icon) || Words.Tags.CMD.equals(icon)) return 0xFF185FA5;   // כחול
-        if (LIVE.equals(icon)) return 0xFF854F0B;
         return 0xFF5F5E5A;                                                  // כונן — אפור
     }
 
