@@ -30,6 +30,8 @@ final class Verbs {
      * "<דרך>" /עיצוב:"<שם>"…". הכלל האחד של העיצוב — כאן ובשלבים שלו; /עיצוב: יצא מ"עדכן" (שמשנה פרטים של רשימה).
      */
     static final String SHAPE = "עצב";   // תחביר
+    /** מבנה 236: "עצב תוכנה /…" — מעל כל האופנים; "עצב אופן "<שם>" /…" — מעל כל הרשימות של האופן. */
+    static final String PROGRAM_WORD = "תוכנה";   // תחביר
     static final String SCREEN = "מסך", LIST = "רשימה", SMART_WORD = "חכמה", FOLDER = "תיקייה";   // תחביר
     /** 1.17.0: "פתח תפריט <רשימה ב'שמור לתוכנה'>" · "צור פקודה" (המילון, 23). */
     static final String MENU = "תפריט", CMD_WORD = "פקודה";   // תחביר
@@ -60,7 +62,9 @@ final class Verbs {
     /** סוגי הפקודה אחרי הפענוח. */
     static final String K_SCREEN = "screen", K_LIST = "list", K_SMART = "smart", K_FOLDER = "folder", K_FIND = "find",
             K_BACK = "back", K_RUN = "run", K_NEW_LIST = "newlist", K_ADD = "add", K_MENU = "menu", K_NEW_CMD = "newcmd", K_TOOL = "tool",
-            K_NOTE = "note", K_TITLE = "title", K_MODE = "mode";
+            K_NOTE = "note", K_TITLE = "title", K_MODE = "mode",
+            /** מבנה 236: "עצב תוכנה". */
+            K_PROGRAM = "program";
 
     static final class Cmd {
         String verb = "", kind = "", arg = "", sort = "", cond = "";
@@ -274,19 +278,22 @@ final class Verbs {
                 c.kind = K_MODE;
                 c.arg = unquote(after(rest, MODE_WORD));
                 if (c.arg.isEmpty()) c.error = Words.Verb.usage(c.verb);
-            } else if (c.verb.equals(SHAPE) && starts(rest, LIST)) {          // מבנה 233: עצב רשימה "<דרך>" /עיצוב:"<שם>"
-                c.kind = K_LIST;
+            } else if (c.verb.equals(SHAPE) && (starts(rest, LIST) || starts(rest, MODE_WORD) || rest.trim().equals(PROGRAM_WORD)
+                    || starts(rest, PROGRAM_WORD))) {                            // מבנה 233, 236: עצב רשימה / אופן / תוכנה
+                boolean program = starts(rest, PROGRAM_WORD) || rest.trim().equals(PROGRAM_WORD);
+                c.kind = program ? K_PROGRAM : starts(rest, LIST) ? K_LIST : K_MODE;
                 c.edit = new java.util.LinkedHashMap<String, String>();
-                for (String w : Parse.tokens(after(rest, LIST))) {
+                for (String w : Parse.tokens(after(rest, program ? PROGRAM_WORD : c.kind.equals(K_LIST) ? LIST : MODE_WORD))) {
                     String look = lookKey(w);
                     if (w.startsWith(SW_DESIGN)) c.edit.put(Store.P_DESIGN, unquote(w.substring(SW_DESIGN.length())));
                     else if (look != null && look.endsWith(":")) putText(c.edit, look, w.substring(w.indexOf(':') + 1));   // מבנה 235
                     else if (look != null) c.edit.put(E_LOOK + look, unquote(w.substring(w.indexOf(':') + 1)));
-                    else if (w.startsWith("/") || !c.arg.isEmpty()) c.error = Words.Verb.usage(SHAPE);
+                    else if (w.startsWith("/") || !c.arg.isEmpty() || program) c.error = Words.Verb.usage(SHAPE);
                     else c.arg = unquote(w);
                 }
-                boolean pickedShape = Parse.var(Syntax.V_SELECTED).equals(c.arg);   // מהמסך — רק /עיצוב: (החלון)
-                if (c.arg.isEmpty() || c.edit.isEmpty() || (pickedShape && (c.edit.size() != 1 || !c.edit.containsKey(Store.P_DESIGN))))
+                boolean pickedShape = Parse.var(Syntax.V_SELECTED).equals(c.arg);   // מהמסך — רק /עיצוב: לרשימה (החלון)
+                if ((c.arg.isEmpty() && !program) || c.edit.isEmpty()
+                        || (pickedShape && (!c.kind.equals(K_LIST) || c.edit.size() != 1 || !c.edit.containsKey(Store.P_DESIGN))))
                     c.error = Words.Verb.usage(SHAPE);
             } else if (c.verb.equals(CREATE) && (starts(rest, NOTE_WORD) || starts(rest, TITLE_WORD))) {   // מ0.37
                 boolean title = starts(rest, TITLE_WORD);

@@ -534,7 +534,7 @@ final class Batch {
         s.error = vc.error;
         s.describe = Verbs.describe(vc);
         String doneIn = null;
-        if (s.error == null && Verbs.K_MODE.equals(vc.kind)) ModeCmds.planMode(s, vc.arg, vc.fromBackup, sim);   // מ0.42: צור אופן
+        if (s.error == null && Verbs.K_MODE.equals(vc.kind) && Verbs.CREATE.equals(vc.verb)) ModeCmds.planMode(s, vc.arg, vc.fromBackup, sim);   // מ0.42: צור אופן (מבנה 236: "עצב אופן" — לא כאן)
         else if (s.error == null && DbVerbs.active()) doneIn = ListVerbs.planVerb(s, vc, sim);   // מ0.25: החלק הכותב — בסדר השורות
         // מ0.30 (ממצא 39): "פתח רשימה / רשימה חכמה" אחרי "אופן X" — נפתחת באופן של הקובץ, לא באופן שפתוח במסך
         if (s.error == null && doneIn == null && sim.mode != null && Verbs.OPEN.equals(vc.verb) && vc.arg != null && !vc.arg.trim().isEmpty()

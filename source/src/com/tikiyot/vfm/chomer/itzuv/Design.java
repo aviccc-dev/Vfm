@@ -121,8 +121,9 @@ final class Design {
     }
 
     /**
-     * המראה של רשימה: מלמעלה למטה — מהרשימה העליונה (שמתחת לבית) עד הרשימה הזו. רשימה שבחרה עיצוב — מתחילה ממנו מחדש; מה
-     * שהיא שינתה (P_LOOK) — עליו. null — לא נקבע כלום בדרך (המסך מצייר כמו תמיד). הדרך למעלה — דרך הרשימה הראשונה שהיא בה.
+     * המראה של רשימה: מלמעלה למטה — כל התוכנה, האופן, ואז מהרשימה העליונה (שמתחת לבית) עד הרשימה הזו (מבנה 234, 236). מי שבחר
+     * עיצוב — מתחילים ממנו מחדש; מה שהוא שינה (המראה) — עליו. null — לא נקבע כלום בדרך (המסך מצייר כמו תמיד). הדרך למעלה —
+     * דרך הרשימה הראשונה שהרשימה בה.
      */
     static Design forList(Store t, long id) {
         List<Long> chain = new ArrayList<Long>();
@@ -133,16 +134,69 @@ final class Design {
             List<Long> up = t.listsOf(at);
             at = up.isEmpty() ? 0 : up.get(0);
         }
-        Design d = null;
-        for (long x : chain) {
-            String name = t.prop(x, Store.P_DESIGN), look = t.prop(x, Store.P_LOOK);
-            if (name != null && !name.trim().isEmpty()) d = get(name.trim()).copy();
-            if (look != null && !look.trim().isEmpty()) {
-                if (d == null) d = get(DEFAULT).copy();
-                d.overlay(look);
-            }
+        Design d = above(t, null);
+        for (long x : chain) d = fold(d, t.prop(x, Store.P_DESIGN), t.prop(x, Store.P_LOOK), null);
+        return d;
+    }
+
+    /**
+     * מבנה 236: מסך הבית — כל התוכנה, האופן, ואז הבית עצמו (העיצוב שלו — מהמסד, או מההגדרה הישנה "עיצוב מסך הבית"). לא נקבע כלום —
+     * רשת בלי מסגרת לצלמית (כמו האריחים בבית הישן).
+     */
+    static Design forHome(Store t, long home) {
+        Design start = get(FILES).copy();
+        start.around = NONE;
+        String own = t.prop(home, Store.P_DESIGN);
+        if (own == null || own.trim().isEmpty()) own = homeName();
+        Design d = fold(above(t, start), own, t.prop(home, Store.P_LOOK), start);
+        return d != null ? d : start;
+    }
+
+    /** מה שמעל הרשימות: של כל התוכנה (הבית של אופן התפריטים), ושל האופן (הבית שלו). start — ממה מתחילים כשיש רק מראה. */
+    private static Design above(Store t, Design start) {
+        String[] all = programProps();
+        Design d = fold(null, all[0], all[1], start);
+        long h = DbPaths.home(t);
+        return h == 0 ? d : fold(d, t.prop(h, Store.P_ALL_DESIGN), t.prop(h, Store.P_ALL_LOOK), start);
+    }
+
+    /** שלב אחד בירושה: עיצוב שנבחר — מתחילים ממנו; מראה — עליו (אין עדיין כלום — מ־start, או מברירת המחדל). */
+    private static Design fold(Design d, String design, String look, Design start) {
+        if (design != null && !design.trim().isEmpty()) d = get(design.trim()).copy();
+        if (look != null && !look.trim().isEmpty()) {
+            if (d == null) d = start != null ? start.copy() : get(DEFAULT).copy();
+            d.overlay(look);
         }
         return d;
+    }
+
+    private static String[] program = {null, null};
+    private static long programStamp = -1;
+
+    /** אחרי "עצב תוכנה": לקרוא מחדש (המסד יכול להשתנות בלי שתאריך הקובץ זז — יומן הכתיבה של המסד). */
+    static synchronized void forgetProgram() {
+        programStamp = -1;
+    }
+
+    /** העיצוב והמראה של כל התוכנה — מהבית של אופן התפריטים; נקרא מחדש כשהמסד שלו השתנה, או אחרי "עצב תוכנה". */
+    static synchronized String[] programProps() {
+        try {
+            File db = Db.dbFile(Db.app, Db.MENUS_MODE);
+            if (Db.app == null || !db.isFile()) return new String[]{null, null};
+            if (db.lastModified() != programStamp) {
+                program = Db.read(Db.app, Db.MENUS_MODE, new Db.Use<String[]>() {
+                    @Override public String[] run(SqlStore s) {
+                        long h = DbPaths.home(s);
+                        return h == 0 ? new String[]{null, null} : new String[]{s.prop(h, Store.P_ALL_DESIGN), s.prop(h, Store.P_ALL_LOOK)};
+                    }
+                });
+                programStamp = db.lastModified();
+            }
+            return program;
+        } catch (Throwable e) {
+            Log.e("Design.programProps", e);
+            return new String[]{null, null};
+        }
     }
 
     /**

@@ -25,7 +25,8 @@ final class DbSnap {
 
     /** המאפיינים שבתמונה, בסדר קבוע. */
     static final String[] PROPS = {Store.P_ICON, Store.P_DESC, Store.P_DESIGN, Store.P_WHY, Store.P_GROUP,
-            Store.P_COND, Store.P_SORT, Store.P_DIR, Store.P_VIEW, Store.P_LOOK};   // מבנה 234: גם המראה של הרשימה
+            Store.P_COND, Store.P_SORT, Store.P_DIR, Store.P_VIEW, Store.P_LOOK,   // מבנה 234: גם המראה של הרשימה
+            Store.P_ALL_DESIGN, Store.P_ALL_LOOK};   // מבנה 236: ושל האופן (על הבית)
 
     private DbSnap() { }
 

@@ -1274,6 +1274,34 @@ final class DbCmdTests {
                         String b235 = look235[0] == null ? "" : look235[0];
                         o.check("מבנה 235: \"\" — חוזרים לרשת (" + b235 + ")", bad(back235).isEmpty() && !b235.contains("טורים") && !b235.contains("שם:")
                                 && b235.contains("ריווח = 12") && d235[0].cols == 3);
+                        // מבנה 236: "עצב אופן" — מעל כל הרשימות של האופן; "עצב תוכנה" — מעל כל האופנים; הבית — גם הוא תחתם
+                        List<String> w236 = go("עצב אופן \"" + m91 + "\" /טורים:6 /כתב-שם:22\nעצב תוכנה /כתב-נתונים:13\n", here, vars, lib);
+                        final Design[] d236 = new Design[3];
+                        final String[] p236 = new String[1];
+                        Db.read(Db.app, m91, new Db.Use<Void>() {
+                            @Override public Void run(SqlStore st) {
+                                d236[0] = Design.forList(st, DbPaths.find(st, m91, java.util.Arrays.asList("בלי 234")));
+                                d236[1] = Design.forList(st, DbPaths.find(st, m91, java.util.Arrays.asList("מראה 234", "ב", "ג")));
+                                d236[2] = Design.forHome(st, DbPaths.home(st));
+                                p236[0] = st.prop(DbPaths.home(st), Store.P_ALL_LOOK);
+                                return null;
+                            }
+                        });
+                        String[] all236 = Design.programProps();
+                        o.check("מבנה 236: עצב אופן — על הבית של האופן (" + p236[0] + "); עצב תוכנה — על הבית של אופן התפריטים (" + all236[1] + "); "
+                                        + "רשימה בלי כלום — מקבלת את שניהם; רשימה שבחרה עיצוב — מתחילה ממנו; הבית — רשת בלי מסגרת, עם מה שמעליו " + w236,
+                                bad(w236).isEmpty() && p236[0] != null && p236[0].contains("טורים = 6") && all236[1] != null
+                                        && all236[1].contains("נתונים: גודל = 13") && d236[0] != null && d236[0].cols == 6
+                                        && d236[0].nameT.size == 22 && d236[0].data.size == 13 && !d236[0].grid
+                                        && d236[1] != null && d236[1].grid && d236[1].cols == 3 && d236[2].grid && d236[2].cols == 6
+                                        && Design.NONE.equals(d236[2].around));
+                        o.check("מבנה 236: אופן שאין — שגיאה; \"עצב תוכנה\" עם שם — שגיאה; \"צור אופן\" — כמו קודם (לא נבלע ב\"עצב\")",
+                                Batch.plan("עצב אופן \"אין כזה 236\" /טורים:2\n", here, vars, lib).blocked()
+                                        && Batch.plan("עצב תוכנה \"x\" /טורים:2\n", here, vars, lib).blocked()
+                                        && Batch.plan("עצב אופן \"" + m91 + "\"\n", here, vars, lib).blocked());
+                        List<String> back236 = go("עצב אופן \"" + m91 + "\" /טורים:\"\" /כתב-שם:\"\"\nעצב תוכנה /כתב-נתונים:\"\"\n", here, vars, lib);
+                        o.check("מבנה 236: \"\" — מתנקה (האופן והתוכנה בלי מראה)", bad(back236).isEmpty()
+                                && (Design.programProps()[1] == null || Design.programProps()[1].isEmpty()));
                     }
                     // מבנה 123: "שחזר דוגמאות" כפקודה; ו"צור אופן" על אופן שיש בו רשימות ואין בו בית — מתקן
                     {

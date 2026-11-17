@@ -155,6 +155,56 @@ final class ListVerbs {
      * מהבחירה, ואינם מפוענחים. אותו כלל כמו בשורה הכתובה (edited). מה שנובע מהמקום: במסך — כל הטופס, ושדה שם ריק פירושו "בלי
      * שינוי בשם"; ורעיון / כותרת (שאין להם דרך של שמות) — רק מכאן, והטקסט שלהם הוא ה"שם".
      */
+    /** מבנה 235: הערכים של המראה — בטווח, והגופן קיים (הכלל — ב־Design). null — הכול תקין; אחרת — למה לא. */
+    static String lookErrors(Verbs.Cmd c) {
+        for (java.util.Map.Entry<String, String> e : c.edit.entrySet())
+            if (e.getKey().startsWith(Verbs.E_LOOK) && !e.getValue().isEmpty()) {
+                String why = Design.lookError(e.getKey().substring(Verbs.E_LOOK.length()), e.getValue());
+                if (why != null) return why;
+            }
+        return null;
+    }
+
+    /** מבנה 235, 236: "עצב" על פריט אחד — העיצוב (pDesign; "" — לרשת) והמראה (pLook): רק מה שנכתב משתנה. */
+    static void shapeOn(Store t, long id, java.util.Map<String, String> edit, String pDesign, String pLook) {
+        if (edit.containsKey(Store.P_DESIGN)) t.setProp(id, pDesign, edit.get(Store.P_DESIGN).trim());
+        String look = t.prop(id, pLook), was = look;
+        for (java.util.Map.Entry<String, String> e : edit.entrySet())
+            if (e.getKey().startsWith(Verbs.E_LOOK)) look = Design.withLook(look, e.getKey().substring(Verbs.E_LOOK.length()), e.getValue());
+        if (look != null && !look.equals(was)) t.setProp(id, pLook, look);
+    }
+
+    /**
+     * מבנה 236 (המשתמש, 17.11.2026: "אחת בסיסית על כל התוכנה" · "וניתן לשינוי לכל אופן כמו לכל רשימה ותת רשימה"): "עצב אופן
+     * "<שם>"" — העיצוב והמראה שמעל כל הרשימות של האופן (על הבית שלו); "עצב תוכנה" — מעל כל האופנים (על הבית של אופן התפריטים,
+     * "שמור לתוכנה"). הכלל — כמו ברשימה (lookErrors, shapeOn). בהרצה — על המסד של האופן, דרך המנהל.
+     */
+    static String planShapeAll(final Batch.Step s, final Verbs.Cmd c, Sim sim) {
+        final boolean program = c.kind.equals(Verbs.K_PROGRAM);
+        final String m = program ? Db.MENUS_MODE : c.arg;
+        if (!program && !Db.dbFile(Db.app, m).isFile()) { s.error = Words.DbCmd.noMode(m, sim.modes()); return null; }
+        if ((s.error = lookErrors(c)) != null) return null;
+        c.noOpen = true;
+        final String said = program ? Words.ListCmdW.DESIGN_SET_ALL : Words.ListCmdW.designSetMode(m);
+        s.describe = Words.DbCmd.inDb(said);
+        s.op = new ListCmd.Op() {
+            @Override public String run(Library lib) {
+                DbListCmd.Res r = ListRun.realRes(m, new DbListCmd.Work() {
+                    @Override public DbListCmd.Res run(Store t, DbListCmd.Finder f) {
+                        long h = DbPaths.home(t);
+                        if (h == 0) return DbListCmd.Res.err(Words.Db.LIST_GONE);
+                        shapeOn(t, h, c.edit, Store.P_ALL_DESIGN, Store.P_ALL_LOOK);
+                        return DbListCmd.Res.ok(said);
+                    }
+                }, false, lib);
+                if (program) Design.forgetProgram();
+                if (r.error != null) DbListCmd.lastFailed = true;
+                return r.error != null ? r.error : Words.DbCmd.inDb(r.text);
+            }
+        };
+        return m;
+    }
+
     static String planPickedEdit(final Batch.Step s, final Verbs.Cmd c, Sim sim) {
         final Batch.Selection sel = sim.selected;
         // מבנה 121: סדר ידני ("/מקום:") של הפריטים שנבחרו, בתוך הרשימה שמוצגת; ועיצוב ("עצב רשימה … /עיצוב:%תוכן%" — מבנה 233) לרשימה. בלי גיבוי — כמו במסך.
@@ -269,15 +319,11 @@ final class ListVerbs {
         final boolean note = c.kind.equals(Verbs.K_NOTE), title = c.kind.equals(Verbs.K_TITLE);   // מ0.37
         final boolean listUpd = c.kind.equals(Verbs.K_LIST) && c.verb.equals(Verbs.UPDATE);   // מבנה 113: עדכן רשימה
         final boolean listShape = c.kind.equals(Verbs.K_LIST) && c.verb.equals(Verbs.SHAPE);   // מבנה 233: עצב רשימה
+        if (c.verb.equals(Verbs.SHAPE) && (c.kind.equals(Verbs.K_MODE) || c.kind.equals(Verbs.K_PROGRAM))) return planShapeAll(s, c, sim);   // מבנה 236
         if (!list && !smartNew && !smartUpd && !note && !title && !listUpd && !listShape) return null;
         if (listUpd || listShape) c.noOpen = true;                              // השם יכול להשתנות — לא פותחים בסוף
         if ((listUpd || listShape) && Parse.var(Syntax.V_SELECTED).equals(c.arg)) return planPickedEdit(s, c, sim);   // מבנה 113, 233: מהמסך
-        if (listShape)                                                          // מבנה 235: הכלל — הערכים בטווח, הגופן קיים; אחרת נאמר למה
-            for (java.util.Map.Entry<String, String> e : c.edit.entrySet())
-                if (e.getKey().startsWith(Verbs.E_LOOK) && !e.getValue().isEmpty()) {
-                    String why = Design.lookError(e.getKey().substring(Verbs.E_LOOK.length()), e.getValue());
-                    if (why != null) { s.error = why; return null; }
-                }
+        if (listShape && (s.error = lookErrors(c)) != null) return null;     // מבנה 235: הכלל — הערכים בטווח, הגופן קיים; אחרת נאמר למה
         if ((note || title) && Parse.var(Syntax.V_SELECTED).equals(c.arg)) return planPickedNote(s, c, title, sim);   // מבנה 93: מהמסך
         if (smartNew && Parse.var(Syntax.V_NEW_NAME).equals(c.arg)) return planPickedSmart(s, c, sim);                // מבנה 97: מהטופס
         if (smartUpd && Parse.var(Syntax.V_SELECTED).equals(c.arg)) return planPickedSmartEdit(s, c, sim);            // מבנה 99: מהטופס
@@ -322,11 +368,7 @@ final class ListVerbs {
                     List<String> at = Names.parsePath(c.arg);
                     DbPaths.Found u = DbPaths.listAt(t, mode, at);
                     if (u.error != null || u.id == 0) return DbListCmd.Res.err(u.ambiguous ? u.error : Words.ListCmdW.noList(Names.label(at)));
-                    if (c.edit.containsKey(Store.P_DESIGN)) t.setProp(u.id, Store.P_DESIGN, c.edit.get(Store.P_DESIGN).trim());   // "" — לרשת
-                    String look = t.prop(u.id, Store.P_LOOK), was = look;     // מבנה 235: המראה — רק המפתחות שנכתבו
-                    for (java.util.Map.Entry<String, String> e : c.edit.entrySet())
-                        if (e.getKey().startsWith(Verbs.E_LOOK)) look = Design.withLook(look, e.getKey().substring(Verbs.E_LOOK.length()), e.getValue());
-                    if (look != null && !look.equals(was)) t.setProp(u.id, Store.P_LOOK, look);
+                    shapeOn(t, u.id, c.edit, Store.P_DESIGN, Store.P_LOOK);
                     return DbListCmd.Res.ok(Words.ListCmdW.DESIGN_SET);
                 }
                 // מבנה 100: המספר של מה שנוצר / עודכן חוזר (DbListCmd.Res.made ← DbListCmd.Step.made) — כפתור שמריץ את השורה פותח בדיוק אותו
