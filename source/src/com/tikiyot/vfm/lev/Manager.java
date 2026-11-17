@@ -436,6 +436,23 @@ final class Manager {
         }
     }
 
+    /**
+     * מבנה 232 (הפרדת העיצוב): חלון העיצוב הישן (DesignUi) כותב את קובצי העיצוב דרך שכבת הניהול — המנהל פותח היתר לזמן
+     * הפעולה, והחומר (Design) כותב. רק לחלון הזה (שומר), ועד שהוא יורד — המשתמש, 17.11.2026: "תכין פקודות... ותוסף; אחרי
+     * שהכל יעבוד נמחק מהקוד הראשי". מה שהפעולה מחזירה — חוזר; חריגה — נרשמת ביומן, וחוזר null.
+     */
+    static <T> T oldDesign(java.util.concurrent.Callable<T> act) {
+        Permit.open();
+        try {
+            return act.call();
+        } catch (Exception e) {
+            Log.e("Manager.oldDesign", e);
+            return null;
+        } finally {
+            Permit.close();
+        }
+    }
+
     private static boolean inZone(java.io.File zone, java.io.File f) {
         if (zone == null || f == null) return false;
         String z = Paths.clean(zone.getAbsolutePath()), p = Paths.clean(f.getAbsolutePath());

@@ -58,7 +58,7 @@ final class DesignUi {
             @Override
             public void onClick(DialogInterface dlg, int which) {
                 if (which < all.size()) {
-                    String name = Design.adopt(all.get(which));
+                    String name = adopt(all.get(which));
                     if (name == null) Ui.toast(a, Words.DesignW.COPY_FAILED);
                     else done.chosen(name);
                 } else if (which == inherit) {
@@ -70,13 +70,13 @@ final class DesignUi {
                         @Override public void changed() { done.changed(); }
                     });
                 } else if (which == edit) {
-                    Design d = Design.get(current);
-                    if (d.file != null && d.file.isFile()) Ui.editText(a, d.file);
+                    java.io.File f = file(current);
+                    if (f.isFile()) Ui.editText(a, f);
                 } else if (which == edit + 1) {
                     Ui.askText(a, Words.DesignW.SAVE_AS, "", Words.DesignW.SAVE_AS_HINT, new Ui.Text1() {
                         @Override
                         public void ok(String name) {
-                            String err = Design.saveAs(Design.get(current), name);
+                            String err = saveAs(Design.get(current), name);
                             if (err != null) Ui.toast(a, err);
                             else done.chosen(name.trim().replace('/', '∕'));
                         }
@@ -86,7 +86,7 @@ final class DesignUi {
                         Ui.toast(a, Words.DesignW.NOT_BUILT_IN);
                         return;
                     }
-                    Ui.toast(a, Design.reset(current) ? Words.DesignW.RESET_DONE : Words.SAVE_FAILED);
+                    Ui.toast(a, reset(current) ? Words.DesignW.RESET_DONE : Words.SAVE_FAILED);
                     done.changed();
                 }
             }
@@ -236,7 +236,7 @@ final class DesignUi {
             @Override
             public void onClick(View v) {
                 collect.run();
-                if (!Design.save(d)) {
+                if (!save(d)) {
                     Ui.toast(a, Words.SAVE_FAILED);
                     return;
                 }
@@ -250,7 +250,7 @@ final class DesignUi {
                 Ui.askText(a, Words.DesignW.SAVE_AS, "", Words.DesignW.SAVE_AS_HINT, new Ui.Text1() {
                     @Override
                     public void ok(String newName) {
-                        String err = Design.saveAs(d, newName);
+                        String err = saveAs(d, newName);
                         if (err != null) {
                             Ui.toast(a, err);
                             return;
@@ -259,7 +259,7 @@ final class DesignUi {
                         collect.run();
                         Design copy = Design.get(n);
                         copyLook(d, copy);
-                        if (!Design.save(copy)) {
+                        if (!save(copy)) {
                             Ui.toast(a, Words.SAVE_FAILED);
                             return;
                         }
@@ -337,13 +337,13 @@ final class DesignUi {
             public void onClick(DialogInterface dlg, int which) {
                 if (which == 0) form(a, name, back);
                 else if (which == 1) {
-                    Design d = Design.get(name);
-                    if (d.file != null && d.file.isFile()) Ui.editText(a, d.file);
+                    java.io.File f = file(name);
+                    if (f.isFile()) Ui.editText(a, f);
                 } else if (which == 2) {
                     Ui.askText(a, Words.DesignW.SAVE_AS, "", Words.DesignW.SAVE_AS_HINT, new Ui.Text1() {
                         @Override
                         public void ok(String n) {
-                            String err = Design.saveAs(Design.get(name), n);
+                            String err = saveAs(Design.get(name), n);
                             Ui.toast(a, err != null ? err : Words.DesignW.CHOSEN + n.trim());
                             manage(a);
                         }
@@ -352,8 +352,7 @@ final class DesignUi {
                     Ui.askText(a, Words.DesignW.RENAME, name, null, new Ui.Text1() {
                         @Override
                         public void ok(String n) {
-                            Design.ensure(name);
-                            String err = Design.rename(name, n);
+                            String err = rename(name, n);
                             if (err != null) Ui.toast(a, err);
                             manage(a);
                         }
@@ -363,15 +362,63 @@ final class DesignUi {
                             new Runnable() {
                                 @Override
                                 public void run() {
-                                    Ui.toast(a, Design.delete(name) ? Words.DesignW.DELETED : Words.DELETE_FAILED);
+                                    Ui.toast(a, delete(name) ? Words.DesignW.DELETED : Words.DELETE_FAILED);
                                     manage(a);
                                 }
                             });
                 } else {
-                    Ui.toast(a, Design.reset(name) ? Words.DesignW.RESET_DONE : Words.SAVE_FAILED);
+                    Ui.toast(a, reset(name) ? Words.DesignW.RESET_DONE : Words.SAVE_FAILED);
                     manage(a);
                 }
             }
         });
+    }
+
+    // ---------- מבנה 232: החלון לא כותב בעצמו — כל כתיבה של עיצוב דרך שכבת הניהול (Manager.oldDesign), עד שהחלון יורד ----------
+
+    private static String adopt(final String[] picked) {
+        return Manager.oldDesign(new java.util.concurrent.Callable<String>() {
+            @Override public String call() { return Design.adopt(picked); }
+        });
+    }
+
+    private static String saveAs(final Design from, final String name) {
+        String r = Manager.oldDesign(new java.util.concurrent.Callable<String>() {
+            @Override public String call() { String e = Design.saveAs(from, name); return e == null ? "" : e; }
+        });
+        return r == null ? Words.SAVE_FAILED : r.isEmpty() ? null : r;
+    }
+
+    private static boolean save(final Design d) {
+        return Boolean.TRUE.equals(Manager.oldDesign(new java.util.concurrent.Callable<Boolean>() {
+            @Override public Boolean call() { return Design.save(d); }
+        }));
+    }
+
+    private static boolean reset(final String name) {
+        return Boolean.TRUE.equals(Manager.oldDesign(new java.util.concurrent.Callable<Boolean>() {
+            @Override public Boolean call() { return Design.reset(name); }
+        }));
+    }
+
+    private static String rename(final String from, final String to) {
+        String r = Manager.oldDesign(new java.util.concurrent.Callable<String>() {
+            @Override public String call() { Design.ensure(from); String e = Design.rename(from, to); return e == null ? "" : e; }
+        });
+        return r == null ? Words.SAVE_FAILED : r.isEmpty() ? null : r;
+    }
+
+    private static boolean delete(final String name) {
+        return Boolean.TRUE.equals(Manager.oldDesign(new java.util.concurrent.Callable<Boolean>() {
+            @Override public Boolean call() { return Design.delete(name); }
+        }));
+    }
+
+    /** הקובץ של העיצוב, לעריכה ידנית: מובנה שאין לו קובץ — נכתב קודם (דרך המנהל). */
+    private static java.io.File file(final String name) {
+        java.io.File f = Manager.oldDesign(new java.util.concurrent.Callable<java.io.File>() {
+            @Override public java.io.File call() { return Design.ensure(name); }
+        });
+        return f == null ? Design.fileOf(name) : f;
     }
 }

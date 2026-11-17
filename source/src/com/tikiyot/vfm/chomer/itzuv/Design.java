@@ -265,8 +265,10 @@ final class Design {
                 name = picked[0] + " (" + picked[1] + ")";
                 f = fileOf(name);
             }
-            dir().mkdirs();
-            if (!f.isFile()) Files.writeAtomic(f, text);
+            if (!f.isFile()) {                                                 // מבנה 232: באזור של התוכנה — רק בהיתר
+                String no = Physical.ownDir(dir()) ? Physical.ownWrite(f, text) : Words.SAVE_FAILED;
+                if (no != null) { Log.i("העתקת עיצוב מאופן אחר: " + no); return null; }
+            }
             return name;
         } catch (Throwable t) {
             Log.e("העתקת עיצוב מאופן אחר", t);
@@ -278,12 +280,8 @@ final class Design {
     static File ensure(String name) {
         File f = fileOf(name);
         if (!f.isFile() && builtIn(name)) {
-            try {
-                dir().mkdirs();
-                Files.writeAtomic(f, builtInText(name));
-            } catch (Throwable t) {
-                Log.e("כתיבת עיצוב מובנה", t);
-            }
+            String no = Physical.ownDir(dir()) ? Physical.ownWrite(f, builtInText(name)) : Words.SAVE_FAILED;   // מבנה 232
+            if (no != null) Log.i("כתיבת עיצוב מובנה: " + no);
         }
         return f;
     }
@@ -298,9 +296,7 @@ final class Design {
             if (old != null)
                 for (Map.Entry<String, String[]> e : old.lists.entrySet())
                     text = withPrivate(text, e.getKey(), e.getKey() + " = " + privateText(e.getValue()[0], e.getValue()[1]));
-            dir().mkdirs();
-            Files.writeAtomic(f, text);
-            return true;
+            return Physical.ownDir(dir()) && Physical.ownWrite(f, text) == null;   // מבנה 232: רק בהיתר
         } catch (Throwable t) {
             Log.e("חזרה לברירת מחדל — עיצוב", t);
             return false;
@@ -314,10 +310,12 @@ final class Design {
         File f = fileOf(n);
         if (f.exists()) return Words.DesignW.EXISTS;
         try {
-            File src = from.file != null && from.file.isFile() ? from.file : ensure(from.name);
-            dir().mkdirs();
-            Files.writeAtomic(f, src.isFile() ? Files.readUtf8(src) : builtInText(DEFAULT));
-            return null;
+            String no = Permit.check(Permit.OWN);                              // מבנה 232: רק בהיתר — והסירוב נאמר
+            if (no != null) return no;
+            File src = from.file != null && from.file.isFile() ? from.file : null;
+            String text = src != null ? Files.readUtf8(src) : builtInText(builtIn(from.name) ? from.name : DEFAULT);
+            if (!Physical.ownDir(dir())) return Words.SAVE_FAILED;
+            return Physical.ownWrite(f, text);                                 // מבנה 232: רק בהיתר; null — נשמר
         } catch (Throwable t) {
             Log.e("שמירת עיצוב בשם", t);
             return Words.SAVE_FAILED;
@@ -395,9 +393,7 @@ final class Design {
                     {T_DATA + ": " + K_WEIGHT, weightName(d.data.weight)}, {T_DATA + ": " + K_FONT, d.data.font},
                     {K_FIT, d.fit ? YES : NO}, {K_MIN, "" + d.min}, {K_LINES, "" + d.lines}};
             for (String[] kv : mid) text = withKey(text, S_MID, kv[0], kv[1]);
-            dir().mkdirs();
-            Files.writeAtomic(f, text);
-            return true;
+            return Physical.ownDir(dir()) && Physical.ownWrite(f, text) == null;   // מבנה 232: רק בהיתר
         } catch (Throwable t) {
             Log.e("שמירת עיצוב מהטופס", t);
             return false;
@@ -415,7 +411,7 @@ final class Design {
         if (n.equals(from)) return null;
         File a = fileOf(from), b = fileOf(n);
         if (b.exists()) return Words.DesignW.EXISTS;
-        if (!a.isFile() || !a.renameTo(b)) return Words.SAVE_FAILED;
+        if (!a.isFile() || !Physical.ownMove(a, b)) return Words.SAVE_FAILED;   // מבנה 232: רק בהיתר
         renameRefs(from, n);
         return null;
     }
@@ -430,8 +426,9 @@ final class Design {
     static boolean delete(String name) {
         File f = fileOf(name);
         if (!f.isFile()) return false;
+        if (Permit.check(Permit.OWN) != null) return false;                   // מבנה 232: גם הגיבוי — רק בהיתר
         Files.backup(f, DIR);
-        if (!f.delete()) return false;
+        if (!Physical.ownDelete(f)) return false;
         if (!builtIn(name)) renameRefs(name, "");
         return true;
     }
@@ -457,13 +454,16 @@ final class Design {
         return d;
     }
 
-    /** העיצוב בשם הזה: מהאופן הזה; מובנה — נכתב; לא נמצא — "עיצוב ברירת מחדל" (לא נשבר). */
+    /**
+     * העיצוב בשם הזה: מהאופן הזה; מובנה שאין לו קובץ — מהמקור (מבנה 232: בלי לכתוב בזמן ציור — הכתיבה רק בהיתר, דרך המנהל);
+     * לא נמצא — "עיצוב ברירת מחדל" (לא נשבר).
+     */
     static Design get(String name) {
         if (name == null || name.trim().isEmpty()) name = DEFAULT;
-        File f = builtIn(name) ? ensure(name) : fileOf(name);
+        File f = fileOf(name);
         if (f.isFile()) return read(f, name);
-        if (!DEFAULT.equals(name)) return get(DEFAULT);
-        Design d = parse(DEFAULT, builtInText(DEFAULT));
+        if (!builtIn(name)) return get(DEFAULT);
+        Design d = parse(name, builtInText(name));
         d.file = f;
         return d;
     }

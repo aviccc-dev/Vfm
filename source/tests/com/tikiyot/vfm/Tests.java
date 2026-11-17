@@ -691,7 +691,22 @@ public final class Tests {
         File dir = Design.dir();
         wipe(dir);
         Design g = Design.get(Design.FILES);
-        check("1.12.0: מובנה — נכתב לתיקיית האופן", Design.fileOf(Design.FILES).isFile() && g.grid);
+        // מבנה 232 (הפרדת העיצוב): בזמן ציור לא כותבים — מובנה בלי קובץ נקרא מהמקור; וכל כתיבה של עיצוב — רק בהיתר של שכבת הניהול
+        check("מבנה 232: מובנה בלי קובץ — נקרא מהמקור (רשת), ולא נכתב בזמן ציור", !Design.fileOf(Design.FILES).isFile() && g.grid
+                && Design.get(Design.WORDS).cols == 2 && !Design.fileOf(Design.WORDS).isFile());
+        Permit.close();                                                         // לרגע — כמו בתוכנה: בלי היתר, אלא אם המנהל פותח
+        try {
+            check("מבנה 232: בלי היתר — שמירה בשם, שמירה, חזרה לברירת מחדל ומחיקה מסורבות, ולא נכתב כלום",
+                    Words.PermitW.refused(Permit.OWN).equals(Design.saveAs(g, "מדף ספרים")) && !Design.save(g)
+                            && !Design.reset(Design.FILES) && !Design.delete(Design.FILES) && !Design.fileOf("מדף ספרים").exists()
+                            && !Design.fileOf(Design.FILES).exists());
+            check("מבנה 232: דרך שכבת הניהול (החלון הישן) — נכתב, וההיתר נסגר אחריו",
+                    "".equals(Manager.oldDesign(new java.util.concurrent.Callable<String>() {
+                        @Override public String call() { Design.ensure(Design.FILES); return Design.fileOf(Design.FILES).isFile() ? "" : "x"; }
+                    })) && !Permit.held());
+        } finally {
+            Permit.open();
+        }
         eq("1.12.0: עיצוב שלא קיים — ברירת המחדל (לא נשבר)", Design.DEFAULT, Design.get("אין כזה").name);
         eq("1.12.0: שמירה בשם", null, Design.saveAs(g, "מדף ספרים"));
         check("1.12.0: שמירה בשם — העותק זהה", Design.get("מדף ספרים").grid && Design.get("מדף ספרים").cols == 3);
@@ -3836,6 +3851,15 @@ public final class Tests {
                         bad128.length() == 0);
             }
             check("מבנה 84: ...ופעולות הכונן — מסורבות כולן (לא חזרו אחורה)", Permit.strict(Permit.DELETE) && Permit.strict(Permit.WRITE));
+            {   // מבנה 232: השער של החלון הישן (Manager.oldDesign) — רק לחלון העיצוב הישן, עד שהוא יורד
+                StringBuilder od = new StringBuilder();
+                String root232 = code.getPath().replace('\\', '/');
+                for (File f : javaFiles(code)) {
+                    String rel = f.getPath().replace('\\', '/').substring(root232.length() + 1);
+                    if (read(f).contains("oldDesign(") && !rel.equals("lev/Manager.java") && !rel.equals("masachim/itzuv/DesignUi.java")) od.append(rel).append(' ');
+                }
+                check("מבנה 232: Manager.oldDesign — רק בחלון העיצוב הישן (" + od.toString().trim() + ")", od.length() == 0);
+            }
         }
         // מבנה 55: המכשיר עצר את התוכנה בזמן הרצה — הדוח אומר זאת ואיזו הגדרה פותרת
         List<String> rep55 = new ArrayList<String>();
