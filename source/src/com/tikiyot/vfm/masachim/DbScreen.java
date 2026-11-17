@@ -132,6 +132,7 @@ public class DbScreen extends Activity {
 
     @Override
     protected void onCreate(Bundle saved) {
+        Ui.begin(this, false);                                     // מבנה 238: הצבעים מהעיצוב
         super.onCreate(saved);
         setTitle(Words.Db.TITLE);
         LinearLayout root = Ui.screen(this);

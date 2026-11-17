@@ -26,6 +26,14 @@ import java.util.Set;
 
 abstract class ListScreen<T> extends Activity {
 
+    /** מבנה 238: הצבעים מהעיצוב — לפני super.onCreate (כל מסך שיורש מכאן). */
+    @Override
+    protected void onCreate(android.os.Bundle saved) {
+        Ui.begin(this, false);
+        super.onCreate(saved);
+    }
+
+
     /** מספרי התפריט של השלד (שלא יתנגשו במספרים של המסך). */
     private static final int MENU_FULL = 9001, MENU_SORT = 9002;
 

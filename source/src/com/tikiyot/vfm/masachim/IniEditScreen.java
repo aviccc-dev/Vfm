@@ -34,6 +34,7 @@ public class IniEditScreen extends Activity {
 
     @Override
     protected void onCreate(Bundle saved) {
+        Ui.begin(this, false);                                     // מבנה 238: הצבעים מהעיצוב
         super.onCreate(saved);
         String p = getIntent() != null ? getIntent().getStringExtra(EXTRA_FILE) : null;
         if (p == null) {

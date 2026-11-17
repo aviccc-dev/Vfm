@@ -222,7 +222,7 @@ final class PhysicalUi {
                 android.widget.Button b = new android.widget.Button(a);
                 b.setText(labels[i]);
                 b.setAllCaps(false);
-                if (c == Physical.Choice.REPLACE) b.setTextColor(Actions.WARNING);
+                if (c == Physical.Choice.REPLACE) b.setTextColor(Ui.RED);
                 b.setOnClickListener(new android.view.View.OnClickListener() {
                     @Override
                     public void onClick(android.view.View v) {

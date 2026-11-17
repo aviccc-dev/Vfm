@@ -3860,6 +3860,29 @@ public final class Tests {
                 }
                 check("מבנה 232: Manager.oldDesign — רק בחלון העיצוב הישן (" + od.toString().trim() + ")", od.length() == 0);
             }
+            {   // מבנה 238: הצבעים מהעיצוב — כל מסך מתחיל ב־Ui.begin, לפני super.onCreate; והסדר של הצבעים כמו בעיצוב (Palette)
+                StringBuilder nb = new StringBuilder();
+                for (File f : javaFiles(new File(code, "masachim"))) {
+                    String t = read(f);
+                    if (!t.contains("extends Activity")) continue;
+                    int b = t.indexOf("Ui.begin(this"), s = t.indexOf("super.onCreate(");
+                    if (b < 0 || s < 0 || b > s) nb.append(f.getName()).append(' ');
+                }
+                check("מבנה 238: כל מסך — Ui.begin לפני super.onCreate (" + nb.toString().trim() + ")", nb.length() == 0);
+                int[] was = {Ui.TEXT, Ui.SUB, Ui.MUTED, Ui.ON_COLOR, Ui.BG, Ui.BG_SOFT, Ui.HEADER, Ui.HEADER_SOFT, Ui.BAR, Ui.SELECTED,
+                        Ui.ACCENT, Ui.ACCENT_DARK, Ui.MARK, Ui.DOUBT, Ui.DOUBT_STRONG, Ui.RED, Ui.ICON, Ui.RULE};
+                int[] light = {0xFF202124, 0xFF5F6368, 0xFF9AA0A6, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFF4F5F6, 0xFFF1F3F4, 0xFFE8EAED, 0xFFE8F0FE,
+                        0xFFD2E3FC, 0xFF1A73E8, 0xFF174EA6, 0xFFFFF2A8, 0xFFFFF1C2, 0xFFF2B52B, 0xFFC5221F, 0xFF5F6368, 0xFFE0E0E0};
+                Ui.use(Palette.resolve(), false);
+                int[] got = {Ui.TEXT, Ui.SUB, Ui.MUTED, Ui.ON_COLOR, Ui.BG, Ui.BG_SOFT, Ui.HEADER, Ui.HEADER_SOFT, Ui.BAR, Ui.SELECTED,
+                        Ui.ACCENT, Ui.ACCENT_DARK, Ui.MARK, Ui.DOUBT, Ui.DOUBT_STRONG, Ui.RED, Ui.ICON, Ui.RULE};
+                check("מבנה 238: הערכה הבהירה — בדיוק הצבעים שהיו קבועים בקוד, באותו סדר (בלי שינוי במה שרואים)",
+                        Arrays.equals(light, got) && Arrays.equals(light, was));
+                Ui.use(Palette.resolve(Palette.K_MODE + " = " + Palette.DARK, Palette.K_COLOR + ": הדגשה = #00FF00"), true);
+                check("מבנה 238: כהה — הרקע כהה והטקסט בהיר; צבע שנקבע — במקומו", Ui.BG == 0xFF202124 && Ui.TEXT == 0xFFE8EAED
+                        && Ui.ACCENT == 0xFF00FF00 && Ui.RULE == 0xFF3C4043);
+                Ui.use(Palette.resolve(), false);
+            }
         }
         // מבנה 55: המכשיר עצר את התוכנה בזמן הרצה — הדוח אומר זאת ואיזו הגדרה פותרת
         List<String> rep55 = new ArrayList<String>();

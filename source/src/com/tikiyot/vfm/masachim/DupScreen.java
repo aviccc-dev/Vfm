@@ -131,6 +131,7 @@ public class DupScreen extends Activity {
 
     @Override
     protected void onCreate(Bundle saved) {
+        Ui.begin(this, false);                                     // מבנה 238: הצבעים מהעיצוב
         super.onCreate(saved);
         lib = Library.get(this);
         scope = extra(EXTRA_SCOPE);

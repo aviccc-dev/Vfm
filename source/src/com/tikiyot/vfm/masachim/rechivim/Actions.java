@@ -42,7 +42,6 @@ public final class Actions {
         DESTRUCTIVE
     }
 
-    public static final int WARNING = Ui.RED;
 
     public static final class Action {
         public final String id, label;

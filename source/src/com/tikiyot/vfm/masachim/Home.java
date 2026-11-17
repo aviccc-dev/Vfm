@@ -19,6 +19,7 @@ public class Home extends Activity {
 
     @Override
     protected void onCreate(Bundle saved) {
+        Ui.begin(this, false);                                     // מבנה 238: הצבעים מהעיצוב
         super.onCreate(saved);
         Log.install();
         Log.initVersion(this);

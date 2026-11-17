@@ -75,6 +75,7 @@ public final class LabScreen extends Activity {
 
     @Override
     protected void onCreate(Bundle b) {
+        Ui.begin(this, false);                                     // מבנה 238: הצבעים מהעיצוב
         super.onCreate(b);
         exp = getIntent().getStringExtra(EXTRA);
         startCmd = getIntent().getStringExtra(EXTRA_CMD);

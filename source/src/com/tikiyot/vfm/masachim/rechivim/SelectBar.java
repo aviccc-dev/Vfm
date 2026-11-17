@@ -117,7 +117,7 @@ public final class SelectBar {
         android.widget.ImageView i = new android.widget.ImageView(a);
         int id = a.getResources().getIdentifier("ic_" + name, "drawable", a.getPackageName());
         if (id != 0) i.setImageResource(id);
-        i.setColorFilter(danger ? Actions.WARNING : Ui.ICON);
+        i.setColorFilter(danger ? Ui.RED : Ui.ICON);
         int s = Ui.dp(a, 24);
         i.setLayoutParams(new LinearLayout.LayoutParams(s + 2 * Ui.dp(a, 10), s + 2 * Ui.dp(a, 10)));
         return i;
@@ -150,7 +150,7 @@ public final class SelectBar {
             l.setBreakStrategy(android.text.Layout.BREAK_STRATEGY_SIMPLE);
         }
         l.setEllipsize(android.text.TextUtils.TruncateAt.END);
-        l.setTextColor(danger ? Actions.WARNING : Ui.TEXT);
+        l.setTextColor(danger ? Ui.RED : Ui.TEXT);
         t.addView(i);
         t.addView(l);
         t.setContentDescription(label);

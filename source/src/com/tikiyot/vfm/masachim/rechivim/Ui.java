@@ -39,8 +39,8 @@ import java.util.Locale;
 
 public final class Ui {
 
-    // ---------- פלטת הצבעים — במקום אחד (80, תצוגה בסיסית; ובעתיד מצב כהה) ----------
-    public static final int TEXT = 0xFF202124, SUB = 0xFF5F6368, MUTED = 0xFF9AA0A6,
+    // ---------- פלטת הצבעים — במקום אחד (80). מבנה 238: נקבעים מהעיצוב (Palette — הערכה, כל התוכנה, האופן), ב־begin ----------
+    public static int TEXT = 0xFF202124, SUB = 0xFF5F6368, MUTED = 0xFF9AA0A6,
             RED = 0xFFC5221F, BG_SOFT = 0xFFF4F5F6, MARK = 0xFFFFF2A8,
             BG = 0xFFFFFFFF, ON_COLOR = 0xFFFFFFFF,
             /** רקע של שורת כותרת/מסלול, ושל כותרת קבוצה. */
@@ -53,6 +53,55 @@ public final class Ui {
             DOUBT = 0xFFFFF1C2, DOUBT_STRONG = 0xFFF2B52B,
             /** 197: כחול — הבחירה הפעילה, וכפתור טקסט; קו דק בין חלקים. */
             ACCENT = 0xFF1A73E8, ACCENT_DARK = 0xFF174EA6, RULE = 0xFFE0E0E0;
+
+    private static int painted = -1;
+    private static boolean darkNow;
+
+    /**
+     * מבנה 238 (העיצוב): בתחילת כל מסך, לפני super.onCreate (שומר). הצבעים — מהעיצוב, כשמה שנקבע השתנה (עצב תוכנה / עצב אופן,
+     * מעבר אופן); כהה — גם הערכה של אנדרואיד (החלונות, השדות). dialog — מסך בצורת חלון.
+     */
+    public static void begin(Activity a, boolean dialog) {
+        try {
+            freshColors();
+        } catch (Throwable e) {
+            Log.e("Ui.begin", e);
+        }
+        if (darkNow) a.setTheme(dialog ? android.R.style.Theme_DeviceDefault_Dialog : android.R.style.Theme_DeviceDefault);
+    }
+
+    /** הצבעים מהעיצוב — רק כשמה שנקבע השתנה. true — השתנו. */
+    static synchronized boolean freshColors() {
+        String[] l = Palette.looks();
+        int v = Palette.version();
+        if (v == painted) return false;
+        use(Palette.resolve(l), Palette.dark(l));
+        painted = v;
+        return true;
+    }
+
+    /** הצבעים, לפי הסדר של Palette.ROLES (הסדר כאן — כמו שם). */
+    static synchronized void use(int[] c, boolean dark) {
+        TEXT = c[0];
+        SUB = c[1];
+        MUTED = c[2];
+        ON_COLOR = c[3];
+        BG = c[4];
+        BG_SOFT = c[5];
+        HEADER = c[6];
+        HEADER_SOFT = c[7];
+        BAR = c[8];
+        SELECTED = c[9];
+        ACCENT = c[10];
+        ACCENT_DARK = c[11];
+        MARK = c[12];
+        DOUBT = c[13];
+        DOUBT_STRONG = c[14];
+        RED = c[15];
+        ICON = c[16];
+        RULE = c[17];
+        darkNow = dark;
+    }
 
     /** כיוון המסכים — במקום אחד (80): כשיהיה קובץ הודעות בשפה אחרת, ייקבע מכאן. */
     public static final int DIRECTION = View.LAYOUT_DIRECTION_RTL;

@@ -25,6 +25,7 @@ public class ShareScreen extends Activity {
 
     @Override
     protected void onCreate(Bundle saved) {
+        Ui.begin(this, true);                                     // מבנה 238: הצבעים מהעיצוב
         super.onCreate(saved);
         Log.install();
         setTitle(Words.ADD_TO_LIST);

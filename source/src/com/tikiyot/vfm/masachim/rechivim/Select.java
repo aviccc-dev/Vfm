@@ -16,7 +16,6 @@ import java.util.Set;
 public final class Select {
 
     /** צבע שורה נבחרת — אחד לכל המסכים. */
-    public static final int HIGHLIGHT = Ui.SELECTED;
 
     /** "בחירת הכול": המסך ממלא את כל מה שמוצג (קבצים, ורשימות אם יש). */
     public interface All {
@@ -122,7 +121,7 @@ public final class Select {
     }
 
     public static int color(boolean selected) {
-        return selected ? HIGHLIGHT : 0x00000000;
+        return selected ? Ui.SELECTED : 0x00000000;
     }
 
     public int count() {

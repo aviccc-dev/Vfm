@@ -24,6 +24,7 @@ public class SettingsScreen extends Activity {
 
     @Override
     protected void onCreate(Bundle saved) {
+        Ui.begin(this, false);                                     // מבנה 238: הצבעים מהעיצוב
         super.onCreate(saved);
         lib = Library.get(this);
         Log.initVersion(this);

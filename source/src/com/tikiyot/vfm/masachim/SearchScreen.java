@@ -137,6 +137,7 @@ public class SearchScreen extends Activity implements Clip.Holder {
 
     @Override
     protected void onCreate(Bundle saved) {
+        Ui.begin(this, false);                                     // מבנה 238: הצבעים מהעיצוב
         super.onCreate(saved);
         lib = Library.get(this);
         readIntent();
@@ -290,7 +291,7 @@ public class SearchScreen extends Activity implements Clip.Holder {
                     boolean missing = top && !volRoots.contains(f.path) && !new File(f.path).isDirectory();   // 1.11.0: מקור שאינו בכונן
                     Ui.bindIcon(v, missing ? "⚠" : top && volRoots.contains(f.path) ? Drive.icon(Drive.internalPath(f.path)) : "📁",
                             top ? rootLabel(f.path) : f.name, missing ? Words.Views.NOT_FOUND : f.matches > 0 ? Words.Views.matches(f.matches) : "");
-                    v.setBackgroundColor(sel.hasDir(f.path) ? Select.HIGHLIGHT
+                    v.setBackgroundColor(sel.hasDir(f.path) ? Ui.SELECTED
                             : FolderView.ALL.equals(view) && fv != null && fv.isMatch(f.path) ? MATCH_BG : 0x00000000);
                     return v;
                 }
@@ -313,7 +314,7 @@ public class SearchScreen extends Activity implements Clip.Holder {
                         hit.rec != null ? hit.rec.size : 0, hit.rec == null ? 0 : byAdded ? hit.rec.added : hit.rec.mtime,
                         hit.path(), status, queryNorm);
                 if (selected.contains(hit.path()) || sel != null && sel.hasDir(hit.path()))
-                    v.setBackgroundColor(Select.HIGHLIGHT);
+                    v.setBackgroundColor(Ui.SELECTED);
                 else v.setBackgroundColor(gone != null ? 0x00000000 : marked ? (match ? MATCH_BG : 0x00000000)
                         : SECTION_BG[hit.section]);
                 if (gone != null) ((TextView[]) v.getTag())[1].setTextColor(Ui.MUTED);    // 146: באפור
