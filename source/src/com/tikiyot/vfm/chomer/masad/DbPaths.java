@@ -209,6 +209,24 @@ final class DbPaths {
         return 0;
     }
 
+    /**
+     * מבנה 243 (תוסף העיצוב — מהרשימה שעל המסך אל הפקודה): הדרך של רשימה, מהראש עד אליה — דרך הרשימה הראשונה שהיא בה (כמו
+     * הירושה של העיצוב, Design.forList). הבית, או רשימה שאינה — ריקה.
+     */
+    static List<String> pathOf(Store s, long id) {
+        List<String> out = new ArrayList<String>();
+        java.util.Set<Long> seen = new java.util.HashSet<Long>();
+        for (long at = id; at != 0 && seen.add(at); ) {
+            if ("1".equals(s.prop(at, Store.P_HOME))) break;
+            Store.Item it = s.item(at);
+            if (it == null) return new ArrayList<String>();
+            out.add(0, it.name);
+            List<Long> up = s.listsOf(at);
+            at = up.isEmpty() ? 0 : up.get(0);
+        }
+        return out;
+    }
+
     static long child(Store s, long list, String name) {
         String n = name.trim();
         for (Store.Member m : s.members(list)) if (m.item.type == Store.LIST && m.item.name.equals(n)) return m.item.id;

@@ -728,6 +728,23 @@ final class Manager {
         return new Act(text, Batch.plan(text, here, vars, lib), null);
     }
 
+    /**
+     * מבנה 243 (תוסף העיצוב — הלוח; המשתמש, 17.11.2026: "כל כפתור מריץ פקודה דרך שכבת הניהול" · "הכל עובר דרך שכבת הניהול"):
+     * שורה אחת של "עצב" — כמו בקובץ פקודות (אותו תכנון, אותן בדיקות), ומיד, בלי מסך ההרצה: העיצוב אינו נוגע בקבצים, וכל שינוי
+     * בו אפשר להחזיר (כמו "עיצוב" מהמסך — onListDesign). כל שורה אחרת — מסורבת. null — נעשה; אחרת — למה לא.
+     */
+    static String shape(String line, Library lib) {
+        String l = line == null ? "" : line.trim();
+        if (l.isEmpty() || l.indexOf('\n') >= 0 || l.indexOf('\r') >= 0) return Words.DesignW.ONLY_SHAPE;
+        Verbs.Cmd c = Verbs.parse(l);
+        if (c == null || !Verbs.SHAPE.equals(c.verb)) return Words.DesignW.ONLY_SHAPE;
+        Act act = onVerbLine(l, Paths.work(), new java.util.HashMap<String, String>(), lib);
+        String no = act.error();
+        if (no != null) return no;
+        String said = act.say(lib);
+        return act.failed ? said : null;
+    }
+
     // ---------- התוצאה חוזרת: מה קורה בסוף ההרצה ----------
 
     /** פקודות הפתיחה שבסוף הקובץ רצות רק כשההרצה הלכה חלק (1.13.0; מ0.25). */

@@ -1373,6 +1373,50 @@ final class DbCmdTests {
                         o.check("מבנה 241: ודא עיצוב בלי מתג, או עם ערך ריק — שגיאה בתכנון",
                                 Batch.plan(o121 + "ודא עיצוב רשימה \"מראה 234/ב/ג\"\n", here, vars, lib).blocked()
                                         && Batch.plan(o121 + "ודא עיצוב רשימה \"מראה 234/ב/ג\" /טורים:\"\"\n", here, vars, lib).blocked());
+                        // מבנה 243: תוסף העיצוב — מה שנקבע ומה שנראה (ShapeCmds.state), הדרך מהרשימה (DbPaths.pathOf), ו"עצב" מיד דרך המנהל
+                        String wasMode243 = Db.currentMode;
+                        Db.currentMode = m91;                                   // הלוח פועל באופן שעל המסך — כמו בתוכנה
+                        try {
+                            String no243 = Manager.shape("עצב רשימה \"מראה 234/ב\" /טורים:5 /כתב-נתונים:12", lib);
+                            ShapeCmds.State s243 = ShapeCmds.state(Verbs.K_LIST, "מראה 234/ב", m91);
+                            ShapeCmds.State c243 = ShapeCmds.state(Verbs.K_LIST, "מראה 234/ב/ג", m91);
+                            final List<String> path243 = new ArrayList<String>();
+                            Db.read(Db.app, m91, new Db.Use<Void>() {
+                                @Override public Void run(SqlStore st) {
+                                    path243.addAll(DbPaths.pathOf(st, DbPaths.find(st, m91, java.util.Arrays.asList("מראה 234", "ב", "ג"))));
+                                    return null;
+                                }
+                            });
+                            o.check("מבנה 243: \"עצב\" מהלוח — דרך המנהל, באופן שעל המסך (" + no243 + "); מה שנקבע כאן (" + s243.look + "), מה שנראה, ומה שמעליו; "
+                                            + "הרשימה שבתוכה — רואה ויורשת; הדרך מהרשימה — " + path243,
+                                    no243 == null && s243.error == null && s243.look.contains("טורים = 5") && s243.shown.cols == 5
+                                            && s243.shown.data.size == 12 && s243.above.cols != 5 && Design.lookMap(s243.look).get("נתונים: גודל").equals("12")
+                                            && c243.error == null && c243.above.data.size == 12 && c243.own.equals(Design.WORDS)
+                                            && path243.equals(java.util.Arrays.asList("מראה 234", "ב", "ג")));
+                            Manager.shape("עצב אופן \"" + m91 + "\" /מראה:כהה /צבע:\"רקע\"=#101010", lib);
+                            ShapeCmds.State mo243 = ShapeCmds.state(Verbs.K_MODE, m91, m91);
+                            ShapeCmds.State pr243 = ShapeCmds.state(Verbs.K_PROGRAM, "", m91);
+                            int bg = Palette.role("רקע");
+                            o.check("מבנה 243: אופן — מה שנקבע (" + mo243.look + "), הצבעים שנראים (כהה, הרקע) ומה שמעליו (בהיר); כל התוכנה — בלי מה שמעליה",
+                                    mo243.error == null && Palette.dark(mo243.looks) && Palette.resolve(mo243.looks)[bg] == 0xFF101010
+                                            && !Palette.dark(mo243.aboveLooks) && pr243.error == null && pr243.aboveLooks.length == 0);
+                            Manager.shape("עצב אופן \"" + m91 + "\" /מראה:\"\" /צבע:\"רקע\"=\"\"", lib);
+                            Manager.shape("עצב רשימה \"מראה 234/ב\" /טורים:\"\" /כתב-נתונים:\"\"", lib);
+                            String two243 = Manager.shape("עצב רשימה \"מראה 234/ב\" /טורים:2\nמחק \"x\"", lib);
+                            String other243 = Manager.shape("מחק \"" + new File(here, "אין-243.txt").getAbsolutePath() + "\"", lib);
+                            String bad243 = Manager.shape("עצב רשימה \"מראה 234/ב\" /טורים:9", lib);
+                            ShapeCmds.State gone243 = ShapeCmds.state(Verbs.K_LIST, "אין רשימה 243", m91);
+                            o.check("מבנה 243: מהלוח רצה רק שורה אחת של \"עצב\" — שתי שורות, או פקודה אחרת — מסורבות; ערך מחוץ לטווח — הסיבה; רשימה שאין — נאמר (" + bad243 + " · " + gone243.error + "); \"\" — מה שנקבע מהלוח יצא",
+                                    Words.DesignW.ONLY_SHAPE.equals(two243) && Words.DesignW.ONLY_SHAPE.equals(other243)
+                                            && bad243 != null && bad243.contains(Words.DesignW.outOfRange("9", Design.COLS[0], Design.COLS[1]))
+                                            && gone243.error != null && !ShapeCmds.state(Verbs.K_LIST, "מראה 234/ב", m91).look.contains("טורים")
+                                            && !ShapeCmds.state(Verbs.K_LIST, "מראה 234/ב", m91).look.contains("נתונים:"));
+                            o.check("מבנה 243: העיצובים שאפשר לבחור — המוכנים קודם, בלי כפילות",
+                                    Design.names().subList(0, 3).equals(java.util.Arrays.asList(Design.DEFAULT, Design.FILES, Design.WORDS))
+                                            && new java.util.HashSet<String>(Design.names()).size() == Design.names().size());
+                        } finally {
+                            Db.currentMode = wasMode243;
+                        }
                     }
                     // מבנה 123: "שחזר דוגמאות" כפקודה; ו"צור אופן" על אופן שיש בו רשימות ואין בו בית — מתקן
                     {

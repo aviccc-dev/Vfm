@@ -3449,9 +3449,9 @@ public final class Tests {
                 StringBuilder door141 = new StringBuilder();
                 java.util.regex.Matcher m141 = java.util.regex.Pattern.compile("@JavascriptInterface\\s+public \\S+ (\\w+)\\(").matcher(br141);
                 while (m141.find()) door141.append(m141.group(1)).append(' ');
-                check("מבנה 141: הדלת, גרסה 1 — 37 הפונקציות (35, ועוד commandFolders — מבנה 151, ו־deleteCommandFile — מבנה 230; תוספת אינה מעלה את המספר), לפי הקבוצות (מידע · קריאה · כתיבה · הרצה · חלונות); התוכנה מוסרת את המספר (info.door) [" + door141.toString().trim() + "]",
+                check("מבנה 141: הדלת, גרסה 1 — 39 הפונקציות (35, ועוד commandFolders — מבנה 151, deleteCommandFile — מבנה 230, design ו־shape — מבנה 243; תוספת אינה מעלה את המספר), לפי הקבוצות (מידע · קריאה · כתיבה · הרצה · חלונות); התוכנה מוסרת את המספר (info.door) [" + door141.toString().trim() + "]",
                         Bridge.DOOR == 1 && br141.contains("o.put(\"door\", DOOR);")
-                                && door141.toString().trim().equals("info theme places modes dataDir startFile dbStats pathInfo commandMatrix smartLists commandFiles commandFolders myCommands templates readText listDir toVar expand saveCommandFile writeCommandFile deleteCommandFile saveTemplate saveText cleanData setReaders load save runCommands runFile pickFolder pickFile pickList smartForm send toast log close"));
+                                && door141.toString().trim().equals("info theme design places modes dataDir startFile dbStats pathInfo commandMatrix smartLists commandFiles commandFolders myCommands templates readText listDir toVar expand saveCommandFile writeCommandFile deleteCommandFile saveTemplate saveText cleanData setReaders load save runCommands runFile shape pickFolder pickFile pickList smartForm send toast log close"));
                 // מבנה 145: המעבר מהמבנה הישן נבדק פעם אחת בהפעלה, ולא בכל קריאה
                 Lab.recheck();
                 File r145 = Lab.root(), old145 = new File(Paths.dbData(), Lab.OLD_DIR);

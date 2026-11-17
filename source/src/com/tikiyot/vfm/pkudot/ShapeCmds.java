@@ -96,37 +96,91 @@ final class ShapeCmds {
         s.describe = Words.DbCmd.verifyWill(what);
         s.op = new ListCmd.Op() {
             @Override public String run(Library lib) {
-                SqlStore st = null;
-                try {
-                    st = Db.openRead(Db.app, m);
-                    Design d;
-                    if (program) d = Design.forProgram();
-                    else if (mode) d = Design.forMode(st);
-                    else {
-                        List<String> at = Names.parsePath(c.arg);
-                        DbPaths.Found u = DbPaths.listAt(st, m, at);
-                        if (u.error != null || u.id == 0) {
-                            s.verified = Boolean.FALSE;
-                            return u.ambiguous ? u.error : Words.ListCmdW.noList(Names.label(at));
-                        }
-                        d = Design.forList(st, u.id);
-                    }
-                    if (d == null) d = Design.get(Design.DEFAULT);
-                    long h = DbPaths.home(st);
-                    String modeLook = program || h == 0 ? null : st.prop(h, Store.P_ALL_LOOK);
-                    String all = Design.programProps()[1];
-                    StringBuilder found = new StringBuilder();
-                    boolean ok = matches(d, program ? new String[]{all} : new String[]{all, modeLook}, c.edit, found);
-                    s.verified = ok;
-                    return Words.DbCmd.verifyResult(ok, what, found.toString());
-                } catch (Throwable t) {
+                State st = state(c.kind, c.arg, m);
+                if (st.error != null) {
                     s.verified = Boolean.FALSE;
-                    return Words.Db.failed(String.valueOf(t.getMessage()));
-                } finally {
-                    if (st != null) st.close();
+                    return st.error;
                 }
+                StringBuilder found = new StringBuilder();
+                boolean ok = matches(st.shown, st.looks, c.edit, found);
+                s.verified = ok;
+                return Words.DbCmd.verifyResult(ok, what, found.toString());
             }
         };
+    }
+
+    /**
+     * מבנה 243: מה שנקבע ומה שנראה — לרשימה (kind = K_LIST, arg — הדרך), לאופן (K_MODE, arg — השם) ולכל התוכנה (K_PROGRAM).
+     * במקום אחד: "ודא עיצוב" (מה שנראה), ותוסף העיצוב (מה שנקבע כאן, מה שנראה, ומה שהיה בלי מה שנקבע כאן — "כמו שמעליו").
+     */
+    static final class State {
+        /** null — נמצא; אחרת — למה לא (רשימה שאין, ספק, אופן שאין, תקלה). */
+        String error;
+        /** מה שנקבע כאן: העיצוב ("" — לא נבחר) והמראה (השורות; "" — כלום). */
+        String own = "", look = "";
+        /** מה שנראה, ומה שהיה בלי מה שנקבע כאן; לא נקבע כלום — ברירת המחדל (set / setAbove — false). */
+        Design shown, above;
+        boolean set, setAbove;
+        /** המראות שקובעים את הצבעים — עם מה שנקבע כאן, ובלעדיו (לרשימה — שניהם של האופן). */
+        String[] looks, aboveLooks;
+    }
+
+    static State state(String kind, String arg, String m) {
+        State r = new State();
+        boolean program = Verbs.K_PROGRAM.equals(kind), mode = Verbs.K_MODE.equals(kind);
+        String all = Design.programProps()[1];
+        if (program) {
+            String[] p = Design.programProps();
+            r.own = p[0] == null ? "" : p[0];
+            r.look = p[1] == null ? "" : p[1];
+            fill(r, Design.forProgram(), null, new String[]{all}, new String[0]);
+            return r;
+        }
+        if (m == null || Db.app == null || !Db.dbFile(Db.app, m).isFile()) {
+            r.error = Words.DbCmd.noMode(String.valueOf(m), Db.app == null ? new java.util.ArrayList<String>() : Db.dbModes(Db.app));
+            return r;
+        }
+        SqlStore st = null;
+        try {
+            st = Db.openRead(Db.app, m);
+            long h = DbPaths.home(st);
+            String modeLook = h == 0 ? null : st.prop(h, Store.P_ALL_LOOK);
+            if (mode) {
+                r.own = h == 0 ? "" : nz(st.prop(h, Store.P_ALL_DESIGN));
+                r.look = nz(modeLook);
+                fill(r, Design.forMode(st), Design.forProgram(), new String[]{all, modeLook}, new String[]{all});
+                return r;
+            }
+            List<String> at = Names.parsePath(arg);
+            DbPaths.Found u = DbPaths.listAt(st, m, at);
+            if (u.error != null || u.id == 0) {
+                r.error = u.ambiguous ? u.error : Words.ListCmdW.noList(Names.label(at));
+                return r;
+            }
+            r.own = nz(st.prop(u.id, Store.P_DESIGN));
+            r.look = nz(st.prop(u.id, Store.P_LOOK));
+            String[] looks = {all, modeLook};
+            fill(r, Design.forList(st, u.id), Design.forListAbove(st, u.id), looks, looks);
+            return r;
+        } catch (Throwable t) {
+            r.error = Words.Db.failed(String.valueOf(t.getMessage()));
+            return r;
+        } finally {
+            if (st != null) st.close();
+        }
+    }
+
+    private static void fill(State r, Design shown, Design above, String[] looks, String[] aboveLooks) {
+        r.set = shown != null;
+        r.setAbove = above != null;
+        r.shown = shown != null ? shown : Design.get(Design.DEFAULT);
+        r.above = above != null ? above : Design.get(Design.DEFAULT);
+        r.looks = looks;
+        r.aboveLooks = aboveLooks;
+    }
+
+    private static String nz(String v) {
+        return v == null ? "" : v;
     }
 
     /** מילה מהשורה, בחזרה עם מירכאות כשצריך (שם עם רווח; מתג שהערך שלו עם רווח). first — המילה שאחרי "עיצוב" (רשימה / אופן / תוכנה). */

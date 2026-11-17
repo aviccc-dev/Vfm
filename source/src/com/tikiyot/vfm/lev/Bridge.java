@@ -114,7 +114,7 @@ final class Bridge {
             o.put("versionCode", pi.versionCode);
             o.put("registry", Manager.registryLine());                                  // מבנה 142: מה התוכנה מכירה, בשורה
             o.put("door", DOOR);                                                        // מבנה 141
-            o.put("features", "steady dropclean zip set cmdfolders");                              // מבנה 50: מה התוכנה יודעת (לתוסף — במקום לנחש לפי מספר הגרסה)
+            o.put("features", "steady dropclean zip set cmdfolders design");                         // מבנה 50: מה התוכנה יודעת (לתוסף — במקום לנחש לפי מספר הגרסה)
             // מבנה 59: איפה תיקיות הגיבויים של האופנים, בכתיב של קובץ פקודות — לבדיקה "אופן שבוטל וחוזר" (שם התיקייה שונה בין הבניות)
             o.put("backupsVar", "%" + Drive.INTERNAL + "%\\" + Paths.DB_DIR + "\\" + Backups.DIR);
             o.put("device", Log.device());
@@ -164,6 +164,130 @@ final class Bridge {
         } catch (Throwable t) {
             return "{}";
         }
+    }
+
+    /**
+     * מבנה 243 (תוסף העיצוב — הלוח; המשתמש, 17.11.2026: "מקום מרוכז שבו משנים את כל הפרמטרים האלה — כמו לוח עם כפתורים
+     * ובוררים"): מה שנקבע ומה שנראה — לרשימה (what = "רשימה", target — הדרך באופן שעל המסך), לאופן ("אופן", target — השם;
+     * "" — האופן שעל המסך) ולכל התוכנה ("תוכנה"). הקריאה — במקום אחד (ShapeCmds.state, כמו "ודא עיצוב"); ועם זה — מה שהלוח
+     * צריך כדי לכתוב את השורה של "עצב": המילים, המתגים, הטווחים, העיצובים, הגופנים והצבעים. אינה משנה דבר.
+     */
+    @JavascriptInterface
+    public String design(String what, String target) {
+        try {
+            String w = what == null ? "" : what.trim(), t = target == null ? "" : target.trim();
+            String kind = w.equals(Verbs.LIST) ? Verbs.K_LIST : w.equals(Verbs.MODE_WORD) ? Verbs.K_MODE : Verbs.K_PROGRAM;
+            if (kind.equals(Verbs.K_PROGRAM)) w = Verbs.PROGRAM_WORD;
+            String m = kind.equals(Verbs.K_MODE) && !t.isEmpty() ? t : String.valueOf(Db.currentMode);
+            if (kind.equals(Verbs.K_MODE)) t = m;
+            ShapeCmds.State st = ShapeCmds.state(kind, t, m);
+            JSONObject o = new JSONObject();
+            o.put("what", w);
+            o.put("target", kind.equals(Verbs.K_PROGRAM) ? "" : t);
+            o.put("mode", String.valueOf(Db.currentMode));
+            o.put("error", st.error == null ? "" : st.error);
+            if (st.error == null) {
+                JSONObject own = new JSONObject();
+                own.put("design", st.own);
+                JSONObject look = new JSONObject();
+                for (Map.Entry<String, String> e : Design.lookMap(st.look).entrySet()) look.put(e.getKey(), e.getValue());
+                own.put("look", look);
+                o.put("own", own);
+                o.put("shown", designJson(st.shown, st.set, st.looks));
+                o.put("above", designJson(st.above, st.setAbove, st.aboveLooks));
+            }
+            o.put("info", designInfo());
+            return o.toString();
+        } catch (Throwable e) {
+            Log.e("Lab.design", e);
+            return "{}";
+        }
+    }
+
+    /** עיצוב אחד, כמו שהוא נראה: הצורה, ארבעת הכתבים, והצבעים (לפי המראות). */
+    private static JSONObject designJson(Design d, boolean set, String[] looks) throws org.json.JSONException {
+        JSONObject o = new JSONObject();
+        o.put("set", set);
+        o.put("design", d.name);
+        o.put("grid", d.grid);
+        o.put("cols", d.cols);
+        o.put("gap", d.gap);
+        o.put("icon", d.icon);
+        o.put("showIcon", d.showIcon);
+        o.put("around", d.around);
+        o.put("showData", d.showData);
+        o.put("dataBelow", d.dataBelow);
+        JSONObject texts = new JSONObject();
+        texts.put(Design.T_TITLE, textJson(d.title));
+        texts.put(Design.T_NAME, textJson(d.nameT));
+        texts.put(Design.T_DATA, textJson(d.data));
+        texts.put(Design.T_GROUP, textJson(d.groupText()));
+        o.put("texts", texts);
+        o.put("dark", Palette.dark(looks));
+        JSONObject colors = new JSONObject();
+        int[] c = Palette.resolve(looks);
+        for (int i = 0; i < Palette.ROLES.length; i++) colors.put(Palette.ROLES[i][0], Palette.hex(c[i]));
+        o.put("colors", colors);
+        return o;
+    }
+
+    private static JSONObject textJson(Design.Text t) throws org.json.JSONException {
+        JSONObject o = new JSONObject();
+        o.put("size", t.size == (int) t.size ? String.valueOf((int) t.size) : String.valueOf(t.size));
+        o.put("weight", t.weight);
+        o.put("weightName", Design.weightName(t.weight));
+        o.put("font", t.font);
+        return o;
+    }
+
+    /** מה שהלוח צריך כדי לכתוב את השורה — מהמקום שבו זה נקבע (Verbs, Design, Palette), ולא מועתק לעמוד. */
+    private static JSONObject designInfo() throws org.json.JSONException {
+        JSONObject o = new JSONObject();
+        o.put("verb", Verbs.SHAPE);
+        o.put("list", Verbs.LIST);
+        o.put("modeWord", Verbs.MODE_WORD);
+        o.put("program", Verbs.PROGRAM_WORD);
+        JSONObject sw = new JSONObject();
+        sw.put("design", Verbs.SW_DESIGN);
+        sw.put("cols", Verbs.SW_COLS);
+        sw.put("gap", Verbs.SW_GAP);
+        sw.put("icon", Verbs.SW_ICON_SIZE);
+        sw.put(Design.T_TITLE, Verbs.SW_T_TITLE);
+        sw.put(Design.T_NAME, Verbs.SW_T_NAME);
+        sw.put(Design.T_DATA, Verbs.SW_T_DATA);
+        sw.put(Design.T_GROUP, Verbs.SW_T_GROUP);
+        sw.put("look", Verbs.SW_MODE_LOOK);
+        sw.put("color", Verbs.SW_COLOR);
+        o.put("switches", sw);
+        JSONObject keys = new JSONObject();
+        keys.put("cols", Design.K_COLS);
+        keys.put("gap", Design.K_GAP);
+        keys.put("icon", Design.K_ICON);
+        keys.put("size", Design.K_SIZE);
+        keys.put("weight", Design.K_WEIGHT);
+        keys.put("font", Design.K_FONT);
+        keys.put("look", Palette.K_MODE);
+        keys.put("color", Palette.K_COLOR);
+        keys.put("light", Palette.LIGHT);
+        keys.put("dark", Palette.DARK);
+        keys.put("system", Design.SYSTEM);
+        o.put("keys", keys);
+        o.put("texts", new JSONArray(java.util.Arrays.asList(Design.T_TITLE, Design.T_NAME, Design.T_DATA, Design.T_GROUP)));
+        o.put("weights", new JSONArray(java.util.Arrays.asList(Design.W_LIGHT, Design.W_REG, Design.W_MED, Design.W_BOLD)));
+        JSONObject ranges = new JSONObject();
+        ranges.put("cols", new JSONArray(java.util.Arrays.asList(Design.COLS[0], Design.COLS[1])));
+        ranges.put("gap", new JSONArray(java.util.Arrays.asList(Design.GAP[0], Design.GAP[1])));
+        ranges.put("icon", new JSONArray(java.util.Arrays.asList(Design.ICON[0], Design.ICON[1])));
+        ranges.put("size", new JSONArray(java.util.Arrays.asList(Design.SIZE[0], Design.SIZE[1])));
+        ranges.put("weight", new JSONArray(java.util.Arrays.asList(Design.WEIGHT[0], Design.WEIGHT[1])));
+        o.put("ranges", ranges);
+        o.put("designs", new JSONArray(Design.names()));
+        o.put("fonts", new JSONArray(Design.fonts()));
+        JSONArray roles = new JSONArray();
+        for (String[] r : Palette.ROLES) roles.put(new JSONArray(java.util.Arrays.asList(r)));
+        o.put("roles", roles);
+        o.put("groups", new JSONArray(java.util.Arrays.asList(Palette.GROUPS)));
+        return o;
     }
 
     /** המקומות המפורסמים: [{name, path}] (הורדות, פנימי, כרטיס…). */
@@ -623,6 +747,21 @@ final class Bridge {
                 }
             }
         });
+    }
+
+    /**
+     * מבנה 243 (תוסף העיצוב): שורה אחת של "עצב" — דרך המנהל, ומיד (Manager.shape: אותו תכנון ואותן בדיקות כמו בקובץ פקודות;
+     * כל שורה אחרת — מסורבת). "" — נעשה; אחרת — למה לא. המסך שמתחת נצבע מחדש כשחוזרים אליו.
+     */
+    @JavascriptInterface
+    public String shape(String line) {
+        try {
+            String no = Manager.shape(line, Library.get(screen));
+            return no == null ? "" : no;
+        } catch (Throwable t) {
+            Log.e("Lab.shape", t);
+            return Words.Db.failed(String.valueOf(t.getMessage()));
+        }
     }
 
     // ---------- חלונות ומסך — בוררים, טופס, הודעה, שליחה, סגירה ----------

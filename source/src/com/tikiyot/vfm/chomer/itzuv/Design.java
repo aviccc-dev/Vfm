@@ -158,6 +158,15 @@ final class Design {
      * דרך הרשימה הראשונה שהרשימה בה.
      */
     static Design forList(Store t, long id) {
+        return forList(t, id, true);
+    }
+
+    /** מבנה 243: מה שהרשימה הייתה מקבלת בלי מה שנקבע לה עצמה (לתוסף העיצוב — "כמו שמעליה"); null — לא נקבע כלום בדרך. */
+    static Design forListAbove(Store t, long id) {
+        return forList(t, id, false);
+    }
+
+    private static Design forList(Store t, long id, boolean self) {
         List<Long> chain = new ArrayList<Long>();
         java.util.Set<Long> seen = new java.util.HashSet<Long>();
         for (long at = id; at != 0 && seen.add(at); ) {
@@ -166,6 +175,7 @@ final class Design {
             List<Long> up = t.listsOf(at);
             at = up.isEmpty() ? 0 : up.get(0);
         }
+        if (!self && !chain.isEmpty()) chain.remove(chain.size() - 1);
         Design d = above(t, null);
         for (long x : chain) d = fold(d, t.prop(x, Store.P_DESIGN), t.prop(x, Store.P_LOOK), null);
         return d;
@@ -277,12 +287,7 @@ final class Design {
 
     /** המראה (P_LOOK) אחרי קביעה של key = value; value ריק — השורה יוצאת (חוזרים לרשת). הסדר נשמר. */
     static String withLook(String look, String key, String value) {
-        Map<String, String> m = new LinkedHashMap<String, String>();
-        if (look != null)
-            for (String part : look.split(java.util.regex.Pattern.quote(P_SEP))) {
-                int eq = part.indexOf('=');
-                if (eq > 0) m.put(part.substring(0, eq).trim(), part.substring(eq + 1).trim());
-            }
+        Map<String, String> m = lookMap(look);
         if (value == null || value.trim().isEmpty()) m.remove(key);
         else m.put(key, value.trim());
         StringBuilder sb = new StringBuilder();
@@ -291,6 +296,36 @@ final class Design {
             sb.append(e.getKey()).append(" = ").append(e.getValue());
         }
         return sb.toString();
+    }
+
+    /** מבנה 243: שורות המראה — מפתח ← ערך, לפי הסדר (גם לתוסף העיצוב: מה שנקבע כאן). */
+    static Map<String, String> lookMap(String look) {
+        Map<String, String> m = new LinkedHashMap<String, String>();
+        if (look != null)
+            for (String part : look.split(java.util.regex.Pattern.quote(P_SEP))) {
+                int eq = part.indexOf('=');
+                if (eq > 0) m.put(part.substring(0, eq).trim(), part.substring(eq + 1).trim());
+            }
+        return m;
+    }
+
+    /** מבנה 243: העיצובים שאפשר לבחור באופן הזה — המוכנים, ואחריהם הקבצים שבתיקייה (בלי כפילות; השם הקודם — בשם של היום). */
+    static List<String> names() {
+        List<String> out = new ArrayList<String>(java.util.Arrays.asList(DEFAULT, FILES, WORDS));
+        for (File f : files(dir())) {
+            String n = current(nameOf(f));
+            if (!out.contains(n)) out.add(n);
+        }
+        return out;
+    }
+
+    /** מבנה 243: הגופנים שבתיקיית "גופנים" של האופן (השמות, כמו שנכתבים ב"עצב"). */
+    static List<String> fonts() {
+        List<String> out = new ArrayList<String>();
+        File[] kids = new File(Paths.work(), Paths.FONTS).listFiles();
+        if (kids != null) for (File k : kids) if (k.isFile()) out.add(k.getName());
+        java.util.Collections.sort(out);
+        return out;
     }
 
     /** סימן לזיהוי שינוי (המסך נבנה מחדש רק כשהמראה השתנה). */
