@@ -272,6 +272,12 @@ final class ListVerbs {
         if (!list && !smartNew && !smartUpd && !note && !title && !listUpd && !listShape) return null;
         if (listUpd || listShape) c.noOpen = true;                              // השם יכול להשתנות — לא פותחים בסוף
         if ((listUpd || listShape) && Parse.var(Syntax.V_SELECTED).equals(c.arg)) return planPickedEdit(s, c, sim);   // מבנה 113, 233: מהמסך
+        if (listShape)                                                          // מבנה 235: הכלל — הערכים בטווח, הגופן קיים; אחרת נאמר למה
+            for (java.util.Map.Entry<String, String> e : c.edit.entrySet())
+                if (e.getKey().startsWith(Verbs.E_LOOK) && !e.getValue().isEmpty()) {
+                    String why = Design.lookError(e.getKey().substring(Verbs.E_LOOK.length()), e.getValue());
+                    if (why != null) { s.error = why; return null; }
+                }
         if ((note || title) && Parse.var(Syntax.V_SELECTED).equals(c.arg)) return planPickedNote(s, c, title, sim);   // מבנה 93: מהמסך
         if (smartNew && Parse.var(Syntax.V_NEW_NAME).equals(c.arg)) return planPickedSmart(s, c, sim);                // מבנה 97: מהטופס
         if (smartUpd && Parse.var(Syntax.V_SELECTED).equals(c.arg)) return planPickedSmartEdit(s, c, sim);            // מבנה 99: מהטופס
@@ -317,6 +323,10 @@ final class ListVerbs {
                     DbPaths.Found u = DbPaths.listAt(t, mode, at);
                     if (u.error != null || u.id == 0) return DbListCmd.Res.err(u.ambiguous ? u.error : Words.ListCmdW.noList(Names.label(at)));
                     if (c.edit.containsKey(Store.P_DESIGN)) t.setProp(u.id, Store.P_DESIGN, c.edit.get(Store.P_DESIGN).trim());   // "" — לרשת
+                    String look = t.prop(u.id, Store.P_LOOK), was = look;     // מבנה 235: המראה — רק המפתחות שנכתבו
+                    for (java.util.Map.Entry<String, String> e : c.edit.entrySet())
+                        if (e.getKey().startsWith(Verbs.E_LOOK)) look = Design.withLook(look, e.getKey().substring(Verbs.E_LOOK.length()), e.getValue());
+                    if (look != null && !look.equals(was)) t.setProp(u.id, Store.P_LOOK, look);
                     return DbListCmd.Res.ok(Words.ListCmdW.DESIGN_SET);
                 }
                 // מבנה 100: המספר של מה שנוצר / עודכן חוזר (DbListCmd.Res.made ← DbListCmd.Step.made) — כפתור שמריץ את השורה פותח בדיוק אותו

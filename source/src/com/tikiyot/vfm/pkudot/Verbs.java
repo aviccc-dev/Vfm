@@ -83,6 +83,37 @@ final class Verbs {
     static final String E_NAME = "name";
     /** מבנה 121: /מקום:למעלה|למטה|לראש|לסוף — המקום של הרשימה בתוך הרשימה שהיא בה (סדר ידני). מבנה 233: /עיצוב:"<שם>" — של "עצב" ("" — לרשת). */
     static final String SW_PLACE = "/מקום:", SW_DESIGN = "/עיצוב:", E_PLACE = "place";   // תחביר
+    /**
+     * מבנה 235: המראה של רשימה ב"עצב" — מעל העיצוב שלה. כל מתג — מפתח של קובץ העיצוב (Design); "" — לרשת. הכתב:
+     * גודל, משקל וגופן, בכל סדר, מופרדים בפסיק ("16,מודגש,"דוד"").
+     */
+    static final String SW_COLS = "/טורים:", SW_GAP = "/ריווח:", SW_ICON_SIZE = "/גודל-צלמית:", SW_T_TITLE = "/כתב-כותרת:",   // תחביר
+            SW_T_NAME = "/כתב-שם:", SW_T_DATA = "/כתב-נתונים:";   // תחביר
+    /** ב־Cmd.edit: מפתח של המראה — "look:" ואחריו המפתח של קובץ העיצוב. */
+    static final String E_LOOK = "look:";
+
+    /** מבנה 235: מתג של המראה ← המפתח שלו בקובץ העיצוב (הכתב — הקידומת; הגודל, המשקל והגופן נוספים לפי הערך). */
+    private static String lookKey(String w) {
+        return w.startsWith(SW_COLS) ? Design.K_COLS : w.startsWith(SW_GAP) ? Design.K_GAP : w.startsWith(SW_ICON_SIZE) ? Design.K_ICON
+                : w.startsWith(SW_T_TITLE) ? Design.T_TITLE + ":" : w.startsWith(SW_T_NAME) ? Design.T_NAME + ":"
+                : w.startsWith(SW_T_DATA) ? Design.T_DATA + ":" : null;
+    }
+
+    /** "16,מודגש,"דוד"" ← גודל, משקל, גופן (מה שכתוב); ריק — שלושתם יוצאים (לרשת). */
+    private static void putText(java.util.Map<String, String> edit, String who, String v) {
+        String size = "", weight = "", font = "";
+        for (String part : v.split(",")) {
+            String p = unquote(part);
+            if (p.isEmpty()) continue;
+            if (p.matches("\\d+") && Integer.parseInt(p) < Design.WEIGHT[0]) size = p;
+            else if (p.matches("\\d+") || p.equals(Design.W_LIGHT) || p.equals(Design.W_REG) || p.equals(Design.W_MED) || p.equals(Design.W_BOLD)) weight = p;
+            else font = p;
+        }
+        boolean clear = v.trim().isEmpty() || unquote(v).isEmpty();
+        if (clear || !size.isEmpty()) edit.put(E_LOOK + who + " " + Design.K_SIZE, size);
+        if (clear || !weight.isEmpty()) edit.put(E_LOOK + who + " " + Design.K_WEIGHT, weight);
+        if (clear || !font.isEmpty()) edit.put(E_LOOK + who + " " + Design.K_FONT, font);
+    }
     static final String[] PLACES = {"למעלה", "למטה", "לראש", "לסוף"};   // תחביר — לפי הסדר של DbMore.UP … BOTTOM
 
     /** מבנה 121: המילה של /מקום: ← DbMore.UP … BOTTOM; ‎-1 — לא מוכרת. */
@@ -247,11 +278,16 @@ final class Verbs {
                 c.kind = K_LIST;
                 c.edit = new java.util.LinkedHashMap<String, String>();
                 for (String w : Parse.tokens(after(rest, LIST))) {
+                    String look = lookKey(w);
                     if (w.startsWith(SW_DESIGN)) c.edit.put(Store.P_DESIGN, unquote(w.substring(SW_DESIGN.length())));
+                    else if (look != null && look.endsWith(":")) putText(c.edit, look, w.substring(w.indexOf(':') + 1));   // מבנה 235
+                    else if (look != null) c.edit.put(E_LOOK + look, unquote(w.substring(w.indexOf(':') + 1)));
                     else if (w.startsWith("/") || !c.arg.isEmpty()) c.error = Words.Verb.usage(SHAPE);
                     else c.arg = unquote(w);
                 }
-                if (c.arg.isEmpty() || c.edit.isEmpty()) c.error = Words.Verb.usage(SHAPE);
+                boolean pickedShape = Parse.var(Syntax.V_SELECTED).equals(c.arg);   // מהמסך — רק /עיצוב: (החלון)
+                if (c.arg.isEmpty() || c.edit.isEmpty() || (pickedShape && (c.edit.size() != 1 || !c.edit.containsKey(Store.P_DESIGN))))
+                    c.error = Words.Verb.usage(SHAPE);
             } else if (c.verb.equals(CREATE) && (starts(rest, NOTE_WORD) || starts(rest, TITLE_WORD))) {   // מ0.37
                 boolean title = starts(rest, TITLE_WORD);
                 c.kind = title ? K_TITLE : K_NOTE;

@@ -1242,6 +1242,38 @@ final class DbCmdTests {
                                         + "העיצוב שבזיכרון לא השתנה",
                                 d234[1] != null && d234[1].cols == 2 && d234[1].nameT.size == 15 && d234[2] == null
                                         && d234[3] != null && d234[3].cols == 3 && Design.get(Design.FILES).cols == 3);
+                        // מבנה 235: המראה בפקודה — "עצב רשימה … /טורים: /ריווח: /גודל-צלמית: /כתב-…:"; רק מה שנכתב משתנה; "" — לרשת
+                        List<String> w235 = go(o121 + "עצב רשימה \"מראה 234/ב\" /טורים:4 /ריווח:12 /גודל-צלמית:60 /כתב-שם:18,מודגש,מערכת /כתב-כותרת:\"\"\n",
+                                here, vars, lib);
+                        final String[] look235 = new String[2];
+                        final Design[] d235 = new Design[1];
+                        final Db.Use<Void> read235 = new Db.Use<Void>() {
+                            @Override public Void run(SqlStore st) {
+                                long b = DbPaths.find(st, m91, java.util.Arrays.asList("מראה 234", "ב"));
+                                look235[0] = st.prop(b, Store.P_LOOK);
+                                d235[0] = Design.forList(st, DbPaths.find(st, m91, java.util.Arrays.asList("מראה 234", "ב", "ג")));
+                                return null;
+                            }
+                        };
+                        Db.read(Db.app, m91, read235);
+                        String l235 = look235[0] == null ? "" : look235[0];
+                        o.check("מבנה 235: עצב רשימה — המראה נשמר על הרשימה (" + l235 + "), מה שלא נכתב נשאר, \"\" — יצא; והרשימה שבתוכה יורשת " + w235,
+                                bad(w235).isEmpty() && l235.contains("טורים = 4") && l235.contains("ריווח = 12") && l235.contains("צלמית = 60")
+                                        && l235.contains("שם: גודל = 18") && l235.contains("שם: משקל = מודגש") && l235.contains("שם: גופן = מערכת")
+                                        && !l235.contains("כותרת:") && !l235.contains("לא מובן") && d235[0] != null && d235[0].cols == 4
+                                        && d235[0].icon == 60 && d235[0].nameT.size == 18 && d235[0].nameT.weight == 700);
+                        Batch.Plan out235 = Batch.plan(o121 + "עצב רשימה \"מראה 234/ב\" /טורים:9\n", here, vars, lib);
+                        Batch.Plan nan235 = Batch.plan(o121 + "עצב רשימה \"מראה 234/ב\" /ריווח:הרבה\n", here, vars, lib);
+                        Batch.Plan font235 = Batch.plan(o121 + "עצב רשימה \"מראה 234/ב\" /כתב-נתונים:12,\"אין גופן כזה 235\"\n", here, vars, lib);
+                        o.check("מבנה 235: מחוץ לטווח, לא מספר, גופן שאין — שגיאה בתכנון, עם הסיבה; ולא נכתב כלום",
+                                out235.blocked() && nan235.blocked() && font235.blocked()
+                                        && errs235(out235).contains(Words.DesignW.outOfRange("9", Design.COLS[0], Design.COLS[1]))
+                                        && errs235(font235).contains(Words.DesignW.noFont("אין גופן כזה 235")));
+                        List<String> back235 = go(o121 + "עצב רשימה \"מראה 234/ב\" /טורים:\"\" /כתב-שם:\"\"\n", here, vars, lib);
+                        Db.read(Db.app, m91, read235);
+                        String b235 = look235[0] == null ? "" : look235[0];
+                        o.check("מבנה 235: \"\" — חוזרים לרשת (" + b235 + ")", bad(back235).isEmpty() && !b235.contains("טורים") && !b235.contains("שם:")
+                                && b235.contains("ריווח = 12") && d235[0].cols == 3);
                     }
                     // מבנה 123: "שחזר דוגמאות" כפקודה; ו"צור אופן" על אופן שיש בו רשימות ואין בו בית — מתקן
                     {
@@ -1474,5 +1506,12 @@ final class DbCmdTests {
         int n = 0;
         for (String x : rep) if (x.contains(mark)) n++;
         return n;
+    }
+
+    /** מבנה 235: השגיאות של התכנית, בשורה אחת. */
+    private static String errs235(Batch.Plan p) {
+        StringBuilder sb = new StringBuilder();
+        for (Batch.Step st : p.steps) if (st.error != null) sb.append(st.error).append(" | ");
+        return sb.toString();
     }
 }

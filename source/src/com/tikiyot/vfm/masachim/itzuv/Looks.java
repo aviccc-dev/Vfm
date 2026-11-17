@@ -33,7 +33,7 @@ final class Looks {
     private static final int[] COLORS = {0xFF0F6E56, 0xFF534AB7, 0xFFBA7517, 0xFF5F5E5A, 0xFF1A73E8, 0xFFC5221F,
             0xFFEF9F27, 0xFFD4537E};
     /** קובצי הגופנים והצלמיות החיצוניים — בתוך תיקיית האופן (עוברים איתו). */
-    static final String FONTS = "גופנים", ICONS = "צלמיות";  // בכונן
+    static final String ICONS = "צלמיות";  // בכונן
     /** "התאם למקום": עד כמה מותר להצר את האותיות (החלטה 3: בערך 85%). */
     static final float NARROW = 0.85f;
     /** רוחב הצלמית בשורות היום (54dp) — היחס שלפיו מוגדלים הכיתובים שבתוכה. */
@@ -65,8 +65,8 @@ final class Looks {
             Typeface f = fonts.get(t.font);
             if (f == null && !fonts.containsKey(t.font)) {
                 try {
-                    File file = t.font.startsWith("/") ? new File(t.font) : new File(new File(Paths.work(), FONTS), t.font);
-                    if (file.isFile()) f = Typeface.createFromFile(file);
+                    File file = Design.fontFile(t.font);                      // מבנה 235: הכלל — במקום אחד
+                    if (file != null) f = Typeface.createFromFile(file);
                 } catch (Throwable e) {
                     Log.e("טעינת גופן " + t.font, e);
                 }

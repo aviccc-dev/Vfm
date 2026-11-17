@@ -145,6 +145,57 @@ final class Design {
         return d;
     }
 
+    /**
+     * מבנה 235: הערך הזה למפתח הזה של המראה ("טורים", "שם: גודל"…) — null: תקין; אחרת — למה לא, במילים של המשתמש. הטווחים —
+     * אלה של הקובץ (למעלה); גופן — "מערכת", או קובץ בתיקיית "גופנים" של האופן (או מסלול מלא).
+     */
+    static String lookError(String key, String v) {
+        int c = key.indexOf(':');
+        String what = c > 0 ? key.substring(c + 1).trim() : key;
+        try {
+            if (key.equals(K_COLS)) return range(v, COLS);
+            if (key.equals(K_ICON)) return range(v, ICON);
+            if (key.equals(K_GAP)) return range(v, GAP);
+            if (what.equals(K_SIZE)) return range(v, SIZE);
+            if (what.equals(K_WEIGHT))
+                return v.equals(W_LIGHT) || v.equals(W_REG) || v.equals(W_MED) || v.equals(W_BOLD) ? null : range(v, WEIGHT);
+            if (what.equals(K_FONT)) return v.equals(SYSTEM) || fontFile(v) != null ? null : Words.DesignW.noFont(v);
+        } catch (NumberFormatException e) {
+            return Words.DesignW.notNumber(v);
+        }
+        return Words.DesignW.notNumber(v);
+    }
+
+    private static String range(String v, int[] r) {
+        int n = num(v);
+        return n < r[0] || n > r[1] ? Words.DesignW.outOfRange(v, r[0], r[1]) : null;
+    }
+
+    /** קובץ הגופן בשם הזה: מסלול מלא, או בתיקיית "גופנים" של האופן; null — אין. */
+    static File fontFile(String font) {
+        if (font == null || font.trim().isEmpty() || SYSTEM.equals(font)) return null;
+        File f = font.startsWith("/") ? new File(font) : new File(new File(Paths.work(), Paths.FONTS), font);
+        return f.isFile() ? f : null;
+    }
+
+    /** המראה (P_LOOK) אחרי קביעה של key = value; value ריק — השורה יוצאת (חוזרים לרשת). הסדר נשמר. */
+    static String withLook(String look, String key, String value) {
+        Map<String, String> m = new LinkedHashMap<String, String>();
+        if (look != null)
+            for (String part : look.split(java.util.regex.Pattern.quote(P_SEP))) {
+                int eq = part.indexOf('=');
+                if (eq > 0) m.put(part.substring(0, eq).trim(), part.substring(eq + 1).trim());
+            }
+        if (value == null || value.trim().isEmpty()) m.remove(key);
+        else m.put(key, value.trim());
+        StringBuilder sb = new StringBuilder();
+        for (Map.Entry<String, String> e : m.entrySet()) {
+            if (sb.length() > 0) sb.append(LOOK_SEP);
+            sb.append(e.getKey()).append(" = ").append(e.getValue());
+        }
+        return sb.toString();
+    }
+
     /** סימן לזיהוי שינוי (המסך נבנה מחדש רק כשהמראה השתנה). */
     String signature() {
         return grid + "|" + cols + "|" + icon + "|" + gap + "|" + showIcon + "|" + around + "|" + tint + "|" + showData
@@ -184,11 +235,17 @@ final class Design {
         return d;
     }
 
+    /**
+     * מבנה 235: הטווחים — במקום אחד. הקריאה של הקובץ מצמצמת אליהם; הפקודה ("עצב") מסרבת למה שמחוץ להם, ואומרת למה.
+     * צלמית וריווח — באחוזים (רשת: מרוחב האריח; שורות: מגודל השם).
+     */
+    static final int[] COLS = {1, 8}, ICON = {0, 1000}, GAP = {0, 200}, SIZE = {6, 60}, WEIGHT = {100, 900};
+
     private void mid(String key, String v) {
         if (key.equals(K_STYLE)) grid = v.equals(GRID);
-        else if (key.equals(K_COLS)) cols = clamp(num(v), 1, 8);
-        else if (key.equals(K_ICON)) icon = clamp(num(v), 0, 1000);
-        else if (key.equals(K_GAP)) gap = clamp(num(v), 0, 200);
+        else if (key.equals(K_COLS)) cols = clamp(num(v), COLS[0], COLS[1]);
+        else if (key.equals(K_ICON)) icon = clamp(num(v), ICON[0], ICON[1]);
+        else if (key.equals(K_GAP)) gap = clamp(num(v), GAP[0], GAP[1]);
         else if (key.equals(K_SHOW_ICON)) showIcon = !v.equals(NO);
         else if (key.equals(K_AROUND)) around = v.equals(NONE) || v.equals(FRAME) ? v : FILL;
         else if (key.equals(K_TINT)) tint = v.equals(YES);
@@ -207,7 +264,7 @@ final class Design {
     }
 
     private void text(Text t, String what, String v) {
-        if (what.equals(K_SIZE)) t.size = clamp(num(v), 6, 60);
+        if (what.equals(K_SIZE)) t.size = clamp(num(v), SIZE[0], SIZE[1]);
         else if (what.equals(K_WEIGHT)) t.weight = weight(v);
         else if (what.equals(K_FONT)) t.font = v;
     }
@@ -217,7 +274,7 @@ final class Design {
         if (v.equals(W_REG)) return 400;
         if (v.equals(W_MED)) return 500;
         if (v.equals(W_BOLD)) return 700;
-        return clamp(num(v), 100, 900);
+        return clamp(num(v), WEIGHT[0], WEIGHT[1]);
     }
 
     static String weightName(int w) {
