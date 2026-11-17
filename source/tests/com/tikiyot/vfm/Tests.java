@@ -71,6 +71,7 @@ public final class Tests {
         run("מ0.45: כל הפקודות עם כל המתגים — נבנה מההגדרה", new Runnable() { public void run() { m045matrix(); } });
         run("מ0.41: בטל לא-משויכים, קובץ של פקודת פתיחה אחת, שמות המסכים", new Runnable() { public void run() { m041(); } });
         run("מ0.41: העורך האינטראקטיבי בא עם התוכנה", new Runnable() { public void run() { m041bundled(); } });
+        run("מבנה 244: תוסף העיצוב — הלוח", new Runnable() { public void run() { m244panel(); } });
         run("מ0.41: קובץ הדוגמה של רשימת \"בחירה\"", new Runnable() { public void run() { m041example(); } });
         run("מ0.41: רשימת \"בחירה\" — %נבחרים%, כמה קבצים הפקודה מקבלת, והתכנון שקובע", new Runnable() { public void run() { m041select(); } });
         run("מ0.37: הפקודות הקטנות — כתוב, ודא (תיקייה, מכיל, קבצים, שגיאה), דוח, המתן, משתנים, רעיון וכותרת", new Runnable() { public void run() { m037(); } });
@@ -4272,6 +4273,42 @@ public final class Tests {
         p = Batch.plan(Choice.expand("העתק %נבחרים% \"" + new File(r, "יעד").getAbsolutePath() + "\"\n", two), d, v, lib);
         Batch.run(p, lib, null, null);
         check("מ0.41: פקודת בחירה שרצה — שני הקבצים הועתקו", p.errors == 0 && new File(r, "יעד/א.txt").isFile() && new File(r, "יעד/ב.txt").isFile());
+    }
+
+    /**
+     * מבנה 244 (המשתמש, 17.11.2026: "מקום מרוכז… כמו לוח עם כפתורים ובוררים" · "הכל עובר דרך שכבת הניהול"): הלוח בא עם התוכנה,
+     * זהה לעמוד של אותה גרסה שב־lab-pages; כל שינוי — רק בשורה של "עצב" דרך המנהל (shape), ומה שנקבע — מהתוכנה (design); לא
+     * מריץ ולא כותב בדרך אחרת. והגשר לדוגמה שבעמוד (לבדיקת העמוד בדפדפן) — באותן מילים כמו בתוכנה.
+     */
+    private static void m244panel() {
+        try {
+            File src = new File(System.getProperty("vfm.src")), pages = new File(src.getParentFile(), "lab-pages");
+            File asset = new File(src, "assets/" + Lab.BUNDLED + "/itzuv.html");
+            String html = Files.readUtf8(asset);
+            String[] nv = Lab.nameOf(html, asset.getName());
+            File same = null;
+            File[] k = pages.listFiles();
+            if (k != null) for (File f : k) {
+                if (!Lab.isHtml(f.getName())) continue;
+                String[] x = Lab.nameOf(Files.readUtf8(f), f.getName());
+                if (x[0].equals(nv[0]) && x[1].equals(nv[1])) same = f;
+            }
+            check("מבנה 244: הלוח בא עם התוכנה (" + nv[0] + " " + nv[1] + "), וזהה לעמוד של אותה גרסה שב־lab-pages",
+                    nv[0].equals("עיצוב") && same != null && Files.readUtf8(same).equals(html));
+            check("מבנה 244: הלוח משנה רק דרך \"עצב\" (V.shape) וקורא דרך V.design — לא מריץ קובץ, לא כותב ולא שומר בדרך אחרת",
+                    html.contains("V.shape(") && html.contains("V.design(") && !html.contains("V.runFile(") && !html.contains("V.runCommands(")
+                            && !html.contains("V.writeCommandFile(") && !html.contains("V.saveCommandFile(") && !html.contains("V.saveText(")
+                            && !html.contains("V.deleteCommandFile("));
+            List<String> miss = new ArrayList<String>();
+            for (String sw : new String[]{Verbs.SW_DESIGN, Verbs.SW_COLS, Verbs.SW_GAP, Verbs.SW_ICON_SIZE, Verbs.SW_T_TITLE, Verbs.SW_T_NAME,
+                    Verbs.SW_T_DATA, Verbs.SW_T_GROUP, Verbs.SW_MODE_LOOK, Verbs.SW_COLOR})
+                if (!html.contains("'" + sw + "'")) miss.add(sw);
+            for (String[] r : Palette.ROLES) if (!html.contains("[\"" + r[0] + "\",\"" + r[1] + "\",\"" + r[2] + "\"]")) miss.add(r[0]);
+            for (String d : new String[]{Design.DEFAULT, Design.FILES, Design.WORDS}) if (!html.contains("'" + d + "':{design:'" + d + "'")) miss.add(d);
+            check("מבנה 244: הגשר לדוגמה שבעמוד — באותן מילים, צבעים ועיצובים כמו בתוכנה (" + miss + ")", miss.isEmpty());
+        } catch (Exception e) {
+            check("מבנה 244: " + e, false);
+        }
     }
 
     /** מ0.41: העורך האינטראקטיבי בא עם התוכנה — העמוד שבהתקנה הוא הגרסה האחרונה שב־lab-pages, והכפתור פותח אותו. */

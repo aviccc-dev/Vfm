@@ -223,6 +223,8 @@ final class Bridge {
         texts.put(Design.T_DATA, textJson(d.data));
         texts.put(Design.T_GROUP, textJson(d.groupText()));
         o.put("texts", texts);
+        o.put("groupOwn", d.group != null);                                     // בלי — כותרת הקבוצה הולכת אחרי השם
+        if (looks == null) return o;                                            // עיצוב מוכן — בלי הצבעים (הם של התוכנה והאופן)
         o.put("dark", Palette.dark(looks));
         JSONObject colors = new JSONObject();
         int[] c = Palette.resolve(looks);
@@ -282,6 +284,12 @@ final class Bridge {
         ranges.put("weight", new JSONArray(java.util.Arrays.asList(Design.WEIGHT[0], Design.WEIGHT[1])));
         o.put("ranges", ranges);
         o.put("designs", new JSONArray(Design.names()));
+        JSONObject presets = new JSONObject();                                  // לתצוגה המקדימה — כל עיצוב מוכן, כמו שהוא
+        for (String n : Design.names()) presets.put(n, designJson(Design.get(n), true, null));
+        o.put("presets", presets);
+        JSONObject wv = new JSONObject();
+        for (String w : new String[]{Design.W_LIGHT, Design.W_REG, Design.W_MED, Design.W_BOLD}) wv.put(w, Design.weight(w));
+        o.put("weightValues", wv);
         o.put("fonts", new JSONArray(Design.fonts()));
         JSONArray roles = new JSONArray();
         for (String[] r : Palette.ROLES) roles.put(new JSONArray(java.util.Arrays.asList(r)));
