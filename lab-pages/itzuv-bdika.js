@@ -179,6 +179,36 @@ const run=async()=>{
     say('נמחק — "שלי" כבר לא בין השילובים',!tc().querySelector('#trySaved'));
     say('כל הניסוי — בלי פקודה ובלי "החלה"',clean());
     say('תצוגה — הסתרת הניסוי',pick('view','ניסוי רעיונות')&&tc().hidden);
+    // ---------- הפריט — קבוצה א, באמת בפקודה (מבנה 255) ----------
+    w=page(null);d=w.document;
+    const sc=()=>$('shapeCard'),srow=t=>[...sc().querySelectorAll('.row')].find(r=>r.querySelector('.lb').textContent===t);
+    const sbtn=(t,v)=>[...srow(t).querySelectorAll('.seg button')].find(b=>b.textContent===v);
+    say('כרטיס "הפריט" — תשעה, מהתוכנה',!!sc()&&sc().querySelectorAll('.row').length===9&&!!srow('סביב הצלמית')&&!!srow('שורות לשם'));
+    say('מה שנראה מסומן (רשימת קבצים: שורות, ריבוע צבעוני)',sbtn('סגנון','שורות').classList.contains('on')&&sbtn('סביב הצלמית','ריבוע צבעוני').classList.contains('on'));
+    click(sbtn('סגנון','רשת'));
+    say('סגנון: רשת — עם הטורים, הריווח והצלמית של רשת ← '+cmd(),cmd()==='עצב תוכנה /טורים:3 /ריווח:8 /גודל-צלמית:60 /סגנון:רשת'&&$('pv').querySelectorAll('.it.g').length===6);
+    pick('edit','ביטול');
+    say('ביטול אחד — מחזיר את כל הארבעה',cmd().startsWith('אין שינויים'));
+    pick('edit','חזרה');
+    click(sbtn('סביב הצלמית','ריבוע צבעוני'));click(sbtn('סביב הצלמית','מסגרת'));
+    click(sbtn('צבע רקע לפריט','כן'));click(sbtn('מקום הנתונים','בצד'));
+    say('עוד שלושה ← '+cmd(),cmd()==='עצב תוכנה /טורים:3 /ריווח:8 /גודל-צלמית:60 /סגנון:רשת /סביב-הצלמית:מסגרת /צבע-רקע-לפריט:כן /מקום-הנתונים:בצד');
+    say('התצוגה — כרטיסים, נתונים בצד, מסגרת',[...$('pv').querySelectorAll('.it')].filter(e=>e.style.borderRadius==='14px').length>=5&&$('pv').querySelectorAll('.tt.side').length===6
+      &&[...$('pv').querySelectorAll('.ic')].some(e=>e.style.border.includes('1px')));
+    click(sbtn('סביב הצלמית','ריבוע צבעוני'));
+    say('ערך עם רווח — במירכאות ← '+cmd(),cmd().includes('/סביב-הצלמית:"ריבוע צבעוני"'));
+    setNum(srow('שורות לשם').querySelector('.num'),1);
+    say('שורות לשם 1 ← '+cmd(),cmd().includes('/שורות-לשם:1')&&!$('pv').querySelector('.nm2.ml'));
+    setNum(srow('שורות לשם').querySelector('.num'),9);
+    say('שורות לשם 9 — מחוץ לטווח: לא נכנס',cmd().includes('/שורות-לשם:1')&&!cmd().includes('/שורות-לשם:9'));
+    click(srow('שורות לשם').querySelector('.re'));
+    say('↺ על שורות לשם — חוזר למה שהיה (2 שורות)',!cmd().includes('שורות-לשם')&&!!$('pv').querySelector('.nm2.ml'));
+    const n255=w.__shaped.length;click($('apply'));
+    const sh255=w.__shaped[w.__shaped.length-1];
+    say('החלה — הכול בשורה אחת של "עצב": '+sh255,w.__shaped.length===n255+1&&sh255.includes('/סגנון:רשת')&&sh255.includes('/סביב-הצלמית:"ריבוע צבעוני"'));
+    say('אחרי החלה — נקרא מחדש מהתוכנה: "נקבע כאן"',cmd().startsWith('אין שינויים')&&sbtn('סגנון','רשת').classList.contains('on')&&srow('סגנון').textContent.includes('נקבע כאן'));
+    click(srow('סגנון').querySelector('.re'));
+    say('↺ אחרי החלה ← '+cmd(),cmd()==='עצב תוכנה /סגנון:""');
     // ---------- שגיאה בעמוד — נאמרת על המסך (מבנה 252) ----------
     const dom2=new JSDOM(html,{runScripts:'dangerously',pretendToBeVisual:true,virtualConsole:new VirtualConsole(),beforeParse(x){
       x.vfm={info:()=>JSON.stringify({features:'design'}),theme:()=>null,load:()=>null,save:()=>{},design:()=>{throw new Error('תקלה לבדיקה');}};}});
@@ -195,6 +225,7 @@ const run=async()=>{
     say('תוכנה ישנה — גם הניסוי עובד',$('pv').querySelectorAll('.car .cc').length===4&&errs.length===errs0);
     setNum(d.querySelectorAll('#main .card')[1].querySelector('.num'),3);
     say('תוכנה ישנה — הפקודה כמו קודם: '+cmd(),cmd()==='עצב תוכנה /טורים:3');
+    say('תוכנה ישנה — בלי כרטיס "הפריט"',!d.getElementById('shapeCard'));
   }catch(e){out.push('❌ חריגה: '+e.stack.split('\n').slice(0,3).join(' | '));}
   const bad=errs.filter(e=>!/Not implemented: (window\.scrollTo|navigator\.clipboard)/.test(e));
   if(bad.length)out.push('❌ שגיאות בעמוד: '+bad.join(' || '));

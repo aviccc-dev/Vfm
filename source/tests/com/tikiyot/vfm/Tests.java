@@ -4319,6 +4319,13 @@ public final class Tests {
                 if (!html.contains("'" + sw + "'")) miss.add(sw);
             for (String[] r : Palette.ROLES) if (!html.contains("[\"" + r[0] + "\",\"" + r[1] + "\",\"" + r[2] + "\"]")) miss.add(r[0]);
             for (String d : new String[]{Design.DEFAULT, Design.FILES, Design.WORDS}) if (!html.contains("'" + d + "':{design:'" + d + "'")) miss.add(d);
+            for (int n = 0; n < Design.SHAPE_KEYS.length; n++) {                    // מבנה 255: הפריט — אותם מפתחות, מתגים, ערכים ושמות
+                String sk = Design.SHAPE_KEYS[n];
+                String[] one = Design.choices(sk);
+                int[] r = Design.shapeRange(sk);
+                String vals = one != null ? "'" + String.join("','", one) + "'" : r[0] + "," + r[1];
+                if (!html.contains("['" + sk + "','" + Verbs.shapeSwitch(sk) + "',[" + vals + "],'" + Design.SHAPE_IDS[n] + "']")) miss.add(sk);
+            }
             check("מבנה 244: הגשר לדוגמה שבעמוד — באותן מילים, צבעים ועיצובים כמו בתוכנה (" + miss + ")", miss.isEmpty());
             // מבנה 245: הכניסה — "🎨 עיצוב" פותח את הלוח על הרשימה שעל המסך (בבית — על האופן); מההגדרות — על כל התוכנה; החלון הישן —
             // בפריט משלו עד שהלוח יעבוד במכשיר; מסך שנבנה בצבעים אחרים — נבנה מחדש כשחוזרים אליו

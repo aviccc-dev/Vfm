@@ -429,6 +429,8 @@ final class Design {
      * מתג): המפתחות של "אמצע" שנקבעים ב"עצב" מעבר לטורים, ריווח וצלמית — לפי הסדר. המתג — שם המפתח, עם "-" במקום רווח.
      */
     static final String[] SHAPE_KEYS = {K_STYLE, K_SHOW_ICON, K_AROUND, K_TINT, K_SHOW_DATA, K_DATA_AT, K_LINES, K_FIT, K_MIN};
+    /** מבנה 255: לכל מפתח — שם קבוע ללוח העיצוב (מה הוא מצייר), באותו סדר. בערכים — הראשון הוא ה"כן" (רשת, כן, מתחת). */
+    static final String[] SHAPE_IDS = {"grid", "showIcon", "around", "tint", "showData", "dataBelow", "lines", "fit", "min"};
 
     /** מבנה 254: הערכים שהמפתח הזה מקבל; null — מספר בטווח (shapeRange). */
     static String[] choices(String key) {
