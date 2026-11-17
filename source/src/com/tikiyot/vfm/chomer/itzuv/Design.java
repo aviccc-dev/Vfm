@@ -184,6 +184,17 @@ final class Design {
         return d != null ? d : start;
     }
 
+    /** מבנה 241: מה שהאופן נותן לרשימות שלו (כל התוכנה, ואז האופן); null — לא נקבע כלום. */
+    static Design forMode(Store t) {
+        return above(t, null);
+    }
+
+    /** מבנה 241: מה שכל התוכנה נותנת; null — לא נקבע כלום. */
+    static Design forProgram() {
+        String[] all = programProps();
+        return fold(null, all[0], all[1], null);
+    }
+
     /** מה שמעל הרשימות: של כל התוכנה (הבית של אופן התפריטים), ושל האופן (הבית שלו). start — ממה מתחילים כשיש רק מראה. */
     private static Design above(Store t, Design start) {
         String[] all = programProps();

@@ -2395,6 +2395,18 @@ public final class Words {
                     + (sizeA != sizeB ? " · " + sizeA + " שורות מול " + sizeB : "");
         }
 
+        /** מבנה 241: ודא עיצוב. */
+        public static final String VERIFY_SHAPE_USAGE = "שימוש: ודא עיצוב רשימה \"דרך\" · ודא עיצוב אופן \"שם\" · ודא עיצוב תוכנה — ואחריהם"
+                + " המתגים של \"עצב\", עם ערך (למשל /טורים:3 /כתב-שם:16,מודגש /מראה:כהה)", SHAPE_DESIGN = "עיצוב";
+
+        public static String shapeWhat(String of) {
+            return of == null ? "העיצוב של כל התוכנה" : "העיצוב של " + of;
+        }
+
+        public static String modeOf(String m) {
+            return "האופן \"" + m + "\"";
+        }
+
         public static String verifyWill(String what) {
             return "יבדוק: " + what;
         }

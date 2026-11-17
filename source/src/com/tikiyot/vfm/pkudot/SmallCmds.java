@@ -83,6 +83,10 @@ final class SmallCmds {
         }
         if (cmd.equals(Syntax.VERIFY) && tk.size() == 2 && tk.get(1).trim().equals(Words.DbCmd.W_STEADY)) return planVerifySteady(plan, s, cmd, tk, here, vars, sim);   // מבנה 50: ודא רציף
         if (cmd.equals(Syntax.VERIFY) && tk.size() == 4 && tk.get(1).trim().equals(Verbs.MODE_WORD)) return planVerifyMode(plan, s, cmd, tk, here, vars, sim);   // מ0.45: ודא אופן "<שם>" קיים / חסר
+        if (cmd.equals(Syntax.VERIFY) && tk.size() >= 3 && tk.get(1).trim().equals(Syntax.W_SHAPE)) {   // מבנה 241: ודא עיצוב רשימה / אופן / תוכנה …
+            ShapeCmds.planVerify(s, tk, vars, sim);
+            return true;
+        }
         if (cmd.equals(Syntax.SECTION)) {                                              // מ0.44: קטע
             if (tk.size() != 2 || tk.get(1).trim().isEmpty()) { s.error = Words.DbCmd.SECTION_USAGE; return true; }
             s.noop = true;
