@@ -101,8 +101,14 @@ final class Verbs {
     /** ב־Cmd.edit: מפתח של המראה — "look:" ואחריו המפתח של קובץ העיצוב. */
     static final String E_LOOK = "look:";
 
+    /** מבנה 254: המתג של מפתח מ־Design.SHAPE_KEYS — שם המפתח, עם "-" במקום רווח ("סביב הצלמית" ← "/סביב-הצלמית:"). */
+    static String shapeSwitch(String key) {
+        return "/" + key.replace(' ', '-') + ":";
+    }
+
     /** מבנה 235: מתג של המראה ← המפתח שלו בקובץ העיצוב (הכתב — הקידומת; הגודל, המשקל והגופן נוספים לפי הערך). */
     private static String lookKey(String w) {
+        for (String k : Design.SHAPE_KEYS) if (w.startsWith(shapeSwitch(k))) return k;   // מבנה 254
         return w.startsWith(SW_COLS) ? Design.K_COLS : w.startsWith(SW_GAP) ? Design.K_GAP : w.startsWith(SW_ICON_SIZE) ? Design.K_ICON
                 : w.startsWith(SW_T_TITLE) ? Design.T_TITLE + ":" : w.startsWith(SW_T_NAME) ? Design.T_NAME + ":"
                 : w.startsWith(SW_T_DATA) ? Design.T_DATA + ":" : w.startsWith(SW_T_GROUP) ? Design.T_GROUP + ":"

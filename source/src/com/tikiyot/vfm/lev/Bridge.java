@@ -244,6 +244,9 @@ final class Bridge {
         o.put("wording", wording);
         o.put("texts", texts);
         o.put("groupOwn", d.group != null);                                     // בלי — כותרת הקבוצה הולכת אחרי השם
+        JSONObject sv = new JSONObject();                                        // מבנה 254: סגנון, הצג צלמית, סביב הצלמית… — כמו בקובץ
+        for (String k : Design.SHAPE_KEYS) sv.put(k, d.shapeValue(k));
+        o.put("shape", sv);
         if (looks == null) return o;                                            // עיצוב מוכן — בלי הצבעים (הם של התוכנה והאופן)
         o.put("dark", Palette.dark(looks));
         JSONObject colors = new JSONObject();
@@ -319,6 +322,16 @@ final class Bridge {
         o.put("roles", roles);
         o.put("groups", new JSONArray(java.util.Arrays.asList(Palette.GROUPS)));
         o.put("kinds", new JSONArray(java.util.Arrays.asList(Design.tagKinds())));   // מבנה 250
+        JSONArray shape = new JSONArray();                                      // מבנה 254: [מפתח, מתג, [ערכים] או [מ, עד]]
+        for (String k : Design.SHAPE_KEYS) {
+            String[] one = Design.choices(k);
+            int[] r = Design.shapeRange(k);
+            JSONArray vals = new JSONArray();
+            if (one != null) for (String v : one) vals.put(v);
+            else vals.put(r[0]).put(r[1]);
+            shape.put(new JSONArray().put(k).put(Verbs.shapeSwitch(k)).put(vals));
+        }
+        o.put("shape", shape);
         return o;
     }
 

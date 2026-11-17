@@ -265,6 +265,9 @@ final class ShapeCmds {
                     String w = d.wording.get(what);
                     got = w == null ? "" : w;
                     same = got.equals(want);
+                } else if (d.shapeValue(key) != null) {                       // מבנה 254: סגנון, הצג צלמית, סביב הצלמית…
+                    got = d.shapeValue(key);
+                    same = got.equals(want);
                 } else if (key.equals(Design.K_COLS) || key.equals(Design.K_GAP) || key.equals(Design.K_ICON)) {
                     int v = key.equals(Design.K_COLS) ? d.cols : key.equals(Design.K_GAP) ? d.gap : d.icon;
                     got = String.valueOf(v);

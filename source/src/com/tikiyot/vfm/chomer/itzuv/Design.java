@@ -304,10 +304,13 @@ final class Design {
         int c = key.indexOf(':');
         String what = c > 0 ? key.substring(c + 1).trim() : key;
         if (c > 0 && key.substring(0, c).trim().equals(K_WORDING)) return wordingError(what, v);   // מבנה 250
+        String[] one = choices(key);                                            // מבנה 254: ערך אחד מתוך כמה
+        if (one != null) return java.util.Arrays.asList(one).contains(v) ? null : Words.DesignW.notOneOf(v, java.util.Arrays.asList(one));
         try {
             if (key.equals(K_COLS)) return range(v, COLS);
             if (key.equals(K_ICON)) return range(v, ICON);
             if (key.equals(K_GAP)) return range(v, GAP);
+            if (shapeRange(key) != null) return range(v, shapeRange(key));       // מבנה 254
             if (what.equals(K_SIZE)) return range(v, SIZE);
             if (what.equals(K_WEIGHT))
                 return v.equals(W_LIGHT) || v.equals(W_REG) || v.equals(W_MED) || v.equals(W_BOLD) ? null : range(v, WEIGHT);
@@ -418,6 +421,42 @@ final class Design {
      * צלמית וריווח — באחוזים (רשת: מרוחב האריח; שורות: מגודל השם).
      */
     static final int[] COLS = {1, 8}, ICON = {0, 1000}, GAP = {0, 200}, SIZE = {6, 60}, WEIGHT = {100, 900};
+    /** מבנה 254: שורות לשם, והגודל המזערי של שם שמוקטן כדי להיכנס (התאם למקום). */
+    static final int[] LINES = {1, 6}, MIN = {6, 40};
+
+    /**
+     * מבנה 254 (המשתמש, 18.11.2026, על מה שעלה מהצילומים: "תבנה מה שהכי קל ומתאים ונראה לך" — קבוצה א: מה שכבר בעיצוב ואין לו
+     * מתג): המפתחות של "אמצע" שנקבעים ב"עצב" מעבר לטורים, ריווח וצלמית — לפי הסדר. המתג — שם המפתח, עם "-" במקום רווח.
+     */
+    static final String[] SHAPE_KEYS = {K_STYLE, K_SHOW_ICON, K_AROUND, K_TINT, K_SHOW_DATA, K_DATA_AT, K_LINES, K_FIT, K_MIN};
+
+    /** מבנה 254: הערכים שהמפתח הזה מקבל; null — מספר בטווח (shapeRange). */
+    static String[] choices(String key) {
+        if (key.equals(K_STYLE)) return new String[]{GRID, ROWS};
+        if (key.equals(K_AROUND)) return new String[]{NONE, FRAME, FILL};
+        if (key.equals(K_DATA_AT)) return new String[]{BELOW, SIDE};
+        if (key.equals(K_SHOW_ICON) || key.equals(K_TINT) || key.equals(K_SHOW_DATA) || key.equals(K_FIT)) return new String[]{YES, NO};
+        return null;
+    }
+
+    /** מבנה 254: הטווח של מפתח מספרי מ־SHAPE_KEYS; null — אין. */
+    static int[] shapeRange(String key) {
+        return key.equals(K_LINES) ? LINES : key.equals(K_MIN) ? MIN : null;
+    }
+
+    /** מבנה 254: הערך של מפתח מ־SHAPE_KEYS כמו שהוא בעיצוב הזה (כמו שנכתב בקובץ); null — לא מפתח כזה. */
+    String shapeValue(String key) {
+        if (key.equals(K_STYLE)) return grid ? GRID : ROWS;
+        if (key.equals(K_SHOW_ICON)) return showIcon ? YES : NO;
+        if (key.equals(K_AROUND)) return around;
+        if (key.equals(K_TINT)) return tint ? YES : NO;
+        if (key.equals(K_SHOW_DATA)) return showData ? YES : NO;
+        if (key.equals(K_DATA_AT)) return dataBelow ? BELOW : SIDE;
+        if (key.equals(K_LINES)) return String.valueOf(lines);
+        if (key.equals(K_FIT)) return fit ? YES : NO;
+        if (key.equals(K_MIN)) return String.valueOf(min);
+        return null;
+    }
 
     private void mid(String key, String v) {
         if (key.equals(K_STYLE)) grid = v.equals(GRID);
@@ -430,8 +469,8 @@ final class Design {
         else if (key.equals(K_SHOW_DATA)) showData = !v.equals(NO);
         else if (key.equals(K_DATA_AT)) dataBelow = !v.equals(SIDE);
         else if (key.equals(K_FIT)) fit = v.equals(YES);
-        else if (key.equals(K_MIN)) min = clamp(num(v), 6, 40);
-        else if (key.equals(K_LINES)) lines = clamp(num(v), 1, 6);
+        else if (key.equals(K_MIN)) min = clamp(num(v), MIN[0], MIN[1]);
+        else if (key.equals(K_LINES)) lines = clamp(num(v), LINES[0], LINES[1]);
         else {
             int c = key.indexOf(':');
             if (c <= 0) return;

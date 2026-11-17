@@ -1472,6 +1472,27 @@ final class DbCmdTests {
                                         && nk250.blocked() && errs235(nk250).contains("אין סוג כזה") && bw250.blocked()
                                         && b250.wording.isEmpty() && java.util.Arrays.asList(Design.tagKinds()).equals(java.util.Arrays.asList(
                                                 "רשימה ידנית", "רשימה חכמה", "תיקייה אמיתית", "פקודה", "קישור", "כונן פנימי", "כרטיס זיכרון")));
+                        // מבנה 254 (המשתמש, 18.11.2026: "תבנה מה שהכי קל ומתאים ונראה לך"): קבוצה א — מה שכבר בעיצוב ואין לו מתג
+                        String all254 = " /סגנון:רשת /הצג-צלמית:לא /סביב-הצלמית:\"ריבוע צבעוני\" /צבע-רקע-לפריט:כן /הצג-נתונים:לא"
+                                + " /מקום-הנתונים:בצד /שורות-לשם:1 /התאם-למקום:כן /גודל-מזערי:9";
+                        Design before254 = ShapeCmds.state(Verbs.K_LIST, "מראה 234/ב", m91).shown;
+                        List<String> s254 = go(o121 + "עצב \"" + m91 + "/מראה 234/ב\"" + all254 + "\n"
+                                + "ודא עיצוב \"" + m91 + "/מראה 234/ב\"" + all254 + "\n", here, vars, lib);
+                        Design d254 = ShapeCmds.state(Verbs.K_LIST, "מראה 234/ב", m91).shown;
+                        List<String> v254 = go(o121 + "ודא עיצוב \"" + m91 + "/מראה 234/ב\" /שורות-לשם:2\n", here, vars, lib);
+                        Batch.Plan st254 = Batch.plan(o121 + "עצב \"" + m91 + "/מראה 234/ב\" /סגנון:עמודות\n", here, vars, lib);
+                        Batch.Plan ln254 = Batch.plan(o121 + "עצב \"" + m91 + "/מראה 234/ב\" /שורות-לשם:9\n", here, vars, lib);
+                        Batch.Plan ar254 = Batch.plan(o121 + "עצב \"" + m91 + "/מראה 234/ב\" /סביב-הצלמית:עיגול\n", here, vars, lib);
+                        go(o121 + "עצב \"" + m91 + "/מראה 234/ב\" /סגנון:\"\" /הצג-צלמית:\"\" /סביב-הצלמית:\"\" /צבע-רקע-לפריט:\"\" /הצג-נתונים:\"\""
+                                + " /מקום-הנתונים:\"\" /שורות-לשם:\"\" /התאם-למקום:\"\" /גודל-מזערי:\"\"\n", here, vars, lib);
+                        Design b254 = ShapeCmds.state(Verbs.K_LIST, "מראה 234/ב", m91).shown;
+                        o.check("מבנה 254: קבוצה א — /סגנון: /הצג-צלמית: /סביב-הצלמית: /צבע-רקע-לפריט: /הצג-נתונים: /מקום-הנתונים: /שורות-לשם: /התאם-למקום: /גודל-מזערי:"
+                                        + " — נקבעים ונבדקים ב\"ודא עיצוב\"; ערך שאינו מהערכים, ומחוץ לטווח — שגיאה; \"\" — חוזרים למה שהיה " + s254 + " " + errs235(st254),
+                                d254.grid && !d254.showIcon && Design.FILL.equals(d254.around) && d254.tint && !d254.showData && !d254.dataBelow
+                                        && d254.lines == 1 && d254.fit && d254.min == 9 && !s254.toString().contains("❌") && v254.toString().contains("❌")
+                                        && st254.blocked() && errs235(st254).contains("לא אחד מאלה") && ln254.blocked() && errs235(ln254).contains("מחוץ לטווח")
+                                        && ar254.blocked() && b254.signature().equals(before254.signature())
+                                        && Verbs.shapeSwitch(Design.K_AROUND).equals("/סביב-הצלמית:") && Design.SHAPE_KEYS.length == 9);
                     }
                     // מבנה 123: "שחזר דוגמאות" כפקודה; ו"צור אופן" על אופן שיש בו רשימות ואין בו בית — מתקן
                     {
