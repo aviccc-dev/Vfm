@@ -18,7 +18,29 @@ final class Design {
     static final String EXT = ".עיצוב.txt";  // בכונן
     static final String DIR = "עיצובים";  // בכונן
     /** העיצובים המובנים — תמיד זמינים; נכתבים לתיקיית האופן בפעם הראשונה שבוחרים בהם. */
-    static final String DEFAULT = "עיצוב ברירת מחדל", FILES = "תוכנת ניהול קבצים", WORDS = "מילים וצבע";  // בכונן
+    /** מבנה 240 (המשתמש, 17.11.2026: "מתאים" — שמות שאומרים מה רואים). */
+    static final String DEFAULT = "רשימת קבצים", FILES = "מנהל קבצים עם צלמיות", WORDS = "מילים וצבע";  // בכונן
+    /** מבנה 240: השמות הקודמים — עדיין מובנים (רשימה, הבית, קובץ שנערך), ומה שנכתב מעכשיו — בשם החדש. */
+    static final String[][] OLD_NAMES = {{"עיצוב ברירת מחדל", DEFAULT}, {"תוכנת ניהול קבצים", FILES}};  // בכונן
+
+    /** מבנה 240: השם של היום, לשם שנכתב פעם (שם ישן של מובנה ← החדש; אחר — כמו שהוא). */
+    static String current(String name) {
+        if (name == null) return null;
+        String n = name.trim();
+        for (String[] o : OLD_NAMES) if (o[0].equals(n)) return o[1];
+        return n;
+    }
+
+    /** מבנה 240: יש עיצוב בשם הזה (מובנה, גם בשם הקודם, או קובץ באופן). */
+    static boolean known(String name) {
+        return name != null && (builtIn(name) || fileOf(current(name)).isFile());
+    }
+
+    /** מבנה 240: הקובץ של מובנה בשמו הקודם (אם נערך פעם) — null אם אין. */
+    static File oldFile(String name) {
+        for (String[] o : OLD_NAMES) if (o[1].equals(name) && fileOf(o[0]).isFile()) return fileOf(o[0]);
+        return null;
+    }
     /** בהגדרות הכלליות של האופן: העיצוב של מסך הבית. */
     static final String HOME_KEY = "עיצוב מסך הבית";  // תחביר
 
@@ -414,6 +436,7 @@ final class Design {
     }
 
     static boolean builtIn(String name) {
+        name = current(name);                                                 // מבנה 240: גם בשם הקודם
         return DEFAULT.equals(name) || FILES.equals(name) || WORDS.equals(name);
     }
 
@@ -665,8 +688,11 @@ final class Design {
      */
     static synchronized Design get(String name) {
         if (name == null || name.trim().isEmpty()) name = DEFAULT;
+        name = current(name);                                                 // מבנה 240: שם קודם — השם של היום
         File f = fileOf(name);
         if (f.isFile()) return read(f, name);
+        File was = oldFile(name);                                            // מובנה שנערך בשמו הקודם — מה שנערך נשאר
+        if (was != null) return read(was, name);
         if (!builtIn(name)) return get(DEFAULT);
         Design d = cache.get(BUILT + name);                                  // מובנה בלי קובץ — פעם אחת, מהמקור
         if (d == null) {

@@ -1619,6 +1619,10 @@ public final class Words {
         /** מבנה 237: הצבעים. */
         public static final String COLORS_ALL_ONLY = "צבעים ומראה (בהיר / כהה) — רק לכל התוכנה או לאופן: עצב תוכנה · עצב אופן";
 
+        public static String noDesign(String v) {
+            return "אין עיצוב בשם \"" + v + "\" (המוכנים: רשימת קבצים · מנהל קבצים עם צלמיות · מילים וצבע)";
+        }
+
         public static String badMode(String v) {
             return "\"" + v + "\" — המראה הוא בהיר או כהה";
         }
@@ -1636,7 +1640,7 @@ public final class Words {
         }
         public static final String WHY_FILES = "רשת גדולה וברורה, כמו מנהל קבצים שוטף — לרשימה שהיא סביבת עבודה";
         public static final String WHY_WORDS = "בלי צלמיות: אריחים צבעוניים עם מילים, בשני טורים";
-        public static final String FILE_NOTE = "אפשר לערוך ידנית. מה שחסר כאן נלקח מ\"עיצוב ברירת מחדל\", ושורה לא מובנת לא נלקחת";
+        public static final String FILE_NOTE = "אפשר לערוך ידנית. מה שחסר כאן נלקח מ\"רשימת קבצים\", ושורה לא מובנת לא נלקחת";
         public static final String FILE_NOTE2 = "רשת: צלמית וריווח באחוזים מרוחב האריח. שורות: באחוזים מגודל השם. משקל: דק / רגיל / בינוני / מודגש. סביב הצלמית: בלי / מסגרת / ריבוע צבעוני";
         public static final String LISTS_NOTE = "צלמית וצבע לכל רשימה, לפי המסלול שלה, למשל: לימוד/הערות = צלמית 📚 · צבע ירוק. בסביבה אחרת — רק כשיש רשימה באותו מסלול";
         public static final String EXISTS = "כבר יש עיצוב בשם הזה";

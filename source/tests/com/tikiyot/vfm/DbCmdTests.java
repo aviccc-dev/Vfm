@@ -1180,7 +1180,7 @@ final class DbCmdTests {
                     {
                         String o121 = "אופן \"" + m91 + "\"\n";
                         List<String> w121 = go(o121 + "MD ידנית \"סדר 121/א\"\nMD ידנית \"סדר 121/ב\"\nMD ידנית \"סדר 121/ג\"\n"
-                                + "עדכן רשימה \"סדר 121/ג\" /מקום:לראש\nעצב רשימה \"סדר 121/ב\" /עיצוב:\"כחול 121\"\n", here, vars, lib);
+                                + "עדכן רשימה \"סדר 121/ג\" /מקום:לראש\nעצב רשימה \"סדר 121/ב\" /עיצוב:\"" + Design.WORDS + "\"\n", here, vars, lib);   // מבנה 240: עיצוב שקיים (שאין — שגיאה)
                         final long[] id121 = new long[3];
                         final String[] got121 = new String[4];
                         final Db.Use<Void> read121 = new Db.Use<Void>() {
@@ -1205,7 +1205,7 @@ final class DbCmdTests {
                         String scr121 = Files.readUtf8(new File(src, "src/com/tikiyot/vfm/masachim/DbListScreen.java"));
                         o.check("מבנה 121: בקובץ — /מקום:לראש (" + order1 + ") ו־/עיצוב: (" + design1 + "); מהמסך — לסוף (" + got121[0] + " · " + so121 + "), עיצוב \"לרשת\" ("
                                         + got121[1] + " · " + sd121 + ") " + w121,
-                                bad(w121).isEmpty() && "גאב".equals(order1) && "כחול 121".equals(design1) && !or121.failed && "גבא".equals(got121[0])
+                                bad(w121).isEmpty() && "גאב".equals(order1) && Design.WORDS.equals(design1) && !or121.failed && "גבא".equals(got121[0])
                                         && !de121.failed && "null".equals(got121[1]));
                         o.check("מבנה 121: מקום לא מוכר — שגיאה בתכנון; השומר — מסך הרשימות אינו מסדר ואינו קובע עיצוב בעצמו",
                                 Batch.plan(o121 + "עדכן רשימה \"סדר 121/א\" /מקום:הצידה\n", here, vars, lib).blocked()
@@ -1214,9 +1214,9 @@ final class DbCmdTests {
                         // מבנה 233 (המשתמש, 17.11.2026: "אולי עצב" · "אין צורך לשמור לקבצים ישנים"): /עיצוב: — רק של "עצב"
                         o.check("מבנה 233: \"עדכן רשימה … /עיצוב:\" — שגיאה (העיצוב עבר ל\"עצב\"); \"עצב רשימה\" בלי מתג, או לרשימה חכמה — שגיאה; "
                                         + "המסך שולח \"עצב\"",
-                                Batch.plan(o121 + "עדכן רשימה \"סדר 121/ב\" /עיצוב:\"כחול 121\"\n", here, vars, lib).blocked()
+                                Batch.plan(o121 + "עדכן רשימה \"סדר 121/ב\" /עיצוב:\"" + Design.WORDS + "\"\n", here, vars, lib).blocked()
                                         && Batch.plan(o121 + "עצב רשימה \"סדר 121/ב\"\n", here, vars, lib).blocked()
-                                        && Batch.plan(o121 + "עצב רשימה חכמה \"x\" /עיצוב:\"כחול 121\"\n", here, vars, lib).blocked()
+                                        && Batch.plan(o121 + "עצב רשימה חכמה \"x\" /עיצוב:\"" + Design.WORDS + "\"\n", here, vars, lib).blocked()
                                         && !Batch.plan(o121 + "עצב רשימה \"סדר 121/ב\" /עיצוב:\"\"\n", here, vars, lib).blocked()
                                         && de121.text.startsWith("עצב רשימה "));
                         // מבנה 234: המראה של רשימה (P_LOOK) מעל העיצוב שלה, והירושה מלמעלה למטה (רשימה שבחרה עיצוב — מתחילה ממנו)
@@ -1335,6 +1335,30 @@ final class DbCmdTests {
                                         && d235[0].groupText().size == 15 && d235[0].groupText().weight == 700
                                         && p239.groupText().size == 14 && p239.groupText().weight == 300
                                         && dd239.groupText() == dd239.nameT);
+                        // מבנה 240: השמות החדשים; השם הקודם — עדיין מובן, ונכתב בשם החדש; עיצוב שאין — שגיאה
+                        List<String> w240 = go(o121 + "עצב רשימה \"מראה 234/ב/ג\" /עיצוב:\"תוכנת ניהול קבצים\"\n", here, vars, lib);
+                        final String[] n240 = new String[1];
+                        Db.read(Db.app, m91, new Db.Use<Void>() {
+                            @Override public Void run(SqlStore st) {
+                                n240[0] = st.prop(DbPaths.find(st, m91, java.util.Arrays.asList("מראה 234", "ב", "ג")), Store.P_DESIGN);
+                                return null;
+                            }
+                        });
+                        Batch.Plan no240 = Batch.plan(o121 + "עצב רשימה \"מראה 234/ב/ג\" /עיצוב:\"אין עיצוב כזה 240\"\n", here, vars, lib);
+                        o.check("מבנה 240: \"" + Design.DEFAULT + "\" · \"" + Design.FILES + "\" · \"" + Design.WORDS + "\"; שם קודם — נכתב בשם החדש ("
+                                        + n240[0] + "); עיצוב שאין — שגיאה " + w240,
+                                Design.DEFAULT.equals("רשימת קבצים") && Design.FILES.equals("מנהל קבצים עם צלמיות") && bad(w240).isEmpty()
+                                        && Design.FILES.equals(n240[0]) && Design.get("תוכנת ניהול קבצים").grid
+                                        && Design.FILES.equals(Design.get("תוכנת ניהול קבצים").name) && Design.builtIn("עיצוב ברירת מחדל")
+                                        && no240.blocked() && errs235(no240).contains(Words.DesignW.noDesign("אין עיצוב כזה 240")));
+                        File old240 = Design.fileOf("תוכנת ניהול קבצים"), new240 = Design.fileOf(Design.FILES);
+                        boolean hadNew240 = new240.isFile();
+                        if (!hadNew240) {
+                            old240.getParentFile().mkdirs();
+                            Files.writeAtomic(old240, "[אמצע]\nסגנון = רשת\nטורים = 7\n");
+                            o.check("מבנה 240: מובנה שנערך בשמו הקודם — מה שנערך נשאר (7 טורים)", Design.get(Design.FILES).cols == 7);
+                            old240.delete();
+                        }
                     }
                     // מבנה 123: "שחזר דוגמאות" כפקודה; ו"צור אופן" על אופן שיש בו רשימות ואין בו בית — מתקן
                     {

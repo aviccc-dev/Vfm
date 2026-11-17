@@ -157,6 +157,8 @@ final class ListVerbs {
      */
     /** מבנה 235: הערכים של המראה — בטווח, והגופן קיים (הכלל — ב־Design). null — הכול תקין; אחרת — למה לא. */
     static String lookErrors(Verbs.Cmd c) {
+        String design = c.edit.get(Store.P_DESIGN);                          // מבנה 240: עיצוב שאין — נאמר (לא נופלים בשקט לברירת המחדל)
+        if (design != null && !design.trim().isEmpty() && !Design.known(design)) return Words.DesignW.noDesign(design.trim());
         for (java.util.Map.Entry<String, String> e : c.edit.entrySet()) {
             if (!e.getKey().startsWith(Verbs.E_LOOK)) continue;
             String key = e.getKey().substring(Verbs.E_LOOK.length());
@@ -173,7 +175,7 @@ final class ListVerbs {
 
     /** מבנה 235, 236: "עצב" על פריט אחד — העיצוב (pDesign; "" — לרשת) והמראה (pLook): רק מה שנכתב משתנה. */
     static void shapeOn(Store t, long id, java.util.Map<String, String> edit, String pDesign, String pLook) {
-        if (edit.containsKey(Store.P_DESIGN)) t.setProp(id, pDesign, edit.get(Store.P_DESIGN).trim());
+        if (edit.containsKey(Store.P_DESIGN)) t.setProp(id, pDesign, Design.current(edit.get(Store.P_DESIGN)));   // מבנה 240: בשם של היום
         String look = t.prop(id, pLook), was = look;
         for (java.util.Map.Entry<String, String> e : edit.entrySet())
             if (e.getKey().startsWith(Verbs.E_LOOK)) look = Design.withLook(look, e.getKey().substring(Verbs.E_LOOK.length()), e.getValue());
