@@ -76,6 +76,7 @@ final class ShapeCmds {
      * הצלמית, הכתב, והצבעים (לאופן ולתוכנה). tk — המילים של השורה (ודא, עיצוב, …).
      */
     static void planVerify(final Batch.Step s, List<String> tk, Map<String, String> vars, Sim sim) {
+        if (!DbVerbs.active()) { s.error = Words.DbCmd.VERIFY_DB_ONLY; return; }   // כמו כל "ודא" של המסד
         StringBuilder line = new StringBuilder(Verbs.SHAPE);
         for (int i = 2; i < tk.size(); i++) line.append(' ').append(quoted(tk.get(i), i == 2));
         final Verbs.Cmd c = Verbs.parse(Verbs.withVars(line.toString(), vars));
