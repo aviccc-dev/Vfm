@@ -68,6 +68,11 @@ abstract class ListScreen<T> extends Activity {
     }
 
     /** 1.12.0: צלמית וצבע מהחלק הפרטי של העיצוב, לשורה שהיא רשימה; null — אין. */
+    /** מבנה 239: השורה היא כותרת של קבוצה (בכתב של כותרת קבוצה). */
+    protected boolean groupTitle(T row) {
+        return false;
+    }
+
     protected String[] ownLook(T row) {
         return null;
     }
@@ -151,6 +156,7 @@ abstract class ListScreen<T> extends Activity {
                 }
                 String[] own = ownLook(r);
                 Looks.apply(ListScreen.this, v, d, tileW, own == null ? "" : own[0], own == null ? "" : own[1], fitted);
+                if (groupTitle(r)) Looks.groupTitle(ListScreen.this, v, d);       // מבנה 239: כותרת קבוצה — בכתב שלה
                 Looks.mark(ListScreen.this, v, d, mark);
                 return v;
             }

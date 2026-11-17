@@ -256,6 +256,14 @@ final class Looks {
     }
 
     /** אחרי apply: הבחירה (או ההתאמה) — גוברת על צבע הרקע של העיצוב, בלי לאבד את הפינות. */
+    /** מבנה 239: שורה של כותרת קבוצה — השם בכתב של כותרת קבוצה (גודל, משקל, גופן). */
+    static void groupTitle(Context c, View v, Design d) {
+        TextView title = ((TextView[]) v.getTag())[1];
+        Design.Text t = d.groupText();
+        title.setTextSize(TypedValue.COMPLEX_UNIT_SP, t.size);
+        title.setTypeface(face(t));
+    }
+
     static void mark(Context c, View v, Design d, int color) {
         if ((color >>> 24) == 0) return;
         v.setBackground(rounded(color, Ui.dp(c, d.tint || d.grid ? 10 : 0), 0, 0));

@@ -549,6 +549,12 @@ public class DbListScreen extends ListScreen<Store.Member> {
         }
     }
 
+    /** מבנה 239: "צור כותרת" — כותרת של קבוצה בתוך הרשימה. */
+    @Override
+    protected boolean groupTitle(Store.Member row) {
+        return row != PLUS && row.item.type == Store.TITLE;
+    }
+
     private long homeCache = -1;
 
     private long homeOrZero() {

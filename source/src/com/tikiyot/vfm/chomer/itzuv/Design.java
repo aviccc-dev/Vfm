@@ -30,6 +30,8 @@ final class Design {
             K_FIT = "התאם למקום", K_MIN = "גודל מזערי", K_LINES = "שורות לשם";  // תחביר
     static final String NONE = "בלי", FRAME = "מסגרת", FILL = "ריבוע צבעוני";  // תחביר
     static final String T_NAME = "שם", T_DATA = "נתונים", K_SIZE = "גודל", K_WEIGHT = "משקל", K_FONT = "גופן";  // תחביר
+    /** מבנה 239 (המשתמש, 17.11.2026: "כן" — סוג כתב רביעי): כותרת של קבוצה בתוך רשימה ("צור כותרת"). */
+    static final String T_GROUP = "קבוצה";  // תחביר
     static final String YES = "כן", NO = "לא", SYSTEM = "מערכת";  // תחביר
     static final String W_LIGHT = "דק", W_REG = "רגיל", W_MED = "בינוני", W_BOLD = "מודגש";  // תחביר
     static final String P_ICON = "צלמית", P_COLOR = "צבע", P_SEP = "·";  // תחביר
@@ -66,6 +68,13 @@ final class Design {
     boolean showData = true;
     boolean dataBelow = true;
     Text title = new Text(12, 400, SYSTEM), nameT = new Text(16, 400, SYSTEM), data = new Text(11, 400, SYSTEM);
+    /** מבנה 239: הכתב של כותרת קבוצה; null — כמו השם (כמו שהיה עד כאן). */
+    Text group;
+
+    /** מבנה 239: הכתב של כותרת קבוצה — שלה, או של השם. */
+    Text groupText() {
+        return group != null ? group : nameT;
+    }
     boolean fit;
     int min = 11;
     int lines = 2;
@@ -89,6 +98,7 @@ final class Design {
         d.title = title.copy();
         d.nameT = nameT.copy();
         d.data = data.copy();
+        d.group = group == null ? null : group.copy();
         d.fit = fit;
         d.min = min;
         d.lines = lines;
@@ -254,7 +264,7 @@ final class Design {
     String signature() {
         return grid + "|" + cols + "|" + icon + "|" + gap + "|" + showIcon + "|" + around + "|" + tint + "|" + showData
                 + "|" + dataBelow + "|" + nameT.size + nameT.weight + nameT.font + "|" + data.size + data.weight + data.font
-                + "|" + fit + "|" + min + "|" + lines;
+                + "|" + fit + "|" + min + "|" + lines + "|" + (group == null ? "" : group.size + "" + group.weight + group.font);
     }
 
     // ---------- קריאה ----------
@@ -314,6 +324,10 @@ final class Design {
             String who = key.substring(0, c).trim(), what = key.substring(c + 1).trim();
             if (who.equals(T_NAME)) text(nameT, what, v);
             else if (who.equals(T_DATA)) text(data, what, v);
+            else if (who.equals(T_GROUP)) {                                  // מבנה 239: מתחיל מהשם, ומשתנה רק מה שנכתב
+                if (group == null) group = nameT.copy();
+                text(group, what, v);
+            }
         }
     }
 
@@ -577,6 +591,11 @@ final class Design {
                     {T_DATA + ": " + K_WEIGHT, weightName(d.data.weight)}, {T_DATA + ": " + K_FONT, d.data.font},
                     {K_FIT, d.fit ? YES : NO}, {K_MIN, "" + d.min}, {K_LINES, "" + d.lines}};
             for (String[] kv : mid) text = withKey(text, S_MID, kv[0], kv[1]);
+            if (d.group != null) {                                            // מבנה 239
+                text = withKey(text, S_MID, T_GROUP + ": " + K_SIZE, num(d.group.size));
+                text = withKey(text, S_MID, T_GROUP + ": " + K_WEIGHT, weightName(d.group.weight));
+                text = withKey(text, S_MID, T_GROUP + ": " + K_FONT, d.group.font);
+            }
             return Physical.ownDir(dir()) && Physical.ownWrite(f, text) == null;   // מבנה 232: רק בהיתר
         } catch (Throwable t) {
             Log.e("שמירת עיצוב מהטופס", t);
@@ -621,6 +640,8 @@ final class Design {
 
     private static final Map<String, Design> cache = new java.util.HashMap<String, Design>();
     private static final Map<String, Long> stamp = new java.util.HashMap<String, Long>();
+    /** בזיכרון: מובנה שנקרא מהמקור (בלי קובץ). */
+    private static final String BUILT = "\u0000";
 
     static synchronized Design read(File f, String name) {
         String k = f.getAbsolutePath();
@@ -642,12 +663,16 @@ final class Design {
      * העיצוב בשם הזה: מהאופן הזה; מובנה שאין לו קובץ — מהמקור (מבנה 232: בלי לכתוב בזמן ציור — הכתיבה רק בהיתר, דרך המנהל);
      * לא נמצא — "עיצוב ברירת מחדל" (לא נשבר).
      */
-    static Design get(String name) {
+    static synchronized Design get(String name) {
         if (name == null || name.trim().isEmpty()) name = DEFAULT;
         File f = fileOf(name);
         if (f.isFile()) return read(f, name);
         if (!builtIn(name)) return get(DEFAULT);
-        Design d = parse(name, builtInText(name));
+        Design d = cache.get(BUILT + name);                                  // מובנה בלי קובץ — פעם אחת, מהמקור
+        if (d == null) {
+            d = parse(name, builtInText(name));
+            cache.put(BUILT + name, d);
+        }
         d.file = f;
         return d;
     }

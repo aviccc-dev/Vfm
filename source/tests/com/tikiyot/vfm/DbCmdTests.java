@@ -1325,6 +1325,16 @@ final class DbCmdTests {
                                 here, vars, lib);
                         o.check("מבנה 237: \"\" — חוזרים לערכה (" + Design.programProps()[1] + ")", bad(back237).isEmpty()
                                 && !Palette.dark(Design.programProps()[1]) && Palette.resolve(Design.programProps()[1])[sub] == 0xFF5F6368);
+                        // מבנה 239: כותרת קבוצה — סוג כתב רביעי; בלי שנקבע — כמו השם (כמו שהיה)
+                        List<String> w239 = go(o121 + "עצב רשימה \"מראה 234/ב\" /כתב-קבוצה:15,מודגש\n", here, vars, lib);
+                        Db.read(Db.app, m91, read235);
+                        Design p239 = Design.parse("x", "[אמצע]\nשם: גודל = 17\nשם: משקל = דק\nקבוצה: גודל = 14\n");
+                        Design dd239 = Design.get(Design.DEFAULT);
+                        o.check("מבנה 239: /כתב-קבוצה: — נשמר ונקרא (" + look235[0] + "); בקובץ — \"קבוצה: גודל\", והשאר מהשם; בלי — כמו השם " + w239,
+                                bad(w239).isEmpty() && look235[0] != null && look235[0].contains("קבוצה: גודל = 15") && d235[0] != null
+                                        && d235[0].groupText().size == 15 && d235[0].groupText().weight == 700
+                                        && p239.groupText().size == 14 && p239.groupText().weight == 300
+                                        && dd239.groupText() == dd239.nameT);
                     }
                     // מבנה 123: "שחזר דוגמאות" כפקודה; ו"צור אופן" על אופן שיש בו רשימות ואין בו בית — מתקן
                     {

@@ -92,7 +92,7 @@ final class Verbs {
      * גודל, משקל וגופן, בכל סדר, מופרדים בפסיק ("16,מודגש,"דוד"").
      */
     static final String SW_COLS = "/טורים:", SW_GAP = "/ריווח:", SW_ICON_SIZE = "/גודל-צלמית:", SW_T_TITLE = "/כתב-כותרת:",   // תחביר
-            SW_T_NAME = "/כתב-שם:", SW_T_DATA = "/כתב-נתונים:";   // תחביר
+            SW_T_NAME = "/כתב-שם:", SW_T_DATA = "/כתב-נתונים:", SW_T_GROUP = "/כתב-קבוצה:";   // תחביר — מבנה 239: כותרת קבוצה
     /** מבנה 237: הצבעים — רק לכל התוכנה ולאופן: /מראה:בהיר|כהה · /צבע:"<תפקיד>"=#RRGGBB ("" אחרי = — לרשת). */
     static final String SW_MODE_LOOK = "/מראה:", SW_COLOR = "/צבע:";   // תחביר
     /** ב־Cmd.edit: מפתח של המראה — "look:" ואחריו המפתח של קובץ העיצוב. */
@@ -102,7 +102,7 @@ final class Verbs {
     private static String lookKey(String w) {
         return w.startsWith(SW_COLS) ? Design.K_COLS : w.startsWith(SW_GAP) ? Design.K_GAP : w.startsWith(SW_ICON_SIZE) ? Design.K_ICON
                 : w.startsWith(SW_T_TITLE) ? Design.T_TITLE + ":" : w.startsWith(SW_T_NAME) ? Design.T_NAME + ":"
-                : w.startsWith(SW_T_DATA) ? Design.T_DATA + ":" : null;
+                : w.startsWith(SW_T_DATA) ? Design.T_DATA + ":" : w.startsWith(SW_T_GROUP) ? Design.T_GROUP + ":" : null;
     }
 
     /** "16,מודגש,"דוד"" ← גודל, משקל, גופן (מה שכתוב); ריק — שלושתם יוצאים (לרשת). */
