@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="vfm-plugin" content="עיצוב">
-<meta name="vfm-plugin-version" content="13">
+<meta name="vfm-plugin-version" content="14">
 <title>עיצוב</title>
 <style>
 /* תוסף "עיצוב" — הלוח (claude/tosaf-itzuv.md, ההחלטות של 17.11.2026): מקום אחד שבו משנים את כל מה שאפשר — כמו לוח עם
@@ -26,6 +26,8 @@
    אינו מוסיף דבר משלו (הוראות, 2א).
    גרסה 11 (מבנה 260; המשתמש — "א"): סגנון שמתחלף בלי שנכתבו טורים — הפקודה מביאה את הטורים הרגילים שלו (רשת 3, שורות 1).
    הכלל — בתוכנה; כאן רק התצוגה מראה מה שיקרה (info.styleCols — כשהתוכנה מכירה).
+   גרסה 14 (מבנה 271; המשתמש: "אם אפשר לעצב כל חלק כרצון המשתמש — למה בחלק מהדברים להגביל?"): הצבעים והמראה (בהיר / כהה)
+   גם לרשימה — כשהתוכנה אומרת שהיא מכירה (info.features: listcolors); בתוכנה שלפני כן — כמו קודם, רק לתוכנה ולאופן.
    הצבעים של העמוד — מהתוכנה (vfm.theme), כאן רק ברירת מחדל. */
 :root{
   --bg:#FFFFFF; --soft:#F4F5F6; --fg:#202124; --muted:#5F6368; --ghost:#9AA0A6; --chip:#E8F0FE; --chip-fg:#174EA6;
@@ -223,8 +225,11 @@ const cur=k=>k in P?P[k]:own(k);
 const same=(a,b)=>JSON.stringify(a)===JSON.stringify(b);
 const TEXTS=()=>I().texts;
 const BY_NAME=()=>String(info.features||'').split(' ').includes('namesize');   // מבנה 258: התוכנה מודדת צלמית וריווח מגודל השם, גם ברשת
+// מבנה 271 (המשתמש, 18.11.2026: "למה בחלק מהדברים להגביל?"): צבעים ומראה גם לרשימה — רק בתוכנה שאומרת שהיא מכירה (info.features: listcolors)
+const LISTCOL=()=>String(info.features||'').split(' ').includes('listcolors');
+const noColors=()=>isList()&&!LISTCOL();
 const SHAPE=()=>I().shape||[];   // מבנה 255: [מפתח, מתג, ערכים או טווח, שם קבוע] — רק מה שהתוכנה מכירה
-const KEYS=()=>['design','cols','gap','icon'].concat(SHAPE().map(x=>'s:'+x[0])).concat(TEXTS()).concat((I().kinds||[]).map(k=>'w:'+k)).concat(isList()?[]:['look'].concat(I().roles.map(r=>'c:'+r[0])));
+const KEYS=()=>['design','cols','gap','icon'].concat(SHAPE().map(x=>'s:'+x[0])).concat(TEXTS()).concat((I().kinds||[]).map(k=>'w:'+k)).concat(noColors()?[]:['look'].concat(I().roles.map(r=>'c:'+r[0])));
 
 function change(k,v){
   const before=JSON.stringify(P);
@@ -328,7 +333,7 @@ function eff(){
   return base;
 }
 function effColors(){
-  if(isList())return {dark:S.shown.dark,colors:S.shown.colors};
+  if(noColors())return {dark:S.shown.dark,colors:S.shown.colors};
   const k=K(),lk=cur('look'),dark=lk?lk===k.dark:S.above.dark,out={};
   I().roles.forEach(r=>{
     const n=r[0],a=S.above.colors[n]||r[1],baseAbove=r[S.above.dark?2:1];
@@ -729,9 +734,9 @@ function drawMain(){
     });
     m.appendChild(c5);
   }
-  // הצבעים — לכל התוכנה ולאופן
+  // הצבעים — לכל התוכנה, לאופן, ולרשימה (בתוכנה שמכירה — מבנה 271)
   const c4=E('div','card');c4.appendChild(E('h2',null)).appendChild(E('span','k','צבעים'));
-  if(isList()){c4.appendChild(E('p','note','הצבעים נקבעים לכל התוכנה או לאופן — בבורר למעלה.'));m.appendChild(c4);return;}
+  if(noColors()){c4.appendChild(E('p','note','בתוכנה הזו הצבעים נקבעים לכל התוכנה או לאופן — בבורר למעלה.'));m.appendChild(c4);return;}
   const lr=E('div','row');lr.appendChild(E('div','lb','מראה'));const sg=E('div','seg');const lk=cur('look');
   [['',' כמו '+aboveWord()],[K().light,'בהיר'],[K().dark,'כהה']].forEach(([v,t])=>sg.appendChild(B(lk===v?'on':'',t.trim(),()=>change('look',v))));
   lr.appendChild(sg);c4.appendChild(lr);
@@ -812,7 +817,8 @@ function about(){
   ['בוחרים למעלה מה מעצבים: כל התוכנה, האופן, או רשימה. הסדר: כל התוכנה ← האופן ← הרשימה ← הרשימות שבתוכה — כל אחת מקבלת ממה שמעליה, ומה שנקבע לה גובר.',
    'כל שינוי נראה מיד בתצוגה המקדימה, ונשמר רק ב"החלה". "↺" — חוזרים לקבל ממה שמעליו.',
    'ב"החלה" רצה הפקודה "עצב" — אותה פקודה שאפשר לכתוב בקובץ פקודות, דרך שכבת הניהול. היא כתובה בתחתית: "הפקודה שתרוץ".',
-   'הצבעים והמראה (בהיר / כהה) — לכל התוכנה או לאופן. המסכים שכבר פתוחים מתעדכנים כשחוזרים אליהם.',
+   LISTCOL()?'הצבעים והמראה (בהיר / כהה) — לכל התוכנה, לאופן, וגם לרשימה: רשימה יכולה להיות כהה באופן בהיר, והרשימות שבתוכה יורשות ממנה. המסכים שכבר פתוחים מתעדכנים כשחוזרים אליהם.'
+     :'הצבעים והמראה (בהיר / כהה) — לכל התוכנה או לאופן. המסכים שכבר פתוחים מתעדכנים כשחוזרים אליהם.',
    'הניסוי (מתחת לתצוגה המקדימה) — רעיונות למראה שעוד אין בתוכנה, ושילובים מוכנים בשמות. הוא משנה רק את התצוגה המקדימה: לא נכנס לפקודה ולא לרשימות. שילוב שמצא חן — אפשר לשמור בשם, בלוח בלבד.'].forEach(t=>inn.appendChild(E('p',null,t)));
   inn.appendChild(B('btn main','סגירה',()=>sh.remove()));
   sh.addEventListener('click',e=>{if(e.target===sh)sh.remove();});
@@ -841,7 +847,8 @@ function demoBridge(){
     ['צבע רקע לפריט','/צבע-רקע-לפריט:',['כן','לא'],'tint'],['הצג נתונים','/הצג-נתונים:',['כן','לא'],'showData'],['מקום הנתונים','/מקום-הנתונים:',['מתחת','בצד'],'dataBelow'],
     ['שורות לשם','/שורות-לשם:',[1,6],'lines'],['התאם למקום','/התאם-למקום:',['כן','לא'],'fit'],['גודל מזערי','/גודל-מזערי:',[6,40],'min'],
     ['הצג תווית','/הצג-תווית:',['כן','לא'],'showTag'],['מוסתר חיוור','/מוסתר-חיוור:',['כן','לא'],'fade']];
-  if(!(window.__old||window.__m048))SHP.push(['צלמית לצד השם','/צלמית-לצד-השם:',['כן','לא'],'side'],['הצג שם','/הצג-שם:',['כן','לא'],'showName']);   // מבנה 265
+  const NOLC=!!(window.__old||window.__m048||window.__m049);   // כמו תוכנה שלפני מבנה 265–269 (מ0.49 ומטה): בלי שני המפתחות החדשים, ובלי צבעים לרשימה
+  if(!NOLC)SHP.push(['צלמית לצד השם','/צלמית-לצד-השם:',['כן','לא'],'side'],['הצג שם','/הצג-שם:',['כן','לא'],'showName']);   // מבנה 265
   const setSV=(x,k,v)=>{const e=SHP.find(y=>y[0]===k);x.shape[k]=v;if(e[3]==='around')x.around=v;else if(e[3]==='lines'||e[3]==='min')x[e[3]]=+v;else x[e[3]]=(v===e[2][0]);};
   const TILE=!!(window.__old||window.__m048);   // כמו תוכנה שלפני מבנה 258: ברשת — צלמית וריווח מרוחב האריח
   const P0={'רשימת קבצים':{design:'רשימת קבצים',grid:false,cols:1,gap:50,icon:340,showIcon:true,around:'ריבוע צבעוני',showData:true,dataBelow:true,groupOwn:false,texts:{'כותרת':T(12,400),'שם':T(16,400),'נתונים':T(11,400),'קבוצה':T(16,400),'תווית':T(11,700)}},
@@ -852,7 +859,7 @@ function demoBridge(){
   const db={'תוכנה':{design:'',look:{}},'אופן':{design:'',look:{}},'רשימה':{design:'מנהל קבצים עם צלמיות',look:{'טורים':'4'}}};
   const colorsOf=looks=>{let dark=false;looks.forEach(l=>{if(l['מראה'])dark=l['מראה']==='כהה';});const o={};ROLES.forEach(r=>{o[r[0]]=r[dark?2:1];looks.forEach(l=>{if(l['צבע: '+r[0]])o[r[0]]=l['צבע: '+r[0]];});});return {dark,colors:o};};
   const fold=(d,own)=>{let x=own.design?JSON.parse(JSON.stringify(P0[own.design])):d?JSON.parse(JSON.stringify(d)):null;
-    const L=own.look;if(Object.keys(L).length){if(!x)x=JSON.parse(JSON.stringify(P0['רשימת קבצים']));
+    const L=own.look;if(Object.keys(L).some(k=>NOLC||(k!=='מראה'&&!k.startsWith('צבע: ')))){if(!x)x=JSON.parse(JSON.stringify(P0['רשימת קבצים']));
       if(L['טורים'])x.cols=+L['טורים'];if(L['ריווח'])x.gap=+L['ריווח'];if(L['צלמית'])x.icon=+L['צלמית'];
       SHP.forEach(e=>{if(L[e[0]])setSV(x,e[0],L[e[0]]);});
       ['כותרת','שם','נתונים','קבוצה','תווית'].forEach(t=>{if(L[t+': גודל'])x.texts[t].size=L[t+': גודל'];if(L[t+': משקל'])x.texts[t].weightName=L[t+': משקל'];if(L[t+': גופן'])x.texts[t].font=L[t+': גופן'];});}
@@ -872,7 +879,7 @@ function demoBridge(){
     if(way[0]!=='עבודה')return {what:'אופן',path:t,mode:way[0],current:'עבודה',error:'אין אופן כזה: "'+way[0]+'"',info};
     const p=way.join('\\');
     if(way.length>1){if(p!=='עבודה\\ספרים\\קודש'&&p!=='עבודה\\לקוחות\\פעילים')return {what:'רשימה',path:p,mode:'עבודה',current:'עבודה',error:'אין רשימה ידנית: "'+p+'"',info};
-      return {what:'רשימה',path:p,mode:'עבודה',current:'עבודה',error:'',own:db['רשימה'],shown:json(fold(mode,db['רשימה']),[db['תוכנה'].look,db['אופן'].look]),above:json(mode,[db['תוכנה'].look,db['אופן'].look]),info};}
+      return {what:'רשימה',path:p,mode:'עבודה',current:'עבודה',error:'',own:db['רשימה'],shown:json(fold(mode,db['רשימה']),[db['תוכנה'].look,db['אופן'].look].concat(NOLC?[]:[db['רשימה'].look])),above:json(mode,[db['תוכנה'].look,db['אופן'].look]),info};}
     return {what:'אופן',path:'עבודה',mode:'עבודה',current:'עבודה',error:'',own:db['אופן'],shown:json(mode,[db['תוכנה'].look,db['אופן'].look]),above:json(prog,[db['תוכנה'].look]),info};
   };
   if(window.__old){                                    // כמו מ0.47 — בלי תווית הסוג ובלי הנוסח (מבנה 249–250)
@@ -887,7 +894,9 @@ function demoBridge(){
     const m=l.match(/^עצב (?:(תוכנה)|"([^"]*)")(.*)$/);if(!m)return 'מתוסף העיצוב רצה רק שורה אחת של "עצב"';
     if(/\/טורים:(9|0)\b/.test(m[3]))return 'הערך מחוץ לטווח — מ־1 עד 8';
     const shownG=()=>!!((state(m[1]?'תוכנה':'',m[2]||'').shown||{}).grid),gBefore=shownG();   // מבנה 260
-    const o=db[m[1]?'תוכנה':m[2].split(/[\\/]/).length>1?'רשימה':'אופן'],toks=m[3].match(/\/[^\s"]+(?:"[^"]*")?(?:=(?:"[^"]*"|\S+))?[^\s]*/g)||[];
+    const o=db[m[1]?'תוכנה':m[2].split(/[\\/]/).length>1?'רשימה':'אופן'];
+    if(NOLC&&o===db['רשימה']&&/\/(מראה|צבע):/.test(m[3]))return 'צבעים ומראה (בהיר / כהה) — רק לכל התוכנה או לאופן: עצב תוכנה · עצב "אופן"';
+    const toks=m[3].match(/\/[^\s"]+(?:"[^"]*")?(?:=(?:"[^"]*"|\S+))?[^\s]*/g)||[];
     toks.forEach(tk=>{
       const un=v=>v.replace(/^"|"$/g,'');
       let r;
@@ -909,7 +918,7 @@ function demoBridge(){
     return '';
   };
   return {
-    info:()=>JSON.stringify({features:TILE?'design':'design namesize'}),theme:()=>null,load:k=>store[k]!=null?store[k]:null,save:(k,v)=>{store[k]=v;},
+    info:()=>JSON.stringify({features:TILE?'design':'design namesize'+(NOLC?'':' listcolors')}),theme:()=>null,load:k=>store[k]!=null?store[k]:null,save:(k,v)=>{store[k]=v;},
     design:(w,t)=>JSON.stringify(w===''&&t===''&&window.__start?state('רשימה',window.__start):state(w,t)),shape,
     pickList:(id)=>setTimeout(()=>window.vfmResult(id,JSON.stringify({mode:'עבודה',path:'לקוחות\\פעילים'})),20),
     close:()=>{window.__closed=true;},toast:()=>{},log:()=>{}

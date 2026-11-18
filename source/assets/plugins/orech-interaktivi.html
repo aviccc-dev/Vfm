@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="vfm-plugin" content="עורך אינטראקטיבי">
-<meta name="vfm-plugin-version" content="23">
+<meta name="vfm-plugin-version" content="24">
 <meta name="vfm-lab" content="עורך אינטראקטיבי">
 <meta name="vfm-lab-version" content="8">
 <title>עורך אינטראקטיבי</title>
@@ -137,7 +137,7 @@ button:focus-visible,.fi:focus-visible{outline:2px solid var(--accent);outline-o
 window.VfmEditorModel=(function(){
 "use strict";
 // מ0.40 התוכנה מכירה "תוסף" (הוסף תוסף, פתח תוסף…); הגרסה הקודמת — "מעבדה". העמוד בודק בהתחלה, וכותב מה שהמנוע המותקן מכיר
-const compat={plugins:true,v45:true,n4:true,n15:true,n16:true,design:false};   // n15 — גרסה 15: התוכנה מכירה "ארוז" ו"פרוס" (info.features: zip)
+const compat={plugins:true,v45:true,n4:true,n15:true,n16:true,design:false,listcolors:false};   // n15 — גרסה 15: התוכנה מכירה "ארוז" ו"פרוס" (info.features: zip)
 //   // v45 — מ0.45 ומעלה (מחק אופן, הסל, ודא תקין…); n4 — גרסה 14: התוכנה מכירה "/מגיבוי" ו"ודא רציף"
 const q=s=>'"'+s+'"';
 const qv=v=>/[\s"]/.test(v)||v===''?q(v):v;
@@ -632,7 +632,8 @@ function allowed(m){
 function allowed0(m){
   const def=CMDS[m.cmd];if(!def||def.text)return [];
   const v=m.vals||[],ok=def.det;
-  if(def.form==='shape')return ok.filter(x=>!(DETS[x].prog&&v[0]&&v[0].is==='list'));   // גרסה 21: הצבעים — רק לכל התוכנה ולאופן
+  // גרסה 21: הצבעים — רק לכל התוכנה ולאופן; גרסה 24 (המשתמש, 18.11.2026: "למה בחלק מהדברים להגביל?"): גם לרשימה — בתוכנה שמכירה (info.features: listcolors)
+  if(def.form==='shape')return ok.filter(x=>!(DETS[x].prog&&!compat.listcolors&&v[0]&&v[0].is==='list'));
   if(m.cmd==='העתק'||m.cmd==='העבר'){
     if(isL(v[1]))return [];
     if(isL(v[0]))return ok.filter(x=>x==='הכל'||x==='מכיל בקובץ'||DETS[x].g==='taken');
@@ -726,7 +727,7 @@ function setDesign(info){
   if(SHAPE){
     const sw=SHAPE.switches,rg=SHAPE.ranges||{},ks=SHAPE.keys||{},name=s=>String(s).replace(/^\//,'').replace(/:$/,'').replace(/-/g,' ');
     const add=(id,d)=>{if(DETS[id])id=id+' (עיצוב)';DETS[id]=d;SHAPE_IDS.push(id);};
-    const S1='עיצוב מוכן',S2='טורים, ריווח וצלמית',S3='הפריט',S4='הכתב',S5='הנוסח של תווית הסוג',S6='צבעים — לכל התוכנה ולאופן';
+    const S1='עיצוב מוכן',S2='טורים, ריווח וצלמית',S3='הפריט',S4='הכתב',S5='הנוסח של תווית הסוג',S6=compat.listcolors?'צבעים':'צבעים — לכל התוכנה ולאופן';
     if(sw.design)add(name(sw.design),shsw(sw.design,{val:'one',items:SHAPE.designs||[],quote:true,sec:S1}));
     ['cols','gap','icon'].forEach(k=>{if(sw[k]&&rg[k])add(name(sw[k]),shsw(sw[k],{val:'num',range:rg[k],sec:S2}));});
     (SHAPE.shape||[]).forEach(x=>{const vs=x[2]||[],num=vs.length===2&&typeof vs[0]==='number';
@@ -760,6 +761,7 @@ Mo.compat.v45=can('commandMatrix');          // מ0.45 ומעלה
 Mo.compat.n15=(function(){try{return (' '+(JSON.parse(can('info')?V.info():'{}').features||'')+' ').indexOf(' zip ')>=0;}catch(e){return false;}})();   // גרסה 15: "ארוז", "פרוס"
 Mo.compat.n16=(function(){try{return (' '+(JSON.parse(can('info')?V.info():'{}').features||'')+' ').indexOf(' set ')>=0;}catch(e){return false;}})();   // גרסה 16: "הגדר"
 Mo.compat.n4=(function(){try{return (' '+(JSON.parse(can('info')?V.info():'{}').features||'')+' ').indexOf(' steady ')>=0;}catch(e){return false;}})();   // גרסה 14: "/מגיבוי", "ודא רציף"
+Mo.compat.listcolors=(function(){try{return (' '+(JSON.parse(can('info')?V.info():'{}').features||'')+' ').indexOf(' listcolors ')>=0;}catch(e){return false;}})();   // גרסה 24: צבעים גם לרשימה
 // גרסה 21: "עצב" — רק לתוכנה שאומרת שהיא מכירה (info.features: design), ומה שהיא מוסרת: המתגים, הערכים והטווחים
 Mo.setDesign((function(){try{if(!can('design')||(' '+(JSON.parse(can('info')?V.info():'{}').features||'')+' ').indexOf(' design ')<0)return null;return JSON.parse(V.design('','')).info||null;}catch(e){return null;}})());
 function ask(method,args,cb){const id='r'+(++seq);pending[id]=cb;V[method].apply(V,[id].concat(args));}
@@ -1570,7 +1572,7 @@ function demoBridge(){
       ['הצג תווית','/הצג-תווית:',['כן','לא'],'showTag'],['מוסתר חיוור','/מוסתר-חיוור:',['כן','לא'],'fade'],
       ['צלמית לצד השם','/צלמית-לצד-השם:',['כן','לא'],'side'],['הצג שם','/הצג-שם:',['כן','לא'],'showName']]};
   if(window.__m047){delete DESIGN.shape;delete DESIGN.kinds;delete DESIGN.switches.wording;delete DESIGN.switches['תווית'];DESIGN.texts.pop();}
-  const FEATS='steady dropclean zip set cmdfolders'+(window.__noDesign?'':' design namesize');
+  const FEATS='steady dropclean zip set cmdfolders'+(window.__noDesign?'':' design namesize'+(window.__noListColors?'':' listcolors'));   // __noListColors — כמו תוכנה שלפני מבנה 269 (מ0.49 ומטה)
   const files={'/k/גיבוי שבועי.vbat':'הערה גיבוי חודשי\nהעתק "%הורדות%\\חשבוניות" "%כרטיס%\\גיבוי" /עמוק\nמחק "%הורדות%\\זמני\\*.tmp" /נסתרים /תאריך:חודש\nפתח רשימה "עבודה"\nCOPY "%הורדות%\\הסכם.docx" "%כרטיס%"\nצור תיקייה "%כרטיס%\\גיבוי\\חדשה"\nחזור 3\nהודעה סבב %סבב%\nסוף\n:: הערה ישנה\n'};
   const store={};
   const later=(id,v)=>setTimeout(()=>window.vfmResult(id,v),30);

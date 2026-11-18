@@ -93,7 +93,7 @@ const run=async()=>{
     click(chip('#who','בחירת רשימה'));
     await new Promise(r=>setTimeout(r,60));
     say('בחירת רשימה — הלוח על הרשימה: '+$('fn').textContent,$('fn').textContent.includes('פעילים'));
-    say('ברשימה — בלי צבעים',d.querySelectorAll('#main .cl').length===0&&d.querySelector('#main').textContent.includes('לכל התוכנה או לאופן'));
+    say('ברשימה — גם צבעים (התוכנה מכירה: listcolors)',d.querySelectorAll('#main .cl').length===18&&!d.querySelector('#main').textContent.includes('לכל התוכנה או לאופן'));
     say('ברשימה — "כמו הרשימה שמעליה"',!!chip('#main','כמו הרשימה שמעליה'));
     setNum(d.querySelectorAll('#main .card')[1].querySelector('.num'),2);
     say('רשימה — הדרך מתחילה באופן ← '+cmd(),cmd()==='עצב "עבודה\\לקוחות\\פעילים" /טורים:2');
@@ -289,6 +289,24 @@ const run=async()=>{
     setNum(d.querySelectorAll('#main .card')[1].querySelector('.num'),3);
     say('תוכנה ישנה — הפקודה כמו קודם: '+cmd(),cmd()==='עצב תוכנה /טורים:3');
     say('תוכנה ישנה — בלי כרטיס "הפריט"',!d.getElementById('shapeCard'));
+    // ---------- מבנה 271: צבעים ומראה גם לרשימה — רק בתוכנה שמכירה (listcolors) ----------
+    w=page('עבודה\\ספרים\\קודש');d=w.document;
+    const colCard=()=>[...d.querySelectorAll('#main .card')].find(c=>c.querySelector('h2')&&c.querySelector('h2').textContent.includes('צבעים'));
+    const segOf=t=>[...colCard().querySelectorAll('.seg button')].find(b=>b.textContent===t);
+    say('רשימה — בכרטיס הצבעים: כמו הרשימה שמעליה · בהיר · כהה',!!segOf('כמו הרשימה שמעליה')&&!!segOf('בהיר')&&!!segOf('כהה'));
+    click(segOf('כהה'));
+    say('רשימה — מראה כהה נכנס לפקודה ← '+cmd(),cmd()==='עצב "עבודה\\ספרים\\קודש" /מראה:כהה');
+    say('רשימה — התצוגה המקדימה כהה',$('pv').style.background.replace(/\s/g,'')==='rgb(32,33,36)');
+    click(d.querySelector('#apply'));
+    say('רשימה — הוחל: השורה שרצה, והלוח מראה "כהה" כנקבע כאן',w.__shaped[w.__shaped.length-1]==='עצב "עבודה\\ספרים\\קודש" /מראה:כהה'&&segOf('כהה').classList.contains('on')&&cmd().startsWith('אין שינויים'));
+    click(chip('#who','האופן'));
+    await new Promise(r=>setTimeout(r,30));
+    say('האופן — נשאר בהיר (הצבעים של הרשימה — שלה בלבד)',$('pv').style.background.replace(/\s/g,'')==='rgb(255,255,255)');
+    w=new JSDOM(html,{runScripts:'dangerously',pretendToBeVisual:true,virtualConsole:vc,beforeParse(x){x.__m049=true;x.__start='עבודה\\ספרים\\קודש';}}).window;d=w.document;
+    say('תוכנה כמו מ0.49 — ברשימה בלי צבעים, ונאמר; ובלי שני המפתחות החדשים',d.querySelectorAll('#main .cl').length===0&&d.querySelector('#main').textContent.includes('לכל התוכנה או לאופן')
+      &&!d.querySelector('#main').textContent.includes('צלמית לצד השם')&&!d.getElementById('oops'));
+    setNum(d.querySelectorAll('#main .card')[1].querySelector('.num'),2);
+    say('תוכנה כמו מ0.49 — הפקודה לרשימה בלי צבעים ← '+cmd(),cmd()==='עצב "עבודה\\ספרים\\קודש" /טורים:2');
   }catch(e){out.push('❌ חריגה: '+e.stack.split('\n').slice(0,3).join(' | '));}
   const bad=errs.filter(e=>!/Not implemented: (window\.scrollTo|navigator\.clipboard)/.test(e));
   if(bad.length)out.push('❌ שגיאות בעמוד: '+bad.join(' || '));

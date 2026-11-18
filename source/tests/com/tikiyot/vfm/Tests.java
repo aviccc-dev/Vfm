@@ -698,6 +698,10 @@ public final class Tests {
                 read(new File(System.getProperty("vfm.src"), "src/com/tikiyot/vfm/lev/Bridge.java")).contains(" namesize "));
         check("מבנה 269: התוכנה אומרת לתוספים שצבעים נקבעים גם לרשימה (listcolors)",
                 read(new File(System.getProperty("vfm.src"), "src/com/tikiyot/vfm/lev/Bridge.java")).contains(" listcolors\""));
+        String b271 = read(new File(System.getProperty("vfm.src"), "assets/plugins/itzuv.html")), e271 = read(new File(System.getProperty("vfm.src"), "assets/plugins/orech-interaktivi.html"));
+        check("מבנה 271: הלוח והעורך מציעים צבעים לרשימה רק לתוכנה שאומרת שהיא מכירה (listcolors) — שואלים, לא מנחשים",
+                b271.contains("split(' ').includes('listcolors')") && b271.contains("const noColors=()=>isList()&&!LISTCOL();") && !b271.contains("if(isList()){c4.")
+                        && e271.contains("indexOf(' listcolors ')>=0") && e271.contains("DETS[x].prog&&!compat.listcolors&&v[0]&&v[0].is==='list'"));
         Design words = Design.parse(Design.WORDS, Design.builtInText(Design.WORDS));
         check("1.12.0: מילים וצבע — בלי צלמית, עם צבע רקע", !words.grid && words.cols == 2 && !words.items.on(ItemKeys.SHOW_ICON) && words.items.on(ItemKeys.TINT));
 
