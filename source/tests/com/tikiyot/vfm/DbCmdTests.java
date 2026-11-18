@@ -1199,26 +1199,24 @@ final class DbCmdTests {
                         String order1 = got121[0], design1 = got121[1];
                         Manager.Act or121 = Manager.onListOrder(m91, id121[0], java.util.Arrays.asList(id121[1]), DbMore.BOTTOM, here, vars, lib);
                         String so121 = or121.error() != null ? or121.error() : or121.say(lib);
-                        Manager.Act de121 = Manager.onListDesign(m91, id121[2], "", here, vars, lib);
-                        String sd121 = de121.error() != null ? de121.error() : de121.say(lib);
+                        String sd121 = Manager.shape("עצב \"" + m91 + "/סדר 121/ב\" /עיצוב:\"\"", lib);   // מבנה 266: מהלוח (החלון הישן ירד)
                         Db.read(Db.app, m91, read121);
                         String scr121 = Files.readUtf8(new File(src, "src/com/tikiyot/vfm/masachim/DbListScreen.java"));
-                        o.check("מבנה 121: בקובץ — /מקום:לראש (" + order1 + ") ו־/עיצוב: (" + design1 + "); מהמסך — לסוף (" + got121[0] + " · " + so121 + "), עיצוב \"לרשת\" ("
+                        o.check("מבנה 121: בקובץ — /מקום:לראש (" + order1 + ") ו־/עיצוב: (" + design1 + "); מהמסך — לסוף (" + got121[0] + " · " + so121 + "), ומהלוח — עיצוב \"לרשת\" ("
                                         + got121[1] + " · " + sd121 + ") " + w121,
                                 bad(w121).isEmpty() && "גאב".equals(order1) && Design.WORDS.equals(design1) && !or121.failed && "גבא".equals(got121[0])
-                                        && !de121.failed && "null".equals(got121[1]));
+                                        && sd121 == null && "null".equals(got121[1]));
                         o.check("מבנה 121: מקום לא מוכר — שגיאה בתכנון; השומר — מסך הרשימות אינו מסדר ואינו קובע עיצוב בעצמו",
                                 Batch.plan(o121 + "עדכן רשימה \"סדר 121/א\" /מקום:הצידה\n", here, vars, lib).blocked()
                                         && !scr121.contains("DbMore.order(") && !scr121.contains("DbVerbsUi.write(") && !scr121.contains("DbListCmd.now(")
-                                        && scr121.contains("Manager.onListOrder(") && scr121.contains("Manager.onListDesign("));
+                                        && scr121.contains("Manager.onListOrder(") && scr121.contains("LabScreen.design(") && !scr121.contains("setProp("));
                         // מבנה 233 (המשתמש, 17.11.2026: "אולי עצב" · "אין צורך לשמור לקבצים ישנים"): /עיצוב: — רק של "עצב"
                         o.check("מבנה 233: \"עדכן רשימה … /עיצוב:\" — שגיאה (העיצוב עבר ל\"עצב\"); \"עצב\" בלי מתג, או בצורה הקודמת (\"עצב רשימה\", מבנה 246) — שגיאה; "
-                                        + "המסך שולח \"עצב\"",
+                                        + "\"\" — לרשת",
                                 Batch.plan(o121 + "עדכן רשימה \"סדר 121/ב\" /עיצוב:\"" + Design.WORDS + "\"\n", here, vars, lib).blocked()
                                         && Batch.plan(o121 + "עצב \"" + m91 + "/סדר 121/ב\"\n", here, vars, lib).blocked()
                                         && Batch.plan(o121 + "עצב רשימה \"סדר 121/ב\" /עיצוב:\"" + Design.WORDS + "\"\n", here, vars, lib).blocked()   // מבנה 246: הצורה הקודמת — שגיאה
-                                        && !Batch.plan(o121 + "עצב \"" + m91 + "/סדר 121/ב\" /עיצוב:\"\"\n", here, vars, lib).blocked()
-                                        && de121.text.startsWith("עצב %"));
+                                        && !Batch.plan(o121 + "עצב \"" + m91 + "/סדר 121/ב\" /עיצוב:\"\"\n", here, vars, lib).blocked());
                         // מבנה 234: המראה של רשימה (P_LOOK) מעל העיצוב שלה, והירושה מלמעלה למטה (רשימה שבחרה עיצוב — מתחילה ממנו)
                         final Design[] d234 = new Design[5];
                         Db.write(Db.app, m91, null, new Db.Use<Void>() {
@@ -1351,14 +1349,6 @@ final class DbCmdTests {
                                         && Design.FILES.equals(n240[0]) && Design.get("תוכנת ניהול קבצים").grid
                                         && Design.FILES.equals(Design.get("תוכנת ניהול קבצים").name) && Design.builtIn("עיצוב ברירת מחדל")
                                         && no240.blocked() && errs235(no240).contains(Words.DesignW.noDesign("אין עיצוב כזה 240")));
-                        File old240 = Design.fileOf("תוכנת ניהול קבצים"), new240 = Design.fileOf(Design.FILES);
-                        boolean hadNew240 = new240.isFile();
-                        if (!hadNew240) {
-                            old240.getParentFile().mkdirs();
-                            Files.writeAtomic(old240, "[אמצע]\nסגנון = רשת\nטורים = 7\n");
-                            o.check("מבנה 240: מובנה שנערך בשמו הקודם — מה שנערך נשאר (7 טורים)", Design.get(Design.FILES).cols == 7);
-                            old240.delete();
-                        }
                         // מבנה 241: "ודא עיצוב" — מה שנראה בפועל (אחרי הירושה) מול מה שנכתב; ברשימה, באופן ובתוכנה
                         List<String> w241 = go(o121 + "עצב \"" + m91 + "/מראה 234/ב/ג\" /עיצוב:\"מילים וצבע\" /טורים:3 /כתב-שם:17,מודגש\n"
                                 + "ודא עיצוב \"" + m91 + "/מראה 234/ב/ג\" /עיצוב:\"מילים וצבע\" /טורים:3 /כתב-שם:17,מודגש /כתב-נתונים:11\n"

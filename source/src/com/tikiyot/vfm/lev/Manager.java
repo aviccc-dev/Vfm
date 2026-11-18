@@ -436,23 +436,6 @@ final class Manager {
         }
     }
 
-    /**
-     * מבנה 232 (הפרדת העיצוב): חלון העיצוב הישן (DesignUi) כותב את קובצי העיצוב דרך שכבת הניהול — המנהל פותח היתר לזמן
-     * הפעולה, והחומר (Design) כותב. רק לחלון הזה (שומר), ועד שהוא יורד — המשתמש, 17.11.2026: "תכין פקודות... ותוסף; אחרי
-     * שהכל יעבוד נמחק מהקוד הראשי". מה שהפעולה מחזירה — חוזר; חריגה — נרשמת ביומן, וחוזר null.
-     */
-    static <T> T oldDesign(java.util.concurrent.Callable<T> act) {
-        Permit.open();
-        try {
-            return act.call();
-        } catch (Exception e) {
-            Log.e("Manager.oldDesign", e);
-            return null;
-        } finally {
-            Permit.close();
-        }
-    }
-
     private static boolean inZone(java.io.File zone, java.io.File f) {
         if (zone == null || f == null) return false;
         String z = Paths.clean(zone.getAbsolutePath()), p = Paths.clean(f.getAbsolutePath());
@@ -642,14 +625,6 @@ final class Manager {
         return new Act(text, Batch.plan(text, here, vars, lib, null, new Batch.Selection(mode, in, ids)), null);
     }
 
-    /** מבנה 121, 233, 246: העיצוב של רשימה — "עצב %נבחרים% /עיצוב:%תוכן%". name — שם העיצוב, כלשונו ("" — לרשת). */
-    static Act onListDesign(String mode, long list, String name, java.io.File here, java.util.Map<String, String> vars, Library lib) {
-        String text = Verbs.SHAPE + " %" + Syntax.V_SELECTED + "% " + Verbs.SW_DESIGN + "%" + Syntax.V_CONTENT + "%\n";
-        Batch.Selection sel = new Batch.Selection(mode, 0, "", name, null);
-        sel.ids.add(list);
-        return new Act(text, Batch.plan(text, here, vars, lib, null, sel), null);
-    }
-
     /** מבנה 120: רענון האינדקס מהמסך (הגדרות, חיפוש) — "רענן" · "רענן עמוק" · "רענן מלא", כמו בקובץ פקודות. */
     static final int INDEX_QUICK = 0, INDEX_DEEP = 1, INDEX_FULL = 2;
 
@@ -731,7 +706,7 @@ final class Manager {
     /**
      * מבנה 243 (תוסף העיצוב — הלוח; המשתמש, 17.11.2026: "כל כפתור מריץ פקודה דרך שכבת הניהול" · "הכל עובר דרך שכבת הניהול"):
      * שורה אחת של "עצב" — כמו בקובץ פקודות (אותו תכנון, אותן בדיקות), ומיד, בלי מסך ההרצה: העיצוב אינו נוגע בקבצים, וכל שינוי
-     * בו אפשר להחזיר (כמו "עיצוב" מהמסך — onListDesign). כל שורה אחרת — מסורבת. null — נעשה; אחרת — למה לא.
+     * בו אפשר להחזיר. כל שורה אחרת — מסורבת. null — נעשה; אחרת — למה לא.
      */
     static String shape(String line, Library lib) {
         String l = line == null ? "" : line.trim();

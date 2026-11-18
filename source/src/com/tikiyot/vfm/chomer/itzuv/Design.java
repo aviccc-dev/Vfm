@@ -1,11 +1,13 @@
 package com.tikiyot.vfm;
 
-// 1.12.0: עיצוב עם שם — קובץ טקסט "<שם>.עיצוב.txt" בתיקיית "עיצובים" של האופן (ר' itzuv.md).
+// 1.12.0: עיצוב עם שם.
+// מבנה 266 (המשתמש, 18.11.2026: "אולי את העיצובים הקבועים לשים במקום אחד ואת המשתנים בשני" · "תתחיל נקי"): הקבועים — כאן, בקוד
+// בלבד (builtInText); אין להם קובץ, ואי אפשר לקלקל אותם. מה שמשתנה — אינו עיצוב שלם: עיצוב קבוע כבסיס, ועליו רק מה ששונה
+// ("המראה" — מה ש"עצב" שומר). קובצי העיצוב של פעם ("<שם>.עיצוב.txt") והחלון הישן שערך אותם — ירדו; הקבצים שבכונן לא נמחקו.
 // מבנה 231 (המשתמש, 17.11.2026, על הפרדת העיצוב: "כן"): ירד מהמסכים לחומר — העיצוב עצמו, הקריאה והכתיבה; הציור (Looks)
 // והחלון (DesignUi) — במסכים. כך גם הפקודות ("עצב") יכולות להגיע אליו.
-// אחראי: לקרוא, לכתוב ולמצוא עיצובים. איזה עיצוב לרשימה (שלה; בבית — של מסך הבית) — DbListScreen.designOf.
-// החלק הפרטי ([רשימות] — צלמית וצבע לפי מסלול, של המנוע הישן) — רק נקרא ונשמר. בלי ממשק: את המראה מצייר Looks.
-// מה שחסר בקובץ — נלקח מ"עיצוב ברירת מחדל"; שורה לא מובנת — מתעלמים ממנה (לא נשבר).
+// אחראי: העיצובים הקבועים, הירושה (התוכנה ← האופן ← הרשימה) והמראה שמעליהם. הציור — Looks (במסכים); הפקודה — ShapeCmds.
+// שורה לא מובנת בטקסט של עיצוב — מתעלמים ממנה (לא נשבר).
 
 import java.io.File;
 import java.util.ArrayList;
@@ -15,9 +17,7 @@ import java.util.Map;
 
 final class Design {
 
-    static final String EXT = ".עיצוב.txt";  // בכונן
-    static final String DIR = "עיצובים";  // בכונן
-    /** העיצובים המובנים — תמיד זמינים; נכתבים לתיקיית האופן בפעם הראשונה שבוחרים בהם. */
+    /** העיצובים הקבועים — תמיד זמינים, בקוד בלבד (מבנה 266). */
     /** מבנה 240 (המשתמש, 17.11.2026: "מתאים" — שמות שאומרים מה רואים). */
     static final String DEFAULT = "רשימת קבצים", FILES = "מנהל קבצים עם צלמיות", WORDS = "מילים וצבע";  // בכונן
     /** מבנה 240: השמות הקודמים — עדיין מובנים (רשימה, הבית, קובץ שנערך), ומה שנכתב מעכשיו — בשם החדש. */
@@ -31,21 +31,16 @@ final class Design {
         return n;
     }
 
-    /** מבנה 240: יש עיצוב בשם הזה (מובנה, גם בשם הקודם, או קובץ באופן). */
+    /** יש עיצוב בשם הזה (קבוע, גם בשמו הקודם). */
     static boolean known(String name) {
-        return name != null && (builtIn(name) || fileOf(current(name)).isFile());
+        return name != null && builtIn(name);
     }
 
-    /** מבנה 240: הקובץ של מובנה בשמו הקודם (אם נערך פעם) — null אם אין. */
-    static File oldFile(String name) {
-        for (String[] o : OLD_NAMES) if (o[1].equals(name) && fileOf(o[0]).isFile()) return fileOf(o[0]);
-        return null;
-    }
     /** בהגדרות הכלליות של האופן: העיצוב של מסך הבית. */
     static final String HOME_KEY = "עיצוב מסך הבית";  // תחביר
 
     // ---------- התחביר של הקובץ ----------
-    static final String S_TITLE = "כותרת המסך", S_MID = "אמצע", S_LISTS = "רשימות";  // תחביר
+    static final String S_TITLE = "כותרת המסך", S_MID = "אמצע";  // תחביר
     static final String K_STYLE = "סגנון", GRID = "רשת", ROWS = "שורות", K_COLS = "טורים", K_ICON = "צלמית",  // תחביר
             K_GAP = "ריווח", K_SHOW_ICON = "הצג צלמית", K_AROUND = "סביב הצלמית", K_TINT = "צבע רקע לפריט",  // תחביר
             K_SHOW_DATA = "הצג נתונים", K_DATA_AT = "מקום הנתונים", BELOW = "מתחת", SIDE = "בצד",  // תחביר
@@ -55,14 +50,7 @@ final class Design {
      * הצלמית במקום התווית) · פריט מוסתר (שמו מתחיל בנקודה) — חיוור.
      */
     static final String K_SHOW_TAG = "הצג תווית", K_FADE = "מוסתר חיוור";  // תחביר
-    /**
-     * מבנה 258 (המשתמש, 18.11.2026: "האם יש דרך לקבוע יחס אחיד לשניהם?" — "כן"): הצלמית והריווח — באחוזים מגודל השם, בשורות
-     * וגם ברשת (עד כאן ברשת — מרוחב האריח). קובץ עיצוב שנכתב מעכשיו מסומן "מידות = לפי השם"; קובץ רשת בלי הסימן — מלפני
-     * השינוי, ומה שכתוב בו מומר בקריאה (fromTile).
-     */
-    static final String K_MEASURE = "מידות", BY_NAME = "לפי השם";  // תחביר
-    /** רוחב של טלפון רגיל, בנקודות — לפיו מומר קובץ רשת ישן, כך שייראה שם כמו שנראה. */
-    private static final int OLD_WIDTH = 380;
+    /** מבנה 258: הצלמית והריווח — אחוזים מגודל השם, בשורות וברשת (iconPx, padPx). */
     static final String NONE = "בלי", FRAME = "מסגרת", FILL = "ריבוע צבעוני";  // תחביר
     /** מבנה 256: סביב הצלמית — עיגול צבעוני (כמו "ריבוע צבעוני", בפינות עגולות לגמרי). */
     static final String CIRCLE = "עיגול";  // תחביר
@@ -95,7 +83,7 @@ final class Design {
     }
     static final String YES = "כן", NO = "לא", SYSTEM = "מערכת";  // תחביר
     static final String W_LIGHT = "דק", W_REG = "רגיל", W_MED = "בינוני", W_BOLD = "מודגש";  // תחביר
-    static final String P_ICON = "צלמית", P_COLOR = "צבע", P_SEP = "·";  // תחביר
+    static final String P_SEP = "·";  // תחביר
 
     /** סגנון טקסט: גודל (sp), משקל (100–900), גופן ("מערכת" או שם קובץ בתיקיית "גופנים"). */
     static final class Text {
@@ -115,7 +103,6 @@ final class Design {
     }
 
     String name = DEFAULT;
-    File file;
     /** האזור האמצעי (הרשימות). */
     boolean grid;
     int cols = 1;
@@ -161,14 +148,11 @@ final class Design {
     boolean fit;
     int min = 11;
     int lines = 2;
-    /** החלק הפרטי: מסלול הרשימה באופן ("לימוד/הערות") ← {צלמית, צבע}. */
-    final Map<String, String[]> lists = new LinkedHashMap<String, String[]>();
 
     /** מבנה 234: עותק — לשינוי מעל עיצוב שבזיכרון (המקור נשאר כמו שהוא). */
     Design copy() {
         Design d = new Design();
         d.name = name;
-        d.file = file;
         d.grid = grid;
         d.cols = cols;
         d.icon = icon;
@@ -190,7 +174,6 @@ final class Design {
         d.fit = fit;
         d.min = min;
         d.lines = lines;
-        d.lists.putAll(lists);
         return d;
     }
 
@@ -379,14 +362,9 @@ final class Design {
         return m;
     }
 
-    /** מבנה 243: העיצובים שאפשר לבחור באופן הזה — המוכנים, ואחריהם הקבצים שבתיקייה (בלי כפילות; השם הקודם — בשם של היום). */
+    /** העיצובים שאפשר לבחור — הקבועים. */
     static List<String> names() {
-        List<String> out = new ArrayList<String>(java.util.Arrays.asList(DEFAULT, FILES, WORDS));
-        for (File f : files(dir())) {
-            String n = current(nameOf(f));
-            if (!out.contains(n)) out.add(n);
-        }
-        return out;
+        return new ArrayList<String>(java.util.Arrays.asList(DEFAULT, FILES, WORDS));
     }
 
     /** מבנה 243: הגופנים שבתיקיית "גופנים" של האופן (השמות, כמו שנכתבים ב"עצב"). */
@@ -412,7 +390,6 @@ final class Design {
         Design d = new Design();
         d.name = name;
         String section = "";
-        boolean byName = false, hadIcon = false, hadGap = false;                // מבנה 258
         for (String raw : (text == null ? "" : text).replace("﻿", "").split("\r\n|\r|\n")) {
             String t = raw.trim();
             if (t.isEmpty() || t.startsWith(";") || t.startsWith("#")) continue;
@@ -423,35 +400,18 @@ final class Design {
             int eq = t.indexOf('=');
             if (eq <= 0) continue;
             String key = t.substring(0, eq).trim(), value = t.substring(eq + 1).trim();
-            if (S_LISTS.equals(section)) {
-                d.lists.put(key, privateValue(value));
-                continue;
-            }
             int sc = value.indexOf(';');                                     // הערה בסוף השורה
             if (sc >= 0) value = value.substring(0, sc).trim();
             if (value.isEmpty()) continue;
             try {
                 if (S_TITLE.equals(section)) d.text(d.title, key, value);
                 else if (S_MID.equals(section)) {
-                    if (key.equals(K_MEASURE)) byName = value.equals(BY_NAME);
-                    else {
-                        d.mid(key, value);
-                        hadIcon |= key.equals(K_ICON);
-                        hadGap |= key.equals(K_GAP);
-                    }
+                    d.mid(key, value);
                 }
             } catch (RuntimeException ignored) {                             // ערך לא מובן — נשאר מברירת המחדל
             }
         }
-        if (d.grid && !byName) d.fromTile(hadIcon, hadGap);                   // מבנה 258: קובץ רשת מלפני "לפי השם"
         return d;
-    }
-
-    /** מבנה 258: מה שנכתב בקובץ רשת ישן באחוזים מרוחב האריח — לאחוזים מגודל השם, כך שבטלפון רגיל ייראה כמו שנראה. */
-    private void fromTile(boolean hadIcon, boolean hadGap) {
-        float tile = OLD_WIDTH / (float) Math.max(1, cols), n = Math.max(1f, nameT.size);
-        if (hadIcon) icon = clamp(Math.round(tile * icon / n), ICON[0], ICON[1]);
-        if (hadGap) gap = clamp(Math.round(Math.max(2f, tile * gap / 200f) * 100f / n), GAP[0], GAP[1]);
     }
 
     /** מבנה 260 (המשתמש, 18.11.2026 — "א"): מספר הטורים הרגיל של סגנון — בא עם החלפת סגנון ב"עצב" (ShapeCmds.shapeOn). */
@@ -585,336 +545,31 @@ final class Design {
         return v < lo ? lo : v > hi ? hi : v;
     }
 
-    /** "צלמית 📚 · צבע ירוק" ← {"📚", "ירוק"}. */
-    static String[] privateValue(String v) {
-        String icon = "", color = "";
-        for (String part : v.split(P_SEP)) {
-            String p = part.trim();
-            if (p.startsWith(P_ICON)) icon = p.substring(P_ICON.length()).trim();
-            else if (p.startsWith(P_COLOR)) color = p.substring(P_COLOR.length()).trim();
-        }
-        return new String[]{icon, color};
-    }
-
-    static String privateText(String icon, String color) {
-        StringBuilder sb = new StringBuilder();
-        if (icon != null && !icon.isEmpty()) sb.append(P_ICON).append(' ').append(icon);
-        if (color != null && !color.isEmpty()) sb.append(sb.length() > 0 ? " " + P_SEP + " " : "").append(P_COLOR).append(' ').append(color);
-        return sb.toString();
-    }
-
     // ---------- החלק הפרטי ----------
     // עד מ0.29 — צלמית וצבע לכל רשימה, לפי המסלול. במסד הצלמית נשמרת ברשימה עצמה; כאן נשאר רק מה ששומר על מה שכתוב
     // בקבצים: הקריאה (load) והשמירה בחזרה לברירת מחדל.
 
-    /** הטקסט אחרי החלפת השורה של path בחלק הפרטי (newLine == null — מחיקה). */
-    static String withPrivate(String text, String path, String newLine) {
-        return withLine(text, S_LISTS, path, newLine);
-    }
-
-    private static String join(List<String> lines) {
-        StringBuilder sb = new StringBuilder();
-        for (String l : lines) sb.append(l).append('\n');
-        return sb.toString();
-    }
-
     // ---------- איפה ----------
-
-    static File dir() {
-        return new File(Paths.settings(), DIR);
-    }
-
-    static File fileOf(String name) {
-        return new File(dir(), name + EXT);
-    }
-
-    static String nameOf(File f) {
-        String n = f.getName();
-        return n.endsWith(EXT) ? n.substring(0, n.length() - EXT.length()) : n;
-    }
-
-    static List<File> files(File dir) {
-        List<File> out = new ArrayList<File>();
-        File[] kids = dir.listFiles();
-        if (kids != null) for (File k : kids) if (k.isFile() && k.getName().endsWith(EXT)) out.add(k);
-        java.util.Collections.sort(out);
-        return out;
-    }
 
     static boolean builtIn(String name) {
         name = current(name);                                                 // מבנה 240: גם בשם הקודם
         return DEFAULT.equals(name) || FILES.equals(name) || WORDS.equals(name);
     }
 
-    /**
-     * כל העיצובים שאפשר לבחור: {שם, מאיפה ("" — האופן הזה; שם אופן; או שם תיקייה), מסלול הקובץ ("" — מובנה שעוד לא נכתב)}.
-     * found — קובצי עיצוב שהאינדקס מצא בכונן (לפי הסיומת), מחוץ לאופנים.
-     */
-    static List<String[]> all(List<String> found) {
-        List<String[]> out = new ArrayList<String[]>();
-        List<String> here = new ArrayList<String>();
-        for (File f : files(dir())) {
-            out.add(new String[]{nameOf(f), "", f.getAbsolutePath()});
-            here.add(nameOf(f));
-        }
-        for (String b : new String[]{DEFAULT, FILES, WORDS})
-            if (!here.contains(b)) out.add(new String[]{b, "", ""});
-        String cur = Modes.current();
-        for (String m : Modes.all()) {
-            if (m.equals(cur)) continue;
-            for (File f : files(new File(new File(Modes.dirOf(m), Paths.SETTINGS), DIR)))
-                out.add(new String[]{nameOf(f), m, f.getAbsolutePath()});
-        }
-        String modes = new File(Paths.data(), Modes.DIR).getAbsolutePath() + "/";
-        if (found != null)
-            for (String p : found) {
-                if (p.startsWith(modes)) continue;                           // כבר נמנו למעלה
-                File f = new File(p);
-                if (f.isFile()) out.add(new String[]{nameOf(f), f.getParentFile().getName(), p});
-            }
-        return out;
-    }
-
-    /**
-     * עיצוב מאופן אחר — מועתק לאופן הזה (כל אופן מחזיק את העיצובים שלו). מחזיר את השם שלו כאן.
-     * שם תפוס בתוכן אחר — מוסיפים את שם האופן.
-     */
-    static String adopt(String[] picked) {
-        if (picked[1].isEmpty()) {
-            if (picked[2].isEmpty()) ensure(picked[0]);
-            return picked[0];
-        }
-        try {
-            String text = Files.readUtf8(new File(picked[2]));
-            String name = picked[0];
-            File f = fileOf(name);
-            if (f.isFile() && !Files.readUtf8(f).equals(text)) {
-                name = picked[0] + " (" + picked[1] + ")";
-                f = fileOf(name);
-            }
-            if (!f.isFile()) {                                                 // מבנה 232: באזור של התוכנה — רק בהיתר
-                String no = Physical.ownDir(dir()) ? Physical.ownWrite(f, text) : Words.SAVE_FAILED;
-                if (no != null) { Log.i("העתקת עיצוב מאופן אחר: " + no); return null; }
-            }
-            return name;
-        } catch (Throwable t) {
-            Log.e("העתקת עיצוב מאופן אחר", t);
-            return null;
-        }
-    }
-
-    /** קובץ של עיצוב מובנה — נכתב אם חסר. */
-    static File ensure(String name) {
-        File f = fileOf(name);
-        if (!f.isFile() && builtIn(name)) {
-            String no = Physical.ownDir(dir()) ? Physical.ownWrite(f, builtInText(name)) : Words.SAVE_FAILED;   // מבנה 232
-            if (no != null) Log.i("כתיבת עיצוב מובנה: " + no);
-        }
-        return f;
-    }
-
-    /** "חזרה לברירת מחדל": המראה מהמקור; הצלמיות והצבעים של הרשימות — נשארים. */
-    static boolean reset(String name) {
-        if (!builtIn(name)) return false;
-        try {
-            File f = fileOf(name);
-            Design old = f.isFile() ? read(f, name) : null;
-            String text = builtInText(name);
-            if (old != null)
-                for (Map.Entry<String, String[]> e : old.lists.entrySet())
-                    text = withPrivate(text, e.getKey(), e.getKey() + " = " + privateText(e.getValue()[0], e.getValue()[1]));
-            return Physical.ownDir(dir()) && Physical.ownWrite(f, text) == null;   // מבנה 232: רק בהיתר
-        } catch (Throwable t) {
-            Log.e("חזרה לברירת מחדל — עיצוב", t);
-            return false;
-        }
-    }
-
-    /** "שמירה בשם": עותק של הקובץ (כולל הצלמיות) בשם חדש. null — הצליח; אחרת הודעה. */
-    static String saveAs(Design from, String newName) {
-        String n = newName.trim().replace('/', '∕');
-        if (n.isEmpty()) return Words.NEED_NAME;
-        File f = fileOf(n);
-        if (f.exists()) return Words.DesignW.EXISTS;
-        try {
-            String no = Permit.check(Permit.OWN);                              // מבנה 232: רק בהיתר — והסירוב נאמר
-            if (no != null) return no;
-            File src = from.file != null && from.file.isFile() ? from.file : null;
-            String text = src != null ? Files.readUtf8(src) : builtInText(builtIn(from.name) ? from.name : DEFAULT);
-            if (!Physical.ownDir(dir())) return Words.SAVE_FAILED;
-            return Physical.ownWrite(f, text);                                 // מבנה 232: רק בהיתר; null — נשמר
-        } catch (Throwable t) {
-            Log.e("שמירת עיצוב בשם", t);
-            return Words.SAVE_FAILED;
-        }
-    }
-
     // ---------- הטופס (1.12.1): כתיבת המראה הכללי ----------
-
-    /** הטקסט אחרי קביעת key = value בקבוצה section (שורה קיימת — מוחלפת; חסרה — נוספת בסוף הקבוצה). */
-    static String withKey(String text, String section, String key, String value) {
-        return withLine(text, section, key, key + " = " + value);
-    }
-
-    /**
-     * 1.14.0: השורה של key בקבוצה section — מוחלפת ב-line, נוספת בסוף הקבוצה, או (line == null) נמחקת. קבוצה חסרה —
-     * נוספת לפני [רשימות] (והיא עצמה — בסוף). הערות (";") — לא נוגעים. (עד כאן — שתי העתקות כמעט זהות.)
-     */
-    private static String withLine(String text, String section, String key, String line) {
-        List<String> lines = new ArrayList<String>();
-        for (String l : text.replace("\r", "").split("\n", -1)) lines.add(l);
-        while (!lines.isEmpty() && lines.get(lines.size() - 1).trim().isEmpty()) lines.remove(lines.size() - 1);
-        int start = -1, end = lines.size();
-        for (int i = 0; i < lines.size(); i++) {
-            String t = lines.get(i).trim();
-            if (t.startsWith("[") && t.endsWith("]")) {
-                if (start >= 0) {
-                    end = i;
-                    break;
-                }
-                if (t.substring(1, t.length() - 1).trim().equals(section)) start = i;
-            }
-        }
-        if (start < 0) {
-            if (line == null) return join(lines);
-            int at = 0;                                                       // לפני [רשימות], אם יש
-            while (at < lines.size() && !lines.get(at).trim().equals("[" + S_LISTS + "]")) at++;
-            List<String> add = new ArrayList<String>();
-            if (at > 0) add.add("");
-            add.add("[" + section + "]");
-            add.add(line);
-            if (at < lines.size()) add.add("");
-            lines.addAll(at, add);
-            return join(lines);
-        }
-        for (int i = start + 1; i < end; i++) {
-            String t = lines.get(i);
-            int eq = t.indexOf('=');
-            if (eq > 0 && !t.trim().startsWith(";") && t.substring(0, eq).trim().equals(key)) {
-                if (line == null) lines.remove(i);
-                else lines.set(i, line);
-                return join(lines);
-            }
-        }
-        if (line != null) {
-            int at = end;
-            while (at > start + 1 && lines.get(at - 1).trim().isEmpty()) at--;
-            lines.add(at, line);
-        }
-        return join(lines);
-    }
-
-    /** המראה הכללי של d — לקובץ שלו (ההערות והחלק הפרטי נשארים). */
-    static boolean save(Design d) {
-        try {
-            File f = d.file != null ? d.file : fileOf(d.name);
-            String text = f.isFile() ? Files.readUtf8(f) : "";
-            text = withKey(text, S_TITLE, K_SIZE, num(d.title.size));
-            text = withKey(text, S_TITLE, K_WEIGHT, weightName(d.title.weight));
-            text = withKey(text, S_TITLE, K_FONT, d.title.font);
-            String[][] mid = {{K_MEASURE, BY_NAME}, {K_STYLE, d.grid ? GRID : ROWS}, {K_COLS, "" + d.cols}, {K_ICON, d.icon + "%"},
-                    {K_GAP, d.gap + "%"}, {K_SHOW_ICON, d.showIcon ? YES : NO}, {K_AROUND, d.around},
-                    {K_TINT, d.tint ? YES : NO}, {K_SHOW_DATA, d.showData ? YES : NO}, {K_DATA_AT, d.dataBelow ? BELOW : SIDE},
-                    {T_NAME + ": " + K_SIZE, num(d.nameT.size)}, {T_NAME + ": " + K_WEIGHT, weightName(d.nameT.weight)},
-                    {T_NAME + ": " + K_FONT, d.nameT.font}, {T_DATA + ": " + K_SIZE, num(d.data.size)},
-                    {T_DATA + ": " + K_WEIGHT, weightName(d.data.weight)}, {T_DATA + ": " + K_FONT, d.data.font},
-                    {K_FIT, d.fit ? YES : NO}, {K_MIN, "" + d.min}, {K_LINES, "" + d.lines},
-                    {K_SHOW_TAG, d.showTag ? YES : NO}, {K_FADE, d.fade ? YES : NO}};   // מבנה 256
-            for (String[] kv : mid) text = withKey(text, S_MID, kv[0], kv[1]);
-            for (String[] x : Extras.DEFS) text = withKey(text, S_MID, x[0], d.extras.get(x[0]));   // מבנה 265
-            if (d.group != null) {                                            // מבנה 239
-                text = withKey(text, S_MID, T_GROUP + ": " + K_SIZE, num(d.group.size));
-                text = withKey(text, S_MID, T_GROUP + ": " + K_WEIGHT, weightName(d.group.weight));
-                text = withKey(text, S_MID, T_GROUP + ": " + K_FONT, d.group.font);
-            }
-            for (Map.Entry<String, String> w : d.wording.entrySet())          // מבנה 250
-                text = withKey(text, S_MID, K_WORDING + ": " + w.getKey(), w.getValue());
-            if (d.tag != null) {                                              // מבנה 249
-                text = withKey(text, S_MID, T_TAG + ": " + K_SIZE, num(d.tag.size));
-                text = withKey(text, S_MID, T_TAG + ": " + K_WEIGHT, weightName(d.tag.weight));
-                text = withKey(text, S_MID, T_TAG + ": " + K_FONT, d.tag.font);
-            }
-            return Physical.ownDir(dir()) && Physical.ownWrite(f, text) == null;   // מבנה 232: רק בהיתר
-        } catch (Throwable t) {
-            Log.e("שמירת עיצוב מהטופס", t);
-            return false;
-        }
-    }
-
-    private static String num(float v) {
-        return v == (int) v ? "" + (int) v : "" + v;
-    }
-
-    /** "שינוי שם": הקובץ, הרשימות שמפנות אליו ומסך הבית. null — הצליח; אחרת הודעה. */
-    static String rename(final String from, String to) {
-        final String n = to.trim().replace('/', '∕');
-        if (n.isEmpty()) return Words.NEED_NAME;
-        if (n.equals(from)) return null;
-        File a = fileOf(from), b = fileOf(n);
-        if (b.exists()) return Words.DesignW.EXISTS;
-        if (!a.isFile() || !Physical.ownMove(a, b)) return Words.SAVE_FAILED;   // מבנה 232: רק בהיתר
-        renameRefs(from, n);
-        return null;
-    }
-
-    /** כל מה שמפנה לעיצוב from — מפנה עכשיו ל־to ("" — יורש). */
-    static void renameRefs(final String from, final String to) {
-        if (from.equals(homeName())) setHome(to);
-        DbFollow.designRenamedEverywhere(from, to);                          // הרשימות — במסד
-    }
-
-    /** מחיקת עיצוב: הקובץ לגיבויים; מה שהפנה אליו — יורש (ומגיע בסוף לברירת המחדל). */
-    static boolean delete(String name) {
-        File f = fileOf(name);
-        if (!f.isFile()) return false;
-        if (Permit.check(Permit.OWN) != null) return false;                   // מבנה 232: גם הגיבוי — רק בהיתר
-        Files.backup(f, DIR);
-        if (!Physical.ownDelete(f)) return false;
-        if (!builtIn(name)) renameRefs(name, "");
-        return true;
-    }
 
     // ---------- טעינה, עם זיכרון ----------
 
     private static final Map<String, Design> cache = new java.util.HashMap<String, Design>();
-    private static final Map<String, Long> stamp = new java.util.HashMap<String, Long>();
-    /** בזיכרון: מובנה שנקרא מהמקור (בלי קובץ). */
-    private static final String BUILT = "\u0000";
 
-    static synchronized Design read(File f, String name) {
-        String k = f.getAbsolutePath();
-        Design d = cache.get(k);
-        if (d != null && stamp.get(k) == f.lastModified()) return d;
-        try {
-            d = parse(name, Files.readUtf8(f));
-        } catch (Throwable t) {
-            Log.e("קריאת עיצוב " + f.getName(), t);
-            d = parse(name, builtInText(DEFAULT));
-        }
-        d.file = f;
-        cache.put(k, d);
-        stamp.put(k, f.lastModified());
-        return d;
-    }
-
-    /**
-     * העיצוב בשם הזה: מהאופן הזה; מובנה שאין לו קובץ — מהמקור (מבנה 232: בלי לכתוב בזמן ציור — הכתיבה רק בהיתר, דרך המנהל);
-     * לא נמצא — "עיצוב ברירת מחדל" (לא נשבר).
-     */
+    /** העיצוב הקבוע בשם הזה (גם בשמו הקודם); שם שאין — "רשימת קבצים" (לא נשבר). מה שחוזר — לא משנים: copy(). */
     static synchronized Design get(String name) {
-        if (name == null || name.trim().isEmpty()) name = DEFAULT;
-        name = current(name);                                                 // מבנה 240: שם קודם — השם של היום
-        File f = fileOf(name);
-        if (f.isFile()) return read(f, name);
-        File was = oldFile(name);                                            // מובנה שנערך בשמו הקודם — מה שנערך נשאר
-        if (was != null) return read(was, name);
-        if (!builtIn(name)) return get(DEFAULT);
-        Design d = cache.get(BUILT + name);                                  // מובנה בלי קובץ — פעם אחת, מהמקור
+        name = name == null || name.trim().isEmpty() || !builtIn(name) ? DEFAULT : current(name);
+        Design d = cache.get(name);
         if (d == null) {
             d = parse(name, builtInText(name));
-            cache.put(BUILT + name, d);
+            cache.put(name, d);
         }
-        d.file = f;
         return d;
     }
 
@@ -925,10 +580,6 @@ final class Design {
         return Conf.get(Conf.GENERAL, HOME_KEY, "");
     }
 
-    static void setHome(String name) {
-        Conf.set(Conf.GENERAL, HOME_KEY, name);
-    }
-
     // ---------- העיצובים המובנים ----------
 
     static String builtInText(String name) {
@@ -936,14 +587,11 @@ final class Design {
         boolean files = FILES.equals(name), words = WORDS.equals(name);
         sb.append("; ").append(name).append(" — ").append(files ? Words.DesignW.WHY_FILES : words ? Words.DesignW.WHY_WORDS
                 : Words.DesignW.WHY_DEFAULT).append('\n');
-        sb.append("; ").append(Words.DesignW.FILE_NOTE).append('\n');
-        sb.append("; ").append(Words.DesignW.FILE_NOTE2).append('\n');
         sb.append('\n').append('[').append(S_TITLE).append("]\n");
         line(sb, K_SIZE, files ? "15" : "12");
         line(sb, K_WEIGHT, files ? W_BOLD : W_REG);
         line(sb, K_FONT, SYSTEM);
         sb.append('\n').append('[').append(S_MID).append("]\n");
-        line(sb, K_MEASURE, BY_NAME);                                           // מבנה 258
         line(sb, K_STYLE, files ? GRID : ROWS);
         line(sb, K_COLS, files ? "3" : words ? "2" : "1");
         line(sb, K_ICON, files ? "500%" : "340%");                              // מבנה 258: היו 55% ו־8% מרוחב האריח — אותו מראה בטלפון רגיל
@@ -965,8 +613,6 @@ final class Design {
         line(sb, K_SHOW_TAG, YES);                                              // מבנה 256
         line(sb, K_FADE, NO);
         Extras.defaults(sb);                                                    // מבנה 265
-        sb.append('\n').append('[').append(S_LISTS).append("]\n");
-        sb.append("; ").append(Words.DesignW.LISTS_NOTE).append('\n');
         return sb.toString();
     }
 

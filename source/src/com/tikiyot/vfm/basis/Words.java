@@ -1657,47 +1657,12 @@ public final class Words {
         }
         public static final String WHY_FILES = "רשת גדולה וברורה, כמו מנהל קבצים שוטף — לרשימה שהיא סביבת עבודה";
         public static final String WHY_WORDS = "בלי צלמיות: אריחים צבעוניים עם מילים, בשני טורים";
-        public static final String FILE_NOTE = "אפשר לערוך ידנית. מה שחסר כאן נלקח מ\"רשימת קבצים\", ושורה לא מובנת לא נלקחת";
-        public static final String FILE_NOTE2 = "צלמית וריווח — באחוזים מגודל השם, בשורות וברשת (ברשת — הצלמית לא גדולה מהאריח). משקל: דק / רגיל / בינוני / מודגש. סביב הצלמית: בלי / מסגרת / ריבוע צבעוני";
-        public static final String LISTS_NOTE = "צלמית וצבע לכל רשימה, לפי המסלול שלה, למשל: לימוד/הערות = צלמית 📚 · צבע ירוק. בסביבה אחרת — רק כשיש רשימה באותו מסלול";
-        public static final String EXISTS = "כבר יש עיצוב בשם הזה";
         public static final String MENU = "🎨 עיצוב";
-        /** מבנה 245: החלון הישן — עד שהלוח יעבוד במכשיר (המשתמש, 17.11.2026: "אחרי שהכל יעבוד נמחק מהקוד הראשי"). */
-        public static final String MENU_OLD = "🎨 עיצוב — החלון הישן";
         public static final String PANEL = "🎨 לוח העיצוב";
         /** מבנה 245: רשימה שהלוח עוד לא יודע להגיע אליה בדרך שלה (כמה רשימות באותה דרך). */
-        public static final String PANEL_NO_PATH = "ללוח העיצוב אין דרך ברורה לרשימה הזו (יש כמה באותה דרך) — בינתיים: החלון הישן";
-        public static final String TITLE_LIST = "עיצוב לרשימה הזו";
-        public static final String TITLE_HOME = "עיצוב למסך הבית";
-        public static final String INHERIT = "↑ כמו הרשימה שמעליה";
-        public static final String NOW = "עכשיו: ";
-        public static final String FROM_ABOVE = " (יורש מ\"";
-        public static final String FROM_HOME = " (יורש ממסך הבית)";
-        public static final String EDIT = "📝 עריכת העיצוב הנוכחי בקובץ הטקסט";
-        public static final String EDIT_FORM = "✏️ שינוי העיצוב הנוכחי";
-        public static final String FORM_TITLE = "שינוי עיצוב · ";
-        public static final String GRID = "רשת", COLS = "טורים", ICON_PCT = "צלמית %", GAP_PCT = "ריווח %";
-        public static final String SHOW_ICON = "הצג צלמית", FRAME = "מסגרת", FILL = "ריבוע צבעוני", TINT = "צבע רקע לפריט";
-        public static final String SHOW_DATA = "הצג נתונים", DATA_SIDE = "נתונים בצד";
-        public static final String TEXT_HEAD = "טקסט: גודל · משקל · גופן";
-        public static final String T_NAME = "שם", T_DATA = "נתונים", T_TITLE = "כותרת";
-        public static final String FIT = "התאם למקום", MIN = "מזערי", LINES = "שורות לשם";
-        public static final String SAVE_AS_BTN = "שמירה בשם…";
+        public static final String PANEL_NO_PATH = "ללוח העיצוב אין דרך ברורה לרשימה הזו (יש כמה באותה דרך)";
         public static final String MANAGE = "🎨 עיצובים";
-        public static final String HOME_LINE = "🏠 העיצוב של מסך הבית: ";
-        public static final String HOME_NONE = "כמו קודם";
-        public static final String RENAME = "שינוי שם", DELETE = "מחיקה";
-        public static final String DELETED = "העיצוב נמחק";
-        public static final String DELETE_ASK = "עותק נשמר בגיבויים. רשימות שהשתמשו בו יקבלו את העיצוב של הרשימה שמעליהן";
         public static final String ICON_SHORT = "צלמית";
-        public static final String SAVE_AS = "💾 שמירת העיצוב הנוכחי בשם אחר…";
-        public static final String SAVE_AS_HINT = "שם, למשל: מדף ספרים";
-        public static final String RESET = "↺ חזרה לברירת מחדל — העיצוב הנוכחי";
-        public static final String RESET_DONE = "העיצוב חזר למקור. הצלמיות והצבעים של הרשימות נשארו";
-        public static final String NOT_BUILT_IN = "חזרה לברירת מחדל — רק לעיצוב מובנה";
-        public static final String FROM_MODE = "  · מתוך ";
-        public static final String CHOSEN = "העיצוב: ";
-        public static final String COPY_FAILED = "העתקת העיצוב נכשלה";
     }
 
     /** 1.13.0: פקודות הפתיחה בעברית (Verbs) */

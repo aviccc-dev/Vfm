@@ -669,13 +669,6 @@ public final class Tests {
         check("1.12.0: תוכנת ניהול קבצים — רשת 3, מסגרת, התאם למקום (מבנה 258: הצלמית והריווח — מגודל השם: 500%, 35%)", files.grid && files.cols == 3
                 && files.icon == 500 && files.gap == 35 && Design.FRAME.equals(files.around) && files.fit && files.nameT.weight == 700);
         // מבנה 258 (המשתמש, 18.11.2026: "האם יש דרך לקבוע יחס אחיד לשניהם?" — "כן"): צלמית וריווח — אחוז מגודל השם, בשורות וברשת
-        String old258 = "[אמצע]\nסגנון = רשת\nטורים = 3\nצלמית = 55%\nריווח = 8%\nשם: גודל = 14\n";
-        Design o258 = Design.parse("ישן", old258), n258 = Design.parse("חדש", old258.replace("[אמצע]\n", "[אמצע]\nמידות = לפי השם\n"));
-        Design r258 = Design.parse("שורות", "[אמצע]\nסגנון = שורות\nצלמית = 340%\nריווח = 50%\n");
-        Design p258 = Design.parse("חלקי", "[אמצע]\nסגנון = רשת\nטורים = 3\n");
-        check("מבנה 258: קובץ רשת ישן (בלי \"מידות\") — מומר בקריאה, וקרוב למובנה של היום (" + o258.icon + ", " + o258.gap + "); קובץ מסומן, קובץ של שורות,"
-                        + " ומה שלא נכתב בקובץ — כמו שהם", Math.abs(o258.icon - files.icon) <= 5 && Math.abs(o258.gap - files.gap) <= 2
-                        && n258.icon == 55 && n258.gap == 8 && r258.icon == 340 && r258.gap == 50 && p258.icon == def.icon && p258.gap == def.gap);
         Design g258 = Design.parse("רשת", Design.builtInText(Design.DEFAULT).replace("סגנון = שורות", "סגנון = רשת"));
         check("מבנה 258: אותו מספר — אותה צלמית ואותו ריווח בשורות וברשת (בלי מה שיתקן אחרי החלפת סגנון)", g258.grid && !def.grid
                 && g258.iconPx(48f, 1080, g258.padPx(48f, 6)) == def.iconPx(48f, 1080, def.padPx(48f, 0)) && def.iconPx(48f, 1080, 24) == 163
@@ -697,9 +690,8 @@ public final class Tests {
                         && Design.lookError("הצג שם", "אולי") != null && Design.lookError("הצג שם", "לא") == null);
         check("מבנה 265: צלמית לצד השם — ברשת הצלמית עד כשליש מהאריח (השאר לשם); בלי — כמו עד כאן",
                 y265.grid && y265.iconPx(48f, 300, 10) == 105 && x265.iconPx(48f, 300, 10) == 240 && y265.iconPx(10f, 300, 10) == 50);
-        check("מבנה 258: עיצוב מובנה — מסומן \"מידות = לפי השם\", והתוכנה אומרת לתוספים שהיא מודדת כך (namesize)",
-                Design.builtInText(Design.FILES).contains(Design.K_MEASURE + " = " + Design.BY_NAME)
-                        && read(new File(System.getProperty("vfm.src"), "src/com/tikiyot/vfm/lev/Bridge.java")).contains(" namesize\""));
+        check("מבנה 258: התוכנה אומרת לתוספים שהיא מודדת מגודל השם (namesize)",
+                read(new File(System.getProperty("vfm.src"), "src/com/tikiyot/vfm/lev/Bridge.java")).contains(" namesize\""));
         Design words = Design.parse(Design.WORDS, Design.builtInText(Design.WORDS));
         check("1.12.0: מילים וצבע — בלי צלמית, עם צבע רקע", !words.grid && words.cols == 2 && !words.showIcon && words.tint);
 
@@ -711,127 +703,29 @@ public final class Tests {
         eq("1.12.0: משקל — שם ↔ מספר", 300, Design.weight("דק"));
         eq("1.12.0: מספר טורים — בגבולות", 8, Design.parse("x", "[אמצע]\nטורים = 40\n").cols);
 
-        // החלק הפרטי — צלמית וצבע לפי המסלול
-        Design withLists = Design.parse("x", "[רשימות]\nלימוד = צלמית 📚 · צבע ירוק\nלימוד/הערות = צבע #112233\n");
-        check("1.12.0: החלק הפרטי — נקרא", Arrays.equals(new String[]{"📚", "ירוק"}, withLists.lists.get("לימוד"))
-                && Arrays.equals(new String[]{"", "#112233"}, withLists.lists.get("לימוד/הערות")) && withLists.lists.get("ספרים") == null);
-        String t1 = Design.withPrivate("[אמצע]\nטורים = 3\n", "לימוד", "לימוד = צלמית 📚");
-        check("1.12.0: שורה פרטית ראשונה — נוסף [רשימות]", t1.contains("[רשימות]\nלימוד = צלמית 📚") && t1.startsWith("[אמצע]"));
-        String t2 = Design.withPrivate(t1, "לימוד", "לימוד = צלמית 📖");
-        check("1.12.0: שורה פרטית — מוחלפת, לא כפולה", t2.contains("📖") && !t2.contains("📚"));
-        String t3 = Design.withPrivate(t2 + "[אחר]\nא = ב\n", "ספרים", "ספרים = צבע כחול");
-        check("1.12.0: שורה פרטית חדשה — בתוך [רשימות], לפני הקבוצה הבאה",
-                t3.indexOf("ספרים = צבע כחול") < t3.indexOf("[אחר]") && t3.indexOf("ספרים = צבע כחול") > t3.indexOf("[רשימות]"));
-        check("1.12.0: מחיקת שורה פרטית", !Design.withPrivate(t3, "לימוד", null).contains("לימוד ="));
-        check("1.12.0: פירוק השורה הפרטית", Arrays.equals(new String[]{"📚", "ירוק"}, Design.privateValue("צלמית 📚 · צבע ירוק")));
-
         // @עיצוב ברשימה — נקרא ונשמר; הירושה
         File tf = new File(home, "מבנה-1120.txt");
         Files.writeAtomic(tf, "@עיצוב פנקס שורש\n#1 לימוד\n@עיצוב תוכנת ניהול קבצים\n#2 לימוד / הערות\n#3 לימוד / הערות / ישנות\n@עיצוב מילים וצבע\n#1 ספרים\n");
         File tf2 = new File(home, "מבנה-1120ב.txt");
-        String homeBefore = Design.homeName();
-        Design.setHome("");
-        Design.setHome(Design.FILES);
-        Design.setHome(homeBefore);
-
-        // קבצים: מובנה נכתב כשצריך; שם שלא קיים — ברירת המחדל; שמירה בשם; חזרה לברירת מחדל שומרת את הצלמיות
-        File dir = Design.dir();
-        wipe(dir);
+        // מבנה 266 (המשתמש, 18.11.2026: "אולי את העיצובים הקבועים לשים במקום אחד ואת המשתנים בשני" · "תתחיל נקי"): הקבועים — בקוד בלבד
         Design g = Design.get(Design.FILES);
-        // מבנה 232 (הפרדת העיצוב): בזמן ציור לא כותבים — מובנה בלי קובץ נקרא מהמקור; וכל כתיבה של עיצוב — רק בהיתר של שכבת הניהול
-        check("מבנה 232: מובנה בלי קובץ — נקרא מהמקור (רשת), ולא נכתב בזמן ציור", !Design.fileOf(Design.FILES).isFile() && g.grid
-                && Design.get(Design.WORDS).cols == 2 && !Design.fileOf(Design.WORDS).isFile());
-        Permit.close();                                                         // לרגע — כמו בתוכנה: בלי היתר, אלא אם המנהל פותח
-        try {
-            check("מבנה 232: בלי היתר — שמירה בשם, שמירה, חזרה לברירת מחדל ומחיקה מסורבות, ולא נכתב כלום",
-                    Words.PermitW.refused(Permit.OWN).equals(Design.saveAs(g, "מדף ספרים")) && !Design.save(g)
-                            && !Design.reset(Design.FILES) && !Design.delete(Design.FILES) && !Design.fileOf("מדף ספרים").exists()
-                            && !Design.fileOf(Design.FILES).exists());
-            check("מבנה 232: דרך שכבת הניהול (החלון הישן) — נכתב, וההיתר נסגר אחריו",
-                    "".equals(Manager.oldDesign(new java.util.concurrent.Callable<String>() {
-                        @Override public String call() { Design.ensure(Design.FILES); return Design.fileOf(Design.FILES).isFile() ? "" : "x"; }
-                    })) && !Permit.held());
-        } finally {
-            Permit.open();
-        }
+        File was266 = new File(new File(Paths.settings(), "עיצובים"), Design.FILES + ".עיצוב.txt");   // קובץ עיצוב של פעם — כבר לא נקרא
+        was266.getParentFile().mkdirs();
+        Files.writeAtomic(was266, "[אמצע]\nטורים = 5\n");
+        check("מבנה 266: עיצוב קבוע — מהקוד (רשת, 3 טורים); קובץ עיצוב של פעם באותו שם אינו משנה אותו, ואינו נמחק",
+                g.grid && g.cols == 3 && Design.get(Design.FILES).cols == 3 && Design.get(Design.WORDS).cols == 2 && was266.isFile());
+        was266.delete();
         eq("1.12.0: עיצוב שלא קיים — ברירת המחדל (לא נשבר)", Design.DEFAULT, Design.get("אין כזה").name);
-        eq("1.12.0: שמירה בשם", null, Design.saveAs(g, "מדף ספרים"));
-        check("1.12.0: שמירה בשם — העותק זהה", Design.get("מדף ספרים").grid && Design.get("מדף ספרים").cols == 3);
-        eq("1.12.0: שמירה בשם תפוס — נדחה", Words.DesignW.EXISTS, Design.saveAs(g, "מדף ספרים"));
-        Files.writeAtomic(Design.fileOf(Design.FILES), Design.withPrivate(Files.readUtf8(Design.fileOf(Design.FILES)), "לימוד",
-                "לימוד = " + Design.privateText("📚", "ירוק")));
-        Files.writeAtomic(Design.fileOf(Design.FILES),
-                Files.readUtf8(Design.fileOf(Design.FILES)).replace("טורים = 3", "טורים = 5"));
-        Design.fileOf(Design.FILES).setLastModified(System.currentTimeMillis() + 2000);
-        eq("1.12.0: עריכה ידנית — נקראת", 5, Design.get(Design.FILES).cols);
-        check("1.12.0: חזרה לברירת מחדל", Design.reset(Design.FILES));
-        Design.fileOf(Design.FILES).setLastModified(System.currentTimeMillis() + 4000);
-        Design r = Design.get(Design.FILES);
-        check("1.12.0: חזרה לברירת מחדל — המראה מהמקור, הצלמיות נשארו", r.cols == 3
-                && Arrays.equals(new String[]{"📚", "ירוק"}, r.lists.get("לימוד")));
-        check("1.12.0: חזרה לברירת מחדל — רק למובנה", !Design.reset("מדף ספרים"));
-
-        // מאופן אחר — מועתק לאופן הזה; שם תפוס בתוכן אחר — עם שם האופן
-        File other = new File(new File(new File(new File(Paths.data(), Modes.DIR), "בדיקת עיצובים"), Paths.SETTINGS), Design.DIR);
-        wipe(other.getParentFile().getParentFile());
-        other.mkdirs();
-        Files.writeAtomic(new File(other, "מדף ספרים" + Design.EXT), "[אמצע]\nטורים = 4\n");
-        Files.writeAtomic(new File(other, "פנקס" + Design.EXT), "[אמצע]\nסגנון = שורות\n");
-        List<String[]> all = Design.all(Arrays.asList("/x/הורדות/מקבלים" + Design.EXT));
-        boolean fromOther = false, builtIns = false, fromDrive = false;
-        for (String[] a : all) {
-            if (a[0].equals("פנקס") && a[1].equals("בדיקת עיצובים")) fromOther = true;
-            if (a[0].equals(Design.WORDS) && a[1].isEmpty()) builtIns = true;
-            if (a[0].equals("מקבלים")) fromDrive = true;
-        }
-        check("1.12.0: כל העיצובים — גם מאופן אחר, וגם המובנים", fromOther && builtIns);
-        check("1.12.0: קובץ שלא קיים בכונן — לא ברשימה", !fromDrive);
-        eq("1.12.0: מאופן אחר — מועתק בשמו", "פנקס", Design.adopt(new String[]{"פנקס", "בדיקת עיצובים",
-                new File(other, "פנקס" + Design.EXT).getAbsolutePath()}));
-        check("1.12.0: מאופן אחר — עכשיו כאן", Design.fileOf("פנקס").isFile());
-        eq("1.12.0: שם תפוס בתוכן אחר — עם שם האופן", "מדף ספרים (בדיקת עיצובים)", Design.adopt(new String[]{"מדף ספרים",
-                "בדיקת עיצובים", new File(other, "מדף ספרים" + Design.EXT).getAbsolutePath()}));
-        wipe(other.getParentFile().getParentFile());
-
-        // ספירת הרשימות באופן — @עיצוב אינו פריט
-        String m = "בדיקת ספירה 1120";
-        File md = new File(new File(Paths.data(), Modes.DIR), m);
-        md.mkdirs();
-        wipe(md);
-        Files.writeAtomic(new File(Design.dir(), "x.txt"), "לא עיצוב");
-        boolean onlyDesigns = true;
-        for (File f : Design.files(Design.dir())) if (!f.getName().endsWith(Design.EXT)) onlyDesigns = false;
-        check("1.12.0: מוצאים רק לפי הסיומת", onlyDesigns);
-
-        // 1.12.1: הטופס — כתיבת המראה הכללי; ההערות והחלק הפרטי נשארים
-        String k1 = Design.withKey("; הערה\n[אמצע]\nטורים = 3 ; למה\n\n[רשימות]\nלימוד = צלמית 📚\n", Design.S_MID, Design.K_COLS, "4");
-        check("1.12.1: מפתח קיים — מוחלף במקומו", k1.contains("[אמצע]\nטורים = 4\n") && k1.startsWith("; הערה"));
-        String k2 = Design.withKey(k1, Design.S_MID, Design.K_TINT, "כן");
-        check("1.12.1: מפתח חסר — נוסף בסוף הקבוצה, לפני [רשימות]",
-                k2.indexOf("צבע רקע לפריט = כן") < k2.indexOf("[רשימות]") && k2.contains("לימוד = צלמית 📚"));
-        String k3 = Design.withKey("[רשימות]\nא = צבע ירוק\n", Design.S_TITLE, Design.K_SIZE, "15");
-        check("1.12.1: קבוצה חסרה — נוספת לפני [רשימות]", k3.indexOf("[כותרת המסך]") < k3.indexOf("[רשימות]"));
-        Design form = Design.get(Design.FILES);
-        form.cols = 4;
-        form.tint = true;
-        form.nameT.weight = 500;
-        form.around = Design.NONE;
-        check("1.12.1: שמירה מהטופס", Design.save(form));
-        Design.fileOf(Design.FILES).setLastModified(System.currentTimeMillis() + 8000);
-        Design back = Design.get(Design.FILES);
-        check("1.12.1: שמירה מהטופס — נקראת בחזרה", back.cols == 4 && back.tint && back.nameT.weight == 500
-                && Design.NONE.equals(back.around) && back.grid);
-        check("1.12.1: שמירה מהטופס — הצלמיות נשארו", Arrays.equals(new String[]{"📚", "ירוק"}, back.lists.get("לימוד")));
-
-        // 1.12.1: שינוי שם ומחיקה — הרשימות ומסך הבית מתעדכנים
-        String homeWas = Design.homeName();
-        Design.setHome("מדף ספרים");
-        eq("1.12.1: שינוי שם", null, Design.rename("מדף ספרים", "מדף"));
-        eq("1.12.1: שינוי שם — גם מסך הבית", "מדף", Design.homeName());
-        eq("1.12.1: שינוי שם לשם תפוס — נדחה", Words.DesignW.EXISTS, Design.rename("מדף", Design.FILES));
-        check("1.12.1: מחיקה", Design.delete("מדף") && !Design.fileOf("מדף").exists());
-        Design.setHome(homeWas);
-        wipe(dir);
+        check("מבנה 266: העיצובים שאפשר לבחור — שלושת הקבועים; שם קודם של קבוע — עדיין מובן; שם אחר — אין",
+                Design.names().equals(Arrays.asList(Design.DEFAULT, Design.FILES, Design.WORDS)) && Design.known("תוכנת ניהול קבצים")
+                        && Design.FILES.equals(Design.get("תוכנת ניהול קבצים").name) && !Design.known("מדף ספרים") && !Design.known(null));
+        Design c266 = Design.get(Design.FILES).copy();
+        c266.cols = 7;
+        check("מבנה 266: עיצוב קבוע אינו משתנה — משנים עותק", Design.get(Design.FILES).cols == 3 && Design.get(Design.FILES) == g);
+        String src266 = read(new File(System.getProperty("vfm.src"), "src/com/tikiyot/vfm/chomer/itzuv/Design.java"));
+        check("מבנה 266: העיצוב אינו כותב ואינו מוחק קבצים; החלון הישן ירד",
+                !src266.contains("writeAtomic") && !src266.contains(".delete()") && !src266.contains("Permit.") && !src266.contains("java.io.FileOutputStream")
+                        && !new File(System.getProperty("vfm.src"), "src/com/tikiyot/vfm/masachim/itzuv/DesignUi.java").exists());
     }
 
 
@@ -3794,8 +3688,8 @@ public final class Tests {
                     if (t.contains("Conf.set(Conf.GENERAL")) gen127.append(n).append(' ');
                     if (t.contains("Conf.setBool(Conf.GENERAL")) bool127 = true;
                 }
-                check("מבנה 127: לסעיף [כללי] של ההגדרות אין כותבים ישירים — חוץ מ\"עיצוב הבית\" (מחכה לפקודות העיצוב); הרשימה רק מתקצרת (" + gen127.toString().trim() + ")",
-                        gen127.toString().trim().equals("Design.java") && !bool127);
+                check("מבנה 127: לסעיף [כללי] של ההגדרות אין כותבים ישירים (מבנה 266: גם \"עיצוב הבית\" ירד — הרשימה ריקה) (" + gen127.toString().trim() + ")",
+                        gen127.toString().trim().isEmpty() && !bool127);
                 check("מבנה 127: קביעה במקום אחד (Manager.setting) — נקבעת, ושגויה — נאמר למה", Manager.setting(Conf.READERS, "4") == null
                         && "4".equals(Conf.get(Conf.GENERAL, Conf.READERS, "")) && Manager.setting(Conf.READERS, "הרבה") != null && Manager.setting("אין הגדרה כזו", "1") != null);
                 Conf.set(Conf.GENERAL, Conf.READERS, "8");
@@ -3900,14 +3794,14 @@ public final class Tests {
                         bad128.length() == 0);
             }
             check("מבנה 84: ...ופעולות הכונן — מסורבות כולן (לא חזרו אחורה)", Permit.strict(Permit.DELETE) && Permit.strict(Permit.WRITE));
-            {   // מבנה 232: השער של החלון הישן (Manager.oldDesign) — רק לחלון העיצוב הישן, עד שהוא יורד
+            {   // מבנה 232 ← 266: החלון הישן ירד, והשער שלו (Manager.oldDesign) איתו — אין עוד מי שכותב עיצוב שלא דרך "עצב"
                 StringBuilder od = new StringBuilder();
                 String root232 = code.getPath().replace('\\', '/');
                 for (File f : javaFiles(code)) {
-                    String rel = f.getPath().replace('\\', '/').substring(root232.length() + 1);
-                    if (read(f).contains("oldDesign(") && !rel.equals("lev/Manager.java") && !rel.equals("masachim/itzuv/DesignUi.java")) od.append(rel).append(' ');
+                    String t232 = read(f);
+                    if (t232.contains("oldDesign(") || t232.contains("DesignUi.")) od.append(f.getPath().replace('\\', '/').substring(root232.length() + 1)).append(' ');
                 }
-                check("מבנה 232: Manager.oldDesign — רק בחלון העיצוב הישן (" + od.toString().trim() + ")", od.length() == 0);
+                check("מבנה 266: Manager.oldDesign והחלון הישן — אינם בקוד (" + od.toString().trim() + ")", od.length() == 0);
             }
             {   // מבנה 238: הצבעים מהעיצוב — כל מסך מתחיל ב־Ui.begin, לפני super.onCreate; והסדר של הצבעים כמו בעיצוב (Palette)
                 StringBuilder nb = new StringBuilder();
@@ -4367,9 +4261,9 @@ public final class Tests {
             String dbl = read(new File(code, "masachim/DbListScreen.java")), set = read(new File(code, "masachim/SettingsScreen.java")),
                     ls = read(new File(code, "masachim/ListScreen.java")), lab = read(new File(code, "masachim/LabScreen.java")),
                     br = read(new File(code, "lev/Bridge.java"));
-            check("מבנה 245: \"🎨 עיצוב\" — הלוח (על הרשימה, בדרך שהפקודה מוצאת; בבית — על האופן); מההגדרות — על כל התוכנה; החלון הישן — בפריט משלו; "
+            check("מבנה 245: \"🎨 עיצוב\" — הלוח (על הרשימה, בדרך שהפקודה מוצאת; בבית — על האופן); מההגדרות — על כל התוכנה; החלון הישן — ירד (מבנה 266); "
                             + "הלוח מתחיל במה שהמסך ביקש; מסך שהצבעים שלו השתנו — נבנה מחדש",
-                    Words.DbCmd.TOOL_DESIGN.equals(nv[0]) && dbl.contains("MENU_DESIGN) panel();") && dbl.contains("MENU_DESIGN_OLD) design();")
+                    Words.DbCmd.TOOL_DESIGN.equals(nv[0]) && dbl.contains("MENU_DESIGN) panel();") && !dbl.contains("MENU_DESIGN_OLD") && !set.contains("DesignW.MANAGE")
                             && dbl.contains("LabScreen.design(this, Verbs.LIST, Names.pathText(path))") && dbl.contains("DbPaths.find(store, mode, path) != listId")
                             && dbl.contains("LabScreen.design(this, Verbs.MODE_WORD, mode)")
                             && set.contains("LabScreen.design(SettingsScreen.this, Verbs.PROGRAM_WORD, \"\")")
