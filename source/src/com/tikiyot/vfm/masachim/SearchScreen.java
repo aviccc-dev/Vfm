@@ -78,6 +78,7 @@ public class SearchScreen extends Activity implements Clip.Holder {
     /** 153 — החיפוש האחד: ההגדרות (מקורות, סוגים, תאריך, גודל) בחלונית במסך, וחלות מיד; המילים — בשורת ההקלדה. */
     private SmartForm.Parts parts;
     private android.widget.ScrollView panel;
+    private LinearLayout head;                                               // מבנה 273: מה שבין שורת החיפוש לקבצים — מתקפל עם השורות (ScrollRoom.head)
     private TextView settings;
     /** 149: פס הלוח — "הדבקה כאן" (ב"כולל הכול") ו"הדבקה…" (בורר); ומוסתרים ב"כולל הכול". */
     private LinearLayout clipBar;
@@ -192,6 +193,8 @@ public class SearchScreen extends Activity implements Clip.Holder {
         input.setTextSize(18);
         input.setPadding(Ui.dp(this, 12), Ui.dp(this, 10), Ui.dp(this, 12), Ui.dp(this, 10));
         root.addView(input);
+        head = ScrollRoom.head(this);
+        root.addView(head, new LinearLayout.LayoutParams(-1, -2));
         quick = new QuickBar(this, new QuickBar.Host() {                       // 181: כפתורי תצוגה מהירה
             @Override public String base() { return query(); }
             @Override public int count(String c) { return find(c).total; }
@@ -203,7 +206,7 @@ public class SearchScreen extends Activity implements Clip.Holder {
             @Override public void saveState(String s) { saveSetting(Quick.STATE, s.isEmpty() ? Quick.SEP : s); }
             @Override public void changed() { search(); }
         });
-        root.addView(quick.view);
+        head.addView(quick.view);
         parts = new SmartForm.Parts(this, Words.Find.ALL_DRIVES);
         parts.load(split[0]);
         LinearLayout box = Ui.form(this);
@@ -222,17 +225,18 @@ public class SearchScreen extends Activity implements Clip.Holder {
                 settings.setText(Words.Find.SETTINGS + (open ? " ▾" : " ▸"));
             }
         });
-        root.addView(settings);
-        root.addView(panel, new LinearLayout.LayoutParams(-1, Ui.dp(this, 300)));
+        head.addView(settings);
+        head.addView(panel, new LinearLayout.LayoutParams(-1, Ui.dp(this, 300)));
     }
 
     /** שורת המידע (נגיעה — רענון, 110), המקרא, ו"איפה עומדים" (148). */
     private void buildInfo(LinearLayout root) {
         info = Ui.info(this);
+        ScrollRoom.oneLine(info);                                             // מבנה 273: שורה אחת, עם "…" — נגיעה פותחת את כולה
         info.setOnClickListener(new View.OnClickListener() {                  // 110: רענון נגיש
             @Override
             public void onClick(View v) {
-                if (!input.getText().toString().trim().isEmpty()) return;
+                if (!input.getText().toString().trim().isEmpty()) { ScrollRoom.wide(info); return; }   // מבנה 273: יש חיפוש — פותחת / סוגרת את השורה
                 Ui.toast(SearchScreen.this, Words.Look.REFRESHING);
                 final java.util.Map<String, String> vars = BatchUi.vars(SearchScreen.this, Paths.work());
                 new Thread(new Runnable() {
@@ -254,19 +258,19 @@ public class SearchScreen extends Activity implements Clip.Holder {
         });
         hint = Ui.firstTimes(this, Words.Look.SEARCH);
         TextView whyBar = Why.bar(this);                                      // 1.13.0
-        root.addView(whyBar);
+        head.addView(whyBar);
         Why.show(whyBar, whyKey, whyText);
-        root.addView(info);
+        head.addView(info);
         legend = Ui.info(this);
         legend.setVisibility(View.GONE);
-        root.addView(legend);
+        head.addView(legend);
         where = Ui.info(this);                                                // 148: איפה עומדים; נגיעה — למעלה
         where.setBackgroundColor(Ui.BG_SOFT);
         where.setVisibility(View.GONE);
         where.setOnClickListener(new View.OnClickListener() {
             @Override public void onClick(View v) { up(); }
         });
-        root.addView(where);
+        head.addView(where);
     }
 
     /** רשימת התוצאות: שורה לכל תוצאה, נגיעה ונגיעה ארוכה. */

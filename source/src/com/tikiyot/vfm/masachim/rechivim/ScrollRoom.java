@@ -86,6 +86,28 @@ final class ScrollRoom extends LinearLayout {
         }
     }
 
+    /**
+     * מבנה 273: החלק שמתקפל עם השורות — המסך מוסיף לתוכו את מה שמעל הקבצים (בחיפוש: הכפתורים המהירים, "הגדרות" והחלונית, "למה",
+     * שורת המידע, המקרא ו"איפה עומדים"; שורת החיפוש — מחוץ לו, ונשארת).
+     */
+    static LinearLayout head(Activity a) {
+        LinearLayout h = new LinearLayout(a);
+        h.setOrientation(VERTICAL);
+        h.setTag(FOLD_TAG);
+        return h;
+    }
+
+    /** מבנה 273: שורת מידע בשורה אחת, עם "…" — כדי שלא תיקח שתי שורות מהקבצים. */
+    static void oneLine(android.widget.TextView t) {
+        t.setSingleLine(true);
+        t.setEllipsize(android.text.TextUtils.TruncateAt.END);
+    }
+
+    /** מבנה 273: נגיעה בשורה כזו — פותחת את כולה, ונגיעה נוספת — חזרה לשורה אחת (מה שנחתך אינו נעלם). */
+    static void wide(android.widget.TextView t) {
+        t.setSingleLine(t.getMaxLines() != 1);
+    }
+
     /** המסך חזר לפנים (ממסך אחר) — הכול מוצג. */
     @Override
     protected void onWindowVisibilityChanged(int visibility) {

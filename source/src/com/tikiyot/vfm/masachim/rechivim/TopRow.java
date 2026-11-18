@@ -360,7 +360,7 @@ final class TopRow {
         nm.setText(name);
         nm.setTextSize(11);
         nm.setTextColor(color);
-        nm.setMaxLines(2);                                                   // 1.10.0: שם ארוך — בשתי שורות, לא דוחק את השורה
+        nm.setMaxLines(1);                                                   // מבנה 273 (ממצא 65): שם ארוך — מתקצר עם "…", ולא מגביה את כל השורה (עד כאן: שתי שורות)
         nm.setEllipsize(android.text.TextUtils.TruncateAt.END);
         nm.setMaxWidth(Ui.dp(a, 96));
         nm.setGravity(Gravity.CENTER);

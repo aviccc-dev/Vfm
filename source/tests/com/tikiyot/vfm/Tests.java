@@ -723,6 +723,14 @@ public final class Tests {
                         && room272.contains("return super.dispatchTouchEvent(e);") && room272.contains("inList = l != null && inside(l, e.getRawX(), e.getRawY());")
                         && room272.contains("top.setVisibility(v);") && room272.contains("bottom.setVisibility(v);") && room272.contains("findViewWithTag(FOLD_TAG)")
                         && room272.contains("bar.hide();") && room272.contains("bar.show();") && room272.contains("l.canScrollVertically(1)"));
+        String s273 = read(new File(System.getProperty("vfm.src"), "src/com/tikiyot/vfm/masachim/SearchScreen.java"));
+        check("מבנה 273: בחיפוש — מה שבין שורת החיפוש לקבצים (מהירים, הגדרות, מידע, מקרא, איפה עומדים) בחלק אחד שמתקפל עם השורות; שורת החיפוש "
+                        + "והקבצים — לא בתוכו; שורת המידע ושם של כפתור — בשורה אחת",
+                s273.contains("head = ScrollRoom.head(this);") && room272.contains("h.setTag(FOLD_TAG);") && s273.contains("root.addView(input);") && s273.contains("root.addView(list, ")
+                        && s273.contains("head.addView(quick.view);") && s273.contains("head.addView(settings);") && s273.contains("head.addView(panel, ")
+                        && s273.contains("head.addView(info);") && s273.contains("head.addView(legend);") && s273.contains("head.addView(where);")
+                        && s273.contains("ScrollRoom.oneLine(info);") && s273.contains("ScrollRoom.wide(info); return;") && room272.contains("t.setSingleLine(t.getMaxLines() != 1);")
+                        && top272.contains("nm.setMaxLines(1);") && !top272.contains("nm.setMaxLines(2);"));
         String b271 = read(new File(System.getProperty("vfm.src"), "assets/plugins/itzuv.html")), e271 = read(new File(System.getProperty("vfm.src"), "assets/plugins/orech-interaktivi.html"));
         check("מבנה 271: הלוח והעורך מציעים צבעים לרשימה רק לתוכנה שאומרת שהיא מכירה (listcolors) — שואלים, לא מנחשים",
                 b271.contains("split(' ').includes('listcolors')") && b271.contains("const noColors=()=>isList()&&!LISTCOL();") && !b271.contains("if(isList()){c4.")
