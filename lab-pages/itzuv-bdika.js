@@ -185,14 +185,16 @@ const run=async()=>{
     const sbtn=(t,v)=>[...srow(t).querySelectorAll('.seg button')].find(b=>b.textContent===v);
     say('כרטיס "הפריט" — אחד־עשר, מהתוכנה',!!sc()&&sc().querySelectorAll('.row').length===11&&!!srow('סביב הצלמית')&&!!srow('שורות לשם')&&!!srow('הצג תווית'));
     say('מה שנראה מסומן (רשימת קבצים: שורות, ריבוע צבעוני)',sbtn('סגנון','שורות').classList.contains('on')&&sbtn('סביב הצלמית','ריבוע צבעוני').classList.contains('on'));
+    const icW=()=>$('pv').querySelector('.ic').style.width;const rowIc=icW();
     click(sbtn('סגנון','רשת'));
-    say('סגנון: רשת — עם הטורים, הריווח והצלמית של רשת ← '+cmd(),cmd()==='עצב תוכנה /טורים:3 /ריווח:8 /גודל-צלמית:60 /סגנון:רשת'&&$('pv').querySelectorAll('.it.g').length===6);
+    say('סגנון: רשת — רק הסגנון; הלוח אינו מוסיף דבר משלו (מבנה 258) ← '+cmd(),cmd()==='עצב תוכנה /סגנון:רשת'&&$('pv').querySelectorAll('.it.g').length===6);
+    say('אותו מספר — אותה צלמית בשורות וברשת ('+rowIc+' ← '+icW()+')',rowIc==='54px'&&icW()===rowIc);
     pick('edit','ביטול');
-    say('ביטול אחד — מחזיר את כל הארבעה',cmd().startsWith('אין שינויים'));
+    say('ביטול — חוזר',cmd().startsWith('אין שינויים'));
     pick('edit','חזרה');
     click(sbtn('סביב הצלמית','ריבוע צבעוני'));click(sbtn('סביב הצלמית','מסגרת'));
     click(sbtn('צבע רקע לפריט','כן'));click(sbtn('מקום הנתונים','בצד'));
-    say('עוד שלושה ← '+cmd(),cmd()==='עצב תוכנה /טורים:3 /ריווח:8 /גודל-צלמית:60 /סגנון:רשת /סביב-הצלמית:מסגרת /צבע-רקע-לפריט:כן /מקום-הנתונים:בצד');
+    say('עוד שלושה ← '+cmd(),cmd()==='עצב תוכנה /סגנון:רשת /סביב-הצלמית:מסגרת /צבע-רקע-לפריט:כן /מקום-הנתונים:בצד');
     say('התצוגה — כרטיסים, נתונים בצד, מסגרת',[...$('pv').querySelectorAll('.it')].filter(e=>e.style.borderRadius==='14px').length>=5&&$('pv').querySelectorAll('.tt.side').length===6
       &&[...$('pv').querySelectorAll('.ic')].some(e=>e.style.border.includes('1px')));
     click(sbtn('סביב הצלמית','ריבוע צבעוני'));
@@ -217,6 +219,20 @@ const run=async()=>{
     say('מוסתר חיוור: כן — פריט מוסתר חיוור בתצוגה',cmd().includes('/מוסתר-חיוור:כן')&&[...$('pv').querySelectorAll('.it')].some(e=>e.style.opacity==='0.45'&&e.textContent.includes('.גיבוי')));
     click(sbtn('סביב הצלמית','עיגול'));
     say('סביב הצלמית: עיגול ← '+cmd(),cmd().includes('/סביב-הצלמית:עיגול')&&[...$('pv').querySelectorAll('.ic')].some(e=>e.style.borderRadius==='50%'));
+    // מבנה 258: המידה — כמו התוכנה. היום: מגודל השם, גם ברשת; תוכנה כמו מ0.48 — ברשת מרוחב האריח
+    const chipOf=t=>[...d.querySelectorAll('#main .chip')].find(b=>b.textContent===t);
+    const e258=errs.length;
+    const hintOf=()=>[...d.querySelectorAll('#main .card')[1].querySelectorAll('.lb')].map(e=>e.textContent).join(' ');
+    w=page(null);d=w.document;
+    click(chipOf('מנהל קבצים עם צלמיות'));
+    say('רשת מוכנה — הצלמית מגודל השם (14 × 500% = 70), ונאמר: '+hintOf(),$('pv').querySelector('.ic').style.width==='70px'&&hintOf().includes('% מגודל השם')&&!hintOf().includes('האריח'));
+    setNum(d.querySelectorAll('#main .card')[1].querySelectorAll('.num')[0],8);
+    const w8=parseInt($('pv').querySelector('.ic').style.width,10);
+    say('8 טורים — הצלמית לא גדולה מהאריח ('+w8+')',w8>0&&w8<40);
+    w=new JSDOM(html,{runScripts:'dangerously',pretendToBeVisual:true,virtualConsole:vc,beforeParse(x){x.__m048=true;}}).window;d=w.document;
+    click(chipOf('מנהל קבצים עם צלמיות'));
+    const w48=$('pv').querySelector('.ic').style.width;
+    say('תוכנה כמו מ0.48 — ברשת מרוחב האריח, כמו שהיא מציירת ('+w48+'), ונאמר',w48!=='70px'&&parseInt(w48,10)>40&&hintOf().includes('% מרוחב האריח')&&!!d.getElementById('shapeCard')&&errs.length===e258);
     // ---------- שגיאה בעמוד — נאמרת על המסך (מבנה 252) ----------
     const dom2=new JSDOM(html,{runScripts:'dangerously',pretendToBeVisual:true,virtualConsole:new VirtualConsole(),beforeParse(x){
       x.vfm={info:()=>JSON.stringify({features:'design'}),theme:()=>null,load:()=>null,save:()=>{},design:()=>{throw new Error('תקלה לבדיקה');}};}});

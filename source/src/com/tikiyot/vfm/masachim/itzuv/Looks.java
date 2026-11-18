@@ -91,10 +91,14 @@ final class Looks {
         return w / Math.max(1, d.cols);                                     // גם שורות בכמה טורים (כמו בשיאומי)
     }
 
-    /** גודל הצלמית בפיקסלים: ברשת — אחוז מרוחב האריח; בשורות — אחוז מגודל השם. */
+    /** מבנה 258: הריווח בפיקסלים — אחוז מגודל השם, בשורות וברשת (הכלל — ב־Design); ברשת — לפחות 2. */
+    static int padPx(Context c, Design d) {
+        return d.padPx(sp(c, d.nameT.size), d.grid ? Ui.dp(c, 2) : 0);
+    }
+
+    /** גודל הצלמית בפיקסלים — אחוז מגודל השם, בשורות וברשת (מבנה 258; הכלל — ב־Design); ברשת — לא יותר מהאריח. */
     static int iconPx(Context c, Design d, int tileW) {
-        if (d.grid) return tileW * d.icon / 100;
-        return (int) (sp(c, d.nameT.size) * d.icon / 100f);
+        return d.iconPx(sp(c, d.nameT.size), tileW, padPx(c, d));
     }
 
     static float sp(Context c, float v) {
@@ -118,7 +122,7 @@ final class Looks {
         more.setTextColor(Ui.MUTED);
         more.setVisibility(View.GONE);
         if (d.grid) {
-            int pad = Math.max(Ui.dp(c, 2), tileW * d.gap / 200);
+            int pad = padPx(c, d);
             row.setOrientation(LinearLayout.VERTICAL);
             row.setGravity(Gravity.CENTER_HORIZONTAL);
             row.setPadding(pad, pad, pad, pad);
@@ -137,7 +141,7 @@ final class Looks {
             }
             row.addView(more);
         } else {
-            int pad = (int) (sp(c, d.nameT.size) * d.gap / 100f);
+            int pad = padPx(c, d);
             row.setOrientation(LinearLayout.HORIZONTAL);
             row.setGravity(Gravity.CENTER_VERTICAL);
             row.setPadding(Ui.dp(c, 12), pad, Ui.dp(c, 12), pad);
@@ -342,7 +346,7 @@ final class Looks {
      */
     static float[] fit(Context c, Design d, List<String> names, int tileW) {
         if (!d.fit || names == null || names.isEmpty()) return null;
-        int avail = d.grid ? tileW - 2 * Math.max(Ui.dp(c, 2), tileW * d.gap / 200) - Ui.dp(c, 6)
+        int avail = d.grid ? tileW - 2 * padPx(c, d) - Ui.dp(c, 6)
                 : tileW - iconPx(c, d, tileW) - Ui.dp(c, 34) - (d.dataBelow ? 0 : tileW * 2 / 5);
         if (avail <= 0) return null;
         Paint p = new Paint();

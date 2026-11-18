@@ -117,7 +117,7 @@ final class Bridge {
             o.put("versionCode", pi.versionCode);
             o.put("registry", Manager.registryLine());                                  // מבנה 142: מה התוכנה מכירה, בשורה
             o.put("door", DOOR);                                                        // מבנה 141
-            o.put("features", "steady dropclean zip set cmdfolders design");                         // מבנה 50: מה התוכנה יודעת (לתוסף — במקום לנחש לפי מספר הגרסה)
+            o.put("features", "steady dropclean zip set cmdfolders design namesize");   // namesize (מבנה 258): צלמית וריווח — מגודל השם, גם ברשת                         // מבנה 50: מה התוכנה יודעת (לתוסף — במקום לנחש לפי מספר הגרסה)
             // מבנה 59: איפה תיקיות הגיבויים של האופנים, בכתיב של קובץ פקודות — לבדיקה "אופן שבוטל וחוזר" (שם התיקייה שונה בין הבניות)
             o.put("backupsVar", "%" + Drive.INTERNAL + "%\\" + Paths.DB_DIR + "\\" + Backups.DIR);
             o.put("device", Log.device());

@@ -55,6 +55,14 @@ final class Design {
      * הצלמית במקום התווית) · פריט מוסתר (שמו מתחיל בנקודה) — חיוור.
      */
     static final String K_SHOW_TAG = "הצג תווית", K_FADE = "מוסתר חיוור";  // תחביר
+    /**
+     * מבנה 258 (המשתמש, 18.11.2026: "האם יש דרך לקבוע יחס אחיד לשניהם?" — "כן"): הצלמית והריווח — באחוזים מגודל השם, בשורות
+     * וגם ברשת (עד כאן ברשת — מרוחב האריח). קובץ עיצוב שנכתב מעכשיו מסומן "מידות = לפי השם"; קובץ רשת בלי הסימן — מלפני
+     * השינוי, ומה שכתוב בו מומר בקריאה (fromTile).
+     */
+    static final String K_MEASURE = "מידות", BY_NAME = "לפי השם";  // תחביר
+    /** רוחב של טלפון רגיל, בנקודות — לפיו מומר קובץ רשת ישן, כך שייראה שם כמו שנראה. */
+    private static final int OLD_WIDTH = 380;
     static final String NONE = "בלי", FRAME = "מסגרת", FILL = "ריבוע צבעוני";  // תחביר
     /** מבנה 256: סביב הצלמית — עיגול צבעוני (כמו "ריבוע צבעוני", בפינות עגולות לגמרי). */
     static final String CIRCLE = "עיגול";  // תחביר
@@ -401,6 +409,7 @@ final class Design {
         Design d = new Design();
         d.name = name;
         String section = "";
+        boolean byName = false, hadIcon = false, hadGap = false;                // מבנה 258
         for (String raw : (text == null ? "" : text).replace("﻿", "").split("\r\n|\r|\n")) {
             String t = raw.trim();
             if (t.isEmpty() || t.startsWith(";") || t.startsWith("#")) continue;
@@ -420,16 +429,42 @@ final class Design {
             if (value.isEmpty()) continue;
             try {
                 if (S_TITLE.equals(section)) d.text(d.title, key, value);
-                else if (S_MID.equals(section)) d.mid(key, value);
+                else if (S_MID.equals(section)) {
+                    if (key.equals(K_MEASURE)) byName = value.equals(BY_NAME);
+                    else {
+                        d.mid(key, value);
+                        hadIcon |= key.equals(K_ICON);
+                        hadGap |= key.equals(K_GAP);
+                    }
+                }
             } catch (RuntimeException ignored) {                             // ערך לא מובן — נשאר מברירת המחדל
             }
         }
+        if (d.grid && !byName) d.fromTile(hadIcon, hadGap);                   // מבנה 258: קובץ רשת מלפני "לפי השם"
         return d;
+    }
+
+    /** מבנה 258: מה שנכתב בקובץ רשת ישן באחוזים מרוחב האריח — לאחוזים מגודל השם, כך שבטלפון רגיל ייראה כמו שנראה. */
+    private void fromTile(boolean hadIcon, boolean hadGap) {
+        float tile = OLD_WIDTH / (float) Math.max(1, cols), n = Math.max(1f, nameT.size);
+        if (hadIcon) icon = clamp(Math.round(tile * icon / n), ICON[0], ICON[1]);
+        if (hadGap) gap = clamp(Math.round(Math.max(2f, tile * gap / 200f) * 100f / n), GAP[0], GAP[1]);
+    }
+
+    /** מבנה 258: הריווח בפיקסלים — אחוז מגודל השם (namePx — גודל השם בפיקסלים), בשורות וברשת; least — המעט שנשאר תמיד. */
+    int padPx(float namePx, int least) {
+        return Math.max(least, (int) (namePx * gap / 100f));
+    }
+
+    /** מבנה 258: הצלמית בפיקסלים — אחוז מגודל השם, בשורות וברשת; ברשת — לא יותר ממה שנכנס באריח (הרוחב, פחות הריווח משני הצדדים). */
+    int iconPx(float namePx, int tileW, int pad) {
+        int px = (int) (namePx * icon / 100f);
+        return grid && tileW > 0 ? Math.max(0, Math.min(px, tileW - 2 * pad)) : px;
     }
 
     /**
      * מבנה 235: הטווחים — במקום אחד. הקריאה של הקובץ מצמצמת אליהם; הפקודה ("עצב") מסרבת למה שמחוץ להם, ואומרת למה.
-     * צלמית וריווח — באחוזים (רשת: מרוחב האריח; שורות: מגודל השם).
+     * צלמית וריווח — באחוזים מגודל השם, בשורות וברשת (מבנה 258; עד אז ברשת — מרוחב האריח).
      */
     static final int[] COLS = {1, 8}, ICON = {0, 1000}, GAP = {0, 200}, SIZE = {6, 60}, WEIGHT = {100, 900};
     /** מבנה 254: שורות לשם, והגודל המזערי של שם שמוקטן כדי להיכנס (התאם למקום). */
@@ -763,7 +798,7 @@ final class Design {
             text = withKey(text, S_TITLE, K_SIZE, num(d.title.size));
             text = withKey(text, S_TITLE, K_WEIGHT, weightName(d.title.weight));
             text = withKey(text, S_TITLE, K_FONT, d.title.font);
-            String[][] mid = {{K_STYLE, d.grid ? GRID : ROWS}, {K_COLS, "" + d.cols}, {K_ICON, d.icon + "%"},
+            String[][] mid = {{K_MEASURE, BY_NAME}, {K_STYLE, d.grid ? GRID : ROWS}, {K_COLS, "" + d.cols}, {K_ICON, d.icon + "%"},
                     {K_GAP, d.gap + "%"}, {K_SHOW_ICON, d.showIcon ? YES : NO}, {K_AROUND, d.around},
                     {K_TINT, d.tint ? YES : NO}, {K_SHOW_DATA, d.showData ? YES : NO}, {K_DATA_AT, d.dataBelow ? BELOW : SIDE},
                     {T_NAME + ": " + K_SIZE, num(d.nameT.size)}, {T_NAME + ": " + K_WEIGHT, weightName(d.nameT.weight)},
@@ -893,10 +928,11 @@ final class Design {
         line(sb, K_WEIGHT, files ? W_BOLD : W_REG);
         line(sb, K_FONT, SYSTEM);
         sb.append('\n').append('[').append(S_MID).append("]\n");
+        line(sb, K_MEASURE, BY_NAME);                                           // מבנה 258
         line(sb, K_STYLE, files ? GRID : ROWS);
         line(sb, K_COLS, files ? "3" : words ? "2" : "1");
-        line(sb, K_ICON, files ? "55%" : "340%");
-        line(sb, K_GAP, files ? "8%" : words ? "40%" : "50%");
+        line(sb, K_ICON, files ? "500%" : "340%");                              // מבנה 258: היו 55% ו־8% מרוחב האריח — אותו מראה בטלפון רגיל
+        line(sb, K_GAP, files ? "35%" : words ? "40%" : "50%");
         line(sb, K_SHOW_ICON, words ? NO : YES);
         line(sb, K_AROUND, files ? FRAME : FILL);
         line(sb, K_TINT, words ? YES : NO);

@@ -1658,7 +1658,7 @@ public final class Words {
         public static final String WHY_FILES = "רשת גדולה וברורה, כמו מנהל קבצים שוטף — לרשימה שהיא סביבת עבודה";
         public static final String WHY_WORDS = "בלי צלמיות: אריחים צבעוניים עם מילים, בשני טורים";
         public static final String FILE_NOTE = "אפשר לערוך ידנית. מה שחסר כאן נלקח מ\"רשימת קבצים\", ושורה לא מובנת לא נלקחת";
-        public static final String FILE_NOTE2 = "רשת: צלמית וריווח באחוזים מרוחב האריח. שורות: באחוזים מגודל השם. משקל: דק / רגיל / בינוני / מודגש. סביב הצלמית: בלי / מסגרת / ריבוע צבעוני";
+        public static final String FILE_NOTE2 = "צלמית וריווח — באחוזים מגודל השם, בשורות וברשת (ברשת — הצלמית לא גדולה מהאריח). משקל: דק / רגיל / בינוני / מודגש. סביב הצלמית: בלי / מסגרת / ריבוע צבעוני";
         public static final String LISTS_NOTE = "צלמית וצבע לכל רשימה, לפי המסלול שלה, למשל: לימוד/הערות = צלמית 📚 · צבע ירוק. בסביבה אחרת — רק כשיש רשימה באותו מסלול";
         public static final String EXISTS = "כבר יש עיצוב בשם הזה";
         public static final String MENU = "🎨 עיצוב";

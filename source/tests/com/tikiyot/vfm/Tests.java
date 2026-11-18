@@ -666,8 +666,25 @@ public final class Tests {
         check("1.12.0: ברירת מחדל — שורות", !def.grid && def.cols == 1 && def.icon == 340 && def.nameT.size == 16
                 && Design.FILL.equals(def.around) && !def.fit && def.lines == 2);
         Design files = Design.parse(Design.FILES, Design.builtInText(Design.FILES));
-        check("1.12.0: תוכנת ניהול קבצים — רשת 3, מסגרת, התאם למקום", files.grid && files.cols == 3 && files.icon == 55
-                && Design.FRAME.equals(files.around) && files.fit && files.nameT.weight == 700);
+        check("1.12.0: תוכנת ניהול קבצים — רשת 3, מסגרת, התאם למקום (מבנה 258: הצלמית והריווח — מגודל השם: 500%, 35%)", files.grid && files.cols == 3
+                && files.icon == 500 && files.gap == 35 && Design.FRAME.equals(files.around) && files.fit && files.nameT.weight == 700);
+        // מבנה 258 (המשתמש, 18.11.2026: "האם יש דרך לקבוע יחס אחיד לשניהם?" — "כן"): צלמית וריווח — אחוז מגודל השם, בשורות וברשת
+        String old258 = "[אמצע]\nסגנון = רשת\nטורים = 3\nצלמית = 55%\nריווח = 8%\nשם: גודל = 14\n";
+        Design o258 = Design.parse("ישן", old258), n258 = Design.parse("חדש", old258.replace("[אמצע]\n", "[אמצע]\nמידות = לפי השם\n"));
+        Design r258 = Design.parse("שורות", "[אמצע]\nסגנון = שורות\nצלמית = 340%\nריווח = 50%\n");
+        Design p258 = Design.parse("חלקי", "[אמצע]\nסגנון = רשת\nטורים = 3\n");
+        check("מבנה 258: קובץ רשת ישן (בלי \"מידות\") — מומר בקריאה, וקרוב למובנה של היום (" + o258.icon + ", " + o258.gap + "); קובץ מסומן, קובץ של שורות,"
+                        + " ומה שלא נכתב בקובץ — כמו שהם", Math.abs(o258.icon - files.icon) <= 5 && Math.abs(o258.gap - files.gap) <= 2
+                        && n258.icon == 55 && n258.gap == 8 && r258.icon == 340 && r258.gap == 50 && p258.icon == def.icon && p258.gap == def.gap);
+        Design g258 = Design.parse("רשת", Design.builtInText(Design.DEFAULT).replace("סגנון = שורות", "סגנון = רשת"));
+        check("מבנה 258: אותו מספר — אותה צלמית ואותו ריווח בשורות וברשת (בלי מה שיתקן אחרי החלפת סגנון)", g258.grid && !def.grid
+                && g258.iconPx(48f, 1080, g258.padPx(48f, 6)) == def.iconPx(48f, 1080, def.padPx(48f, 0)) && def.iconPx(48f, 1080, 24) == 163
+                && g258.padPx(48f, 6) == def.padPx(48f, 0) && def.padPx(48f, 0) == 24);
+        check("מבנה 258: ברשת — הצלמית לא גדולה ממה שנכנס באריח; בשורות — לא מוגבלת; ריווח 0 ברשת — המעט שנשאר", g258.iconPx(48f, 120, 10) == 100
+                && def.iconPx(48f, 120, 10) == 163 && Design.parse("x", "[אמצע]\nמידות = לפי השם\nסגנון = רשת\nריווח = 0%\n").padPx(48f, 6) == 6);
+        check("מבנה 258: עיצוב מובנה — מסומן \"מידות = לפי השם\", והתוכנה אומרת לתוספים שהיא מודדת כך (namesize)",
+                Design.builtInText(Design.FILES).contains(Design.K_MEASURE + " = " + Design.BY_NAME)
+                        && read(new File(System.getProperty("vfm.src"), "src/com/tikiyot/vfm/lev/Bridge.java")).contains(" namesize\""));
         Design words = Design.parse(Design.WORDS, Design.builtInText(Design.WORDS));
         check("1.12.0: מילים וצבע — בלי צלמית, עם צבע רקע", !words.grid && words.cols == 2 && !words.showIcon && words.tint);
 
