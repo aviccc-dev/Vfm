@@ -4404,6 +4404,61 @@ public final class Tests {
             check("מ0.45+: העורך הישן נמחק — החדש נפתח עם הקובץ (startFile), ויש בו הפקודות הנפוצות ושמירה כנפוצה",
                     html.contains("V.startFile()") && html.contains("V.templates()") && html.contains("V.saveTemplate(")
                             && !new File(System.getProperty("vfm.src"), "src/com/tikiyot/vfm/BatchEditScreen.java").exists());
+            // מבנה 261 (המשתמש, 18.11.2026: "תזכור להכניס הכל לגרסה ולתוסף העורך"): העורך מכיר "עצב" ו"ודא עיצוב". המתגים, הערכים
+            // והטווחים — מהתוכנה (design().info), ולא כתובים בקוד של העמוד ("כל דבר נקבע במקום אחד"); ורק לתוכנה שאומרת שהיא מכירה
+            // (info.features: design). הגשר לדוגמה שבעמוד (לבדיקת העמוד) — באותן מילים כמו בתוכנה.
+            int demoAt = html.indexOf("function demoBridge(");
+            String page = html.substring(0, demoAt), demo = html.substring(demoAt);
+            String verify = Words.DbCmd.N_VERIFY + " " + Syntax.W_SHAPE;
+            check("מבנה 261: העורך מכיר \"" + Verbs.SHAPE + "\" ו\"" + verify + "\", באותו הסבר כמו בתוכנה; הפרטים — ממה שהתוכנה מוסרת, ורק כשהיא אומרת שהיא מכירה",
+                    page.contains("'" + Verbs.SHAPE + "':{w:'" + Verbs.SHAPE + "',form:'shape',what:'" + Words.Def.W_SHAPE + "'")
+                            && page.contains("'" + verify + "':{w:'" + verify + "',en:'" + Syntax.VERIFY + " " + Syntax.W_SHAPE + "',form:'shape'")
+                            && page.contains("NEW_SHAPE_CMDS=['" + Verbs.SHAPE + "','" + verify + "']") && page.contains("V.design('','')")
+                            && page.contains("indexOf(' design ')") && page.contains("Mo.setDesign(")
+                            && read(new File(src, "src/com/tikiyot/vfm/lev/Bridge.java")).contains(" design "));
+            List<String> written = new ArrayList<String>(), miss = new ArrayList<String>();
+            List<String> sws = new ArrayList<String>(java.util.Arrays.asList(Verbs.SW_DESIGN, Verbs.SW_COLS, Verbs.SW_GAP, Verbs.SW_ICON_SIZE, Verbs.SW_T_TITLE,
+                    Verbs.SW_T_NAME, Verbs.SW_T_DATA, Verbs.SW_T_GROUP, Verbs.SW_T_TAG, Verbs.SW_MODE_LOOK, Verbs.SW_COLOR, Verbs.SW_WORDING));
+            for (String sk : Design.SHAPE_KEYS) sws.add(Verbs.shapeSwitch(sk));
+            for (String sw : sws) {
+                if (page.contains(sw)) written.add(sw);
+                if (!demo.contains("'" + sw + "'")) miss.add(sw);
+            }
+            check("מבנה 261: אף מתג של \"עצב\" אינו כתוב בקוד של העורך (" + written + ") — רק בגשר לדוגמה", written.isEmpty());
+            for (String[] r : Palette.ROLES) if (!demo.contains("[\"" + r[0] + "\",\"" + r[1] + "\",\"" + r[2] + "\"]")) miss.add(r[0]);
+            for (String d : new String[]{Design.DEFAULT, Design.FILES, Design.WORDS}) if (!demo.contains("'" + d + "'")) miss.add(d);
+            for (String kind : Design.tagKinds()) if (!demo.contains("'" + kind + "'")) miss.add(kind);
+            for (int n = 0; n < Design.SHAPE_KEYS.length; n++) {
+                String sk = Design.SHAPE_KEYS[n];
+                String[] one = Design.choices(sk);
+                int[] r = Design.shapeRange(sk);
+                String vals = one != null ? "'" + String.join("','", one) + "'" : r[0] + "," + r[1];
+                if (!demo.contains("['" + sk + "','" + Verbs.shapeSwitch(sk) + "',[" + vals + "],'" + Design.SHAPE_IDS[n] + "']")) miss.add(sk);
+            }
+            for (String x : new String[]{"verb:'" + Verbs.SHAPE + "',program:'" + Verbs.PROGRAM_WORD + "'",
+                    "ranges:{cols:[" + Design.COLS[0] + "," + Design.COLS[1] + "],gap:[" + Design.GAP[0] + "," + Design.GAP[1] + "],icon:[" + Design.ICON[0] + ","
+                            + Design.ICON[1] + "]}",
+                    "texts:['" + Design.T_TITLE + "','" + Design.T_NAME + "','" + Design.T_DATA + "','" + Design.T_GROUP + "','" + Design.T_TAG + "']",
+                    "weights:['" + Design.W_LIGHT + "','" + Design.W_REG + "','" + Design.W_MED + "','" + Design.W_BOLD + "']",
+                    "keys:{light:'" + Palette.LIGHT + "',dark:'" + Palette.DARK + "',system:'" + Design.SYSTEM + "'}"})
+                if (!demo.contains(x)) miss.add(x);
+            check("מבנה 261: הגשר לדוגמה שבעורך — באותן מילים, ערכים וטווחים כמו בתוכנה (" + miss + ")", miss.isEmpty());
+            // מה שהעורך כותב (השורות שבבדיקות העמוד) — המנוע קורא, ומבין אותו דבר
+            String js = read(new File(pages, "orech-bdika.js"));
+            String w1 = "עצב תוכנה /טורים:\"\" /סגנון:רשת /כתב-שם:16,מודגש,\"דוד.ttf\" /תווית:\"פקודה\"=\"סקריפט\" /צבע:\"טקסט\"=#112233",
+                    w2 = "עצב \"עבודה\\לקוחות\\פעילים\" /עיצוב:\"" + Design.FILES + "\" /סגנון:רשת /סביב-הצלמית:\"ריבוע צבעוני\" /שורות-לשם:2";
+            Verbs.Cmd c1 = Verbs.parse(w1), c2 = Verbs.parse(w2);
+            String L = Verbs.E_LOOK;
+            check("מבנה 261: שורה שהעורך כותב — המנוע קורא אותה: כל התוכנה, \"\" לטורים, סגנון, כתב (גודל, משקל, גופן), נוסח וצבע",
+                    js.contains("'" + w1 + "'") && c1.error == null && Verbs.K_PROGRAM.equals(c1.kind) && c1.edit != null && c1.edit.size() == 7
+                            && "".equals(c1.edit.get(L + Design.K_COLS)) && Design.GRID.equals(c1.edit.get(L + Design.K_STYLE))
+                            && "16".equals(c1.edit.get(L + Design.T_NAME + ": " + Design.K_SIZE)) && Design.W_BOLD.equals(c1.edit.get(L + Design.T_NAME + ": " + Design.K_WEIGHT))
+                            && "דוד.ttf".equals(c1.edit.get(L + Design.T_NAME + ": " + Design.K_FONT))
+                            && "סקריפט".equals(c1.edit.get(L + Design.K_WORDING + ": פקודה")) && "#112233".equals(c1.edit.get(L + Palette.K_COLOR + ": טקסט")));
+            check("מבנה 261: ...ורשימה: הדרך מתחילה באופן; עיצוב מוכן, ערך בשתי מילים, ומספר",
+                    js.contains("'" + w2.replace("\\", "\\\\") + "'") && c2.error == null && Verbs.K_LIST.equals(c2.kind) && "עבודה".equals(c2.cond)
+                            && "לקוחות\\פעילים".equals(c2.arg.replace('/', '\\')) && Design.FILES.equals(c2.edit.get(Store.P_DESIGN))
+                            && Design.FILL.equals(c2.edit.get(L + Design.K_AROUND)) && "2".equals(c2.edit.get(L + Design.K_LINES)));
         } catch (Exception e) {
             check("מ0.41: התוסף שבהתקנה — " + e, false);
         }

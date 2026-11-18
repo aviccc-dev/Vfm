@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="vfm-plugin" content="עורך אינטראקטיבי">
-<meta name="vfm-plugin-version" content="20">
+<meta name="vfm-plugin-version" content="21">
 <meta name="vfm-lab" content="עורך אינטראקטיבי">
 <meta name="vfm-lab-version" content="8">
 <title>עורך אינטראקטיבי</title>
@@ -84,6 +84,8 @@ body{padding-bottom:calc(24px + env(safe-area-inset-bottom,0px))}
 .keys{display:flex;gap:6px;padding:8px 12px 0;flex-wrap:wrap}
 .key{font:inherit;min-width:2.6em;padding:5px 10px;border-radius:7px;border:1px solid var(--rule);background:var(--bg);color:var(--fg);cursor:pointer}
 .key small{color:var(--muted);font-size:.75em}
+.key.on{background:var(--chip);color:var(--chip-fg);border-color:var(--chip);font-weight:600}
+.vrow{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
 .addrow{padding:10px 12px}
 .ghostbtn{background:transparent;border:1px dashed var(--rule);color:var(--muted);border-radius:8px;padding:7px 12px;font:inherit;font-size:.92rem;cursor:pointer}
 .empty{padding:28px 16px;color:var(--muted);text-align:center}
@@ -135,7 +137,7 @@ button:focus-visible,.fi:focus-visible{outline:2px solid var(--accent);outline-o
 window.VfmEditorModel=(function(){
 "use strict";
 // מ0.40 התוכנה מכירה "תוסף" (הוסף תוסף, פתח תוסף…); הגרסה הקודמת — "מעבדה". העמוד בודק בהתחלה, וכותב מה שהמנוע המותקן מכיר
-const compat={plugins:true,v45:true,n4:true,n15:true,n16:true};   // n15 — גרסה 15: התוכנה מכירה "ארוז" ו"פרוס" (info.features: zip)
+const compat={plugins:true,v45:true,n4:true,n15:true,n16:true,design:false};   // n15 — גרסה 15: התוכנה מכירה "ארוז" ו"פרוס" (info.features: zip)
 //   // v45 — מ0.45 ומעלה (מחק אופן, הסל, ודא תקין…); n4 — גרסה 14: התוכנה מכירה "/מגיבוי" ו"ודא רציף"
 const q=s=>'"'+s+'"';
 const qv=v=>/[\s"]/.test(v)||v===''?q(v):v;
@@ -205,6 +207,8 @@ const NEW_N4=['מגיבוי'],NEW_N4_CMDS=['ודא רציף'];
 const NEW_N15_CMDS=['ארוז','פרוס','שחזר דוגמאות'];
 // גרסה 16: הגדר (info.features: set)
 const NEW_N16_CMDS=['הגדר'];
+// גרסה 21: עצב · ודא עיצוב (info.features: design) — והפרטים שלהן באים מהתוכנה (setDesign, למטה)
+const NEW_SHAPE_CMDS=['עצב','ודא עיצוב'];
 const DATES=['מהיום','מהשבוע','מהחודש','מהשנה','תאריך אחר'];
 const TRANSFER=['הכל','נסתרים'].concat(TAKEN,DATES,['גודל','מכיל בקובץ','עד אחוז','יומן']);
 
@@ -224,7 +228,11 @@ const PICK={
   cmdfile:{label:'קובץ פקודות',v:'place'},
   outfile:{label:'קובץ',v:'place'},
   htmlfile:{label:'עמוד מעבדה (html)',v:'place'},
-  mode:{label:'אופן',v:'mode'}
+  mode:{label:'אופן',v:'mode'},
+  // גרסה 21: מה מעצבים — "עצב תוכנה" · "עצב "<אופן>"" · "עצב "<אופן>\<רשימה>…""
+  shprog:{label:'כל התוכנה',v:'shape'},
+  shmode:{label:'אופן — הבית שלו, ומעל כל הרשימות שלו',v:'shape'},
+  shlist:{label:'רשימה — והרשימות שבתוכה',v:'shape'}
 };
 const PLACE_PICKS=['folder','file','home','cmdfile','outfile','htmlfile'];
 function pickOf(v){
@@ -234,6 +242,7 @@ function pickOf(v){
   if(v.kind==='smart')return [v.files?'smartfiles':'smart'];
   if(v.kind==='expfile')return ['expfile','impfile'];
   if(v.kind==='mode')return ['mode'];
+  if(v.kind==='shape')return [v.is==='program'?'shprog':v.is==='mode'?'shmode':'shlist'];
   return [];
 }
 const BASE_SCREENS=['הבית','חיפוש','פקודות','קבצים פיזיים','קבצים וירטואליים','הגדרות','סל','עורך פקודות','גיבויים','אבחון'];
@@ -346,6 +355,12 @@ const CMDS={
   'שם':{w:'שם',text:'השם בתפריט',what:'כותרת הקובץ: השם בתפריט'},
   'למה':{w:'למה',text:'למה הקובץ קיים',what:'כותרת הקובץ: ההסבר'},
 
+  // גרסה 21 (המשתמש, 18.11.2026: "תזכור להכניס הכל… לתוסף העורך"): עצב · ודא עיצוב. הפרטים (det) — מהתוכנה, לא כתובים כאן
+  'עצב':{w:'עצב',form:'shape',what:'קובע את העיצוב של רשימה, של אופן או של כל התוכנה',
+    slots:[{link:'את',kind:'pick',pk:['shprog','shmode','shlist'],label:'מה מעצבים'}],det:[]},
+  'ודא עיצוב':{w:'ודא עיצוב',en:'VERIFY עיצוב',form:'shape',what:'בודק את העיצוב שנראה בפועל (אחרי הירושה): ✅ או ❌, ולא עוצר',
+    slots:[{link:'של',kind:'pick',pk:['shprog','shmode','shlist'],label:'של מה'}],det:[]},
+
   'גבה':{w:'גבה',en:'BACKUP',read:['BACKUP'],what:'גיבוי ידני של המסד של האופן (לא נמחק לבד)',slots:[],det:[]},
   'רענן':{w:'רענן',en:'REFRESH',read:['REFRESH'],what:'מרענן את האינדקס, כדי שקבצים חדשים יימצאו. עמוק — בדיקה מלאה; מלא — בנייה מחדש',slots:[],det:['עמוק','מלא','קוראים']},
   'הוסף תוסף':{w:()=>compat.plugins?'הוסף תוסף':'הוסף מעבדה',read:['הוסף מעבדה'],what:'מוסיף תוסף (עמוד html). בלי קובץ — החדש ביותר בהורדות',slots:[{link:'',kind:'pick',pk:['htmlfile'],opt:true}],det:[]},
@@ -356,6 +371,7 @@ Object.keys(CMDS).forEach(k=>{const d=CMDS[k];d.id=k;if(!d.read)d.read=[];if(!d.
 const MENU=[
   ['קבצים ותיקיות',['העתק','העבר','מחק','שנה','צור תיקייה','מחק תיקייה','השווה','הפעל','שחזר מהסל','רוקן סל','ארוז','פרוס']],
   ['רשימות',['צור רשימה','צור רשימה חכמה','עדכן רשימה חכמה','העתק','העבר','שנה','בטל','בטל לא-משויכים','קשר','צור רעיון','צור כותרת']],
+  ['עיצוב',['עצב','ודא עיצוב']],   // גרסה 21
   ['פתיחה בסוף ההרצה',['פתח מסך','פתח רשימה','פתח רשימה חכמה','פתח תיקייה','פתח תפריט','פתח כלי','מצא','חזרה','הרץ','הוסף','צור פקודה']],
   ['הודעות וכתיבה',['הודעה','הערה','כתוב','דוח']],
   ['בדיקות וזרימה',['ודא','ודא שגיאה','ודא מסד','ודא תקין','ודא רציף','ודא אופן','קטע','המתן','המשך','כלול','לולאה','הדמיה','בדיקה','מדידה']],
@@ -363,7 +379,7 @@ const MENU=[
   ['המסד והתוספים',['אופן','צור אופן','בטל אופן','שחזר דוגמאות','גבה','רענן','הגדר','הוסף תוסף','החלף תוסף']]   // גרסה 9: "אופן" — כאן (המשתמש לא מצא אותה ב"רשימות")
 ];
 // מ0.40: "הוסף תוסף" ו"החלף תוסף" ירדו (העמודים עוברים ב"העבר"); בגרסה הקודמת — עדיין בתפריט
-function menu(){return MENU.map(([g,ks])=>[g,(compat.plugins?ks.filter(k=>k!=='הוסף תוסף'&&k!=='החלף תוסף'):ks).filter(k=>compat.v45||NEW045_CMDS.indexOf(k)<0).filter(k=>compat.n4||NEW_N4_CMDS.indexOf(k)<0).filter(k=>compat.n15||NEW_N15_CMDS.indexOf(k)<0).filter(k=>compat.n16||NEW_N16_CMDS.indexOf(k)<0)]);}
+function menu(){return MENU.map(([g,ks])=>[g,(compat.plugins?ks.filter(k=>k!=='הוסף תוסף'&&k!=='החלף תוסף'):ks).filter(k=>compat.v45||NEW045_CMDS.indexOf(k)<0).filter(k=>compat.n4||NEW_N4_CMDS.indexOf(k)<0).filter(k=>compat.n15||NEW_N15_CMDS.indexOf(k)<0).filter(k=>compat.n16||NEW_N16_CMDS.indexOf(k)<0).filter(k=>compat.design||NEW_SHAPE_CMDS.indexOf(k)<0)]).filter(([g,ks])=>ks.length);}
 
 // הצורות שנקראות: מילים ← הפקודה (הארוכה קודם)
 const READS=[];
@@ -371,6 +387,7 @@ Object.keys(CMDS).forEach(k=>{const d=CMDS[k];
   const forms=[typeof d.w==='string'?d.w:k].concat(d.read,d.en&&d.en.indexOf(' ')<0?[d.en]:[]);   // פונקציה (הכפל, תוסף) — לפי שם הפקודה
   forms.forEach(f=>READS.push({w:f.split(' '),id:k}));});
 READS.push({w:['VERIFY','שגיאה'],id:'ודא שגיאה'});
+READS.push({w:['VERIFY','עיצוב'],id:'ודא עיצוב'});
 READS.sort((a,b)=>b.w.length-a.w.length);
 const isLatin=s=>/^[A-Za-z]/.test(s);
 
@@ -397,7 +414,7 @@ function takeNoOpen(m,rest){const r=(' '+rest+' ').replace(' /בלי-לפתוח 
 function takeSort(m,rest){const i=rest.indexOf('מיון:');if(i<0||(i>0&&rest[i-1]!==' '))return rest;m.dets.push({d:'מיון',v:unq(rest.slice(i+5))});return rest.slice(0,i).trim();}
 function readDet(def,t){
   for(const id of def.det){const x=DETS[id];if(x.val||!x.read)continue;const r=x.read(t);if(r!==undefined)return {d:id};}
-  for(const id of def.det){const x=DETS[id];if(!x.val||!x.read)continue;const r=x.read(t);if(r!==undefined&&r!=='')return {d:id,v:r};}
+  for(const id of def.det){const x=DETS[id];if(!x.val||!x.read)continue;const r=x.read(t);if(r!==undefined&&(r!==''||x.reset))return {d:id,v:r===''?RESET:r};}
   return null;
 }
 function blank(cmd){const def=CMDS[cmd];return def.text?{cmd:cmd,text:''}:{cmd:cmd,vals:def.slots.map(()=>null),dets:[]};}
@@ -449,6 +466,16 @@ function fromLine(s){
     case 'tool':{const nr=nameAndRest(rest);if(TOOLS.indexOf(nr[0])<0)return null;m.vals[0]={kind:'word',raw:nr[0]};m.vals[1]=nr[1]?{kind:'text',raw:nr[1]}:null;return m;}
     case 'run':{const r=unq(rest);if(!r)return null;m.vals[0]={kind:'place',raw:r};return m;}
     case 'add':{if(ADDS.indexOf(rest)<0)return null;m.vals[0]={kind:'word',raw:rest};return m;}
+    // גרסה 21: עצב / ודא עיצוב — היעד (תוכנה · "<אופן>" · "<אופן>\<רשימה>…") והמתגים, בכל סדר. מתג שהתוכנה לא מסרה, מתג
+    // שנכתב פעמיים, "" במקום שאינו מותר, או פרט שאינו שייך ליעד — השורה נשארת כמו שהיא (לא מאבדים דבר)
+    case 'shape':{if(!SHAPE)return null;
+      for(let i=n;i<tk.length;i++){const t=tk[i];
+        if(t.raw[0]==='/'){const d=readDet(def,t.t);if(!d||m.dets.some(x=>x.d===d.d)||(d.v===RESET&&!canReset(hit.id,d.d)))return null;m.dets.push(d);continue;}
+        const x=t.t.trim();if(m.vals[0]||!x)return null;
+        if(x===SHAPE.program)m.vals[0]={kind:'shape',raw:x,is:'program'};
+        else{const p=x.split(/[\\/]/).map(y=>y.trim()).filter(Boolean);if(!p.length)return null;m.vals[0]={kind:'shape',raw:p.join('\\'),is:p.length>1?'list':'mode'};}
+      }
+      const ok=allowed(m);return m.dets.some(d=>ok.indexOf(d.d)<0)?null:m;}
   }
   // הצורה הכללית: מקומות (עם מילות סוג), ופרטים בכל מקום בשורה
   const vals=[];
@@ -565,6 +592,7 @@ function toLine(m,lang){
     case 'name1':if(has(v[0]))parts.push(q(v[0].raw));return parts.concat(has(v[0])?detsOut(m,lang):[]).join(' ');
     case 'tool':if(has(v[0]))parts.push(v[0].raw);if(has(v[0])&&has(v[1]))parts.push(v[1].raw);return parts.join(' ');
     case 'run':case 'add':if(has(v[0]))parts.push(v[0].kind==='word'?v[0].raw:q(v[0].raw));return parts.join(' ');
+    case 'shape':if(has(v[0]))parts.push(v[0].is==='program'?v[0].raw:q(v[0].raw));return parts.concat(detsOut(m,lang)).join(' ');   // גרסה 21
     case 'comp':
       if(has(v[0])&&has(v[1])&&v[0].kind==='list'&&!v[0].files&&!v[0].content&&v[1].kind==='place'){
         parts.push('/רשימה:'+q(listPath(v[0].raw)),q(v[1].raw));return parts.concat(detsOut(m,lang)).join(' ');}
@@ -604,6 +632,7 @@ function allowed(m){
 function allowed0(m){
   const def=CMDS[m.cmd];if(!def||def.text)return [];
   const v=m.vals||[],ok=def.det;
+  if(def.form==='shape')return ok.filter(x=>!(DETS[x].prog&&v[0]&&v[0].is==='list'));   // גרסה 21: הצבעים — רק לכל התוכנה ולאופן
   if(m.cmd==='העתק'||m.cmd==='העבר'){
     if(isL(v[1]))return [];
     if(isL(v[0]))return ok.filter(x=>x==='הכל'||x==='מכיל בקובץ'||DETS[x].g==='taken');
@@ -629,8 +658,9 @@ function allowed0(m){
 /** לא משאירים דבר לא תקין: פרט שכבר לא מתאים — יורד; מחזיר מה ירד */
 function prune(m){
   if(!m||!m.cmd||CMDS[m.cmd].text)return [];
-  const ok=allowed(m),gone=m.dets.filter(d=>ok.indexOf(d.d)<0).map(d=>d.d);
-  if(gone.length)m.dets=m.dets.filter(d=>ok.indexOf(d.d)>=0);
+  const fits=d=>ok.indexOf(d.d)>=0&&!(d.v===RESET&&!canReset(m.cmd,d.d));   // גרסה 21: "כמו שמעליו" — לא ב"ודא עיצוב"
+  const ok=allowed(m),gone=m.dets.filter(d=>!fits(d)).map(d=>d.d);
+  if(gone.length)m.dets=m.dets.filter(fits);
   return gone;
 }
 /** מקום שנבחר בו משהו שכבר לא מתאים (אחרי החלפת המקור) — מתרוקן; מחזיר את מילות הקישור שהתרוקנו */
@@ -646,6 +676,7 @@ function missing(m){
   const def=CMDS[m.cmd];if(def.text)return [];
   const out=[];
   def.slots.forEach((sl,k)=>{if(sl.opt||sl.kind==='screenarg')return;const v=m.vals[k];if(!has(v))out.push((sl.link?sl.link+' ':'')+(sl.label||'בורר'));});
+  if(def.form==='shape'&&!m.dets.length)out.push(m.cmd==='עצב'?'פרטים (מה לקבוע)':'פרטים (מה לבדוק)');   // גרסה 21: בלי מתג — שגיאה במנוע
   return out;
 }
 /** מה שמוצג בשורה סגורה: אותן מילים כמו בשורה הפתוחה (בקובץ — התחביר של המנוע) */
@@ -655,6 +686,7 @@ function shown(v){
   if(v.kind==='smart')return {kl:v.files?'הקבצים של חכמה':'רשימה חכמה',t:listPath(v.raw).replace(/\//g,' › ')};
   if(v.kind==='expfile')return {kl:'קובץ רשימה',t:path(v.raw)};
   if(v.kind==='place')return {kl:'',t:v.raw==='%בית%'?'הבית':path(v.raw)};
+  if(v.kind==='shape')return v.is==='program'?{kl:'',t:'כל התוכנה'}:{kl:v.is==='mode'?'אופן':'רשימה',t:String(v.raw).replace(/\\/g,' › ')};   // גרסה 21
   return {kl:'',t:String(v.raw)};
 }
 function parts(m,lang){
@@ -665,7 +697,50 @@ function parts(m,lang){
   m.dets.forEach(d=>out.push({c:'dt',t:'· '+d.d+(d.v!=null&&d.v!==''?' '+d.v:'')}));
   return out;
 }
+// ---------- גרסה 21: "עצב" ו"ודא עיצוב" — הפרטים באים מהתוכנה ----------
+// המתגים, הערכים והטווחים אינם כתובים בעמוד: התוכנה מוסרת אותם (design().info — המקום האחד שבו הם נקבעים), והעורך בונה מהם את
+// הפרטים. מה שהתוכנה לא מסרה — לא מוצע; תוכנה שאינה מכירה את "עצב" — אין פרטים, הפקודות אינן בתפריט, ושורה של "עצב" נשארת כמו שהיא.
+const RESET='↺ כמו שמעליו';      // בשורה: "" — חוזרים לקבל ממה שמעליו (בנוסח של תווית — כמו במילון)
+let SHAPE=null;const SHAPE_IDS=[];
+/** "כמו שמעליו" — ב"עצב"; ב"ודא עיצוב" — רק בנוסח של תווית ("" = כמו במילון) */
+function canReset(cmd,id){const x=DETS[id];return !!x&&!!x.reset&&(cmd==='עצב'||!!x.wording);}
+/** פרט של "עצב" ממתג שהתוכנה מסרה. who — מתג של "<מי>"=<ערך> (צבע של תפקיד, נוסח של סוג) */
+function shsw(sw,o){
+  const head=o.who!=null?sw+q(o.who)+'=':sw,pre=o.who!=null?sw+o.who+'=':sw;
+  const d=Object.assign({shape:true,reset:true},o);
+  d.write=v=>{
+    if(v===RESET)return head+'""';
+    v=String(v);
+    if(o.font)return head+v.split(',').map(p=>p.trim()).filter(Boolean).map(p=>/^\d+$/.test(p)||(o.bare||[]).indexOf(p)>=0?p:q(p)).join(',');
+    return head+(o.quote||/[\s"]/.test(v)||v===''?q(v):v);
+  };
+  d.read=t=>t.startsWith(pre)?t.slice(pre.length):undefined;
+  if(o.range){d.ph=o.range[0]+' עד '+o.range[1];d.txt=o.range[0]+'–'+o.range[1];
+    d.check=v=>/^\d+$/.test(String(v))&&+v>=o.range[0]&&+v<=o.range[1]?null:o.range[0]+'–'+o.range[1];}
+  return d;
+}
+/** מה שהתוכנה מסרה על "עצב" (null — אינה מכירה): מכאן הפרטים של שתי הפקודות */
+function setDesign(info){
+  SHAPE_IDS.forEach(id=>{delete DETS[id];});SHAPE_IDS.length=0;
+  SHAPE=info&&info.switches&&info.program?info:null;compat.design=!!SHAPE;
+  if(SHAPE){
+    const sw=SHAPE.switches,rg=SHAPE.ranges||{},ks=SHAPE.keys||{},name=s=>String(s).replace(/^\//,'').replace(/:$/,'').replace(/-/g,' ');
+    const add=(id,d)=>{if(DETS[id])id=id+' (עיצוב)';DETS[id]=d;SHAPE_IDS.push(id);};
+    const S1='עיצוב מוכן',S2='טורים, ריווח וצלמית',S3='הפריט',S4='הכתב',S5='הנוסח של תווית הסוג',S6='צבעים — לכל התוכנה ולאופן';
+    if(sw.design)add(name(sw.design),shsw(sw.design,{val:'one',items:SHAPE.designs||[],quote:true,sec:S1}));
+    ['cols','gap','icon'].forEach(k=>{if(sw[k]&&rg[k])add(name(sw[k]),shsw(sw[k],{val:'num',range:rg[k],sec:S2}));});
+    (SHAPE.shape||[]).forEach(x=>{const vs=x[2]||[],num=vs.length===2&&typeof vs[0]==='number';
+      add(x[0],shsw(x[1],num?{val:'num',range:vs,sec:S3}:{val:'one',items:vs,sec:S3}));});
+    const bare=(SHAPE.weights||[]).slice(),hints=bare.concat(ks.system?[ks.system]:[],SHAPE.fonts||[]);
+    (SHAPE.texts||[]).forEach(t=>{if(sw[t])add(name(sw[t]),shsw(sw[t],{val:'text',font:true,bare:bare,hints:hints,sec:S4,ph:'גודל, משקל, גופן — למשל: 16,'+(bare[bare.length-1]||''),txt:'גודל, משקל, גופן — מה שכותבים'}));});
+    if(sw.wording)(SHAPE.kinds||[]).forEach(k=>add(name(sw.wording)+': '+k,shsw(sw.wording,{val:'text',who:k,wording:true,quote:true,sec:S5,ph:'הנוסח שיוצג'})));
+    if(sw.look&&ks.light&&ks.dark)add(name(sw.look),shsw(sw.look,{val:'one',items:[ks.light,ks.dark],sec:S6,prog:true}));
+    if(sw.color)(SHAPE.roles||[]).forEach(r=>add(name(sw.color)+': '+r[0],shsw(sw.color,{val:'text',who:r[0],sec:S6,prog:true,ph:'#RRGGBB'})));
+  }
+  NEW_SHAPE_CMDS.forEach(k=>{CMDS[k].det=SHAPE_IDS.slice();CMDS[k].auto=!SHAPE;});   // auto — לא מוצעת בהקלדה
+}
 return {compat:compat,screens:screens,CMDS:CMDS,DETS:DETS,PICK:PICK,MENU:MENU,menu:menu,TOOLS:TOOLS,ADDS:ADDS,GROUP_TITLE:GROUP_TITLE,
+  RESET:RESET,canReset:canReset,setDesign:setDesign,design:()=>SHAPE,
   fromLine:fromLine,toLine:toLine,blank:blank,allowed:allowed,prune:prune,pruneVals:pruneVals,missing:missing,
   pickKinds:pickKinds,pickOf:pickOf,addDet:addDet,shown:shown,parts:parts,word:word,has:has,listPath:listPath};
 })();
@@ -685,6 +760,8 @@ Mo.compat.v45=can('commandMatrix');          // מ0.45 ומעלה
 Mo.compat.n15=(function(){try{return (' '+(JSON.parse(can('info')?V.info():'{}').features||'')+' ').indexOf(' zip ')>=0;}catch(e){return false;}})();   // גרסה 15: "ארוז", "פרוס"
 Mo.compat.n16=(function(){try{return (' '+(JSON.parse(can('info')?V.info():'{}').features||'')+' ').indexOf(' set ')>=0;}catch(e){return false;}})();   // גרסה 16: "הגדר"
 Mo.compat.n4=(function(){try{return (' '+(JSON.parse(can('info')?V.info():'{}').features||'')+' ').indexOf(' steady ')>=0;}catch(e){return false;}})();   // גרסה 14: "/מגיבוי", "ודא רציף"
+// גרסה 21: "עצב" — רק לתוכנה שאומרת שהיא מכירה (info.features: design), ומה שהיא מוסרת: המתגים, הערכים והטווחים
+Mo.setDesign((function(){try{if(!can('design')||(' '+(JSON.parse(can('info')?V.info():'{}').features||'')+' ').indexOf(' design ')<0)return null;return JSON.parse(V.design('','')).info||null;}catch(e){return null;}})());
 function ask(method,args,cb){const id='r'+(++seq);pending[id]=cb;V[method].apply(V,[id].concat(args));}
 function J(s,d){try{return s==null?d:JSON.parse(s);}catch(e){return d;}}
 function pref(k,d){try{const v=V.load(k);return v==null?d:v;}catch(e){return d;}}
@@ -820,7 +897,7 @@ function smartForm(k){
 // גרסה 8 — המשתמש: "כדאי להוסיף סימן לסיום כל פקודה… בפרט בלולאות ותנאים ושאר מבנים מורכבים"; בחר בדוגמה ד: כרטיס לכל פקודה,
 // קו אנכי מ"חזור" עד "סוף", וצבע לפי הקבוצה בתפריט הפקודות
 const GROUP_COLOR={'קבצים ותיקיות':'#1D9E75','רשימות':'#378ADD','פתיחה בסוף ההרצה':'#D85A30','הודעות וכתיבה':'#888780',
-  'בדיקות וזרימה':'#7F77DD','כותרת הקובץ':'#B4B2A9','המסד והתוספים':'#BA7517'};
+  'בדיקות וזרימה':'#7F77DD','כותרת הקובץ':'#B4B2A9','המסד והתוספים':'#BA7517','עיצוב':'#D4537E'};
 const LOOP_COLOR=GROUP_COLOR['בדיקות וזרימה'];
 function groupOf(m){
   if(!m||!m.cmd)return null;
@@ -1152,6 +1229,13 @@ function pickNow(k,kd,mask){
   else if(kd==='cmdfile')openSheet({kind:'cmdfile',slot:k});
   else if(kd==='mode'){const ms=(can('modes')?J(V.modes(),[]):[]).filter(x=>x!=='שמור לתוכנה');   // אופן התוכנה — לא מתבטל
     openSheet({kind:'choose',slot:k,title:'אופן',items:ms,free:'שם האופן',make:n=>({kind:'mode',raw:n})});}
+  // גרסה 21: מה מעצבים. הדרך של רשימה מתחילה באופן ("<אופן>\<רשימה>…") — כמו שהבורר של התוכנה מוסר
+  else if(kd==='shprog')done({kind:'shape',raw:Mo.design().program,is:'program'});
+  else if(kd==='shmode'){const ms=can('modes')?J(V.modes(),[]):[];
+    openSheet({kind:'choose',slot:k,title:'אופן',items:ms,free:'שם האופן',make:n=>({kind:'shape',raw:n,is:'mode'})});}
+  else if(kd==='shlist')ask('pickList',[title],r=>{const o=J(r,null);if(!o)return;const way=String(o.path||'').split(/[\\/]/).map(x=>x.trim()).filter(Boolean);
+    if(!o.mode){toast('הבורר לא מסר את האופן של הרשימה');return;}
+    done({kind:'shape',raw:[o.mode].concat(way).join('\\'),is:way.length?'list':'mode'});});
   else if(kd==='outfile'||kd==='expfile')openSheet({kind:'choose',slot:k,title:Mo.PICK[kd].label,items:['קובץ קיים','קובץ חדש בתיקייה'],
     then:c=>{if(c==='קובץ קיים')ask('pickFile',[title],p=>{if(p)done({kind:kd==='expfile'?'expfile':'place',raw:V.toVar(p),is:'file'});});
       else ask('pickFolder',[title,true],p=>{if(p)openSheet({kind:'name',title:'שם הקובץ',ph:kd==='expfile'?'למשל רשימה.txt':'למשל יומן.txt',
@@ -1217,16 +1301,33 @@ function drawDet(){
     },{role:'menuitemcheckbox','aria-checked':String(!!cur)}));
     if(cur&&x.val){
       const r=E('div','vrow');r.style.padding='0 12px 10px';
-      const f=E('input','fi');f.type='text';f.value=cur.v||'';f.placeholder=x.ph||'';f.dir='auto';if(x.val==='num')f.inputMode='numeric';
-      f.addEventListener('input',()=>{let v=f.value;if(x.val==='num')v=v.replace(/\D/g,'');else v=fixText(v);if(v!==f.value)f.value=v;cur.v=v;});
-      f.addEventListener('focus',()=>{lastInput=f;});
-      r.appendChild(f);
-      if(x.val==='file')r.appendChild(B('key','בורר',()=>{const keep=sh;hideSheet();ask('pickFile',['קובץ'],p=>{sh=keep;if(p)cur.v=V.toVar(p);shade.hidden=false;sheet.hidden=false;drawSheet();});}));
+      const back=Mo.canReset(M.cmd,id);
+      if(x.val==='one')   // גרסה 21: בחירה מתוך הערכים שהתוכנה מסרה
+        x.items.forEach(it=>r.appendChild(B('key'+(cur.v===it?' on':''),it,()=>{cur.v=it;drawSheet();},{'aria-pressed':String(cur.v===it)})));
+      else{
+        const f=E('input','fi');f.type='text';f.value=cur.v===Mo.RESET?'':cur.v||'';f.placeholder=x.ph||'';f.dir='auto';if(x.val==='num')f.inputMode='numeric';
+        f.addEventListener('input',()=>{let v=f.value;if(x.val==='num')v=v.replace(/\D/g,'');else v=fixText(v);if(v!==f.value)f.value=v;cur.v=v;
+          const b=r.querySelector('.key.re');if(b){b.classList.remove('on');b.setAttribute('aria-pressed','false');}});
+        f.addEventListener('focus',()=>{lastInput=f;});
+        r.appendChild(f);
+        if(x.val==='file')r.appendChild(B('key','בורר',()=>{const keep=sh;hideSheet();ask('pickFile',['קובץ'],p=>{sh=keep;if(p)cur.v=V.toVar(p);shade.hidden=false;sheet.hidden=false;drawSheet();});}));
+        // גרסה 21: מה שאפשר לכתוב בכתב (המשקלים והגופנים שהתוכנה מסרה) — נגיעה מוסיפה, עם פסיק
+        (x.hints||[]).forEach(h=>r.appendChild(B('key',h,()=>{const v=cur.v===Mo.RESET?'':String(cur.v||'').trim();cur.v=v?v.replace(/,\s*$/,'')+','+h:h;drawSheet();})));
+      }
+      if(back)r.appendChild(B('key re'+(cur.v===Mo.RESET?' on':''),Mo.RESET,()=>{cur.v=Mo.RESET;drawSheet();},{'aria-pressed':String(cur.v===Mo.RESET)}));
       wrap.appendChild(r);
     }
     return wrap;
   };
-  const solo=ok.filter(id=>!DETS[id].g);
+  const solo=ok.filter(id=>!DETS[id].g&&!DETS[id].sec);
+  // גרסה 21: פרטים רבים (עצב) — בחלקים שנפתחים; ליד כל חלק — כמה נבחרו בו
+  const secs=[];ok.forEach(id=>{const c=DETS[id].sec;if(c&&secs.indexOf(c)<0)secs.push(c);});
+  secs.forEach(c=>{
+    const ids=ok.filter(id=>DETS[id].sec===c),n=ids.filter(on).length,open=sh.sec===c,box=E('div','items');
+    box.appendChild(B('it'+(open?' on':''),[E('span',null,c),E('span','k',(n?n+' ✓ ':'')+(open?'▾':'›'))],()=>{sh.sec=open?null:c;drawSheet();},{'aria-expanded':String(open)}));
+    if(open)ids.forEach(id=>box.appendChild(row(id,id+(DETS[id].txt?' — '+DETS[id].txt:''))));
+    sheetIn.appendChild(box);
+  });
   if(solo.length){const box=E('div','items');solo.forEach(id=>box.appendChild(row(id,id+(DETS[id].txt?' — '+DETS[id].txt:''))));sheetIn.appendChild(box);}
   if(!ok.length)sheetIn.appendChild(E('div','grp','אין פרטים למה שנבחר (לרשימה — בלי סינון ובלי "אם תפוס")'));
   ['taken','date','ex'].forEach(g=>{
@@ -1237,6 +1338,8 @@ function drawDet(){
   sheetIn.appendChild(B('primary','בחירה',()=>{
     const empty=sh.dets.filter(d=>DETS[d.d].val&&!String(d.v||'').trim()).map(d=>d.d);
     if(empty.length){toast('חסר ערך: '+empty.join(', '));return;}
+    const bad=sh.dets.filter(d=>DETS[d.d].check&&d.v!==Mo.RESET&&DETS[d.d].check(d.v)).map(d=>d.d+' — '+DETS[d.d].check(d.v));   // גרסה 21: הטווח שהתוכנה מסרה
+    if(bad.length){toast('מחוץ לטווח: '+bad.join(' · '));return;}
     M.dets=sh.dets;commit();closeSheet();}));
 }
 function cmdTree(pick,skip){
@@ -1450,11 +1553,29 @@ theme();
 
 // ---------- דוגמה לבדיקה בדפדפן (בתוכנה — הגשר האמיתי) ----------
 function demoBridge(){
+  // גרסה 21: מה שהתוכנה מוסרת על "עצב" (design().info) — באותן מילים כמו בתוכנה (שומר, בבדיקות המחשב).
+  // לבדיקת העמוד: __noDesign — תוכנה שאינה מכירה עיצוב; __m047 — מכירה, בלי "הפריט", בלי תווית הסוג ובלי נוסח (כמו מ0.47)
+  const DESIGN={verb:'עצב',program:'תוכנה',
+    switches:{design:'/עיצוב:',cols:'/טורים:',gap:'/ריווח:',icon:'/גודל-צלמית:','כותרת':'/כתב-כותרת:','שם':'/כתב-שם:','נתונים':'/כתב-נתונים:','קבוצה':'/כתב-קבוצה:','תווית':'/כתב-תווית:',wording:'/תווית:',look:'/מראה:',color:'/צבע:'},
+    keys:{light:'בהיר',dark:'כהה',system:'מערכת'},
+    texts:['כותרת','שם','נתונים','קבוצה','תווית'],weights:['דק','רגיל','בינוני','מודגש'],
+    ranges:{cols:[1,8],gap:[0,200],icon:[0,1000]},
+    designs:['רשימת קבצים','מנהל קבצים עם צלמיות','מילים וצבע'],fonts:['דוד.ttf'],
+    kinds:['רשימה ידנית','רשימה חכמה','תיקייה אמיתית','פקודה','קישור','כונן פנימי','כרטיס זיכרון'],
+    roles:[["טקסט","#202124","#E8EAED"],["טקסט משני","#5F6368","#BDC1C6"],["טקסט חלש","#9AA0A6","#80868B"],["טקסט על צבע","#FFFFFF","#FFFFFF"],["רקע","#FFFFFF","#202124"],["רקע רך","#F4F5F6","#2A2B2E"],["רקע הכותרת","#F1F3F4","#303134"],["כותרת קבוצה","#E8EAED","#3C4043"],["פס הבחירה","#E8F0FE","#1F3A5F"],["שורה שנבחרה","#D2E3FC","#28456E"],["הדגשה","#1A73E8","#8AB4F8"],["הדגשה כהה","#174EA6","#AECBFA"],["סימון התאמה","#FFF2A8","#5C4A00"],["בספק","#FFF1C2","#4A3D10"],["בספק חזק","#F2B52B","#F2B52B"],["אזהרה ומחיקה","#C5221F","#F28B82"],["צלמיות","#5F6368","#BDC1C6"],["קו בין חלקים","#E0E0E0","#3C4043"]],
+    shape:[['סגנון','/סגנון:',['רשת','שורות'],'grid'],['הצג צלמית','/הצג-צלמית:',['כן','לא'],'showIcon'],['סביב הצלמית','/סביב-הצלמית:',['בלי','מסגרת','ריבוע צבעוני','עיגול'],'around'],
+      ['צבע רקע לפריט','/צבע-רקע-לפריט:',['כן','לא'],'tint'],['הצג נתונים','/הצג-נתונים:',['כן','לא'],'showData'],['מקום הנתונים','/מקום-הנתונים:',['מתחת','בצד'],'dataBelow'],
+      ['שורות לשם','/שורות-לשם:',[1,6],'lines'],['התאם למקום','/התאם-למקום:',['כן','לא'],'fit'],['גודל מזערי','/גודל-מזערי:',[6,40],'min'],
+      ['הצג תווית','/הצג-תווית:',['כן','לא'],'showTag'],['מוסתר חיוור','/מוסתר-חיוור:',['כן','לא'],'fade']]};
+  if(window.__m047){delete DESIGN.shape;delete DESIGN.kinds;delete DESIGN.switches.wording;delete DESIGN.switches['תווית'];DESIGN.texts.pop();}
+  const FEATS='steady dropclean zip set cmdfolders'+(window.__noDesign?'':' design namesize');
   const files={'/k/גיבוי שבועי.vbat':'הערה גיבוי חודשי\nהעתק "%הורדות%\\חשבוניות" "%כרטיס%\\גיבוי" /עמוק\nמחק "%הורדות%\\זמני\\*.tmp" /נסתרים /תאריך:חודש\nפתח רשימה "עבודה"\nCOPY "%הורדות%\\הסכם.docx" "%כרטיס%"\nצור תיקייה "%כרטיס%\\גיבוי\\חדשה"\nחזור 3\nהודעה סבב %סבב%\nסוף\n:: הערה ישנה\n'};
   const store={};
   const later=(id,v)=>setTimeout(()=>window.vfmResult(id,v),30);
   const list=()=>JSON.stringify(Object.keys(files).map((p,i)=>({name:p.split('/').pop(),path:p,time:i})));
-  return {
+  const more=window.__noDesign?{}:{design:()=>JSON.stringify({info:DESIGN})};
+  return Object.assign(more,{
+    info:()=>JSON.stringify({features:FEATS}),
     theme:()=>null,load:k=>store[k]!=null?store[k]:(k==='file'?'/k/גיבוי שבועי.vbat':null),save:(k,v)=>{store[k]=v;},
     commandFiles:list,myCommands:list,
     templates:()=>JSON.stringify([{name:'גיבוי',mine:false,lines:['העתק "<מקור>" "<יעד>" /עמוק /תפוס:לדלג']},{name:'ניקוי זמניים',mine:true,lines:['מחק "%הורדות%\\*.tmp"','הודעה נוקה']}]),
@@ -1471,7 +1592,7 @@ function demoBridge(){
     smartLists:()=>JSON.stringify(['חדשים','ספרים\\פדף']),modes:()=>JSON.stringify(['עבודה','בדיקות מערכת']),
     smartForm:(id,n,c,so)=>later(id,JSON.stringify({name:n||'מהטופס',cond:(c?c+' ':'')+'סוג:ספרים',sort:'תאריך',view:''})),
     runFile:(t,p,r)=>{window.__ran={text:t,path:p,real:r};},runCommands:t=>{window.__ran=t;},close:()=>{},toast:()=>{},log:()=>{}
-  };
+  });
 }
 })();
 </script>
