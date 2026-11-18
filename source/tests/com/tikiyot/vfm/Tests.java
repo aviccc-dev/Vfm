@@ -4274,7 +4274,14 @@ public final class Tests {
                             && dbl.contains("LabScreen.design(this, Verbs.MODE_WORD, mode)")
                             && set.contains("LabScreen.design(SettingsScreen.this, Verbs.PROGRAM_WORD, \"\")")
                             && lab.contains("putExtra(EXTRA, Words.DbCmd.TOOL_DESIGN)") && br.contains("host.startTarget()") && html.contains("load('','')")
-                            && ls.contains("if (paint != Ui.painted())") && ls.contains("recreate();"));
+                            && ls.contains("paint = Ui.begin(this, false);") && ls.contains("if (!paint.equals(Ui.colors(this)))") && ls.contains("recreate();"));
+            // מבנה 270: הצבעים של מסך — של הרשימה שעליו; ומסך שחוזר לפנים — הצבעים שלו חוזרים לשימוש, במקום אחד
+            String ui270 = read(new File(code, "masachim/rechivim/Ui.java"));
+            check("מבנה 270: מסך של רשימה אומר מה המראות שלה (מהכלל שב־Palette), הצבעים נכנסים לשימוש לפי המסך, וכל מסך שחוזר לפנים מחזיר את שלו",
+                    dbl.contains("implements Ui.Colors") && dbl.contains("Palette.looksOf(getIntent().getStringExtra(EXTRA_MODE), getIntent().getLongExtra(EXTRA_LIST, 0))")
+                            && ui270.contains("a instanceof Colors ? ((Colors) a).looks() : Palette.looks()")
+                            && ui270.contains("registerActivityLifecycleCallbacks") && ui270.contains("public void onActivityResumed(Activity x) { colors(x); }")
+                            && !ui270.contains("Palette.version"));
         } catch (Exception e) {
             check("מבנה 244: " + e, false);
         }

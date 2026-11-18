@@ -91,6 +91,23 @@ final class Palette {
         return out;
     }
 
+    /**
+     * מבנה 270: לרשימה שעל המסך (המסכים) — המראות שלה, מהמסד של האופן שלה. אין רשימה, אין מסד, תקלה — של האופן שעל המסך.
+     * נקרא בכל פעם (לא נשמר): רשימה שעברה למקום אחר יורשת מיד ממה שמעליה עכשיו.
+     */
+    static String[] looksOf(String mode, final long list) {
+        if (list == 0 || mode == null || Db.app == null) return looks();
+        try {
+            if (!Db.dbFile(Db.app, mode).isFile()) return looks();
+            return Db.read(Db.app, mode, new Db.Use<String[]>() {
+                @Override public String[] run(SqlStore s) { return listLooks(s, list, true); }
+            });
+        } catch (Throwable e) {
+            Log.e("Palette.looksOf", e);
+            return looks();
+        }
+    }
+
     /** האם כהה (לפי מה שנקבע אחרון). */
     static boolean dark(String... looks) {
         boolean dark = false;
@@ -115,23 +132,15 @@ final class Palette {
 
     private static String[] now = null;
     private static String nowMode = null;
-    private static int version = 0;
 
     /** אחרי "עצב תוכנה" / "עצב "<אופן>"", ובמעבר אופן — לקרוא מחדש. */
     static synchronized void forget() {
         now = null;
-        version++;
-    }
-
-    /** מספר שמשתנה בכל פעם שמה שנקבע עשוי להשתנות — המסכים צובעים מחדש רק כשהוא זז. */
-    static synchronized int version() {
-        return version;
     }
 
     /** המראה של כל התוכנה ושל האופן שעל המסך — {של התוכנה, של האופן}. */
     static synchronized String[] looks() {
         if (now != null && String.valueOf(Db.currentMode).equals(nowMode)) return now;   // אופן אחר על המסך — קוראים מחדש
-        if (now != null) version++;
         nowMode = String.valueOf(Db.currentMode);
         String all = Design.programProps()[1], mode = null;
         try {

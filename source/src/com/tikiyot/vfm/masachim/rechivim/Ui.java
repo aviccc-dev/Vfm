@@ -54,35 +54,68 @@ public final class Ui {
             /** 197: כחול — הבחירה הפעילה, וכפתור טקסט; קו דק בין חלקים. */
             ACCENT = 0xFF1A73E8, ACCENT_DARK = 0xFF174EA6, RULE = 0xFFE0E0E0;
 
-    private static int painted = -1;
-    private static boolean darkNow;
+    private static String inUse = "";
+    private static boolean darkNow, watching;
 
     /**
-     * מבנה 238 (העיצוב): בתחילת כל מסך, לפני super.onCreate (שומר). הצבעים — מהעיצוב, כשמה שנקבע השתנה (עצב תוכנה / עצב "<אופן>",
-     * מעבר אופן); כהה — גם הערכה של אנדרואיד (החלונות, השדות). dialog — מסך בצורת חלון.
+     * מבנה 270 (המשתמש, 18.11.2026: "באופן אחר ברשימה אחרת עיצוב כהה מאוד"): מסך שהצבעים שלו אינם בהכרח של האופן — רשימה, עם מה
+     * שנקבע לה ולרשימות שמעליה — אומר מה המראות שלו (לפי הסדר של Palette). מסך אחר — הצבעים של האופן שעל המסך.
      */
-    public static void begin(Activity a, boolean dialog) {
+    public interface Colors {
+        String[] looks();
+    }
+
+    /**
+     * מבנה 238 (העיצוב): בתחילת כל מסך, לפני super.onCreate (שומר). הצבעים — של המסך הזה (מבנה 270); כהה — גם הערכה של אנדרואיד
+     * (החלונות, השדות). dialog — מסך בצורת חלון. חוזר: הסימן של הצבעים שהמסך נבנה בהם.
+     */
+    public static String begin(Activity a, boolean dialog) {
+        String sig = colors(a);
         try {
-            freshColors();
+            watch(a);
         } catch (Throwable e) {
             Log.e("Ui.begin", e);
         }
         if (darkNow) a.setTheme(dialog ? android.R.style.Theme_DeviceDefault_Dialog : android.R.style.Theme_DeviceDefault);
+        return sig;
     }
 
-    /** מבנה 245: המספר של הצבעים שבשימוש — מסך שנבנה במספר אחר נבנה מחדש כשחוזרים אליו (ListScreen). */
-    static synchronized int painted() {
-        return painted;
+    /**
+     * מבנה 270: הצבעים של המסך הזה — נכנסים לשימוש (הצבעים הם של המסך שמלפנים: מה שנבנה מעכשיו — שורות, חלונות, תפריטים —
+     * נבנה בהם). חוזר: הסימן שלהם; מסך שנבנה בסימן אחר נבנה מחדש כשחוזרים אליו (ListScreen).
+     */
+    static synchronized String colors(Activity a) {
+        try {
+            String[] l = a instanceof Colors ? ((Colors) a).looks() : Palette.looks();
+            int[] c = Palette.resolve(l);
+            boolean dark = Palette.dark(l);
+            String sig = java.util.Arrays.toString(c) + dark;
+            if (!sig.equals(inUse)) {
+                use(c, dark);
+                inUse = sig;
+            }
+        } catch (Throwable e) {
+            Log.e("Ui.colors", e);
+        }
+        return inUse;
     }
 
-    /** הצבעים מהעיצוב — רק כשמה שנקבע השתנה. true — השתנו. */
-    static synchronized boolean freshColors() {
-        String[] l = Palette.looks();
-        int v = Palette.version();
-        if (v == painted) return false;
-        use(Palette.resolve(l), Palette.dark(l));
-        painted = v;
-        return true;
+    /**
+     * מבנה 270: מסך שחוזר לפנים — הצבעים שלו חוזרים לשימוש (במקום אחד, לכל המסכים; אנדרואיד קורא לזה מתוך super.onResume של
+     * המסך). בלי זה, מי שחזר מרשימה כהה למסך בהיר היה בונה את השורות והחלונות הבאים בצבעים של הרשימה שנסגרה.
+     */
+    private static synchronized void watch(Activity a) {
+        if (watching || a.getApplication() == null) return;
+        watching = true;
+        a.getApplication().registerActivityLifecycleCallbacks(new android.app.Application.ActivityLifecycleCallbacks() {
+            @Override public void onActivityResumed(Activity x) { colors(x); }
+            @Override public void onActivityCreated(Activity x, android.os.Bundle b) { }
+            @Override public void onActivityStarted(Activity x) { }
+            @Override public void onActivityPaused(Activity x) { }
+            @Override public void onActivityStopped(Activity x) { }
+            @Override public void onActivitySaveInstanceState(Activity x, android.os.Bundle b) { }
+            @Override public void onActivityDestroyed(Activity x) { }
+        });
     }
 
     /** הצבעים, לפי הסדר של Palette.ROLES (הסדר כאן — כמו שם). */

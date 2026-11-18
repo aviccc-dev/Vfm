@@ -29,13 +29,12 @@ abstract class ListScreen<T> extends Activity {
     /** מבנה 238: הצבעים מהעיצוב — לפני super.onCreate (כל מסך שיורש מכאן). */
     @Override
     protected void onCreate(android.os.Bundle saved) {
-        Ui.begin(this, false);
-        paint = Ui.painted();
+        paint = Ui.begin(this, false);
         super.onCreate(saved);
     }
 
-    /** מבנה 245: הצבעים שהמסך נבנה בהם — השתנו בינתיים (לוח העיצוב, "עצב תוכנה / אופן") — נבנה מחדש כשחוזרים. */
-    private int paint;
+    /** מבנה 245, 270: הצבעים שהמסך נבנה בהם (הסימן) — השתנו בינתיים (לוח העיצוב, "עצב") — נבנה מחדש כשחוזרים. */
+    private String paint = "";
 
 
     /** מספרי התפריט של השלד (שלא יתנגשו במספרים של המסך). */
@@ -280,8 +279,7 @@ abstract class ListScreen<T> extends Activity {
     @Override
     protected void onResume() {
         super.onResume();
-        Ui.freshColors();
-        if (paint != Ui.painted()) {                                            // מבנה 245: הצבעים השתנו — נבנה מחדש
+        if (!paint.equals(Ui.colors(this))) {                                   // מבנה 245, 270: הצבעים של המסך השתנו — נבנה מחדש
             recreate();
             return;
         }

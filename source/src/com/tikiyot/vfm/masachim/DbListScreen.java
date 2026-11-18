@@ -18,7 +18,7 @@ import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
 
-public class DbListScreen extends ListScreen<Store.Member> {
+public class DbListScreen extends ListScreen<Store.Member> implements Ui.Colors {
 
     static final String EXTRA_MODE = "mode", EXTRA_LIST = "list", EXTRA_SORT = "sort";
     /** מ0.22: מיון מהפקודה ("פתח רשימה … מיין:…"); ריק — הסדר של הרשימה. */
@@ -113,6 +113,15 @@ public class DbListScreen extends ListScreen<Store.Member> {
     static Intent intent(android.content.Context a, String mode, long list, String sort) {
         return new Intent(a, DbListScreen.class).putExtra(EXTRA_MODE, mode).putExtra(EXTRA_LIST, list)
                 .putExtra(EXTRA_SORT, sort == null ? "" : sort);
+    }
+
+    /**
+     * מבנה 270 (המשתמש, 18.11.2026: "למה בחלק מהדברים להגביל?"): הצבעים של המסך — של הרשימה שעליו: כל התוכנה, האופן, והרשימות
+     * מלמעלה עד הרשימה הזו (הכלל והקריאה — ב־Palette). נשאל גם לפני onCreate, ולכן מה־Intent.
+     */
+    @Override
+    public String[] looks() {
+        return Palette.looksOf(getIntent().getStringExtra(EXTRA_MODE), getIntent().getLongExtra(EXTRA_LIST, 0));
     }
 
     /** מ0.25: האם המסך הזה הוא הבית. */

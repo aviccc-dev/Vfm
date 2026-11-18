@@ -1345,14 +1345,28 @@ final class DbCmdTests {
                         Db.read(Db.app, m91, read235);
                         boolean same269 = (d235[0] == null ? "" : d235[0].signature()).equals(was269);
                         final String[][] l269 = new String[2][];
+                        final long[] ids270 = new long[3];
                         Db.read(Db.app, m91, new Db.Use<Void>() {
                             @Override public Void run(SqlStore st) {
                                 long b = DbPaths.find(st, m91, java.util.Arrays.asList("מראה 234", "ב")), g = DbPaths.find(st, m91, java.util.Arrays.asList("מראה 234", "ב", "ג"));
                                 l269[0] = Palette.listLooks(st, g, true);
                                 l269[1] = Palette.listLooks(st, b, false);
+                                ids270[0] = b;
+                                ids270[1] = g;
+                                ids270[2] = DbPaths.find(st, m91, java.util.Arrays.asList("מראה 234"));
                                 return null;
                             }
                         });
+                        // מבנה 270: מה שהמסך של רשימה מקבל (Palette.looksOf) — הרשימה הכהה כהה, זו שבתוכה (שקבעה בהיר) בהירה עם הרקע שירשה, זו שמעל — כמו האופן
+                        int bg270 = Palette.role("רקע");
+                        o.check("מבנה 270: הצבעים של מסך — של הרשימה שעליו (ב — כהה, רקע שחור; ג שבתוכה — בהירה, הרקע שירשה; מראה 234 שמעל — כמו האופן); "
+                                        + "בלי רשימה, או אופן שאין — של האופן שעל המסך",
+                                Palette.dark(Palette.looksOf(m91, ids270[0])) && Palette.resolve(Palette.looksOf(m91, ids270[0]))[bg270] == 0xFF000000
+                                        && !Palette.dark(Palette.looksOf(m91, ids270[1])) && Palette.resolve(Palette.looksOf(m91, ids270[1]))[bg270] == 0xFF000000
+                                        && java.util.Arrays.equals(Palette.looksOf(m91, ids270[1]), l269[0])
+                                        && !Palette.dark(Palette.looksOf(m91, ids270[2])) && Palette.resolve(Palette.looksOf(m91, ids270[2]))[bg270] == 0xFFFFFFFF
+                                        && java.util.Arrays.equals(Palette.looksOf(m91, 0), Palette.looks())
+                                        && java.util.Arrays.equals(Palette.looksOf("אין אופן כזה 270", ids270[0]), Palette.looks()));
                         List<String> no269 = go(o121 + "ודא עיצוב \"" + m91 + "/מראה 234\" /מראה:כהה\n", here, vars, lib);
                         List<String> back269 = go(o121 + "עצב \"" + m91 + "/מראה 234/ב\" /מראה:\"\" /צבע:\"רקע\"=\"\"\nעצב \"" + m91 + "/מראה 234/ב/ג\" /מראה:\"\"\n"
                                 + "ודא עיצוב \"" + m91 + "/מראה 234/ב/ג\" /מראה:בהיר /צבע:\"רקע\"=#FFFFFF\n", here, vars, lib);
