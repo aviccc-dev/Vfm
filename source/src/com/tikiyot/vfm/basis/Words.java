@@ -1535,6 +1535,9 @@ public final class Words {
         public static final String HOME = "בית", BACK = "חזרה", SEARCH = "חיפוש", COMMANDS = "פקודות",
                 FILES = "קבצים פיזיים", SETTINGS = "הגדרות", ADD = "כפתור";
         public static final String T_LINE = "⌨ שורת פקודה בכתב";
+        /** מבנה 275: הרצועה הדקה שמעל המסך — מה היא תעשה (למקריא המסך). */
+        public static final String FOLD_ROWS = "הסתרת שורות הכפתורים והכותרת — נגיעה, או גרירה למעלה",
+                UNFOLD_ROWS = "החזרת שורות הכפתורים והכותרת — נגיעה, או גרירה למטה";
         public static final String NO_BATCH = "אין קובצי פקודות";
         public static final String LINE_HINT = "למשל: פתח רשימה חכמה אחרונים · מצא סוג:ספרים תאריך:שבוע · MOVE …";
         /** 1.13.0 */

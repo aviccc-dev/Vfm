@@ -1,18 +1,18 @@
 package com.tikiyot.vfm;
 
-// מבנה 272 (ממצא 65; המשתמש, 18.11.2026): מקום לקבצים. המסך עם שורות הכפתורים סביבו (TopRow.wrap) — וכשגוללים בקבצים למטה,
-// הכותרת של המסך, שורות הכפתורים שלמעלה ושלמטה, ומה שהמסך סימן כ"מתקפל" (FOLD_TAG) — יורדים מהמסך, והקבצים מקבלים את המקום.
-// גוללים מעט חזרה למעלה, הרשימה מגיעה לראש, או שהמסך חוזר לפנים — הכול חוזר. עצירה ונגיעה בקובץ — שום דבר לא זז.
-// במקום אחד, לכל המסכים שיש בהם רשימה; מסך בלי רשימה (הגדרות, תוסף) — כמו שהיה. הכלל — ב־FoldTrack (נבדק במחשב); כאן — רק
-// הקשב לאצבע (בלי לקחת את הנגיעה מהרשימה) והקיפול.
+// מקום לקבצים (ממצא 65). המסך עם שורות הכפתורים סביבו (TopRow.wrap), ובין השורות שלמעלה למסך — רצועה דקה.
+// מבנה 275 (המשתמש, 18.11.2026, על מ0.50: "אולי עדיף פשוט אזור דק שנגיעה או גרירה בו מסלקת או מחזירה את השורה"; במקום הקיפול
+// בגלילה של 272, שיצא קופצני): נגיעה ברצועה, או גרירה ממנה למעלה — הכותרת של המסך, שורות הכפתורים שלמעלה ושלמטה, ומה שהמסך
+// סימן כ"מתקפל" (FOLD_TAG; בחיפוש — מה שבין שורת החיפוש לקבצים) — יורדים; הרצועה נשארת. נגיעה, או גרירה למטה — חוזרים.
+// הגלילה בקבצים — כמו תמיד, בלי שום קיפול. המצב — אחד לכל המסכים, כל עוד התוכנה פתוחה (מסך חדש נפתח מקופל, אם קיפלו);
+// אחרי הפעלה מחדש — הכול מוצג. במקום אחד, לכל המסכים. הכלל — ב־FoldTrack (נבדק במחשב); כאן — הרצועה והקיפול.
 
 import android.app.ActionBar;
 import android.app.Activity;
+import android.graphics.drawable.GradientDrawable;
+import android.view.Gravity;
 import android.view.MotionEvent;
 import android.view.View;
-import android.view.ViewGroup;
-import android.view.ViewTreeObserver;
-import android.widget.AbsListView;
 import android.widget.LinearLayout;
 
 final class ScrollRoom extends LinearLayout {
@@ -20,23 +20,16 @@ final class ScrollRoom extends LinearLayout {
     /** מה שמעל הקבצים ומתקפל יחד עם השורות — המסך מסמן (למשל החלק שמתחת לשורת החיפוש). */
     static final String FOLD_TAG = "fold-with-rows";  // תחביר
 
+    /** מקופל או לא — אחד לכל המסכים, כל עוד התוכנה פתוחה. */
+    private static boolean folded;
+
     private final Activity a;
-    private final FoldTrack track;
-    private View top, content, bottom;
-    private boolean inList, touching;
-    private final ViewTreeObserver.OnScrollChangedListener atTop = new ViewTreeObserver.OnScrollChangedListener() {
-        @Override
-        public void onScrollChanged() {                                       // תנופה שהגיעה לראש הרשימה, בלי אצבע
-            if (touching || !track.folded()) return;
-            AbsListView l = list(content);
-            if (l != null && !l.canScrollVertically(-1)) apply(track.rest());
-        }
-    };
+    private View top, content, bottom, strip;
+    private float downY;
 
     ScrollRoom(Activity a) {
         super(a);
         this.a = a;
-        track = new FoldTrack(Ui.dp(a, 24));
     }
 
     /** החלקים: השורות שלמעלה, המסך עצמו, והשורות שלמטה (בתוך מחזיק משלהן — פס הבחירה מסתיר את השורות עצמן). */
@@ -46,44 +39,72 @@ final class ScrollRoom extends LinearLayout {
         this.bottom = bottom;
     }
 
-    @Override
-    public boolean dispatchTouchEvent(MotionEvent e) {
-        try {
-            watch(e);
-        } catch (RuntimeException x) {
-            Log.e("ScrollRoom", x);
-        }
-        return super.dispatchTouchEvent(e);
-    }
-
-    /** רק מקשיבים: הנגיעה ממשיכה לרשימה כרגיל. הגובה — על המסך (לא בתוך המסגרת, שזזה כשהכותרת מתקפלת). */
-    private void watch(MotionEvent e) {
-        int act = e.getActionMasked();
-        if (act == MotionEvent.ACTION_DOWN) {
-            touching = true;
-            AbsListView l = list(content);
-            inList = l != null && inside(l, e.getRawX(), e.getRawY());
-            track.down(e.getRawY());
-        } else if (act == MotionEvent.ACTION_UP || act == MotionEvent.ACTION_CANCEL) {
-            touching = false;
-        } else if (act == MotionEvent.ACTION_MOVE && inList) {
-            AbsListView l = list(content);
-            apply(track.move(e.getRawY(), l != null && l.canScrollVertically(1)));
-        }
+    /** הרצועה הדקה, עם ידית באמצע: נגיעה — מקפלת או מחזירה; גרירה ממנה למעלה — מקפלת; למטה — מחזירה. */
+    View strip() {
+        LinearLayout s = new LinearLayout(a);
+        s.setGravity(Gravity.CENTER);
+        s.setBackgroundColor(Ui.BG_SOFT);
+        s.setMinimumHeight(Ui.dp(a, 18));
+        View pill = new View(a);
+        GradientDrawable g = new GradientDrawable();
+        g.setColor(Ui.MUTED);
+        g.setCornerRadius(Ui.dp(a, 2));
+        pill.setBackground(g);
+        s.addView(pill, new LayoutParams(Ui.dp(a, 40), Ui.dp(a, 4)));
+        s.setClickable(true);
+        s.setOnClickListener(new OnClickListener() {                         // נגיעה — וגם מקריא המסך
+            @Override public void onClick(View v) { apply(folded ? FoldTrack.OPEN : FoldTrack.FOLD); }
+        });
+        s.setOnTouchListener(new OnTouchListener() {
+            @Override
+            public boolean onTouch(View v, MotionEvent e) {
+                int act = e.getActionMasked();
+                if (act == MotionEvent.ACTION_DOWN) downY = e.getRawY();
+                else if (act == MotionEvent.ACTION_UP) {
+                    float dy = e.getRawY() - downY, step = Ui.dp(a, 12);
+                    if (FoldTrack.tap(dy, step)) v.performClick();
+                    else apply(FoldTrack.release(dy, step, folded));
+                }
+                return true;
+            }
+        });
+        strip = s;
+        say();
+        return s;
     }
 
     private void apply(int what) {
-        if (what == FoldTrack.NONE || top == null) return;
-        int v = what == FoldTrack.FOLD ? GONE : VISIBLE;
+        if (what == FoldTrack.NONE) return;
+        folded = what == FoldTrack.FOLD;
+        show();
+    }
+
+    /** מראים או מסתירים לפי המצב (האחד לכל המסכים). */
+    private void show() {
+        if (top == null) return;
+        int v = folded ? GONE : VISIBLE;
         top.setVisibility(v);
         bottom.setVisibility(v);
         View more = content.findViewWithTag(FOLD_TAG);
         if (more != null) more.setVisibility(v);
         ActionBar bar = a.getActionBar();
         if (bar != null) {
-            if (what == FoldTrack.FOLD) bar.hide();
+            if (folded) bar.hide();
             else bar.show();
         }
+        say();
+    }
+
+    /** מה הרצועה תעשה — למקריא המסך (במילון). */
+    private void say() {
+        if (strip != null) strip.setContentDescription(folded ? Words.Top.UNFOLD_ROWS : Words.Top.FOLD_ROWS);
+    }
+
+    /** מסך שנפתח, או שחזר לפנים — במצב שבו השאירו אותו במסך אחר. */
+    @Override
+    protected void onWindowVisibilityChanged(int visibility) {
+        super.onWindowVisibilityChanged(visibility);
+        if (visibility == VISIBLE) show();
     }
 
     /**
@@ -106,43 +127,5 @@ final class ScrollRoom extends LinearLayout {
     /** מבנה 273: נגיעה בשורה כזו — פותחת את כולה, ונגיעה נוספת — חזרה לשורה אחת (מה שנחתך אינו נעלם). */
     static void wide(android.widget.TextView t) {
         t.setSingleLine(t.getMaxLines() != 1);
-    }
-
-    /** המסך חזר לפנים (ממסך אחר) — הכול מוצג. */
-    @Override
-    protected void onWindowVisibilityChanged(int visibility) {
-        super.onWindowVisibilityChanged(visibility);
-        if (visibility == VISIBLE) apply(track.rest());
-    }
-
-    @Override
-    protected void onAttachedToWindow() {
-        super.onAttachedToWindow();
-        getViewTreeObserver().addOnScrollChangedListener(atTop);
-    }
-
-    @Override
-    protected void onDetachedFromWindow() {
-        getViewTreeObserver().removeOnScrollChangedListener(atTop);
-        super.onDetachedFromWindow();
-    }
-
-    /** הרשימה שעל המסך (שורות או רשת); המסך יכול להחליף אותה, ולכן מחפשים בכל נגיעה. אין — null. */
-    private static AbsListView list(View v) {
-        if (v == null || v.getVisibility() != VISIBLE) return null;
-        if (v instanceof AbsListView) return (AbsListView) v;
-        if (!(v instanceof ViewGroup)) return null;
-        ViewGroup g = (ViewGroup) v;
-        for (int i = 0; i < g.getChildCount(); i++) {
-            AbsListView l = list(g.getChildAt(i));
-            if (l != null) return l;
-        }
-        return null;
-    }
-
-    private static boolean inside(View v, float x, float y) {
-        int[] at = new int[2];
-        v.getLocationOnScreen(at);
-        return x >= at[0] && x < at[0] + v.getWidth() && y >= at[1] && y < at[1] + v.getHeight();
     }
 }
