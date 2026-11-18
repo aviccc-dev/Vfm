@@ -245,11 +245,26 @@ final class Design {
     /** שלב אחד בירושה: עיצוב שנבחר — מתחילים ממנו; מראה — עליו (אין עדיין כלום — מ־start, או מברירת המחדל). */
     private static Design fold(Design d, String design, String look, Design start) {
         if (design != null && !design.trim().isEmpty()) d = get(design.trim()).copy();
-        if (look != null && !look.trim().isEmpty()) {
+        if (shapes(look)) {
             if (d == null) d = start != null ? start.copy() : get(DEFAULT).copy();
             d.overlay(look);
         }
         return d;
+    }
+
+    /**
+     * מבנה 268 (ממצא 64): האם במראה יש משהו חוץ מצבעים. מראה שכולו צבעים ("מראה = כהה", "צבע: רקע = #000000") אינו קובע עיצוב —
+     * רק מה שנכתב משתנה: מי שביקש כהה מקבל כהה, והשורות נשארות כמו שהיו. הצבעים הולכים בדרך משלהם (Palette).
+     */
+    static boolean shapes(String look) {
+        if (look == null) return false;
+        for (String part : look.split(java.util.regex.Pattern.quote(P_SEP))) {
+            int eq = part.indexOf('=');
+            if (eq <= 0 || part.substring(eq + 1).trim().isEmpty()) continue;
+            String key = part.substring(0, eq).trim();
+            if (!key.equals(Palette.K_MODE) && !key.startsWith(Palette.K_COLOR + ":")) return true;
+        }
+        return false;
     }
 
     private static String[] program = {null, null};

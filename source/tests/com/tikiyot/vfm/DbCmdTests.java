@@ -1314,6 +1314,14 @@ final class DbCmdTests {
                                         + "ערכה כהה, משני מהתוכנה, הדגשה מהאופן " + w237,
                                 bad(w237).isEmpty() && Palette.dark(prog237, mode237[0]) && c237[txt] == 0xFFE8EAED && c237[sub] == 0xFF123456
                                         && c237[acc] == 0xFFABCDEF && Palette.resolve()[txt] == 0xFF202124 && Palette.ROLES.length == 18);
+                        final boolean[] plain268 = new boolean[1];
+                        Db.read(Db.app, m91, new Db.Use<Void>() {
+                            @Override public Void run(SqlStore st) { plain268[0] = Design.forMode(st) == null; return null; }
+                        });
+                        o.check("מבנה 268 (ממצא 64): מראה שכולו צבעים אינו קובע עיצוב — אחרי \"עצב תוכנה /מראה:כהה\" ו\"עצב אופן /צבע:\" הרשימות "
+                                        + "נשארות כמו שהיו (לא נקבע כלום), ועם /טורים: — נקבע",
+                                plain268[0] && Design.forProgram() == null && !Design.shapes(prog237) && !Design.shapes(mode237[0])
+                                        && !Design.shapes(null) && !Design.shapes("") && Design.shapes(Design.withLook(prog237, Design.K_COLS, "2")));
                         o.check("מבנה 237: צבעים לרשימה — שגיאה; תפקיד שאין, צבע לא כתוב נכון, מראה לא מוכר — שגיאה, עם הסיבה",
                                 errs235(Batch.plan(o121 + "עצב \"" + m91 + "/מראה 234/ב\" /מראה:כהה\n", here, vars, lib)).contains(Words.DesignW.COLORS_ALL_ONLY)
                                         && errs235(Batch.plan("עצב תוכנה /צבע:\"אין כזה\"=#111111\n", here, vars, lib)).contains(Words.DesignW.noRole("אין כזה"))
