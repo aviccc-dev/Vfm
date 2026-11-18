@@ -184,7 +184,7 @@ const run=async()=>{
     const n264=w.__shaped.length;
     say('264: הכרטיס אומר מה מוחל ומה מסומן ◌',tc().querySelector('h2 .k').textContent==='ניסוי ושילובים'&&tc().textContent.includes('נכנס לפקודה')&&tc().textContent.includes('◌'));
     say('264: מה שבתוכנה — בלי סימון; מה שעוד לא — מסומן',!tchip('בלי נתונים').classList.contains('soon')&&!tchip('בלי פס הסוג').classList.contains('soon')
-      &&tchip('לשוניות').classList.contains('soon')&&tchip('שני חלקים').classList.contains('soon')&&!tchip('עיגולים צבעוניים').classList.contains('soon'));
+      &&tchip('לשוניות').classList.contains('soon')&&tchip('שני חלקים').classList.contains('soon')&&!tchip('צלמית לצד השם').classList.contains('soon')&&!tchip('בלי שמות').classList.contains('soon')&&tchip('תמונה ממוזערת').classList.contains('soon')&&!tchip('עיגולים צבעוניים').classList.contains('soon'));
     click(tchip('בלי נתונים'));
     say('264: "בלי נתונים" ← '+cmd()+' — ו"החלה" דלוקה',cmd()==='עצב תוכנה /הצג-נתונים:לא'&&!$('apply').disabled&&tchip('בלי נתונים').classList.contains('on')&&!pv().querySelector('.dt'));
     say('264: ...וגם בכרטיס "הפריט" — אותו ערך',[...[...$('shapeCard').querySelectorAll('.row')].find(r=>r.querySelector('.lb').textContent==='הצג נתונים').querySelectorAll('.seg button')].find(b=>b.textContent==='לא').classList.contains('on'));
@@ -201,7 +201,10 @@ const run=async()=>{
     click(tchip('גלריה'));
     const g264=cmd();
     say('264: שילוב שחלקו עוד לא בתוכנה ← '+g264+' · '+($('tryMiss')||{textContent:''}).textContent,g264.includes('/טורים:3')&&g264.includes('/ריווח:0')&&!g264.includes('תמונה')
-      &&$('tryMiss').textContent.includes('תמונה ממוזערת')&&$('tryMiss').textContent.includes('בלי שמות')&&$('pvNote').textContent.includes('ניסוי')&&pv().querySelectorAll('.th').length>=5);
+      &&g264.includes('/הצג-שם:לא')&&$('tryMiss').textContent.includes('תמונה ממוזערת')&&!$('tryMiss').textContent.includes('בלי שמות')&&$('pvNote').textContent.includes('ניסוי')&&pv().querySelectorAll('.th').length>=5);
+    click(tchip('צלמית לצד השם'));
+    say('265: "צלמית לצד השם" — בפקודה, ובתצוגה האריח שוכב ← '+cmd(),cmd().includes('/צלמית-לצד-השם:כן')&&[...pv().querySelectorAll('.it.g')].every(e=>e.style.flexDirection==='row'));
+    click(tchip('צלמית לצד השם'));
     click([...tc().querySelectorAll('button')].find(b=>b.textContent==='ניקוי'));
     const z264=cmd();
     say('264: ניקוי — הכול חוזר ל"כמו העיצוב" ← '+z264,['/טורים:""','/סגנון:""','/סביב-הצלמית:""','/הצג-נתונים:""','/הצג-תווית:""'].every(x=>z264.includes(x))&&!z264.includes('/ריווח')&&!$('tryMiss')&&!tc().querySelector('.chip.on:not(:first-child)'));
@@ -209,7 +212,7 @@ const run=async()=>{
     w=page(null);d=w.document;
     const sc=()=>$('shapeCard'),srow=t=>[...sc().querySelectorAll('.row')].find(r=>r.querySelector('.lb').textContent===t);
     const sbtn=(t,v)=>[...srow(t).querySelectorAll('.seg button')].find(b=>b.textContent===v);
-    say('כרטיס "הפריט" — אחד־עשר, מהתוכנה',!!sc()&&sc().querySelectorAll('.row').length===11&&!!srow('סביב הצלמית')&&!!srow('שורות לשם')&&!!srow('הצג תווית'));
+    say('כרטיס "הפריט" — שלושה־עשר, מהתוכנה',!!sc()&&sc().querySelectorAll('.row').length===13&&!!srow('צלמית לצד השם')&&!!srow('סביב הצלמית')&&!!srow('שורות לשם')&&!!srow('הצג תווית'));
     say('מה שנראה מסומן (רשימת קבצים: שורות, ריבוע צבעוני)',sbtn('סגנון','שורות').classList.contains('on')&&sbtn('סביב הצלמית','ריבוע צבעוני').classList.contains('on'));
     const icW=()=>$('pv').querySelector('.ic').style.width;const rowIc=icW();
     click(sbtn('סגנון','רשת'));

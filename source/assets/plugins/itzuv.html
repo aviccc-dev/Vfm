@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="vfm-plugin" content="עיצוב">
-<meta name="vfm-plugin-version" content="12">
+<meta name="vfm-plugin-version" content="13">
 <title>עיצוב</title>
 <style>
 /* תוסף "עיצוב" — הלוח (claude/tosaf-itzuv.md, ההחלטות של 17.11.2026): מקום אחד שבו משנים את כל מה שאפשר — כמו לוח עם
@@ -841,13 +841,14 @@ function demoBridge(){
     ['צבע רקע לפריט','/צבע-רקע-לפריט:',['כן','לא'],'tint'],['הצג נתונים','/הצג-נתונים:',['כן','לא'],'showData'],['מקום הנתונים','/מקום-הנתונים:',['מתחת','בצד'],'dataBelow'],
     ['שורות לשם','/שורות-לשם:',[1,6],'lines'],['התאם למקום','/התאם-למקום:',['כן','לא'],'fit'],['גודל מזערי','/גודל-מזערי:',[6,40],'min'],
     ['הצג תווית','/הצג-תווית:',['כן','לא'],'showTag'],['מוסתר חיוור','/מוסתר-חיוור:',['כן','לא'],'fade']];
+  if(!(window.__old||window.__m048))SHP.push(['צלמית לצד השם','/צלמית-לצד-השם:',['כן','לא'],'side'],['הצג שם','/הצג-שם:',['כן','לא'],'showName']);   // מבנה 265
   const setSV=(x,k,v)=>{const e=SHP.find(y=>y[0]===k);x.shape[k]=v;if(e[3]==='around')x.around=v;else if(e[3]==='lines'||e[3]==='min')x[e[3]]=+v;else x[e[3]]=(v===e[2][0]);};
   const TILE=!!(window.__old||window.__m048);   // כמו תוכנה שלפני מבנה 258: ברשת — צלמית וריווח מרוחב האריח
   const P0={'רשימת קבצים':{design:'רשימת קבצים',grid:false,cols:1,gap:50,icon:340,showIcon:true,around:'ריבוע צבעוני',showData:true,dataBelow:true,groupOwn:false,texts:{'כותרת':T(12,400),'שם':T(16,400),'נתונים':T(11,400),'קבוצה':T(16,400),'תווית':T(11,700)}},
     'מנהל קבצים עם צלמיות':{design:'מנהל קבצים עם צלמיות',grid:true,cols:3,gap:TILE?8:35,icon:TILE?55:500,showIcon:true,around:'מסגרת',showData:true,dataBelow:true,groupOwn:false,texts:{'כותרת':T(12,400),'שם':T(14,400),'נתונים':T(11,400),'קבוצה':T(14,400),'תווית':T(11,700)}},
     'מילים וצבע':{design:'מילים וצבע',grid:true,cols:2,gap:TILE?6:30,icon:0,showIcon:false,around:'בלי',showData:false,dataBelow:true,groupOwn:false,texts:{'כותרת':T(12,400),'שם':T(15,700),'נתונים':T(11,400),'קבוצה':T(15,700),'תווית':T(11,700)}}};
-  [['רשימת קבצים',['שורות','כן','ריבוע צבעוני','לא','כן','מתחת','2','לא','11','כן','לא']],['מנהל קבצים עם צלמיות',['רשת','כן','מסגרת','לא','כן','מתחת','2','כן','11','כן','לא']],
-   ['מילים וצבע',['רשת','לא','בלי','כן','לא','מתחת','2','כן','11','כן','לא']]].forEach(([n,v])=>{P0[n].shape={};SHP.forEach((x,i)=>setSV(P0[n],x[0],v[i]));});
+  [['רשימת קבצים',['שורות','כן','ריבוע צבעוני','לא','כן','מתחת','2','לא','11','כן','לא','לא','כן']],['מנהל קבצים עם צלמיות',['רשת','כן','מסגרת','לא','כן','מתחת','2','כן','11','כן','לא','לא','כן']],
+   ['מילים וצבע',['רשת','לא','בלי','כן','לא','מתחת','2','כן','11','כן','לא','לא','כן']]].forEach(([n,v])=>{P0[n].shape={};SHP.forEach((x,i)=>setSV(P0[n],x[0],v[i]));});
   const db={'תוכנה':{design:'',look:{}},'אופן':{design:'',look:{}},'רשימה':{design:'מנהל קבצים עם צלמיות',look:{'טורים':'4'}}};
   const colorsOf=looks=>{let dark=false;looks.forEach(l=>{if(l['מראה'])dark=l['מראה']==='כהה';});const o={};ROLES.forEach(r=>{o[r[0]]=r[dark?2:1];looks.forEach(l=>{if(l['צבע: '+r[0]])o[r[0]]=l['צבע: '+r[0]];});});return {dark,colors:o};};
   const fold=(d,own)=>{let x=own.design?JSON.parse(JSON.stringify(P0[own.design])):d?JSON.parse(JSON.stringify(d)):null;

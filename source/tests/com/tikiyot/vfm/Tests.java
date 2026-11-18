@@ -682,6 +682,21 @@ public final class Tests {
                 && g258.padPx(48f, 6) == def.padPx(48f, 0) && def.padPx(48f, 0) == 24);
         check("מבנה 258: ברשת — הצלמית לא גדולה ממה שנכנס באריח; בשורות — לא מוגבלת; ריווח 0 ברשת — המעט שנשאר", g258.iconPx(48f, 120, 10) == 100
                 && def.iconPx(48f, 120, 10) == 163 && Design.parse("x", "[אמצע]\nמידות = לפי השם\nסגנון = רשת\nריווח = 0%\n").padPx(48f, 6) == 6);
+        // מבנה 265: מפתחות נוספים של הפריט — בקובץ משלהם (Extras); המתג, הלוח והעורך נגזרים מהם
+        Design x265 = Design.parse("בדיקה", Design.builtInText(Design.FILES));
+        boolean in265 = true;
+        for (String[] x : Extras.DEFS)
+            in265 &= java.util.Arrays.asList(Design.SHAPE_KEYS).contains(x[0]) && java.util.Arrays.asList(Design.SHAPE_IDS).contains(x[1])
+                    && java.util.Arrays.equals(Design.choices(x[0]), new String[]{Design.YES, Design.NO}) && x[2].equals(x265.shapeValue(x[0]))
+                    && Design.builtInText(Design.FILES).contains(x[0] + " = " + x[2])
+                    && Words.Verb.usage(Verbs.SHAPE).contains(Verbs.shapeSwitch(x[0]));
+        Design y265 = Design.parse("בדיקה", Design.builtInText(Design.FILES) .replace("צלמית לצד השם = לא", "צלמית לצד השם = כן").replace("הצג שם = כן", "הצג שם = לא"));
+        check("מבנה 265: כל מפתח שב־Extras — בין מפתחות הפריט, עם שם קבוע, כן / לא, מתג, בעזרה ובקובץ המובנה (ברירת המחדל); ונקרא מקובץ",
+                in265 && Design.SHAPE_KEYS.length == Design.SHAPE_IDS.length && y265.extras.on(Extras.SIDE) && !y265.extras.on(Extras.SHOW_NAME)
+                        && !x265.extras.on(Extras.SIDE) && x265.extras.on(Extras.SHOW_NAME) && y265.copy().extras.on(Extras.SIDE)
+                        && Design.lookError("הצג שם", "אולי") != null && Design.lookError("הצג שם", "לא") == null);
+        check("מבנה 265: צלמית לצד השם — ברשת הצלמית עד כשליש מהאריח (השאר לשם); בלי — כמו עד כאן",
+                y265.grid && y265.iconPx(48f, 300, 10) == 105 && x265.iconPx(48f, 300, 10) == 240 && y265.iconPx(10f, 300, 10) == 50);
         check("מבנה 258: עיצוב מובנה — מסומן \"מידות = לפי השם\", והתוכנה אומרת לתוספים שהיא מודדת כך (namesize)",
                 Design.builtInText(Design.FILES).contains(Design.K_MEASURE + " = " + Design.BY_NAME)
                         && read(new File(System.getProperty("vfm.src"), "src/com/tikiyot/vfm/lev/Bridge.java")).contains(" namesize\""));

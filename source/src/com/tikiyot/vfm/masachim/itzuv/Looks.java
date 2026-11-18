@@ -123,23 +123,35 @@ final class Looks {
         more.setVisibility(View.GONE);
         if (d.grid) {
             int pad = padPx(c, d);
-            row.setOrientation(LinearLayout.VERTICAL);
-            row.setGravity(Gravity.CENTER_HORIZONTAL);
+            boolean side = d.extras.on(Extras.SIDE);                          // מבנה 265: הצלמית לצד השם — אריח שוכב
+            row.setOrientation(side ? LinearLayout.HORIZONTAL : LinearLayout.VERTICAL);
+            row.setGravity(side ? Gravity.CENTER_VERTICAL : Gravity.CENTER_HORIZONTAL);
             row.setPadding(pad, pad, pad, pad);
             row.addView(box, new LinearLayout.LayoutParams(icon, icon));
+            LinearLayout col = row;
+            if (side) {                                                       // השם, הנתונים והסוג — בטור, ליד הצלמית
+                col = new LinearLayout(c);
+                col.setOrientation(LinearLayout.VERTICAL);
+                col.setPaddingRelative(Ui.dp(c, 8), 0, 0, 0);
+                row.addView(col, new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f));
+            }
             strip = new TextView(c);                                          // 1.17.0: הסוג — פס בתחתית הצלמית (ב')
             strip.setGravity(Gravity.CENTER);
             strip.setTextColor(Ui.ON_COLOR);
             strip.setSingleLine(true);
             strip.setTypeface(Typeface.DEFAULT_BOLD);
             strip.setVisibility(View.GONE);
-            row.addView(strip, new LinearLayout.LayoutParams(icon, LinearLayout.LayoutParams.WRAP_CONTENT));
+            if (!side) row.addView(strip, new LinearLayout.LayoutParams(icon, LinearLayout.LayoutParams.WRAP_CONTENT));
             for (TextView t : new TextView[]{title, sub}) {
-                t.setGravity(Gravity.CENTER);
-                t.setTextAlignment(View.TEXT_ALIGNMENT_CENTER);
-                row.addView(t, new LinearLayout.LayoutParams(-1, -2));
+                t.setGravity(side ? Gravity.START : Gravity.CENTER);
+                t.setTextAlignment(side ? View.TEXT_ALIGNMENT_VIEW_START : View.TEXT_ALIGNMENT_CENTER);
+                col.addView(t, new LinearLayout.LayoutParams(-1, -2));
             }
-            row.addView(more);
+            if (side) {                                                       // לצד השם — הסוג מתחת לנתונים, ברוחב של המילה
+                strip.setPadding(Ui.dp(c, 6), 0, Ui.dp(c, 6), 0);
+                col.addView(strip, new LinearLayout.LayoutParams(-2, -2));
+            }
+            col.addView(more);
         } else {
             int pad = padPx(c, d);
             row.setOrientation(LinearLayout.HORIZONTAL);
@@ -246,6 +258,7 @@ final class Looks {
             title.setMaxLines(d.lines);
             title.setEllipsize(TextUtils.TruncateAt.END);
         }
+        title.setVisibility(d.extras.on(Extras.SHOW_NAME) ? View.VISIBLE : View.GONE);   // מבנה 265: "הצג שם = לא" — בלי השם
         // הנתונים
         text(sub, d.data, d.data.size);
         text(more, d.data, d.data.size);

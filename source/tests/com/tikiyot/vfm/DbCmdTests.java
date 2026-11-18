@@ -1492,7 +1492,7 @@ final class DbCmdTests {
                                         && d254.lines == 1 && d254.fit && d254.min == 9 && !s254.toString().contains("❌") && v254.toString().contains("❌")
                                         && st254.blocked() && errs235(st254).contains("לא אחד מאלה") && ln254.blocked() && errs235(ln254).contains("מחוץ לטווח")
                                         && ar254.blocked() && b254.signature().equals(before254.signature())
-                                        && Verbs.shapeSwitch(Design.K_AROUND).equals("/סביב-הצלמית:") && Design.SHAPE_KEYS.length == 11);
+                                        && Verbs.shapeSwitch(Design.K_AROUND).equals("/סביב-הצלמית:") && Design.SHAPE_KEYS.length == 11 + Extras.DEFS.length);   // מבנה 265: ועוד מה שב־Extras
                         // מבנה 256: קבוצה ב, הקל — בלי תווית הסוג · עיגול סביב הצלמית · פריט מוסתר חיוור
                         String b256 = " /הצג-תווית:לא /סביב-הצלמית:עיגול /מוסתר-חיוור:כן";
                         List<String> s256 = go(o121 + "עצב \"" + m91 + "/מראה 234/ב\"" + b256 + "\n"
@@ -1505,6 +1505,18 @@ final class DbCmdTests {
                                 !d256.showTag && Design.CIRCLE.equals(d256.around) && d256.fade && !s256.toString().contains("❌")
                                         && e256.showTag && !e256.fade && !Design.CIRCLE.equals(e256.around) && e256.signature().equals(before254.signature())
                                         && f256.showTag && !f256.fade);
+                        // מבנה 265 (המשתמש, 18.11.2026: "תגמור את שניהם" — מה שהיה רק בניסוי של הלוח, בתוכנה): צלמית לצד השם · הצג שם
+                        String b265 = " /צלמית-לצד-השם:כן /הצג-שם:לא";
+                        List<String> s265 = go(o121 + "עצב \"" + m91 + "/מראה 234/ב\"" + b265 + "\n"
+                                + "ודא עיצוב \"" + m91 + "/מראה 234/ב\"" + b265 + "\n", here, vars, lib);
+                        Design d265 = ShapeCmds.state(Verbs.K_LIST, "מראה 234/ב", m91).shown;
+                        List<String> x265 = go(o121 + "ודא עיצוב \"" + m91 + "/מראה 234/ב\" /הצג-שם:כן\n", here, vars, lib);
+                        go(o121 + "עצב \"" + m91 + "/מראה 234/ב\" /צלמית-לצד-השם:\"\" /הצג-שם:\"\"\n", here, vars, lib);
+                        Design e265 = ShapeCmds.state(Verbs.K_LIST, "מראה 234/ב", m91).shown;
+                        o.check("מבנה 265: /צלמית-לצד-השם:כן · /הצג-שם:לא — נקבעים, נבדקים (גם ❌ כשלא), וחוזרים; בלי שנקבע — כמו עד כאן " + s265 + " " + x265,
+                                d265.extras.on(Extras.SIDE) && !d265.extras.on(Extras.SHOW_NAME) && !s265.toString().contains("❌")
+                                        && x265.toString().contains("❌") && !e265.extras.on(Extras.SIDE) && e265.extras.on(Extras.SHOW_NAME)
+                                        && e265.signature().equals(before254.signature()) && !d265.signature().equals(e265.signature()));
                         // מבנה 260 (המשתמש, 18.11.2026 — "א": "החלפת סגנון מביאה את מספר הטורים הרגיל של הסגנון: 3 ברשת, 1 בשורות; כתבת טורים באותה
                         // שורה — נשאר מה שכתבת"). הכלל — בפקודה, לכל הדרכים
                         String p260 = "עצב \"" + m91 + "/מראה 234/ב\"";
