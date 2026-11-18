@@ -20,6 +20,16 @@ else
 fi
 [ -s "$T/android.jar" ] || { echo "הסביבה לא מוכנה: android.jar חסר"; exit 1; }
 
+# מבנה 259: הדפדפן המדומה (jsdom) — לבדיקות העמודים של התוספים שבאים עם התוכנה (test.sh מריץ אותן)
+if [ ! -d "$T/node_modules/jsdom" ]; then
+  command -v npm > /dev/null || { echo "הסביבה לא מוכנה: אין npm (לבדיקות העמודים)"; exit 1; }
+  npm install --silent --no-audit --no-fund --prefix "$T" jsdom > /dev/null 2>&1 || true
+  echo "jsdom: הותקן"
+else
+  echo "jsdom: יש"
+fi
+[ -d "$T/node_modules/jsdom" ] || { echo "הסביבה לא מוכנה: jsdom חסר"; exit 1; }
+
 if [ "$1" = "build" ]; then
   NEED=""
   for t in aapt zipalign apksigner dalvik-exchange; do command -v $t > /dev/null || NEED="$NEED $t"; done
