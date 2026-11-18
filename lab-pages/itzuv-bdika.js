@@ -116,8 +116,8 @@ const run=async()=>{
     w=page('עבודה\\ספרים\\קודש');d=w.document;
     say('נפתח מרשימה — הלוח עליה, והבורר מציע אותה',d.getElementById('fn').textContent.includes('קודש')&&[...d.querySelectorAll('#who .chip')].some(b=>b.textContent.includes('"קודש"')&&b.classList.contains('on')));
     say('הרשימה בחרה "מנהל קבצים עם צלמיות" וטורים 4 — כך נראה',[...d.querySelectorAll('#main .chip.on')].some(b=>b.textContent==='מנהל קבצים עם צלמיות')&&d.querySelectorAll('#main .card')[1].querySelector('.num').value==='4');
-    // ---------- הניסוי (מבנה 251) — רק בתצוגה ----------
-    w=page(null);d=w.document;
+    // ---------- הניסוי (מבנה 251) — רק בתצוגה: בתוכנה שאינה מכירה את "הפריט" (כמו מ0.47), הכול נשאר כמו שהיה ----------
+    w=new JSDOM(html,{runScripts:'dangerously',pretendToBeVisual:true,virtualConsole:vc,beforeParse(x){x.__old=true;}}).window;d=w.document;
     const tc=()=>$('tryCard'),pv=()=>$('pv');
     const tchip=t=>[...tc().querySelectorAll('.chip')].find(b=>b.textContent===t);
     const shaped0=w.__shaped.length;
@@ -179,6 +179,32 @@ const run=async()=>{
     say('נמחק — "שלי" כבר לא בין השילובים',!tc().querySelector('#trySaved'));
     say('כל הניסוי — בלי פקודה ובלי "החלה"',clean());
     say('תצוגה — הסתרת הניסוי',pick('view','ניסוי רעיונות')&&tc().hidden);
+    // ---------- מבנה 264: מה שהתוכנה מכירה — נכנס לפקודה ואפשר להחיל; מה שלא — מסומן, ורק בתצוגה ----------
+    w=page(null);d=w.document;
+    const n264=w.__shaped.length;
+    say('264: הכרטיס אומר מה מוחל ומה מסומן ◌',tc().querySelector('h2 .k').textContent==='ניסוי ושילובים'&&tc().textContent.includes('נכנס לפקודה')&&tc().textContent.includes('◌'));
+    say('264: מה שבתוכנה — בלי סימון; מה שעוד לא — מסומן',!tchip('בלי נתונים').classList.contains('soon')&&!tchip('בלי פס הסוג').classList.contains('soon')
+      &&tchip('לשוניות').classList.contains('soon')&&tchip('שני חלקים').classList.contains('soon')&&!tchip('עיגולים צבעוניים').classList.contains('soon'));
+    click(tchip('בלי נתונים'));
+    say('264: "בלי נתונים" ← '+cmd()+' — ו"החלה" דלוקה',cmd()==='עצב תוכנה /הצג-נתונים:לא'&&!$('apply').disabled&&tchip('בלי נתונים').classList.contains('on')&&!pv().querySelector('.dt'));
+    say('264: ...וגם בכרטיס "הפריט" — אותו ערך',[...[...$('shapeCard').querySelectorAll('.row')].find(r=>r.querySelector('.lb').textContent==='הצג נתונים').querySelectorAll('.seg button')].find(b=>b.textContent==='לא').classList.contains('on'));
+    click(tchip('בלי נתונים'));
+    say('264: שוב — חוזר, ואין שינויים',cmd().startsWith('אין שינויים')&&$('apply').disabled);
+    click(tchip('עיגולים צבעוניים'));
+    const c264=cmd();
+    say('264: שילוב שכולו בתוכנה ← '+c264,['/טורים:4','/סגנון:רשת','/סביב-הצלמית:עיגול','/הצג-נתונים:לא','/הצג-תווית:לא'].every(x=>c264.includes(x))&&tchip('עיגולים צבעוניים').classList.contains('on')&&!$('tryMiss')&&!$('pvNote').textContent.includes('ניסוי'));
+    say('264: ...נראה בתצוגה: 4 טורים, עיגול, בלי פס הסוג ובלי נתונים',pv().querySelector('.items').style.gridTemplateColumns.startsWith('repeat(4')&&[...pv().querySelectorAll('.ic')].some(e=>e.style.borderRadius==='50%')&&!pv().querySelector('.tg')&&!pv().querySelector('.dt'));
+    pick('edit','ביטול');
+    say('264: "ביטול" אחד מחזיר את כל השילוב',cmd().startsWith('אין שינויים'));
+    pick('edit','חזרה');click($('apply'));
+    say('264: החלה — שורה אחת של "עצב", ואחריה השילוב עדיין מסומן',w.__shaped.length===n264+1&&w.__shaped[n264].includes('/סביב-הצלמית:עיגול')&&cmd().startsWith('אין שינויים')&&tchip('עיגולים צבעוניים').classList.contains('on'));
+    click(tchip('גלריה'));
+    const g264=cmd();
+    say('264: שילוב שחלקו עוד לא בתוכנה ← '+g264+' · '+($('tryMiss')||{textContent:''}).textContent,g264.includes('/טורים:3')&&g264.includes('/ריווח:0')&&!g264.includes('תמונה')
+      &&$('tryMiss').textContent.includes('תמונה ממוזערת')&&$('tryMiss').textContent.includes('בלי שמות')&&$('pvNote').textContent.includes('ניסוי')&&pv().querySelectorAll('.th').length>=5);
+    click([...tc().querySelectorAll('button')].find(b=>b.textContent==='ניקוי'));
+    const z264=cmd();
+    say('264: ניקוי — הכול חוזר ל"כמו העיצוב" ← '+z264,['/טורים:""','/סגנון:""','/סביב-הצלמית:""','/הצג-נתונים:""','/הצג-תווית:""'].every(x=>z264.includes(x))&&!z264.includes('/ריווח')&&!$('tryMiss')&&!tc().querySelector('.chip.on:not(:first-child)'));
     // ---------- הפריט — קבוצה א, באמת בפקודה (מבנה 255) ----------
     w=page(null);d=w.document;
     const sc=()=>$('shapeCard'),srow=t=>[...sc().querySelectorAll('.row')].find(r=>r.querySelector('.lb').textContent===t);

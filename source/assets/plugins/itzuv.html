@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="vfm-plugin" content="עיצוב">
-<meta name="vfm-plugin-version" content="11">
+<meta name="vfm-plugin-version" content="12">
 <title>עיצוב</title>
 <style>
 /* תוסף "עיצוב" — הלוח (claude/tosaf-itzuv.md, ההחלטות של 17.11.2026): מקום אחד שבו משנים את כל מה שאפשר — כמו לוח עם
@@ -131,6 +131,8 @@ summary{cursor:pointer;padding:6px 0;font-weight:600;font-size:.92rem}
 .tl2{flex:none;width:6.2em;font-size:.88rem;padding-top:6px}
 .chips.tog{padding:6px 0}
 .chip.mineC{border-style:dashed}
+.chip.soon::after{content:' ◌';opacity:.7}
+.tmiss{font-size:.85rem;color:var(--muted);padding-top:6px}
 .acts{display:flex;gap:8px;flex-wrap:wrap;padding-top:8px}
 .nmIn{width:100%;font:inherit;padding:8px;border:1px solid var(--rule);border-radius:8px;background:var(--bg);color:var(--fg);margin:6px 0}
 .toast{position:fixed;bottom:calc(84px + env(safe-area-inset-bottom,0px));inset-inline:14px;z-index:20;background:#323232;color:#fff;border-radius:8px;padding:10px 14px;font-size:.92rem;box-shadow:0 4px 14px rgba(0,0,0,.3)}
@@ -425,22 +427,63 @@ const COMBOS={
 let TRY=Object.assign({},T0,J(pref('try',''),{}));
 let SAVED=J(pref('try-saved',''),{});
 let foldOpen=false;
-const tryOn=()=>Object.keys(T0).some(k=>TRY[k]!==T0[k]);
-const sameTry=o=>Object.keys(T0).every(k=>(o[k]===undefined?T0[k]:o[k])===TRY[k]);
-function setTry(o){TRY=Object.assign({},T0,o);foldOpen=false;setPref('try',JSON.stringify(TRY));drawPreview();drawTry();}
-function flip(k){const o=Object.assign({},TRY);o[k]=!o[k];setTry(o);}
-function pickTry(k,v){const o=Object.assign({},TRY);o[k]=v;setTry(o);}
+// מבנה 264 (המשתמש, 18.11.2026: "ולמה לא הכנסת את זה לביצוע?" · "תגמור את שניהם"): מה שהתוכנה מכירה — נכנס לפקודה, ו"החלה" קובעת
+// אותו; מה שעוד לא — רק בתצוגה, ומסומן ◌. הקישור — לפי השם הקבוע שהתוכנה מוסרת (info.shape), ולכן מה שייבנה בתוכנה מתחבר מעצמו.
+// הלוח אינו קובע כאן שום כלל: כל מתג הוא ערך אחד של "עצב", כמו בכרטיס "הפריט".
+// [מתג בניסוי] ← [השם הקבוע בתוכנה, איזה ערך הוא ה"דלוק": 0 — הראשון (כן), 1 — השני (לא / בצד)]
+const LINK={card:['tint',0],side:['side',0],noStrip:['showTag',1],hidden:['fade',0],thumbs:['thumbs',0],badge:['badge',0],bar:['bar',0],noNames:['showName',1],
+  noData:['showData',1],dataSide:['dataBelow',1],two:['two',0],fold:['fold',0],gmenu:['gmenu',0],carousel:['carousel',0],tabs:['tabs',0],wide:['wide',0]};
+const BG_OF={'ריבוע רך':2,'ריבוע חי':2,'עיגול חי':3};   // הרקע לצלמית שבשילובים ← המקום ברשימת הערכים של התוכנה
+const shp=id=>SHAPE().find(x=>x[3]===id&&Array.isArray(x[2])&&typeof x[2][0]==='string');
+/** לאן מתג של הניסוי הולך בתוכנה: המפתח בלוח, ומה כותבים בו — או null (עוד לא בתוכנה: רק בתצוגה) */
+function link(k){
+  if(!SHAPE().length)return null;                      // תוכנה שאינה מכירה את "הפריט" — הכול רק בתצוגה, כמו קודם
+  if(k==='cols')return {key:'cols',to:v=>v};
+  if(k==='tight')return {key:'gap',to:v=>v?'0':''};
+  if(k==='grid'){const x=shp('grid');return x?{key:'s:'+x[0],to:v=>v==='רשת'?x[2][0]:v==='שורות'?x[2][1]:''}:null;}
+  if(k==='iconBg'){const x=shp('around');return x?{key:'s:'+x[0],to:v=>!v?'':x[2].indexOf(v)>=0?v:x[2][BG_OF[v]]||''}:null;}
+  const l=LINK[k],x=l&&shp(l[0]);return x?{key:'s:'+x[0],to:v=>v?x[2][l[1]]:''}:null;
+}
+const full=o=>Object.assign({},T0,o);
+/** האם מה שעל הלוח הוא השילוב הזה (מה שבתוכנה — לפי מה שנקבע כאן; השאר — לפי הניסוי) */
+const sameTry=o=>{o=full(o);return Object.keys(T0).every(k=>{const l=link(k);return l?l.to(o[k])===cur(l.key):o[k]===TRY[k];});};
+const tryOn=()=>!sameTry({});
+const tryOnly=()=>Object.keys(T0).some(k=>!link(k)&&TRY[k]!==T0[k]);   // יש בתצוגה משהו שעוד לא בתוכנה
+const soonOf=o=>{o=full(o);return Object.keys(T0).filter(k=>o[k]!==T0[k]&&!link(k));};
+const NAME_OF=Object.assign({},...TOG_ITEM.concat(TOG_SCREEN).map(([k,t])=>({[k]:t})),{grid:'סגנון',cols:'טורים',iconBg:'רקע לצלמית'});
+/** שילוב שלם: מה שבתוכנה — לשינויים (צעד אחד ב"ביטול"); השאר — לניסוי. מה שהשילוב לא אומר — חוזר ל"כמו העיצוב" */
+function setTry(o){
+  o=full(o);const before=JSON.stringify(P),t={};
+  Object.keys(T0).forEach(k=>{const l=link(k);if(!l){t[k]=o[k];return;}t[k]=T0[k];const v=l.to(o[k]);if(same(v,own(l.key)))delete P[l.key];else P[l.key]=v;});
+  if(JSON.stringify(P)!==before){hist.push(before);fut=[];}
+  TRY=t;foldOpen=false;setPref('try',JSON.stringify(TRY));draw();
+}
+/** מתג אחד: רק הוא משתנה */
+function pickTry(k,v){
+  const l=link(k);
+  if(l){change(l.key,l.to(v));return;}
+  TRY=Object.assign({},TRY,{[k]:v});foldOpen=false;setPref('try',JSON.stringify(TRY));drawPreview();drawTry();
+}
+const tryVal=k=>{const l=link(k);if(!l)return TRY[k];const c=cur(l.key);
+  return k==='cols'||k==='iconBg'?c:k==='grid'?(c===l.to('רשת')?'רשת':c===l.to('שורות')?'שורות':''):c!==''&&c===l.to(true);};
+function flip(k){pickTry(k,!tryVal(k));}
+/** מה שעל הלוח, כשילוב — לשמירה בשם */
+const tryNow=()=>{const o={};Object.keys(T0).forEach(k=>{o[k]=tryVal(k);});return o;};
 function drawTry(){
   const c=$('tryCard');c.hidden=!VIEW.tryc;if(!VIEW.tryc)return;c.textContent='';
-  const h=c.appendChild(E('h2',null));h.appendChild(E('span','k','ניסוי — רק בתצוגה'));
+  const live=SHAPE().length>0,soon=k=>!link(k);
+  const h=c.appendChild(E('h2',null));h.appendChild(E('span','k',live?'ניסוי ושילובים':'ניסוי — רק בתצוגה'));
   const clr=B('btn','ניקוי',()=>setTry({}));clr.disabled=!tryOn();h.appendChild(clr);
-  c.appendChild(E('p','note','מה שכאן משנה רק את התצוגה המקדימה — לא נכנס לפקודה, ל"החלה" ולרשימות. מה שימצא חן — ייבנה בתוכנה.'));
+  c.appendChild(E('p','note',live?'מה שהתוכנה מכירה — נכנס לפקודה, ו"החלה" קובעת אותו. מה שמסומן ◌ — עוד לא בתוכנה: רק בתצוגה המקדימה, ולא יוחל.'
+    :'מה שכאן משנה רק את התצוגה המקדימה — לא נכנס לפקודה, ל"החלה" ולרשימות. מה שימצא חן — ייבנה בתוכנה.'));
   const s1=E('div','tsec');s1.appendChild(E('div','tl','שילובים'));
   const ch=E('div','chips');ch.id='tryCombos';
-  Object.keys(COMBOS).forEach(n=>ch.appendChild(B('chip'+(tryOn()&&sameTry(COMBOS[n])?' on':''),n,()=>setTry(COMBOS[n]))));
+  const cchip=(n,o,cls)=>B('chip'+cls+(tryOn()&&sameTry(o)?' on':'')+(live&&soonOf(o).length?' soon':''),n,()=>setTry(o));
+  Object.keys(COMBOS).forEach(n=>ch.appendChild(cchip(n,COMBOS[n],'')));
   s1.appendChild(ch);
   const mine=Object.keys(SAVED);
-  if(mine.length){const ch2=E('div','chips');ch2.id='trySaved';mine.forEach(n=>ch2.appendChild(B('chip mineC'+(sameTry(SAVED[n])?' on':''),n,()=>setTry(SAVED[n]))));s1.appendChild(ch2);}
+  if(mine.length){const ch2=E('div','chips');ch2.id='trySaved';mine.forEach(n=>ch2.appendChild(cchip(n,SAVED[n],' mineC')));s1.appendChild(ch2);}
+  if(live&&tryOnly()){const ms=E('div','tmiss','בתצוגה יש גם מה שעוד לא בתוכנה, ולא יוחל: '+soonOf(TRY).map(k=>NAME_OF[k]).join(' · '));ms.id='tryMiss';s1.appendChild(ms);}
   const ac=E('div','acts');
   const sv=B('btn','שמירה בשם…',saveTry);sv.disabled=!tryOn();ac.appendChild(sv);
   const now=mine.find(n=>sameTry(SAVED[n]));
@@ -448,14 +491,16 @@ function drawTry(){
   s1.appendChild(ac);c.appendChild(s1);
   const d1=E('details');d1.open=true;d1.appendChild(E('summary',null,'מראה הפריט'));
   const radio=(lb,k,vals)=>{const r=E('div','tln');r.appendChild(E('span','tl2',lb));const g=E('div','chips');
-    [['','כמו העיצוב']].concat(vals.map(v=>[v,v])).forEach(([v,t])=>g.appendChild(B('chip'+(TRY[k]===v?' on':''),t,()=>pickTry(k,v))));r.appendChild(g);return r;};
+    [['','כמו העיצוב']].concat(vals.map(v=>[v,v])).forEach(([v,t])=>g.appendChild(B('chip'+(tryVal(k)===v?' on':'')+(live&&soon(k)&&v?' soon':''),t,()=>pickTry(k,v))));r.appendChild(g);return r;};
   d1.appendChild(radio('סגנון','grid',['רשת','שורות']));
   d1.appendChild(radio('טורים','cols',['2','3','4','5']));
-  d1.appendChild(radio('רקע לצלמית','iconBg',ICON_BG));
-  const g1=E('div','chips tog');TOG_ITEM.forEach(([k,t])=>g1.appendChild(B('chip'+(TRY[k]?' on':''),t,()=>flip(k))));d1.appendChild(g1);
+  const ar=link('iconBg')&&shp('around');
+  d1.appendChild(radio('רקע לצלמית','iconBg',ar?ar[2]:ICON_BG));     // מה שהתוכנה מכירה — הערכים שלה
+  const tog=(k,t)=>B('chip'+(tryVal(k)?' on':'')+(live&&soon(k)?' soon':''),t,()=>flip(k));
+  const g1=E('div','chips tog');TOG_ITEM.forEach(([k,t])=>g1.appendChild(tog(k,t)));d1.appendChild(g1);
   c.appendChild(d1);
   const d2=E('details');d2.open=true;d2.appendChild(E('summary',null,'מבנה המסך'));
-  const g2=E('div','chips tog');TOG_SCREEN.forEach(([k,t])=>g2.appendChild(B('chip'+(TRY[k]?' on':''),t,()=>flip(k))));d2.appendChild(g2);
+  const g2=E('div','chips tog');TOG_SCREEN.forEach(([k,t])=>g2.appendChild(tog(k,t)));d2.appendChild(g2);
   c.appendChild(d2);
 }
 function sheetOf(title,text){
@@ -465,7 +510,7 @@ function sheetOf(title,text){
   return [sh,inn];
 }
 function saveTry(){
-  const [sh,inn]=sheetOf('שמירת השילוב בשם','נשמר בלוח בלבד, לניסוי. כדי ששילוב ישמש ברשימות — צריך פקודה (בהמשך).');
+  const [sh,inn]=sheetOf('שמירת השילוב בשם','השם נשמר בלוח בלבד. בחירה בו מחזירה את השילוב ללוח, ו"החלה" קובעת את מה שהתוכנה מכירה.');
   const inp=E('input','nmIn');inp.type='text';inp.maxLength=30;inp.setAttribute('aria-label','השם');
   const was=Object.keys(SAVED).find(n=>sameTry(SAVED[n]));if(was)inp.value=was;
   inn.appendChild(inp);const er=E('div','err');er.hidden=true;inn.appendChild(er);
@@ -474,7 +519,7 @@ function saveTry(){
     const bad=!n?'צריך שם':n.length>30?'עד 30 תווים':COMBOS[n]?'זה שם של שילוב מוכן — צריך שם אחר':'';
     if(bad){er.textContent=bad;er.hidden=false;return;}
     if(SAVED[n]&&!sameTry(SAVED[n])&&ok.dataset.sure!=='1'){er.textContent='כבר יש שילוב בשם "'+n+'". "להחליף" — והקודם יוחלף.';er.hidden=false;ok.dataset.sure='1';ok.textContent='להחליף';return;}
-    SAVED[n]=Object.assign({},TRY);setPref('try-saved',JSON.stringify(SAVED));sh.remove();toast('נשמר: "'+n+'"');drawTry();
+    SAVED[n]=tryNow();setPref('try-saved',JSON.stringify(SAVED));sh.remove();toast('נשמר: "'+n+'"');drawTry();
   });
   inp.addEventListener('input',()=>{ok.dataset.sure='';ok.textContent='שמירה';er.hidden=true;});
   const ac=E('div','acts');ac.appendChild(ok);ac.appendChild(B('btn','ביטול',()=>sh.remove()));inn.appendChild(ac);
@@ -489,7 +534,10 @@ function delTry(n){
 
 function drawPreview(){
   $('pvCard').hidden=!VIEW.pv;if(!VIEW.pv)return;
-  const d=eff(),c=d.colors,t=d.texts,i=I(),pv=$('pv'),X=TRY;pv.textContent='';
+  const d=eff(),c=d.colors,t=d.texts,i=I(),pv=$('pv'),X=Object.assign({},TRY);pv.textContent='';
+  // מבנה 264: מה שבתוכנה — מהעיצוב עצמו (עם השינויים), לא מהניסוי
+  if(SHAPE().length){X.cols='';X.tight=d.gap===0;['grid','iconBg'].forEach(k=>{if(link(k))X[k]='';});
+    Object.keys(LINK).forEach(k=>{const x=shp(LINK[k][0]);if(x)X[k]=!!d.shape&&d.shape[x[0]]===x[2][LINK[k][1]];});}
   if(X.grid&&d.grid!==(X.grid==='רשת')){        // הניסוי — רק כאן, על מה שנראה
     d.grid=X.grid==='רשת';if(!d.grid)d.cols=1;
     if(!BY_NAME()){const pr=Object.values(i.presets).find(p=>p.grid===d.grid&&p.showIcon);if(pr){d.gap=pr.gap;d.icon=pr.icon;}}   // תוכנה שמודדת ברשת מהאריח
@@ -598,7 +646,7 @@ function drawPreview(){
     group('קבצים',all.filter(a=>!LISTS.includes(a[1])),base);
   }else group('פרקים',all,base);
   const sb=E('div','selbar','נבחר 1 · פס הבחירה');sb.style.background=c['פס הבחירה'];sb.style.color=c['הדגשה כהה'];pv.appendChild(sb);
-  $('pvNote').textContent=(d.grid?'רשת · '+Math.max(1,d.cols)+' טורים':'שורות')+(Object.keys(P).length?' · עם השינויים':'')+(tryOn()?' · ניסוי':'');
+  $('pvNote').textContent=(d.grid?'רשת · '+Math.max(1,d.cols)+' טורים':'שורות')+(Object.keys(P).length?' · עם השינויים':'')+(tryOnly()?' · ניסוי':'');
 }
 
 function reBtn(k,empty){const o=cur(k);const b=B('re','↺',()=>change(k,empty),'כמו '+aboveWord());b.disabled=same(o,empty);return b;}
