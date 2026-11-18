@@ -35,13 +35,36 @@ final class ShapeCmds {
         return null;
     }
 
-    /** מבנה 235, 236: "עצב" על פריט אחד — העיצוב (pDesign; "" — לרשת) והמראה (pLook): רק מה שנכתב משתנה. */
-    static void shapeOn(Store t, long id, java.util.Map<String, String> edit, String pDesign, String pLook) {
+    /**
+     * מבנה 235, 236: "עצב" על פריט אחד — העיצוב (pDesign; "" — לרשת) והמראה (pLook): רק מה שנכתב משתנה.
+     * מבנה 260 (המשתמש, 18.11.2026 — "א": "החלפת סגנון מביאה את מספר הטורים הרגיל של הסגנון: 3 ברשת, 1 בשורות; כתבת טורים באותה
+     * שורה — נשאר מה שכתבת"): /סגנון: בלי /טורים:, והסגנון שנראה מתחלף (מול מה שנראה עד כאן; ואם באותה שורה נבחר עיצוב — מול
+     * הסגנון של העיצוב הזה) ← הטורים הרגילים של הסגנון; /סגנון:"" שמחזיר את הסגנון שמעל ← גם הטורים חוזרים למה שמעל.
+     * הכלל האחד — כאן, לכל הדרכים (קובץ פקודות, הלוח). above — מה שנראה מעל הפריט (null — כלום). חוזר: מה שבא עם הסגנון, לדוח; או null.
+     */
+    static String shapeOn(Store t, long id, java.util.Map<String, String> edit, String pDesign, String pLook, Design above) {
+        String style = edit.get(Verbs.E_LOOK + Design.K_STYLE);
+        boolean rule = style != null && !edit.containsKey(Verbs.E_LOOK + Design.K_COLS);
+        boolean before = rule && Design.gridOf(above, t.prop(id, pDesign), t.prop(id, pLook));
         if (edit.containsKey(Store.P_DESIGN)) t.setProp(id, pDesign, Design.current(edit.get(Store.P_DESIGN)));   // מבנה 240: בשם של היום
-        String look = t.prop(id, pLook), was = look;
+        String look = t.prop(id, pLook), was = look, note = null;
         for (java.util.Map.Entry<String, String> e : edit.entrySet())
             if (e.getKey().startsWith(Verbs.E_LOOK)) look = Design.withLook(look, e.getKey().substring(Verbs.E_LOOK.length()), e.getValue());
+        if (rule) {
+            String design = t.prop(id, pDesign);
+            boolean now = Design.gridOf(above, design, look);
+            boolean base = edit.containsKey(Store.P_DESIGN) ? Design.gridOf(above, design, Design.withLook(look, Design.K_STYLE, "")) : before;
+            if (now != base) {
+                String cols = style.trim().isEmpty() ? "" : String.valueOf(Design.usualCols(now));
+                String next = Design.withLook(look, Design.K_COLS, cols);
+                if (!next.equals(look == null ? "" : look)) {
+                    look = next;
+                    note = Words.ListCmdW.colsWithStyle(cols);
+                }
+            }
+        }
         if (look != null && !look.equals(was)) t.setProp(id, pLook, look);
+        return note;
     }
 
     /**
@@ -63,8 +86,8 @@ final class ShapeCmds {
                     @Override public DbListCmd.Res run(Store t, DbListCmd.Finder f) {
                         long h = DbPaths.home(t);
                         if (h == 0) return DbListCmd.Res.err(Words.Db.LIST_GONE);
-                        shapeOn(t, h, c.edit, Store.P_ALL_DESIGN, Store.P_ALL_LOOK);
-                        return DbListCmd.Res.ok(said);
+                        String more = shapeOn(t, h, c.edit, Store.P_ALL_DESIGN, Store.P_ALL_LOOK, program ? null : Design.forProgram());
+                        return DbListCmd.Res.ok(more == null ? said : said + more);
                     }
                 }, false, lib);
                 if (program) Design.forgetProgram();
@@ -90,8 +113,8 @@ final class ShapeCmds {
             @Override public DbListCmd.Res run(Store t, DbListCmd.Finder f) {
                 DbPaths.Found u = DbPaths.listAt(t, m, at);
                 if (u.error != null || u.id == 0) return DbListCmd.Res.err(u.ambiguous ? u.error : Words.ListCmdW.noList(Names.label(at)));
-                shapeOn(t, u.id, c.edit, Store.P_DESIGN, Store.P_LOOK);
-                return DbListCmd.Res.ok(Words.ListCmdW.DESIGN_SET);
+                String more = shapeOn(t, u.id, c.edit, Store.P_DESIGN, Store.P_LOOK, Design.forListAbove(t, u.id));
+                return DbListCmd.Res.ok(more == null ? Words.ListCmdW.DESIGN_SET : Words.ListCmdW.DESIGN_SET + more);
             }
         };
         String no;

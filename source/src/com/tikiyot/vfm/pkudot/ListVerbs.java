@@ -319,8 +319,8 @@ final class ListVerbs {
                     List<String> at = Names.parsePath(c.arg);
                     DbPaths.Found u = DbPaths.listAt(t, mode, at);
                     if (u.error != null || u.id == 0) return DbListCmd.Res.err(u.ambiguous ? u.error : Words.ListCmdW.noList(Names.label(at)));
-                    ShapeCmds.shapeOn(t, u.id, c.edit, Store.P_DESIGN, Store.P_LOOK);
-                    return DbListCmd.Res.ok(Words.ListCmdW.DESIGN_SET);
+                    String more = ShapeCmds.shapeOn(t, u.id, c.edit, Store.P_DESIGN, Store.P_LOOK, Design.forListAbove(t, u.id));   // מבנה 260
+                    return DbListCmd.Res.ok(more == null ? Words.ListCmdW.DESIGN_SET : Words.ListCmdW.DESIGN_SET + more);
                 }
                 // מבנה 100: המספר של מה שנוצר / עודכן חוזר (DbListCmd.Res.made ← DbListCmd.Step.made) — כפתור שמריץ את השורה פותח בדיוק אותו
                 if (list) {                                                      // מבנה 102: "צור רשימה" — הכלל האחד; שם קיים — סירוב

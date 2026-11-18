@@ -1505,6 +1505,34 @@ final class DbCmdTests {
                                 !d256.showTag && Design.CIRCLE.equals(d256.around) && d256.fade && !s256.toString().contains("❌")
                                         && e256.showTag && !e256.fade && !Design.CIRCLE.equals(e256.around) && e256.signature().equals(before254.signature())
                                         && f256.showTag && !f256.fade);
+                        // מבנה 260 (המשתמש, 18.11.2026 — "א": "החלפת סגנון מביאה את מספר הטורים הרגיל של הסגנון: 3 ברשת, 1 בשורות; כתבת טורים באותה
+                        // שורה — נשאר מה שכתבת"). הכלל — בפקודה, לכל הדרכים
+                        String p260 = "עצב \"" + m91 + "/מראה 234/ב\"";
+                        Design a260 = ShapeCmds.state(Verbs.K_LIST, "מראה 234/ב", m91).shown;
+                        boolean g260 = a260 != null && a260.grid;
+                        String to260 = g260 ? Design.ROWS : Design.GRID, back260 = g260 ? Design.GRID : Design.ROWS;
+                        List<String> r260 = go(o121 + p260 + " /סגנון:" + to260 + "\n", here, vars, lib);
+                        Design b260 = ShapeCmds.state(Verbs.K_LIST, "מראה 234/ב", m91).shown;
+                        go(o121 + p260 + " /טורים:5\n" + p260 + " /סגנון:" + to260 + "\n", here, vars, lib);          // אותו סגנון שוב — אין החלפה
+                        Design c260 = ShapeCmds.state(Verbs.K_LIST, "מראה 234/ב", m91).shown;
+                        go(o121 + p260 + " /סגנון:" + back260 + " /טורים:2\n", here, vars, lib);                        // החלפה, עם טורים באותה שורה
+                        Design d260 = ShapeCmds.state(Verbs.K_LIST, "מראה 234/ב", m91).shown;
+                        go(o121 + p260 + " /סגנון:" + to260 + "\n", here, vars, lib);
+                        List<String> x260 = go(o121 + p260 + " /סגנון:\"\"\n", here, vars, lib);                        // חזרה לסגנון שמעל — גם הטורים
+                        ShapeCmds.State e260 = ShapeCmds.state(Verbs.K_LIST, "מראה 234/ב", m91);
+                        go(o121 + p260 + " /עיצוב:\"" + Design.DEFAULT + "\" /סגנון:רשת\n", here, vars, lib);          // עיצוב של שורות, ובאותה שורה — רשת
+                        Design f260 = ShapeCmds.state(Verbs.K_LIST, "מראה 234/ב", m91).shown;
+                        go(o121 + p260 + " /עיצוב:\"" + Design.FILES + "\" /סגנון:רשת\n", here, vars, lib);            // עיצוב של רשת — אין החלפה: הטורים שלו
+                        Design h260 = ShapeCmds.state(Verbs.K_LIST, "מראה 234/ב", m91).shown;
+                        go(o121 + p260 + " /עיצוב:\"\" /סגנון:\"\" /טורים:\"\"\n", here, vars, lib);
+                        Design z260 = ShapeCmds.state(Verbs.K_LIST, "מראה 234/ב", m91).shown;
+                        o.check("מבנה 260: סגנון שמתחלף בלי /טורים: — הטורים הרגילים שלו (רשת 3, שורות 1), ונאמר בדוח; אותו סגנון שוב — הטורים נשארים;"
+                                        + " טורים באותה שורה — מה שנכתב; /סגנון:\"\" — גם הטורים חוזרים למה שמעל; עם עיצוב באותה שורה — מול הסגנון של העיצוב " + r260 + " " + x260,
+                                b260.grid != g260 && b260.cols == Design.usualCols(b260.grid) && r260.toString().contains("עם הסגנון — טורים: " + Design.usualCols(b260.grid))
+                                        && c260.cols == 5 && c260.grid == b260.grid && d260.grid == g260 && d260.cols == 2
+                                        && e260.shown.grid == g260 && e260.shown.cols == a260.cols && !e260.look.contains(Design.K_COLS) && x260.toString().contains("הטורים חזרו")
+                                        && f260.grid && f260.cols == 3 && h260.grid && h260.cols == Design.get(Design.FILES).cols
+                                        && z260.signature().equals(a260.signature()) && Design.usualCols(true) == 3 && Design.usualCols(false) == 1);
                     }
                     // מבנה 123: "שחזר דוגמאות" כפקודה; ו"צור אופן" על אופן שיש בו רשימות ואין בו בית — מתקן
                     {

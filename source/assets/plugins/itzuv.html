@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="vfm-plugin" content="עיצוב">
-<meta name="vfm-plugin-version" content="10">
+<meta name="vfm-plugin-version" content="11">
 <title>עיצוב</title>
 <style>
 /* תוסף "עיצוב" — הלוח (claude/tosaf-itzuv.md, ההחלטות של 17.11.2026): מקום אחד שבו משנים את כל מה שאפשר — כמו לוח עם
@@ -24,6 +24,8 @@
    גרסה 10 (מבנה 258; המשתמש: "האם יש דרך לקבוע יחס אחיד לשניהם?" — "כן"): הצלמית והריווח — אחוז מגודל השם, בשורות וברשת.
    התצוגה מודדת כמו התוכנה (info.features: namesize; תוכנה שלפני כן — כמו שהיא מציירת). בחירת סגנון משנה רק את הסגנון — הלוח
    אינו מוסיף דבר משלו (הוראות, 2א).
+   גרסה 11 (מבנה 260; המשתמש — "א"): סגנון שמתחלף בלי שנכתבו טורים — הפקודה מביאה את הטורים הרגילים שלו (רשת 3, שורות 1).
+   הכלל — בתוכנה; כאן רק התצוגה מראה מה שיקרה (info.styleCols — כשהתוכנה מכירה).
    הצבעים של העמוד — מהתוכנה (vfm.theme), כאן רק ברירת מחדל. */
 :root{
   --bg:#FFFFFF; --soft:#F4F5F6; --fg:#202124; --muted:#5F6368; --ghost:#9AA0A6; --chip:#E8F0FE; --chip-fg:#174EA6;
@@ -296,12 +298,20 @@ function clone(o){return JSON.parse(JSON.stringify(o));}
 function eff(){
   const i=I(),d=cur('design');
   const base=clone(d&&i.presets[d]?i.presets[d]:S.above);
+  const g0=!!base.grid,c0=base.cols;                                  // מבנה 260: לפני מה שנקבע כאן
   ['cols','gap','icon'].forEach(k=>{const v=cur(k);if(v!=='')base[k]=+v;});
   const sv=Object.assign({},base.shape||{});                        // מבנה 255: הפריט — מה שנקבע, ועליו מה שמשתנה
   SHAPE().forEach(x=>{const v=cur('s:'+x[0]);if(v!=='')sv[x[0]]=v;});
   SHAPE().forEach(x=>{const v=sv[x[0]];if(v==null||v==='')return;
     if(x[3]==='around')base.around=v;else if(x[3]==='lines'||x[3]==='min')base[x[3]]=+v;else base[x[3]]=(v===x[2][0]);});
   base.shape=sv;
+  // מבנה 260: כמו בפקודה (הכלל — בתוכנה; כאן רק מה שייראה): סגנון שמתחלף בלי שנכתבו טורים — הטורים הרגילים של הסגנון;
+  // סגנון שחוזר למה שמעל — גם הטורים. "מתחלף" — מול מה שנראה עכשיו; ואם נבחר גם עיצוב — מול הסגנון של העיצוב
+  const sk=SHAPE().find(x=>x[3]==='grid'),stk=sk?'s:'+sk[0]:'';
+  if(i.styleCols&&stk&&stk in P&&!('cols' in P)){
+    const was='design' in P?g0:!!(S.shown&&S.shown.grid);
+    if(!!base.grid!==was)base.cols=P[stk]!==''?i.styleCols[P[stk]]:c0;
+  }
   let groupSet=false;
   TEXTS().forEach(t=>{
     const o=cur(t),x=base.texts[t];
@@ -805,7 +815,8 @@ function demoBridge(){
     texts:['כותרת','שם','נתונים','קבוצה','תווית'],weights:['דק','רגיל','בינוני','מודגש'],weightValues:{'דק':300,'רגיל':400,'בינוני':500,'מודגש':700},
     ranges:{cols:[1,8],gap:[0,200],icon:[0,1000],size:[6,60],weight:[100,900]},designs:Object.keys(P0),presets:P0,fonts:['דוד.ttf'],
     kinds:['רשימה ידנית','רשימה חכמה','תיקייה אמיתית','פקודה','קישור','כונן פנימי','כרטיס זיכרון'],
-    roles:ROLES,groups:['טקסט:4','רקעים:4','בחירה והדגשה:4','סימון ואזהרה:4','צלמיות וקווים:2'],shape:SHP};
+    roles:ROLES,groups:['טקסט:4','רקעים:4','בחירה והדגשה:4','סימון ואזהרה:4','צלמיות וקווים:2'],shape:SHP,styleCols:{'רשת':3,'שורות':1}};
+  if(TILE)delete info.styleCols;                       // תוכנה שלפני מבנה 260
   const state=(w,t)=>{
     const prog=fold(null,db['תוכנה']),mode=fold(prog,db['אופן']),way=String(t||'').split(/[\\/]/).filter(Boolean);
     if(w==='תוכנה'||!way.length)return {what:'תוכנה',path:'',mode:'עבודה',current:'עבודה',error:'',own:db['תוכנה'],shown:json(prog,[db['תוכנה'].look]),above:json(null,[]),info};
@@ -826,6 +837,7 @@ function demoBridge(){
     if(l.includes('\n'))return 'מתוסף העיצוב רצה רק שורה אחת של "עצב"';
     const m=l.match(/^עצב (?:(תוכנה)|"([^"]*)")(.*)$/);if(!m)return 'מתוסף העיצוב רצה רק שורה אחת של "עצב"';
     if(/\/טורים:(9|0)\b/.test(m[3]))return 'הערך מחוץ לטווח — מ־1 עד 8';
+    const shownG=()=>!!((state(m[1]?'תוכנה':'',m[2]||'').shown||{}).grid),gBefore=shownG();   // מבנה 260
     const o=db[m[1]?'תוכנה':m[2].split(/[\\/]/).length>1?'רשימה':'אופן'],toks=m[3].match(/\/[^\s"]+(?:"[^"]*")?(?:=(?:"[^"]*"|\S+))?[^\s]*/g)||[];
     toks.forEach(tk=>{
       const un=v=>v.replace(/^"|"$/g,'');
@@ -840,6 +852,11 @@ function demoBridge(){
         if(un(v)===''){['גודל','משקל','גופן'].forEach(f=>delete o.look[t+': '+f]);}
         else v.split(',').map(un).forEach(p=>{if(/^\d+$/.test(p)&&+p<100)o.look[t+': גודל']=p;else if(['דק','רגיל','בינוני','מודגש'].includes(p)||/^\d+$/.test(p))o.look[t+': משקל']=p;else o.look[t+': גופן']=p;});}
     });
+    if(info.styleCols&&/\/סגנון:/.test(m[3])&&!/\/טורים:/.test(m[3])){      // מבנה 260 — כמו בתוכנה (ShapeCmds.shapeOn)
+      const st=o.look['סגנון']||'',now=shownG();let base=gBefore;
+      if(/\/עיצוב:/.test(m[3])){delete o.look['סגנון'];base=shownG();if(st)o.look['סגנון']=st;}
+      if(now!==base){if(st)o.look['טורים']=String(info.styleCols[st]);else delete o.look['טורים'];}
+    }
     return '';
   };
   return {

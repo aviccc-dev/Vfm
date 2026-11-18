@@ -189,6 +189,8 @@ const run=async()=>{
     click(sbtn('סגנון','רשת'));
     say('סגנון: רשת — רק הסגנון; הלוח אינו מוסיף דבר משלו (מבנה 258) ← '+cmd(),cmd()==='עצב תוכנה /סגנון:רשת'&&$('pv').querySelectorAll('.it.g').length===6);
     say('אותו מספר — אותה צלמית בשורות וברשת ('+rowIc+' ← '+icW()+')',rowIc==='54px'&&icW()===rowIc);
+    const colsVal=()=>d.querySelectorAll('#main .card')[1].querySelectorAll('.num')[0].value,gridCols=()=>$('pv').querySelector('.items').style.gridTemplateColumns;
+    say('סגנון שמתחלף — התצוגה מראה את הטורים שהפקודה תביא (3), והם אינם בשורה (מבנה 260): '+gridCols(),gridCols().startsWith('repeat(3')&&colsVal()==='3'&&!cmd().includes('טורים'));
     pick('edit','ביטול');
     say('ביטול — חוזר',cmd().startsWith('אין שינויים'));
     pick('edit','חזרה');
@@ -209,8 +211,13 @@ const run=async()=>{
     const sh255=w.__shaped[w.__shaped.length-1];
     say('החלה — הכול בשורה אחת של "עצב": '+sh255,w.__shaped.length===n255+1&&sh255.includes('/סגנון:רשת')&&sh255.includes('/סביב-הצלמית:"ריבוע צבעוני"'));
     say('אחרי החלה — נקרא מחדש מהתוכנה: "נקבע כאן"',cmd().startsWith('אין שינויים')&&sbtn('סגנון','רשת').classList.contains('on')&&srow('סגנון').textContent.includes('נקבע כאן'));
+    say('אחרי החלה — הטורים באו מהפקודה: 3, נקבע כאן',colsVal()==='3'&&gridCols().startsWith('repeat(3')&&d.querySelectorAll('#main .card')[1].querySelector('.row').textContent.includes('נקבע כאן'));
     click(srow('סגנון').querySelector('.re'));
-    say('↺ אחרי החלה ← '+cmd(),cmd()==='עצב תוכנה /סגנון:""');
+    say('↺ אחרי החלה ← '+cmd()+' — בתצוגה גם הטורים חוזרים',cmd()==='עצב תוכנה /סגנון:""'&&gridCols().startsWith('repeat(1')&&!$('pv').querySelector('.it.g'));
+    click($('apply'));
+    say('אחרי החלה — שורות בטור אחד, והטורים כבר לא "נקבע כאן"',colsVal()==='1'&&!d.querySelectorAll('#main .card')[1].querySelector('.row').textContent.includes('נקבע כאן'));
+    setNum(d.querySelectorAll('#main .card')[1].querySelectorAll('.num')[0],4);click(sbtn('סגנון','רשת'));
+    say('טורים שנכתבו באותה שורה — נשארים: '+cmd(),cmd()==='עצב תוכנה /טורים:4 /סגנון:רשת'&&gridCols().startsWith('repeat(4'));
     // מבנה 256: הצג תווית · מוסתר חיוור · עיגול
     w=page(null);d=w.document;
     click(sbtn('הצג תווית','לא'));
@@ -232,6 +239,9 @@ const run=async()=>{
     w=new JSDOM(html,{runScripts:'dangerously',pretendToBeVisual:true,virtualConsole:vc,beforeParse(x){x.__m048=true;}}).window;d=w.document;
     click(chipOf('מנהל קבצים עם צלמיות'));
     const w48=$('pv').querySelector('.ic').style.width;
+    click(chipOf('רשימת קבצים'));click([...d.querySelectorAll('#shapeCard .row')].find(r=>r.querySelector('.lb').textContent==='סגנון').querySelectorAll('.seg button')[0]);
+    say('תוכנה כמו מ0.48 — סגנון שמתחלף אינו מביא טורים (אין שם הכלל)',$('pv').querySelector('.items').style.gridTemplateColumns.startsWith('repeat(1'));
+    click(chipOf('מנהל קבצים עם צלמיות'));
     say('תוכנה כמו מ0.48 — ברשת מרוחב האריח, כמו שהיא מציירת ('+w48+'), ונאמר',w48!=='70px'&&parseInt(w48,10)>40&&hintOf().includes('% מרוחב האריח')&&!!d.getElementById('shapeCard')&&errs.length===e258);
     // ---------- שגיאה בעמוד — נאמרת על המסך (מבנה 252) ----------
     const dom2=new JSDOM(html,{runScripts:'dangerously',pretendToBeVisual:true,virtualConsole:new VirtualConsole(),beforeParse(x){

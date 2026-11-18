@@ -322,6 +322,7 @@ final class Bridge {
         o.put("roles", roles);
         o.put("groups", new JSONArray(java.util.Arrays.asList(Palette.GROUPS)));
         o.put("kinds", new JSONArray(java.util.Arrays.asList(Design.tagKinds())));   // מבנה 250
+        o.put("styleCols", new JSONObject().put(Design.GRID, Design.usualCols(true)).put(Design.ROWS, Design.usualCols(false)));   // מבנה 260: לתצוגה של הלוח
         JSONArray shape = new JSONArray();                                      // מבנה 254: [מפתח, מתג, [ערכים] או [מ, עד], שם קבוע (255)]
         for (int n = 0; n < Design.SHAPE_KEYS.length; n++) {
             String k = Design.SHAPE_KEYS[n];

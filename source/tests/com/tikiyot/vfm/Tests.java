@@ -4336,6 +4336,8 @@ public final class Tests {
                 if (!html.contains("'" + sw + "'")) miss.add(sw);
             for (String[] r : Palette.ROLES) if (!html.contains("[\"" + r[0] + "\",\"" + r[1] + "\",\"" + r[2] + "\"]")) miss.add(r[0]);
             for (String d : new String[]{Design.DEFAULT, Design.FILES, Design.WORDS}) if (!html.contains("'" + d + "':{design:'" + d + "'")) miss.add(d);
+            if (!html.contains("styleCols:{'" + Design.GRID + "':" + Design.usualCols(true) + ",'" + Design.ROWS + "':" + Design.usualCols(false) + "}"))
+                miss.add("styleCols");                                          // מבנה 260: הטורים הרגילים של סגנון — כמו בתוכנה
             for (int n = 0; n < Design.SHAPE_KEYS.length; n++) {                    // מבנה 255: הפריט — אותם מפתחות, מתגים, ערכים ושמות
                 String sk = Design.SHAPE_KEYS[n];
                 String[] one = Design.choices(sk);

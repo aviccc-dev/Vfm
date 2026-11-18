@@ -451,6 +451,17 @@ final class Design {
         if (hadGap) gap = clamp(Math.round(Math.max(2f, tile * gap / 200f) * 100f / n), GAP[0], GAP[1]);
     }
 
+    /** מבנה 260 (המשתמש, 18.11.2026 — "א"): מספר הטורים הרגיל של סגנון — בא עם החלפת סגנון ב"עצב" (ShapeCmds.shapeOn). */
+    static int usualCols(boolean grid) {
+        return grid ? 3 : 1;
+    }
+
+    /** מבנה 260: הסגנון שנראה בשלב אחד של הירושה — מה שמעל (null — כלום), העיצוב שנבחר, והמראה שעליו. בלי כלום — שורות (כך המסך מצייר). */
+    static boolean gridOf(Design above, String design, String look) {
+        Design d = fold(above == null ? null : above.copy(), design, look, null);
+        return d != null && d.grid;
+    }
+
     /** מבנה 258: הריווח בפיקסלים — אחוז מגודל השם (namePx — גודל השם בפיקסלים), בשורות וברשת; least — המעט שנשאר תמיד. */
     int padPx(float namePx, int least) {
         return Math.max(least, (int) (namePx * gap / 100f));
