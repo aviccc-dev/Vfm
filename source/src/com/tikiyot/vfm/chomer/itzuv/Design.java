@@ -110,15 +110,8 @@ final class Design {
     int icon = 340;
     /** רשת: אחוז מרוחב האריח. שורות: אחוז מגודל הטקסט של השם — הריווח למעלה ולמטה. */
     int gap = 50;
-    boolean showIcon = true;
-    String around = FILL;
-    boolean tint;
-    /** מבנה 256: תווית הסוג נראית (כמו עד כאן); פריט מוסתר — חיוור (לא — כמו עד כאן). */
-    boolean showTag = true, fade;
-    /** מבנה 265: מפתחות נוספים של הפריט — בקובץ משלהם (Extras). */
-    final Extras extras = new Extras();
-    boolean showData = true;
-    boolean dataBelow = true;
+    /** מבנה 267: מראה הפריט — כל המפתחות בטבלה אחת (ItemKeys); כאן רק הערכים. */
+    final ItemKeys items = new ItemKeys();
     Text title = new Text(12, 400, SYSTEM), nameT = new Text(16, 400, SYSTEM), data = new Text(11, 400, SYSTEM);
     /** מבנה 239: הכתב של כותרת קבוצה; null — כמו השם (כמו שהיה עד כאן). */
     Text group;
@@ -145,9 +138,6 @@ final class Design {
     Text groupText() {
         return group != null ? group : nameT;
     }
-    boolean fit;
-    int min = 11;
-    int lines = 2;
 
     /** מבנה 234: עותק — לשינוי מעל עיצוב שבזיכרון (המקור נשאר כמו שהוא). */
     Design copy() {
@@ -157,23 +147,13 @@ final class Design {
         d.cols = cols;
         d.icon = icon;
         d.gap = gap;
-        d.showIcon = showIcon;
-        d.around = around;
-        d.tint = tint;
-        d.showTag = showTag;
-        d.fade = fade;
-        d.extras.copyFrom(extras);
-        d.showData = showData;
-        d.dataBelow = dataBelow;
+        d.items.copyFrom(items);
         d.title = title.copy();
         d.nameT = nameT.copy();
         d.data = data.copy();
         d.group = group == null ? null : group.copy();
         d.tag = tag == null ? null : tag.copy();
         d.wording.putAll(wording);
-        d.fit = fit;
-        d.min = min;
-        d.lines = lines;
         return d;
     }
 
@@ -236,7 +216,7 @@ final class Design {
      */
     static Design forHome(Store t, long home) {
         Design start = get(FILES).copy();
-        start.around = NONE;
+        start.items.put(K_AROUND, NONE);
         String own = t.prop(home, Store.P_DESIGN);
         if (own == null || own.trim().isEmpty()) own = homeName();
         Design d = fold(above(t, start), own, t.prop(home, Store.P_LOOK), start);
@@ -378,10 +358,9 @@ final class Design {
 
     /** סימן לזיהוי שינוי (המסך נבנה מחדש רק כשהמראה השתנה). */
     String signature() {
-        return grid + "|" + cols + "|" + icon + "|" + gap + "|" + showIcon + "|" + around + "|" + tint + "|" + showData
-                + "|" + dataBelow + "|" + nameT.size + nameT.weight + nameT.font + "|" + data.size + data.weight + data.font
-                + "|" + fit + "|" + min + "|" + lines + "|" + (group == null ? "" : group.size + "" + group.weight + group.font)
-                + "|" + (tag == null ? "" : tag.size + "" + tag.weight + tag.font) + "|" + wording + "|" + showTag + "|" + fade + "|" + extras.signature();
+        return grid + "|" + cols + "|" + icon + "|" + gap + "|" + items.signature() + nameT.size + nameT.weight + nameT.font + "|" + data.size
+                + data.weight + data.font + "|" + (group == null ? "" : group.size + "" + group.weight + group.font)
+                + "|" + (tag == null ? "" : tag.size + "" + tag.weight + tag.font) + "|" + wording;
     }
 
     // ---------- קריאה ----------
@@ -433,7 +412,7 @@ final class Design {
     /** מבנה 258: הצלמית בפיקסלים — אחוז מגודל השם, בשורות וברשת; ברשת — לא יותר ממה שנכנס באריח (הרוחב, פחות הריווח משני הצדדים). */
     int iconPx(float namePx, int tileW, int pad) {
         int px = (int) (namePx * icon / 100f);
-        return grid && tileW > 0 ? Math.max(0, Math.min(px, extras.room(tileW, pad))) : px;
+        return grid && tileW > 0 ? Math.max(0, Math.min(px, items.room(tileW, pad))) : px;
     }
 
     /**
@@ -442,47 +421,32 @@ final class Design {
      */
     static final int[] COLS = {1, 8}, ICON = {0, 1000}, GAP = {0, 200}, SIZE = {6, 60}, WEIGHT = {100, 900};
     /** מבנה 254: שורות לשם, והגודל המזערי של שם שמוקטן כדי להיכנס (התאם למקום). */
-    static final int[] LINES = {1, 6}, MIN = {6, 40};
+    static final int[] LINES = ItemKeys.LINES_RANGE, MIN = ItemKeys.MIN_RANGE;
 
     /**
      * מבנה 254 (המשתמש, 18.11.2026, על מה שעלה מהצילומים: "תבנה מה שהכי קל ומתאים ונראה לך" — קבוצה א: מה שכבר בעיצוב ואין לו
      * מתג): המפתחות של "אמצע" שנקבעים ב"עצב" מעבר לטורים, ריווח וצלמית — לפי הסדר. המתג — שם המפתח, עם "-" במקום רווח.
      */
-    static final String[] SHAPE_KEYS = Extras.with(new String[]{K_STYLE, K_SHOW_ICON, K_AROUND, K_TINT, K_SHOW_DATA, K_DATA_AT, K_LINES,
-            K_FIT, K_MIN, K_SHOW_TAG, K_FADE}, 0);   // מבנה 256; מבנה 265: ועוד מה שב־Extras
+    static final String[] SHAPE_KEYS = ItemKeys.with(K_STYLE, true);   // מבנה 267: הסגנון, ואחריו הטבלה של ItemKeys
     /** מבנה 255: לכל מפתח — שם קבוע ללוח העיצוב (מה הוא מצייר), באותו סדר. בערכים — הראשון הוא ה"כן" (רשת, כן, מתחת). */
-    static final String[] SHAPE_IDS = Extras.with(new String[]{"grid", "showIcon", "around", "tint", "showData", "dataBelow", "lines",
-            "fit", "min", "showTag", "fade"}, 1);
+    static final String[] SHAPE_IDS = ItemKeys.with("grid", false);
 
     /** מבנה 254: הערכים שהמפתח הזה מקבל; null — מספר בטווח (shapeRange). */
     static String[] choices(String key) {
         if (key.equals(K_STYLE)) return new String[]{GRID, ROWS};
-        if (key.equals(K_AROUND)) return new String[]{NONE, FRAME, FILL, CIRCLE};
-        if (key.equals(K_DATA_AT)) return new String[]{BELOW, SIDE};
-        if (key.equals(K_SHOW_ICON) || key.equals(K_TINT) || key.equals(K_SHOW_DATA) || key.equals(K_FIT) || key.equals(K_SHOW_TAG)
-                || key.equals(K_FADE) || Extras.has(key)) return new String[]{YES, NO};
-        return null;
+        ItemKeys.Def d = ItemKeys.def(key);
+        return d == null ? null : d.values;
     }
 
     /** מבנה 254: הטווח של מפתח מספרי מ־SHAPE_KEYS; null — אין. */
     static int[] shapeRange(String key) {
-        return key.equals(K_LINES) ? LINES : key.equals(K_MIN) ? MIN : null;
+        ItemKeys.Def d = ItemKeys.def(key);
+        return d == null ? null : d.range;
     }
 
     /** מבנה 254: הערך של מפתח מ־SHAPE_KEYS כמו שהוא בעיצוב הזה (כמו שנכתב בקובץ); null — לא מפתח כזה. */
     String shapeValue(String key) {
-        if (key.equals(K_STYLE)) return grid ? GRID : ROWS;
-        if (key.equals(K_SHOW_ICON)) return showIcon ? YES : NO;
-        if (key.equals(K_AROUND)) return around;
-        if (key.equals(K_TINT)) return tint ? YES : NO;
-        if (key.equals(K_SHOW_DATA)) return showData ? YES : NO;
-        if (key.equals(K_DATA_AT)) return dataBelow ? BELOW : SIDE;
-        if (key.equals(K_LINES)) return String.valueOf(lines);
-        if (key.equals(K_FIT)) return fit ? YES : NO;
-        if (key.equals(K_MIN)) return String.valueOf(min);
-        if (key.equals(K_SHOW_TAG)) return showTag ? YES : NO;
-        if (key.equals(K_FADE)) return fade ? YES : NO;
-        return extras.get(key);
+        return key.equals(K_STYLE) ? (grid ? GRID : ROWS) : items.get(key);
     }
 
     private void mid(String key, String v) {
@@ -490,17 +454,7 @@ final class Design {
         else if (key.equals(K_COLS)) cols = clamp(num(v), COLS[0], COLS[1]);
         else if (key.equals(K_ICON)) icon = clamp(num(v), ICON[0], ICON[1]);
         else if (key.equals(K_GAP)) gap = clamp(num(v), GAP[0], GAP[1]);
-        else if (key.equals(K_SHOW_ICON)) showIcon = !v.equals(NO);
-        else if (key.equals(K_AROUND)) around = v.equals(NONE) || v.equals(FRAME) || v.equals(CIRCLE) ? v : FILL;
-        else if (key.equals(K_SHOW_TAG)) showTag = !v.equals(NO);
-        else if (key.equals(K_FADE)) fade = v.equals(YES);
-        else if (key.equals(K_TINT)) tint = v.equals(YES);
-        else if (key.equals(K_SHOW_DATA)) showData = !v.equals(NO);
-        else if (key.equals(K_DATA_AT)) dataBelow = !v.equals(SIDE);
-        else if (key.equals(K_FIT)) fit = v.equals(YES);
-        else if (key.equals(K_MIN)) min = clamp(num(v), MIN[0], MIN[1]);
-        else if (key.equals(K_LINES)) lines = clamp(num(v), LINES[0], LINES[1]);
-        else if (!extras.put(key, v)) {
+        else if (!items.put(key, v)) {
             int c = key.indexOf(':');
             if (c <= 0) return;
             String who = key.substring(0, c).trim(), what = key.substring(c + 1).trim();
@@ -599,8 +553,6 @@ final class Design {
         line(sb, K_SHOW_ICON, words ? NO : YES);
         line(sb, K_AROUND, files ? FRAME : FILL);
         line(sb, K_TINT, words ? YES : NO);
-        line(sb, K_SHOW_DATA, YES);
-        line(sb, K_DATA_AT, BELOW);
         line(sb, T_NAME + ": " + K_SIZE, files ? "14" : words ? "15" : "16");
         line(sb, T_NAME + ": " + K_WEIGHT, files || words ? W_BOLD : W_REG);
         line(sb, T_NAME + ": " + K_FONT, SYSTEM);
@@ -608,11 +560,6 @@ final class Design {
         line(sb, T_DATA + ": " + K_WEIGHT, W_REG);
         line(sb, T_DATA + ": " + K_FONT, SYSTEM);
         line(sb, K_FIT, files || words ? YES : NO);
-        line(sb, K_MIN, "11");
-        line(sb, K_LINES, files ? "2" : words ? "2" : "2");
-        line(sb, K_SHOW_TAG, YES);                                              // מבנה 256
-        line(sb, K_FADE, NO);
-        Extras.defaults(sb);                                                    // מבנה 265
         return sb.toString();
     }
 

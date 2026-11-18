@@ -1292,7 +1292,7 @@ final class DbCmdTests {
                                         && all236[1].contains("נתונים: גודל = 13") && d236[0] != null && d236[0].cols == 6
                                         && d236[0].nameT.size == 22 && d236[0].data.size == 13 && !d236[0].grid
                                         && d236[1] != null && d236[1].grid && d236[1].cols == 3 && d236[2].grid && d236[2].cols == 6
-                                        && Design.NONE.equals(d236[2].around));
+                                        && Design.NONE.equals(d236[2].items.of(ItemKeys.AROUND)));
                         o.check("מבנה 236: אופן שאין — שגיאה; \"עצב תוכנה\" עם שם — שגיאה; \"צור אופן\" — כמו קודם (לא נבלע ב\"עצב\")",
                                 Batch.plan("עצב \"אין כזה 236\" /טורים:2\n", here, vars, lib).blocked()
                                         && Batch.plan("עצב תוכנה \"x\" /טורים:2\n", here, vars, lib).blocked()
@@ -1478,11 +1478,11 @@ final class DbCmdTests {
                         Design b254 = ShapeCmds.state(Verbs.K_LIST, "מראה 234/ב", m91).shown;
                         o.check("מבנה 254: קבוצה א — /סגנון: /הצג-צלמית: /סביב-הצלמית: /צבע-רקע-לפריט: /הצג-נתונים: /מקום-הנתונים: /שורות-לשם: /התאם-למקום: /גודל-מזערי:"
                                         + " — נקבעים ונבדקים ב\"ודא עיצוב\"; ערך שאינו מהערכים, ומחוץ לטווח — שגיאה; \"\" — חוזרים למה שהיה " + s254 + " " + errs235(st254),
-                                d254.grid && !d254.showIcon && Design.FILL.equals(d254.around) && d254.tint && !d254.showData && !d254.dataBelow
-                                        && d254.lines == 1 && d254.fit && d254.min == 9 && !s254.toString().contains("❌") && v254.toString().contains("❌")
+                                d254.grid && !d254.items.on(ItemKeys.SHOW_ICON) && Design.FILL.equals(d254.items.of(ItemKeys.AROUND)) && d254.items.on(ItemKeys.TINT) && !d254.items.on(ItemKeys.SHOW_DATA) && !d254.items.on(ItemKeys.DATA_BELOW)
+                                        && d254.items.num(ItemKeys.LINES) == 1 && d254.items.on(ItemKeys.FIT) && d254.items.num(ItemKeys.MIN) == 9 && !s254.toString().contains("❌") && v254.toString().contains("❌")
                                         && st254.blocked() && errs235(st254).contains("לא אחד מאלה") && ln254.blocked() && errs235(ln254).contains("מחוץ לטווח")
                                         && ar254.blocked() && b254.signature().equals(before254.signature())
-                                        && Verbs.shapeSwitch(Design.K_AROUND).equals("/סביב-הצלמית:") && Design.SHAPE_KEYS.length == 11 + Extras.DEFS.length);   // מבנה 265: ועוד מה שב־Extras
+                                        && Verbs.shapeSwitch(Design.K_AROUND).equals("/סביב-הצלמית:") && Design.SHAPE_KEYS.length == 1 + ItemKeys.DEFS.length);   // מבנה 267: הסגנון, ועוד הטבלה
                         // מבנה 256: קבוצה ב, הקל — בלי תווית הסוג · עיגול סביב הצלמית · פריט מוסתר חיוור
                         String b256 = " /הצג-תווית:לא /סביב-הצלמית:עיגול /מוסתר-חיוור:כן";
                         List<String> s256 = go(o121 + "עצב \"" + m91 + "/מראה 234/ב\"" + b256 + "\n"
@@ -1492,9 +1492,9 @@ final class DbCmdTests {
                         Design e256 = ShapeCmds.state(Verbs.K_LIST, "מראה 234/ב", m91).shown;
                         Design f256 = Design.parse("בדיקה", Design.builtInText(Design.FILES));
                         o.check("מבנה 256: /הצג-תווית:לא · /סביב-הצלמית:עיגול · /מוסתר-חיוור:כן — נקבעים, נבדקים, וחוזרים; בלי שנקבע — כמו עד כאן (תווית, לא חיוור) " + s256,
-                                !d256.showTag && Design.CIRCLE.equals(d256.around) && d256.fade && !s256.toString().contains("❌")
-                                        && e256.showTag && !e256.fade && !Design.CIRCLE.equals(e256.around) && e256.signature().equals(before254.signature())
-                                        && f256.showTag && !f256.fade);
+                                !d256.items.on(ItemKeys.SHOW_TAG) && Design.CIRCLE.equals(d256.items.of(ItemKeys.AROUND)) && d256.items.on(ItemKeys.FADE) && !s256.toString().contains("❌")
+                                        && e256.items.on(ItemKeys.SHOW_TAG) && !e256.items.on(ItemKeys.FADE) && !Design.CIRCLE.equals(e256.items.of(ItemKeys.AROUND)) && e256.signature().equals(before254.signature())
+                                        && f256.items.on(ItemKeys.SHOW_TAG) && !f256.items.on(ItemKeys.FADE));
                         // מבנה 265 (המשתמש, 18.11.2026: "תגמור את שניהם" — מה שהיה רק בניסוי של הלוח, בתוכנה): צלמית לצד השם · הצג שם
                         String b265 = " /צלמית-לצד-השם:כן /הצג-שם:לא";
                         List<String> s265 = go(o121 + "עצב \"" + m91 + "/מראה 234/ב\"" + b265 + "\n"
@@ -1504,8 +1504,8 @@ final class DbCmdTests {
                         go(o121 + "עצב \"" + m91 + "/מראה 234/ב\" /צלמית-לצד-השם:\"\" /הצג-שם:\"\"\n", here, vars, lib);
                         Design e265 = ShapeCmds.state(Verbs.K_LIST, "מראה 234/ב", m91).shown;
                         o.check("מבנה 265: /צלמית-לצד-השם:כן · /הצג-שם:לא — נקבעים, נבדקים (גם ❌ כשלא), וחוזרים; בלי שנקבע — כמו עד כאן " + s265 + " " + x265,
-                                d265.extras.on(Extras.SIDE) && !d265.extras.on(Extras.SHOW_NAME) && !s265.toString().contains("❌")
-                                        && x265.toString().contains("❌") && !e265.extras.on(Extras.SIDE) && e265.extras.on(Extras.SHOW_NAME)
+                                d265.items.on(ItemKeys.SIDE) && !d265.items.on(ItemKeys.SHOW_NAME) && !s265.toString().contains("❌")
+                                        && x265.toString().contains("❌") && !e265.items.on(ItemKeys.SIDE) && e265.items.on(ItemKeys.SHOW_NAME)
                                         && e265.signature().equals(before254.signature()) && !d265.signature().equals(e265.signature()));
                         // מבנה 260 (המשתמש, 18.11.2026 — "א": "החלפת סגנון מביאה את מספר הטורים הרגיל של הסגנון: 3 ברשת, 1 בשורות; כתבת טורים באותה
                         // שורה — נשאר מה שכתבת"). הכלל — בפקודה, לכל הדרכים

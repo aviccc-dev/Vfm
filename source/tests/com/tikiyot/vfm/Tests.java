@@ -664,10 +664,10 @@ public final class Tests {
         // ברירת המחדל — המראה של היום: שורות, צלמית 54dp (340% מ־16), שם 16
         Design def = Design.parse(Design.DEFAULT, Design.builtInText(Design.DEFAULT));
         check("1.12.0: ברירת מחדל — שורות", !def.grid && def.cols == 1 && def.icon == 340 && def.nameT.size == 16
-                && Design.FILL.equals(def.around) && !def.fit && def.lines == 2);
+                && Design.FILL.equals(def.items.of(ItemKeys.AROUND)) && !def.items.on(ItemKeys.FIT) && def.items.num(ItemKeys.LINES) == 2);
         Design files = Design.parse(Design.FILES, Design.builtInText(Design.FILES));
         check("1.12.0: תוכנת ניהול קבצים — רשת 3, מסגרת, התאם למקום (מבנה 258: הצלמית והריווח — מגודל השם: 500%, 35%)", files.grid && files.cols == 3
-                && files.icon == 500 && files.gap == 35 && Design.FRAME.equals(files.around) && files.fit && files.nameT.weight == 700);
+                && files.icon == 500 && files.gap == 35 && Design.FRAME.equals(files.items.of(ItemKeys.AROUND)) && files.items.on(ItemKeys.FIT) && files.nameT.weight == 700);
         // מבנה 258 (המשתמש, 18.11.2026: "האם יש דרך לקבוע יחס אחיד לשניהם?" — "כן"): צלמית וריווח — אחוז מגודל השם, בשורות וברשת
         Design g258 = Design.parse("רשת", Design.builtInText(Design.DEFAULT).replace("סגנון = שורות", "סגנון = רשת"));
         check("מבנה 258: אותו מספר — אותה צלמית ואותו ריווח בשורות וברשת (בלי מה שיתקן אחרי החלפת סגנון)", g258.grid && !def.grid
@@ -675,25 +675,29 @@ public final class Tests {
                 && g258.padPx(48f, 6) == def.padPx(48f, 0) && def.padPx(48f, 0) == 24);
         check("מבנה 258: ברשת — הצלמית לא גדולה ממה שנכנס באריח; בשורות — לא מוגבלת; ריווח 0 ברשת — המעט שנשאר", g258.iconPx(48f, 120, 10) == 100
                 && def.iconPx(48f, 120, 10) == 163 && Design.parse("x", "[אמצע]\nמידות = לפי השם\nסגנון = רשת\nריווח = 0%\n").padPx(48f, 6) == 6);
-        // מבנה 265: מפתחות נוספים של הפריט — בקובץ משלהם (Extras); המתג, הלוח והעורך נגזרים מהם
+        // מבנה 265, 267: מפתחות הפריט — טבלה אחת (ItemKeys); המתג, הלוח והעורך נגזרים ממנה
         Design x265 = Design.parse("בדיקה", Design.builtInText(Design.FILES));
         boolean in265 = true;
-        for (String[] x : Extras.DEFS)
-            in265 &= java.util.Arrays.asList(Design.SHAPE_KEYS).contains(x[0]) && java.util.Arrays.asList(Design.SHAPE_IDS).contains(x[1])
-                    && java.util.Arrays.equals(Design.choices(x[0]), new String[]{Design.YES, Design.NO}) && x[2].equals(x265.shapeValue(x[0]))
-                    && Design.builtInText(Design.FILES).contains(x[0] + " = " + x[2])
-                    && Words.Verb.usage(Verbs.SHAPE).contains(Verbs.shapeSwitch(x[0]));
-        Design y265 = Design.parse("בדיקה", Design.builtInText(Design.FILES) .replace("צלמית לצד השם = לא", "צלמית לצד השם = כן").replace("הצג שם = כן", "הצג שם = לא"));
-        check("מבנה 265: כל מפתח שב־Extras — בין מפתחות הפריט, עם שם קבוע, כן / לא, מתג, בעזרה ובקובץ המובנה (ברירת המחדל); ונקרא מקובץ",
-                in265 && Design.SHAPE_KEYS.length == Design.SHAPE_IDS.length && y265.extras.on(Extras.SIDE) && !y265.extras.on(Extras.SHOW_NAME)
-                        && !x265.extras.on(Extras.SIDE) && x265.extras.on(Extras.SHOW_NAME) && y265.copy().extras.on(Extras.SIDE)
-                        && Design.lookError("הצג שם", "אולי") != null && Design.lookError("הצג שם", "לא") == null);
+        for (ItemKeys.Def x : ItemKeys.DEFS)
+            in265 &= java.util.Arrays.asList(Design.SHAPE_KEYS).contains(x.key) && java.util.Arrays.asList(Design.SHAPE_IDS).contains(x.id)
+                    && (x.range == null) == (x.values != null) && (x.values == null || java.util.Arrays.asList(x.values).contains(x.def))
+                    && x.def.equals(new Design().shapeValue(x.key)) && Words.Verb.usage(Verbs.SHAPE).contains(Verbs.shapeSwitch(x.key))
+                    && Design.lookError(x.key, x.def) == null && Design.lookError(x.key, "אולי") != null;
+        Design y265 = Design.parse("בדיקה", "[אמצע]\nסגנון = רשת\nצלמית לצד השם = כן\nהצג שם = לא\nשורות לשם = 40\nגודל מזערי = x\nסביב הצלמית = משושה\n");
+        check("מבנה 265, 267: כל מפתח בטבלה — בין מפתחות הפריט, עם שם קבוע, ערכים או טווח, ברירת מחדל, מתג, ובעזרה; ערך שאינו מהערכים — שגיאה ב\"עצב\"",
+                in265 && Design.SHAPE_KEYS.length == Design.SHAPE_IDS.length && Design.SHAPE_KEYS.length == 13 && Design.K_STYLE.equals(Design.SHAPE_KEYS[0]));
+        check("מבנה 267: נקרא מטקסט של עיצוב — מה שנכתב; מספר — בתוך הטווח; לא מספר — נשאר; ערך לא מוכר — ברירת המחדל; עותק — עם הערכים",
+                y265.items.on(ItemKeys.SIDE) && !y265.items.on(ItemKeys.SHOW_NAME) && y265.items.num(ItemKeys.LINES) == 6 && y265.items.num(ItemKeys.MIN) == 11
+                        && Design.FILL.equals(y265.items.of(ItemKeys.AROUND)) && !x265.items.on(ItemKeys.SIDE) && x265.items.on(ItemKeys.SHOW_NAME)
+                        && y265.copy().items.on(ItemKeys.SIDE) && !y265.signature().equals(x265.signature())
+                        && Design.FRAME.equals(x265.items.of(ItemKeys.AROUND)) && x265.items.on(ItemKeys.FIT) && x265.items.on(ItemKeys.SHOW_DATA));
+        y265 = Design.parse("בדיקה", Design.builtInText(Design.FILES) + "צלמית לצד השם = כן\n");
         check("מבנה 265: צלמית לצד השם — ברשת הצלמית עד כשליש מהאריח (השאר לשם); בלי — כמו עד כאן",
                 y265.grid && y265.iconPx(48f, 300, 10) == 105 && x265.iconPx(48f, 300, 10) == 240 && y265.iconPx(10f, 300, 10) == 50);
         check("מבנה 258: התוכנה אומרת לתוספים שהיא מודדת מגודל השם (namesize)",
                 read(new File(System.getProperty("vfm.src"), "src/com/tikiyot/vfm/lev/Bridge.java")).contains(" namesize\""));
         Design words = Design.parse(Design.WORDS, Design.builtInText(Design.WORDS));
-        check("1.12.0: מילים וצבע — בלי צלמית, עם צבע רקע", !words.grid && words.cols == 2 && !words.showIcon && words.tint);
+        check("1.12.0: מילים וצבע — בלי צלמית, עם צבע רקע", !words.grid && words.cols == 2 && !words.items.on(ItemKeys.SHOW_ICON) && words.items.on(ItemKeys.TINT));
 
         // מה שחסר — מברירת המחדל; שורה לא מובנת — לא נלקחת; הערה בסוף שורה
         Design part = Design.parse("חלקי", "[אמצע]\nסגנון = רשת ; הערה\nטורים = ארבעה\nשם: משקל = מודגש\nמשהו מוזר\n[לא קיים]\nגודל = 99\n");

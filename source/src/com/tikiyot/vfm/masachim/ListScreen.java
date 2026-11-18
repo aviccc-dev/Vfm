@@ -191,7 +191,7 @@ abstract class ListScreen<T> extends Activity {
             l = g;
         } else {
             ListView lv = new ListView(this);
-            if (d != null && d.tint) {                                        // אריחים צבעוניים — רווח ביניהם, בלי קו
+            if (d != null && d.items.on(ItemKeys.TINT)) {                                        // אריחים צבעוניים — רווח ביניהם, בלי קו
                 int sp = Ui.dp(this, 4);
                 lv.setDivider(new android.graphics.drawable.ColorDrawable(0));
                 lv.setDividerHeight(sp);
@@ -234,7 +234,7 @@ abstract class ListScreen<T> extends Activity {
             list = makeList(d);
             parent.addView(list, at, lp);
         }
-        if (d == null || !d.fit) {
+        if (d == null || !d.items.on(ItemKeys.FIT)) {
             fitted = null;
             return;
         }

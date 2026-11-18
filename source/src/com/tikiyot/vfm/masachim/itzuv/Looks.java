@@ -123,7 +123,7 @@ final class Looks {
         more.setVisibility(View.GONE);
         if (d.grid) {
             int pad = padPx(c, d);
-            boolean side = d.extras.on(Extras.SIDE);                          // מבנה 265: הצלמית לצד השם — אריח שוכב
+            boolean side = d.items.on(ItemKeys.SIDE);                          // מבנה 265: הצלמית לצד השם — אריח שוכב
             row.setOrientation(side ? LinearLayout.HORIZONTAL : LinearLayout.VERTICAL);
             row.setGravity(side ? Gravity.CENTER_VERTICAL : Gravity.CENTER_HORIZONTAL);
             row.setPadding(pad, pad, pad, pad);
@@ -165,10 +165,10 @@ final class Looks {
             sub.setTextAlignment(View.TEXT_ALIGNMENT_VIEW_START);
             more.setTextAlignment(View.TEXT_ALIGNMENT_VIEW_START);
             texts.addView(title);
-            if (d.dataBelow) texts.addView(sub);
+            if (d.items.on(ItemKeys.DATA_BELOW)) texts.addView(sub);
             texts.addView(more);
             row.addView(texts, new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f));
-            if (!d.dataBelow) {                                               // החלטה 2: הנתונים בצד, מול השם
+            if (!d.items.on(ItemKeys.DATA_BELOW)) {                                               // החלטה 2: הנתונים בצד, מול השם
                 sub.setPadding(Ui.dp(c, 8), 0, 0, 0);
                 sub.setMaxWidth(tileW * 2 / 5);
                 row.addView(sub, new LinearLayout.LayoutParams(-2, -2));
@@ -193,10 +193,10 @@ final class Looks {
         if (kind != null) {                                                   // 1.17.0: הסוג תמיד, והצלמית בנוסף (המילון, 24)
             String own = Ui.userIconOf(v);
             if (own.isEmpty() && icon != null) own = icon;
-            if (d.grid || !d.showTag) {                                       // ב': הצלמית באריח, הסוג בפס מתחת (מבנה 256: בלי תווית — גם בשורות)
+            if (d.grid || !d.items.on(ItemKeys.SHOW_TAG)) {                                       // ב': הצלמית באריח, הסוג בפס מתחת (מבנה 256: בלי תווית — גם בשורות)
                 String txt = title.getText().toString();
                 if (!own.isEmpty() && txt.startsWith(own + "  ")) title.setText(txt.substring(own.length() + 2));
-                if (strip != null && d.showTag) {                             // מבנה 256: "הצג תווית = לא" — בלי הפס
+                if (strip != null && d.items.on(ItemKeys.SHOW_TAG)) {                             // מבנה 256: "הצג תווית = לא" — בלי הפס
                     String w = d.wordingOf(Ui.tag(kind));                       // מבנה 250: הנוסח שנקבע, או המילה הקצרה
                     strip.setText(w != null ? w : Ui.tagShort(kind));
                     strip.setBackgroundColor(Ui.kindColor(kind));
@@ -239,35 +239,35 @@ final class Looks {
         if (emoji && d.grid) box.setTextSize(TypedValue.COMPLEX_UNIT_PX, px * 0.5f);
         else if (d.tag != null && kind != null && !d.grid && !emoji) text(box, d.tag, d.tag.size);   // מבנה 249: התווית בשורות — כמו שנקבע
         else box.setTextSize(TypedValue.COMPLEX_UNIT_PX, box.getTextSize() * scale);
-        boolean circle = Design.CIRCLE.equals(d.around);                    // מבנה 256: עיגול — כמו ריבוע צבעוני, עגול
+        boolean circle = Design.CIRCLE.equals(d.items.of(ItemKeys.AROUND));                    // מבנה 256: עיגול — כמו ריבוע צבעוני, עגול
         float r = circle ? px / 2f : Ui.dp(c, d.grid ? 12 : 6);
         box.setMinHeight(circle && !d.grid ? px : 0);                         // בשורות — גובה כרוחב, כדי שיהיה עיגול
-        if (Design.FILL.equals(d.around) || circle) {
+        if (Design.FILL.equals(d.items.of(ItemKeys.AROUND)) || circle) {
             box.setTextColor(Ui.ON_COLOR);
             box.setBackground(bg == 0 ? null : rounded(bg, r, 0, 0));
         } else {
             box.setTextColor(bg == 0 ? Ui.TEXT : bg);
-            box.setBackground(Design.FRAME.equals(d.around) ? rounded(0, r, Ui.dp(c, 1), bg == 0 ? Ui.RULE : bg) : null);
+            box.setBackground(Design.FRAME.equals(d.items.of(ItemKeys.AROUND)) ? rounded(0, r, Ui.dp(c, 1), bg == 0 ? Ui.RULE : bg) : null);
         }
-        box.setVisibility(d.showIcon ? View.VISIBLE : View.GONE);
+        box.setVisibility(d.items.on(ItemKeys.SHOW_ICON) ? View.VISIBLE : View.GONE);
         // השם
-        boolean full = !d.grid && title.getMaxLines() > d.lines + 2;          // "נתונים מלאים" — השם המלא נשאר
+        boolean full = !d.grid && title.getMaxLines() > d.items.num(ItemKeys.LINES) + 2;          // "נתונים מלאים" — השם המלא נשאר
         text(title, d.nameT, fitted != null ? fitted[0] : d.nameT.size);
         title.setTextScaleX(fitted != null ? fitted[1] : 1f);
         if (!full) {
-            title.setMaxLines(d.lines);
+            title.setMaxLines(d.items.num(ItemKeys.LINES));
             title.setEllipsize(TextUtils.TruncateAt.END);
         }
-        title.setVisibility(d.extras.on(Extras.SHOW_NAME) ? View.VISIBLE : View.GONE);   // מבנה 265: "הצג שם = לא" — בלי השם
+        title.setVisibility(d.items.on(ItemKeys.SHOW_NAME) ? View.VISIBLE : View.GONE);   // מבנה 265: "הצג שם = לא" — בלי השם
         // הנתונים
         text(sub, d.data, d.data.size);
         text(more, d.data, d.data.size);
-        boolean hasData = d.showData && sub.getText().length() > 0;
+        boolean hasData = d.items.on(ItemKeys.SHOW_DATA) && sub.getText().length() > 0;
         if (d.grid || d.cols > 1) {                                           // גובה אחיד לכל אריח (עיצוב 1; 1.12.1 — גם שורות בטורים)
-            title.setMinLines(d.lines);
+            title.setMinLines(d.items.num(ItemKeys.LINES));
             sub.setSingleLine(true);
             sub.setEllipsize(TextUtils.TruncateAt.END);
-            sub.setVisibility(hasData ? View.VISIBLE : d.showData ? View.INVISIBLE : View.GONE);
+            sub.setVisibility(hasData ? View.VISIBLE : d.items.on(ItemKeys.SHOW_DATA) ? View.INVISIBLE : View.GONE);
             more.setVisibility(View.GONE);
         } else {
             title.setMinLines(1);
@@ -275,10 +275,10 @@ final class Looks {
         }
         // צבע רקע לפריט
         int tint = kindBg != 0 ? own : bg;                                    // הצבע של המשתמש — לרקע הפריט
-        v.setBackground(d.tint ? rounded(tint == 0 ? Ui.BG_SOFT : soft(tint), Ui.dp(c, 10), 0, 0) : null);
-        if (d.tint && tint != 0) title.setTextColor(darker(tint));
+        v.setBackground(d.items.on(ItemKeys.TINT) ? rounded(tint == 0 ? Ui.BG_SOFT : soft(tint), Ui.dp(c, 10), 0, 0) : null);
+        if (d.items.on(ItemKeys.TINT) && tint != 0) title.setTextColor(darker(tint));
         // מבנה 256: פריט מוסתר (שמו מתחיל בנקודה) — חיוור; השורה חוזרת לשימוש, ולכן תמיד נקבע
-        v.setAlpha(d.fade && title.getText().toString().trim().startsWith(".") ? 0.45f : 1f);
+        v.setAlpha(d.items.on(ItemKeys.FADE) && title.getText().toString().trim().startsWith(".") ? 0.45f : 1f);
     }
 
     /** אחרי apply: הבחירה (או ההתאמה) — גוברת על צבע הרקע של העיצוב, בלי לאבד את הפינות. */
@@ -292,7 +292,7 @@ final class Looks {
 
     static void mark(Context c, View v, Design d, int color) {
         if ((color >>> 24) == 0) return;
-        v.setBackground(rounded(color, Ui.dp(c, d.tint || d.grid ? 10 : 0), 0, 0));
+        v.setBackground(rounded(color, Ui.dp(c, d.items.on(ItemKeys.TINT) || d.grid ? 10 : 0), 0, 0));
     }
 
     static GradientDrawable rounded(int fill, float radius, int stroke, int strokeColor) {
@@ -358,9 +358,9 @@ final class Looks {
      * מה שעדיין לא נכנס — יורד שורה (עד "שורות לשם"), ואז "…". null — בלי התאמה.
      */
     static float[] fit(Context c, Design d, List<String> names, int tileW) {
-        if (!d.fit || names == null || names.isEmpty()) return null;
+        if (!d.items.on(ItemKeys.FIT) || names == null || names.isEmpty()) return null;
         int avail = d.grid ? tileW - 2 * padPx(c, d) - Ui.dp(c, 6)
-                : tileW - iconPx(c, d, tileW) - Ui.dp(c, 34) - (d.dataBelow ? 0 : tileW * 2 / 5);
+                : tileW - iconPx(c, d, tileW) - Ui.dp(c, 34) - (d.items.on(ItemKeys.DATA_BELOW) ? 0 : tileW * 2 / 5);
         if (avail <= 0) return null;
         Paint p = new Paint();
         p.setTypeface(face(d.nameT));
@@ -370,7 +370,7 @@ final class Looks {
         if (widest <= avail) return new float[]{d.nameT.size, 1f};
         float f = avail / widest;
         float narrow = Math.max(NARROW, f);
-        float size = Math.max(d.min, d.nameT.size * f / narrow);
+        float size = Math.max(d.items.num(ItemKeys.MIN), d.nameT.size * f / narrow);
         return new float[]{Math.min(size, d.nameT.size), narrow};
     }
 }

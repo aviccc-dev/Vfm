@@ -228,10 +228,10 @@ final class Bridge {
         o.put("cols", d.cols);
         o.put("gap", d.gap);
         o.put("icon", d.icon);
-        o.put("showIcon", d.showIcon);
-        o.put("around", d.around);
-        o.put("showData", d.showData);
-        o.put("dataBelow", d.dataBelow);
+        o.put("showIcon", d.items.on(ItemKeys.SHOW_ICON));
+        o.put("around", d.items.of(ItemKeys.AROUND));
+        o.put("showData", d.items.on(ItemKeys.SHOW_DATA));
+        o.put("dataBelow", d.items.on(ItemKeys.DATA_BELOW));
         JSONObject texts = new JSONObject();
         texts.put(Design.T_TITLE, textJson(d.title));
         texts.put(Design.T_NAME, textJson(d.nameT));
