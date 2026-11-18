@@ -165,6 +165,12 @@ const wait=ms=>new Promise(r=>setTimeout(r,ms));
   a.hit(a.it('עיצוב'));a.hit(a.it('עצב'));
   const t21=a.get(),miss21=(a.D.querySelector('#ed .miss')||{textContent:''}).textContent;
   say('עצב: שורה חדשה — נאמר מה חסר ('+miss21+')',t21==='עצב'&&miss21.includes('מה מעצבים')&&miss21.includes('פרטים'));
+  // גרסה 22 (ממצא 63): ל"רענן" — "עמוק" ו"מלא" בגיליון הפרטים, אחד מתוך
+  a.set('רענן\n');a.hit(a.row(0));a.hit(a.chip(0,'פרטים'));
+  say('רענן: בגיליון הפרטים — "איזה רענון": עמוק, מלא',[...a.D.querySelectorAll('#sheetIn .grp')].some(x=>x.textContent===Mo.GROUP_TITLE.rf)&&!!a.it('עמוק')&&!!a.it('מלא'));
+  a.hit(a.it('עמוק'));a.hit(a.btn('בחירה'));const r1=a.get();
+  a.hit(a.row(0));a.hit(a.chip(0,'פרטים'));a.hit(a.it('מלא'));a.hit(a.btn('בחירה'));
+  say('רענן: נכתב "'+r1+'", ובחירה אחרת מחליפה — "'+a.get()+'"',r1==='רענן עמוק'&&a.get()==='רענן מלא');
   say('עצב: בלי שגיאות בעמוד'+(a.er.length?': '+a.er.join(' ¦ '):''),!a.er.length);
   a.W.close();
   // תוכנה שאינה מכירה את "עצב" (אין design, ואין "design" במה שהיא יודעת): לא מוצע, ושורה של "עצב" נשארת כמו שהיא

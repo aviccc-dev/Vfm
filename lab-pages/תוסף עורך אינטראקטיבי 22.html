@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="vfm-plugin" content="עורך אינטראקטיבי">
-<meta name="vfm-plugin-version" content="21">
+<meta name="vfm-plugin-version" content="22">
 <meta name="vfm-lab" content="עורך אינטראקטיבי">
 <meta name="vfm-lab-version" content="8">
 <title>עורך אינטראקטיבי</title>
@@ -1330,7 +1330,8 @@ function drawDet(){
   });
   if(solo.length){const box=E('div','items');solo.forEach(id=>box.appendChild(row(id,id+(DETS[id].txt?' — '+DETS[id].txt:''))));sheetIn.appendChild(box);}
   if(!ok.length)sheetIn.appendChild(E('div','grp','אין פרטים למה שנבחר (לרשימה — בלי סינון ובלי "אם תפוס")'));
-  ['taken','date','ex'].forEach(g=>{
+  // גרסה 22 (ממצא 63): כל קבוצה של "אחד מתוך" שיש לה שם — גם "איזה רענון" (עמוק / מלא), שלא צוירה עד כאן
+  Object.keys(Mo.GROUP_TITLE).forEach(g=>{
     const ids=ok.filter(id=>DETS[id].g===g);if(!ids.length)return;
     sheetIn.appendChild(E('div','grp',Mo.GROUP_TITLE[g]));const box=E('div','items');
     ids.forEach(id=>box.appendChild(row(id,g==='taken'?id.replace('אם תפוס ',''):id+(DETS[id].txt?' — '+DETS[id].txt:''))));sheetIn.appendChild(box);
