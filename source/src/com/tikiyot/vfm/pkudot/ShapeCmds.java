@@ -20,7 +20,6 @@ final class ShapeCmds {
             if (!e.getKey().startsWith(Verbs.E_LOOK)) continue;
             String key = e.getKey().substring(Verbs.E_LOOK.length());
             boolean colors = key.equals(Palette.K_MODE) || key.startsWith(Palette.K_COLOR + ":");   // מבנה 237
-            if (colors && c.kind.equals(Verbs.K_LIST)) return Words.DesignW.COLORS_ALL_ONLY;
             if (colors && key.startsWith(Palette.K_COLOR + ":") && Palette.role(key.substring(key.indexOf(':') + 1)) < 0)
                 return Palette.error(key, e.getValue());                         // תפקיד שאין — גם כשמנקים
             if (key.startsWith(Design.K_WORDING + ":") && e.getValue().isEmpty()) {   // מבנה 250: סוג שאין — גם כשמנקים
@@ -143,7 +142,7 @@ final class ShapeCmds {
     /**
      * מבנה 241 (המשתמש, 17.11.2026: "קבצים שמנים לפי כל הפרמטרים, עם בדיקות"), 246: "ודא עיצוב "<אופן>\<רשימה>…" …" · "ודא
      * עיצוב "<אופן>" …" · "ודא עיצוב תוכנה …" — אותם מתגים כמו ב"עצב", ונבדק מה שנראה בפועל (אחרי הירושה): העיצוב, הטורים,
-     * הריווח, הצלמית, הכתב, והצבעים (לאופן ולתוכנה). tk — המילים של השורה (ודא, עיצוב, …).
+     * הריווח, הצלמית, הכתב, והצבעים (מבנה 269: גם לרשימה). tk — המילים של השורה (ודא, עיצוב, …).
      */
     static void planVerify(final Batch.Step s, List<String> tk, Map<String, String> vars, Sim sim) {
         if (!DbVerbs.active()) { s.error = Words.DbCmd.VERIFY_DB_ONLY; return; }   // כמו כל "ודא" של המסד
@@ -192,7 +191,7 @@ final class ShapeCmds {
         /** מה שנראה, ומה שהיה בלי מה שנקבע כאן; לא נקבע כלום — ברירת המחדל (set / setAbove — false). */
         Design shown, above;
         boolean set, setAbove;
-        /** המראות שקובעים את הצבעים — עם מה שנקבע כאן, ובלעדיו (לרשימה — שניהם של האופן). */
+        /** המראות שקובעים את הצבעים — עם מה שנקבע כאן, ובלעדיו (מבנה 269: לרשימה — עם הרשימות שמעליה). */
         String[] looks, aboveLooks;
     }
 
@@ -230,8 +229,7 @@ final class ShapeCmds {
             }
             r.own = nz(st.prop(u.id, Store.P_DESIGN));
             r.look = nz(st.prop(u.id, Store.P_LOOK));
-            String[] looks = {all, modeLook};
-            fill(r, Design.forList(st, u.id), Design.forListAbove(st, u.id), looks, looks);
+            fill(r, Design.forList(st, u.id), Design.forListAbove(st, u.id), Palette.listLooks(st, u.id, true), Palette.listLooks(st, u.id, false));
             return r;
         } catch (Throwable t) {
             r.error = Words.Db.failed(String.valueOf(t.getMessage()));

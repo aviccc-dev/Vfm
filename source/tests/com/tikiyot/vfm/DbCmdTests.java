@@ -1322,8 +1322,9 @@ final class DbCmdTests {
                                         + "נשארות כמו שהיו (לא נקבע כלום), ועם /טורים: — נקבע",
                                 plain268[0] && Design.forProgram() == null && !Design.shapes(prog237) && !Design.shapes(mode237[0])
                                         && !Design.shapes(null) && !Design.shapes("") && Design.shapes(Design.withLook(prog237, Design.K_COLS, "2")));
-                        o.check("מבנה 237: צבעים לרשימה — שגיאה; תפקיד שאין, צבע לא כתוב נכון, מראה לא מוכר — שגיאה, עם הסיבה",
-                                errs235(Batch.plan(o121 + "עצב \"" + m91 + "/מראה 234/ב\" /מראה:כהה\n", here, vars, lib)).contains(Words.DesignW.COLORS_ALL_ONLY)
+                        o.check("מבנה 237: תפקיד שאין, צבע לא כתוב נכון, מראה לא מוכר — שגיאה, עם הסיבה (גם ברשימה — מבנה 269)",
+                                errs235(Batch.plan(o121 + "עצב \"" + m91 + "/מראה 234/ב\" /מראה:אפור\n", here, vars, lib)).contains(Words.DesignW.badMode("אפור"))
+                                        && errs235(Batch.plan(o121 + "עצב \"" + m91 + "/מראה 234/ב\" /צבע:\"אין כזה\"=#111111\n", here, vars, lib)).contains(Words.DesignW.noRole("אין כזה"))
                                         && errs235(Batch.plan("עצב תוכנה /צבע:\"אין כזה\"=#111111\n", here, vars, lib)).contains(Words.DesignW.noRole("אין כזה"))
                                         && errs235(Batch.plan("עצב תוכנה /צבע:\"רקע\"=כחול\n", here, vars, lib)).contains(Words.DesignW.badColor("כחול"))
                                         && errs235(Batch.plan("עצב תוכנה /מראה:אפור\n", here, vars, lib)).contains(Words.DesignW.badMode("אפור")));
@@ -1331,6 +1332,36 @@ final class DbCmdTests {
                                 here, vars, lib);
                         o.check("מבנה 237: \"\" — חוזרים לערכה (" + Design.programProps()[1] + ")", bad(back237).isEmpty()
                                 && !Palette.dark(Design.programProps()[1]) && Palette.resolve(Design.programProps()[1])[sub] == 0xFF5F6368);
+                        // מבנה 269 (המשתמש, 18.11.2026: "למה בחלק מהדברים להגביל?"): צבעים ומראה גם לרשימה; מה שבתוכה יורש, מה שמעליה ולידה — לא
+                        Db.read(Db.app, m91, read235);
+                        String was269 = d235[0] == null ? "" : d235[0].signature();
+                        List<String> w269 = go(o121 + "עצב \"" + m91 + "/מראה 234/ב\" /מראה:כהה /צבע:\"רקע\"=#000000\n"
+                                + "ודא עיצוב \"" + m91 + "/מראה 234/ב\" /מראה:כהה /צבע:\"רקע\"=#000000 /צבע:\"טקסט\"=#E8EAED\n"
+                                + "ודא עיצוב \"" + m91 + "/מראה 234/ב/ג\" /מראה:כהה /צבע:\"רקע\"=#000000\n"
+                                + "ודא עיצוב \"" + m91 + "/מראה 234\" /מראה:בהיר /צבע:\"רקע\"=#FFFFFF\n"
+                                + "ודא עיצוב \"" + m91 + "\" /מראה:בהיר\n"
+                                + "עצב \"" + m91 + "/מראה 234/ב/ג\" /מראה:בהיר\n"
+                                + "ודא עיצוב \"" + m91 + "/מראה 234/ב/ג\" /מראה:בהיר /צבע:\"רקע\"=#000000 /צבע:\"טקסט\"=#202124\n", here, vars, lib);
+                        Db.read(Db.app, m91, read235);
+                        boolean same269 = (d235[0] == null ? "" : d235[0].signature()).equals(was269);
+                        final String[][] l269 = new String[2][];
+                        Db.read(Db.app, m91, new Db.Use<Void>() {
+                            @Override public Void run(SqlStore st) {
+                                long b = DbPaths.find(st, m91, java.util.Arrays.asList("מראה 234", "ב")), g = DbPaths.find(st, m91, java.util.Arrays.asList("מראה 234", "ב", "ג"));
+                                l269[0] = Palette.listLooks(st, g, true);
+                                l269[1] = Palette.listLooks(st, b, false);
+                                return null;
+                            }
+                        });
+                        List<String> no269 = go(o121 + "ודא עיצוב \"" + m91 + "/מראה 234\" /מראה:כהה\n", here, vars, lib);
+                        List<String> back269 = go(o121 + "עצב \"" + m91 + "/מראה 234/ב\" /מראה:\"\" /צבע:\"רקע\"=\"\"\nעצב \"" + m91 + "/מראה 234/ב/ג\" /מראה:\"\"\n"
+                                + "ודא עיצוב \"" + m91 + "/מראה 234/ב/ג\" /מראה:בהיר /צבע:\"רקע\"=#FFFFFF\n", here, vars, lib);
+                        o.check("מבנה 269: צבעים ומראה לרשימה — נקבעים; הרשימה שבתוכה יורשת (ויכולה לקבוע משלה — הערכה מתחלפת, והצבע שירשה נשאר); "
+                                        + "הרשימה שמעליה והאופן — כמו שהיו; צבעים לבד אינם משנים את העיצוב של הרשימה; \"\" — חוזרים למה שמעל "
+                                        + w269 + " " + no269 + " " + back269,
+                                bad(w269).isEmpty() && count(w269, "✅") == 6 && same269 && !bad(no269).isEmpty() && bad(back269).isEmpty()
+                                        && l269[0].length == 5 && l269[1].length == 3 && Palette.dark(l269[1]) == false
+                                        && Words.Verb.usage("עצב").contains("לרשימה"));
                         // מבנה 239: כותרת קבוצה — סוג כתב רביעי; בלי שנקבע — כמו השם (כמו שהיה)
                         List<String> w239 = go(o121 + "עצב \"" + m91 + "/מראה 234/ב\" /כתב-קבוצה:15,מודגש\n", here, vars, lib);
                         Db.read(Db.app, m91, read235);

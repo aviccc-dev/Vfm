@@ -196,6 +196,18 @@ final class Design {
     }
 
     private static Design forList(Store t, long id, boolean self) {
+        List<Long> chain = chain(t, id);
+        if (!self && !chain.isEmpty()) chain.remove(chain.size() - 1);
+        Design d = above(t, null);
+        for (long x : chain) d = fold(d, t.prop(x, Store.P_DESIGN), t.prop(x, Store.P_LOOK), null);
+        return d;
+    }
+
+    /**
+     * הדרך של הירושה — מהרשימה העליונה (שמתחת לבית) עד הרשימה עצמה; למעלה — דרך הרשימה הראשונה שהרשימה בה. במקום אחד: העיצוב
+     * (כאן) והצבעים (Palette, מבנה 269) יורשים באותה דרך.
+     */
+    static List<Long> chain(Store t, long id) {
         List<Long> chain = new ArrayList<Long>();
         java.util.Set<Long> seen = new java.util.HashSet<Long>();
         for (long at = id; at != 0 && seen.add(at); ) {
@@ -204,10 +216,7 @@ final class Design {
             List<Long> up = t.listsOf(at);
             at = up.isEmpty() ? 0 : up.get(0);
         }
-        if (!self && !chain.isEmpty()) chain.remove(chain.size() - 1);
-        Design d = above(t, null);
-        for (long x : chain) d = fold(d, t.prop(x, Store.P_DESIGN), t.prop(x, Store.P_LOOK), null);
-        return d;
+        return chain;
     }
 
     /**

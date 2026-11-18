@@ -4,6 +4,9 @@ package com.tikiyot.vfm;
 // הצבעים של התוכנה — 18 התפקידים שבקוד (עד כאן קבועים ב־Ui), בשמות של המשתמש, בשתי ערכות (בהיר, כהה). מה שנקבע — שורות
 // במראה של כל התוכנה ושל האופן (Store.P_ALL_LOOK): "מראה = כהה", "צבע: טקסט משני = #5F6368". הסדר: הערכה, ואז מה שנקבע לכל
 // התוכנה, ואז מה שנקבע לאופן. הכלל (מה מותר) והקריאה — כאן; הציור — ב־Ui (המסכים); הקביעה — "עצב תוכנה" / "עצב "<אופן>"" (מבנה 246).
+// מבנה 269 (המשתמש, 18.11.2026: "אם אפשר לעצב כל חלק כרצון המשתמש — למה בחלק מהדברים להגביל?" · "באופן אחד להחיל עיצוב בהיר,
+// ובאופן אחר ברשימה אחרת עיצוב כהה מאוד"): גם לרשימה (Store.P_LOOK) — ואחרי האופן באות הרשימות, מהעליונה עד הרשימה עצמה,
+// באותה דרך שהעיצוב יורש (Design.chain).
 
 final class Palette {
 
@@ -70,6 +73,21 @@ final class Palette {
                 Integer c = color(value(l, K_COLOR + ": " + ROLES[i][0]));
                 if (c != null) out[i] = c;
             }
+        return out;
+    }
+
+    /**
+     * מבנה 269: המראות שקובעים את הצבעים של רשימה, לפי הסדר — כל התוכנה, האופן, ואז מהרשימה העליונה עד הרשימה (self — כולל
+     * מה שנקבע לה עצמה; בלי — "כמו שמעליה").
+     */
+    static String[] listLooks(Store t, long id, boolean self) {
+        java.util.List<Long> chain = Design.chain(t, id);
+        if (!self && !chain.isEmpty()) chain.remove(chain.size() - 1);
+        String[] out = new String[2 + chain.size()];
+        out[0] = Design.programProps()[1];
+        long h = DbPaths.home(t);
+        out[1] = h == 0 ? null : t.prop(h, Store.P_ALL_LOOK);
+        for (int i = 0; i < chain.size(); i++) out[2 + i] = t.prop(chain.get(i), Store.P_LOOK);
         return out;
     }
 
