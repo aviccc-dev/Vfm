@@ -58,7 +58,7 @@ final class TopRow {
 
     /** המסך עם השורות סביבו. כל המסכים קוראים לזה במקום setContentView(content). */
     static View wrap(final Activity a, View content) {
-        LinearLayout box = new LinearLayout(a);
+        ScrollRoom box = new ScrollRoom(a);                                   // מבנה 272: כשגוללים בקבצים — השורות והכותרת מפנות מקום
         box.setOrientation(LinearLayout.VERTICAL);
         box.setLayoutDirection(Ui.DIRECTION);
         box.setBackgroundColor(Ui.BG);
@@ -70,7 +70,11 @@ final class TopRow {
         box.addView(top, new LinearLayout.LayoutParams(-1, -2));
         if (content.getParent() instanceof ViewGroup) ((ViewGroup) content.getParent()).removeView(content);
         box.addView(content, new LinearLayout.LayoutParams(-1, 0, 1f));
-        box.addView(bottom, new LinearLayout.LayoutParams(-1, -2));
+        LinearLayout hold = new LinearLayout(a);                               // מבנה 272: מחזיק לשורות שלמטה — הקיפול מסתיר אותו,
+        hold.setOrientation(LinearLayout.VERTICAL);                            // ופס הבחירה ממשיך להסתיר את השורות עצמן (bottomOf)
+        hold.addView(bottom, new LinearLayout.LayoutParams(-1, -2));
+        box.addView(hold, new LinearLayout.LayoutParams(-1, -2));
+        box.parts(top, content, hold);
         final TopRow t = new TopRow(a, top, bottom);
         t.build();
         // מסך שחזר לקדמה — אם התפריטים שונו (ברשימות), או שהמסך עצמו השתנה (הבית / רשימה) — השורות נבנות מחדש

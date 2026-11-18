@@ -698,6 +698,31 @@ public final class Tests {
                 read(new File(System.getProperty("vfm.src"), "src/com/tikiyot/vfm/lev/Bridge.java")).contains(" namesize "));
         check("מבנה 269: התוכנה אומרת לתוספים שצבעים נקבעים גם לרשימה (listcolors)",
                 read(new File(System.getProperty("vfm.src"), "src/com/tikiyot/vfm/lev/Bridge.java")).contains(" listcolors\""));
+        // מבנה 272 (ממצא 65): מקום לקבצים — הכלל (FoldTrack): גוללים למטה — מקפלים; עוצרים — כלום; מעט חזרה למעלה — פותחים
+        FoldTrack f272 = new FoldTrack(24);
+        f272.down(500);
+        boolean jitter272 = f272.move(490, true) == FoldTrack.NONE && f272.move(505, true) == FoldTrack.NONE && !f272.folded();
+        boolean fold272 = f272.move(481, true) == FoldTrack.FOLD && f272.folded();              // 24 מהמקום הנמוך ביותר (505)
+        boolean stay272 = f272.move(300, true) == FoldTrack.NONE && f272.move(310, true) == FoldTrack.NONE && f272.folded();   // ממשיכים, עוצרים, רעד
+        f272.down(310);                                                                          // נגיעה חדשה (בקובץ) — כלום
+        boolean tap272 = f272.move(312, true) == FoldTrack.NONE && f272.folded();
+        boolean open272 = f272.move(334, true) == FoldTrack.OPEN && !f272.folded();              // 24 חזרה למעלה
+        FoldTrack s272 = new FoldTrack(24);
+        s272.down(500);
+        boolean short272 = s272.move(400, false) == FoldTrack.NONE && !s272.folded()             // רשימה שכולה על המסך — אין מה לקפל
+                && s272.move(370, true) == FoldTrack.FOLD;                                       // ...ואחרי עוד 24, כשיש עוד קבצים — מקפלים
+        boolean rest272 = s272.rest() == FoldTrack.OPEN && !s272.folded() && s272.rest() == FoldTrack.NONE;
+        check("מבנה 272: מקום לקבצים — גלילה למטה מקפלת (רק כשיש עוד קבצים מתחת), רעד ועצירה אינם משנים, נגיעה בקובץ אינה פותחת, "
+                        + "מעט חזרה למעלה פותחת, והגעה לראש / חזרה למסך — פותחת",
+                jitter272 && fold272 && stay272 && tap272 && open272 && short272 && rest272);
+        String top272 = read(new File(System.getProperty("vfm.src"), "src/com/tikiyot/vfm/masachim/rechivim/TopRow.java")),
+                room272 = read(new File(System.getProperty("vfm.src"), "src/com/tikiyot/vfm/masachim/rechivim/ScrollRoom.java"));
+        check("מבנה 272: הקיפול — במקום אחד לכל המסכים (המסגרת של TopRow.wrap): השורות שלמעלה, שלמטה (במחזיק — פס הבחירה נשאר כמו שהוא), "
+                        + "הכותרת, ומה שהמסך סימן; רק מקשיבים לנגיעה (הרשימה מקבלת אותה), ורק כשהיא בתוך הרשימה",
+                top272.contains("ScrollRoom box = new ScrollRoom(a);") && top272.contains("box.parts(top, content, hold);") && top272.contains("hold.addView(bottom")
+                        && room272.contains("return super.dispatchTouchEvent(e);") && room272.contains("inList = l != null && inside(l, e.getRawX(), e.getRawY());")
+                        && room272.contains("top.setVisibility(v);") && room272.contains("bottom.setVisibility(v);") && room272.contains("findViewWithTag(FOLD_TAG)")
+                        && room272.contains("bar.hide();") && room272.contains("bar.show();") && room272.contains("l.canScrollVertically(1)"));
         String b271 = read(new File(System.getProperty("vfm.src"), "assets/plugins/itzuv.html")), e271 = read(new File(System.getProperty("vfm.src"), "assets/plugins/orech-interaktivi.html"));
         check("מבנה 271: הלוח והעורך מציעים צבעים לרשימה רק לתוכנה שאומרת שהיא מכירה (listcolors) — שואלים, לא מנחשים",
                 b271.contains("split(' ').includes('listcolors')") && b271.contains("const noColors=()=>isList()&&!LISTCOL();") && !b271.contains("if(isList()){c4.")
