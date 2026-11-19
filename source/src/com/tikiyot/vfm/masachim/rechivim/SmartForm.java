@@ -266,6 +266,7 @@ public final class SmartForm {
             ds.clear();
             words.setText("");
             src.set(new ArrayList<String>());
+            empty.setChecked(false);                                          // מבנה 285: גם "רק תיקיות ריקות" — עד כאן נשאר מסומן מהקודמת
             load(cond);
             show();
             if (filterView != null && filterView.getParent() instanceof android.view.ViewGroup) {

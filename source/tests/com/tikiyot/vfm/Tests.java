@@ -342,6 +342,9 @@ public final class Tests {
                         && hs284.indexOf("remember();", hs284.indexOf("private void tap(")) > 0 && hs284.indexOf("remember();", hs284.indexOf("protected void onPause()")) > 0
                         && hs284.contains("IME_ACTION_SEARCH") && hs284.contains("history.countRow(") && SmartLists.HISTORY_DEFAULT == 20);
         String sf281 = read(new File(System.getProperty("vfm.src"), "src/com/tikiyot/vfm/masachim/rechivim/SmartForm.java"));
+        int rl285 = sf281.indexOf("public void reload(Activity a, String cond) {");
+        check("מבנה 285: טעינה של הגדרה אחרת לטופס מנקה גם את \"רק תיקיות ריקות\" (עד כאן נשארה מסומנת מהקודמת)",
+                rl285 > 0 && sf281.indexOf("empty.setChecked(false);", rl285) > rl285 && sf281.indexOf("empty.setChecked(false);", rl285) < sf281.indexOf("load(cond);", rl285));
         check("מבנה 281: שורת החיפוש — נגיעה בוחרת את הכתוב, ✕ מנקה (רק כשיש מה), והמסך משתמש בה; הנוסח למקריא — במילון",
                 sf281.contains("input.setSelectAllOnFocus(true);") && sf281.contains("input.setText(\"\");") && sf281.contains("Words.Find.CLEAR")
                         && read(new File(System.getProperty("vfm.src"), "src/com/tikiyot/vfm/masachim/SearchScreen.java")).contains("SmartForm.fieldRow(this, input)")
