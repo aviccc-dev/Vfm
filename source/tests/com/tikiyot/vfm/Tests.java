@@ -355,12 +355,17 @@ public final class Tests {
                 fc286.contains("parts.active()") && fc286.contains("parts.drop(a, f[1])") && fc286.contains("if (sig.toString().equals(shown)) return;")
                         && ss286.contains("chips = new FilterChips(this, parts);") && ss286.contains("if (chips != null) chips.refresh();")
                         && sf281.contains("if (!k.isEmpty() && !empty.isChecked()) {") && Words.Find.chip("x").contains("✕"));
-        String ss287 = read(new File(System.getProperty("vfm.src"), "src/com/tikiyot/vfm/masachim/SearchScreen.java")),
+        String ss287 = read(new File(System.getProperty("vfm.src"), "src/com/tikiyot/vfm/masachim/SearchScreen.java"))
+                        + read(new File(System.getProperty("vfm.src"), "src/com/tikiyot/vfm/masachim/SearchSave.java")),   // מבנה 290: השמירה — בקובץ משלה
                 dl287 = read(new File(System.getProperty("vfm.src"), "src/com/tikiyot/vfm/masachim/DbListScreen.java"));
         check("מבנה 287: רשימה חכמה של המסד נפתחת עם האופן והמספר שלה, ובתפריט — \"💾 שמירה\" דרך המנהל (אותה פקודה של הטופס)",
                 dl287.contains("i.putExtra(SearchScreen.EXTRA_SMART_ID, id);") && dl287.contains("openSmart(this, mode, it.id, it.name, cond, sort, view);")
-                        && ss287.contains("if (smartId != 0) menu.add(0, 9, 5, Words.Find.saveHere(")
-                        && ss287.contains("Manager.onSmartEdit(smartMode, smartId,") && ss287.contains("Lists.smartProps(s, smartId)"));
+                        && ss287.contains("if (saves.onSmart()) menu.add(0, 9, 5, Words.Find.saveHere(")
+                        && ss287.contains("Manager.onSmartEdit(smartMode, smartId,") && ss287.contains("Lists.smartProps(st, smartId)"));
+        String only290 = read(new File(System.getProperty("vfm.src"), "src/com/tikiyot/vfm/masachim/SearchScreen.java"));
+        check("מבנה 290: השמירה של מסך החיפוש — בקובץ משלה (SearchSave), ולא גם במסך",
+                !only290.contains("Manager.onSmartEdit(") && !only290.contains("DbVerbsUi.makeSmart(") && !only290.contains("Words.Find.SAVE_AS_TITLE")
+                        && only290.contains("final SearchSave saves = new SearchSave(this);") && only290.contains("saves.read(getIntent());"));
         int ed288 = dl287.indexOf("private void edit(final Store.Item it) {"), ee288 = dl287.indexOf("private void done(String msg) {", ed288);
         String edit288 = ed288 > 0 && ee288 > ed288 ? dl287.substring(ed288, ee288) : "";
         check("מבנה 288: עריכה של רשימה חכמה — אותו חלון של רשימה ידנית (שם, צלמית, תיאור, \"למה\"); התנאי, המיון והתצוגה נשמרים כמו שהם; "
@@ -383,7 +388,7 @@ public final class Tests {
                         && t289.get(np289 + 1)[0].equals("ב חכמה") && t289.get(np289 + 1)[2].equals(Sort.DATE)
                         && pt289.contains("Words.Find.LOAD") && pt289.contains("Words.Find.SORT_B") && pt289.contains("Words.Find.VIEW_B")
                         && pt289.contains("Words.Find.SAVE_AS_B") && pt289.contains("Lists.templates(s)")
-                        && ss287.contains("PanelTools.row(this,") && ss287.contains("private void pickView() {") && ss287.contains("private void loadTemplate("));
+                        && ss287.contains("PanelTools.row(this,") && ss287.contains("private void pickView() {") && ss287.contains("void load(String cond, String sort, String v) {"));
         int rl285 = sf281.indexOf("public void reload(Activity a, String cond) {");
         check("מבנה 285: טעינה של הגדרה אחרת לטופס מנקה גם את \"רק תיקיות ריקות\" (עד כאן נשארה מסומנת מהקודמת)",
                 rl285 > 0 && sf281.indexOf("empty.setChecked(false);", rl285) > rl285 && sf281.indexOf("empty.setChecked(false);", rl285) < sf281.indexOf("load(cond);", rl285));

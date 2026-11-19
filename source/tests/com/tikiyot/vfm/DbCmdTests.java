@@ -744,7 +744,8 @@ final class DbCmdTests {
                     o.check("מבנה 98: רשימה חכמה חדשה נאמרת \"רשימה חכמה חדשה\" — לא \"רשימה ידנית חדשה\" " + w97,
                             String.valueOf(w97).contains(Words.ListCmdW.createdSmart("מקובץ 97")) && !String.valueOf(w97).contains(Words.ListCmdW.created("מקובץ 97")));
                     String ui97 = Files.readUtf8(new File(src, "src/com/tikiyot/vfm/masachim/rechivim/DbVerbsUi.java"))
-                            + Files.readUtf8(new File(src, "src/com/tikiyot/vfm/masachim/SearchScreen.java"));
+                            + Files.readUtf8(new File(src, "src/com/tikiyot/vfm/masachim/SearchScreen.java"))
+                            + Files.readUtf8(new File(src, "src/com/tikiyot/vfm/masachim/SearchSave.java"));   // מבנה 290: השמירה של מסך החיפוש
                     o.check("מבנה 97: ה־➕ ומסך החיפוש אינם יוצרים עוד רשימה חכמה בעצמם — דרך המנהל",
                             !ui97.contains("DbSmartForm.save(") && ui97.contains("Manager.onSmartNew(") && ui97.contains("DbVerbsUi.makeSmart("));
                 }

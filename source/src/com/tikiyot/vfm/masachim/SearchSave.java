@@ -1,0 +1,107 @@
+package com.tikiyot.vfm;
+
+// מבנה 290 (המסך התקרב ל־1,000 שורות): השמירה ממסך החיפוש — "💾 שמירה" אל הרשימה החכמה שעל המסך (287), "💾 שמירה בשם" (רשימה
+// חכמה חדשה), ו"📥 לטעון" (289). עד כאן — בתוך SearchScreen, אותן שורות. אחראי: לאסוף מהמסך ולשלוח למנהל. אסור לו: לכתוב בעצמו.
+
+final class SearchSave {
+
+    private final SearchScreen s;
+    /** מבנה 287: הרשימה החכמה שעל המסך (0 — אין): "💾 שמירה" כותב אליה את מה שבחלונית. */
+    private String smartMode;
+    private long smartId;
+
+    SearchSave(SearchScreen s) {
+        this.s = s;
+    }
+
+    void read(android.content.Intent i) {
+        smartMode = i.getStringExtra(SearchScreen.EXTRA_SMART_MODE);
+        smartId = smartMode == null ? 0 : i.getLongExtra(SearchScreen.EXTRA_SMART_ID, 0);
+    }
+
+    /** על המסך רשימה חכמה של המסד — יש "💾 שמירה". */
+    boolean onSmart() {
+        return smartId != 0;
+    }
+
+    /** האופן שממנו נטענות התבניות: של הרשימה החכמה שעל המסך, אחרת — האופן הפתוח. */
+    String mode() {
+        return smartMode != null ? smartMode : Db.currentMode;
+    }
+
+    /**
+     * מבנה 287 (אפיון החיפוש, 6 — "מקום אחד לעריכה"): התנאי שבחלונית ובשורה, המיון והתצוגה — אל הרשימה החכמה שעל המסך, דרך המנהל
+     * (אותה פקודה כמו בטופס: "עדכן רשימה חכמה"). הצלמית, התיאור וה"למה" — נשארים כמו שהם (נקראים מהמסד; הטופס מוחק מה שחסר).
+     */
+    void saveHere() {
+        final String q = s.query();
+        if (q.trim().isEmpty()) {
+            Ui.toast(s, Words.Db.SMART_NO_COND);
+            return;
+        }
+        java.util.Map<String, String> props;
+        try {
+            props = Db.read(s, smartMode, new Db.Use<java.util.Map<String, String>>() {
+                @Override public java.util.Map<String, String> run(SqlStore st) {
+                    return st.item(smartId) == null ? null : Lists.smartProps(st, smartId);
+                }
+            });
+        } catch (Throwable t) {
+            Ui.toast(s, Words.Db.failed(String.valueOf(t.getMessage())));
+            return;
+        }
+        if (props == null) {
+            Ui.toast(s, Words.Db.ITEM_GONE);
+            return;
+        }
+        props.put(Store.P_SORT, s.srt.by);
+        props.put(Store.P_VIEW, s.view);
+        Manager.Act act = Manager.onSmartEdit(smartMode, smartId, s.getTitle().toString(), q, props, Paths.data(), BatchUi.vars(s, Paths.data()), s.lib);
+        Ui.toast(s, act.error() != null ? act.error() : act.say(s.lib));
+    }
+
+    /** מבנה 289: "📥 לטעון" — התנאי של תבנית (ההגדרות לחלונית, המילים לשורה), המיון והתצוגה שלה. */
+    void load(String cond, String sort, String v) {
+        String[] sp = SmartLists.split(cond);
+        s.parts.reload(s, sp[0]);
+        s.input.setText(sp[1]);
+        if (sort != null && !sort.isEmpty()) s.srt.prefer(sort);
+        if (v != null && !v.isEmpty()) {
+            s.view = v;
+            s.placed = false;
+            s.here = null;
+        }
+        s.search();
+    }
+
+    /**
+     * "שמירה בשם" — רשימה חכמה חדשה במסד, בבית של האופן הפתוח, עם התנאי, המיון והתצוגה שעל המסך.
+     * מ0.29: עד כאן נשמרה "הגדרה נפוצה" בקובץ הראשי של המנוע הישן (ולכן לא הופיעה במסד).
+     */
+    void saveAs() {
+        final String q = s.query(), so = s.srt.by, w = s.view;
+        Ui.askText(s, Words.Find.SAVE_AS_TITLE, s.input.getText().toString().trim(), Words.Short.NAME_HINT, new Ui.Text1() {   // מ0.30: שם משלו — לא "תבנית"
+            @Override
+            public void ok(String value) {
+                final String n = value.trim();
+                if (n.isEmpty()) {
+                    Ui.toast(s, Words.NEED_NAME);
+                    return;
+                }
+                final DbSmartForm.Result r = new DbSmartForm.Result();
+                r.name = n;
+                r.cond = q;
+                r.sort = so;
+                r.view = w;
+                String mode = Db.currentMode;
+                if (mode == null) {
+                    Ui.toast(s, Words.DbCmd.NO_DB);
+                    return;
+                }
+                DbVerbsUi.makeSmart(s, mode, 0, r, new DbVerbsUi.Made() {   // מבנה 97: דרך המנהל; בבית. מבנה 103: שם קיים — שואלים
+                    @Override public void ok(long id) { Ui.toast(s, Words.Find.saved(r.name)); }
+                });
+            }
+        });
+    }
+}
