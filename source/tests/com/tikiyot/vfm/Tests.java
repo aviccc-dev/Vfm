@@ -361,6 +361,12 @@ public final class Tests {
                 dl287.contains("i.putExtra(SearchScreen.EXTRA_SMART_ID, id);") && dl287.contains("openSmart(this, mode, it.id, it.name, cond, sort, view);")
                         && ss287.contains("if (smartId != 0) menu.add(0, 9, 5, Words.Find.saveHere(")
                         && ss287.contains("Manager.onSmartEdit(smartMode, smartId,") && ss287.contains("Lists.smartProps(s, smartId)"));
+        int ed288 = dl287.indexOf("private void edit(final Store.Item it) {"), ee288 = dl287.indexOf("private void done(String msg) {", ed288);
+        String edit288 = ed288 > 0 && ee288 > ed288 ? dl287.substring(ed288, ee288) : "";
+        check("מבנה 288: עריכה של רשימה חכמה — אותו חלון של רשימה ידנית (שם, צלמית, תיאור, \"למה\"); התנאי, המיון והתצוגה נשמרים כמו שהם; "
+                        + "הטופס הנפרד כבר לא נפתח מכאן",
+                !edit288.isEmpty() && !edit288.contains("DbSmartForm.show(") && edit288.contains("list = it.type == Store.LIST || smart;")
+                        && edit288.contains("r.cond = prop(it.id, Store.P_COND);") && edit288.contains("saveSmart(it, r);"));
         int rl285 = sf281.indexOf("public void reload(Activity a, String cond) {");
         check("מבנה 285: טעינה של הגדרה אחרת לטופס מנקה גם את \"רק תיקיות ריקות\" (עד כאן נשארה מסומנת מהקודמת)",
                 rl285 > 0 && sf281.indexOf("empty.setChecked(false);", rl285) > rl285 && sf281.indexOf("empty.setChecked(false);", rl285) < sf281.indexOf("load(cond);", rl285));

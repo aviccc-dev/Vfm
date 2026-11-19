@@ -662,27 +662,21 @@ public class DbListScreen extends ListScreen<Store.Member> implements Ui.Colors,
         done(why != null ? why : act.say(lib));
     }
 
-    /** מ0.13.1: עריכה — רשימה חכמה בטופס שלה; רשימה: שם, צלמית, תיאור, "למה"; רעיון/כותרת — הטקסט. דרך הליבה. */
+    /**
+     * מ0.13.1: עריכה — רשימה: שם, צלמית, תיאור, "למה"; רעיון/כותרת — הטקסט. דרך הליבה. מבנה 288 (אפיון החיפוש, 6 — המשתמש: "1"):
+     * רשימה חכמה — באותו חלון כמו רשימה ידנית; התנאים — רק בחלונית של החיפוש ("💾 שמירה", מבנה 287), והטופס הנפרד כבר לא נפתח מכאן.
+     */
     private void edit(final Store.Item it) {
         if (it.type == Store.FILE) {
             Ui.toast(this, Words.DbCmd.FILE_NO_EDIT);
             return;
         }
-        if (it.type == Store.SMART) {
-            DbSmartForm.show(this, store, it.id, new DbSmartForm.Done() {
-                @Override
-                public void ok(final DbSmartForm.Result r) {
-                    saveSmart(it, r);
-                }
-            });
-            return;
-        }
-        final boolean list = it.type == Store.LIST;
+        final boolean smart = it.type == Store.SMART, list = it.type == Store.LIST || smart;
         LinearLayout form = Ui.form(this);
         form.addView(Ui.label(this, list ? Words.ToolM.NAME : Words.Db.NOTE_TEXT));
         final android.widget.EditText name = Ui.field(this, it.name, null);
         form.addView(name);
-        final android.widget.EditText icon = Ui.field(this, prop(it.id, Store.P_ICON), "📁");
+        final android.widget.EditText icon = Ui.field(this, prop(it.id, Store.P_ICON), smart ? "✨" : "📁");
         final android.widget.EditText desc = Ui.field(this, prop(it.id, Store.P_DESC), Words.Manual.DESC_HINT);
         final android.widget.EditText why = Ui.field(this, prop(it.id, Store.P_WHY), Words.WhyW.HINT);
         if (list) {
@@ -704,6 +698,18 @@ public class DbListScreen extends ListScreen<Store.Member> implements Ui.Colors,
                 boolean same = n.equals(it.name) && i.equals(prop(it.id, Store.P_ICON)) && d.equals(prop(it.id, Store.P_DESC))
                         && w.equals(prop(it.id, Store.P_WHY));
                 if (same) { done(Words.DbCmd.saved(it.name)); return; }
+                if (smart) {                                                  // מבנה 288: התנאי, המיון והתצוגה — כמו שהם
+                    DbSmartForm.Result r = new DbSmartForm.Result();
+                    r.name = n.trim();
+                    r.cond = prop(it.id, Store.P_COND);
+                    r.sort = prop(it.id, Store.P_SORT);
+                    r.view = prop(it.id, Store.P_VIEW);
+                    r.icon = i;
+                    r.desc = d;
+                    r.why = w;
+                    saveSmart(it, r);
+                    return;
+                }
                 // מבנה 113: השמירה — דרך המנהל, כפקודה ("עדכן רשימה %נבחרים%"): אותו כלל כמו בשורה כתובה, עם גיבוי "לפני עריכה"
                 // (מבנה 58), עם עדכון קובצי הפקודות שפונים אליה (מ0.42), ועם "הפריט כבר לא קיים" (מבנה 60).
                 java.util.Map<String, String> props = new java.util.HashMap<String, String>();
