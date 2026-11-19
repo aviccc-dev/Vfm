@@ -711,13 +711,19 @@ public final class Tests {
                         + "שלמטה (במחזיק — פס הבחירה נשאר כמו שהוא), הכותרת, ומה שהמסך סימן; הגלילה בקבצים — בלי קיפול (272 ירד); מצב אחד לכל המסכים; "
                         + "מה שהרצועה עושה — במילון",
                 top272.contains("ScrollRoom box = new ScrollRoom(a);") && top272.contains("box.parts(top, content, hold);") && top272.contains("hold.addView(bottom")
-                        && top272.contains("box.addView(box.strip(), ")
-                        && top272.indexOf("box.addView(top, ") < top272.indexOf("box.addView(box.strip(), ") && top272.indexOf("box.addView(box.strip(), ") < top272.indexOf("box.addView(content, ")
+                        && top272.contains("box.addView(box.strip(false), ") && top272.contains("box.addView(box.strip(true), ")
+                        && top272.indexOf("box.addView(top, ") < top272.indexOf("box.addView(box.strip(false), ") && top272.indexOf("box.addView(box.strip(false), ") < top272.indexOf("box.addView(content, ")
+                        && top272.indexOf("box.addView(content, ") < top272.indexOf("box.addView(box.strip(true), ") && top272.indexOf("box.addView(box.strip(true), ") < top272.indexOf("box.addView(hold, ")
                         && !room272.contains("dispatchTouchEvent") && !room272.contains("canScrollVertically") && !room272.contains("OnScrollChangedListener")
-                        && room272.contains("private static boolean folded;") && room272.contains("FoldTrack.release(dy, step, folded)")
-                        && room272.contains("top.setVisibility(v);") && room272.contains("bottom.setVisibility(v);") && room272.contains("findViewWithTag(FOLD_TAG)")
+                        && room272.contains("private static boolean foldedTop, foldedBottom;") && room272.contains("FoldTrack.release(low ? -dy : dy, step, low ? foldedBottom : foldedTop)")
+                        && room272.contains("bottom.setVisibility(foldedBottom ? GONE : VISIBLE);")
+                        && room272.contains("top.setVisibility(v);") && room272.contains("findViewWithTag(FOLD_TAG)")
                         && room272.contains("bar.hide();") && room272.contains("bar.show();")
-                        && room272.contains("Words.Top.UNFOLD_ROWS : Words.Top.FOLD_ROWS") && !Words.Top.FOLD_ROWS.isEmpty() && !Words.Top.UNFOLD_ROWS.isEmpty());
+                        && room272.contains("Words.Top.UNFOLD_ROWS : Words.Top.FOLD_ROWS") && room272.contains("Words.Top.UNFOLD_LOW : Words.Top.FOLD_LOW")
+                        && !Words.Top.FOLD_ROWS.isEmpty() && !Words.Top.UNFOLD_ROWS.isEmpty() && !Words.Top.FOLD_LOW.isEmpty() && !Words.Top.UNFOLD_LOW.isEmpty());
+        check("מבנה 277: החץ שעל הרצועה מראה לאן השורות ילכו — למעלה: מוצגות ▲, מקופלות ▼; למטה: מוצגות ▼, מקופלות ▲",
+                FoldTrack.arrow(false, false).equals("▲") && FoldTrack.arrow(false, true).equals("▼")
+                        && FoldTrack.arrow(true, false).equals("▼") && FoldTrack.arrow(true, true).equals("▲"));
         String s273 = read(new File(System.getProperty("vfm.src"), "src/com/tikiyot/vfm/masachim/SearchScreen.java"));
         check("מבנה 273: בחיפוש — מה שבין שורת החיפוש לקבצים (מהירים, הגדרות, מידע, מקרא, איפה עומדים) בחלק אחד שמתקפל עם השורות; שורת החיפוש "
                         + "והקבצים — לא בתוכו; שורת המידע ושם של כפתור — בשורה אחת",

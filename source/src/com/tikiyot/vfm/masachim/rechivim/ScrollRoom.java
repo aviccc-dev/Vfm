@@ -4,12 +4,11 @@ package com.tikiyot.vfm;
 // מבנה 275 (המשתמש, 18.11.2026, על מ0.50: "אולי עדיף פשוט אזור דק שנגיעה או גרירה בו מסלקת או מחזירה את השורה"; במקום הקיפול
 // בגלילה של 272, שיצא קופצני): נגיעה ברצועה, או גרירה ממנה למעלה — הכותרת של המסך, שורות הכפתורים שלמעלה ושלמטה, ומה שהמסך
 // סימן כ"מתקפל" (FOLD_TAG; בחיפוש — מה שבין שורת החיפוש לקבצים) — יורדים; הרצועה נשארת. נגיעה, או גרירה למטה — חוזרים.
-// הגלילה בקבצים — כמו תמיד, בלי שום קיפול. המצב — אחד לכל המסכים, כל עוד התוכנה פתוחה (מסך חדש נפתח מקופל, אם קיפלו);
+// מבנה 277: שתי רצועות, עם חץ — למעלה ולמטה, כל אחת לשורות שלה. הגלילה בקבצים — כמו תמיד, בלי שום קיפול. המצב — אחד לכל המסכים, כל עוד התוכנה פתוחה (מסך חדש נפתח מקופל, אם קיפלו);
 // אחרי הפעלה מחדש — הכול מוצג. במקום אחד, לכל המסכים. הכלל — ב־FoldTrack (נבדק במחשב); כאן — הרצועה והקיפול.
 
 import android.app.ActionBar;
 import android.app.Activity;
-import android.graphics.drawable.GradientDrawable;
 import android.view.Gravity;
 import android.view.MotionEvent;
 import android.view.View;
@@ -20,11 +19,12 @@ final class ScrollRoom extends LinearLayout {
     /** מה שמעל הקבצים ומתקפל יחד עם השורות — המסך מסמן (למשל החלק שמתחת לשורת החיפוש). */
     static final String FOLD_TAG = "fold-with-rows";  // תחביר
 
-    /** מקופל או לא — אחד לכל המסכים, כל עוד התוכנה פתוחה. */
-    private static boolean folded;
+    /** מקופל או לא — למעלה ולמטה בנפרד; אחד לכל המסכים, כל עוד התוכנה פתוחה. */
+    private static boolean foldedTop, foldedBottom;
 
     private final Activity a;
-    private View top, content, bottom, strip;
+    private View top, content, bottom;
+    private android.widget.TextView stripTop, stripBottom;
     private float downY;
 
     ScrollRoom(Activity a) {
@@ -39,21 +39,22 @@ final class ScrollRoom extends LinearLayout {
         this.bottom = bottom;
     }
 
-    /** הרצועה הדקה, עם ידית באמצע: נגיעה — מקפלת או מחזירה; גרירה ממנה למעלה — מקפלת; למטה — מחזירה. */
-    View strip() {
-        LinearLayout s = new LinearLayout(a);
+    /**
+     * מבנה 277 (המשתמש, 19.11.2026: "חשבתי שהיא כמו המעלית בצד שמראה תנועה… כדאי לצמצם אותה יותר לכיוון הפס, לתת לה חיצים קטנים,
+     * ולהוסיף גם למטה בפס כזו אחת"): רצועה צרה עם חץ קטן שמראה מה הנגיעה תעשה. למעלה (מתחת לשורות שלמעלה) — הכותרת, השורות
+     * שלמעלה ומה שהמסך סימן; למטה (מעל השורות שלמטה) — השורות שלמטה. נגיעה מחליפה; גרירה לכיוון החץ — גם.
+     */
+    View strip(final boolean low) {
+        final android.widget.TextView s = new android.widget.TextView(a);
         s.setGravity(Gravity.CENTER);
+        s.setIncludeFontPadding(false);
+        s.setTextSize(android.util.TypedValue.COMPLEX_UNIT_DIP, 9);
+        s.setTextColor(Ui.SUB);
         s.setBackgroundColor(Ui.BG_SOFT);
-        s.setMinimumHeight(Ui.dp(a, 18));
-        View pill = new View(a);
-        GradientDrawable g = new GradientDrawable();
-        g.setColor(Ui.MUTED);
-        g.setCornerRadius(Ui.dp(a, 2));
-        pill.setBackground(g);
-        s.addView(pill, new LayoutParams(Ui.dp(a, 40), Ui.dp(a, 4)));
+        s.setMinHeight(Ui.dp(a, 13));
         s.setClickable(true);
         s.setOnClickListener(new OnClickListener() {                         // נגיעה — וגם מקריא המסך
-            @Override public void onClick(View v) { apply(folded ? FoldTrack.OPEN : FoldTrack.FOLD); }
+            @Override public void onClick(View v) { apply(low, (low ? foldedBottom : foldedTop) ? FoldTrack.OPEN : FoldTrack.FOLD); }
         });
         s.setOnTouchListener(new OnTouchListener() {
             @Override
@@ -63,41 +64,50 @@ final class ScrollRoom extends LinearLayout {
                 else if (act == MotionEvent.ACTION_UP) {
                     float dy = e.getRawY() - downY, step = Ui.dp(a, 12);
                     if (FoldTrack.tap(dy, step)) v.performClick();
-                    else apply(FoldTrack.release(dy, step, folded));
+                    else apply(low, FoldTrack.release(low ? -dy : dy, step, low ? foldedBottom : foldedTop));   // למטה — הכיוונים הפוכים
                 }
                 return true;
             }
         });
-        strip = s;
+        if (low) stripBottom = s;
+        else stripTop = s;
         say();
         return s;
     }
 
-    private void apply(int what) {
+    private void apply(boolean low, int what) {
         if (what == FoldTrack.NONE) return;
-        folded = what == FoldTrack.FOLD;
+        if (low) foldedBottom = what == FoldTrack.FOLD;
+        else foldedTop = what == FoldTrack.FOLD;
         show();
     }
 
     /** מראים או מסתירים לפי המצב (האחד לכל המסכים). */
     private void show() {
         if (top == null) return;
-        int v = folded ? GONE : VISIBLE;
+        int v = foldedTop ? GONE : VISIBLE;
         top.setVisibility(v);
-        bottom.setVisibility(v);
         View more = content.findViewWithTag(FOLD_TAG);
         if (more != null) more.setVisibility(v);
         ActionBar bar = a.getActionBar();
         if (bar != null) {
-            if (folded) bar.hide();
+            if (foldedTop) bar.hide();
             else bar.show();
         }
+        bottom.setVisibility(foldedBottom ? GONE : VISIBLE);
         say();
     }
 
-    /** מה הרצועה תעשה — למקריא המסך (במילון). */
+    /** החץ — לאן השורות ילכו בנגיעה; ומה הרצועה תעשה — למקריא המסך (במילון). */
     private void say() {
-        if (strip != null) strip.setContentDescription(folded ? Words.Top.UNFOLD_ROWS : Words.Top.FOLD_ROWS);
+        if (stripTop != null) {
+            stripTop.setText(FoldTrack.arrow(false, foldedTop));
+            stripTop.setContentDescription(foldedTop ? Words.Top.UNFOLD_ROWS : Words.Top.FOLD_ROWS);
+        }
+        if (stripBottom != null) {
+            stripBottom.setText(FoldTrack.arrow(true, foldedBottom));
+            stripBottom.setContentDescription(foldedBottom ? Words.Top.UNFOLD_LOW : Words.Top.FOLD_LOW);
+        }
     }
 
     /** מסך שנפתח, או שחזר לפנים — במצב שבו השאירו אותו במסך אחר. */

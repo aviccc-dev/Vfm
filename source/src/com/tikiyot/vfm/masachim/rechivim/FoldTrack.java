@@ -24,4 +24,9 @@ final class FoldTrack {
         if (dy < 0) return folded ? NONE : FOLD;
         return folded ? OPEN : NONE;
     }
+
+    /** מבנה 277: החץ שעל הרצועה — לאן השורות ילכו בנגיעה. למעלה: מוצגות ▲, מקופלות ▼; למטה — הפוך. */
+    static String arrow(boolean low, boolean folded) {
+        return low == folded ? "▲" : "▼";  // תחביר
+    }
 }

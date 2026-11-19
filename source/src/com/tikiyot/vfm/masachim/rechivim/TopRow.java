@@ -68,9 +68,10 @@ final class TopRow {
         bottom.setOrientation(LinearLayout.VERTICAL);
         bottom.setTag(BOTTOM_TAG);
         box.addView(top, new LinearLayout.LayoutParams(-1, -2));
-        box.addView(box.strip(), new LinearLayout.LayoutParams(-1, -2));
+        box.addView(box.strip(false), new LinearLayout.LayoutParams(-1, -2));
         if (content.getParent() instanceof ViewGroup) ((ViewGroup) content.getParent()).removeView(content);
         box.addView(content, new LinearLayout.LayoutParams(-1, 0, 1f));
+        box.addView(box.strip(true), new LinearLayout.LayoutParams(-1, -2));  // מבנה 277: רצועה גם לשורות שלמטה
         LinearLayout hold = new LinearLayout(a);                               // מבנה 272: מחזיק לשורות שלמטה — הקיפול מסתיר אותו,
         hold.setOrientation(LinearLayout.VERTICAL);                            // ופס הבחירה ממשיך להסתיר את השורות עצמן (bottomOf)
         hold.addView(bottom, new LinearLayout.LayoutParams(-1, -2));
