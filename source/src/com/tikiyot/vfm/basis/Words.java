@@ -204,6 +204,11 @@ public final class Words {
         public static String saved(String name) {
             return "נשמר: " + name;
         }
+
+        /** מבנה 287: "💾 שמירה" — אל הרשימה החכמה שעל המסך. */
+        public static String saveHere(String name) {
+            return "💾 שמירה — " + name;
+        }
     }
 
     // ---------- רשימה חכמה בתיקיות (148) ----------

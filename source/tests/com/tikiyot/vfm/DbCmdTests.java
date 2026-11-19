@@ -1704,9 +1704,15 @@ final class DbCmdTests {
                 String dir282 = "%" + Syntax.V_INTERNAL + "%\\בדיקת 282 (אפשר למחוק)";
                 List<String> r282 = go("המשך ()\nצור אופן \"" + m282 + "\"\nאופן \"" + m282 + "\"\nMD \"" + dir282 + "\"\n"
                         + "כתוב \"" + dir282 + "\\חשבון א.txt\" \"1\"\nכתוב \"" + dir282 + "\\חשבון ב.txt\" \"2\"\nכתוב \"" + dir282 + "\\חשבון ג.txt\" \"3\"\n"
-                        + "MD ידנית \"מסמכים/Abc/עמוק\"\nצור רשימה חכמה \"מסמכים/חכמה 282\" סוג:txt\n"
+                        + "MD ידנית \"מסמכים/Abc/עמוק\"\n"
                         + "העתק \"" + dir282 + "\\חשבון א.txt\" ידנית \"מסמכים\"\n"
                         + "העתק \"" + dir282 + "\\חשבון ב.txt\" ידנית \"מסמכים/Abc/עמוק\"\n", here, vars, lib);
+                Db.write(Db.app, m282, null, new Db.Use<Void>() {                  // רשימה חכמה בתוך "מסמכים" (ממצא 66: בפקודה — אי אפשר)
+                    @Override public Void run(SqlStore st) {
+                        Lists.saveSmart(st, 0, DbPaths.find(st, m282, java.util.Arrays.asList("מסמכים")), "חכמה 282", "סוג:txt", null);
+                        return null;
+                    }
+                });
                 String all282 = "רשימה:«" + m282 + "»", top = "רשימה:«" + m282 + "\\מסמכים»", deep = "רשימה:«" + m282 + "\\מסמכים\\Abc»";
                 Library.Result a282 = lib.list("חשבון " + all282), t282 = lib.list("חשבון " + top), d282 = lib.list("חשבון " + deep),
                         only282 = lib.list(deep), none282 = lib.list("חשבון רשימה:«" + m282 + "\\מסמכים\\אין כזו 282»"),
@@ -1722,6 +1728,48 @@ final class DbCmdTests {
                 String sl283 = names282(lib.list("חשבון " + Cond.inList(m282, java.util.Arrays.asList("מסמכים", "Abc")))),
                         sh283 = names282(lib.list("חשבון " + Cond.inList(m282, new ArrayList<String>())));
                 o.check("מבנה 283: מקום החיפוש מהמסך — הרשימה (" + sl283 + "), הבית — האופן כולו (" + sh283 + ")", sl283.equals("ב") && sh283.equals("א,ב"));
+                // מבנה 287: "💾 שמירה" מהחלונית — התנאי, המיון והתצוגה החדשים; השם, הצלמית, התיאור וה"למה" — נשארים
+                {
+                    final long[] id287 = {0};
+                    Db.read(Db.app, m282, new Db.Use<Void>() {
+                        @Override public Void run(SqlStore st) {
+                            for (Store.Item it : st.smarts()) if (it.name.equals("חכמה 282")) id287[0] = it.id;
+                            return null;
+                        }
+                    });
+                    java.util.Map<String, String> p0 = new java.util.HashMap<String, String>();
+                    p0.put(Store.P_ICON, "⭐");
+                    p0.put(Store.P_DESC, "תיאור 287");
+                    p0.put(Store.P_SORT, Sort.NAME);
+                    Manager.Act set287 = Manager.onSmartEdit(m282, id287[0], "חכמה 282", "סוג:txt", p0, here, vars, lib);
+                    String said0 = set287.error() != null ? set287.error() : set287.say(lib);
+                    // מה שהמסך עושה (SearchScreen.saveHere): קורא את מה שיש, מחליף מיון ותצוגה, ושולח עם התנאי שבחלונית
+                    java.util.Map<String, String> p1 = Db.read(Db.app, m282, new Db.Use<java.util.Map<String, String>>() {
+                        @Override public java.util.Map<String, String> run(SqlStore st) { return Lists.smartProps(st, id287[0]); }
+                    });
+                    p1.put(Store.P_SORT, Sort.DATE);
+                    p1.put(Store.P_VIEW, FolderView.FLAT);
+                    Manager.Act save287 = Manager.onSmartEdit(m282, id287[0], "חכמה 282", "חשבון " + Cond.inList(m282, java.util.Arrays.asList("מסמכים")), p1, here, vars, lib);
+                    String said1 = save287.error() != null ? save287.error() : save287.say(lib);
+                    final String[] got287 = new String[6];
+                    Db.read(Db.app, m282, new Db.Use<Void>() {
+                        @Override public Void run(SqlStore st) {
+                            Store.Item it = st.item(id287[0]);
+                            got287[0] = it == null ? null : it.name;
+                            got287[1] = st.prop(id287[0], Store.P_COND);
+                            got287[2] = st.prop(id287[0], Store.P_ICON);
+                            got287[3] = st.prop(id287[0], Store.P_DESC);
+                            got287[4] = st.prop(id287[0], Store.P_SORT);
+                            got287[5] = st.prop(id287[0], Store.P_VIEW);
+                            return null;
+                        }
+                    });
+                    o.check("מבנה 287: \"💾 שמירה\" מהחלונית אל הרשימה החכמה — התנאי, המיון והתצוגה מתעדכנים; השם, הצלמית והתיאור נשארים ("
+                                    + said0 + " · " + said1 + " · " + java.util.Arrays.toString(got287) + ")",
+                            id287[0] != 0 && !set287.failed && !save287.failed && "חכמה 282".equals(got287[0])
+                                    && got287[1] != null && got287[1].startsWith("חשבון רשימה:") && "⭐".equals(got287[2]) && "תיאור 287".equals(got287[3])
+                                    && Sort.DATE.equals(got287[4]) && FolderView.FLAT.equals(got287[5]));
+                }
                 go("המשך ()\nבטל אופן \"" + m282 + "\"\n", here, vars, lib);
             }
         } catch (Throwable t) {

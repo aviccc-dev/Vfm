@@ -39,6 +39,8 @@ public class SearchScreen extends Activity implements Clip.Holder, PlaceChip.Pla
     public static final String EXTRA_HIDDEN = "hidden";     // 159: מוסתרים מוצגים
     /** מבנה 283: מקום החיפוש — התנאי (רשימה: / מקור:) והשם שעל השבב. */
     static final String EXTRA_PLACE = "place", EXTRA_PLACE_NAME = "placeName";
+    /** מבנה 287: רשימה חכמה של המסד — האופן והמספר שלה (כדי לשמור אליה מהחלונית). */
+    static final String EXTRA_SMART_MODE = "smartMode", EXTRA_SMART_ID = "smartId";
 
     /** מבנה 283: "פתח חיפוש" — מהמסך שעליו עומדים, עם המקום שלו. */
     static void open(Activity from) {
@@ -114,6 +116,9 @@ public class SearchScreen extends Activity implements Clip.Holder, PlaceChip.Pla
     /** מבנה 283: מקום החיפוש (null — אין), ו"בכל המכשיר" במקומו. */
     private String place, placeName;
     private boolean wide;
+    /** מבנה 287: הרשימה החכמה שעל המסך (0 — אין): "💾 שמירה" כותב אליה את מה שבחלונית. */
+    private String smartMode;
+    private long smartId;
     /** מבנה 284: היסטוריית החיפוש (רק בחיפוש — לא ברשימה חכמה). */
     private HistoryBox history;
     /** מבנה 286: המסננים הפעילים — שבבים עם ✕. */
@@ -199,6 +204,8 @@ public class SearchScreen extends Activity implements Clip.Holder, PlaceChip.Pla
         hidden = getIntent().getBooleanExtra(EXTRA_HIDDEN, false);
         place = fixed ? null : getIntent().getStringExtra(EXTRA_PLACE);       // מבנה 283: רשימה חכמה — התנאי שלה, בלי מקום
         placeName = getIntent().getStringExtra(EXTRA_PLACE_NAME);
+        smartMode = getIntent().getStringExtra(EXTRA_SMART_MODE);
+        smartId = smartMode == null ? 0 : getIntent().getLongExtra(EXTRA_SMART_ID, 0);
         wide = "כן".equals(setting(SmartLists.WHOLE, "לא"));  // תחביר
         paths = "כן".equals(setting(SmartLists.PATHS, "לא"));  // תחביר
         loose = !"לא".equals(setting(SmartLists.LOOSE, "כן"));  // תחביר
@@ -459,6 +466,37 @@ public class SearchScreen extends Activity implements Clip.Holder, PlaceChip.Pla
      * "שמירה בשם" — רשימה חכמה חדשה במסד, בבית של האופן הפתוח, עם התנאי, המיון והתצוגה שעל המסך.
      * מ0.29: עד כאן נשמרה "הגדרה נפוצה" בקובץ הראשי של המנוע הישן (ולכן לא הופיעה במסד).
      */
+    /**
+     * מבנה 287 (אפיון החיפוש, 6 — "מקום אחד לעריכה"): התנאי שבחלונית ובשורה, המיון והתצוגה — אל הרשימה החכמה שעל המסך, דרך המנהל
+     * (אותה פקודה כמו בטופס: "עדכן רשימה חכמה"). הצלמית, התיאור וה"למה" — נשארים כמו שהם (נקראים מהמסד; הטופס מוחק מה שחסר).
+     */
+    private void saveHere() {
+        final String q = query();
+        if (q.trim().isEmpty()) {
+            Ui.toast(this, Words.Db.SMART_NO_COND);
+            return;
+        }
+        java.util.Map<String, String> props;
+        try {
+            props = Db.read(this, smartMode, new Db.Use<java.util.Map<String, String>>() {
+                @Override public java.util.Map<String, String> run(SqlStore s) {
+                    return s.item(smartId) == null ? null : Lists.smartProps(s, smartId);
+                }
+            });
+        } catch (Throwable t) {
+            Ui.toast(this, Words.Db.failed(String.valueOf(t.getMessage())));
+            return;
+        }
+        if (props == null) {
+            Ui.toast(this, Words.Db.ITEM_GONE);
+            return;
+        }
+        props.put(Store.P_SORT, srt.by);
+        props.put(Store.P_VIEW, view);
+        Manager.Act act = Manager.onSmartEdit(smartMode, smartId, getTitle().toString(), q, props, Paths.data(), BatchUi.vars(this, Paths.data()), lib);
+        Ui.toast(this, act.error() != null ? act.error() : act.say(lib));
+    }
+
     private void save() {
         final String q = query(), s = srt.by, w = view;
         Ui.askText(this, Words.Find.SAVE_AS_TITLE, input.getText().toString().trim(), Words.Short.NAME_HINT, new Ui.Text1() {   // מ0.30: שם משלו — לא "תבנית"
@@ -793,6 +831,7 @@ public class SearchScreen extends Activity implements Clip.Holder, PlaceChip.Pla
         menu.add(0, 4, 3, Words.FULL_SHORT);
         menu.add(0, 5, 4, Words.Views.MENU);                                  // 148
         if (FolderView.ALL.equals(view)) menu.add(0, 8, 7, hidden ? Words.Here.HIDE_HIDDEN : Words.Here.SHOW_HIDDEN);   // 149
+        if (smartId != 0) menu.add(0, 9, 5, Words.Find.saveHere(getTitle().toString()));   // מבנה 287
         menu.add(0, 7, 6, Words.Find.SAVE_AS);                                // 153
         return true;
     }
@@ -814,6 +853,10 @@ public class SearchScreen extends Activity implements Clip.Holder, PlaceChip.Pla
         }
         if (item.getItemId() == 7) {                                          // 153: "שמירה בשם"
             save();
+            return true;
+        }
+        if (item.getItemId() == 9) {                                          // מבנה 287: "💾 שמירה" — אל הרשימה החכמה שעל המסך
+            saveHere();
             return true;
         }
         if (item.getItemId() == 5) {                                          // 148: לפתיחה הזו; ברירת המחדל — בהגדרות הרשימה

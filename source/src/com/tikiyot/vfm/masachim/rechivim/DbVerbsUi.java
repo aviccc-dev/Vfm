@@ -363,7 +363,7 @@ final class DbVerbsUi {
             s = Db.openRead(a, mode);
             Store.Item it = s.item(id);
             String cond = s.prop(id, Store.P_COND), own = s.prop(id, Store.P_SORT), view = s.prop(id, Store.P_VIEW);
-            DbListScreen.openSmart(a, it == null ? "" : it.name, cond, sort != null && !sort.isEmpty() ? sort : own, view);
+            DbListScreen.openSmart(a, mode, it == null ? 0 : id, it == null ? "" : it.name, cond, sort != null && !sort.isEmpty() ? sort : own, view);
         } catch (Throwable t) {
             Log.e("DbVerbsUi.openSmart", t);
         } finally {

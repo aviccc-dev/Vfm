@@ -598,15 +598,18 @@ public class DbListScreen extends ListScreen<Store.Member> implements Ui.Colors,
                 Ui.toast(this, Words.Db.SMART_NO_COND);
                 return;
             }
-            openSmart(this, it.name, cond, sort, view);
+            openSmart(this, mode, it.id, it.name, cond, sort, view);
         } else if (it.type == Store.FILE) {
             Store.FileInfo fi = store.file(it.id);
             if (fi != null) Ui.open(this, new File(fi.path));
         }
     }
 
-    /** רשימה חכמה של המסד במסך החיפוש המוכר — כמו כלי חכם (FnSmart.open), בלי מזהה כלי (לקריאה). */
-    static void openSmart(android.app.Activity a, String name, String cond, String sort, String view) {
+    /**
+     * רשימה חכמה של המסד במסך החיפוש המוכר — כמו כלי חכם (FnSmart.open), בלי מזהה כלי. מבנה 287: עם האופן והמספר שלה — כדי
+     * שהחלונית של המסך תשמור אליה ("💾 שמירה"; אפיון החיפוש, 6 — מקום אחד לעריכה).
+     */
+    static void openSmart(android.app.Activity a, String mode, long id, String name, String cond, String sort, String view) {
         if (cond == null || cond.isEmpty()) {
             Ui.toast(a, Words.Db.SMART_NO_COND);
             return;
@@ -617,6 +620,10 @@ public class DbListScreen extends ListScreen<Store.Member> implements Ui.Colors,
         i.putExtra(SearchScreen.EXTRA_TITLE, name);
         i.putExtra(SearchScreen.EXTRA_SORT, sort == null || sort.isEmpty() ? Sort.NAME : sort);
         i.putExtra(SearchScreen.EXTRA_VIEW, view == null ? "" : view);
+        if (mode != null && id != 0) {
+            i.putExtra(SearchScreen.EXTRA_SMART_MODE, mode);
+            i.putExtra(SearchScreen.EXTRA_SMART_ID, id);
+        }
         a.startActivity(i);
     }
 
