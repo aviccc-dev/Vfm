@@ -28,7 +28,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Set;
 
-public class SearchScreen extends Activity implements Clip.Holder {
+public class SearchScreen extends Activity implements Clip.Holder, PlaceChip.Place {
 
     public static final String EXTRA_QUERY = "query";
     public static final String EXTRA_FIXED = "fixed";
@@ -37,6 +37,26 @@ public class SearchScreen extends Activity implements Clip.Holder {
     public static final String EXTRA_VIEW = "view";         // 148: ברצף / בתיקיות — ברירת המחדל של הרשימה
     public static final String EXTRA_DIR = "dir";           // 159: בתיקיות — מאיפה מתחילים
     public static final String EXTRA_HIDDEN = "hidden";     // 159: מוסתרים מוצגים
+    /** מבנה 283: מקום החיפוש — התנאי (רשימה: / מקור:) והשם שעל השבב. */
+    static final String EXTRA_PLACE = "place", EXTRA_PLACE_NAME = "placeName";
+
+    /** מבנה 283: "פתח חיפוש" — מהמסך שעליו עומדים, עם המקום שלו. */
+    static void open(Activity from) {
+        android.content.Intent i = new android.content.Intent(from, SearchScreen.class);
+        String[] p = from instanceof PlaceChip.Place ? ((PlaceChip.Place) from).searchPlace() : null;
+        if (p != null && p[0] != null && !p[0].isEmpty()) {
+            i.putExtra(EXTRA_PLACE, p[0]);
+            i.putExtra(EXTRA_PLACE_NAME, p[1]);
+        }
+        from.startActivity(i);
+    }
+
+    /** מבנה 283: מכאן — התיקייה שעומדים בה (בתצוגת תיקיות). */
+    @Override
+    public String[] searchPlace() {
+        if (!fb.folderMode() || here == null) return null;
+        return new String[]{Cond.inFolder(here), PlaceChip.folderLabel(this, here)};
+    }
 
     /**
      * 159 — "מנהל קבצים": רשימה חכמה בלי סינון, "בתיקיות — כולל הכול" (במקום המסך הישן).
@@ -91,6 +111,9 @@ public class SearchScreen extends Activity implements Clip.Holder {
     private String queryNorm = "", fixedQuery;
     Sort srt;
     private boolean fixed, paths, loose = true;
+    /** מבנה 283: מקום החיפוש (null — אין), ו"בכל המכשיר" במקומו. */
+    private String place, placeName;
+    private boolean wide;
     private Runnable pending;
     private static final int[] SECTION_BG = Library.MATCH_COLORS;
     /** שורת תוצאה בעיני המיון (79). */
@@ -167,6 +190,9 @@ public class SearchScreen extends Activity implements Clip.Holder {
         if (v != null) view = v;
         startDir = getIntent().getStringExtra(EXTRA_DIR);
         hidden = getIntent().getBooleanExtra(EXTRA_HIDDEN, false);
+        place = fixed ? null : getIntent().getStringExtra(EXTRA_PLACE);       // מבנה 283: רשימה חכמה — התנאי שלה, בלי מקום
+        placeName = getIntent().getStringExtra(EXTRA_PLACE_NAME);
+        wide = "כן".equals(setting(SmartLists.WHOLE, "לא"));  // תחביר
         paths = "כן".equals(setting(SmartLists.PATHS, "לא"));  // תחביר
         loose = !"לא".equals(setting(SmartLists.LOOSE, "כן"));  // תחביר
         Sort.Store st = Sort.tool(Conf.SEARCH, "");
@@ -189,6 +215,14 @@ public class SearchScreen extends Activity implements Clip.Holder {
         root.addView(SmartForm.fieldRow(this, input));                        // מבנה 281: נגיעה בוחרת, ✕ מנקה
         head = ScrollRoom.head(this);
         root.addView(head, new LinearLayout.LayoutParams(-1, -2));
+        if (place != null)                                                    // מבנה 283: "מחפש ב: <המקום> ▾"
+            head.addView(new PlaceChip(this, placeName == null ? "" : placeName, wide, wide, new PlaceChip.Host() {
+                @Override public void changed(boolean w, boolean always) {
+                    wide = w;
+                    saveSetting(SmartLists.WHOLE, always ? "כן" : "לא");  // תחביר
+                    search();
+                }
+            }).view);
         quick = new QuickBar(this, new QuickBar.Host() {                       // 181: כפתורי תצוגה מהירה
             @Override public String base() { return query(); }
             @Override public int count(String c) { return find(c).total; }
@@ -520,7 +554,8 @@ public class SearchScreen extends Activity implements Clip.Holder {
 
     /** 153: התנאי — ההגדרות שבחלונית ועוד מה שבשורת ההקלדה. */
     String query() {
-        return SmartLists.withHere(SmartLists.join(parts == null ? "" : parts.build(), input.getText().toString()), hereDir());
+        String q = SmartLists.withHere(SmartLists.join(parts == null ? "" : parts.build(), input.getText().toString()), hereDir());
+        return q.trim().isEmpty() || place == null || wide ? q : SmartLists.join(place, q);   // מבנה 283: המקום — רק כשמחפשים משהו
     }
 
     /** 1.11.0: %כאן% — התיקייה שממנה פתחו (EXTRA_DIR), ואם אין — תיקיית אופן העבודה. */
@@ -566,7 +601,7 @@ public class SearchScreen extends Activity implements Clip.Holder {
             return;
         }
         Library.Result r = find(q);
-        emptyMode = Cond.parse(r.query).emptyDirs;                          // 175: תיקיות ריקות — תמיד ברצף
+        emptyMode = Cond.emptyDirsIn(r.query);                              // 175: תיקיות ריקות — תמיד ברצף (מבנה 283: בלי לפרק שוב)
         queryNorm = r.query;
         out.clear();                                                          // חיפוש מחדש = רענון: האפורים יורדים
         if (fb.folderMode()) {                                                   // 148

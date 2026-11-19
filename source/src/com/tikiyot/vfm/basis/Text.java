@@ -300,8 +300,17 @@ public final class Text {
         String norm = norm(shown);
         if (norm.length() != shown.length()) return new int[0];
         boolean[] on = new boolean[norm.length()];
+        boolean inValue = false;                                            // מבנה 283: "רשימה:«א ב»" — גם המילים שבתוך «» אינן לסימון
         for (String w : norm(queryNorm).trim().split("\\s+")) {             // מנורמל כבר במסך; כאן — ליתר ביטחון (אותיות סופיות)
-            if (w.isEmpty() || w.startsWith("-") || w.indexOf(':') >= 0) continue;
+            if (inValue) {
+                if (w.indexOf('»') >= 0) inValue = false;
+                continue;
+            }
+            if (w.isEmpty() || w.startsWith("-") || w.indexOf(':') >= 0) {
+                int q = w.indexOf('«');
+                if (w.indexOf(':') >= 0 && q >= 0 && w.indexOf('»', q) < 0) inValue = true;
+                continue;
+            }
             for (String alt : w.split("\\|"))
                 for (String piece : alt.split("[*?]")) {
                     if (piece.isEmpty()) continue;

@@ -110,7 +110,7 @@ final class VerbsUi {
             @Override void go(Activity a, Verbs.Cmd c, File here) { Home.go(a); }
         });
         screen(Verbs.S_SEARCH, new Do() {
-            @Override void go(Activity a, Verbs.Cmd c, File here) { a.startActivity(new Intent(a, SearchScreen.class)); }
+            @Override void go(Activity a, Verbs.Cmd c, File here) { SearchScreen.open(a); }   // מבנה 283: עם המקום שממנו באו
         });
         screen(Verbs.S_COMMANDS, new Do() {                                      // 1.16.1: אותו תפריט בכל מקום
             @Override void go(Activity a, Verbs.Cmd c, File here) { CmdMenu.show(a, null); }

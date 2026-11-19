@@ -156,6 +156,18 @@ public final class Words {
         /** מבנה 282: "רשימה:" — החיפוש ברשימה, כשהרשימה לא נמצאה. */
         public static final String SCOPE_NO_DB = "המסד לא נפתח", SCOPE_NO_HOME = "אין בית באופן הזה";
 
+        /** מבנה 283: מקום החיפוש — "מחפש ב: <המקום> ▾". */
+        public static final String WHOLE_DEVICE = "כל המכשיר", WHOLE_DEVICE_ITEM = "🌐 כל המכשיר",
+                ALWAYS_WHOLE = "תמיד בכל המכשיר (ברירת המחדל)";
+
+        public static String placeChip(String where) {
+            return "מחפש ב: " + where + " ▾";
+        }
+
+        public static String placeHere(String where) {
+            return "📍 " + where;
+        }
+
         public static String scopeMissing(String where, String why) {
             return "החיפוש ברשימה \"" + where + "\" לא נעשה — " + why;
         }

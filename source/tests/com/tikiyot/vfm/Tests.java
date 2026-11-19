@@ -300,6 +300,27 @@ public final class Tests {
                         && java.util.Arrays.equals(Text.marks("דוח מאי 2026.pdf", "סוג:pdf -מאי דוח"), new int[]{0, 3})
                         && java.util.Arrays.equals(Text.marks("ספר שלם.pdf", "שלם ספר"), new int[]{0, 3, 4, 7})
                         && Text.marks("דוח.pdf", "תמונה").length == 0 && Text.marks("דוח.pdf", null).length == 0);
+        // מבנה 283: מקום החיפוש — התנאי נבנה במקום אחד (Cond), המסכים אומרים מה המקום שלהם, והפתיחה מעבירה אותו
+        String src283 = System.getProperty("vfm.src") + "/src/com/tikiyot/vfm/";
+        String ss283 = read(new File(src283 + "masachim/SearchScreen.java")), vu283 = read(new File(src283 + "masachim/rechivim/VerbsUi.java")),
+                dl283 = read(new File(src283 + "masachim/DbListScreen.java")), dk283 = read(new File(src283 + "masachim/DiskScreen.java"));
+        check("מבנה 283: מקום החיפוש — \"רשימה:\" (האופן קודם; בבית — רק האופן) ו\"מקור:\" (תיקייה, ערך עם רווח בתוך «»); "
+                        + "תיקיות ריקות — בלי לפרק את כל התנאי; הסימון מדלג על הערך שבתוך «» (" + Cond.inList("עבודה", java.util.Arrays.asList("א ב", "ג")) + ")",
+                Cond.inList("עבודה", java.util.Arrays.asList("א ב", "ג")).equals("רשימה:«עבודה\\א ב\\ג»")
+                        && Cond.inList("עבודה", new java.util.ArrayList<String>()).equals("רשימה:עבודה")
+                        && Cond.inFolder("/storage/emulated/0/ספרים חדשים").equals("מקור:«/storage/emulated/0/ספרים חדשים»")
+                        && Cond.emptyDirsIn("סוג:pdf תיקיות:ריקות") && !Cond.emptyDirsIn("-תיקיות:ריקות") && !Cond.emptyDirsIn("תיקיות")
+                        && java.util.Arrays.equals(Text.marks("חשבון 282 ג.txt", "חשבון רשימה:«בדיקת 282\\ג»"), new int[]{0, 5})
+                        && java.util.Arrays.equals(Text.marks("חשבון 282.txt", "רשימה:«א ב» 282"), new int[]{6, 9}));
+        check("מבנה 283: \"פתח חיפוש\" — מהמסך שעליו עומדים, עם המקום שלו (רשימה, בית, תיקייה); רשימה חכמה — בלי מקום; "
+                        + "המקום נכנס לתנאי רק כשמחפשים משהו, ולא כש\"בכל המכשיר\"; השבב — מתחת לשורה",
+                vu283.contains("SearchScreen.open(a);") && !vu283.contains("new Intent(a, SearchScreen.class)); }")
+                        && dl283.contains("PlaceChip.Place {") && dl283.contains("Cond.inList(mode, path)")
+                        && dk283.contains("PlaceChip.Place {") && dk283.contains("Cond.inFolder(d.getAbsolutePath())")
+                        && ss283.contains("place = fixed ? null : getIntent().getStringExtra(EXTRA_PLACE);")
+                        && ss283.contains("q.trim().isEmpty() || place == null || wide ? q : SmartLists.join(place, q)")
+                        && ss283.contains("new PlaceChip(this,") && ss283.contains("saveSetting(SmartLists.WHOLE,")
+                        && !ss283.contains("Cond.parse(") && Words.Find.placeChip("x").contains("x"));
         String sf281 = read(new File(System.getProperty("vfm.src"), "src/com/tikiyot/vfm/masachim/rechivim/SmartForm.java"));
         check("מבנה 281: שורת החיפוש — נגיעה בוחרת את הכתוב, ✕ מנקה (רק כשיש מה), והמסך משתמש בה; הנוסח למקריא — במילון",
                 sf281.contains("input.setSelectAllOnFocus(true);") && sf281.contains("input.setText(\"\");") && sf281.contains("Words.Find.CLEAR")

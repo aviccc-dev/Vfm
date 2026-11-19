@@ -56,6 +56,24 @@ public final class Cond {
         return c > 0 && is(token.substring(0, c), "תיקיות") && is(token.substring(c + 1), "ריקות");  // תחביר
     }
 
+    /** מבנה 283: התנאי מבקש תיקיות ריקות — בלי לפרק את כולו (ובלי לקרוא את המסד בשביל "רשימה:"). כמו parse(raw).emptyDirs. */
+    public static boolean emptyDirsIn(String raw) {
+        for (String t : tokens(raw)) if (isEmptyDirs(t)) return true;
+        return false;
+    }
+
+    /** מבנה 283: מקום החיפוש — רשימה (האופן קודם; בבית — רק האופן, כלומר כולו) או תיקייה (עם מה שבתוכה). */
+    public static String inList(String mode, List<String> path) {
+        List<String> all = new ArrayList<String>();
+        all.add(mode);
+        all.addAll(path);
+        return LIST + ":" + quote(Names.pathText(all));
+    }
+
+    public static String inFolder(String dir) {
+        return SOURCE + ":" + quote(dir);
+    }
+
     /** 175: מבקשים תיקיות ריקות (ולא קבצים). */
     public boolean emptyDirs;
     /**

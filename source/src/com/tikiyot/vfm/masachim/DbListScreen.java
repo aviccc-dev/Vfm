@@ -18,7 +18,7 @@ import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
 
-public class DbListScreen extends ListScreen<Store.Member> implements Ui.Colors {
+public class DbListScreen extends ListScreen<Store.Member> implements Ui.Colors, PlaceChip.Place {
 
     static final String EXTRA_MODE = "mode", EXTRA_LIST = "list", EXTRA_SORT = "sort";
     /** מ0.22: מיון מהפקודה ("פתח רשימה … מיין:…"); ריק — הסדר של הרשימה. */
@@ -122,6 +122,18 @@ public class DbListScreen extends ListScreen<Store.Member> implements Ui.Colors 
     @Override
     public String[] looks() {
         return Palette.looksOf(getIntent().getStringExtra(EXTRA_MODE), getIntent().getLongExtra(EXTRA_LIST, 0));
+    }
+
+    /**
+     * מבנה 283: מקום החיפוש — הרשימה שעל המסך ומה שבתוכה; בבית — האופן כולו. הדרך — כמו שהפקודה מוצאת אותה (כמו בלוח העיצוב);
+     * רשימה שהדרך שלה מובילה לאחרת — האופן כולו (והשם שעל השבב אומר זאת).
+     */
+    @Override
+    public String[] searchPlace() {
+        if (store == null || mode == null) return null;
+        java.util.List<String> path = atHome ? new java.util.ArrayList<String>() : DbPaths.pathOf(store, listId);
+        if (!path.isEmpty() && DbPaths.find(store, mode, path) != listId) path.clear();
+        return new String[]{Cond.inList(mode, path), path.isEmpty() ? Words.DbCmd.modeOf(mode) : Names.label(path)};
     }
 
     /** מ0.25: האם המסך הזה הוא הבית. */

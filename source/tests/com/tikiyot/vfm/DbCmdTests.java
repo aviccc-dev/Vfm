@@ -1718,6 +1718,10 @@ final class DbCmdTests {
                         bad(r282).isEmpty() && sa.equals("א,ב") && st.equals("א,ב") && sd.equals("ב") && so.equals("ב") && sn.equals("א,ג")
                                 && none282.hits.isEmpty() && none282.note.contains("לא נעשה") && none282.note.contains("אין כזו 282")
                                 && noMode282.hits.isEmpty() && noMode282.note.equals(Words.Find.scopeMissing("אין אופן 282", Words.Find.scopeNoMode("אין אופן 282"))));
+                // מבנה 283: התנאי שהמסך בונה (Cond.inList) — אותו חיפוש
+                String sl283 = names282(lib.list("חשבון " + Cond.inList(m282, java.util.Arrays.asList("מסמכים", "Abc")))),
+                        sh283 = names282(lib.list("חשבון " + Cond.inList(m282, new ArrayList<String>())));
+                o.check("מבנה 283: מקום החיפוש מהמסך — הרשימה (" + sl283 + "), הבית — האופן כולו (" + sh283 + ")", sl283.equals("ב") && sh283.equals("א,ב"));
                 go("המשך ()\nבטל אופן \"" + m282 + "\"\n", here, vars, lib);
             }
         } catch (Throwable t) {

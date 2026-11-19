@@ -17,7 +17,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
-public class DiskScreen extends ListScreen<File> implements Clip.Holder {
+public class DiskScreen extends ListScreen<File> implements Clip.Holder, PlaceChip.Place {
 
     static final String EXTRA_DIR = "dir";
     private static final int MENU_HIDDEN = 1, MENU_NEW = 2, MENU_PASTE = 3, MENU_SORT = 4, MENU_UP = 5, MENU_DETAILS = 6, MENU_ZIP = 7;
@@ -125,6 +125,13 @@ public class DiskScreen extends ListScreen<File> implements Clip.Holder {
         super.onSaveInstanceState(out);
         out.putStringArrayList("trail", trail);
         out.putBoolean("hidden", showHidden);
+    }
+
+    /** מבנה 283: מקום החיפוש — התיקייה שעומדים בה ומה שבתוכה; ברשימת הכוננים — אין (כל המכשיר). */
+    @Override
+    public String[] searchPlace() {
+        File d = here();
+        return d == null ? null : new String[]{Cond.inFolder(d.getAbsolutePath()), PlaceChip.folderLabel(this, d.getAbsolutePath())};
     }
 
     /** התיקייה הנוכחית, או null — רשימת הכוננים. */
