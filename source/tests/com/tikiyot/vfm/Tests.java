@@ -360,7 +360,7 @@ public final class Tests {
                 dl287 = read(new File(System.getProperty("vfm.src"), "src/com/tikiyot/vfm/masachim/DbListScreen.java"));
         check("מבנה 287: רשימה חכמה של המסד נפתחת עם האופן והמספר שלה, ובתפריט — \"💾 שמירה\" דרך המנהל (אותה פקודה של הטופס)",
                 dl287.contains("i.putExtra(SearchScreen.EXTRA_SMART_ID, id);") && dl287.contains("openSmart(this, mode, it.id, it.name, cond, sort, view);")
-                        && ss287.contains("if (saves.onSmart()) menu.add(0, 9, 5, Words.Find.saveHere(")
+                        && ss287.contains("if (saves.onSmart()) menu.add(0, 9, 5, saves.picking() ? Words.Find.PICK : Words.Find.saveHere(")
                         && ss287.contains("Manager.onSmartEdit(smartMode, smartId,") && ss287.contains("Lists.smartProps(st, smartId)"));
         String only290 = read(new File(System.getProperty("vfm.src"), "src/com/tikiyot/vfm/masachim/SearchScreen.java"));
         check("מבנה 290: השמירה של מסך החיפוש — בקובץ משלה (SearchSave), ולא גם במסך",
@@ -373,6 +373,13 @@ public final class Tests {
                         && ss287.contains("DbVerbsUi.makeSmart(s, newMode, newIn, r,") && ss287.contains("boolean open = saves.isNew();")
                         && !new File(System.getProperty("vfm.src"), "src/com/tikiyot/vfm/masachim/rechivim/SearchTabs.java").exists()
                         && !read(new File(System.getProperty("vfm.src"), "src/com/tikiyot/vfm/masachim/rechivim/DbSmartForm.java")).contains("static void show("));
+        String lab292 = read(new File(System.getProperty("vfm.src"), "src/com/tikiyot/vfm/masachim/LabScreen.java"));
+        check("מבנה 292: העורך מבקש תנאי לשורה \"צור רשימה חכמה\" — בחלונית של החיפוש (\"✓ לבחור\"): מחזיר שם, תנאי, מיון ותצוגה, בלי לשמור, "
+                        + "והתנאי — בלי המקום ובלי להחליף את %כאן%; ביטול — בלי תשובה",
+                lab292.contains("startActivityForResult(SearchScreen.pick(LabScreen.this, name, cond, sort), REQ_SMART);") && !lab292.contains("DbSmartForm.ask(")
+                        && lab292.contains("if (res != RESULT_OK || data == null) return;")
+                        && ss287.contains("final String q = SmartLists.join(s.parts.build(), s.input.getText().toString());")
+                        && ss287.contains("s.setResult(android.app.Activity.RESULT_OK, r);") && ss287.contains("return (newMode != null && smartId == 0) || pick;"));
         int ed288 = dl287.indexOf("private void edit(final Store.Item it) {"), ee288 = dl287.indexOf("private void done(String msg) {", ed288);
         String edit288 = ed288 > 0 && ee288 > ed288 ? dl287.substring(ed288, ee288) : "";
         check("מבנה 288: עריכה של רשימה חכמה — אותו חלון של רשימה ידנית (שם, צלמית, תיאור, \"למה\"); התנאי, המיון והתצוגה נשמרים כמו שהם; "

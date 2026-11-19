@@ -85,6 +85,21 @@ public final class LabScreen extends Activity {
         a.startActivity(i);
     }
 
+    /** מבנה 292: מה שהעורך ביקש מהחלונית של החיפוש — מחכה לתשובה. ביטול (חזרה בלי "✓ לבחור") — כמו סגירת הטופס: בלי תשובה. */
+    private static final int REQ_SMART = 7292;
+    private Bridge.SmartPicked pendingSmart;
+
+    @Override
+    protected void onActivityResult(int req, int res, Intent data) {
+        super.onActivityResult(req, res, data);
+        if (req != REQ_SMART || pendingSmart == null) return;
+        Bridge.SmartPicked d = pendingSmart;
+        pendingSmart = null;
+        if (res != RESULT_OK || data == null) return;
+        d.ok(data.getStringExtra(SearchScreen.PICKED_NAME), data.getStringExtra(SearchScreen.PICKED_COND),
+                data.getStringExtra(SearchScreen.PICKED_SORT), data.getStringExtra(SearchScreen.PICKED_VIEW));
+    }
+
     @Override
     protected void onCreate(Bundle b) {
         Ui.begin(this, false);                                     // מבנה 238: הצבעים מהעיצוב
@@ -377,11 +392,11 @@ public final class LabScreen extends Activity {
             });
         }
 
+        /** מבנה 292 (אפיון החיפוש, 6 — מקום אחד לעריכה): התנאי לשורה "צור רשימה חכמה" — בחלונית של מסך החיפוש ("✓ לבחור"). */
         @Override
         public void smartForm(String name, String cond, String sort, final Bridge.SmartPicked done) {
-            DbSmartForm.ask(LabScreen.this, name, cond, sort, new DbSmartForm.Done() {
-                @Override public void ok(DbSmartForm.Result r) { done.ok(r.name, r.cond, r.sort, r.view); }
-            });
+            pendingSmart = done;
+            startActivityForResult(SearchScreen.pick(LabScreen.this, name, cond, sort), REQ_SMART);
         }
 
         @Override public void send(File f) { Acts.sendReady(LabScreen.this, java.util.Collections.singletonList(f)); }

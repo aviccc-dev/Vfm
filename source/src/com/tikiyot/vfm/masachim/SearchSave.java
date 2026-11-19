@@ -12,6 +12,8 @@ final class SearchSave {
     /** מבנה 291: רשימה חכמה חדשה — האופן והרשימה שבתוכה (newMode = null — לא חדשה). */
     private String newMode;
     private long newIn;
+    /** מבנה 292: העורך מבקש תנאי — "✓ לבחור" מחזיר אותו, ולא שומר. */
+    private boolean pick;
 
     SearchSave(SearchScreen s) {
         this.s = s;
@@ -22,16 +24,21 @@ final class SearchSave {
         smartId = smartMode == null ? 0 : i.getLongExtra(SearchScreen.EXTRA_SMART_ID, 0);
         newMode = i.getStringExtra(SearchScreen.EXTRA_NEW_MODE);
         newIn = i.getLongExtra(SearchScreen.EXTRA_NEW_IN, 0);
+        pick = i.getBooleanExtra(SearchScreen.EXTRA_PICK, false);
+    }
+
+    boolean picking() {
+        return pick;
     }
 
     /** על המסך רשימה חכמה של המסד, או חדשה — יש "💾 שמירה". */
     boolean onSmart() {
-        return smartId != 0 || newMode != null;
+        return smartId != 0 || newMode != null || pick;
     }
 
     /** מבנה 291: רשימה חכמה חדשה, שעוד לא נשמרה. */
     boolean isNew() {
-        return newMode != null && smartId == 0;
+        return (newMode != null && smartId == 0) || pick;                  // מבנה 292: גם "לבחור" — החלונית פתוחה
     }
 
     /** האופן שממנו נטענות התבניות: של הרשימה החכמה שעל המסך (או החדשה), אחרת — האופן הפתוח. */
@@ -44,6 +51,10 @@ final class SearchSave {
      * (אותה פקודה כמו בטופס: "עדכן רשימה חכמה"). הצלמית, התיאור וה"למה" — נשארים כמו שהם (נקראים מהמסד; הטופס מוחק מה שחסר).
      */
     void saveHere() {
+        if (pick) {
+            pickDone();
+            return;
+        }
         final String q = s.query();
         if (q.trim().isEmpty()) {
             Ui.toast(s, Words.Db.SMART_NO_COND);
@@ -119,6 +130,30 @@ final class SearchSave {
                         Ui.toast(s, Words.Find.saved(r.name));
                     }
                 });
+            }
+        });
+    }
+
+    /**
+     * מבנה 292: "✓ לבחור" — השם (נשאל, עם מה שבא מהעורך), והתנאי כמו שהוא בחלונית ובשורה: בלי המקום ובלי להחליף את %כאן% (כמו
+     * שהטופס הנפרד החזיר — בשורה של קובץ פקודות %כאן% הוא משתנה). המסך נסגר, והעורך מקבל.
+     */
+    private void pickDone() {
+        final String q = SmartLists.join(s.parts.build(), s.input.getText().toString());
+        if (q.trim().isEmpty()) {
+            Ui.toast(s, Words.Db.SMART_NO_COND);
+            return;
+        }
+        Ui.askText(s, Words.Find.PICK, s.getTitle().toString(), Words.Short.NAME_HINT, new Ui.Text1() {
+            @Override
+            public void ok(String value) {
+                android.content.Intent r = new android.content.Intent();
+                r.putExtra(SearchScreen.PICKED_NAME, value.trim());
+                r.putExtra(SearchScreen.PICKED_COND, q);
+                r.putExtra(SearchScreen.PICKED_SORT, s.srt.by);
+                r.putExtra(SearchScreen.PICKED_VIEW, s.view);
+                s.setResult(android.app.Activity.RESULT_OK, r);
+                s.finish();
             }
         });
     }

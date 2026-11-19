@@ -209,6 +209,9 @@ public final class Words {
         public static final String LOAD = "📥 לטעון", SORT_B = "↕ מיון", VIEW_B = "▦ תצוגה", SAVE_HERE_B = "💾 שמירה",
                 SAVE_AS_B = "💾 שמירה בשם…", LOAD_TITLE = "לטעון את התנאים של…";
 
+        /** מבנה 292: העורך מבקש תנאי — "✓ לבחור". */
+        public static final String PICK = "✓ לבחור";
+
         /** מבנה 291: רשימה חכמה חדשה — בחלונית של החיפוש; כפולים — אפשרות באותה בחירה. */
         public static final String NEW_SMART = "✨ רשימה חכמה — בחלונית של החיפוש", NEW_DUPS = "👯 כפולים",
                 NEW_SMART_TITLE = "רשימה חכמה חדשה";

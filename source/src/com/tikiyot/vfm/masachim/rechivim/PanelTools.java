@@ -25,6 +25,9 @@ final class PanelTools {
 
         /** null — אין רשימה חכמה על המסך (ואין "💾 שמירה"). */
         Runnable saveHere();
+
+        /** מבנה 292: מה כתוב על הכפתור של saveHere ("💾 שמירה", או "✓ לבחור" כשהעורך מבקש תנאי). */
+        String hereLabel();
     }
 
     private PanelTools() { }
@@ -42,7 +45,7 @@ final class PanelTools {
             @Override public void run() { host.view(); }
         }));
         final Runnable here = host.saveHere();
-        if (here != null) f.addView(button(a, Words.Find.SAVE_HERE_B, here));
+        if (here != null) f.addView(button(a, host.hereLabel(), here));
         f.addView(button(a, Words.Find.SAVE_AS_B, new Runnable() {
             @Override public void run() { host.saveAs(); }
         }));

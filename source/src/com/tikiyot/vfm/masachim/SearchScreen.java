@@ -44,6 +44,22 @@ public class SearchScreen extends Activity implements Clip.Holder, PlaceChip.Pla
     /** מבנה 291: רשימה חכמה חדשה — האופן והרשימה שבתוכה תיווצר ב"💾 שמירה". */
     static final String EXTRA_NEW_MODE = "newMode", EXTRA_NEW_IN = "newIn";
 
+    /**
+     * מבנה 292: "לבחור" — העורך (דרך הגשר) מבקש תנאי לשורה "צור רשימה חכמה": אותה חלונית (פתוחה), ו"✓ לבחור" מחזיר את השם, התנאי,
+     * המיון והתצוגה (PICKED_*), בלי לשמור דבר. עד כאן — הטופס הנפרד (DbSmartForm.ask).
+     */
+    static final String EXTRA_PICK = "pick", PICKED_NAME = "pickedName", PICKED_COND = "pickedCond", PICKED_SORT = "pickedSort",
+            PICKED_VIEW = "pickedView";
+
+    static android.content.Intent pick(android.content.Context c, String name, String cond, String sort) {
+        android.content.Intent i = new android.content.Intent(c, SearchScreen.class);
+        i.putExtra(EXTRA_PICK, true);
+        i.putExtra(EXTRA_QUERY, cond == null ? "" : cond.trim());
+        if (sort != null && !sort.trim().isEmpty()) i.putExtra(EXTRA_SORT, sort.trim());
+        i.putExtra(EXTRA_TITLE, name == null || name.trim().isEmpty() ? Words.SMART_LIST : name.trim());
+        return i;
+    }
+
     /** מבנה 291: רשימה חכמה חדשה בתוך in — בחלונית של החיפוש (פתוחה), ו"💾 שמירה" יוצרת אותה. */
     static void newSmart(Activity from, String mode, long in) {
         android.content.Intent i = new android.content.Intent(from, SearchScreen.class);
@@ -297,6 +313,7 @@ public class SearchScreen extends Activity implements Clip.Holder, PlaceChip.Pla
             }
             @Override public void view() { pickView(); }
             @Override public void saveAs() { saves.saveAs(); }
+            @Override public String hereLabel() { return saves.picking() ? Words.Find.PICK : Words.Find.SAVE_HERE_B; }   // מבנה 292
             @Override public Runnable saveHere() {
                 return !saves.onSmart() ? null : new Runnable() {
                     @Override public void run() { saves.saveHere(); }
@@ -806,7 +823,7 @@ public class SearchScreen extends Activity implements Clip.Holder, PlaceChip.Pla
         menu.add(0, 4, 3, Words.FULL_SHORT);
         menu.add(0, 5, 4, Words.Views.MENU);                                  // 148
         if (FolderView.ALL.equals(view)) menu.add(0, 8, 7, hidden ? Words.Here.HIDE_HIDDEN : Words.Here.SHOW_HIDDEN);   // 149
-        if (saves.onSmart()) menu.add(0, 9, 5, Words.Find.saveHere(getTitle().toString()));   // מבנה 287
+        if (saves.onSmart()) menu.add(0, 9, 5, saves.picking() ? Words.Find.PICK : Words.Find.saveHere(getTitle().toString()));   // מבנה 287, 292
         menu.add(0, 7, 6, Words.Find.SAVE_AS);                                // 153
         return true;
     }
