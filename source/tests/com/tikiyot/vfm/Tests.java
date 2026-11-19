@@ -367,6 +367,23 @@ public final class Tests {
                         + "הטופס הנפרד כבר לא נפתח מכאן",
                 !edit288.isEmpty() && !edit288.contains("DbSmartForm.show(") && edit288.contains("list = it.type == Store.LIST || smart;")
                         && edit288.contains("r.cond = prop(it.id, Store.P_COND);") && edit288.contains("saveSmart(it, r);"));
+        // מבנה 289: "📥 לטעון" — המוכנות, ואחריהן הרשימות החכמות של האופן (לפי השם; בלי תנאי — לא)
+        MemStore ms289 = new MemStore(IdCounter.memory());
+        long b289 = ms289.createSmart("ב חכמה", 0), a289 = ms289.createSmart("א חכמה", 0), e289 = ms289.createSmart("ריקה", 0);
+        ms289.setProp(b289, Store.P_COND, "סוג:pdf");
+        ms289.setProp(b289, Store.P_SORT, Sort.DATE);
+        ms289.setProp(a289, Store.P_COND, "דוח");
+        java.util.List<String[]> t289 = Lists.templates(ms289), p289 = Lists.templates(null);
+        int np289 = SmartLists.PRESETS.length;
+        String pt289 = read(new File(System.getProperty("vfm.src"), "src/com/tikiyot/vfm/masachim/rechivim/PanelTools.java"));
+        check("מבנה 289: התבניות — " + np289 + " המוכנות קודם (מסומנות), ואחריהן הרשימות החכמות של האופן לפי השם, עם התנאי והמיון; בלי תנאי — לא; "
+                        + "בלי מסד — רק המוכנות; בחלונית — לטעון, מיון, תצוגה, שמירה בשם (ושמירה ברשימה חכמה)",
+                p289.size() == np289 && t289.size() == np289 + 2 && "1".equals(t289.get(0)[4]) && t289.get(0)[0].equals(SmartLists.PRESETS[0][0])
+                        && t289.get(np289)[0].equals("א חכמה") && t289.get(np289)[1].equals("דוח") && t289.get(np289)[4].isEmpty()
+                        && t289.get(np289 + 1)[0].equals("ב חכמה") && t289.get(np289 + 1)[2].equals(Sort.DATE)
+                        && pt289.contains("Words.Find.LOAD") && pt289.contains("Words.Find.SORT_B") && pt289.contains("Words.Find.VIEW_B")
+                        && pt289.contains("Words.Find.SAVE_AS_B") && pt289.contains("Lists.templates(s)")
+                        && ss287.contains("PanelTools.row(this,") && ss287.contains("private void pickView() {") && ss287.contains("private void loadTemplate("));
         int rl285 = sf281.indexOf("public void reload(Activity a, String cond) {");
         check("מבנה 285: טעינה של הגדרה אחרת לטופס מנקה גם את \"רק תיקיות ריקות\" (עד כאן נשארה מסומנת מהקודמת)",
                 rl285 > 0 && sf281.indexOf("empty.setChecked(false);", rl285) > rl285 && sf281.indexOf("empty.setChecked(false);", rl285) < sf281.indexOf("load(cond);", rl285));

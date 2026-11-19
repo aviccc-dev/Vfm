@@ -254,6 +254,29 @@ final class Lists {
         return null;
     }
 
+    /**
+     * מבנה 289 (אפיון החיפוש, 6 — התבניות; המשתמש: "1"): מה ש"📥 לטעון" שבחלונית מציע — המוכנות (SmartLists.PRESETS), ואחריהן
+     * הרשימות החכמות של האופן, לפי השם. לכל אחת: {שם, תנאי, מיון, תצוגה, "1" — מוכנה}. s = null — רק המוכנות. רשימה חכמה בלי
+     * תנאי — לא (אין מה לטעון).
+     */
+    static List<String[]> templates(Store s) {
+        List<String[]> out = new ArrayList<String[]>();
+        for (String[] p : SmartLists.PRESETS) out.add(new String[]{p[0], p[1], p[2], p[4], "1"});
+        if (s == null) return out;
+        List<String[]> own = new ArrayList<String[]>();
+        for (Store.Item it : s.smarts()) {
+            String c = s.prop(it.id, Store.P_COND);
+            if (c == null || c.trim().isEmpty()) continue;
+            String so = s.prop(it.id, Store.P_SORT), v = s.prop(it.id, Store.P_VIEW);
+            own.add(new String[]{it.name, c, so == null ? "" : so, v == null ? "" : v, ""});
+        }
+        Collections.sort(own, new java.util.Comparator<String[]>() {
+            @Override public int compare(String[] x, String[] y) { return x[0].compareTo(y[0]); }
+        });
+        out.addAll(own);
+        return out;
+    }
+
     /** מבנה 105: מה שבטופס של רשימה חכמה קיימת — לפי SMART_FORM (כדי לתת לאחרת את ההגדרות שלה). */
     static java.util.Map<String, String> smartProps(Store s, long id) {
         java.util.Map<String, String> m = new java.util.HashMap<String, String>();

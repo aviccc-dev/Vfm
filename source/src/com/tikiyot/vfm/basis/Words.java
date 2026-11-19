@@ -205,6 +205,15 @@ public final class Words {
             return "נשמר: " + name;
         }
 
+        /** מבנה 289: השורה שבראש חלונית ההגדרות. */
+        public static final String LOAD = "📥 לטעון", SORT_B = "↕ מיון", VIEW_B = "▦ תצוגה", SAVE_HERE_B = "💾 שמירה",
+                SAVE_AS_B = "💾 שמירה בשם…", LOAD_TITLE = "לטעון את התנאים של…";
+
+        /** ✨ — מוכנה; ⚡ — רשימה חכמה של האופן. */
+        public static String template(String name, boolean ready) {
+            return (ready ? "✨ " : "⚡ ") + name;
+        }
+
         /** מבנה 287: "💾 שמירה" — אל הרשימה החכמה שעל המסך. */
         public static String saveHere(String name) {
             return "💾 שמירה — " + name;

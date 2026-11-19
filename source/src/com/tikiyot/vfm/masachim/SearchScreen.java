@@ -279,6 +279,21 @@ public class SearchScreen extends Activity implements Clip.Holder, PlaceChip.Pla
         chips = new FilterChips(this, parts);                                 // מבנה 286
         head.addView(chips.view);
         LinearLayout box = Ui.form(this);
+        box.addView(PanelTools.row(this, smartMode != null ? smartMode : Db.currentMode, new PanelTools.Host() {   // מבנה 289
+            @Override public void load(String c, String s, String v) { loadTemplate(c, s, v); }
+            @Override public void sort() {
+                SortUi.menu(SearchScreen.this, srt, new Runnable() {
+                    @Override public void run() { search(); }
+                });
+            }
+            @Override public void view() { pickView(); }
+            @Override public void saveAs() { save(); }
+            @Override public Runnable saveHere() {
+                return smartId == 0 ? null : new Runnable() {
+                    @Override public void run() { saveHere(); }
+                };
+            }
+        }));
         parts.addTo(this, box);
         if (history != null) box.addView(history.countRow(new Runnable() {    // מבנה 284
             @Override public void run() { saveSetting(SmartLists.HISTORY_MAX, String.valueOf(history.max())); }
@@ -495,6 +510,33 @@ public class SearchScreen extends Activity implements Clip.Holder, PlaceChip.Pla
         props.put(Store.P_VIEW, view);
         Manager.Act act = Manager.onSmartEdit(smartMode, smartId, getTitle().toString(), q, props, Paths.data(), BatchUi.vars(this, Paths.data()), lib);
         Ui.toast(this, act.error() != null ? act.error() : act.say(lib));
+    }
+
+    /** 148: התצוגה — לפתיחה הזו (מהתפריט ומהחלונית — מבנה 289: מקום אחד). */
+    private void pickView() {
+        Ui.options(this, Words.Views.TITLE, FolderView.MODES, new android.content.DialogInterface.OnClickListener() {
+            @Override
+            public void onClick(android.content.DialogInterface d, int w) {
+                view = FolderView.MODES[w];
+                placed = false;
+                here = null;
+                search();
+            }
+        });
+    }
+
+    /** מבנה 289: "📥 לטעון" — התנאי של תבנית (ההגדרות לחלונית, המילים לשורה), המיון והתצוגה שלה. */
+    private void loadTemplate(String cond, String sort, String v) {
+        String[] sp = SmartLists.split(cond);
+        parts.reload(this, sp[0]);
+        input.setText(sp[1]);
+        if (sort != null && !sort.isEmpty()) srt.prefer(sort);
+        if (v != null && !v.isEmpty()) {
+            view = v;
+            placed = false;
+            here = null;
+        }
+        search();
     }
 
     private void save() {
@@ -860,15 +902,7 @@ public class SearchScreen extends Activity implements Clip.Holder, PlaceChip.Pla
             return true;
         }
         if (item.getItemId() == 5) {                                          // 148: לפתיחה הזו; ברירת המחדל — בהגדרות הרשימה
-            Ui.options(this, Words.Views.TITLE, FolderView.MODES, new android.content.DialogInterface.OnClickListener() {
-                @Override
-                public void onClick(android.content.DialogInterface d, int w) {
-                    view = FolderView.MODES[w];
-                    placed = false;
-                    here = null;
-                    search();
-                }
-            });
+            pickView();
             return true;
         }
         if (item.getItemId() == 4) {
