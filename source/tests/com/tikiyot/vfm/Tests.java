@@ -366,6 +366,13 @@ public final class Tests {
         check("מבנה 290: השמירה של מסך החיפוש — בקובץ משלה (SearchSave), ולא גם במסך",
                 !only290.contains("Manager.onSmartEdit(") && !only290.contains("DbVerbsUi.makeSmart(") && !only290.contains("Words.Find.SAVE_AS_TITLE")
                         && only290.contains("final SearchSave saves = new SearchSave(this);") && only290.contains("saves.read(getIntent());"));
+        String vu291 = read(new File(System.getProperty("vfm.src"), "src/com/tikiyot/vfm/masachim/rechivim/DbVerbsUi.java"));
+        check("מבנה 291: רשימה חכמה חדשה — בחלונית של החיפוש (פתוחה), ו\"💾 שמירה\" יוצרת אותה בתוך הרשימה שממנה באו, דרך המנהל; "
+                        + "כפולים — אפשרות באותה בחירה; הלשוניות והטופס הנפרד ליצירה ולעריכה — יצאו",
+                vu291.contains("SearchScreen.newSmart(a, mode, in);") && vu291.contains("Func.byKind(Target.KIND_DUP)") && !vu291.contains("DbSmartForm.showNew(")
+                        && ss287.contains("DbVerbsUi.makeSmart(s, newMode, newIn, r,") && ss287.contains("boolean open = saves.isNew();")
+                        && !new File(System.getProperty("vfm.src"), "src/com/tikiyot/vfm/masachim/rechivim/SearchTabs.java").exists()
+                        && !read(new File(System.getProperty("vfm.src"), "src/com/tikiyot/vfm/masachim/rechivim/DbSmartForm.java")).contains("static void show("));
         int ed288 = dl287.indexOf("private void edit(final Store.Item it) {"), ee288 = dl287.indexOf("private void done(String msg) {", ed288);
         String edit288 = ed288 > 0 && ee288 > ed288 ? dl287.substring(ed288, ee288) : "";
         check("מבנה 288: עריכה של רשימה חכמה — אותו חלון של רשימה ידנית (שם, צלמית, תיאור, \"למה\"); התנאי, המיון והתצוגה נשמרים כמו שהם; "

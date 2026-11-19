@@ -1,6 +1,7 @@
 package com.tikiyot.vfm;
 
-// מ0.10.1: רשימה חכמה במסד — בטופס המוכר (SmartForm: מאיפה, סוג, תאריך, גודל, מיון, תצוגה, צלמית, תיאור, "למה"),
+// מבנה 291: היצירה והעריכה של רשימה חכמה — כבר לא כאן (החלונית של מסך החיפוש — SearchSave; הפרטים — בחלון העריכה של הרשימות).
+// נשאר: התוצאה (Result, props) שהמנהל מקבל, והטופס לעורך הפקודות (ask). מ0.10.1: רשימה חכמה במסד — בטופס המוכר (SmartForm: מאיפה, סוג, תאריך, גודל, מיון, תצוגה, צלמית, תיאור, "למה"),
 // ליצירה ולעריכה (המשתמש: "רשימה חכמה היא בלי הטופס של התנאים"). הטופס עצמו לא משתנה; כאן רק התרגום בין המאפיינים
 // במסד (cond/sort/view/icon/desc/why) לבין מה שהטופס מקבל ומחזיר.
 // אחראי: התרגום, ושמירה בעסקה אחת. אסור לו: לפתוח מסד (מקבל Store פתוח לכתיבה).
@@ -18,38 +19,6 @@ final class DbSmartForm {
 
     interface Done {
         void ok(Result r);
-    }
-
-    /** הטופס; smart — לעריכה (0 — חדשה). s — לקריאת הערכים הקיימים בלבד. */
-    static void show(Activity a, Store s, long smart, final Done done) {
-        Target t = null;
-        String name = null;
-        if (smart != 0) {
-            name = s.item(smart).name;
-            t = Target.of(FnSmart.KIND, SmartLists.COND, v(s, smart, Store.P_COND), SmartLists.SORT, v(s, smart, Store.P_SORT),
-                    SmartLists.VIEW, v(s, smart, Store.P_VIEW), Program.ICON, v(s, smart, Store.P_ICON),
-                    DESC, v(s, smart, Store.P_DESC), Program.WHY, v(s, smart, Store.P_WHY));
-        }
-        SmartForm.show(a, name, t, new Func.Done() {
-            @Override
-            public void ok(String n, Target out) {
-                done.ok(result(n, out));
-            }
-        });
-    }
-
-    /**
-     * מ0.28 (המשתמש: "כפולים אמור להיות באותו תפריט של רשימה חכמה בתור עוד אופציה"): רשימה חכמה חדשה — הטופס עם הפס
-     * "סוג: חכמה | כפולים" (SearchTabs, כמו בבית הישן). חכמה — done; כפולים — dups (השם וההגדרות של הכפולים).
-     */
-    static void showNew(Activity a, final Done done, final Func.Done dups) {
-        SearchTabs.configure(a, FnSmart.KIND, null, null, new Func.Done() {
-            @Override
-            public void ok(String n, Target out) {
-                if (FnDup.KIND.equals(out.kind)) dups.ok(n, out);
-                else done.ok(result(n, out));
-            }
-        });
     }
 
     /**

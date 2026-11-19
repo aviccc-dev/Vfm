@@ -9,6 +9,9 @@ final class SearchSave {
     /** מבנה 287: הרשימה החכמה שעל המסך (0 — אין): "💾 שמירה" כותב אליה את מה שבחלונית. */
     private String smartMode;
     private long smartId;
+    /** מבנה 291: רשימה חכמה חדשה — האופן והרשימה שבתוכה (newMode = null — לא חדשה). */
+    private String newMode;
+    private long newIn;
 
     SearchSave(SearchScreen s) {
         this.s = s;
@@ -17,16 +20,23 @@ final class SearchSave {
     void read(android.content.Intent i) {
         smartMode = i.getStringExtra(SearchScreen.EXTRA_SMART_MODE);
         smartId = smartMode == null ? 0 : i.getLongExtra(SearchScreen.EXTRA_SMART_ID, 0);
+        newMode = i.getStringExtra(SearchScreen.EXTRA_NEW_MODE);
+        newIn = i.getLongExtra(SearchScreen.EXTRA_NEW_IN, 0);
     }
 
-    /** על המסך רשימה חכמה של המסד — יש "💾 שמירה". */
+    /** על המסך רשימה חכמה של המסד, או חדשה — יש "💾 שמירה". */
     boolean onSmart() {
-        return smartId != 0;
+        return smartId != 0 || newMode != null;
     }
 
-    /** האופן שממנו נטענות התבניות: של הרשימה החכמה שעל המסך, אחרת — האופן הפתוח. */
+    /** מבנה 291: רשימה חכמה חדשה, שעוד לא נשמרה. */
+    boolean isNew() {
+        return newMode != null && smartId == 0;
+    }
+
+    /** האופן שממנו נטענות התבניות: של הרשימה החכמה שעל המסך (או החדשה), אחרת — האופן הפתוח. */
     String mode() {
-        return smartMode != null ? smartMode : Db.currentMode;
+        return smartMode != null ? smartMode : newMode != null ? newMode : Db.currentMode;
     }
 
     /**
@@ -37,6 +47,10 @@ final class SearchSave {
         final String q = s.query();
         if (q.trim().isEmpty()) {
             Ui.toast(s, Words.Db.SMART_NO_COND);
+            return;
+        }
+        if (isNew()) {
+            saveNew(q);
             return;
         }
         java.util.Map<String, String> props;
@@ -78,6 +92,37 @@ final class SearchSave {
      * "שמירה בשם" — רשימה חכמה חדשה במסד, בבית של האופן הפתוח, עם התנאי, המיון והתצוגה שעל המסך.
      * מ0.29: עד כאן נשמרה "הגדרה נפוצה" בקובץ הראשי של המנוע הישן (ולכן לא הופיעה במסד).
      */
+    /**
+     * מבנה 291: רשימה חכמה חדשה — השם (נשאל), ונוצרת בתוך הרשימה שממנה באו, דרך המנהל (אותו "צור רשימה חכמה" של ➕ עד כאן;
+     * שם קיים — שואלים, מבנה 103). מכאן — המסך הוא של הרשימה החדשה: "💾 שמירה" מעדכן אותה.
+     */
+    private void saveNew(final String q) {
+        Ui.askText(s, Words.Find.NEW_SMART_TITLE, s.input.getText().toString().trim(), Words.Short.NAME_HINT, new Ui.Text1() {
+            @Override
+            public void ok(String value) {
+                final String n = value.trim();
+                if (n.isEmpty()) {
+                    Ui.toast(s, Words.NEED_NAME);
+                    return;
+                }
+                final DbSmartForm.Result r = new DbSmartForm.Result();
+                r.name = n;
+                r.cond = q;
+                r.sort = s.srt.by;
+                r.view = s.view;
+                DbVerbsUi.makeSmart(s, newMode, newIn, r, new DbVerbsUi.Made() {
+                    @Override public void ok(long id) {
+                        smartMode = newMode;
+                        smartId = id;
+                        s.setTitle(r.name);
+                        s.invalidateOptionsMenu();
+                        Ui.toast(s, Words.Find.saved(r.name));
+                    }
+                });
+            }
+        });
+    }
+
     void saveAs() {
         final String q = s.query(), so = s.srt.by, w = s.view;
         Ui.askText(s, Words.Find.SAVE_AS_TITLE, s.input.getText().toString().trim(), Words.Short.NAME_HINT, new Ui.Text1() {   // מ0.30: שם משלו — לא "תבנית"

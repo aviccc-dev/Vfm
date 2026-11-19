@@ -41,6 +41,17 @@ public class SearchScreen extends Activity implements Clip.Holder, PlaceChip.Pla
     static final String EXTRA_PLACE = "place", EXTRA_PLACE_NAME = "placeName";
     /** מבנה 287: רשימה חכמה של המסד — האופן והמספר שלה (כדי לשמור אליה מהחלונית). */
     static final String EXTRA_SMART_MODE = "smartMode", EXTRA_SMART_ID = "smartId";
+    /** מבנה 291: רשימה חכמה חדשה — האופן והרשימה שבתוכה תיווצר ב"💾 שמירה". */
+    static final String EXTRA_NEW_MODE = "newMode", EXTRA_NEW_IN = "newIn";
+
+    /** מבנה 291: רשימה חכמה חדשה בתוך in — בחלונית של החיפוש (פתוחה), ו"💾 שמירה" יוצרת אותה. */
+    static void newSmart(Activity from, String mode, long in) {
+        android.content.Intent i = new android.content.Intent(from, SearchScreen.class);
+        i.putExtra(EXTRA_NEW_MODE, mode);
+        i.putExtra(EXTRA_NEW_IN, in);
+        i.putExtra(EXTRA_TITLE, Words.Find.NEW_SMART_TITLE);
+        from.startActivity(i);
+    }
 
     /** מבנה 283: "פתח חיפוש" — מהמסך שעליו עומדים, עם המקום שלו. */
     static void open(Activity from) {
@@ -298,10 +309,11 @@ public class SearchScreen extends Activity implements Clip.Holder, PlaceChip.Pla
         }));
         panel = new android.widget.ScrollView(this);
         panel.addView(box);
-        panel.setVisibility(View.GONE);
+        boolean open = saves.isNew();                                         // מבנה 291: רשימה חכמה חדשה — החלונית פתוחה
+        panel.setVisibility(open ? View.VISIBLE : View.GONE);
         settings = Ui.info(this);
         settings.setBackgroundColor(Ui.BG_SOFT);
-        settings.setText(Words.Find.SETTINGS + " ▸");
+        settings.setText(Words.Find.SETTINGS + (open ? " ▾" : " ▸"));
         settings.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {

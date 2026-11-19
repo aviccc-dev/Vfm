@@ -198,17 +198,23 @@ final class DbVerbsUi {
         done.ok(act.made);
     }
 
-    /** רשימה חכמה חדשה — בטופס המוכר — בתוך in (0 — בתוך הבית, אם יש). */
+    /**
+     * רשימה חכמה חדשה בתוך in (0 — בתוך הבית, אם יש). מבנה 291 (אפיון החיפוש, 6 — מקום אחד לעריכה): בחלונית של מסך החיפוש —
+     * מגדירים, רואים מה נמצא, ו"💾 שמירה" יוצרת אותה כאן (SearchSave). כפולים — אפשרות נוספת באותה בחירה (מ0.28, המשתמש: "כפולים אמור
+     * להיות באותו תפריט של רשימה חכמה בתור עוד אופציה"), בטופס שלהם.
+     */
     static void newSmart(final Activity a, final String mode, final long in) {
-        DbSmartForm.showNew(a, new DbSmartForm.Done() {
-            @Override
-            public void ok(final DbSmartForm.Result r) {
-                makeSmart(a, mode, in, r, new Made() {                            // מבנה 97: דרך המנהל, כפקודה; מבנה 103: שם קיים — שואלים
-                    @Override public void ok(long id) { if (a instanceof DbListScreen) ((DbListScreen) a).reload(); }
+        Ui.options(a, Words.Main.ADD_SMART, new String[]{Words.Find.NEW_SMART, Words.Find.NEW_DUPS}, new android.content.DialogInterface.OnClickListener() {
+            @Override public void onClick(android.content.DialogInterface d, int w) {
+                if (w == 0) {
+                    SearchScreen.newSmart(a, mode, in);
+                    return;
+                }
+                Func f = Func.byKind(Target.KIND_DUP);
+                if (f != null) f.configure(a, null, null, new Func.Done() {
+                    @Override public void ok(String name, Target t) { saveDups(a, mode, in, name, t); }
                 });
             }
-        }, new Func.Done() {
-            @Override public void ok(String name, Target t) { saveDups(a, mode, in, name, t); }   // מ0.28: נבחר "כפולים" בפס הסוג
         });
     }
 
