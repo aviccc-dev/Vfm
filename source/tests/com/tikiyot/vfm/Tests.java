@@ -718,9 +718,14 @@ public final class Tests {
                         && room272.contains("private static boolean foldedTop, foldedBottom;") && room272.contains("FoldTrack.release(low ? -dy : dy, step, low ? foldedBottom : foldedTop)")
                         && room272.contains("bottom.setVisibility(foldedBottom ? GONE : VISIBLE);")
                         && room272.contains("top.setVisibility(v);") && room272.contains("findViewWithTag(FOLD_TAG)")
-                        && room272.contains("bar.hide();") && room272.contains("bar.show();")
+                        && room272.contains("if (bar != null) bar.hide();") && !room272.contains("bar.show();")
                         && room272.contains("Words.Top.UNFOLD_ROWS : Words.Top.FOLD_ROWS") && room272.contains("Words.Top.UNFOLD_LOW : Words.Top.FOLD_LOW")
                         && !Words.Top.FOLD_ROWS.isEmpty() && !Words.Top.UNFOLD_ROWS.isEmpty() && !Words.Top.FOLD_LOW.isEmpty() && !Words.Top.UNFOLD_LOW.isEmpty());
+        check("מבנה 278: הכותרת של אנדרואיד מוסתרת, ושם המסך וה־⋮ ברצועה שלמעלה — אותו תפריט של המסך (המסך בונה, המסך מקבל את הבחירה), "
+                        + "והשם מתעדכן כשהמסך משנה אותו",
+                room272.contains("a.onCreateOptionsMenu(pm.getMenu());") && room272.contains("a.onPrepareOptionsMenu(pm.getMenu());")
+                        && room272.contains("return a.onOptionsItemSelected(item);") && room272.contains("CharSequence t = a.getTitle();")
+                        && room272.contains("addOnPreDrawListener(fresh)") && !Words.Top.SCREEN_MENU.isEmpty());
         check("מבנה 277: החץ שעל הרצועה מראה לאן השורות ילכו — למעלה: מוצגות ▲, מקופלות ▼; למטה: מוצגות ▼, מקופלות ▲",
                 FoldTrack.arrow(false, false).equals("▲") && FoldTrack.arrow(false, true).equals("▼")
                         && FoldTrack.arrow(true, false).equals("▼") && FoldTrack.arrow(true, true).equals("▲"));

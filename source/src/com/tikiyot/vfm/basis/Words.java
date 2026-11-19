@@ -1536,10 +1536,11 @@ public final class Words {
                 FILES = "קבצים פיזיים", SETTINGS = "הגדרות", ADD = "כפתור";
         public static final String T_LINE = "⌨ שורת פקודה בכתב";
         /** מבנה 275: הרצועה הדקה שמעל המסך — מה היא תעשה (למקריא המסך). */
-        public static final String FOLD_ROWS = "הסתרת הכותרת ושורות הכפתורים שלמעלה — נגיעה, או גרירה למעלה",
-                UNFOLD_ROWS = "החזרת הכותרת ושורות הכפתורים שלמעלה — נגיעה, או גרירה למטה",
+        public static final String FOLD_ROWS = "הסתרת שורות הכפתורים שלמעלה — נגיעה, או גרירה למעלה",
+                UNFOLD_ROWS = "החזרת שורות הכפתורים שלמעלה — נגיעה, או גרירה למטה",
                 FOLD_LOW = "הסתרת שורות הכפתורים שלמטה — נגיעה, או גרירה למטה",
                 UNFOLD_LOW = "החזרת שורות הכפתורים שלמטה — נגיעה, או גרירה למעלה";   // מבנה 277
+        public static final String SCREEN_MENU = "התפריט של המסך";   // מבנה 278
         public static final String NO_BATCH = "אין קובצי פקודות";
         public static final String LINE_HINT = "למשל: פתח רשימה חכמה אחרונים · מצא סוג:ספרים תאריך:שבוע · MOVE …";
         /** 1.13.0 */
