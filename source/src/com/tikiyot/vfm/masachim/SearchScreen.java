@@ -116,6 +116,8 @@ public class SearchScreen extends Activity implements Clip.Holder, PlaceChip.Pla
     private boolean wide;
     /** מבנה 284: היסטוריית החיפוש (רק בחיפוש — לא ברשימה חכמה). */
     private HistoryBox history;
+    /** מבנה 286: המסננים הפעילים — שבבים עם ✕. */
+    private FilterChips chips;
     private Runnable pending;
     private static final int[] SECTION_BG = Library.MATCH_COLORS;
     /** שורת תוצאה בעיני המיון (79). */
@@ -267,6 +269,8 @@ public class SearchScreen extends Activity implements Clip.Holder, PlaceChip.Pla
         head.addView(quick.view);
         parts = new SmartForm.Parts(this, Words.Find.ALL_DRIVES);
         parts.load(split[0]);
+        chips = new FilterChips(this, parts);                                 // מבנה 286
+        head.addView(chips.view);
         LinearLayout box = Ui.form(this);
         parts.addTo(this, box);
         if (history != null) box.addView(history.countRow(new Runnable() {    // מבנה 284
@@ -625,6 +629,7 @@ public class SearchScreen extends Activity implements Clip.Holder, PlaceChip.Pla
     }
 
     void search() {
+        if (chips != null) chips.refresh();                                   // מבנה 286
         String q = searchQuery();
         if (!lib.ready) {
             info.setText(Words.LOADING_INDEX);

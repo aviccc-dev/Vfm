@@ -342,6 +342,19 @@ public final class Tests {
                         && hs284.indexOf("remember();", hs284.indexOf("private void tap(")) > 0 && hs284.indexOf("remember();", hs284.indexOf("protected void onPause()")) > 0
                         && hs284.contains("IME_ACTION_SEARCH") && hs284.contains("history.countRow(") && SmartLists.HISTORY_DEFAULT == 20);
         String sf281 = read(new File(System.getProperty("vfm.src"), "src/com/tikiyot/vfm/masachim/rechivim/SmartForm.java"));
+        // מבנה 286: שבבי המסננים — ההסרה של מסנן אחד משאירה את השאר; המסך בונה אותם מהחלונית ומרענן בכל חיפוש
+        String fc286 = read(new File(System.getProperty("vfm.src"), "src/com/tikiyot/vfm/masachim/rechivim/FilterChips.java")),
+                ss286 = read(new File(System.getProperty("vfm.src"), "src/com/tikiyot/vfm/masachim/SearchScreen.java"));
+        check("מבנה 286: שבב ✕ מסיר מסנן אחד — השאר נשאר (גם ערך עם רווח, גם מסנן של כמה רכיבים, גם רכיב שמופיע פעמיים — פעם אחת)",
+                SmartForm.without("מקור:«/s/ספרים חדשים» סוג:pdf גודל:>10MB", "סוג:pdf").equals("מקור:«/s/ספרים חדשים» גודל:>10MB")
+                        && SmartForm.without("מקור:«/s/ספרים חדשים» סוג:pdf", "מקור:«/s/ספרים חדשים»").equals("סוג:pdf")
+                        && SmartForm.without("א ב ג", "א ג").equals("ב") && SmartForm.without("א א", "א").equals("א")
+                        && SmartForm.without("סוג:pdf", "סוג:pdf").isEmpty() && SmartForm.without("", "x").isEmpty());
+        check("מבנה 286: השבבים — מהחלונית (Parts.active), מתחת לשורה, נבנים מחדש רק כשהמסננים השתנו, ונגיעה מסירה (Parts.drop); "
+                        + "\"רק תיקיות ריקות\" — בלי שבב של סוג",
+                fc286.contains("parts.active()") && fc286.contains("parts.drop(a, f[1])") && fc286.contains("if (sig.toString().equals(shown)) return;")
+                        && ss286.contains("chips = new FilterChips(this, parts);") && ss286.contains("if (chips != null) chips.refresh();")
+                        && sf281.contains("if (!k.isEmpty() && !empty.isChecked()) {") && Words.Find.chip("x").contains("✕"));
         int rl285 = sf281.indexOf("public void reload(Activity a, String cond) {");
         check("מבנה 285: טעינה של הגדרה אחרת לטופס מנקה גם את \"רק תיקיות ריקות\" (עד כאן נשארה מסומנת מהקודמת)",
                 rl285 > 0 && sf281.indexOf("empty.setChecked(false);", rl285) > rl285 && sf281.indexOf("empty.setChecked(false);", rl285) < sf281.indexOf("load(cond);", rl285));

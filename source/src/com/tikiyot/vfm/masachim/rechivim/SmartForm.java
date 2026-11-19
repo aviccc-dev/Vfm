@@ -61,6 +61,14 @@ public final class SmartForm {
 
     private static final String CLEAR = "✕";  // תחביר
 
+    /** מבנה 286: התנאי בלי הרכיבים של מסנן אחד (כל רכיב — פעם אחת; השאר — כמו שהיו, עם «» כשיש רווח). */
+    static String without(String all, String token) {
+        List<String> gone = Cond.tokens(token);
+        StringBuilder rest = new StringBuilder();
+        for (String t : Cond.tokens(all)) if (!gone.remove(t)) rest.append(rest.length() > 0 ? " " : "").append(Cond.quoteToken(t));
+        return rest.toString();
+    }
+
     /** חלקי הטופס — משותפים לרשימה חכמה ולחיפוש: מקורות, סוגים, תאריך, גודל, מילים. */
     public static final class Parts {
         /** 145: סוגי הקבצים — המודל (Types.Choice) והקבוצות מההגדרות. */
@@ -312,6 +320,35 @@ public final class SmartForm {
             String w = words.getText().toString().trim();
             if (!w.isEmpty()) add(sb, w);
             return sb.toString();
+        }
+
+        /**
+         * מבנה 286 (אפיון החיפוש, 8): המסננים שפעילים עכשיו — {מה כתוב על השבב, הרכיבים שלו בתנאי}: מאיפה, סוג, תאריך, גודל,
+         * תיקיות ריקות, ושאר הרכיבים (מה שאין לו מקום בחלונית).
+         */
+        public List<String[]> active() {
+            read();
+            List<String[]> out = new ArrayList<String[]>();
+            String s = Sources.toCond(src.get());
+            if (!s.isEmpty()) out.add(new String[]{Sources.describe(s), s});
+            String k = kinds.token();
+            if (!k.isEmpty() && !empty.isChecked()) {                          // תיקיות ריקות — אין סוג (199)
+                String kt = Cond.tokens(k).get(0);
+                out.add(new String[]{Words.Find.chipKind(kt.substring(kt.indexOf(':') + 1).replace("|", ", ")), k});
+            }
+            String d = ds.dateToken();
+            if (!d.isEmpty()) out.add(new String[]{Words.SmartF.phrase(DateSize.DATE_MODES[ds.dateMode], ds.dateValue) + (ds.added ? Words.SmartF.BY_ADDED : ""), d});
+            String z = ds.sizeToken();
+            if (!z.isEmpty()) out.add(new String[]{Words.SmartF.phrase(DateSize.SIZE_MODES[ds.sizeMode], ds.sizeNumber + ds.sizeUnit), z});
+            if (empty.isChecked()) out.add(new String[]{Words.Empty.TITLE, Cond.EMPTY});
+            String w = words.getText().toString().trim();
+            if (!w.isEmpty()) out.add(new String[]{w, w});
+            return out;
+        }
+
+        /** מבנה 286: בלי המסנן הזה — כל השאר נשאר (כמו טעינה מחדש של התנאי בלי הרכיבים שלו). */
+        public void drop(Activity a, String token) {
+            reload(a, without(build(), token));
         }
 
         public void watch(final Runnable update) {
