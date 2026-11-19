@@ -290,6 +290,38 @@ public final class Text {
         return pi == p.length;
     }
 
+    /**
+     * מבנה 281 (אפיון החיפוש, 8 — "הכל"): מה לסמן בשם שבשורה — כל המילים שחיפשו, לא רק הראשונה. מילה עם "|" — כל חלופה; עם תו כללי —
+     * החלקים שבין התווים ("דוח*2026" — "דוח" ו"2026"); מסננים ("סוג:pdf") ו"בלי" ("-טיוטה") — לא מסמנים. חוזר: זוגות [התחלה, סוף),
+     * בסדר, בלי חפיפות. שם שהנרמול משנה את אורכו — כלום (המקומות לא היו נכונים).
+     */
+    public static int[] marks(String shown, String queryNorm) {
+        if (shown == null || queryNorm == null) return new int[0];
+        String norm = norm(shown);
+        if (norm.length() != shown.length()) return new int[0];
+        boolean[] on = new boolean[norm.length()];
+        for (String w : norm(queryNorm).trim().split("\\s+")) {             // מנורמל כבר במסך; כאן — ליתר ביטחון (אותיות סופיות)
+            if (w.isEmpty() || w.startsWith("-") || w.indexOf(':') >= 0) continue;
+            for (String alt : w.split("\\|"))
+                for (String piece : alt.split("[*?]")) {
+                    if (piece.isEmpty()) continue;
+                    int i = norm.indexOf(piece);
+                    if (i >= 0) for (int k = i; k < i + piece.length(); k++) on[k] = true;
+                }
+        }
+        java.util.List<Integer> out = new java.util.ArrayList<Integer>();
+        for (int i = 0; i < on.length; i++)
+            if (on[i] && (i == 0 || !on[i - 1])) {
+                int j = i;
+                while (j < on.length && on[j]) j++;
+                out.add(i);
+                out.add(j);
+            }
+        int[] r = new int[out.size()];
+        for (int i = 0; i < r.length; i++) r[i] = out.get(i);
+        return r;
+    }
+
     // ---------- דירוג ----------
 
     /** 0 מתחיל בשאילתה · 1 מילה מתחילה בה · 2 מכיל · 3 אחר */

@@ -463,18 +463,13 @@ public final class Ui {
         return st.isEmpty() || name.length() - st.length() > 6 ? name : st;
     }
 
+    /** מבנה 281: כל המילים שחיפשו מסומנות (המקומות — Text.marks; עד כאן — רק המילה הראשונה). */
     private static CharSequence highlight(String shown, String queryNorm) {
-        if (queryNorm == null) return shown;
-        String q = queryNorm.trim();
-        int sp = q.indexOf(' ');
-        if (sp > 0) q = q.substring(0, sp);
-        if (q.isEmpty() || q.indexOf('*') >= 0 || q.indexOf('?') >= 0 || q.indexOf(':') >= 0) return shown;
-        String norm = Text.norm(shown);
-        if (norm.length() != shown.length()) return shown;
-        int i = norm.indexOf(q);
-        if (i < 0) return shown;
+        int[] m = Text.marks(shown, queryNorm);
+        if (m.length == 0) return shown;
         SpannableString sb = new SpannableString(shown);
-        sb.setSpan(new BackgroundColorSpan(MARK), i, i + q.length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+        for (int i = 0; i < m.length; i += 2)
+            sb.setSpan(new BackgroundColorSpan(MARK), m[i], m[i + 1], Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
         return sb;
     }
 

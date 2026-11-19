@@ -152,6 +152,7 @@ public final class Words {
 
         public static final String SETTINGS = "⚙ הגדרות", SAVE_AS = "💾 שמירה בשם — רשימה חכמה בבית…", SAVE_AS_TITLE = "שמירה בשם — רשימה חכמה בבית",
                 ALL_DRIVES = "אין מקורות = כל הכוננים", HINT = "חיפוש…";
+        public static final String CLEAR = "ניקוי שורת החיפוש";   // מבנה 281
 
         public static String saved(String name) {
             return "נשמר: " + name;

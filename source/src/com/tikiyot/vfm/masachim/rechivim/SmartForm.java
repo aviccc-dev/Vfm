@@ -23,6 +23,44 @@ public final class SmartForm {
 
     private SmartForm() { }
 
+    /**
+     * מבנה 281 (אפיון החיפוש, 7–8; המשתמש: "כאשר אני נוגע בשורת החיפוש, מה שקיים בה נצבע" · "הכל"): שורת החיפוש — נגיעה ראשונה
+     * בוחרת את כל מה שכתוב (הקלדה מחליפה; נגיעה נוספת — הסמן במקום), ו־✕ בקצה מנקה בנגיעה אחת (רק כשיש מה לנקות).
+     */
+    public static LinearLayout fieldRow(final Activity a, final EditText input) {
+        input.setSelectAllOnFocus(true);
+        LinearLayout row = new LinearLayout(a);
+        row.setOrientation(LinearLayout.HORIZONTAL);
+        row.setGravity(android.view.Gravity.CENTER_VERTICAL);
+        row.addView(input, new LinearLayout.LayoutParams(0, -2, 1f));
+        final TextView clear = new TextView(a);
+        clear.setText(CLEAR);
+        clear.setTextSize(18);
+        clear.setTextColor(Ui.SUB);
+        clear.setGravity(android.view.Gravity.CENTER);
+        clear.setContentDescription(Words.Find.CLEAR);
+        clear.setVisibility(input.getText().length() > 0 ? View.VISIBLE : View.GONE);
+        clear.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                input.setText("");
+                input.requestFocus();
+                android.view.inputmethod.InputMethodManager im =
+                        (android.view.inputmethod.InputMethodManager) a.getSystemService(Activity.INPUT_METHOD_SERVICE);
+                if (im != null) im.showSoftInput(input, 0);
+            }
+        });
+        input.addTextChangedListener(new TextWatcher() {
+            @Override public void beforeTextChanged(CharSequence s, int st, int c, int af) { }
+            @Override public void onTextChanged(CharSequence s, int st, int b, int c) { }
+            @Override public void afterTextChanged(Editable e) { clear.setVisibility(e.length() > 0 ? View.VISIBLE : View.GONE); }
+        });
+        row.addView(clear, new LinearLayout.LayoutParams(Ui.dp(a, 44), Ui.dp(a, 44)));
+        return row;
+    }
+
+    private static final String CLEAR = "✕";  // תחביר
+
     /** חלקי הטופס — משותפים לרשימה חכמה ולחיפוש: מקורות, סוגים, תאריך, גודל, מילים. */
     public static final class Parts {
         /** 145: סוגי הקבצים — המודל (Types.Choice) והקבוצות מההגדרות. */

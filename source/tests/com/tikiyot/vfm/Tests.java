@@ -291,6 +291,20 @@ public final class Tests {
                 Text.wild("*.pdf", "Book.PDF") && !Text.wild("*.pdf", "book.pdf.txt") && Text.wild("*.*", "README") && Text.wild("*", "a")
                         && Text.wild("פרק?", "פרק1") && !Text.wild("פרק?", "פרק12") && Text.wild("דוח*", "דוח 1.txt") && !Text.wild("דוח*", "סיכום דוח")
                         && Text.wild("a.txt", "A.TXT") && !Text.wild("a.txt", "aa.txt") && Text.wild("a*b*c", "aXbYc") && !Text.wild("a*b*c", "aXbYcd"));
+        // מבנה 281: כל המילים מסומנות בשם; מסננים ו"בלי" — לא; חלופות ותווים כלליים — החלקים
+        check("מבנה 281: סימון — כל המילים (\"דוח 2026\"), חלופות (\"ספר|דוח\"), החלקים שבין התווים הכלליים (\"דוח*2026\"); "
+                        + "מסנן ו\"בלי\" — לא; בלי התאמה — כלום",
+                java.util.Arrays.equals(Text.marks("דוח מאי 2026.pdf", "דוח 2026"), new int[]{0, 3, 8, 12})
+                        && java.util.Arrays.equals(Text.marks("דוח מאי 2026.pdf", "ספר|דוח"), new int[]{0, 3})
+                        && java.util.Arrays.equals(Text.marks("דוח מאי 2026.pdf", "דוח*2026"), new int[]{0, 3, 8, 12})
+                        && java.util.Arrays.equals(Text.marks("דוח מאי 2026.pdf", "סוג:pdf -מאי דוח"), new int[]{0, 3})
+                        && java.util.Arrays.equals(Text.marks("ספר שלם.pdf", "שלם ספר"), new int[]{0, 3, 4, 7})
+                        && Text.marks("דוח.pdf", "תמונה").length == 0 && Text.marks("דוח.pdf", null).length == 0);
+        String sf281 = read(new File(System.getProperty("vfm.src"), "src/com/tikiyot/vfm/masachim/rechivim/SmartForm.java"));
+        check("מבנה 281: שורת החיפוש — נגיעה בוחרת את הכתוב, ✕ מנקה (רק כשיש מה), והמסך משתמש בה; הנוסח למקריא — במילון",
+                sf281.contains("input.setSelectAllOnFocus(true);") && sf281.contains("input.setText(\"\");") && sf281.contains("Words.Find.CLEAR")
+                        && read(new File(System.getProperty("vfm.src"), "src/com/tikiyot/vfm/masachim/SearchScreen.java")).contains("SmartForm.fieldRow(this, input)")
+                        && !Words.Find.CLEAR.isEmpty());
         String ss280 = read(new File(System.getProperty("vfm.src"), "src/com/tikiyot/vfm/masachim/SearchScreen.java")),
                 fb280 = read(new File(System.getProperty("vfm.src"), "src/com/tikiyot/vfm/masachim/FolderBrowse.java"));
         check("מבנה 280: התצוגה בתיקיות ופס הלוח — בקובץ משלהם (FolderBrowse), ולא גם במסך החיפוש",
@@ -751,7 +765,7 @@ public final class Tests {
         String s273 = read(new File(System.getProperty("vfm.src"), "src/com/tikiyot/vfm/masachim/SearchScreen.java"));
         check("מבנה 273: בחיפוש — מה שבין שורת החיפוש לקבצים (מהירים, הגדרות, מידע, מקרא, איפה עומדים) בחלק אחד שמתקפל עם השורות; שורת החיפוש "
                         + "והקבצים — לא בתוכו; שורת המידע ושם של כפתור — בשורה אחת",
-                s273.contains("head = ScrollRoom.head(this);") && room272.contains("h.setTag(FOLD_TAG);") && s273.contains("root.addView(input);") && s273.contains("root.addView(list, ")
+                s273.contains("head = ScrollRoom.head(this);") && room272.contains("h.setTag(FOLD_TAG);") && s273.contains("root.addView(SmartForm.fieldRow(this, input));") && s273.contains("root.addView(list, ")
                         && s273.contains("head.addView(quick.view);") && s273.contains("head.addView(settings);") && s273.contains("head.addView(panel, ")
                         && s273.contains("head.addView(info);") && s273.contains("head.addView(legend);") && s273.contains("head.addView(where);")
                         && s273.contains("ScrollRoom.oneLine(info);") && s273.contains("ScrollRoom.wide(info); return;") && room272.contains("t.setSingleLine(t.getMaxLines() != 1);")

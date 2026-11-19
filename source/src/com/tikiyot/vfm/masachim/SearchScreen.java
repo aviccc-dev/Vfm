@@ -186,7 +186,7 @@ public class SearchScreen extends Activity implements Clip.Holder {
         input = Ui.field(this, split[1], Words.Find.HINT);
         input.setTextSize(18);
         input.setPadding(Ui.dp(this, 12), Ui.dp(this, 10), Ui.dp(this, 12), Ui.dp(this, 10));
-        root.addView(input);
+        root.addView(SmartForm.fieldRow(this, input));                        // מבנה 281: נגיעה בוחרת, ✕ מנקה
         head = ScrollRoom.head(this);
         root.addView(head, new LinearLayout.LayoutParams(-1, -2));
         quick = new QuickBar(this, new QuickBar.Host() {                       // 181: כפתורי תצוגה מהירה
