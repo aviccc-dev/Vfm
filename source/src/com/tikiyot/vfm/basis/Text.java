@@ -221,12 +221,25 @@ public final class Text {
         return p;
     }
 
-    /** תווים כלליים מתייחסים להכלה: "מה*אומר" כמו "*מה*אומר*". */
+    /**
+     * מילה בחיפוש. מבנה 279 (המשתמש, 19.11.2026 — "א": הכוכבית כמו בפקודות): עם כוכבית — מעוגנת, כמו שנכתבה ("דוח*" מתחיל
+     * ב"דוח", "*.pdf" נגמר ב־pdf, "מה*אומר" מתחיל ב"מה" ונגמר ב"אומר"); בלי כוכבית — הכלה, כמו תמיד ("ספר", וגם "פרק?" כמו
+     * "*פרק?*"). עד כאן — כל מילה עם תו כללי נעטפה בכוכביות, ולא היה "מתחיל ב" ו"נגמר ב".
+     */
     public static String widen(String q) {
-        if (q.indexOf('*') < 0 && q.indexOf('?') < 0) return q;
-        if (!q.startsWith("*")) q = "*" + q;
-        if (!q.endsWith("*")) q = q + "*";
-        return q;
+        if (q.indexOf('*') >= 0 || q.indexOf('?') < 0) return q;
+        return "*" + q + "*";
+    }
+
+    /**
+     * מבנה 279: תבנית שם של קובץ בפקודות (בסגנון bat) — אותה התאמה של החיפוש (compile), במקום אחד: * ו־?, בלי הבדל בין גדולות
+     * לקטנות, השם כולו; "*.*" — כל הקבצים, גם בלי סיומת; בלי תו כללי — השם בדיוק. (עד כאן — מימוש שני, בביטוי רגולרי, ב־Parse.)
+     */
+    public static boolean wild(String pattern, String name) {
+        if (pattern.equals("*.*")) return true;  // תחביר
+        String p = pattern.toLowerCase(Locale.ROOT), n = name.toLowerCase(Locale.ROOT);
+        if (p.indexOf('*') < 0 && p.indexOf('?') < 0) return n.equals(p);
+        return compile(p).matches(n);
     }
 
     public static Pattern compile(String q) {

@@ -241,7 +241,7 @@ final class FileCmds {
             File best = null;
             int n = 0;
             for (File x : sim.files(dir))
-                if (Parse.wild(name, x.getName()) && Batch.visible(s, x)) {
+                if (Text.wild(name, x.getName()) && Batch.visible(s, x)) {
                     n++;
                     if (best == null || sim.real(x).lastModified() > sim.real(best).lastModified()) best = x;
                 }
@@ -310,7 +310,7 @@ final class FileCmds {
         for (File x : sim.files(dir)) {
             if (!Batch.visible(s, x) || FileCopy.isPartial(x.getName())) continue;
             any = true;
-            if (mask != null && !Parse.wild(mask, x.getName())) continue;
+            if (mask != null && !Text.wild(mask, x.getName())) continue;
             s.total++;
             if (flt.ok(sim.real(x))) s.files.add(x.getAbsolutePath());
         }
@@ -368,7 +368,7 @@ final class FileCmds {
             File dir = f.getParentFile();
             if (dir == null || !sim.isDir(dir)) { s.error = Words.FOLDER_NOT_FOUND + ": " + (dir == null ? src : dir.getAbsolutePath()); return; }
             for (File x : sim.files(dir))
-                if (Parse.wild(name, x.getName()) && Batch.visible(s, x)) {
+                if (Text.wild(name, x.getName()) && Batch.visible(s, x)) {
                     s.total++;
                     if (flt.ok(sim.real(x))) s.files.add(x.getAbsolutePath());
                 }

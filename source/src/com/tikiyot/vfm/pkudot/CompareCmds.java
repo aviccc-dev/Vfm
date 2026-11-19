@@ -221,7 +221,7 @@ final class CompareCmds {
         for (File x : k) {
             if (!Batch.visible(s, x) || FileCopy.isPartial(x.getName())) continue;
             if (x.isDirectory()) collect(s, x, mask, out);
-            else if (mask == null || Parse.wild(mask, x.getName())) out.add(x.getAbsolutePath());
+            else if (mask == null || Text.wild(mask, x.getName())) out.add(x.getAbsolutePath());
         }
     }
 }

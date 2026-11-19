@@ -190,18 +190,6 @@ final class Parse {
         return Paths.clean(p);                                                  // מבנה 42: צורה אחת — בלי "." ו".."
     }
 
-    /** תבנית שם בסגנון bat: * ו-? (בלי הבדל בין גדולות לקטנות). */
-    static boolean wild(String pattern, String name) {
-        StringBuilder re = new StringBuilder();
-        for (char c : pattern.toCharArray()) {
-            if (c == '*') re.append(".*");
-            else if (c == '?') re.append('.');
-            else re.append(Pattern.quote(String.valueOf(c)));
-        }
-        String p = re.toString();
-        if (pattern.equals("*.*")) p = ".*";                   // כמו ב-bat: *.* — כל הקבצים, גם בלי סיומת
-        return Pattern.compile(p, Pattern.CASE_INSENSITIVE | Pattern.UNICODE_CASE).matcher(name).matches();
-    }
 
     static String clean(String raw) {
         String line = raw.trim();

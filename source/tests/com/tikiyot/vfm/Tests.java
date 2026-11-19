@@ -281,6 +281,19 @@ public final class Tests {
         check("תו כללי *", Text.compile(Text.widen("מה*אומר")).matches("מה הוא אומר"));
         check("תו כללי ?", Text.compile(Text.widen("ס?ר")).matches("ספר"));
         check("הכלה רגילה", Text.compile("ספר").matches("הספר.pdf"));
+        // מבנה 279: הכוכבית בחיפוש — כמו בפקודות (מעוגנת); בלי כוכבית — הכלה; ומימוש אחד לשניהם
+        check("מבנה 279: בחיפוש — \"דוח*\" מתחיל ב, \"*.pdf\" נגמר ב, \"מה*אומר\" מתחיל ונגמר; \"פרק?\" ו\"ספר\" — הכלה",
+                Text.compile(Text.widen("דוח*")).matches("דוח מאי.pdf") && !Text.compile(Text.widen("דוח*")).matches("סיכום דוח.pdf")
+                        && Text.compile(Text.widen("*.pdf")).matches("ספר.pdf") && !Text.compile(Text.widen("*.pdf")).matches("ספר.pdf.txt")
+                        && Text.compile(Text.widen("מה*אומר")).matches("מה הוא אומר") && !Text.compile(Text.widen("מה*אומר")).matches("מה הוא אומר.txt")
+                        && Text.compile(Text.widen("פרק?")).matches("ספר פרק1.pdf") && Text.compile(Text.widen("ספר")).matches("הספר.pdf"));
+        check("מבנה 279: בפקודות — אותה התאמה (Text.wild): השם כולו, בלי הבדל בין גדולות לקטנות, \"*.*\" — הכול, בלי תו כללי — השם בדיוק",
+                Text.wild("*.pdf", "Book.PDF") && !Text.wild("*.pdf", "book.pdf.txt") && Text.wild("*.*", "README") && Text.wild("*", "a")
+                        && Text.wild("פרק?", "פרק1") && !Text.wild("פרק?", "פרק12") && Text.wild("דוח*", "דוח 1.txt") && !Text.wild("דוח*", "סיכום דוח")
+                        && Text.wild("a.txt", "A.TXT") && !Text.wild("a.txt", "aa.txt") && Text.wild("a*b*c", "aXbYc") && !Text.wild("a*b*c", "aXbYcd"));
+        check("מבנה 279: מימוש אחד לתווים כלליים — אין עוד Parse.wild, והפקודות קוראות ל־Text.wild",
+                !read(new File(System.getProperty("vfm.src"), "src/com/tikiyot/vfm/pkudot/Parse.java")).contains("static boolean wild(")
+                        && read(new File(System.getProperty("vfm.src"), "src/com/tikiyot/vfm/pkudot/FileCmds.java")).contains("Text.wild("));
         eq("דירוג: מתחיל בשאילתה", 0, Text.rank("ספר טוב", "ספר"));
         eq("דירוג: מילה מתחילה בה", 1, Text.rank("הנה ספר", "ספר"));
         eq("דירוג: בתוך מילה", 2, Text.rank("הספר", "ספר"));
@@ -4581,8 +4594,8 @@ public final class Tests {
                 Parse.tokens("MOVE \"%הורדות%\\ספר חדש.pdf\" יעד /Y").toString());
         check("117א: מתג מוכר", Parse.isSwitch("/Y") && Parse.isSwitch("/-y") && Parse.isSwitch("/תאריך:יום") && Parse.isSwitch("/MAXAGE:3"));
         check("117א: מסלול אינו מתג", !Parse.isSwitch("/storage/emulated/0") && !Parse.isSwitch("/ספרים"));
-        check("117א: תבנית", Parse.wild("*.pdf", "ספר.PDF") && !Parse.wild("*.pdf", "ספר.epub") && Parse.wild("פרק ?.txt", "פרק 3.txt")
-                && Parse.wild("*.*", "README"));
+        check("117א: תבנית", Text.wild("*.pdf", "ספר.PDF") && !Text.wild("*.pdf", "ספר.epub") && Text.wild("פרק ?.txt", "פרק 3.txt")
+                && Text.wild("*.*", "README"));
 
         File root = new File(home, "כונן-117");
         wipe(root);

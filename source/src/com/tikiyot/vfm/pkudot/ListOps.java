@@ -81,7 +81,7 @@ final class ListOps {
                     for (Store.Member m : t.members(id)) {
                         if (a.mask != null) {
                             String p = DbListCmd.pathOf(t, m.item);
-                            if (p == null || !Parse.wild(a.mask, new File(p).getName())) continue;
+                            if (p == null || !Text.wild(a.mask, new File(p).getName())) continue;
                         }
                         n[0]++;
                         boolean idea = m.item.type == Store.NOTE || m.item.type == Store.TITLE;
@@ -210,7 +210,7 @@ final class ListOps {
         for (Store.Member m : s.members(src)) {
             if (mask != null) {
                 String p = DbListCmd.pathOf(s, m.item);
-                if (p == null || !Parse.wild(mask, new File(p).getName())) continue;
+                if (p == null || !Text.wild(mask, new File(p).getName())) continue;
             }
             if (m.item.type == Store.LIST && (m.item.id == dest || s.contains(m.item.id, dest))) {
                 self.add(m.item.name);                                       // היעד עצמו (או מה שהוא בתוכו) — לא לתוך עצמו

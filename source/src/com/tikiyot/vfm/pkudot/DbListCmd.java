@@ -135,7 +135,7 @@ final class DbListCmd {
             if (x.mask != null) {
                 for (Store.Member m : s.members(id)) {
                     String p = pathOf(s, m.item);
-                    if (p != null && Parse.wild(x.mask, new File(p).getName())) out.add(p);
+                    if (p != null && Text.wild(x.mask, new File(p).getName())) out.add(p);
                 }
             } else if (!deep(s, id, f, out, new HashSet<Long>())) {
                 err[0] = Words.ListCmdW.INDEX_NOT_READY;
