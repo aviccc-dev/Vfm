@@ -19,6 +19,8 @@ public final class Cond {
     public final List<String> words = new ArrayList<String>();
     public final List<Test> tests = new ArrayList<Test>();
     public final List<String> unknown = new ArrayList<String>();
+    /** מבנה 282: רכיב שהובן ולא נעשה (רשימה שלא נמצאה) — עם הסיבה. החיפוש אומר אותה, ולא מחזיר "אין תוצאות" בשקט. */
+    public final List<String> problems = new ArrayList<String>();
     /** 181: "לא" — מינוס לפני רכיב ("-סוג:ini", "-מטמון"): מה שעונה עליו יוצא. */
     final List<Test> notTests = new ArrayList<Test>(), notKind = new ArrayList<Test>();
     final List<String> notWords = new ArrayList<String>();
@@ -43,7 +45,8 @@ public final class Cond {
             SIZE = "גודל", DATE = "תאריך",  // תחביר
             ADDED = "נוסף",  // 189: מתי האינדקס ראה את הקובץ לראשונה // תחביר
             STATE = "מצב", STATE2 = "מצב-בתאריך",  // 1.21.0: מצב הגיבוי בזמן נבחר // תחביר
-            DUPS = "כפולים";  // מבנה 207: רק קבצים שיש להם כפיל // תחביר
+            DUPS = "כפולים",  // מבנה 207: רק קבצים שיש להם כפיל // תחביר
+            LIST = "רשימה";  // מבנה 282: "רשימה:«<אופן>\<רשימה>»" — רק מה שברשימה ובתוכה (DbScope) // תחביר
     /** 175: רק תיקיות ריקות — תיקיות במקום קבצים. */
     public static final String EMPTY = "תיקיות:ריקות";  // תחביר
 
@@ -125,6 +128,7 @@ public final class Cond {
                 c.notKind.addAll(n.kindTests);
                 for (String w : n.words) c.notWords.add(Text.norm(w));
                 for (String u : n.unknown) c.unknown.add(NOT + u);
+                c.problems.addAll(n.problems);
                 continue;
             }
             int colon = token.indexOf(':');
@@ -165,6 +169,15 @@ public final class Cond {
             else if (is(key, STATE) || is(key, STATE2)) {
                 t = state(value);
                 c.backup = true;
+            }
+            else if (is(key, LIST)) {                                       // מבנה 282
+                DbScope.Res res = DbScope.of(value);
+                if (res.error != null) {
+                    c.problems.add(res.error);
+                    continue;
+                }
+                t = inList(res);
+                c.backup = true;                                            // מקום שנבחר במפורש — כמו "מקור:"
             }
             else {
                 c.words.add(token);
@@ -262,6 +275,31 @@ public final class Cond {
                     m.put(r.dir, b);
                 }
                 return b;
+            }
+        };
+    }
+
+    /**
+     * מבנה 282: רק הקבצים שברשימה (DbScope). קודם התיקייה — פעם אחת לכל תיקייה (המשפך: רוב הקבצים נופלים כאן, בלי לבנות מסלול),
+     * ורק בתיקייה שיש בה קובץ מהרשימה — המסלול המלא. משווים מנורמל (Text.norm) בשני הצדדים: במכשיר "Download" ו"download" — אותה תיקייה.
+     */
+    private static Test inList(final DbScope.Res res) {
+        final java.util.IdentityHashMap<Index, java.util.HashMap<Integer, String>> cache =
+                new java.util.IdentityHashMap<Index, java.util.HashMap<Integer, String>>();
+        return new Test() {
+            @Override
+            public boolean ok(Index ix, Index.Rec r) {
+                if (r.name == null || r.name.isEmpty()) return false;              // תיקייה — לא ברשימה
+                java.util.HashMap<Integer, String> m = cache.get(ix);
+                if (m == null) cache.put(ix, m = new java.util.HashMap<Integer, String>());
+                String d = m.get(r.dir);
+                if (d == null) {
+                    d = DbScope.trim(ix.normPath(r.dir));
+                    if (!res.dirs.contains(d)) d = "";
+                    m.put(r.dir, d);
+                }
+                if (d.isEmpty()) return false;
+                return res.files.contains(d + "/" + (r.norm != null ? r.norm : Text.norm(r.name)));
             }
         };
     }

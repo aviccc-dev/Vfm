@@ -153,6 +153,20 @@ public final class Words {
         public static final String SETTINGS = "⚙ הגדרות", SAVE_AS = "💾 שמירה בשם — רשימה חכמה בבית…", SAVE_AS_TITLE = "שמירה בשם — רשימה חכמה בבית",
                 ALL_DRIVES = "אין מקורות = כל הכוננים", HINT = "חיפוש…";
         public static final String CLEAR = "ניקוי שורת החיפוש";   // מבנה 281
+        /** מבנה 282: "רשימה:" — החיפוש ברשימה, כשהרשימה לא נמצאה. */
+        public static final String SCOPE_NO_DB = "המסד לא נפתח", SCOPE_NO_HOME = "אין בית באופן הזה";
+
+        public static String scopeMissing(String where, String why) {
+            return "החיפוש ברשימה \"" + where + "\" לא נעשה — " + why;
+        }
+
+        public static String scopeNoMode(String m) {
+            return "אין אופן בשם \"" + m + "\"";
+        }
+
+        public static String scopeTwoNames(String n) {
+            return "יש שתי רשימות ששמן \"" + n + "\" (באותיות גדולות וקטנות) — לא ברור לאיזו הכוונה";
+        }
 
         public static String saved(String name) {
             return "נשמר: " + name;

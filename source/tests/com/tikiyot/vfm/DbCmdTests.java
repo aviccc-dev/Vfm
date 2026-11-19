@@ -1698,6 +1698,28 @@ final class DbCmdTests {
                 o.check("מבנה 92: שם שכולו רווחים — סירוב, גם בשינוי שם בפקודה (עד כאן הרשימה קיבלה את השם \"ללא שם\") " + e92, bad(e92).isEmpty());
                 go("המשך ()\nבטל אופן \"" + m91 + "\"\n", here, vars, lib);
             }
+            // מבנה 282 (אפיון החיפוש, נקודה 3): "רשימה:«<אופן>\<רשימה>»" — רק מה שברשימה ובכל הרשימות שבתוכה; רשימה חכמה שבתוכה — לא
+            {
+                final String m282 = "בדיקת-282";
+                String dir282 = "%" + Syntax.V_INTERNAL + "%\\בדיקת 282 (אפשר למחוק)";
+                List<String> r282 = go("המשך ()\nצור אופן \"" + m282 + "\"\nאופן \"" + m282 + "\"\nMD \"" + dir282 + "\"\n"
+                        + "כתוב \"" + dir282 + "\\חשבון א.txt\" \"1\"\nכתוב \"" + dir282 + "\\חשבון ב.txt\" \"2\"\nכתוב \"" + dir282 + "\\חשבון ג.txt\" \"3\"\n"
+                        + "MD ידנית \"מסמכים/Abc/עמוק\"\nצור רשימה חכמה \"מסמכים/חכמה 282\" סוג:txt\n"
+                        + "העתק \"" + dir282 + "\\חשבון א.txt\" ידנית \"מסמכים\"\n"
+                        + "העתק \"" + dir282 + "\\חשבון ב.txt\" ידנית \"מסמכים/Abc/עמוק\"\n", here, vars, lib);
+                String all282 = "רשימה:«" + m282 + "»", top = "רשימה:«" + m282 + "\\מסמכים»", deep = "רשימה:«" + m282 + "\\מסמכים\\Abc»";
+                Library.Result a282 = lib.list("חשבון " + all282), t282 = lib.list("חשבון " + top), d282 = lib.list("חשבון " + deep),
+                        only282 = lib.list(deep), none282 = lib.list("חשבון רשימה:«" + m282 + "\\מסמכים\\אין כזו 282»"),
+                        noMode282 = lib.list("חשבון רשימה:«אין אופן 282»"), not282 = lib.list("חשבון -" + deep);
+                String sa = names282(a282), st = names282(t282), sd = names282(d282), so = names282(only282), sn = names282(not282);
+                o.check("מבנה 282: \"רשימה:\" — האופן כולו (" + sa + "), רשימה ומה שבתוכה (" + st + "), רשימה בעומק — גם בשם באותיות קטנות ("
+                                + sd + "), התנאי לבד (" + so + "), \"לא\" (" + sn + "); רשימה חכמה שבתוכה — לא נאספת; רשימה או אופן שאין — "
+                                + "אין תוצאות, והסיבה נאמרת (" + none282.note + " · " + noMode282.note + ") " + bad(r282),
+                        bad(r282).isEmpty() && sa.equals("א,ב") && st.equals("א,ב") && sd.equals("ב") && so.equals("ב") && sn.equals("א,ג")
+                                && none282.hits.isEmpty() && none282.note.contains("לא נעשה") && none282.note.contains("אין כזו 282")
+                                && noMode282.hits.isEmpty() && noMode282.note.equals(Words.Find.scopeMissing("אין אופן 282", Words.Find.scopeNoMode("אין אופן 282"))));
+                go("המשך ()\nבטל אופן \"" + m282 + "\"\n", here, vars, lib);
+            }
         } catch (Throwable t) {
             t.printStackTrace();
             o.check("מבנה 71: חריגה — " + t, false);
@@ -1706,6 +1728,14 @@ final class DbCmdTests {
             Db.currentMode = wasMode;
         }
         return o;
+    }
+
+    /** מבנה 282: מה שנמצא בתיקיית הבדיקה — האות האחרונה של השם ("חשבון א.txt" ← א), ממוין. */
+    private static String names282(Library.Result r) {
+        java.util.TreeSet<String> out = new java.util.TreeSet<String>();
+        for (Library.Hit h : r.hits)
+            if (h.rec != null && h.ix.path(h.rec).contains("בדיקת 282")) out.add(h.rec.name.replace("חשבון ", "").replace(".txt", ""));
+        return String.join(",", out);
     }
 
     /** מבנה 106: השמות של הגיבויים "לפני עריכה" (נשמרים עד חמישה — לכן משווים שמות, לא ספירה). */

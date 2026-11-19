@@ -79,6 +79,16 @@ final class Search {
             for (int i = 0; i < cond.unknown.size(); i++) u.append(i > 0 ? ", " : "").append(cond.unknown.get(i));
             res.note = u.toString();
         }
+        // מבנה 282: רשימה שלא נמצאה — אין תוצאות, והסיבה נאמרת (ולא חיפוש בכל המכשיר במקום ברשימה)
+        if (!cond.problems.isEmpty()) {
+            List<String> said = Cond.parse(query).problems;                   // רק כאן: שוב, בשמות כמו שנכתבו (המנורמלת — "מסמכימ")
+            if (said.isEmpty()) said = cond.problems;
+            StringBuilder p = new StringBuilder();
+            for (String x : said) p.append(p.length() > 0 ? " · " : "").append(x);
+            res.note = p + (res.note == null || res.note.isEmpty() ? "" : " · " + res.note);
+            res.ms = (System.nanoTime() - t0) / 1_000_000.0;
+            return res;
+        }
         List<Term> terms = new ArrayList<Term>();
         for (String w : cond.words) terms.add(term(w));
         if (cond.emptyDirs) {                                               // 175: תיקיות ריקות, לא קבצים
