@@ -12,6 +12,43 @@ final class Search {
 
     private Search() { }
 
+    /**
+     * מבנה 284 (אפיון החיפוש, 4 — המשתמש: "לשמור היסטוריית חיפוש עד כמות מסויימת"; "א" — רק המילים): החיפוש החדש ראשון; אותן
+     * מילים שכבר היו (גם ברווחים אחרים, באותיות גדולות או סופיות) — עולות למעלה בנוסח החדש, ולא נוספות פעמיים; עד max (0 — בלי
+     * היסטוריה). words ריק או null — רק החיתוך לכמות. "‖" — המפריד בשמירה — אינו נשמר בתוך חיפוש.
+     */
+    static List<String> remember(List<String> had, String words, int max) {
+        List<String> out = new ArrayList<String>();
+        String w = words == null ? "" : words.replace(HISTORY_SEP, " ").trim().replaceAll("\\s+", " ");
+        if (!w.isEmpty()) out.add(w);
+        String key = Text.norm(w);
+        if (had != null)
+            for (String h : had) {
+                String t = h == null ? "" : h.trim();
+                if (t.isEmpty() || (!key.isEmpty() && Text.norm(t.replaceAll("\\s+", " ")).equals(key))) continue;
+                boolean twice = false;
+                for (String o : out) if (Text.norm(o).equals(Text.norm(t.replaceAll("\\s+", " ")))) twice = true;
+                if (!twice) out.add(t);
+            }
+        while (out.size() > Math.max(0, max)) out.remove(out.size() - 1);
+        return out;
+    }
+
+    /** מבנה 284: ההיסטוריה בשורה אחת של ההגדרות — מופרדת ב"‖". */
+    static final String HISTORY_SEP = "‖";
+
+    static String historyText(List<String> list) {
+        StringBuilder sb = new StringBuilder();
+        for (String h : list) sb.append(sb.length() > 0 ? " " + HISTORY_SEP + " " : "").append(h);
+        return sb.toString();
+    }
+
+    static List<String> historyOf(String text) {
+        List<String> out = new ArrayList<String>();
+        if (text != null) for (String h : text.split(HISTORY_SEP)) if (!h.trim().isEmpty()) out.add(h.trim());
+        return out;
+    }
+
     private static final class Term {
         Text.Pattern[] alts;
         /** לכל חלופה: האם היא הגרסה בלי אות השימוש (78). */

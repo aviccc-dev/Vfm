@@ -114,6 +114,8 @@ public class SearchScreen extends Activity implements Clip.Holder, PlaceChip.Pla
     /** מבנה 283: מקום החיפוש (null — אין), ו"בכל המכשיר" במקומו. */
     private String place, placeName;
     private boolean wide;
+    /** מבנה 284: היסטוריית החיפוש (רק בחיפוש — לא ברשימה חכמה). */
+    private HistoryBox history;
     private Runnable pending;
     private static final int[] SECTION_BG = Library.MATCH_COLORS;
     /** שורת תוצאה בעיני המיון (79). */
@@ -173,7 +175,10 @@ public class SearchScreen extends Activity implements Clip.Holder, PlaceChip.Pla
         input.addTextChangedListener(new TextWatcher() {
             @Override public void beforeTextChanged(CharSequence s, int a, int b, int c) { }
             @Override public void onTextChanged(CharSequence s, int a, int b, int c) { }
-            @Override public void afterTextChanged(Editable s) { schedule(); }
+            @Override public void afterTextChanged(Editable s) {
+                if (history != null) history.show(s.toString().trim().isEmpty());   // מבנה 284
+                schedule();
+            }
         });
         parts.watch(new Runnable() {                                          // 153: שינוי בהגדרות — מיד
             @Override public void run() { schedule(); }
@@ -223,6 +228,31 @@ public class SearchScreen extends Activity implements Clip.Holder, PlaceChip.Pla
                     search();
                 }
             }).view);
+        if (!fixed) {                                                          // מבנה 284: היסטוריה — מתחת לשורה ריקה
+            int max = SmartLists.HISTORY_DEFAULT;
+            try {
+                max = Integer.parseInt(setting(SmartLists.HISTORY_MAX, String.valueOf(max)).trim());
+            } catch (NumberFormatException e) {
+                // לא מספר בקובץ ההגדרות — ברירת המחדל
+            }
+            history = new HistoryBox(this, Search.historyOf(setting(SmartLists.HISTORY, "")), max, new HistoryBox.Host() {
+                @Override public void use(String w) {
+                    input.setText(w);
+                    input.setSelection(w.length());
+                }
+                @Override public void saved(List<String> list) { saveSetting(SmartLists.HISTORY, Search.historyText(list)); }
+            });
+            history.show(input.getText().toString().trim().isEmpty());
+            head.addView(history.view);
+            input.setImeOptions(android.view.inputmethod.EditorInfo.IME_ACTION_SEARCH);
+            input.setOnEditorActionListener(new TextView.OnEditorActionListener() {
+                @Override public boolean onEditorAction(TextView v, int action, android.view.KeyEvent e) {
+                    remember();
+                    ((android.view.inputmethod.InputMethodManager) getSystemService(INPUT_METHOD_SERVICE)).hideSoftInputFromWindow(v.getWindowToken(), 0);
+                    return true;
+                }
+            });
+        }
         quick = new QuickBar(this, new QuickBar.Host() {                       // 181: כפתורי תצוגה מהירה
             @Override public String base() { return query(); }
             @Override public int count(String c) { return find(c).total; }
@@ -239,6 +269,9 @@ public class SearchScreen extends Activity implements Clip.Holder, PlaceChip.Pla
         parts.load(split[0]);
         LinearLayout box = Ui.form(this);
         parts.addTo(this, box);
+        if (history != null) box.addView(history.countRow(new Runnable() {    // מבנה 284
+            @Override public void run() { saveSetting(SmartLists.HISTORY_MAX, String.valueOf(history.max())); }
+        }));
         panel = new android.widget.ScrollView(this);
         panel.addView(box);
         panel.setVisibility(View.GONE);
@@ -480,13 +513,20 @@ public class SearchScreen extends Activity implements Clip.Holder, PlaceChip.Pla
 
     @Override
     protected void onPause() {
+        remember();                                                      // מבנה 284: יצאו מהמסך אחרי חיפוש
         lib.left();                                                      // 110
         super.onPause();
     }
 
     // ---------- נגיעות ובחירה ----------
 
+    /** מבנה 284: חיפוש שנעשה — המילים שבשורה (בלי המקום וההגדרות) נכנסות להיסטוריה. */
+    private void remember() {
+        if (history != null) history.remember(input.getText().toString());
+    }
+
     private void tap(Library.Hit hit) {
+        remember();                                                           // מבנה 284: פתחו תוצאה
         FileItem.State gone = out.get(hit.path());
         if (gone != null && gone != FileItem.State.OUT) {                     // 146: כבר אינו כאן
             Ui.toast(this, gone.line);

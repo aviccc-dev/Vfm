@@ -160,6 +160,14 @@ public final class Words {
         public static final String WHOLE_DEVICE = "כל המכשיר", WHOLE_DEVICE_ITEM = "🌐 כל המכשיר",
                 ALWAYS_WHOLE = "תמיד בכל המכשיר (ברירת המחדל)";
 
+        /** מבנה 284: היסטוריית החיפוש. */
+        public static final String HISTORY_CLEAR = "🗑 ניקוי ההיסטוריה", HISTORY_CLEAR_ASK = "למחוק את כל החיפושים שנשמרו?",
+                HISTORY_CLEAR_YES = "למחוק", HISTORY_MAX = "כמה חיפושים לשמור (0 — בלי היסטוריה)";
+
+        public static String historyItem(String words) {
+            return "🕘 " + words;
+        }
+
         public static String placeChip(String where) {
             return "מחפש ב: " + where + " ▾";
         }

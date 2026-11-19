@@ -321,6 +321,26 @@ public final class Tests {
                         && ss283.contains("q.trim().isEmpty() || place == null || wide ? q : SmartLists.join(place, q)")
                         && ss283.contains("new PlaceChip(this,") && ss283.contains("saveSetting(SmartLists.WHOLE,")
                         && !ss283.contains("Cond.parse(") && Words.Find.placeChip("x").contains("x"));
+        // מבנה 284: היסטוריית החיפוש — הכלל (Search.remember), השמירה בשורה אחת, והמסך
+        java.util.List<String> h284 = Search.remember(java.util.Arrays.asList("דוח מאי", "ספר", "חשבון"), "  ספר  ", 20);
+        java.util.List<String> c284 = Search.remember(java.util.Arrays.asList("א", "ב", "ג", "ד"), "ה", 3);
+        java.util.List<String> f284 = Search.remember(java.util.Arrays.asList("ספרים"), "ספרימ", 20);
+        String hs284 = read(new File(System.getProperty("vfm.src"), "src/com/tikiyot/vfm/masachim/SearchScreen.java"));
+        check("מבנה 284: היסטוריה — החדש ראשון; מה שכבר היה עולה למעלה (גם ברווחים ובאותיות סופיות), לא פעמיים; עד הכמות; 0 — בלי; "
+                        + "ריק — רק חיתוך; \"‖\" אינו נשמר בתוך חיפוש; נשמרת בשורה אחת ונקראת חזרה " + h284 + c284 + f284,
+                h284.equals(java.util.Arrays.asList("ספר", "דוח מאי", "חשבון")) && c284.equals(java.util.Arrays.asList("ה", "א", "ב"))
+                        && f284.equals(java.util.Arrays.asList("ספרימ")) && Search.remember(java.util.Arrays.asList("א"), "ב", 0).isEmpty()
+                        && Search.remember(java.util.Arrays.asList("א", "ב", "ג"), null, 2).equals(java.util.Arrays.asList("א", "ב"))
+                        && Search.remember(java.util.Arrays.asList("א"), "  ", 5).equals(java.util.Arrays.asList("א"))
+                        && Search.remember(new java.util.ArrayList<String>(), "x‖y", 5).equals(java.util.Arrays.asList("x y"))
+                        && Search.historyOf(Search.historyText(java.util.Arrays.asList("דוח *.pdf", "ספר|דוח"))).equals(java.util.Arrays.asList("דוח *.pdf", "ספר|דוח"))
+                        && Search.historyOf("").isEmpty() && Search.historyOf(null).isEmpty());
+        check("מבנה 284: המסך — היסטוריה רק בחיפוש (לא ברשימה חכמה), מתחת לשורה ריקה; נכנס אליה מה שבשורה כשפותחים תוצאה, ב\"חפש\" "
+                        + "שבמקלדת וביציאה; הכמות — בחלונית ההגדרות",
+                hs284.contains("if (!fixed) {") && hs284.contains("new HistoryBox(this, Search.historyOf(setting(SmartLists.HISTORY, \"\"))")
+                        && hs284.contains("history.show(s.toString().trim().isEmpty());") && hs284.contains("history.remember(input.getText().toString());")
+                        && hs284.indexOf("remember();", hs284.indexOf("private void tap(")) > 0 && hs284.indexOf("remember();", hs284.indexOf("protected void onPause()")) > 0
+                        && hs284.contains("IME_ACTION_SEARCH") && hs284.contains("history.countRow(") && SmartLists.HISTORY_DEFAULT == 20);
         String sf281 = read(new File(System.getProperty("vfm.src"), "src/com/tikiyot/vfm/masachim/rechivim/SmartForm.java"));
         check("מבנה 281: שורת החיפוש — נגיעה בוחרת את הכתוב, ✕ מנקה (רק כשיש מה), והמסך משתמש בה; הנוסח למקריא — במילון",
                 sf281.contains("input.setSelectAllOnFocus(true);") && sf281.contains("input.setText(\"\");") && sf281.contains("Words.Find.CLEAR")
