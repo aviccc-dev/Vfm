@@ -30,9 +30,6 @@ import java.util.Set;
 
 public class SearchScreen extends Activity implements Clip.Holder {
 
-    /** 1.11.0: התיקייה שעליה כבר הודענו "לא באינדקס / לא קיימת" — כדי שההודעה לא תקפוץ בכל ריענון. */
-    private String warned;
-
     public static final String EXTRA_QUERY = "query";
     public static final String EXTRA_FIXED = "fixed";
     public static final String EXTRA_TITLE = "title";
@@ -56,46 +53,43 @@ public class SearchScreen extends Activity implements Clip.Holder {
         return i;
     }
 
-    private Library lib;
+    Library lib;
     private final Handler h = new Handler(Looper.getMainLooper());
-    private final List<Object> rows = new ArrayList<Object>();
+    /** מבנה 280: התצוגה בתיקיות ופס הלוח — בקובץ משלהם. */
+    private final FolderBrowse fb = new FolderBrowse(this);
+    final List<Object> rows = new ArrayList<Object>();
     private Set<String> selected = new LinkedHashSet<String>();
     private Select sel;
     /** 146: שורות שאחרי פעולה כבר אינן עונות — נשארות באפור עד רענון (מסך יציב). המפתח: המסלול שבשורה. */
-    private final java.util.Map<String, FileItem.State> out = new java.util.HashMap<String, FileItem.State>();
+    final java.util.Map<String, FileItem.State> out = new java.util.HashMap<String, FileItem.State>();
     private String infoBase = "";
     /** 175: מוצגות תיקיות ריקות (ו"בחירת הכול" בוחרת אותן). */
-    private boolean emptyMode;
+    boolean emptyMode;
     /** 148: התצוגה (ברירת המחדל מהרשימה; "תצוגה…" בתפריט — לפתיחה הזו בלבד), והתיקייה שבה עומדים. */
-    private String view = FolderView.FLAT;
-    private FolderView fv;
+    String view = FolderView.FLAT;
+    FolderView fv;
     /** התיקייה הנוכחית; null — רשימת המקורות. */
-    private String here;
+    String here;
     private boolean placed;
     /** 159: התיקייה שבה נפתחים (מבחוץ: "פתיחת התיקייה", הדבקה). */
     private String startDir;
-    private TextView where;
+    TextView where;
     /** 153 — החיפוש האחד: ההגדרות (מקורות, סוגים, תאריך, גודל) בחלונית במסך, וחלות מיד; המילים — בשורת ההקלדה. */
     private SmartForm.Parts parts;
     private android.widget.ScrollView panel;
     private LinearLayout head;                                               // מבנה 273: מה שבין שורת החיפוש לקבצים — מתקפל עם השורות (ScrollRoom.head)
     private TextView settings;
-    /** 149: פס הלוח — "הדבקה כאן" (ב"כולל הכול") ו"הדבקה…" (בורר); ומוסתרים ב"כולל הכול". */
-    private LinearLayout clipBar;
-    private TextView clipText;
-    private Button pasteHere;
-    private boolean hidden;
-    private final List<String> volRoots = new ArrayList<String>();
+    boolean hidden;
     /** סימון התאמה ב"כולל הכול". */
     private static final int MATCH_BG = 0xFFE3F2E6;
-    private BaseAdapter adapter;
+    BaseAdapter adapter;
     private EditText input;
     private TextView info;
     private SelectBar bar;
     /** ההסבר "נגיעה ארוכה…" — רק בפתיחות הראשונות. */
     private boolean hint;
     private String queryNorm = "", fixedQuery;
-    private Sort srt;
+    Sort srt;
     private boolean fixed, paths, loose = true;
     private Runnable pending;
     private static final int[] SECTION_BG = Library.MATCH_COLORS;
@@ -149,7 +143,7 @@ public class SearchScreen extends Activity implements Clip.Holder {
         buildInfo(root);
         buildList(root);
         buildSelection();
-        buildClipBar(root);
+        fb.buildClipBar(root);
         root.addView(bar.view);
         setContentView(TopRow.wrap(this, root));                   // 1.9.0: שורת הכפתורים העליונה
 
@@ -268,7 +262,7 @@ public class SearchScreen extends Activity implements Clip.Holder {
         where.setBackgroundColor(Ui.BG_SOFT);
         where.setVisibility(View.GONE);
         where.setOnClickListener(new View.OnClickListener() {
-            @Override public void onClick(View v) { up(); }
+            @Override public void onClick(View v) { fb.up(); }
         });
         head.addView(where);
     }
@@ -292,9 +286,9 @@ public class SearchScreen extends Activity implements Clip.Holder {
                 if (o instanceof FolderView.Folder) {                         // 148: תיקייה בתצוגה בתיקיות
                     FolderView.Folder f = (FolderView.Folder) o;
                     boolean top = here == null;
-                    boolean missing = top && !volRoots.contains(f.path) && !new File(f.path).isDirectory();   // 1.11.0: מקור שאינו בכונן
-                    Ui.bindIcon(v, missing ? "⚠" : top && volRoots.contains(f.path) ? Drive.icon(Drive.internalPath(f.path)) : "📁",
-                            top ? rootLabel(f.path) : f.name, missing ? Words.Views.NOT_FOUND : f.matches > 0 ? Words.Views.matches(f.matches) : "");
+                    boolean missing = top && !fb.volRoots.contains(f.path) && !new File(f.path).isDirectory();   // 1.11.0: מקור שאינו בכונן
+                    Ui.bindIcon(v, missing ? "⚠" : top && fb.volRoots.contains(f.path) ? Drive.icon(Drive.internalPath(f.path)) : "📁",
+                            top ? fb.rootLabel(f.path) : f.name, missing ? Words.Views.NOT_FOUND : f.matches > 0 ? Words.Views.matches(f.matches) : "");
                     v.setBackgroundColor(sel.hasDir(f.path) ? Ui.SELECTED
                             : FolderView.ALL.equals(view) && fv != null && fv.isMatch(f.path) ? MATCH_BG : 0x00000000);
                     return v;
@@ -336,7 +330,7 @@ public class SearchScreen extends Activity implements Clip.Holder {
                     if (sel.on()) sel.toggleDir(f.path);
                     else {
                         here = f.path;
-                        showFolder();
+                        fb.showFolder();
                     }
                 }
             }
@@ -390,33 +384,6 @@ public class SearchScreen extends Activity implements Clip.Holder {
     }
 
     /** 149: פס ההדבקה (מה בלוח, הדבקה כאן, בחירת יעד, ביטול). */
-    private void buildClipBar(LinearLayout root) {
-        clipBar = new LinearLayout(this);                                     // 149
-        clipBar.setOrientation(LinearLayout.HORIZONTAL);
-        clipBar.setGravity(android.view.Gravity.CENTER_VERTICAL);
-        clipBar.setBackgroundColor(Ui.HEADER);
-        clipBar.setPadding(Ui.dp(this, 8), Ui.dp(this, 4), Ui.dp(this, 8), Ui.dp(this, 4));
-        clipText = new TextView(this);
-        clipText.setTextColor(Ui.TEXT);
-        clipText.setTextSize(14);
-        clipBar.addView(clipText, new LinearLayout.LayoutParams(0, -2, 1f));
-        pasteHere = clipButton(Words.PASTE_HERE, new Runnable() {
-            @Override public void run() { PhysicalUi.paste(SearchScreen.this, here == null ? null : new File(here), afterPaste()); }
-        });
-        clipButton(Words.Here.PASTE_PICK, new Runnable() {
-            @Override public void run() { pastePick(); }
-        });
-        clipButton(Words.CANCEL, new Runnable() {
-            @Override
-            public void run() {
-                Clip.clear();
-                showClip();
-            }
-        });
-        clipBar.setVisibility(View.GONE);
-        root.addView(clipBar);
-    }
-
     /**
      * "שמירה בשם" — רשימה חכמה חדשה במסד, בבית של האופן הפתוח, עם התנאי, המיון והתצוגה שעל המסך.
      * מ0.29: עד כאן נשמרה "הגדרה נפוצה" בקובץ הראשי של המנוע הישן (ולכן לא הופיעה במסד).
@@ -454,55 +421,13 @@ public class SearchScreen extends Activity implements Clip.Holder {
         lib.start(null);
         lib.returned();                                                  // 110
         search();
-        showClip();
-    }
-
-    // ---------- 149: הלוח ברשימה החכמה ----------
-
-    private Button clipButton(String text, final Runnable r) {
-        Button b = new Button(this);
-        b.setText(text);
-        b.setAllCaps(false);
-        b.setOnClickListener(new View.OnClickListener() {
-            @Override public void onClick(View v) { r.run(); }
-        });
-        clipBar.addView(b);
-        return b;
-    }
-
-    private Runnable afterPaste() {
-        return new Runnable() {
-            @Override
-            public void run() {
-                search();
-                showClip();
-            }
-        };
-    }
-
-    /** מה בלוח; "הדבקה כאן" — רק ב"כולל הכול", בתוך תיקייה שאפשר להדביק בה. */
-    private void showClip() {
-        if (clipBar == null) return;
-        if (Clip.isEmpty()) {
-            clipBar.setVisibility(View.GONE);
-            return;
-        }
-        clipBar.setVisibility(View.VISIBLE);
-        boolean canHere = FolderView.ALL.equals(view) && here != null && Clip.cannotPasteInto(new File(here)) == null;
-        clipText.setText("📋 " + Clip.label());
-        pasteHere.setVisibility(canHere ? View.VISIBLE : View.GONE);
-    }
-
-    private void pastePick() {
-        FolderPicker.choose(this, Words.Here.PICK_TITLE, true, new FolderPicker.Picked() {
-            @Override public void ok(File folder) { PhysicalUi.paste(SearchScreen.this, folder, afterPaste()); }
-        });
+        fb.showClip();
     }
 
     /** אחרי "העתקה/העברה" מתוך הרשימה: נשארים, ובוחרים איך להדביק (במקום לעבור לכלי אחר). */
     @Override
     public void clipped() {
-        showClip();
+        fb.showClip();
         Ui.options(this, Clip.label(), new String[]{Words.Here.TO_ALL, Words.Here.PICK, Words.Here.LATER},
                 new android.content.DialogInterface.OnClickListener() {
                     @Override
@@ -513,8 +438,8 @@ public class SearchScreen extends Activity implements Clip.Holder {
                                 if (here == null) placed = false;
                                 search();
                             }
-                            showClip();
-                        } else if (w == 1) pastePick();
+                            fb.showClip();
+                        } else if (w == 1) fb.pastePick();
                     }
                 });
     }
@@ -594,7 +519,7 @@ public class SearchScreen extends Activity implements Clip.Holder {
     }
 
     /** 153: התנאי — ההגדרות שבחלונית ועוד מה שבשורת ההקלדה. */
-    private String query() {
+    String query() {
         return SmartLists.withHere(SmartLists.join(parts == null ? "" : parts.build(), input.getText().toString()), hereDir());
     }
 
@@ -624,7 +549,7 @@ public class SearchScreen extends Activity implements Clip.Holder {
         }
     }
 
-    private void search() {
+    void search() {
         String q = searchQuery();
         if (!lib.ready) {
             info.setText(Words.LOADING_INDEX);
@@ -644,9 +569,9 @@ public class SearchScreen extends Activity implements Clip.Holder {
         emptyMode = Cond.parse(r.query).emptyDirs;                          // 175: תיקיות ריקות — תמיד ברצף
         queryNorm = r.query;
         out.clear();                                                          // חיפוש מחדש = רענון: האפורים יורדים
-        if (folderMode()) {                                                   // 148
+        if (fb.folderMode()) {                                                   // 148
             legend.setVisibility(View.GONE);
-            fv = new FolderView(r.hits, roots());
+            fv = new FolderView(r.hits, fb.roots());
             if (!placed || here != null && fv.rootOf(here) == null) {
                 here = startDir != null && fv.rootOf(startDir) != null ? startDir : fv.start();   // 159
                 placed = true;
@@ -654,7 +579,7 @@ public class SearchScreen extends Activity implements Clip.Holder {
             infoBase = Words.Views.matches(fv.total()) + " · " + srt.describe()
                     + (r.note.isEmpty() ? "" : " · " + r.note) + (r.loading ? Words.Look.STILL_LOADING : "");
             info.setText(infoBase);
-            showFolder();
+            fb.showFolder();
             if (r.loading) h.postDelayed(new Runnable() {
                 @Override public void run() { search(); }
             }, 600);
@@ -704,8 +629,8 @@ public class SearchScreen extends Activity implements Clip.Holder {
      * רענון, מיון או שינוי החיפוש — מחשבים מחדש, והאפורים יורדים.
      */
     private void stay() {
-        if (folderMode()) {                                                   // 148: בתיקיות
-            stayInFolder();
+        if (fb.folderMode()) {                                                   // 148: בתיקיות
+            fb.stayInFolder();
             return;
         }
         String q = searchQuery();
@@ -749,129 +674,6 @@ public class SearchScreen extends Activity implements Clip.Holder {
         StringBuilder sb = new StringBuilder(infoBase);
         for (java.util.Map.Entry<FileItem.State, Integer> e : n.entrySet()) sb.append(" · ").append(e.getKey().count(e.getValue()));
         info.setText(sb.toString());
-    }
-
-    // ---------- 148: רשימה חכמה בתיקיות ----------
-
-    private boolean folderMode() {
-        return !emptyMode && FolderView.folders(view);
-    }
-
-    /** מאיפה מתחילים: המקורות שבתנאי, או הכוננים. */
-    private List<String> roots() {
-        List<String[]> vols = new ArrayList<String[]>();
-        volRoots.clear();
-        for (Vols.Vol v : Vols.list(this)) {
-            vols.add(new String[]{v.root.getAbsolutePath(), v.internal ? Sources.INTERNAL : Sources.CARD});
-            volRoots.add(v.root.getAbsolutePath());
-        }
-        return FolderView.roots(Sources.fromCond(query()), vols);
-    }
-
-    /** שם של מקור: כונן — צלמית ושם; תיקייה — השם והכונן. */
-    private String rootLabel(String r) {
-        if (volRoots.contains(r)) return Drive.label(Drive.internalPath(r), Drive.nameOf(r));
-        return FolderView.name(r) + " · " + Drive.nameOf(r);
-    }
-
-    private void up() {
-        if (fv == null || !fv.canGoUp(here)) return;
-        here = fv.up(here);
-        showFolder();
-    }
-
-    /** התיקייה הנוכחית: "רק מה שעונה" — מהמודל; "כולל הכול" — מהאינדקס, וההתאמות מסומנות. */
-    private void showFolder() {
-        if (fv == null) return;
-        rows.clear();
-        boolean all = FolderView.ALL.equals(view);
-        List<FolderView.Folder> dirs = new ArrayList<FolderView.Folder>();
-        List<Library.Hit> files = new ArrayList<Library.Hit>();
-        if (here == null) dirs.addAll(fv.top(!all));
-        else if (!all) {
-            dirs.addAll(fv.matchDirs(here));
-            for (String p : fv.matchFiles(here)) {
-                Library.Hit x = lib.find(p);
-                if (x != null) files.add(x);
-            }
-        } else {
-            List<File> ls = lib.listDir(new File(here), hidden, new Runnable() {   // השתנתה בכונן — מסונכרנת ומוצגת
-                @Override
-                public void run() {
-                    runOnUiThread(new Runnable() {
-                        @Override public void run() { search(); }
-                    });
-                }
-            });
-            if (ls == null && !here.equals(warned)) {                           // 1.11.0: פעם אחת לתיקייה, ובמילים הנכונות
-                warned = here;
-                Ui.toast(this, new File(here).isDirectory() ? Words.Views.NO_ACCESS : Words.Views.NOT_FOUND);
-            }
-            else for (File f : ls) {
-                String p = f.getAbsolutePath();
-                if (f.isDirectory()) dirs.add(new FolderView.Folder(p, f.getName(), fv.matches(p)));
-                else {
-                    Library.Hit x = lib.find(p);
-                    if (x != null) files.add(x);
-                }
-            }
-        }
-        if (here != null) java.util.Collections.sort(dirs, new java.util.Comparator<FolderView.Folder>() {
-            @Override
-            public int compare(FolderView.Folder a, FolderView.Folder b) {
-                return a.name.compareToIgnoreCase(b.name);
-            }
-        });
-        srt.apply(files, HIT);
-        rows.addAll(dirs);
-        rows.addAll(files);
-        StringBuilder w = new StringBuilder();
-        if (here == null) w.append("📂 ").append(Words.Views.SOURCES);
-        else {
-            if (fv.canGoUp(here)) w.append(Words.Views.UP).append("  ");
-            String root = fv.rootOf(here);
-            w.append(root == null ? here : rootLabel(root));
-            if (root != null && here.length() > root.length())
-                for (String part : here.substring(root.length() + 1).split("/")) w.append(" › ").append(part);
-        }
-        if (rows.isEmpty()) w.append("   ·   ").append(Words.Views.NO_MATCH_HERE);
-        where.setText(w.toString());
-        where.setVisibility(View.VISIBLE);
-        adapter.notifyDataSetChanged();
-        showClip();                                                           // 149: "הדבקה כאן" — לפי התיקייה
-    }
-
-    /**
-     * 146 בתיקיות: אחרי פעולה מחשבים מחדש. ב"רק מה שעונה" — קובץ שהיה כאן ונשאר בתיקייה (שינוי שם) או נמחק,
-     * ואינו עונה עוד — נשאר באפור עם הסיבה. קובץ שעבר לתיקייה אחרת — יוצא ממנה, כמו במנהל קבצים.
-     */
-    private void stayInFolder() {
-        List<Library.Hit> before = new ArrayList<Library.Hit>();
-        java.util.Map<String, FileItem.State> was = new java.util.HashMap<String, FileItem.State>(out);
-        for (Object o : rows) if (o instanceof Library.Hit) before.add((Library.Hit) o);
-        String dir = here;
-        search();
-        if (!FolderView.MATCH.equals(view) || dir == null || !dir.equals(here)) return;
-        Set<String> shown = new java.util.HashSet<String>();
-        for (Object o : rows) if (o instanceof Library.Hit) shown.add(((Library.Hit) o).path());
-        for (Library.Hit old : before) {
-            String p = old.path();
-            FileItem.State prev = was.get(p);
-            String now = prev != null && prev != FileItem.State.OUT ? p : Physical.whereNow(p);
-            if (shown.contains(now)) continue;
-            FileItem.State why = prev != null && prev != FileItem.State.OUT ? prev : FileItem.dropped(lib, now, true);
-            if (why == FileItem.State.OUT) {
-                if (!dir.equals(FolderView.parent(now))) continue;            // עבר לתיקייה אחרת
-                Library.Hit at = lib.find(now);
-                if (at == null) continue;
-                rows.add(at);
-                out.put(now, why);
-            } else {
-                rows.add(old);
-                out.put(p, why);
-            }
-        }
-        adapter.notifyDataSetChanged();
     }
 
     /** מקרא: ריבוע בצבע הסוג, השם והמספר. מוצג רק כשיש יותר מסוג אחד. */
@@ -918,7 +720,7 @@ public class SearchScreen extends Activity implements Clip.Holder {
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
         if (item.getItemId() == 900) {                                       // 127
-            CmdMenu.show(this, folderMode() && here != null ? new File(here) : null);   // 149: "פקודה חדשה" — כאן
+            CmdMenu.show(this, fb.folderMode() && here != null ? new File(here) : null);   // 149: "פקודה חדשה" — כאן
             return true;
         }
         if (item.getItemId() == 1) {
@@ -927,7 +729,7 @@ public class SearchScreen extends Activity implements Clip.Holder {
         }
         if (item.getItemId() == 8) {                                          // 149: מוסתרים, בפתיחה הזו
             hidden = !hidden;
-            showFolder();
+            fb.showFolder();
             return true;
         }
         if (item.getItemId() == 7) {                                          // 153: "שמירה בשם"
@@ -986,8 +788,8 @@ public class SearchScreen extends Activity implements Clip.Holder {
     @Override
     public void onBackPressed() {
         if (sel.back()) return;
-        if (folderMode() && fv != null && fv.canGoUp(here)) {                 // 148: בתיקיות — למעלה
-            up();
+        if (fb.folderMode() && fv != null && fv.canGoUp(here)) {                 // 148: בתיקיות — למעלה
+            fb.up();
             return;
         }
         super.onBackPressed();

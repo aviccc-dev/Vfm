@@ -291,6 +291,12 @@ public final class Tests {
                 Text.wild("*.pdf", "Book.PDF") && !Text.wild("*.pdf", "book.pdf.txt") && Text.wild("*.*", "README") && Text.wild("*", "a")
                         && Text.wild("פרק?", "פרק1") && !Text.wild("פרק?", "פרק12") && Text.wild("דוח*", "דוח 1.txt") && !Text.wild("דוח*", "סיכום דוח")
                         && Text.wild("a.txt", "A.TXT") && !Text.wild("a.txt", "aa.txt") && Text.wild("a*b*c", "aXbYc") && !Text.wild("a*b*c", "aXbYcd"));
+        String ss280 = read(new File(System.getProperty("vfm.src"), "src/com/tikiyot/vfm/masachim/SearchScreen.java")),
+                fb280 = read(new File(System.getProperty("vfm.src"), "src/com/tikiyot/vfm/masachim/FolderBrowse.java"));
+        check("מבנה 280: התצוגה בתיקיות ופס הלוח — בקובץ משלהם (FolderBrowse), ולא גם במסך החיפוש",
+                fb280.contains("void showFolder() {") && fb280.contains("void stayInFolder() {") && fb280.contains("void buildClipBar(LinearLayout root) {")
+                        && fb280.contains("void showClip() {") && !ss280.contains("void showFolder() {") && !ss280.contains("void buildClipBar(")
+                        && !ss280.contains("void showClip() {") && ss280.contains("private final FolderBrowse fb = new FolderBrowse(this);"));
         check("מבנה 279: מימוש אחד לתווים כלליים — אין עוד Parse.wild, והפקודות קוראות ל־Text.wild",
                 !read(new File(System.getProperty("vfm.src"), "src/com/tikiyot/vfm/pkudot/Parse.java")).contains("static boolean wild(")
                         && read(new File(System.getProperty("vfm.src"), "src/com/tikiyot/vfm/pkudot/FileCmds.java")).contains("Text.wild("));
