@@ -1,6 +1,6 @@
 package com.tikiyot.vfm;
 
-// כלי: רשימה חכמה — תנאי שנפתח במסך החיפוש; והטופס שלה (SmartForm).
+// כלי: רשימה חכמה — תנאי שנפתח במסך החיפוש (מבנה 293: והוא גם המקום לערוך אותו — אין טופס נפרד).
 
 import android.app.Activity;
 import android.content.Intent;
@@ -28,8 +28,13 @@ public final class FnSmart extends Func {
         a.startActivity(i);
     }
 
+    /**
+     * מבנה 293 (אפיון החיפוש, 6 — "מקום אחד לעריכה"): אין עוד טופס נפרד — התנאים נערכים בחלונית של מסך החיפוש. מי שמבקש להגדיר
+     * כלי חכם — המסך נפתח עם התנאי שלו (כמו open), ושם עורכים ושומרים.
+     */
     @Override
     public void configure(Activity a, String name, Target t, final Done done) {
-        SmartForm.show(a, name, t, done);
+        if (t != null) open(a, t);
+        else a.startActivity(new Intent(a, SearchScreen.class));
     }
 }

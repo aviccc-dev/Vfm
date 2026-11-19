@@ -380,6 +380,15 @@ public final class Tests {
                         && lab292.contains("if (res != RESULT_OK || data == null) return;")
                         && ss287.contains("final String q = SmartLists.join(s.parts.build(), s.input.getText().toString());")
                         && ss287.contains("s.setResult(android.app.Activity.RESULT_OK, r);") && ss287.contains("return (newMode != null && smartId == 0) || pick;"));
+        String sf293 = read(new File(System.getProperty("vfm.src"), "src/com/tikiyot/vfm/masachim/rechivim/SmartForm.java")),
+                db293 = read(new File(System.getProperty("vfm.src"), "src/com/tikiyot/vfm/masachim/rechivim/DbSmartForm.java"));
+        check("מבנה 293: הטופס הנפרד של רשימה חכמה יצא — אין חלון שני לאותן הגדרות; נשארו החלקים המשותפים (Parts) והשורה של החיפוש; "
+                        + "הכלל של הטופס (\"רק הסוגים שאבחר\" בלי אף סוג — לא נשמר) — עבר לשמירה מהחלונית",
+                !sf293.contains("public static void show(") && !sf293.contains("class Fold") && !sf293.contains("askSaveAs(")
+                        && sf293.contains("public static final class Parts {") && sf293.contains("public static LinearLayout fieldRow(")
+                        && !db293.contains("static void ask(") && !db293.contains("SmartForm.") && db293.contains("static java.util.Map<String, String> props(Result r)")
+                        && ss287.contains("if (!s.parts.noKind()) return false;") && ss287.indexOf("if (noKind()) return;") > 0
+                        && ss287.indexOf("if (noKind()) return;", ss287.indexOf("void saveAs() {")) > 0);
         int ed288 = dl287.indexOf("private void edit(final Store.Item it) {"), ee288 = dl287.indexOf("private void done(String msg) {", ed288);
         String edit288 = ed288 > 0 && ee288 > ed288 ? dl287.substring(ed288, ee288) : "";
         check("מבנה 288: עריכה של רשימה חכמה — אותו חלון של רשימה ידנית (שם, צלמית, תיאור, \"למה\"); התנאי, המיון והתצוגה נשמרים כמו שהם; "

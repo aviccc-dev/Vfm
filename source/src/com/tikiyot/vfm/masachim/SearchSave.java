@@ -50,7 +50,15 @@ final class SearchSave {
      * מבנה 287 (אפיון החיפוש, 6 — "מקום אחד לעריכה"): התנאי שבחלונית ובשורה, המיון והתצוגה — אל הרשימה החכמה שעל המסך, דרך המנהל
      * (אותה פקודה כמו בטופס: "עדכן רשימה חכמה"). הצלמית, התיאור וה"למה" — נשארים כמו שהם (נקראים מהמסד; הטופס מוחק מה שחסר).
      */
+    /** מבנה 293: הכלל של הטופס הנפרד — עכשיו כאן, במקום האחד: "רק הסוגים שאבחר" בלי אף סוג — לא נשמר (אחרת — כל הסוגים, בשקט). */
+    private boolean noKind() {
+        if (!s.parts.noKind()) return false;
+        Ui.toast(s, Words.Kinds.NONE_PICKED);
+        return true;
+    }
+
     void saveHere() {
+        if (noKind()) return;
         if (pick) {
             pickDone();
             return;
@@ -159,6 +167,7 @@ final class SearchSave {
     }
 
     void saveAs() {
+        if (noKind()) return;
         final String q = s.query(), so = s.srt.by, w = s.view;
         Ui.askText(s, Words.Find.SAVE_AS_TITLE, s.input.getText().toString().trim(), Words.Short.NAME_HINT, new Ui.Text1() {   // מ0.30: שם משלו — לא "תבנית"
             @Override
