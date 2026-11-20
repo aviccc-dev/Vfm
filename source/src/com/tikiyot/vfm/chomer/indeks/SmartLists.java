@@ -124,6 +124,14 @@ final class SmartLists {
         return sb.toString();
     }
 
+    /**
+     * מבנה 294 — הכלל האחד לתנאי ריק של רשימה חכמה (המשתמש, 20.11.2026: "1"): נשמר במפורש כ"כל הקבצים בכל הכוננים" (כמו שהטופס
+     * הנפרד שמר; מהחלונית של החיפוש — עד כאן סורב). כל שמירה מהחלונית עוברת כאן.
+     */
+    static String orAll(String cond) {
+        return cond == null || cond.trim().isEmpty() ? Cond.sourcesCond(java.util.Arrays.asList(Drive.INTERNAL, Drive.CARD)) : cond.trim();
+    }
+
     static String join(String settings, String words) {
         String a = settings == null ? "" : settings.trim(), b = words == null ? "" : words.trim();
         return a.isEmpty() ? b : b.isEmpty() ? a : a + " " + b;

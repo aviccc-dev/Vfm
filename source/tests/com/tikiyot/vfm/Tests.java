@@ -378,7 +378,7 @@ public final class Tests {
                         + "והתנאי — בלי המקום ובלי להחליף את %כאן%; ביטול — בלי תשובה",
                 lab292.contains("startActivityForResult(SearchScreen.pick(LabScreen.this, name, cond, sort), REQ_SMART);") && !lab292.contains("DbSmartForm.ask(")
                         && lab292.contains("if (res != RESULT_OK || data == null) return;")
-                        && ss287.contains("final String q = SmartLists.join(s.parts.build(), s.input.getText().toString());")
+                        && ss287.contains("final String q = SmartLists.orAll(SmartLists.join(s.parts.build(), s.input.getText().toString()));")
                         && ss287.contains("s.setResult(android.app.Activity.RESULT_OK, r);") && ss287.contains("return (newMode != null && smartId == 0) || pick;"));
         String sf293 = read(new File(System.getProperty("vfm.src"), "src/com/tikiyot/vfm/masachim/rechivim/SmartForm.java")),
                 db293 = read(new File(System.getProperty("vfm.src"), "src/com/tikiyot/vfm/masachim/rechivim/DbSmartForm.java"));
@@ -389,6 +389,10 @@ public final class Tests {
                         && !db293.contains("static void ask(") && !db293.contains("SmartForm.") && db293.contains("static java.util.Map<String, String> props(Result r)")
                         && ss287.contains("if (!s.parts.noKind()) return false;") && ss287.indexOf("if (noKind()) return;") > 0
                         && ss287.indexOf("if (noKind()) return;", ss287.indexOf("void saveAs() {")) > 0);
+        check("מבנה 294: תנאי ריק של רשימה חכמה — נשמר במפורש כ\"כל הקבצים בכל הכוננים\" (הכלל האחד, המשתמש: \"1\"); בכל שמירה מהחלונית",
+                SmartLists.orAll("").equals(Cond.sourcesCond(java.util.Arrays.asList(Drive.INTERNAL, Drive.CARD))) && SmartLists.orAll(null).equals(SmartLists.orAll("  "))
+                        && SmartLists.orAll(" סוג:pdf ").equals("סוג:pdf") && !SmartLists.orAll("").isEmpty()
+                        && ss287.split("SmartLists.orAll\\(", -1).length - 1 == 3 && !ss287.contains("Words.Db.SMART_NO_COND"));
         int ed288 = dl287.indexOf("private void edit(final Store.Item it) {"), ee288 = dl287.indexOf("private void done(String msg) {", ed288);
         String edit288 = ed288 > 0 && ee288 > ed288 ? dl287.substring(ed288, ee288) : "";
         check("מבנה 288: עריכה של רשימה חכמה — אותו חלון של רשימה ידנית (שם, צלמית, תיאור, \"למה\"); התנאי, המיון והתצוגה נשמרים כמו שהם; "
