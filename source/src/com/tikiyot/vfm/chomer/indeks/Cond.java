@@ -24,6 +24,8 @@ public final class Cond {
     /** 181: "לא" — מינוס לפני רכיב ("-סוג:ini", "-מטמון"): מה שעונה עליו יוצא. */
     final List<Test> notTests = new ArrayList<Test>(), notKind = new ArrayList<Test>();
     final List<String> notWords = new ArrayList<String>();
+    /** מבנה 297: "-מילה" — באותו כלל של מילה בחיפוש (Text.find: כוכבית, מרכאות, |). עד כאן — הכלה פשוטה, בלי כוכבית. */
+    private final List<Text.Pattern> notPats = new ArrayList<Text.Pattern>();
     public static final String NOT = "-";                                                    // תחביר
 
     /** 181: יש בתנאי "לא". */
@@ -144,7 +146,10 @@ public final class Cond {
                 Cond n = parse(quoteToken(token.substring(1)));
                 c.notTests.addAll(n.tests);
                 c.notKind.addAll(n.kindTests);
-                for (String w : n.words) c.notWords.add(Text.norm(w));
+                for (String w : n.words) {
+                    c.notWords.add(Text.norm(w));
+                    for (String alt : Text.norm(w).split("\\|")) if (!alt.isEmpty()) c.notPats.add(Text.find(alt));
+                }
                 for (String u : n.unknown) c.unknown.add(NOT + u);
                 c.problems.addAll(n.problems);
                 continue;
@@ -219,7 +224,7 @@ public final class Cond {
     public boolean matches(Index ix, Index.Rec r) {
         for (Test t : tests) if (!t.ok(ix, r)) return false;
         for (Test t : notTests) if (t.ok(ix, r)) return false;                 // 181
-        for (String w : notWords) if (r.norm != null && r.norm.contains(w)) return false;
+        for (Text.Pattern w : notPats) if (r.norm != null && w.matches(r.norm)) return false;
         return true;
     }
 
@@ -233,7 +238,7 @@ public final class Cond {
         for (Test t : tests) if (!kindTests.contains(t) && !t.ok(ix, r)) return false;
         for (Test t : notTests) if (!notKind.contains(t) && t.ok(ix, r)) return false;     // 181: "בלי סוג" — לא על תיקייה
         String dn = ix.dirs.get(dirId).norm;
-        for (String w : notWords) if (dn != null && dn.contains(w)) return false;
+        for (Text.Pattern w : notPats) if (dn != null && w.matches(dn)) return false;
         return true;
     }
 

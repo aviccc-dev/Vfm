@@ -187,12 +187,13 @@ public final class Text {
 
     // ---------- תבניות ----------
 
-    public static final int CONTAINS = 0, PREFIX = 1, SUFFIX = 2, EXACT = 3, GLOB = 4, WORD = 5;
+    public static final int CONTAINS = 0, PREFIX = 1, SUFFIX = 2, EXACT = 3, GLOB = 4, WORD = 5, REGEX = 6;   // REGEX — מבנה 297: מרכאות
 
     public static final class Pattern {
         public int kind;
         public String text;
         public char[] glob;
+        java.util.regex.Pattern rx;
 
         public boolean matches(String name) {
             switch (kind) {
@@ -201,6 +202,7 @@ public final class Text {
                 case SUFFIX: return name.endsWith(text);
                 case EXACT: return name.equals(text);
                 case WORD: return atWordStart(name, text);
+                case REGEX: return rx.matcher(name).find();
                 default: return globMatch(name, glob);
             }
         }
@@ -222,13 +224,44 @@ public final class Text {
     }
 
     /**
-     * מילה בחיפוש. מבנה 279 (המשתמש, 19.11.2026 — "א": הכוכבית כמו בפקודות): עם כוכבית — מעוגנת, כמו שנכתבה ("דוח*" מתחיל
-     * ב"דוח", "*.pdf" נגמר ב־pdf, "מה*אומר" מתחיל ב"מה" ונגמר ב"אומר"); בלי כוכבית — הכלה, כמו תמיד ("ספר", וגם "פרק?" כמו
-     * "*פרק?*"). עד כאן — כל מילה עם תו כללי נעטפה בכוכביות, ולא היה "מתחיל ב" ו"נגמר ב".
+     * מילה בחיפוש — הכלל האחד. מבנה 297 (המשתמש, 20.11.2026, על מ0.52: "כוכבית אומרת כל תו, כך שפירושו של vfm*2 — מצא מחרוזת
+     * vfm, אחר כך כל תו שהוא, ואחר כך 2. מה אכפת לי מה הסיום" · "תחילת מילה או סיום — במרכאות מצוין, לא בכוכבית"):
+     * הכוכבית רק ממלאת (כל תווים, גם אף אחד), ? — תו אחד; המילה נמצאת בכל מקום בשם. מרכאות בתחילת המילה ("דוח) — רק בתחילת מילה
+     * בשם; בסוף (pdf") — רק בסוף מילה; בשני הצדדים — מילה שלמה. מרכאות באמצע (דו"ח) — תו כמו כל תו. מחליף את 279 ("כמו בפקודות":
+     * הכוכבית עיגנה את תחילת השם ואת סופו — ו־vfm*2 לא מצא את vfm-m0.52.apk). בפקודות הקבצים — לא השתנה (wild: השם כולו).
      */
-    public static String widen(String q) {
-        if (q.indexOf('*') >= 0 || q.indexOf('?') < 0) return q;
-        return "*" + q + "*";
+    public static Pattern find(String word) {
+        String q = word;
+        boolean ws = false, we = false;
+        if (q.length() > 1 && quote(q.charAt(0))) {
+            ws = true;
+            q = q.substring(1);
+        }
+        if (q.length() > 1 && quote(q.charAt(q.length() - 1))) {
+            we = true;
+            q = q.substring(0, q.length() - 1);
+        }
+        boolean wild = q.indexOf('*') >= 0 || q.indexOf('?') >= 0;
+        if (!ws && !we) return compile(wild ? "*" + q + "*" : q);           // בלי מרכאות — בכל מקום בשם
+        if (ws && !we && !wild) return wordStart(q);
+        StringBuilder rx = new StringBuilder();
+        if (ws) rx.append("(?<![\\p{L}\\p{N}])");
+        for (int i = 0; i < q.length(); i++) {
+            char c = q.charAt(i);
+            if (c == '*') rx.append(".*");
+            else if (c == '?') rx.append('.');
+            else rx.append(java.util.regex.Pattern.quote(String.valueOf(c)));
+        }
+        if (we) rx.append("(?![\\p{L}\\p{N}])");
+        Pattern p = new Pattern();
+        p.kind = REGEX;
+        p.rx = java.util.regex.Pattern.compile(rx.toString(), java.util.regex.Pattern.DOTALL);
+        return p;
+    }
+
+    /** מבנה 297: מרכאות שמסמנות תחילת מילה או סופה — " ומה שהמקלדת שמה במקומן (״ “ ”). */
+    public static boolean quote(char c) {
+        return c == '"' || c == '\u05F4' || c == '\u201C' || c == '\u201D';
     }
 
     /**
@@ -313,6 +346,8 @@ public final class Text {
             }
             for (String alt : w.split("\\|"))
                 for (String piece : alt.split("[*?]")) {
+                    while (!piece.isEmpty() && quote(piece.charAt(0))) piece = piece.substring(1);   // מבנה 297: מרכאות בקצה — לא לסימון
+                    while (!piece.isEmpty() && quote(piece.charAt(piece.length() - 1))) piece = piece.substring(0, piece.length() - 1);
                     if (piece.isEmpty()) continue;
                     int i = norm.indexOf(piece);
                     if (i >= 0) for (int k = i; k < i + piece.length(); k++) on[k] = true;

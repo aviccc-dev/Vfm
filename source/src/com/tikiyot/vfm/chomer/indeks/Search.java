@@ -289,10 +289,10 @@ final class Search {
         List<Boolean> strip = new ArrayList<Boolean>();
         for (String part : word.split("\\|")) {
             if (part.isEmpty()) continue;
-            alts.add(Text.compile(Text.widen(part)));
+            alts.add(Text.find(part));                                       // מבנה 297: הכלל האחד של מילה בחיפוש
             strip.add(false);
             String stripped = Text.withoutPrefixLetter(part);
-            if (stripped != null && part.indexOf('*') < 0 && part.indexOf('?') < 0) {
+            if (stripped != null && part.indexOf('*') < 0 && part.indexOf('?') < 0 && !Text.quote(part.charAt(part.length() - 1))) {
                 alts.add(Text.wordStart(stripped));
                 strip.add(true);
             }

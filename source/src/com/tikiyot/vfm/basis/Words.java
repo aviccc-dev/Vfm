@@ -216,10 +216,12 @@ public final class Words {
         public static final String SYMBOLS_B = "❓ סימנים", SYMBOLS_TITLE = "סימנים בחיפוש";
 
         public static String symbolsHelp(String type, String size, String date, String source, String list) {
-            return "דוח*  — מתחיל ב\"דוח\"\n"
-                    + "*.pdf  — נגמר ב\".pdf\"\n"
+            return "vfm*2  — vfm, אחר כך כל דבר, ואחר כך 2 (בכל מקום בשם)\n"
                     + "פרק?  — ? הוא תו אחד\n"
-                    + "דוח  (בלי *)  — מכיל \"דוח\" בשם\n"
+                    + "דוח  — בכל מקום בשם\n"
+                    + "\"דוח  — רק בתחילת מילה\n"
+                    + "pdf\"  — רק בסוף מילה\n"
+                    + "\"דוח\"  — מילה שלמה\n"
                     + "ספר|דוח  — אחד מהם\n"
                     + "-מטמון  — בלי מה שמכיל \"מטמון\"\n"
                     + "«שתי מילים»  — יחד, בדיוק כך\n"

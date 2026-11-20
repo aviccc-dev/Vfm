@@ -249,6 +249,14 @@ public final class Tests {
         return ix;
     }
 
+    /** מבנה 297: רשומה עם שם בלבד — לבדיקת "-מילה" (בלי תנאים שצריכים אינדקס). */
+    private static Index.Rec rec297(String name) {
+        Index.Rec r = new Index.Rec();
+        r.name = name;
+        r.norm = Text.norm(name);
+        return r;
+    }
+
     private static Index.Rec rec(Index ix, String name) {
         for (Index.Rec r : ix.files) if (r.name.equals(name)) return r;
         return null;
@@ -278,18 +286,30 @@ public final class Tests {
         eq("מילה קצרה לא מורחבת", null, Text.withoutPrefixLetter("מו"));
         check("77: 'וגה' בתחילת מילה לא נמצא בתוך 'יוגה'", !Text.wordStart("וגה").matches("יוגה למתחילים.pdf"));
         check("77: 'וגה' נמצא בתחילת מילה", Text.wordStart("וגה").matches("ספר וגה.pdf"));
-        check("תו כללי *", Text.compile(Text.widen("מה*אומר")).matches("מה הוא אומר"));
-        check("תו כללי ?", Text.compile(Text.widen("ס?ר")).matches("ספר"));
+        check("תו כללי *", Text.find("מה*אומר").matches("מה הוא אומר"));
+        check("תו כללי ?", Text.find("ס?ר").matches("ספר"));
         check("הכלה רגילה", Text.compile("ספר").matches("הספר.pdf"));
-        // מבנה 279: הכוכבית בחיפוש — כמו בפקודות (מעוגנת); בלי כוכבית — הכלה; ומימוש אחד לשניהם
-        check("מבנה 279: בחיפוש — \"דוח*\" מתחיל ב, \"*.pdf\" נגמר ב, \"מה*אומר\" מתחיל ונגמר; \"פרק?\" ו\"ספר\" — הכלה",
-                Text.compile(Text.widen("דוח*")).matches("דוח מאי.pdf") && !Text.compile(Text.widen("דוח*")).matches("סיכום דוח.pdf")
-                        && Text.compile(Text.widen("*.pdf")).matches("ספר.pdf") && !Text.compile(Text.widen("*.pdf")).matches("ספר.pdf.txt")
-                        && Text.compile(Text.widen("מה*אומר")).matches("מה הוא אומר") && !Text.compile(Text.widen("מה*אומר")).matches("מה הוא אומר.txt")
-                        && Text.compile(Text.widen("פרק?")).matches("ספר פרק1.pdf") && Text.compile(Text.widen("ספר")).matches("הספר.pdf"));
+        // מבנה 297 (מחליף את 279 בחיפוש; המשתמש: "כוכבית אומרת כל תו… מה אכפת לי מה הסיום" · "תחילת מילה או סיום — במרכאות"):
+        // הכוכבית רק ממלאת, המילה — בכל מקום בשם; מרכאות בקצה — תחילת מילה או סופה; מרכאות באמצע — תו רגיל
+        check("מבנה 297: vfm*2 מוצא את vfm-m0.52.apk (מה שבמכשיר לא נמצא), וגם vfm-m0.52-חדש; הכוכבית לא מעגנת לא את ההתחלה ולא את הסוף",
+                Text.find("vfm*2").matches("vfm-m0.52.apk") && Text.find("vfm*2").matches("vfm-m0.52-חדש") && Text.find("vfm*2").matches("old vfm 2")
+                        && !Text.find("vfm*2").matches("2 vfm") && Text.find("דוח*").matches("סיכום דוח.pdf") && Text.find("*.pdf").matches("a.pdf.txt")
+                        && Text.find("מה*אומר").matches("מה הוא אומר.txt") && Text.find("פרק?").matches("ספר פרק1.pdf") && !Text.find("פרק?").matches("פרק")
+                        && Text.find("ספר").matches("הספר.pdf") && Text.find("*").matches("x"));
+        check("מבנה 297: מרכאות בתחילת המילה — רק בתחילת מילה; בסוף — רק בסוף מילה; בשני הצדדים — מילה שלמה; גם עם כוכבית; ״ ו“” — כמו \"",
+                Text.find("\"דוח").matches("סיכום דוח מאי") && !Text.find("\"דוח").matches("מדוחות") && Text.find("\"דוח").matches("דוחות 2026")
+                        && Text.find("pdf\"").matches("ספר.pdf") && !Text.find("pdf\"").matches("ספר.pdfx") && Text.find("מאי\"").matches("דוח מאי.txt")
+                        && Text.find("\"דוח\"").matches("דוח מאי") && !Text.find("\"דוח\"").matches("דוחות") && !Text.find("\"דוח\"").matches("מדוח")
+                        && Text.find("\"vfm*2\"").matches("vfm-m0.52.apk") && !Text.find("\"vfm*2\"").matches("xvfm-m0.52.apk")
+                        && !Text.find("\"vfm*2\"").matches("vfm-m0.52x.apk") && Text.find("״דוח").matches("סיכום דוח") && !Text.find("“דוח").matches("מדוח")
+                        && Text.find("דו\"ח").matches("סיכום דו\"ח מאי") && !Text.find("דו\"ח").matches("דוח") && Text.find("\"").matches("a\"b"));
+        check("מבנה 297: \"-מילה\" — באותו כלל (כוכבית, מרכאות, |); הסימון בשם — בלי המרכאות שבקצה",
+                !Cond.parse(Text.norm("-vfm*2")).matches(null, rec297("vfm-m0.52.apk")) && Cond.parse(Text.norm("-vfm*2")).matches(null, rec297("vfm-n0.14.apk"))
+                        && !Cond.parse(Text.norm("-ספר|דוח")).matches(null, rec297("דוח מאי")) && Cond.parse(Text.norm("-\"דוח")).matches(null, rec297("מדוחות"))
+                        && java.util.Arrays.equals(Text.marks("סיכום דוח", "\"דוח"), new int[]{6, 9}));
         check("מבנה 279: בפקודות — אותה התאמה (Text.wild): השם כולו, בלי הבדל בין גדולות לקטנות, \"*.*\" — הכול, בלי תו כללי — השם בדיוק",
                 Text.wild("*.pdf", "Book.PDF") && !Text.wild("*.pdf", "book.pdf.txt") && Text.wild("*.*", "README") && Text.wild("*", "a")
-                        && Text.wild("פרק?", "פרק1") && !Text.wild("פרק?", "פרק12") && Text.wild("דוח*", "דוח 1.txt") && !Text.wild("דוח*", "סיכום דוח")
+                        && Text.wild("פרק?", "פרק1") && !Text.wild("פרק?", "פרק12") && Text.wild("דוח*", "דוח 1.txt") && !Text.wild("דוח*", "סיכום דוח")   // מבנה 297: בפקודות — לא השתנה
                         && Text.wild("a.txt", "A.TXT") && !Text.wild("a.txt", "aa.txt") && Text.wild("a*b*c", "aXbYc") && !Text.wild("a*b*c", "aXbYcd"));
         // מבנה 281: כל המילים מסומנות בשם; מסננים ו"בלי" — לא; חלופות ותווים כלליים — החלקים
         check("מבנה 281: סימון — כל המילים (\"דוח 2026\"), חלופות (\"ספר|דוח\"), החלקים שבין התווים הכלליים (\"דוח*2026\"); "
@@ -395,12 +415,13 @@ public final class Tests {
                         && ss287.split("SmartLists.orAll\\(", -1).length - 1 == 3 && !ss287.contains("Words.Db.SMART_NO_COND"));
         // מבנה 295: העזרה על הסימנים — מה שהיא אומרת, החיפוש באמת עושה (כל דוגמה נבדקת מול ההתאמה עצמה)
         String help295 = PanelTools.symbols();
-        check("מבנה 295: העזרה על הסימנים — בחלונית; המילים של התנאים מ־Cond; והדוגמאות נכונות: \"דוח*\" מתחיל, \"*.pdf\" נגמר, \"פרק?\" — תו אחד",
-                help295.contains("דוח*") && help295.contains("*.pdf") && help295.contains("פרק?") && help295.contains(Cond.TYPE + ":pdf")
+        check("מבנה 295, 297: העזרה על הסימנים — בחלונית; המילים של התנאים מ־Cond; והדוגמאות נכונות: vfm*2, \"פרק?\" — תו אחד, מרכאות — תחילת מילה וסופה",
+                help295.contains("vfm*2") && help295.contains("פרק?") && help295.contains("\"דוח  —") && help295.contains("pdf\"  —")
+                        && help295.contains(Cond.TYPE + ":pdf") && !help295.contains("*.pdf")
                         && help295.contains(Cond.LIST + ":«") && help295.contains(Cond.SOURCE + ":«") && help295.contains("-מטמון")
-                        && Text.compile(Text.widen("דוח*")).matches("דוח מאי") && !Text.compile(Text.widen("דוח*")).matches("סיכום דוח")
-                        && Text.compile(Text.widen("*.pdf")).matches("a.pdf") && !Text.compile(Text.widen("*.pdf")).matches("a.pdf.txt")
-                        && Text.compile(Text.widen("פרק?")).matches("פרק1") && Text.compile(Text.widen("דוח")).matches("סיכום דוח מאי")
+                        && Text.find("vfm*2").matches("vfm-m0.52.apk") && Text.find("\"דוח").matches("דוח מאי") && !Text.find("\"דוח").matches("מדוח")
+                        && Text.find("pdf\"").matches("a.pdf") && Text.find("\"דוח\"").matches("סיכום דוח") && !Text.find("\"דוח\"").matches("דוחות")
+                        && Text.find("פרק?").matches("פרק1") && Text.find("דוח").matches("סיכום דוח מאי")
                         && Cond.parse(Text.norm(Cond.SIZE + ":>10MB " + Cond.DATE + ":שבוע " + Cond.TYPE + ":pdf -מטמון «שתי מילים»")).unknown.isEmpty()
                         && Cond.parse(Text.norm("-מטמון")).hasNot() && Cond.parse(Text.norm("«שתי מילים»")).words.size() == 1
                         && read(new File(System.getProperty("vfm.src"), "src/com/tikiyot/vfm/masachim/rechivim/PanelTools.java")).contains("Words.Find.SYMBOLS_B"));

@@ -1725,6 +1725,11 @@ final class DbCmdTests {
                         bad(r282).isEmpty() && sa.equals("א,ב") && st.equals("א,ב") && sd.equals("ב") && so.equals("ב") && sn.equals("א,ג")
                                 && none282.hits.isEmpty() && none282.note.contains("לא נעשה") && none282.note.contains("אין כזו 282")
                                 && noMode282.hits.isEmpty() && noMode282.note.equals(Words.Find.scopeMissing("אין אופן 282", Words.Find.scopeNoMode("אין אופן 282"))));
+                // מבנה 297: החיפוש עצמו, על האינדקס — "חשבון*א" מוצא את "חשבון א.txt" (בכלל של 279 — לא: נגמר ב־.txt); "-\"ב" (מילה שמתחילה ב־ב) מוציא את ב
+                String w297 = names282(lib.list("חשבון*א " + all282)), q297 = names282(lib.list("\"חשבון " + all282)),
+                        n297 = names282(lib.list("חשבון -\"ב " + all282));   // "-*ב" — מוציא את שניהם: ב יש גם ב"חשבון"
+                o.check("מבנה 297: בחיפוש — הכוכבית ממלאת ולא מעגנת (" + w297 + "), מרכאות — תחילת מילה (" + q297 + "), \"בלי\" עם כוכבית (" + n297 + ")",
+                        w297.equals("א") && q297.equals("א,ב") && n297.equals("א"));
                 // מבנה 283: התנאי שהמסך בונה (Cond.inList) — אותו חיפוש
                 String sl283 = names282(lib.list("חשבון " + Cond.inList(m282, java.util.Arrays.asList("מסמכים", "Abc")))),
                         sh283 = names282(lib.list("חשבון " + Cond.inList(m282, new ArrayList<String>())));
