@@ -425,6 +425,12 @@ public final class Tests {
                         && Cond.parse(Text.norm(Cond.SIZE + ":>10MB " + Cond.DATE + ":שבוע " + Cond.TYPE + ":pdf -מטמון «שתי מילים»")).unknown.isEmpty()
                         && Cond.parse(Text.norm("-מטמון")).hasNot() && Cond.parse(Text.norm("«שתי מילים»")).words.size() == 1
                         && read(new File(System.getProperty("vfm.src"), "src/com/tikiyot/vfm/masachim/rechivim/PanelTools.java")).contains("Words.Find.SYMBOLS_B"));
+        String ss298 = read(new File(System.getProperty("vfm.src"), "src/com/tikiyot/vfm/masachim/SearchScreen.java"));
+        check("מבנה 298: לא נמצא כלום — נאמר בתוך אזור התוצאות (גם כששורת המידע מקופלת), עם ההערה של החיפוש; שורה ריקה, תצוגה בתיקיות ורענון שהוסיף — בלי",
+                ss298.contains("sayNothing(rows.isEmpty() && !r.loading, r.note);") && ss298.indexOf("sayNothing(false, \"\");") > 0
+                        && ss298.indexOf("root.addView(nothing,") < ss298.indexOf("root.addView(list,")
+                        && Words.Find.nothing("vfm*2", "").contains("vfm*2") && Words.Find.nothing("x", "הערה").contains("הערה")
+                        && !Words.Find.nothing("", null).contains("—"));
         int ed288 = dl287.indexOf("private void edit(final Store.Item it) {"), ee288 = dl287.indexOf("private void done(String msg) {", ed288);
         String edit288 = ed288 > 0 && ee288 > ed288 ? dl287.substring(ed288, ee288) : "";
         check("מבנה 288: עריכה של רשימה חכמה — אותו חלון של רשימה ידנית (שם, צלמית, תיאור, \"למה\"); התנאי, המיון והתצוגה נשמרים כמו שהם; "

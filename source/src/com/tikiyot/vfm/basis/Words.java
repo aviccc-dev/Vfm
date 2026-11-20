@@ -233,6 +233,11 @@ public final class Words {
                     + list + ":«אופן\\רשימה»  — רק ברשימה ובמה שבתוכה";
         }
 
+        /** מבנה 298: לא נמצא כלום — בתוך אזור התוצאות. */
+        public static String nothing(String words, String note) {
+            return "לא נמצא" + (words.isEmpty() ? "" : " — " + words) + (note == null || note.isEmpty() ? "" : "\n" + note);
+        }
+
         /** מבנה 292: העורך מבקש תנאי — "✓ לבחור". */
         public static final String PICK = "✓ לבחור";
 

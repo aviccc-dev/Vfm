@@ -147,6 +147,8 @@ public class SearchScreen extends Activity implements Clip.Holder, PlaceChip.Pla
     final SearchSave saves = new SearchSave(this);
     /** מבנה 284: היסטוריית החיפוש (רק בחיפוש — לא ברשימה חכמה). */
     private HistoryBox history;
+    /** מבנה 298: "לא נמצא" — בתוך אזור התוצאות. */
+    private TextView nothing;
     /** מבנה 286: המסננים הפעילים — שבבים עם ✕. */
     private FilterChips chips;
     private Runnable pending;
@@ -475,7 +477,25 @@ public class SearchScreen extends Activity implements Clip.Holder, PlaceChip.Pla
                 return true;
             }
         });
+        nothing = Ui.info(this);                                              // מבנה 298: "לא נמצא" — בתוך אזור התוצאות
+        nothing.setGravity(android.view.Gravity.CENTER);
+        nothing.setPadding(Ui.dp(this, 16), Ui.dp(this, 24), Ui.dp(this, 16), Ui.dp(this, 24));
+        nothing.setVisibility(View.GONE);
+        root.addView(nothing, new LinearLayout.LayoutParams(-1, -2));
         root.addView(list, new LinearLayout.LayoutParams(-1, 0, 1f));
+    }
+
+    /**
+     * מבנה 298 (המשתמש, 20.11, צילום של מ0.52: המסך ריק אחרי vfm*2): כשלא נמצא כלום — נאמר בתוך אזור התוצאות, ולא רק בשורת המידע
+     * (שמתקפלת עם הרצועה). עם ההערה של החיפוש, אם יש (רשימה שלא נמצאה, מה שלא הובן).
+     */
+    private void sayNothing(boolean show, String note) {
+        if (!show) {
+            nothing.setVisibility(View.GONE);
+            return;
+        }
+        nothing.setText(Words.Find.nothing(input.getText().toString().trim(), note));
+        nothing.setVisibility(View.VISIBLE);
     }
 
     /** בחירה ופעולות על הנבחרים. */
@@ -671,6 +691,7 @@ public class SearchScreen extends Activity implements Clip.Holder, PlaceChip.Pla
         if (q.trim().isEmpty()) {
             rows.clear();
             adapter.notifyDataSetChanged();
+            sayNothing(false, "");
             info.setText(Files.count(lib.totalFiles()) + Words.Look.FILES_IN_INDEX
                     + Files.when(lib.lastBuilt()));
             return;
@@ -681,6 +702,7 @@ public class SearchScreen extends Activity implements Clip.Holder, PlaceChip.Pla
         out.clear();                                                          // חיפוש מחדש = רענון: האפורים יורדים
         if (fb.folderMode()) {                                                   // 148
             legend.setVisibility(View.GONE);
+            sayNothing(false, "");
             fv = new FolderView(r.hits, fb.roots());
             if (!placed || here != null && fv.rootOf(here) == null) {
                 here = startDir != null && fv.rootOf(startDir) != null ? startDir : fv.start();   // 159
@@ -713,6 +735,7 @@ public class SearchScreen extends Activity implements Clip.Holder, PlaceChip.Pla
             rows.add(hit);
         }
         adapter.notifyDataSetChanged();
+        sayNothing(rows.isEmpty() && !r.loading, r.note);                     // מבנה 298
         showLegend(r);
         StringBuilder byType = new StringBuilder();
         if (emptyMode) {
@@ -779,6 +802,7 @@ public class SearchScreen extends Activity implements Clip.Holder, PlaceChip.Pla
         out.clear();
         out.putAll(grey);
         adapter.notifyDataSetChanged();
+        if (!rows.isEmpty()) sayNothing(false, "");                           // מבנה 298: ברענון נוסף משהו
         java.util.Map<FileItem.State, Integer> n = new java.util.LinkedHashMap<FileItem.State, Integer>();
         for (FileItem.State s : grey.values()) n.put(s, n.containsKey(s) ? n.get(s) + 1 : 1);
         StringBuilder sb = new StringBuilder(infoBase);
