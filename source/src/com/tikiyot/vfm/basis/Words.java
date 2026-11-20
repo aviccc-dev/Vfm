@@ -209,6 +209,28 @@ public final class Words {
         public static final String LOAD = "📥 לטעון", SORT_B = "↕ מיון", VIEW_B = "▦ תצוגה", SAVE_HERE_B = "💾 שמירה",
                 SAVE_AS_B = "💾 שמירה בשם…", LOAD_TITLE = "לטעון את התנאים של…";
 
+        /**
+         * מבנה 295 (אפיון החיפוש, 7 — "הסבר קצר על הסימנים"): העזרה שבחלונית. המילים של התנאים — מהמקום שבו הם מוגדרים (Cond),
+         * כדי שהעזרה לא תאמר מילה אחרת ממה שהחיפוש מבין.
+         */
+        public static final String SYMBOLS_B = "❓ סימנים", SYMBOLS_TITLE = "סימנים בחיפוש";
+
+        public static String symbolsHelp(String type, String size, String date, String source, String list) {
+            return "דוח*  — מתחיל ב\"דוח\"\n"
+                    + "*.pdf  — נגמר ב\".pdf\"\n"
+                    + "פרק?  — ? הוא תו אחד\n"
+                    + "דוח  (בלי *)  — מכיל \"דוח\" בשם\n"
+                    + "ספר|דוח  — אחד מהם\n"
+                    + "-מטמון  — בלי מה שמכיל \"מטמון\"\n"
+                    + "«שתי מילים»  — יחד, בדיוק כך\n"
+                    + "כמה מילים עם רווח  — כולן בשם\n\n"
+                    + type + ":pdf  — סוג\n"
+                    + size + ":>10MB  — גודל (גם <)\n"
+                    + date + ":שבוע  — מאז (יום, שבוע, חודש, שנה)\n"
+                    + source + ":«/storage/…/תיקייה»  — רק בתיקייה ובמה שבתוכה\n"
+                    + list + ":«אופן\\רשימה»  — רק ברשימה ובמה שבתוכה";
+        }
+
         /** מבנה 292: העורך מבקש תנאי — "✓ לבחור". */
         public static final String PICK = "✓ לבחור";
 

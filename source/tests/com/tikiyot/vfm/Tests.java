@@ -393,6 +393,17 @@ public final class Tests {
                 SmartLists.orAll("").equals(Cond.sourcesCond(java.util.Arrays.asList(Drive.INTERNAL, Drive.CARD))) && SmartLists.orAll(null).equals(SmartLists.orAll("  "))
                         && SmartLists.orAll(" סוג:pdf ").equals("סוג:pdf") && !SmartLists.orAll("").isEmpty()
                         && ss287.split("SmartLists.orAll\\(", -1).length - 1 == 3 && !ss287.contains("Words.Db.SMART_NO_COND"));
+        // מבנה 295: העזרה על הסימנים — מה שהיא אומרת, החיפוש באמת עושה (כל דוגמה נבדקת מול ההתאמה עצמה)
+        String help295 = PanelTools.symbols();
+        check("מבנה 295: העזרה על הסימנים — בחלונית; המילים של התנאים מ־Cond; והדוגמאות נכונות: \"דוח*\" מתחיל, \"*.pdf\" נגמר, \"פרק?\" — תו אחד",
+                help295.contains("דוח*") && help295.contains("*.pdf") && help295.contains("פרק?") && help295.contains(Cond.TYPE + ":pdf")
+                        && help295.contains(Cond.LIST + ":«") && help295.contains(Cond.SOURCE + ":«") && help295.contains("-מטמון")
+                        && Text.compile(Text.widen("דוח*")).matches("דוח מאי") && !Text.compile(Text.widen("דוח*")).matches("סיכום דוח")
+                        && Text.compile(Text.widen("*.pdf")).matches("a.pdf") && !Text.compile(Text.widen("*.pdf")).matches("a.pdf.txt")
+                        && Text.compile(Text.widen("פרק?")).matches("פרק1") && Text.compile(Text.widen("דוח")).matches("סיכום דוח מאי")
+                        && Cond.parse(Text.norm(Cond.SIZE + ":>10MB " + Cond.DATE + ":שבוע " + Cond.TYPE + ":pdf -מטמון «שתי מילים»")).unknown.isEmpty()
+                        && Cond.parse(Text.norm("-מטמון")).hasNot() && Cond.parse(Text.norm("«שתי מילים»")).words.size() == 1
+                        && read(new File(System.getProperty("vfm.src"), "src/com/tikiyot/vfm/masachim/rechivim/PanelTools.java")).contains("Words.Find.SYMBOLS_B"));
         int ed288 = dl287.indexOf("private void edit(final Store.Item it) {"), ee288 = dl287.indexOf("private void done(String msg) {", ed288);
         String edit288 = ed288 > 0 && ee288 > ed288 ? dl287.substring(ed288, ee288) : "";
         check("מבנה 288: עריכה של רשימה חכמה — אותו חלון של רשימה ידנית (שם, צלמית, תיאור, \"למה\"); התנאי, המיון והתצוגה נשמרים כמו שהם; "

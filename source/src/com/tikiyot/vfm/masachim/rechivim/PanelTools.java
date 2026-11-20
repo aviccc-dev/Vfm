@@ -49,7 +49,18 @@ final class PanelTools {
         f.addView(button(a, Words.Find.SAVE_AS_B, new Runnable() {
             @Override public void run() { host.saveAs(); }
         }));
+        f.addView(button(a, Words.Find.SYMBOLS_B, new Runnable() {             // מבנה 295
+            @Override public void run() {
+                new android.app.AlertDialog.Builder(a).setTitle(Words.Find.SYMBOLS_TITLE).setMessage(symbols())
+                        .setPositiveButton(android.R.string.ok, null).show();
+            }
+        }));
         return f;
+    }
+
+    /** מבנה 295: העזרה על הסימנים — המילים של התנאים מ־Cond (מקום אחד). */
+    static String symbols() {
+        return Words.Find.symbolsHelp(Cond.TYPE, Cond.SIZE, Cond.DATE, Cond.SOURCE, Cond.LIST);
     }
 
     private static Button button(Activity a, String text, final Runnable r) {
