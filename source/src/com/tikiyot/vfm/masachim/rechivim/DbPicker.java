@@ -52,7 +52,16 @@ final class DbPicker {
     // ================= החלון =================
 
     static void choose(final Activity a, final String title, final Picked cb) {
-        final String mode = DbLists.mode(a);
+        choose(a, null, title, cb);
+    }
+
+    /**
+     * מבנה 299 (המשתמש, 22.11.2026, בלוח העיצוב: "כשאני בוחר אופן עבודה ומבקש להחיל על רשימה מסוימת עיצוב — בבורר הוא לא מביא את
+     * הרשימות הקיימות באופן הנבחר"): הבורר — באופן שמבקשים (inMode); null או ריק — האופן הפתוח, כמו עד כאן. רשימה חדשה מהבורר —
+     * באותו אופן.
+     */
+    static void choose(final Activity a, String inMode, final String title, final Picked cb) {
+        final String mode = inMode == null || inMode.trim().isEmpty() ? DbLists.mode(a) : inMode.trim();
         final DbLists.Snap snap = DbLists.snap(a, mode);
         if (snap == null) {
             Ui.toast(a, Words.Db.NO_DB_HERE);

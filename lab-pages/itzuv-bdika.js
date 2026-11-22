@@ -93,6 +93,7 @@ const run=async()=>{
     click(chip('#who','בחירת רשימה'));
     await new Promise(r=>setTimeout(r,60));
     say('בחירת רשימה — הלוח על הרשימה: '+$('fn').textContent,$('fn').textContent.includes('פעילים'));
+    say('מבנה 299: הבורר — באופן שבלוח (התוכנה אומרת pickmode): '+JSON.stringify(w.__picked),!!w.__picked&&w.__picked.fn==='pickListIn'&&w.__picked.mode==='עבודה');
     say('ברשימה — גם צבעים (התוכנה מכירה: listcolors)',d.querySelectorAll('#main .cl').length===18&&!d.querySelector('#main').textContent.includes('לכל התוכנה או לאופן'));
     say('ברשימה — "כמו הרשימה שמעליה"',!!chip('#main','כמו הרשימה שמעליה'));
     setNum(d.querySelectorAll('#main .card')[1].querySelector('.num'),2);
@@ -307,6 +308,11 @@ const run=async()=>{
       &&!d.querySelector('#main').textContent.includes('צלמית לצד השם')&&!d.getElementById('oops'));
     setNum(d.querySelectorAll('#main .card')[1].querySelector('.num'),2);
     say('תוכנה כמו מ0.49 — הפקודה לרשימה בלי צבעים ← '+cmd(),cmd()==='עצב "עבודה\\ספרים\\קודש" /טורים:2');
+    click([...d.querySelectorAll('.sheet button')].find(b=>b.textContent==='לעזוב אותם')||d.body);
+    click(chip('#who','בחירת רשימה'));
+    const lv=[...d.querySelectorAll('.sheet button')].find(b=>b.textContent==='לעזוב אותם');if(lv)click(lv);
+    await new Promise(r=>setTimeout(r,60));
+    say('מבנה 299: תוכנה שלפני (בלי pickmode) — הבורר כמו קודם, באופן הפתוח: '+JSON.stringify(w.__picked),!!w.__picked&&w.__picked.fn==='pickList');
   }catch(e){out.push('❌ חריגה: '+e.stack.split('\n').slice(0,3).join(' | '));}
   const bad=errs.filter(e=>!/Not implemented: (window\.scrollTo|navigator\.clipboard)/.test(e));
   if(bad.length)out.push('❌ שגיאות בעמוד: '+bad.join(' || '));

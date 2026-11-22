@@ -49,7 +49,8 @@ final class Bridge {
         void pickFile(String title, Picked done);
 
         /** בורר הרשימות של המסד. */
-        void pickList(String title, ListPicked done);
+        /** mode — האופן שבו בוחרים (מבנה 299); null — האופן הפתוח. */
+        void pickList(String title, String mode, ListPicked done);
 
         /** הטופס המוכר של רשימה חכמה, עם מה שכבר כתוב. */
         void smartForm(String name, String cond, String sort, SmartPicked done);
@@ -117,7 +118,7 @@ final class Bridge {
             o.put("versionCode", pi.versionCode);
             o.put("registry", Manager.registryLine());                                  // מבנה 142: מה התוכנה מכירה, בשורה
             o.put("door", DOOR);                                                        // מבנה 141
-            o.put("features", "steady dropclean zip set cmdfolders design namesize listcolors");   // namesize (מבנה 258): צלמית וריווח — מגודל השם, גם ברשת; listcolors (מבנה 269): צבעים גם לרשימה                         // מבנה 50: מה התוכנה יודעת (לתוסף — במקום לנחש לפי מספר הגרסה)
+            o.put("features", "steady dropclean zip set cmdfolders design namesize listcolors pickmode");   // pickmode (מבנה 299): בורר הרשימה — באופן שהתוסף אומר   // namesize (מבנה 258): צלמית וריווח — מגודל השם, גם ברשת; listcolors (מבנה 269): צבעים גם לרשימה                         // מבנה 50: מה התוכנה יודעת (לתוסף — במקום לנחש לפי מספר הגרסה)
             // מבנה 59: איפה תיקיות הגיבויים של האופנים, בכתיב של קובץ פקודות — לבדיקה "אופן שבוטל וחוזר" (שם התיקייה שונה בין הבניות)
             o.put("backupsVar", "%" + Drive.INTERNAL + "%\\" + Paths.DB_DIR + "\\" + Backups.DIR);
             o.put("device", Log.device());
@@ -838,13 +839,23 @@ final class Bridge {
         });
     }
 
-    /** רשימה מהמסד: {mode, path} — path בשמות, מופרד ב־\. */
+    /** רשימה מהמסד: {mode, path} — path בשמות, מופרד ב־\. באופן הפתוח. */
     @JavascriptInterface
     public void pickList(final String id, final String title) {
+        pick(id, title, null);
+    }
+
+    /** מבנה 299: רשימה מהמסד באופן מסוים (התוסף אומר באיזה — הלוח: האופן שבחרו בו; ריק — האופן הפתוח). info.features: pickmode. */
+    @JavascriptInterface
+    public void pickListIn(final String id, final String title, final String mode) {
+        pick(id, title, mode);
+    }
+
+    private void pick(final String id, final String title, final String mode) {
         screen.runOnUiThread(new Runnable() {
             @Override
             public void run() {
-                host.pickList(title == null ? Words.NEW_LIST : title, new ListPicked() {
+                host.pickList(title == null ? Words.NEW_LIST : title, mode, new ListPicked() {
                     @Override
                     public void ok(String mode, List<String> path) {
                         try {

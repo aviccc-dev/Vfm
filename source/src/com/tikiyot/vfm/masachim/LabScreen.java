@@ -386,8 +386,8 @@ public final class LabScreen extends Activity {
         }
 
         @Override
-        public void pickList(String title, final Bridge.ListPicked done) {
-            DbPicker.choose(LabScreen.this, title, new DbPicker.Picked() {
+        public void pickList(String title, String mode, final Bridge.ListPicked done) {
+            DbPicker.choose(LabScreen.this, mode, title, new DbPicker.Picked() {   // מבנה 299: באופן שהתוסף אומר
                 @Override public void ok(String mode, long list, List<String> path) { done.ok(mode, path); }
             });
         }

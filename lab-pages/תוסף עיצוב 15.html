@@ -1,0 +1,936 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="vfm-plugin" content="עיצוב">
+<meta name="vfm-plugin-version" content="15">
+<title>עיצוב</title>
+<style>
+/* תוסף "עיצוב" — הלוח (claude/tosaf-itzuv.md, ההחלטות של 17.11.2026): מקום אחד שבו משנים את כל מה שאפשר — כמו לוח עם
+   כפתורים ובוררים. כל שינוי נעשה בפקודה "עצב", דרך שכבת הניהול (vfm.shape); מה שנקבע ומה שנראה — מהתוכנה (vfm.design).
+   גרסה 2 (מבנה 246; המשתמש: "עצב אופן/רשימה/תת רשימה — אופן הוא הבית"): הדרך בפקודה מתחילה באופן.
+   גרסה 3 (מבנה 249; המשתמש: "להקטין ידנית ולהגדיל את השם"): תווית הסוג — כתב חמישי.
+   גרסה 4 (מבנה 250; המשתמש: "אפשרות לקבוע נוסח — ידנית · סביבת עבודה · ידנית כסביבת עבודה"): נוסח משלך לכל סוג.
+   גרסה 5 (מבנה 251; המשתמש: "כן" — לנסות קודם בתצוגה · "ותכין גם שמות… לאפשר לשמור שילוב מוצלח בשם"): הניסוי — רעיונות למראה
+   מהצילומים שנאספו, ושילובים בשמות. רק בתצוגה המקדימה: לא נכנס לפקודה ולא לרשימות.
+   גרסה 6 (מבנה 252; המשתמש, על 5: "פתחתי במנהל קבצים וירטואלי… הוא מוצג ולא זז"): שגיאה בעמוד — נאמרת על המסך, בכרטיס אדום
+   ("אין מצב שיש שגיאה והקובץ רץ ואף אחד לא יודע"), וגם ליומן של התוכנה.
+   גרסה 7 (מבנה 253; הכרטיס האדום במכשיר, במ0.47: "Cannot read properties of undefined (reading 'size')"): הלוח עובד גם עם
+   תוכנה שאינה מכירה את תווית הסוג ואת הנוסח (מבנה 249–250) — לפי מה שהתוכנה אומרת שהיא יודעת (info), בלי לנחש.
+   גרסה 8 (מבנה 255; המשתמש: "תבנה מה שהכי קל ומתאים ונראה לך" — קבוצה א): כרטיס "הפריט" — סגנון, הצג צלמית, סביב הצלמית,
+   צבע רקע לפריט, הצג נתונים, מקום הנתונים, שורות לשם, התאם למקום, גודל מזערי. באמת — בפקודה "עצב"; רק כשהתוכנה מכירה (info.shape).
+   גרסה 9 (מבנה 256; קבוצה ב, הקל): הצג תווית · מוסתר חיוור · "עיגול" סביב הצלמית — מהתוכנה, בלי שינוי בכרטיס.
+   גרסה 10 (מבנה 258; המשתמש: "האם יש דרך לקבוע יחס אחיד לשניהם?" — "כן"): הצלמית והריווח — אחוז מגודל השם, בשורות וברשת.
+   התצוגה מודדת כמו התוכנה (info.features: namesize; תוכנה שלפני כן — כמו שהיא מציירת). בחירת סגנון משנה רק את הסגנון — הלוח
+   אינו מוסיף דבר משלו (הוראות, 2א).
+   גרסה 11 (מבנה 260; המשתמש — "א"): סגנון שמתחלף בלי שנכתבו טורים — הפקודה מביאה את הטורים הרגילים שלו (רשת 3, שורות 1).
+   הכלל — בתוכנה; כאן רק התצוגה מראה מה שיקרה (info.styleCols — כשהתוכנה מכירה).
+   גרסה 14 (מבנה 271; המשתמש: "אם אפשר לעצב כל חלק כרצון המשתמש — למה בחלק מהדברים להגביל?"): הצבעים והמראה (בהיר / כהה)
+   גם לרשימה — כשהתוכנה אומרת שהיא מכירה (info.features: listcolors); בתוכנה שלפני כן — כמו קודם, רק לתוכנה ולאופן.
+   גרסה 15 (מבנה 299; המשתמש, 22.11.2026: "כשאני בוחר אופן עבודה ומבקש להחיל על רשימה מסוימת עיצוב — בבורר הוא לא מביא את הרשימות
+   הקיימות באופן הנבחר"): "בחירת רשימה…" — באופן שבחרו בלוח (info.features: pickmode); בתוכנה שלפני כן — באופן הפתוח, כמו קודם.
+   הצבעים של העמוד — מהתוכנה (vfm.theme), כאן רק ברירת מחדל. */
+:root{
+  --bg:#FFFFFF; --soft:#F4F5F6; --fg:#202124; --muted:#5F6368; --ghost:#9AA0A6; --chip:#E8F0FE; --chip-fg:#174EA6;
+  --accent:#1A73E8; --err:#C5221F; --rule:#E0E0E0; --on:#FFFFFF;
+  --f:system-ui,"Roboto","Noto Sans Hebrew",Arial,sans-serif;
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--soft);color:var(--fg);font-family:var(--f);font-size:16px;line-height:1.5}
+body{padding-bottom:calc(76px + env(safe-area-inset-bottom,0px))}
+.top{position:sticky;top:0;z-index:5;background:var(--soft);border-bottom:1px solid var(--rule)}
+.mbar{display:flex;gap:2px;padding:2px 6px 0;position:relative;align-items:center}
+.mbar>button{font:inherit;font-size:.95rem;border:0;background:transparent;color:var(--fg);padding:8px 9px;border-radius:6px;cursor:pointer}
+.mbar>button.on{background:var(--chip);color:var(--chip-fg)}
+.fn{flex:1;min-width:0;text-align:end;padding:0 8px;font-size:.8rem;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.menu{position:absolute;top:100%;inset-inline-start:6px;z-index:8;min-width:230px;max-width:92vw;max-height:70vh;overflow:auto;background:var(--bg);border:1px solid var(--rule);border-radius:10px;box-shadow:0 6px 24px rgba(0,0,0,.2);padding:4px 0}
+.menu button{display:flex;gap:10px;align-items:center;width:100%;font:inherit;border:0;background:transparent;color:var(--fg);padding:11px 14px;text-align:start;cursor:pointer}
+.menu button:disabled{color:var(--ghost);cursor:default}
+.menu button .mk{width:1em;color:var(--accent);font-weight:700}
+.menu hr{border:0;border-top:1px solid var(--rule);margin:4px 0}
+.tbar{display:flex;gap:6px;padding:4px 10px 8px;overflow-x:auto}
+.btn{flex:none;font:inherit;font-size:.92rem;border-radius:8px;border:1px solid var(--rule);background:var(--bg);color:var(--fg);padding:6px 10px;cursor:pointer;white-space:nowrap}
+.btn.main{background:var(--accent);border-color:var(--accent);color:var(--on)}
+.btn:disabled{opacity:.45;cursor:default}
+.card{background:var(--bg);border:1px solid var(--rule);border-radius:12px;margin:10px;padding:10px 12px}
+.card h2{font-size:.95rem;margin:0 0 8px;color:var(--muted);font-weight:600;display:flex;gap:8px;align-items:center}
+.card h2 .k{flex:1}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{font:inherit;font-size:.9rem;border:1px solid var(--rule);background:var(--bg);color:var(--fg);border-radius:18px;padding:5px 12px;cursor:pointer}
+.chip.on{background:var(--chip);border-color:var(--chip-fg);color:var(--chip-fg);font-weight:600}
+.row{display:flex;gap:8px;align-items:center;padding:6px 0;border-top:1px solid var(--rule)}
+.row:first-of-type{border-top:0}
+.row .lb{flex:none;width:7.2em;font-size:.92rem}
+.row .lb small{display:block;color:var(--muted);font-size:.75rem;line-height:1.2}
+.row input[type=range]{flex:1;min-width:60px;accent-color:var(--accent)}
+.num{flex:none;width:4.2em;font:inherit;font-size:.9rem;padding:4px 6px;border:1px solid var(--rule);border-radius:6px;background:var(--bg);color:var(--fg);text-align:center}
+.hex{flex:none;width:6.2em;font:inherit;font-size:.85rem;padding:4px 6px;border:1px solid var(--rule);border-radius:6px;background:var(--bg);color:var(--fg);direction:ltr;text-align:center}
+.bad{border-color:var(--err)!important;color:var(--err)}
+.re{flex:none;font:inherit;border:0;background:transparent;color:var(--muted);padding:4px 6px;cursor:pointer;border-radius:6px}
+.re:disabled{visibility:hidden}
+.mine{color:var(--accent);font-size:.75rem}
+.tx{border-top:1px solid var(--rule);padding:8px 0}
+.tx:first-of-type{border-top:0}
+.tx .hd{display:flex;align-items:center;gap:6px;font-size:.92rem;font-weight:600}
+.tx .hd span{flex:1}
+.tx .ln{display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding-top:4px}
+.seg{display:inline-flex;border:1px solid var(--rule);border-radius:8px;overflow:hidden}
+.seg button{font:inherit;font-size:.82rem;border:0;background:var(--bg);color:var(--muted);padding:4px 9px;cursor:pointer}
+.seg button+button{border-inline-start:1px solid var(--rule)}
+.seg button.on{background:var(--chip);color:var(--chip-fg);font-weight:600}
+select{font:inherit;font-size:.88rem;padding:4px 6px;border:1px solid var(--rule);border-radius:6px;background:var(--bg);color:var(--fg);max-width:12em}
+details{border-top:1px solid var(--rule);padding:4px 0}
+details:first-of-type{border-top:0}
+summary{cursor:pointer;padding:6px 0;font-weight:600;font-size:.92rem}
+.cl{display:flex;gap:6px;align-items:center;padding:5px 0;flex-wrap:wrap}
+.cl .nm{flex:1 1 7em;min-width:6em;font-size:.88rem}
+.cl input[type=color]{flex:none;width:34px;height:30px;padding:0;border:1px solid var(--rule);border-radius:6px;background:none}
+.cl input[type=range]{flex:1 1 6em;min-width:5em;accent-color:var(--accent)}
+.note{color:var(--muted);font-size:.82rem;margin:4px 0 0}
+.cmd{font-family:ui-monospace,"Noto Sans Mono",monospace;font-size:.85rem;background:var(--soft);border:1px solid var(--rule);border-radius:8px;padding:8px;white-space:pre-wrap;word-break:break-word;min-height:2.2em}
+.cmd.none{color:var(--ghost);font-family:var(--f)}
+.err{color:var(--err);font-size:.88rem;margin:6px 0 0}
+.foot{position:fixed;bottom:0;inset-inline:0;z-index:6;display:flex;gap:8px;padding:10px 12px calc(10px + env(safe-area-inset-bottom,0px));background:var(--soft);border-top:1px solid var(--rule)}
+.foot .btn{flex:1;padding:10px}
+/* התצוגה המקדימה — בצבעים ובמידות של מה שייראה */
+.pv{border-radius:10px;overflow:hidden;border:1px solid var(--rule)}
+.pv .ph{padding:8px 12px;font-weight:600}
+.pv .grp{padding:4px 12px}
+.pv .items{display:grid;padding:6px}
+.pv .it{display:flex;align-items:center;gap:10px;border-radius:8px;min-width:0}
+.pv .it.g{flex-direction:column;text-align:center;justify-content:flex-start}
+.pv .ic{flex:none;display:flex;align-items:center;justify-content:center;border-radius:8px;line-height:1}
+.pv .ic{text-align:center;overflow:hidden}
+.pv .tg{text-align:center;border-radius:4px;padding:1px 4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+.pv .tt{min-width:0;overflow:hidden}
+.pv .nm2{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pv .nm2.ml{white-space:normal;display:-webkit-box;-webkit-box-orient:vertical;overflow:hidden;overflow-wrap:anywhere}
+.pv .dt{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pv .selbar{padding:6px 12px;font-size:.85rem}
+/* הניסוי — רק בתצוגה */
+.pv .tabs{display:flex}
+.pv .tab{flex:1;text-align:center;padding:8px 4px;border-bottom:2px solid transparent}
+.pv .wide{display:flex;align-items:center;gap:12px;margin:8px;padding:12px 14px;border-radius:16px}
+.pv .ring{flex:none;width:52px;height:52px;border-radius:50%;border:4px solid;display:flex;align-items:center;justify-content:center;font-size:.8rem;font-weight:700}
+.pv .grp.gm{display:flex;align-items:center}
+.pv .grp.gm span:first-child{flex:1}
+.pv .gdots{padding:0 4px;font-weight:700}
+.pv .car{display:flex;gap:8px;overflow-x:auto;padding:6px}
+.pv .cc{flex:none;border-radius:16px;padding:8px 10px;min-width:0}
+.pv .cov{position:absolute;inset-inline-start:4px;bottom:3px;line-height:1}
+.pv .bd{position:absolute;inset-inline-end:0;bottom:0;border-radius:50%;border:1px solid;display:flex;align-items:center;justify-content:center;line-height:1}
+.pv .it.g .tt{align-self:stretch;max-width:100%}
+.pv .tt.side{display:flex;gap:8px;align-items:baseline}
+.pv .tt.side .nm2{flex:1;min-width:0}
+.pv .tt.side .dt{flex:none}
+.pv .bw{flex:none;width:4.2em;display:flex;flex-direction:column;gap:2px;text-align:center}
+.pv .bw.full{width:100%}
+.pv .btr{height:6px;border-radius:3px;overflow:hidden}
+.pv .bf{height:100%}
+.pv .more{font:inherit;font-weight:600;border:0;background:transparent;padding:6px;cursor:pointer;text-align:center}
+.tsec{padding:2px 0 6px}
+.tl{font-size:.92rem;font-weight:600;margin:4px 0}
+.tln{display:flex;gap:8px;align-items:flex-start;padding:4px 0}
+.tl2{flex:none;width:6.2em;font-size:.88rem;padding-top:6px}
+.chips.tog{padding:6px 0}
+.chip.mineC{border-style:dashed}
+.chip.soon::after{content:' ◌';opacity:.7}
+.tmiss{font-size:.85rem;color:var(--muted);padding-top:6px}
+.acts{display:flex;gap:8px;flex-wrap:wrap;padding-top:8px}
+.nmIn{width:100%;font:inherit;padding:8px;border:1px solid var(--rule);border-radius:8px;background:var(--bg);color:var(--fg);margin:6px 0}
+.toast{position:fixed;bottom:calc(84px + env(safe-area-inset-bottom,0px));inset-inline:14px;z-index:20;background:#323232;color:#fff;border-radius:8px;padding:10px 14px;font-size:.92rem;box-shadow:0 4px 14px rgba(0,0,0,.3)}
+.sheet{position:fixed;inset:0;z-index:30;background:rgba(32,33,36,.38);display:flex;align-items:flex-end}
+.sheet .in{background:var(--bg);width:100%;max-height:80vh;overflow:auto;border-radius:14px 14px 0 0;padding:14px 16px}
+.sheet h3{margin:0 0 8px;font-size:1rem}
+.sheet p{margin:6px 0;font-size:.92rem}
+[hidden]{display:none!important}
+.oops{border-color:var(--err);color:var(--err);font-size:.9rem;direction:rtl}
+</style>
+<script>
+// מבנה 252: שגיאה בעמוד — נאמרת על המסך, ולא רק ביומן. כתוב בצורה הישנה, כדי שירוץ גם כשהעמוד עצמו לא נקרא.
+window.vfmOops=function(m,line){try{
+  var b=document.body;if(!b){document.addEventListener('DOMContentLoaded',function(){window.vfmOops(m,line);});return;}
+  var e=document.getElementById('oops');if(!e){e=document.createElement('div');e.id='oops';e.className='card oops';b.insertBefore(e,b.firstChild);}
+  var d=document.createElement('div');d.textContent='שגיאה בלוח: '+m+(line?' (שורה '+line+')':'');e.appendChild(d);
+}catch(x){}};
+window.onerror=function(m,src,line){window.vfmOops(m,line);};
+</script>
+</head>
+<body>
+<div class="top">
+  <div class="mbar" id="mbar">
+    <button data-m="file">קובץ</button><button data-m="edit">עריכה</button><button data-m="view">תצוגה</button><button data-m="help">עזרה</button>
+    <span class="fn" id="fn"></span>
+    <div class="menu" id="menu" hidden></div>
+  </div>
+  <div class="tbar" id="tbar"></div>
+</div>
+<div class="card"><h2><span class="k">מה מעצבים</span></h2><div class="chips" id="who"></div><div class="err" id="whoErr" hidden></div></div>
+<div class="card" id="pvCard"><h2><span class="k">תצוגה מקדימה</span><span class="mine" id="pvNote"></span></h2><div class="pv" id="pv"></div></div>
+<div class="card" id="tryCard" hidden></div>
+<div id="main"></div>
+<div class="card" id="cmdCard"><h2><span class="k">הפקודה שתרוץ</span><button class="btn" id="copy">העתקה</button></h2><div class="cmd none" id="cmd"></div></div>
+<div class="foot"><button class="btn main" id="apply">✓ החלה</button><button class="btn" id="discard">ביטול השינויים</button></div>
+<script>
+(function(){
+'use strict';
+const V=window.vfm||demoBridge();
+const J=(s,d)=>{try{return s==null||s===''?d:JSON.parse(s);}catch(e){return d;}};
+const can=f=>typeof V[f]==='function';
+const $=id=>document.getElementById(id);
+function E(tag,cls,txt){const e=document.createElement(tag);if(cls)e.className=cls;if(txt!=null)e.textContent=txt;return e;}
+function B(cls,txt,fn,title){const b=E('button',cls,txt);if(title)b.title=title;b.addEventListener('click',fn);return b;}
+const pref=(k,d)=>{const v=can('load')?V.load(k):null;return v==null?d:v;};
+const setPref=(k,v)=>{if(can('save'))V.save(k,String(v));};
+let toastT=0;
+function toast(t){let e=document.querySelector('.toast');if(!e){e=E('div','toast');document.body.appendChild(e);}e.textContent=t;clearTimeout(toastT);toastT=setTimeout(()=>e.remove(),3200);}
+
+// ---------- המצב ----------
+let S=null;          // מה שהתוכנה אמרה (vfm.design): מה שנקבע כאן, מה שנראה, מה שמעליו, והמידע לשורה
+let P={};            // השינויים שעוד לא הוחלו: design · cols · gap · icon · look · c:<צבע> · <סוג כתב> ← {size,weight,font}
+let hist=[],fut=[];  // ביטול / חזרה של השינויים שעוד לא הוחלו
+let done=[];         // מה שהוחל — לביטול ההחלה האחרונה: {what,target,line}
+let started=null;    // הרשימה שממנה באו (מהתוכנה), אם יש — הדרך המלאה, מהאופן
+const VIEW={pv:pref('pv','1')!=='0',tryc:pref('tryc','1')!=='0',cmd:pref('cmd','1')!=='0',tbar:pref('tbar','1')!=='0'};
+const I=()=>S.info, K=()=>S.info.keys;
+const isList=()=>S&&S.what===I().list, isProgram=()=>S&&S.what===I().program;
+
+function load(what,target){
+  const r=J(can('design')?V.design(what,target):null,null);
+  if(!r||!r.info){toast('התוכנה הזו אינה מכירה את לוח העיצוב — צריך גרסה חדשה יותר');return false;}
+  if(r.error){
+    $('whoErr').textContent=r.error;$('whoErr').hidden=false;
+    if(S)return false;
+    return load(r.info.program,'');
+  }
+  $('whoErr').hidden=true;
+  S=r;P={};hist=[];fut=[];
+  if(isList()&&!started)started=S.path;
+  draw();return true;
+}
+
+// מה שנקבע כאן (במה שהוחל); ומה שיהיה (עם השינויים)
+function own(k){
+  const L=S.own.look||{},k2=K();
+  if(k==='design')return S.own.design||'';
+  if(k==='cols')return L[k2.cols]||'';
+  if(k==='gap')return L[k2.gap]||'';
+  if(k==='icon')return L[k2.icon]||'';
+  if(k==='look')return L[k2.look]||'';
+  if(k.startsWith('c:'))return L[k2.color+': '+k.slice(2)]||'';
+  if(k.startsWith('w:'))return L[k2.wording+': '+k.slice(2)]||'';
+  if(k.startsWith('s:'))return L[k.slice(2)]||'';
+  return {size:L[k+': '+k2.size]||'',weight:L[k+': '+k2.weight]||'',font:L[k+': '+k2.font]||''};
+}
+const cur=k=>k in P?P[k]:own(k);
+const same=(a,b)=>JSON.stringify(a)===JSON.stringify(b);
+const TEXTS=()=>I().texts;
+const BY_NAME=()=>String(info.features||'').split(' ').includes('namesize');   // מבנה 258: התוכנה מודדת צלמית וריווח מגודל השם, גם ברשת
+// מבנה 271 (המשתמש, 18.11.2026: "למה בחלק מהדברים להגביל?"): צבעים ומראה גם לרשימה — רק בתוכנה שאומרת שהיא מכירה (info.features: listcolors)
+const LISTCOL=()=>String(info.features||'').split(' ').includes('listcolors');
+// מבנה 299: בורר הרשימה — באופן שבחרו בלוח, בתוכנה שאומרת שהיא יודעת (info.features: pickmode)
+const PICKMODE=()=>String(info.features||'').split(' ').includes('pickmode')&&can('pickListIn');
+const noColors=()=>isList()&&!LISTCOL();
+const SHAPE=()=>I().shape||[];   // מבנה 255: [מפתח, מתג, ערכים או טווח, שם קבוע] — רק מה שהתוכנה מכירה
+const KEYS=()=>['design','cols','gap','icon'].concat(SHAPE().map(x=>'s:'+x[0])).concat(TEXTS()).concat((I().kinds||[]).map(k=>'w:'+k)).concat(noColors()?[]:['look'].concat(I().roles.map(r=>'c:'+r[0])));
+
+function change(k,v){
+  const before=JSON.stringify(P);
+  if(same(v,own(k)))delete P[k];else P[k]=v;
+  if(JSON.stringify(P)!==before){hist.push(before);fut=[];}
+  draw();
+}
+function undo(){if(!hist.length)return;fut.push(JSON.stringify(P));P=J(hist.pop(),{});draw();}
+function redo(){if(!fut.length)return;hist.push(JSON.stringify(P));P=J(fut.pop(),{});draw();}
+function discard(){if(!Object.keys(P).length)return;hist.push(JSON.stringify(P));fut=[];P={};draw();}
+function inheritAll(){
+  const before=JSON.stringify(P);
+  KEYS().forEach(k=>{const o=own(k);const empty=typeof o==='string'?'':{size:'',weight:'',font:''};if(!same(o,empty))P[k]=empty;else delete P[k];});
+  if(JSON.stringify(P)!==before){hist.push(before);fut=[];}
+  draw();
+}
+
+// ---------- השורה של "עצב" — מהמילים שהתוכנה מסרה ----------
+const q=v=>'"'+String(v)+'"';
+function head(){
+  const i=I();
+  if(isProgram())return i.verb+' '+i.program;
+  return i.verb+' '+q(S.path);                                     // הדרך מתחילה באופן: "<אופן>" או "<אופן>\<רשימה>…"
+}
+function sw(k,v){
+  const s=I().switches;
+  if(k==='design')return s.design+q(v);
+  if(k==='cols'||k==='gap'||k==='icon')return s[k]+(v===''?'""':v);
+  if(k==='look')return s.look+(v===''?'""':v);
+  if(k.startsWith('c:'))return s.color+q(k.slice(2))+'='+(v===''?'""':v);
+  if(k.startsWith('w:'))return s.wording+q(k.slice(2))+'='+q(v);
+  if(k.startsWith('s:')){const x=SHAPE().find(y=>y[0]===k.slice(2));return x[1]+(v===''?'""':/\s/.test(v)?q(v):v);}
+  const parts=[v.size,v.weight,v.font?q(v.font):''].filter(x=>x!=='');
+  return s[k]+(parts.length?parts.join(','):'""');
+}
+// מ־a אל b: מה שצריך לכתוב (כתב שחלק ממנו חוזר לרשת — קודם מנקים, ואז מה שנשאר)
+function switches(from,to){
+  const out=[];
+  KEYS().forEach(k=>{
+    const a=from(k),b=to(k);if(same(a,b))return;
+    if(typeof a==='string'){out.push(sw(k,b));return;}
+    const cleared=['size','weight','font'].some(f=>a[f]!==''&&b[f]==='');
+    const any=b.size!==''||b.weight!==''||b.font!=='';
+    if(cleared||!any)out.push(sw(k,{size:'',weight:'',font:''}));
+    if(any)out.push(sw(k,b));
+  });
+  return out;
+}
+function line(){const s=switches(own,cur);return s.length?head()+' '+s.join(' '):'';}
+
+function apply(){
+  const l=line();if(!l){toast('אין מה להחיל');return false;}
+  const back=switches(cur,own);
+  const no=can('shape')?V.shape(l):'התוכנה הזו אינה מכירה את לוח העיצוב';
+  if(no){toast(no);return false;}
+  done.push({what:S.what,path:S.path,line:head()+' '+back.join(' ')});
+  toast('הוחל');
+  load(S.what,S.path);
+  if(!isList())retheme();
+  return true;
+}
+function undoApplied(){
+  const d=done.pop();if(!d)return;
+  const no=V.shape(d.line);
+  if(no){done.push(d);toast(no);return;}
+  toast('ההחלה האחרונה בוטלה');
+  load(d.what,d.path);
+  if(!isList())retheme();
+}
+
+// ---------- מה שיהיה: העיצוב, והצבעים ----------
+function clone(o){return JSON.parse(JSON.stringify(o));}
+function eff(){
+  const i=I(),d=cur('design');
+  const base=clone(d&&i.presets[d]?i.presets[d]:S.above);
+  const g0=!!base.grid,c0=base.cols;                                  // מבנה 260: לפני מה שנקבע כאן
+  ['cols','gap','icon'].forEach(k=>{const v=cur(k);if(v!=='')base[k]=+v;});
+  const sv=Object.assign({},base.shape||{});                        // מבנה 255: הפריט — מה שנקבע, ועליו מה שמשתנה
+  SHAPE().forEach(x=>{const v=cur('s:'+x[0]);if(v!=='')sv[x[0]]=v;});
+  SHAPE().forEach(x=>{const v=sv[x[0]];if(v==null||v==='')return;
+    if(x[3]==='around')base.around=v;else if(x[3]==='lines'||x[3]==='min')base[x[3]]=+v;else base[x[3]]=(v===x[2][0]);});
+  base.shape=sv;
+  // מבנה 260: כמו בפקודה (הכלל — בתוכנה; כאן רק מה שייראה): סגנון שמתחלף בלי שנכתבו טורים — הטורים הרגילים של הסגנון;
+  // סגנון שחוזר למה שמעל — גם הטורים. "מתחלף" — מול מה שנראה עכשיו; ואם נבחר גם עיצוב — מול הסגנון של העיצוב
+  const sk=SHAPE().find(x=>x[3]==='grid'),stk=sk?'s:'+sk[0]:'';
+  if(i.styleCols&&stk&&stk in P&&!('cols' in P)){
+    const was='design' in P?g0:!!(S.shown&&S.shown.grid);
+    if(!!base.grid!==was)base.cols=P[stk]!==''?i.styleCols[P[stk]]:c0;
+  }
+  let groupSet=false;
+  TEXTS().forEach(t=>{
+    const o=cur(t),x=base.texts[t];
+    if(o.size!=='')x.size=o.size;
+    if(o.weight!==''){x.weight=i.weightValues[o.weight]||+o.weight;x.weightName=o.weight;}
+    if(o.font!=='')x.font=o.font;
+    if(t===i.texts[3]&&(o.size!==''||o.weight!==''||o.font!==''))groupSet=true;
+    if(t===i.texts[4]&&(o.size!==''||o.weight!==''||o.font!==''))base.tagOwn=true;
+  });
+  if(!base.groupOwn&&!groupSet)base.texts[i.texts[3]]=clone(base.texts[i.texts[1]]);
+  const c=effColors();base.dark=c.dark;base.colors=c.colors;
+  return base;
+}
+function effColors(){
+  if(noColors())return {dark:S.shown.dark,colors:S.shown.colors};
+  const k=K(),lk=cur('look'),dark=lk?lk===k.dark:S.above.dark,out={};
+  I().roles.forEach(r=>{
+    const n=r[0],a=S.above.colors[n]||r[1],baseAbove=r[S.above.dark?2:1];
+    const inherited=a.toUpperCase()!==baseAbove.toUpperCase()?a:r[dark?2:1];
+    out[n]=cur('c:'+n)||inherited;
+  });
+  return {dark,colors:out};
+}
+// העמוד עצמו — בצבעים של האופן שעל המסך, אחרי החלה של צבעים (המסכים של התוכנה — כשחוזרים אליהם)
+function retheme(){
+  const m=J(V.design(I().modeWord,S.current),null);if(!m||m.error||!m.shown)return;
+  const c=m.shown.colors,R=I().roles.map(r=>c[r[0]]);
+  const r=document.documentElement.style,set=(k,v)=>{if(v)r.setProperty(k,v);};
+  set('--fg',R[0]);set('--muted',R[1]);set('--ghost',R[2]);set('--on',R[3]);set('--bg',R[4]);set('--soft',R[5]);
+  set('--chip',R[8]);set('--accent',R[10]);set('--chip-fg',R[11]);set('--err',R[15]);set('--rule',R[17]);
+}
+
+// ---------- צבע: בהירות ----------
+function hex2hsl(h){
+  const n=parseInt(h.slice(1),16),r=(n>>16&255)/255,g=(n>>8&255)/255,b=(n&255)/255;
+  const mx=Math.max(r,g,b),mn=Math.min(r,g,b),l=(mx+mn)/2;let hh=0,s=0;
+  if(mx!==mn){const d=mx-mn;s=l>.5?d/(2-mx-mn):d/(mx+mn);
+    hh=mx===r?(g-b)/d+(g<b?6:0):mx===g?(b-r)/d+2:(r-g)/d+4;hh/=6;}
+  return [hh,s,l];
+}
+function hsl2hex(h,s,l){
+  const f=(p,q,t)=>{if(t<0)t+=1;if(t>1)t-=1;return t<1/6?p+(q-p)*6*t:t<1/2?q:t<2/3?p+(q-p)*(2/3-t)*6:p;};
+  let r,g,b;if(s===0)r=g=b=l;else{const q2=l<.5?l*(1+s):l+s-l*s,p=2*l-q2;r=f(p,q2,h+1/3);g=f(p,q2,h);b=f(p,q2,h-1/3);}
+  const x=v=>Math.round(v*255).toString(16).padStart(2,'0');
+  return ('#'+x(r)+x(g)+x(b)).toUpperCase();
+}
+const okHex=v=>/^#[0-9A-Fa-f]{6}$/.test(v);
+
+// ---------- הציור ----------
+function draw(){
+  if(!S)return;
+  drawWho();drawPreview();drawTry();drawMain();drawCmd();drawBars();
+}
+function drawWho(){
+  const i=I(),w=$('who');w.textContent='';
+  const add=(t,on,fn)=>w.appendChild(B('chip'+(on?' on':''),t,fn));
+  add('כל התוכנה',isProgram(),()=>leave(()=>load(i.program,'')));
+  add('האופן "'+S.mode+'"',S.what===i.modeWord,()=>leave(()=>load(i.modeWord,S.mode)));
+  if(started)add('הרשימה "'+last(started)+'"',isList()&&S.path===started,()=>leave(()=>load(i.list,started)));
+  if(isList()&&S.path!==started)add('הרשימה "'+last(S.path)+'"',true,()=>{});
+  add('בחירת רשימה…',false,()=>leave(pickList));
+  $('fn').textContent=isProgram()?'כל התוכנה':S.what===i.modeWord?'האופן '+S.mode:S.path.replace(/\\/g,' › ');
+}
+const last=p=>String(p).split(/[\\/]/).filter(Boolean).pop()||p;
+// יש שינויים שלא הוחלו — שואלים (בגיליון של העמוד, לא בחלון של הדפדפן)
+function leave(go){
+  if(!Object.keys(P).length){go();return;}
+  const sh=E('div','sheet'),inn=E('div','in');sh.appendChild(inn);
+  inn.appendChild(E('h3',null,'יש שינויים שלא הוחלו'));
+  inn.appendChild(E('p','cmd',line()));
+  const row=E('div','chips');inn.appendChild(row);
+  row.appendChild(B('btn main','להחיל ולהמשיך',()=>{sh.remove();if(apply())go();}));
+  row.appendChild(B('btn','לעזוב אותם',()=>{sh.remove();P={};hist=[];fut=[];go();}));
+  row.appendChild(B('btn','להישאר',()=>sh.remove()));
+  sh.addEventListener('click',e=>{if(e.target===sh)sh.remove();});
+  document.body.appendChild(sh);
+}
+let pickN=0;
+function pickList(){
+  if(!can('pickList')){toast('אין כאן בחירת רשימה');return;}
+  const id='pl'+(++pickN);
+  WAIT[id]=v=>{const o=J(v,null);if(!o)return;
+    load(I().list,(o.mode||S.mode)+'\\'+o.path);};               // הדרך מתחילה באופן — גם רשימה באופן אחר
+  if(PICKMODE())V.pickListIn(id,'איזו רשימה לעצב?',S.mode||'');
+  else V.pickList(id,'איזו רשימה לעצב?');
+}
+const WAIT={};
+const prevResult=window.vfmResult;
+window.vfmResult=function(id,v){if(WAIT[id]){const f=WAIT[id];delete WAIT[id];f(v);}else if(prevResult)prevResult(id,v);};
+
+// ---------- הניסוי (מבנה 251; המשתמש, 17.11.2026: "כן" — לנסות קודם בתצוגה של התוסף · "ותכין גם שמות לעיצובים האלה… לאפשר
+// לשמור שילוב מוצלח בשם"): רעיונות למראה שעוד אין בתוכנה, מהצילומים שנאספו. רק בתצוגה המקדימה — לא נכנס לפקודה, לא ל"החלה"
+// ולא לרשימות. מה שימצא חן — ייבנה בתוכנה (קודם פקודה). השילובים השמורים — בלוח בלבד.
+const T0={grid:'',cols:'',iconBg:'',card:false,side:false,tight:false,noStrip:false,hidden:false,thumbs:false,badge:false,bar:false,noNames:false,noData:false,dataSide:false,
+  two:false,fold:false,gmenu:false,carousel:false,tabs:false,wide:false};
+const TOG_ITEM=[['card','רקע לכל פריט'],['side','צלמית לצד השם'],['tight','צמוד, בלי ריווח'],['noStrip','בלי פס הסוג'],['hidden','מוסתר — חיוור'],['thumbs','תמונה ממוזערת'],
+  ['badge','סמל קטן על הצלמית'],['bar','פס ואחוז בקצה'],['noNames','בלי שמות'],['noData','בלי נתונים'],['dataSide','נתונים בצד']];
+const TOG_SCREEN=[['two','שני סגנונות לפי קבוצה'],['fold','קבוצה מקופלת עם "עוד"'],['gmenu','⋮ לכותרת קבוצה'],['carousel','שורת כרטיסים לצד'],['tabs','לשוניות'],['wide','כרטיס רחב']];
+const ICON_BG=['בלי','מסגרת','ריבוע רך','ריבוע חי','עיגול חי'];
+const COMBOS={
+  'כרטיסי קטגוריות':{grid:'רשת',cols:'2',card:true,side:true,iconBg:'בלי',noStrip:true,gmenu:true,carousel:true},
+  'שורות רכות':{grid:'שורות',iconBg:'ריבוע רך',hidden:true},
+  'אריחים':{grid:'רשת',cols:'3',card:true,iconBg:'בלי',noData:true,noStrip:true,hidden:true},
+  'עיגולים צבעוניים':{grid:'רשת',cols:'4',iconBg:'עיגול חי',noData:true,noStrip:true},
+  'ריבועים צבעוניים':{grid:'רשת',cols:'4',iconBg:'ריבוע חי',noStrip:true,wide:true},
+  'תיקיות עם סמל':{grid:'רשת',cols:'4',thumbs:true,badge:true,noData:true},
+  'גלריה':{grid:'רשת',cols:'3',thumbs:true,noNames:true,tight:true,noStrip:true},
+  'תמונות עם שמות':{grid:'רשת',cols:'3',thumbs:true,noStrip:true},
+  'ניתוח מקום':{grid:'שורות',card:true,bar:true,iconBg:'ריבוע רך',wide:true},
+  'שני חלקים':{two:true,fold:true,gmenu:true,tabs:true}
+};
+let TRY=Object.assign({},T0,J(pref('try',''),{}));
+let SAVED=J(pref('try-saved',''),{});
+let foldOpen=false;
+// מבנה 264 (המשתמש, 18.11.2026: "ולמה לא הכנסת את זה לביצוע?" · "תגמור את שניהם"): מה שהתוכנה מכירה — נכנס לפקודה, ו"החלה" קובעת
+// אותו; מה שעוד לא — רק בתצוגה, ומסומן ◌. הקישור — לפי השם הקבוע שהתוכנה מוסרת (info.shape), ולכן מה שייבנה בתוכנה מתחבר מעצמו.
+// הלוח אינו קובע כאן שום כלל: כל מתג הוא ערך אחד של "עצב", כמו בכרטיס "הפריט".
+// [מתג בניסוי] ← [השם הקבוע בתוכנה, איזה ערך הוא ה"דלוק": 0 — הראשון (כן), 1 — השני (לא / בצד)]
+const LINK={card:['tint',0],side:['side',0],noStrip:['showTag',1],hidden:['fade',0],thumbs:['thumbs',0],badge:['badge',0],bar:['bar',0],noNames:['showName',1],
+  noData:['showData',1],dataSide:['dataBelow',1],two:['two',0],fold:['fold',0],gmenu:['gmenu',0],carousel:['carousel',0],tabs:['tabs',0],wide:['wide',0]};
+const BG_OF={'ריבוע רך':2,'ריבוע חי':2,'עיגול חי':3};   // הרקע לצלמית שבשילובים ← המקום ברשימת הערכים של התוכנה
+const shp=id=>SHAPE().find(x=>x[3]===id&&Array.isArray(x[2])&&typeof x[2][0]==='string');
+/** לאן מתג של הניסוי הולך בתוכנה: המפתח בלוח, ומה כותבים בו — או null (עוד לא בתוכנה: רק בתצוגה) */
+function link(k){
+  if(!SHAPE().length)return null;                      // תוכנה שאינה מכירה את "הפריט" — הכול רק בתצוגה, כמו קודם
+  if(k==='cols')return {key:'cols',to:v=>v};
+  if(k==='tight')return {key:'gap',to:v=>v?'0':''};
+  if(k==='grid'){const x=shp('grid');return x?{key:'s:'+x[0],to:v=>v==='רשת'?x[2][0]:v==='שורות'?x[2][1]:''}:null;}
+  if(k==='iconBg'){const x=shp('around');return x?{key:'s:'+x[0],to:v=>!v?'':x[2].indexOf(v)>=0?v:x[2][BG_OF[v]]||''}:null;}
+  const l=LINK[k],x=l&&shp(l[0]);return x?{key:'s:'+x[0],to:v=>v?x[2][l[1]]:''}:null;
+}
+const full=o=>Object.assign({},T0,o);
+/** האם מה שעל הלוח הוא השילוב הזה (מה שבתוכנה — לפי מה שנקבע כאן; השאר — לפי הניסוי) */
+const sameTry=o=>{o=full(o);return Object.keys(T0).every(k=>{const l=link(k);return l?l.to(o[k])===cur(l.key):o[k]===TRY[k];});};
+const tryOn=()=>!sameTry({});
+const tryOnly=()=>Object.keys(T0).some(k=>!link(k)&&TRY[k]!==T0[k]);   // יש בתצוגה משהו שעוד לא בתוכנה
+const soonOf=o=>{o=full(o);return Object.keys(T0).filter(k=>o[k]!==T0[k]&&!link(k));};
+const NAME_OF=Object.assign({},...TOG_ITEM.concat(TOG_SCREEN).map(([k,t])=>({[k]:t})),{grid:'סגנון',cols:'טורים',iconBg:'רקע לצלמית'});
+/** שילוב שלם: מה שבתוכנה — לשינויים (צעד אחד ב"ביטול"); השאר — לניסוי. מה שהשילוב לא אומר — חוזר ל"כמו העיצוב" */
+function setTry(o){
+  o=full(o);const before=JSON.stringify(P),t={};
+  Object.keys(T0).forEach(k=>{const l=link(k);if(!l){t[k]=o[k];return;}t[k]=T0[k];const v=l.to(o[k]);if(same(v,own(l.key)))delete P[l.key];else P[l.key]=v;});
+  if(JSON.stringify(P)!==before){hist.push(before);fut=[];}
+  TRY=t;foldOpen=false;setPref('try',JSON.stringify(TRY));draw();
+}
+/** מתג אחד: רק הוא משתנה */
+function pickTry(k,v){
+  const l=link(k);
+  if(l){change(l.key,l.to(v));return;}
+  TRY=Object.assign({},TRY,{[k]:v});foldOpen=false;setPref('try',JSON.stringify(TRY));drawPreview();drawTry();
+}
+const tryVal=k=>{const l=link(k);if(!l)return TRY[k];const c=cur(l.key);
+  return k==='cols'||k==='iconBg'?c:k==='grid'?(c===l.to('רשת')?'רשת':c===l.to('שורות')?'שורות':''):c!==''&&c===l.to(true);};
+function flip(k){pickTry(k,!tryVal(k));}
+/** מה שעל הלוח, כשילוב — לשמירה בשם */
+const tryNow=()=>{const o={};Object.keys(T0).forEach(k=>{o[k]=tryVal(k);});return o;};
+function drawTry(){
+  const c=$('tryCard');c.hidden=!VIEW.tryc;if(!VIEW.tryc)return;c.textContent='';
+  const live=SHAPE().length>0,soon=k=>!link(k);
+  const h=c.appendChild(E('h2',null));h.appendChild(E('span','k',live?'ניסוי ושילובים':'ניסוי — רק בתצוגה'));
+  const clr=B('btn','ניקוי',()=>setTry({}));clr.disabled=!tryOn();h.appendChild(clr);
+  c.appendChild(E('p','note',live?'מה שהתוכנה מכירה — נכנס לפקודה, ו"החלה" קובעת אותו. מה שמסומן ◌ — עוד לא בתוכנה: רק בתצוגה המקדימה, ולא יוחל.'
+    :'מה שכאן משנה רק את התצוגה המקדימה — לא נכנס לפקודה, ל"החלה" ולרשימות. מה שימצא חן — ייבנה בתוכנה.'));
+  const s1=E('div','tsec');s1.appendChild(E('div','tl','שילובים'));
+  const ch=E('div','chips');ch.id='tryCombos';
+  const cchip=(n,o,cls)=>B('chip'+cls+(tryOn()&&sameTry(o)?' on':'')+(live&&soonOf(o).length?' soon':''),n,()=>setTry(o));
+  Object.keys(COMBOS).forEach(n=>ch.appendChild(cchip(n,COMBOS[n],'')));
+  s1.appendChild(ch);
+  const mine=Object.keys(SAVED);
+  if(mine.length){const ch2=E('div','chips');ch2.id='trySaved';mine.forEach(n=>ch2.appendChild(cchip(n,SAVED[n],' mineC')));s1.appendChild(ch2);}
+  if(live&&tryOnly()){const ms=E('div','tmiss','בתצוגה יש גם מה שעוד לא בתוכנה, ולא יוחל: '+soonOf(TRY).map(k=>NAME_OF[k]).join(' · '));ms.id='tryMiss';s1.appendChild(ms);}
+  const ac=E('div','acts');
+  const sv=B('btn','שמירה בשם…',saveTry);sv.disabled=!tryOn();ac.appendChild(sv);
+  const now=mine.find(n=>sameTry(SAVED[n]));
+  if(now)ac.appendChild(B('btn','מחיקת "'+now+'"',()=>delTry(now)));
+  s1.appendChild(ac);c.appendChild(s1);
+  const d1=E('details');d1.open=true;d1.appendChild(E('summary',null,'מראה הפריט'));
+  const radio=(lb,k,vals)=>{const r=E('div','tln');r.appendChild(E('span','tl2',lb));const g=E('div','chips');
+    [['','כמו העיצוב']].concat(vals.map(v=>[v,v])).forEach(([v,t])=>g.appendChild(B('chip'+(tryVal(k)===v?' on':'')+(live&&soon(k)&&v?' soon':''),t,()=>pickTry(k,v))));r.appendChild(g);return r;};
+  d1.appendChild(radio('סגנון','grid',['רשת','שורות']));
+  d1.appendChild(radio('טורים','cols',['2','3','4','5']));
+  const ar=link('iconBg')&&shp('around');
+  d1.appendChild(radio('רקע לצלמית','iconBg',ar?ar[2]:ICON_BG));     // מה שהתוכנה מכירה — הערכים שלה
+  const tog=(k,t)=>B('chip'+(tryVal(k)?' on':'')+(live&&soon(k)?' soon':''),t,()=>flip(k));
+  const g1=E('div','chips tog');TOG_ITEM.forEach(([k,t])=>g1.appendChild(tog(k,t)));d1.appendChild(g1);
+  c.appendChild(d1);
+  const d2=E('details');d2.open=true;d2.appendChild(E('summary',null,'מבנה המסך'));
+  const g2=E('div','chips tog');TOG_SCREEN.forEach(([k,t])=>g2.appendChild(tog(k,t)));d2.appendChild(g2);
+  c.appendChild(d2);
+}
+function sheetOf(title,text){
+  const sh=E('div','sheet'),inn=E('div','in');sh.appendChild(inn);
+  inn.appendChild(E('h3',null,title));if(text)inn.appendChild(E('p',null,text));
+  sh.addEventListener('click',e=>{if(e.target===sh)sh.remove();});document.body.appendChild(sh);
+  return [sh,inn];
+}
+function saveTry(){
+  const [sh,inn]=sheetOf('שמירת השילוב בשם','השם נשמר בלוח בלבד. בחירה בו מחזירה את השילוב ללוח, ו"החלה" קובעת את מה שהתוכנה מכירה.');
+  const inp=E('input','nmIn');inp.type='text';inp.maxLength=30;inp.setAttribute('aria-label','השם');
+  const was=Object.keys(SAVED).find(n=>sameTry(SAVED[n]));if(was)inp.value=was;
+  inn.appendChild(inp);const er=E('div','err');er.hidden=true;inn.appendChild(er);
+  const ok=B('btn main','שמירה',()=>{
+    const n=inp.value.trim();
+    const bad=!n?'צריך שם':n.length>30?'עד 30 תווים':COMBOS[n]?'זה שם של שילוב מוכן — צריך שם אחר':'';
+    if(bad){er.textContent=bad;er.hidden=false;return;}
+    if(SAVED[n]&&!sameTry(SAVED[n])&&ok.dataset.sure!=='1'){er.textContent='כבר יש שילוב בשם "'+n+'". "להחליף" — והקודם יוחלף.';er.hidden=false;ok.dataset.sure='1';ok.textContent='להחליף';return;}
+    SAVED[n]=tryNow();setPref('try-saved',JSON.stringify(SAVED));sh.remove();toast('נשמר: "'+n+'"');drawTry();
+  });
+  inp.addEventListener('input',()=>{ok.dataset.sure='';ok.textContent='שמירה';er.hidden=true;});
+  const ac=E('div','acts');ac.appendChild(ok);ac.appendChild(B('btn','ביטול',()=>sh.remove()));inn.appendChild(ac);
+  try{inp.focus();}catch(e){}
+}
+function delTry(n){
+  const [sh,inn]=sheetOf('למחוק את השילוב "'+n+'"?','השילוב יימחק מהלוח. מה שעל התצוגה — נשאר.');
+  const ac=E('div','acts');
+  ac.appendChild(B('btn main','מחיקה',()=>{delete SAVED[n];setPref('try-saved',JSON.stringify(SAVED));sh.remove();toast('נמחק: "'+n+'"');drawTry();}));
+  ac.appendChild(B('btn','ביטול',()=>sh.remove()));inn.appendChild(ac);
+}
+
+function drawPreview(){
+  $('pvCard').hidden=!VIEW.pv;if(!VIEW.pv)return;
+  const d=eff(),c=d.colors,t=d.texts,i=I(),pv=$('pv'),X=Object.assign({},TRY);pv.textContent='';
+  // מבנה 264: מה שבתוכנה — מהעיצוב עצמו (עם השינויים), לא מהניסוי
+  if(SHAPE().length){X.cols='';X.tight=d.gap===0;['grid','iconBg'].forEach(k=>{if(link(k))X[k]='';});
+    Object.keys(LINK).forEach(k=>{const x=shp(LINK[k][0]);if(x)X[k]=!!d.shape&&d.shape[x[0]]===x[2][LINK[k][1]];});}
+  if(X.grid&&d.grid!==(X.grid==='רשת')){        // הניסוי — רק כאן, על מה שנראה
+    d.grid=X.grid==='רשת';if(!d.grid)d.cols=1;
+    if(!BY_NAME()){const pr=Object.values(i.presets).find(p=>p.grid===d.grid&&p.showIcon);if(pr){d.gap=pr.gap;d.icon=pr.icon;}}   // תוכנה שמודדת ברשת מהאריח
+  }
+  if(X.cols)d.cols=+X.cols;
+  if(X.tight)d.gap=0;
+  if(X.noData)d.showData=false;
+  const font=f=>!f||f===K().system?'var(--f)':'"'+f+'",var(--f)';
+  const style=(e,x,color)=>{if(!x)return;e.style.fontSize=x.size+'px';e.style.fontWeight=x.weight;e.style.fontFamily=font(x.font);if(color)e.style.color=color;};
+  const NM=t[i.texts[1]],DT=t[i.texts[2]],tagT=t[i.texts[4]]||{size:'11',weight:700,font:''};   // תוכנה שאינה מכירה את תווית הסוג — כמו שהיא מציירת
+  pv.style.background=c['רקע'];pv.style.borderColor=c['קו בין חלקים'];
+  const ph=E('div','ph',isList()?last(S.path):'ספרים');ph.style.background=c['רקע הכותרת'];style(ph,t[i.texts[0]],c['טקסט']);pv.appendChild(ph);
+  const W=Math.max(220,(pv.clientWidth||320)-12);
+  if(X.tabs){const tb=E('div','tabs');tb.style.borderBottom='1px solid '+c['קו בין חלקים'];
+    ['רשימות','קבצים','תמונות'].forEach((n,k)=>{const b=E('span','tab'+(k?'':' on'),n);style(b,NM,k?c['טקסט משני']:c['הדגשה']);if(!k)b.style.borderBottomColor=c['הדגשה'];tb.appendChild(b);});
+    pv.appendChild(tb);}
+  if(X.wide){const wc=E('div','wide');wc.style.background=c['הדגשה'];
+    const ring=E('div','ring','62%');ring.style.borderColor=c['טקסט על צבע'];ring.style.color=c['טקסט על צבע'];wc.appendChild(ring);
+    const tx=E('div','tt');const a=E('div','nm2','כונן פנימי');style(a,NM,c['טקסט על צבע']);a.style.fontWeight=700;
+    const b2=E('div','dt','38 GB פנויים מתוך 128');style(b2,DT,c['טקסט על צבע']);tx.appendChild(a);tx.appendChild(b2);wc.appendChild(tx);pv.appendChild(wc);}
+  const ghead=n=>{const g=E('div','grp');g.style.background=c['כותרת קבוצה'];style(g,t[i.texts[3]],c['טקסט']);
+    if(X.gmenu){g.classList.add('gm');g.appendChild(E('span',null,n));const m=E('span','gdots','⋮');m.style.color=c['טקסט משני'];g.appendChild(m);}else g.textContent=n;
+    pv.appendChild(g);};
+  if(X.carousel){ghead('אחרונים');const car=E('div','car');
+    [['הלכות',['שבת','ברכות','תפילה']],['מוסר',['מסילת ישרים','שערי תשובה','חובות הלבבות']],['הורדות',['שער.jpg','סיכום.pdf','רשימה.txt']],['סריקות',['חשבון 1','חשבון 2','קבלה']]].forEach(([n,l])=>{
+      const k=E('div','cc');k.style.background=c['רקע רך'];k.style.width=Math.round(W*.58)+'px';
+      const a=E('div','nm2',n);style(a,NM,c['טקסט']);a.style.fontWeight=600;k.appendChild(a);
+      l.forEach(x=>{const r=E('div','dt','📄 '+x);style(r,DT,c['טקסט משני']);k.appendChild(r);});car.appendChild(k);});
+    pv.appendChild(car);}
+  const tint=['#E8F0FE','#E6F4EA','#FEF7E0','#FCE8E6','#F3E8FD','#E4F7FB'];
+  const VIVID=['#F08C00','#7048E8','#E03131','#1971C2','#2F9E44','#0C8599','#868E96'];
+  const PIC=['linear-gradient(160deg,#FFD8A8,#F76707 55%,#5C2A0B)','linear-gradient(160deg,#A5D8FF,#1C7ED6 60%,#0B3D91)','linear-gradient(160deg,#B2F2BB,#2F9E44 60%,#1B4332)',
+    'linear-gradient(160deg,#FCC2D7,#C2255C 60%,#5C0F2E)','linear-gradient(160deg,#D0BFFF,#6741D9 60%,#2B1A66)'];
+  const PAGE='repeating-linear-gradient(180deg,#FFFFFF 0 7px,#DEE2E6 7px 8px)';
+  const wd=k=>cur('w:'+k)||((d.design===S.above.design&&!cur('design'))?(S.above.wording||{})[k]:'')||'';   // הנוסח — שלך, או מה שמעליו
+  const KIND=[[wd('רשימה ידנית')||'ידנית','#0F6E56'],[wd('רשימה חכמה')||'חכמה','#534AB7'],null,null,null,[wd('פקודה')||'פקודה','#185FA5']];
+  const ITEMS=[['📁','הלכות','12 קבצים',38,'📄'],['📚','מוסר','5 רשימות',22,'★'],['📄','מסילת ישרים.pdf','2.1 MB · 14.11',15],['📄','דרך ה׳.pdf','1.4 MB · 02.11',9],
+    ['🖼','שער.jpg','380 KB · 30.10',6],['▶','העתקה לטאבלט','6 קבצים',2]];
+  const barOf=(p,full)=>{const w=E('div','bw'+(full?' full':''));const tr=E('div','btr');tr.style.background=c['קו בין חלקים'];
+    const f=E('div','bf');f.style.width=p+'%';f.style.background=c['הדגשה'];tr.appendChild(f);w.appendChild(tr);
+    const pc=E('div','bp',p+'%');style(pc,DT,c['טקסט משני']);w.appendChild(pc);return w;};
+  function item(x,n,hid,o){
+    const it=E('div','it'+(o.grid?' g':''));
+    if(o.grid&&o.side){it.style.flexDirection='row';it.style.textAlign='start';}
+    if(n===2)it.style.background=c['שורה שנבחרה'];
+    else if(o.card)it.style.background=c['רקע רך'];
+    else if(!d.showIcon)it.style.background=tint[n%tint.length];
+    if(o.card)it.style.borderRadius='14px';
+    if(hid)it.style.opacity='0.45';
+    it.style.padding=o.gal?'0':o.grid?Math.max(o.card?8:4,Math.round(o.gapPx/2))+'px':Math.max(2,o.gapPx)+'px 8px';
+    if(!o.grid&&!o.card)it.style.borderBottom='1px solid '+c['קו בין חלקים'];
+    const kind=!X.noStrip&&d.showTag!==false&&!hid&&KIND[n];   // מבנה 256: הצג תווית
+    const icPx=o.icPx,tagPx=d.tagOwn?+tagT.size:Math.max(11,Math.round(icPx*.16));   // בלי שנקבע — לפי הצלמית, כמו בתוכנה
+    const thumb=X.thumbs?(hid?PIC[1]:n===4?PIC[0]:n===0?PIC[2]:n===1?PIC[4]:(n===2||n===3)?PAGE:null):null;
+    if(d.showIcon&&icPx>0){
+      const ic=E('div','ic',thumb?'':x[0]);ic.style.width=ic.style.height=icPx+'px';ic.style.fontSize=Math.round(icPx*.62)+'px';ic.style.color=c['צלמיות'];
+      const bg=o.iconBg||(d.around==='ריבוע צבעוני'?'ריבוע רך':d.around==='עיגול'?'עיגול רך':d.around==='מסגרת'?'מסגרת':'בלי');
+      if(thumb){ic.classList.add('th');ic.style.background=thumb;ic.style.position='relative';if(thumb===PAGE)ic.style.border='1px solid '+c['קו בין חלקים'];if(o.gal&&X.tight)ic.style.borderRadius='0';
+        if(n<2||hid){const s=E('span','cov',x[0]);s.style.fontSize=Math.max(10,Math.round(icPx*.24))+'px';ic.appendChild(s);}}   // כריכה לתיקייה
+      else if(bg==='ריבוע רך'||bg==='עיגול רך'){ic.style.background=c['רקע רך'];if(bg==='עיגול רך')ic.style.borderRadius='50%';}
+      else if(bg==='מסגרת')ic.style.border='1px solid '+c['קו בין חלקים'];
+      else if(bg==='ריבוע חי'||bg==='עיגול חי'){ic.style.background=VIVID[n%VIVID.length];ic.style.fontSize=Math.round(icPx*.5)+'px';ic.style.borderRadius=bg==='עיגול חי'?'50%':'22%';}
+      it.appendChild(ic);
+      if(kind&&!o.grid){ic.textContent=kind[0];ic.style.background=kind[1];ic.style.color='#fff';style(ic,tagT);ic.style.fontSize=(d.tagOwn?tagPx:Math.max(8,Math.round(icPx*.28)))+'px';ic.style.lineHeight='1.05';}
+      if(X.badge&&x[4]){ic.style.position='relative';ic.style.overflow='visible';const bs=Math.max(12,Math.round(icPx*.38));
+        const bd=E('span','bd',x[4]);bd.style.width=bd.style.height=bs+'px';bd.style.fontSize=Math.round(bs*.6)+'px';bd.style.background=c['רקע'];bd.style.borderColor=c['קו בין חלקים'];ic.appendChild(bd);}
+    }
+    let st=null;
+    if(kind&&o.grid){st=E('div','tg',kind[0]);st.style.background=kind[1];st.style.color='#fff';st.style.alignSelf='stretch';
+      style(st,tagT);st.style.fontSize=tagPx+'px';if(!o.side)it.appendChild(st);}            // ברשת — הפס עם הסוג, גם בלי צלמית
+    if(!X.noNames){
+      const tt=E('div','tt'+((X.dataSide||d.dataBelow===false)&&d.showData?' side':''));const nm=E('div','nm2',x[1]);style(nm,NM,c['טקסט']);tt.appendChild(nm);
+      if(d.lines>1){nm.classList.add('ml');nm.style.webkitLineClamp=String(d.lines);}   // שורות לשם
+      if(d.showData){const dt=E('div','dt',x[2]);style(dt,DT,c['טקסט משני']);tt.appendChild(dt);}
+      if(st&&o.side)tt.appendChild(st);
+      if(X.bar&&o.grid)tt.appendChild(barOf(x[3],true));
+      if(X.bar&&!o.grid||o.side)tt.style.flex='1';
+      it.appendChild(tt);
+    }else if(st&&o.side)it.appendChild(st);
+    if(X.bar&&!o.grid)it.appendChild(barOf(x[3],false));
+    return it;
+  }
+  function group(name,list,o){
+    ghead(name);
+    const items=E('div','items');pv.appendChild(items);
+    const cols=o.grid?Math.max(1,o.cols):1;
+    // מבנה 258: כמו התוכנה — הריווח והצלמית מגודל השם, בשורות וברשת (ברשת — הריווח משני צדי האריח); תוכנה שלפני כן — ברשת מהאריח
+    o.gapPx=!o.grid?Math.round(NM.size*o.gap/100):BY_NAME()?Math.round(2*NM.size*o.gap/100):Math.round((W/cols)*o.gap/100);
+    items.style.gridTemplateColumns='repeat('+cols+',minmax(0,1fr))';items.style.gap=(o.grid?o.gapPx:(o.card?6:0))+'px';
+    if(o.card&&!o.grid)items.style.padding='6px';
+    const tile=(W-(cols-1)*o.gapPx)/cols;
+    o.gal=o.grid&&X.thumbs&&X.noNames;
+    o.icPx=o.gal?Math.floor(tile):!o.grid?Math.round(NM.size*o.icon/100):BY_NAME()?Math.round(Math.min(o.side?tile*0.35:Math.max(0,tile-o.gapPx),NM.size*o.icon/100))
+      :Math.min(tile*(o.side?0.35:0.9),Math.round(tile*Math.min(o.icon,100)/100));
+    const k=o.grid?cols:2,fold=X.fold&&o.last&&list.length>k;
+    (fold&&!foldOpen?list.slice(0,k):list).forEach(([x,n,hid])=>items.appendChild(item(x,n,hid,o)));
+    if(fold){const mo=E('button','more',foldOpen?'פחות':'עוד '+(list.length-k)+' ›');mo.style.color=c['הדגשה'];mo.style.gridColumn='1 / -1';
+      mo.addEventListener('click',()=>{foldOpen=!foldOpen;drawPreview();});items.appendChild(mo);}
+  }
+  const all=ITEMS.map((x,n)=>[x,n,false]);
+  if(X.hidden||d.fade)all.splice(2,0,[['📁','.גיבוי','3 קבצים',8],6,true]);   // מבנה 256: מוסתר חיוור — נראה בפריט לדוגמה
+  const base={grid:d.grid,cols:d.cols,gap:d.gap,icon:d.icon,card:X.card||!!d.tint,side:X.side,iconBg:X.iconBg,last:true};
+  const LISTS=[0,1,5];
+  if(X.two){
+    group('רשימות',all.filter(a=>LISTS.includes(a[1])),{grid:true,cols:2,gap:BY_NAME()?15:4,icon:BY_NAME()?250:100,card:true,side:true,iconBg:X.iconBg||'ריבוע רך'});
+    group('קבצים',all.filter(a=>!LISTS.includes(a[1])),base);
+  }else group('פרקים',all,base);
+  const sb=E('div','selbar','נבחר 1 · פס הבחירה');sb.style.background=c['פס הבחירה'];sb.style.color=c['הדגשה כהה'];pv.appendChild(sb);
+  $('pvNote').textContent=(d.grid?'רשת · '+Math.max(1,d.cols)+' טורים':'שורות')+(Object.keys(P).length?' · עם השינויים':'')+(tryOnly()?' · ניסוי':'');
+}
+
+function reBtn(k,empty){const o=cur(k);const b=B('re','↺',()=>change(k,empty),'כמו '+aboveWord());b.disabled=same(o,empty);return b;}
+function aboveWord(){return isProgram()?'הרגיל':S.what===I().modeWord?'כל התוכנה':'הרשימה שמעליה';}
+function mineMark(k){const o=cur(k),set=typeof o==='string'?o!=='':(o.size+o.weight+o.font)!=='';return E('span','mine',set?'נקבע כאן':'יורש');}
+
+function drawMain(){
+  const m=$('main');m.textContent='';
+  const i=I(),d=eff();
+  // עיצוב מוכן
+  const c1=E('div','card');c1.appendChild(E('h2',null)).appendChild(E('span','k','עיצוב מוכן'));
+  const ch=E('div','chips');c1.appendChild(ch);
+  const dv=cur('design');
+  ch.appendChild(B('chip'+(dv===''?' on':''),'כמו '+aboveWord()+(dv===''?' ('+S.above.design+')':''),()=>change('design','')));
+  i.designs.forEach(n=>ch.appendChild(B('chip'+(dv===n?' on':''),n,()=>change('design',n))));
+  m.appendChild(c1);
+  // הצורה
+  const c2=E('div','card');const h2=c2.appendChild(E('h2',null));h2.appendChild(E('span','k','צורה'));
+  [['cols','טורים',i.ranges.cols,d.grid?'':'בשורות — טור אחד'],['gap','ריווח',i.ranges.gap,d.grid&&!BY_NAME()?'% מרוחב האריח':'% מגודל השם'],['icon','גודל צלמית',i.ranges.icon,d.grid&&!BY_NAME()?'% מרוחב האריח':'% מגודל השם']].forEach(([k,lb,rg,hint])=>{
+    const r=E('div','row');const l=E('div','lb',lb);if(hint)l.appendChild(E('small',null,hint));r.appendChild(l);
+    const v=cur(k),shown=v!==''?+v:d[k];
+    const s=E('input');s.type='range';s.min=rg[0];s.max=k==='icon'?Math.min(rg[1],400):rg[1];s.value=shown;
+    const n=E('input','num');n.type='number';n.min=rg[0];n.max=rg[1];n.value=shown;n.setAttribute('aria-label',lb);
+    s.addEventListener('input',()=>{n.value=s.value;});s.addEventListener('change',()=>change(k,String(s.value)));
+    n.addEventListener('change',()=>{const x=parseInt(n.value,10);if(isNaN(x)||x<rg[0]||x>rg[1]){n.classList.add('bad');toast('מ־'+rg[0]+' עד '+rg[1]);return;}change(k,String(x));});
+    r.appendChild(s);r.appendChild(n);r.appendChild(reBtn(k,''));r.appendChild(mineMark(k));c2.appendChild(r);
+  });
+  m.appendChild(c2);
+  // הפריט (מבנה 255) — מה שהתוכנה מכירה: ערך אחד מכמה, או מספר בטווח
+  if(SHAPE().length){
+    const c5=E('div','card');c5.id='shapeCard';c5.appendChild(E('h2',null)).appendChild(E('span','k','הפריט'));
+    SHAPE().forEach(x=>{
+      const k='s:'+x[0],v=cur(k),shown=v!==''?v:String((d.shape||{})[x[0]]||'');
+      const r=E('div','row');r.style.flexWrap='wrap';r.appendChild(E('div','lb',x[0]));
+      if(typeof x[2][0]==='number'){
+        const rg=x[2],s=E('input');s.type='range';s.min=rg[0];s.max=rg[1];s.value=shown;
+        const n=E('input','num');n.type='number';n.min=rg[0];n.max=rg[1];n.value=shown;n.setAttribute('aria-label',x[0]);
+        s.addEventListener('input',()=>{n.value=s.value;});s.addEventListener('change',()=>change(k,String(s.value)));
+        n.addEventListener('change',()=>{const y=parseInt(n.value,10);if(isNaN(y)||y<rg[0]||y>rg[1]){n.classList.add('bad');toast('מ־'+rg[0]+' עד '+rg[1]);return;}change(k,String(y));});
+        r.appendChild(s);r.appendChild(n);
+      }else{
+        const g=E('div','seg');x[2].forEach(o=>g.appendChild(B(o===shown?'on':'',o,()=>change(k,o))));r.appendChild(g);
+      }
+      r.appendChild(reBtn(k,''));r.appendChild(mineMark(k));c5.appendChild(r);
+    });
+    m.appendChild(c5);
+  }
+  // הכתב — לכל סוג
+  const c3=E('div','card');c3.appendChild(E('h2',null)).appendChild(E('span','k','כתב'));
+  const NAMES=['כותרת המסך','שם הפריט','השורה מתחת לפריט','כותרת קבוצה','תווית הסוג'];
+  TEXTS().forEach((t,n)=>{
+    const o=cur(t),x=d.texts[t],box=E('div','tx'),hd=E('div','hd');
+    hd.appendChild(E('span',null,NAMES[n]||t));hd.appendChild(mineMark(t));hd.appendChild(reBtn(t,{size:'',weight:'',font:''}));box.appendChild(hd);
+    const ln=E('div','ln');
+    const s=E('input');s.type='range';s.min=i.ranges.size[0];s.max=i.ranges.size[1];s.value=x.size;s.style.flex='1';
+    const nb=E('input','num');nb.type='number';nb.min=i.ranges.size[0];nb.max=i.ranges.size[1];nb.value=x.size;nb.setAttribute('aria-label','גודל '+NAMES[n]);
+    const set=(f,v)=>{const y=Object.assign({},cur(t));y[f]=v;change(t,y);};
+    s.addEventListener('input',()=>{nb.value=s.value;});s.addEventListener('change',()=>set('size',String(s.value)));
+    nb.addEventListener('change',()=>{const v=parseInt(nb.value,10);if(isNaN(v)||v<i.ranges.size[0]||v>i.ranges.size[1]){nb.classList.add('bad');toast('מ־'+i.ranges.size[0]+' עד '+i.ranges.size[1]);return;}set('size',String(v));});
+    ln.appendChild(E('span','note','גודל'));ln.appendChild(s);ln.appendChild(nb);box.appendChild(ln);
+    const ln2=E('div','ln'),seg=E('div','seg');
+    i.weights.forEach(w=>seg.appendChild(B((o.weight||x.weightName)===w?'on':'',w,()=>set('weight',w))));
+    ln2.appendChild(seg);
+    const sel=E('select');sel.setAttribute('aria-label','גופן '+NAMES[n]);
+    [K().system].concat(i.fonts).forEach(f=>{const op=E('option',null,f===K().system?'גופן המערכת':f);op.value=f;if((o.font||x.font)===f)op.selected=true;sel.appendChild(op);});
+    sel.addEventListener('change',()=>set('font',sel.value));
+    ln2.appendChild(sel);box.appendChild(ln2);c3.appendChild(box);
+  });
+  if(!i.fonts.length)c3.appendChild(E('p','note','גופן נוסף — קובץ בתיקיית "גופנים" של האופן.'));
+  m.appendChild(c3);
+  // הנוסח של התוויות — לכל סוג (מבנה 250)
+  if((i.kinds||[]).length){
+    const c5=E('div','card');c5.appendChild(E('h2',null)).appendChild(E('span','k','נוסח התוויות'));
+    i.kinds.forEach(k=>{
+      const key='w:'+k,r=E('div','row');r.appendChild(E('div','lb',k));
+      const f=E('input','hex');f.style.width='auto';f.style.flex='1';f.style.direction='rtl';f.style.textAlign='start';
+      f.value=cur(key);f.placeholder='כמו במילון';f.setAttribute('aria-label','הנוסח של '+k);
+      f.addEventListener('change',()=>{const v=f.value.trim();if(v.length>30||/[·=]/.test(v)){f.classList.add('bad');toast('עד 30 תווים, בלי "·" ובלי "="');return;}change(key,v);});
+      r.appendChild(f);r.appendChild(reBtn(key,''));c5.appendChild(r);
+    });
+    m.appendChild(c5);
+  }
+  // הצבעים — לכל התוכנה, לאופן, ולרשימה (בתוכנה שמכירה — מבנה 271)
+  const c4=E('div','card');c4.appendChild(E('h2',null)).appendChild(E('span','k','צבעים'));
+  if(noColors()){c4.appendChild(E('p','note','בתוכנה הזו הצבעים נקבעים לכל התוכנה או לאופן — בבורר למעלה.'));m.appendChild(c4);return;}
+  const lr=E('div','row');lr.appendChild(E('div','lb','מראה'));const sg=E('div','seg');const lk=cur('look');
+  [['',' כמו '+aboveWord()],[K().light,'בהיר'],[K().dark,'כהה']].forEach(([v,t])=>sg.appendChild(B(lk===v?'on':'',t.trim(),()=>change('look',v))));
+  lr.appendChild(sg);c4.appendChild(lr);
+  const C=effColors().colors;let at=0;
+  i.groups.forEach(g=>{
+    const [gn,cnt]=g.split(':');const det=E('details');det.appendChild(E('summary',null,gn));
+    i.roles.slice(at,at+(+cnt)).forEach(r=>{
+      const k='c:'+r[0],v=C[r[0]],row=E('div','cl');
+      const pick=E('input');pick.type='color';pick.value=v.toLowerCase();pick.setAttribute('aria-label',r[0]);
+      const hsl=hex2hsl(v);const br=E('input');br.type='range';br.min=0;br.max=100;br.value=Math.round(hsl[2]*100);br.setAttribute('aria-label','בהירות '+r[0]);
+      const hx=E('input','hex');hx.value=v;hx.setAttribute('aria-label','הצבע '+r[0]);
+      pick.addEventListener('change',()=>change(k,pick.value.toUpperCase()));
+      br.addEventListener('input',()=>{const h=hex2hsl(cur(k)||v);hx.value=hsl2hex(h[0],h[1],br.value/100);pick.value=hx.value.toLowerCase();});
+      br.addEventListener('change',()=>change(k,hx.value));
+      hx.addEventListener('change',()=>{const t=hx.value.trim();const t2=t.startsWith('#')?t:'#'+t;if(!okHex(t2)){hx.classList.add('bad');toast('צבע נכתב כך: #RRGGBB');return;}change(k,t2.toUpperCase());});
+      row.appendChild(pick);row.appendChild(E('span','nm',r[0]));row.appendChild(br);row.appendChild(hx);row.appendChild(reBtn(k,''));
+      det.appendChild(row);
+    });
+    at+=+cnt;
+    if(i.roles.slice(at-cnt,at).some(r=>cur('c:'+r[0])!==''))det.open=true;
+    c4.appendChild(det);
+  });
+  m.appendChild(c4);
+}
+function drawCmd(){
+  $('cmdCard').hidden=!VIEW.cmd;
+  const l=line(),c=$('cmd');c.textContent=l||'אין שינויים — מה שנקבע כאן נשאר.';c.classList.toggle('none',!l);
+  $('apply').disabled=!l;$('discard').disabled=!l;
+}
+
+// ---------- התפריטים והקיצורים (כמו בחלונות) ----------
+const A={
+  apply:{t:'החלה',k:'✓ החלה',run:apply,on:()=>!!line()},
+  close:{t:'סגירה',run:()=>leave(()=>{if(can('close'))V.close();})},
+  undo:{t:'ביטול',k:'↶ ביטול',run:undo,on:()=>hist.length>0},
+  redo:{t:'חזרה',k:'↷ חזרה',run:redo,on:()=>fut.length>0},
+  discard:{t:'ביטול כל השינויים',run:discard,on:()=>Object.keys(P).length>0},
+  undoApplied:{t:'ביטול ההחלה האחרונה',run:undoApplied,on:()=>done.length>0},
+  inherit:{t:'הכול כמו שמעליו',k:'ברירת מחדל',run:inheritAll,on:()=>KEYS().some(k=>{const o=cur(k);return typeof o==='string'?o!=='':(o.size+o.weight+o.font)!=='';})},
+  copy:{t:'העתקת הפקודה',run:copyCmd,on:()=>!!line()},
+  pv:{t:'תצוגה מקדימה',run:()=>toggle('pv'),mark:()=>VIEW.pv},
+  tryc:{t:'ניסוי רעיונות',run:()=>toggle('tryc'),mark:()=>VIEW.tryc},
+  cmd:{t:'הפקודה שתרוץ',run:()=>toggle('cmd'),mark:()=>VIEW.cmd},
+  tbar:{t:'סרגל קיצורים',run:()=>toggle('tbar'),mark:()=>VIEW.tbar},
+  about:{t:'על הלוח',run:about}
+};
+const MENUS={file:['apply','-','close'],edit:['undo','redo','-','discard','undoApplied','-','inherit','copy'],view:['pv','tryc','cmd','tbar'],help:['about']};
+const TBAR=['undo','redo','inherit','apply'];
+function toggle(k){VIEW[k]=!VIEW[k];setPref(k,VIEW[k]?'1':'0');draw();}
+let openMenu=null;
+function drawBars(){
+  const tb=$('tbar');tb.hidden=!VIEW.tbar;tb.textContent='';
+  TBAR.forEach(a=>{const x=A[a];const b=B('btn'+(a==='apply'?' main':''),x.k||x.t,()=>x.run());b.disabled=x.on?!x.on():false;tb.appendChild(b);});
+  document.querySelectorAll('#mbar>button[data-m]').forEach(b=>b.classList.toggle('on',b.dataset.m===openMenu));
+}
+function showMenu(m){
+  const menu=$('menu');
+  if(openMenu===m||!m){openMenu=null;menu.hidden=true;drawBars();return;}
+  openMenu=m;menu.textContent='';
+  MENUS[m].forEach(a=>{
+    if(a==='-'){menu.appendChild(E('hr'));return;}
+    const x=A[a],b=E('button');b.appendChild(E('span','mk',x.mark&&x.mark()?'✓':''));b.appendChild(E('span',null,x.t));
+    b.disabled=x.on?!x.on():false;b.addEventListener('click',()=>{showMenu(null);x.run();});menu.appendChild(b);
+  });
+  const btn=document.querySelector('#mbar>button[data-m="'+m+'"]');
+  menu.style.insetInlineStart=Math.max(6,(btn.offsetLeft?document.body.clientWidth-btn.offsetLeft-btn.offsetWidth:6))+'px';
+  menu.hidden=false;drawBars();
+}
+document.querySelectorAll('#mbar>button[data-m]').forEach(b=>b.addEventListener('click',e=>{e.stopPropagation();showMenu(b.dataset.m);}));
+document.addEventListener('click',e=>{if(openMenu&&!$('menu').contains(e.target))showMenu(null);});
+$('apply').addEventListener('click',apply);
+$('discard').addEventListener('click',discard);
+$('copy').addEventListener('click',copyCmd);
+function copyCmd(){const l=line();if(!l)return;try{navigator.clipboard.writeText(l);toast('הועתק');}catch(e){toast(l);}}
+function about(){
+  const sh=E('div','sheet'),inn=E('div','in');sh.appendChild(inn);
+  inn.appendChild(E('h3',null,'לוח העיצוב'));
+  ['בוחרים למעלה מה מעצבים: כל התוכנה, האופן, או רשימה. הסדר: כל התוכנה ← האופן ← הרשימה ← הרשימות שבתוכה — כל אחת מקבלת ממה שמעליה, ומה שנקבע לה גובר.',
+   'כל שינוי נראה מיד בתצוגה המקדימה, ונשמר רק ב"החלה". "↺" — חוזרים לקבל ממה שמעליו.',
+   'ב"החלה" רצה הפקודה "עצב" — אותה פקודה שאפשר לכתוב בקובץ פקודות, דרך שכבת הניהול. היא כתובה בתחתית: "הפקודה שתרוץ".',
+   LISTCOL()?'הצבעים והמראה (בהיר / כהה) — לכל התוכנה, לאופן, וגם לרשימה: רשימה יכולה להיות כהה באופן בהיר, והרשימות שבתוכה יורשות ממנה. המסכים שכבר פתוחים מתעדכנים כשחוזרים אליהם.'
+     :'הצבעים והמראה (בהיר / כהה) — לכל התוכנה או לאופן. המסכים שכבר פתוחים מתעדכנים כשחוזרים אליהם.',
+   'הניסוי (מתחת לתצוגה המקדימה) — רעיונות למראה שעוד אין בתוכנה, ושילובים מוכנים בשמות. הוא משנה רק את התצוגה המקדימה: לא נכנס לפקודה ולא לרשימות. שילוב שמצא חן — אפשר לשמור בשם, בלוח בלבד.'].forEach(t=>inn.appendChild(E('p',null,t)));
+  inn.appendChild(B('btn main','סגירה',()=>sh.remove()));
+  sh.addEventListener('click',e=>{if(e.target===sh)sh.remove();});
+  document.body.appendChild(sh);
+}
+
+// ---------- התחלה ----------
+function theme(){
+  const t=J(can('theme')?V.theme():null,null);if(!t)return;
+  const r=document.documentElement.style,set=(k,v)=>{if(v)r.setProperty(k,v);};
+  set('--bg',t.bg);set('--soft',t.bgSoft);set('--fg',t.text);set('--muted',t.sub);set('--ghost',t.muted);set('--chip',t.bar);
+  set('--chip-fg',t.accentDark);set('--accent',t.accent);set('--err',t.red);set('--rule',t.rule);set('--on',t.onColor);
+}
+theme();
+const info=J(can('info')?V.info():null,{});
+if(window.vfm&&!(String(info.features||'').split(' ').includes('design'))){
+  $('main').appendChild(E('div','card','התוכנה הזו אינה מכירה את לוח העיצוב — צריך גרסה חדשה יותר.'));
+}else load('','');
+window.vfmResume=function(){if(S&&!Object.keys(P).length)load(S.what,S.path);};
+
+// ---------- דוגמה לבדיקה בדפדפן (בתוכנה — הגשר האמיתי) ----------
+function demoBridge(){
+  const ROLES=[["טקסט","#202124","#E8EAED"],["טקסט משני","#5F6368","#BDC1C6"],["טקסט חלש","#9AA0A6","#80868B"],["טקסט על צבע","#FFFFFF","#FFFFFF"],["רקע","#FFFFFF","#202124"],["רקע רך","#F4F5F6","#2A2B2E"],["רקע הכותרת","#F1F3F4","#303134"],["כותרת קבוצה","#E8EAED","#3C4043"],["פס הבחירה","#E8F0FE","#1F3A5F"],["שורה שנבחרה","#D2E3FC","#28456E"],["הדגשה","#1A73E8","#8AB4F8"],["הדגשה כהה","#174EA6","#AECBFA"],["סימון התאמה","#FFF2A8","#5C4A00"],["בספק","#FFF1C2","#4A3D10"],["בספק חזק","#F2B52B","#F2B52B"],["אזהרה ומחיקה","#C5221F","#F28B82"],["צלמיות","#5F6368","#BDC1C6"],["קו בין חלקים","#E0E0E0","#3C4043"]];
+  const T=(s,w,f)=>({size:String(s),weight:w,weightName:w<=300?'דק':w<500?'רגיל':w<600?'בינוני':'מודגש',font:f||'מערכת'});
+  const SHP=[['סגנון','/סגנון:',['רשת','שורות'],'grid'],['הצג צלמית','/הצג-צלמית:',['כן','לא'],'showIcon'],['סביב הצלמית','/סביב-הצלמית:',['בלי','מסגרת','ריבוע צבעוני','עיגול'],'around'],
+    ['צבע רקע לפריט','/צבע-רקע-לפריט:',['כן','לא'],'tint'],['הצג נתונים','/הצג-נתונים:',['כן','לא'],'showData'],['מקום הנתונים','/מקום-הנתונים:',['מתחת','בצד'],'dataBelow'],
+    ['שורות לשם','/שורות-לשם:',[1,6],'lines'],['התאם למקום','/התאם-למקום:',['כן','לא'],'fit'],['גודל מזערי','/גודל-מזערי:',[6,40],'min'],
+    ['הצג תווית','/הצג-תווית:',['כן','לא'],'showTag'],['מוסתר חיוור','/מוסתר-חיוור:',['כן','לא'],'fade']];
+  const NOLC=!!(window.__old||window.__m048||window.__m049);   // כמו תוכנה שלפני מבנה 265–269 (מ0.49 ומטה): בלי שני המפתחות החדשים, ובלי צבעים לרשימה
+  if(!NOLC)SHP.push(['צלמית לצד השם','/צלמית-לצד-השם:',['כן','לא'],'side'],['הצג שם','/הצג-שם:',['כן','לא'],'showName']);   // מבנה 265
+  const setSV=(x,k,v)=>{const e=SHP.find(y=>y[0]===k);x.shape[k]=v;if(e[3]==='around')x.around=v;else if(e[3]==='lines'||e[3]==='min')x[e[3]]=+v;else x[e[3]]=(v===e[2][0]);};
+  const TILE=!!(window.__old||window.__m048);   // כמו תוכנה שלפני מבנה 258: ברשת — צלמית וריווח מרוחב האריח
+  const P0={'רשימת קבצים':{design:'רשימת קבצים',grid:false,cols:1,gap:50,icon:340,showIcon:true,around:'ריבוע צבעוני',showData:true,dataBelow:true,groupOwn:false,texts:{'כותרת':T(12,400),'שם':T(16,400),'נתונים':T(11,400),'קבוצה':T(16,400),'תווית':T(11,700)}},
+    'מנהל קבצים עם צלמיות':{design:'מנהל קבצים עם צלמיות',grid:true,cols:3,gap:TILE?8:35,icon:TILE?55:500,showIcon:true,around:'מסגרת',showData:true,dataBelow:true,groupOwn:false,texts:{'כותרת':T(12,400),'שם':T(14,400),'נתונים':T(11,400),'קבוצה':T(14,400),'תווית':T(11,700)}},
+    'מילים וצבע':{design:'מילים וצבע',grid:true,cols:2,gap:TILE?6:30,icon:0,showIcon:false,around:'בלי',showData:false,dataBelow:true,groupOwn:false,texts:{'כותרת':T(12,400),'שם':T(15,700),'נתונים':T(11,400),'קבוצה':T(15,700),'תווית':T(11,700)}}};
+  [['רשימת קבצים',['שורות','כן','ריבוע צבעוני','לא','כן','מתחת','2','לא','11','כן','לא','לא','כן']],['מנהל קבצים עם צלמיות',['רשת','כן','מסגרת','לא','כן','מתחת','2','כן','11','כן','לא','לא','כן']],
+   ['מילים וצבע',['רשת','לא','בלי','כן','לא','מתחת','2','כן','11','כן','לא','לא','כן']]].forEach(([n,v])=>{P0[n].shape={};SHP.forEach((x,i)=>setSV(P0[n],x[0],v[i]));});
+  const db={'תוכנה':{design:'',look:{}},'אופן':{design:'',look:{}},'רשימה':{design:'מנהל קבצים עם צלמיות',look:{'טורים':'4'}}};
+  const colorsOf=looks=>{let dark=false;looks.forEach(l=>{if(l['מראה'])dark=l['מראה']==='כהה';});const o={};ROLES.forEach(r=>{o[r[0]]=r[dark?2:1];looks.forEach(l=>{if(l['צבע: '+r[0]])o[r[0]]=l['צבע: '+r[0]];});});return {dark,colors:o};};
+  const fold=(d,own)=>{let x=own.design?JSON.parse(JSON.stringify(P0[own.design])):d?JSON.parse(JSON.stringify(d)):null;
+    const L=own.look;if(Object.keys(L).some(k=>NOLC||(k!=='מראה'&&!k.startsWith('צבע: ')))){if(!x)x=JSON.parse(JSON.stringify(P0['רשימת קבצים']));
+      if(L['טורים'])x.cols=+L['טורים'];if(L['ריווח'])x.gap=+L['ריווח'];if(L['צלמית'])x.icon=+L['צלמית'];
+      SHP.forEach(e=>{if(L[e[0]])setSV(x,e[0],L[e[0]]);});
+      ['כותרת','שם','נתונים','קבוצה','תווית'].forEach(t=>{if(L[t+': גודל'])x.texts[t].size=L[t+': גודל'];if(L[t+': משקל'])x.texts[t].weightName=L[t+': משקל'];if(L[t+': גופן'])x.texts[t].font=L[t+': גופן'];});}
+    return x;};
+  const json=(x,looks)=>{const d=x?JSON.parse(JSON.stringify(x)):JSON.parse(JSON.stringify(P0['רשימת קבצים']));d.set=!!x;if(window.__old){delete d.texts['תווית'];delete d.wording;delete d.tagOwn;delete d.shape;}if(looks){const c=colorsOf(looks);d.dark=c.dark;d.colors=c.colors;}return d;};
+  const info={verb:'עצב',list:'רשימה',modeWord:'אופן',program:'תוכנה',
+    switches:{design:'/עיצוב:',cols:'/טורים:',gap:'/ריווח:',icon:'/גודל-צלמית:','כותרת':'/כתב-כותרת:','שם':'/כתב-שם:','נתונים':'/כתב-נתונים:','קבוצה':'/כתב-קבוצה:','תווית':'/כתב-תווית:',wording:'/תווית:',look:'/מראה:',color:'/צבע:'},
+    keys:{cols:'טורים',gap:'ריווח',icon:'צלמית',size:'גודל',weight:'משקל',font:'גופן',look:'מראה',color:'צבע',light:'בהיר',dark:'כהה',system:'מערכת',wording:'נוסח'},
+    texts:['כותרת','שם','נתונים','קבוצה','תווית'],weights:['דק','רגיל','בינוני','מודגש'],weightValues:{'דק':300,'רגיל':400,'בינוני':500,'מודגש':700},
+    ranges:{cols:[1,8],gap:[0,200],icon:[0,1000],size:[6,60],weight:[100,900]},designs:Object.keys(P0),presets:P0,fonts:['דוד.ttf'],
+    kinds:['רשימה ידנית','רשימה חכמה','תיקייה אמיתית','פקודה','קישור','כונן פנימי','כרטיס זיכרון'],
+    roles:ROLES,groups:['טקסט:4','רקעים:4','בחירה והדגשה:4','סימון ואזהרה:4','צלמיות וקווים:2'],shape:SHP,styleCols:{'רשת':3,'שורות':1}};
+  if(TILE)delete info.styleCols;                       // תוכנה שלפני מבנה 260
+  const state=(w,t)=>{
+    const prog=fold(null,db['תוכנה']),mode=fold(prog,db['אופן']),way=String(t||'').split(/[\\/]/).filter(Boolean);
+    if(w==='תוכנה'||!way.length)return {what:'תוכנה',path:'',mode:'עבודה',current:'עבודה',error:'',own:db['תוכנה'],shown:json(prog,[db['תוכנה'].look]),above:json(null,[]),info};
+    if(way[0]!=='עבודה')return {what:'אופן',path:t,mode:way[0],current:'עבודה',error:'אין אופן כזה: "'+way[0]+'"',info};
+    const p=way.join('\\');
+    if(way.length>1){if(p!=='עבודה\\ספרים\\קודש'&&p!=='עבודה\\לקוחות\\פעילים')return {what:'רשימה',path:p,mode:'עבודה',current:'עבודה',error:'אין רשימה ידנית: "'+p+'"',info};
+      return {what:'רשימה',path:p,mode:'עבודה',current:'עבודה',error:'',own:db['רשימה'],shown:json(fold(mode,db['רשימה']),[db['תוכנה'].look,db['אופן'].look].concat(NOLC?[]:[db['רשימה'].look])),above:json(mode,[db['תוכנה'].look,db['אופן'].look]),info};}
+    return {what:'אופן',path:'עבודה',mode:'עבודה',current:'עבודה',error:'',own:db['אופן'],shown:json(mode,[db['תוכנה'].look,db['אופן'].look]),above:json(prog,[db['תוכנה'].look]),info};
+  };
+  if(window.__old){                                    // כמו מ0.47 — בלי תווית הסוג ובלי הנוסח (מבנה 249–250)
+    info.texts=info.texts.slice(0,4);delete info.kinds;delete info.shape;delete info.switches['תווית'];delete info.switches.wording;delete info.keys.wording;
+    Object.values(P0).forEach(x=>{delete x.texts['תווית'];});
+  }
+  const store={};window.__shaped=[];
+  // הפקודה — כמו בתוכנה, בקירוב: המתגים נכתבים על מה שנקבע
+  const shape=l=>{
+    window.__shaped.push(l);
+    if(l.includes('\n'))return 'מתוסף העיצוב רצה רק שורה אחת של "עצב"';
+    const m=l.match(/^עצב (?:(תוכנה)|"([^"]*)")(.*)$/);if(!m)return 'מתוסף העיצוב רצה רק שורה אחת של "עצב"';
+    if(/\/טורים:(9|0)\b/.test(m[3]))return 'הערך מחוץ לטווח — מ־1 עד 8';
+    const shownG=()=>!!((state(m[1]?'תוכנה':'',m[2]||'').shown||{}).grid),gBefore=shownG();   // מבנה 260
+    const o=db[m[1]?'תוכנה':m[2].split(/[\\/]/).length>1?'רשימה':'אופן'];
+    if(NOLC&&o===db['רשימה']&&/\/(מראה|צבע):/.test(m[3]))return 'צבעים ומראה (בהיר / כהה) — רק לכל התוכנה או לאופן: עצב תוכנה · עצב "אופן"';
+    const toks=m[3].match(/\/[^\s"]+(?:"[^"]*")?(?:=(?:"[^"]*"|\S+))?[^\s]*/g)||[];
+    toks.forEach(tk=>{
+      const un=v=>v.replace(/^"|"$/g,'');
+      let r;
+      if((r=tk.match(/^\/עיצוב:(.*)$/)))o.design=un(r[1]);
+      else if((r=tk.match(/^\/(טורים|ריווח|גודל-צלמית):(.*)$/))){const k=r[1]==='גודל-צלמית'?'צלמית':r[1];const v=un(r[2]);if(v)o.look[k]=v;else delete o.look[k];}
+      else if((r=tk.match(/^\/מראה:(.*)$/))){const v=un(r[1]);if(v)o.look['מראה']=v;else delete o.look['מראה'];}
+      else if((r=tk.match(/^\/תווית:"([^"]+)"=(.*)$/))){const v=un(r[2]);if(v)o.look['נוסח: '+r[1]]=v;else delete o.look['נוסח: '+r[1]];}
+      else if((r=tk.match(/^\/צבע:"([^"]+)"=(.*)$/))){const v=un(r[2]);if(v)o.look['צבע: '+r[1]]=v;else delete o.look['צבע: '+r[1]];}
+      else if((r=tk.match(/^(\/[^:"]+:)(.*)$/))&&SHP.some(x=>x[1]===r[1])){const x=SHP.find(y=>y[1]===r[1]),v=un(r[2]);if(v)o.look[x[0]]=v;else delete o.look[x[0]];}
+      else if((r=tk.match(/^\/כתב-(כותרת|שם|נתונים|קבוצה|תווית):(.*)$/))){const t=r[1],v=r[2];
+        if(un(v)===''){['גודל','משקל','גופן'].forEach(f=>delete o.look[t+': '+f]);}
+        else v.split(',').map(un).forEach(p=>{if(/^\d+$/.test(p)&&+p<100)o.look[t+': גודל']=p;else if(['דק','רגיל','בינוני','מודגש'].includes(p)||/^\d+$/.test(p))o.look[t+': משקל']=p;else o.look[t+': גופן']=p;});}
+    });
+    if(info.styleCols&&/\/סגנון:/.test(m[3])&&!/\/טורים:/.test(m[3])){      // מבנה 260 — כמו בתוכנה (ShapeCmds.shapeOn)
+      const st=o.look['סגנון']||'',now=shownG();let base=gBefore;
+      if(/\/עיצוב:/.test(m[3])){delete o.look['סגנון'];base=shownG();if(st)o.look['סגנון']=st;}
+      if(now!==base){if(st)o.look['טורים']=String(info.styleCols[st]);else delete o.look['טורים'];}
+    }
+    return '';
+  };
+  return {
+    info:()=>JSON.stringify({features:TILE?'design':'design namesize'+(NOLC?'':' listcolors pickmode')}),theme:()=>null,load:k=>store[k]!=null?store[k]:null,save:(k,v)=>{store[k]=v;},
+    design:(w,t)=>JSON.stringify(w===''&&t===''&&window.__start?state('רשימה',window.__start):state(w,t)),shape,
+    pickList:(id)=>{window.__picked={fn:'pickList'};setTimeout(()=>window.vfmResult(id,JSON.stringify({mode:'עבודה',path:'לקוחות\\פעילים'})),20);},
+    pickListIn:(id,t,m)=>{window.__picked={fn:'pickListIn',mode:m};setTimeout(()=>window.vfmResult(id,JSON.stringify({mode:m||'עבודה',path:'לקוחות\\פעילים'})),20);},
+    close:()=>{window.__closed=true;},toast:()=>{},log:()=>{}
+  };
+}
+})();
+</script>
+</body>
+</html>
