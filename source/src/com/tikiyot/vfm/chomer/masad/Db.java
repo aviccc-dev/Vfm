@@ -120,7 +120,26 @@ final class Db {
             return use.run(s);
         } finally {
             s.close();
+            WRITES.incrementAndGet();                                         // מבנה 301: המסד השתנה (או נוסה) — מה שנשמר ממנו כבר לא בתוקף
         }
+    }
+
+    private static final java.util.concurrent.atomic.AtomicLong WRITES = new java.util.concurrent.atomic.AtomicLong();
+
+    /**
+     * מבנה 301 (הביקורת אחרי מ0.53, 1 — המשפך: "מה שלא השתנה לא מחושבים שוב"): חותם של המסד של אופן. משתנה בכל כתיבה: דרך השער —
+     * המונה; מכל מקום אחר (מסך המסד, תהליך אחר) — הקובץ והיומן שלו (WAL) השתנו. מי ששומר תוצאה של קריאה — שומר איתה את החותם,
+     * ומשתמש בה רק כל עוד החותם אותו חותם. זול: ארבע שאלות למערכת הקבצים, בלי לפתוח את המסד.
+     */
+    static long writes() {
+        return WRITES.get();
+    }
+
+    static long stamp(android.content.Context c, String mode) {
+        File f = dbFile(c, mode), w = new File(f.getPath() + "-wal");
+        long h = WRITES.get();
+        for (long x : new long[]{f.lastModified(), f.length(), w.lastModified(), w.length()}) h = h * 1000003L + x;
+        return h;
     }
 
     /** מבנה 84: העטיפות שדרכן מגיעים לשער — ביומן של ההיתר נרשם מי שקרא להן. */

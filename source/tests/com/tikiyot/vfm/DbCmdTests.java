@@ -1776,6 +1776,21 @@ final class DbCmdTests {
                                     && got287[1] != null && got287[1].startsWith("חשבון רשימה:") && "⭐".equals(got287[2]) && "תיאור 287".equals(got287[3])
                                     && Sort.DATE.equals(got287[4]) && FolderView.FLAT.equals(got287[5]));
                 }
+                // מבנה 301 (הביקורת אחרי מ0.53, 1): המסד לא השתנה — הרשימה לא נקראת שוב; השתנה — נקראת, והחדש נמצא
+                {
+                    String a301 = names282(lib.list("חשבון " + top));
+                    int w0 = DbScope.walks;
+                    String b301 = names282(lib.list("חשבון " + top)), c301 = names282(lib.list("חשבון א " + top));
+                    int w1 = DbScope.walks;
+                    List<String> r301 = go("המשך ()\nאופן \"" + m282 + "\"\nהעתק \"" + dir282 + "\\חשבון ג.txt\" ידנית \"מסמכים\"\n", here, vars, lib);
+                    String d301 = names282(lib.list("חשבון " + top));
+                    int w2 = DbScope.walks;
+                    String e301 = names282(lib.list("חשבון " + top));
+                    o.check("מבנה 301: חיפוש ברשימה — כל עוד המסד לא השתנה הרשימה לא נקראת שוב (" + (w1 - w0) + " קריאות בשני חיפושים: " + b301 + " · " + c301
+                                    + "); אחרי כתיבה — נקראת פעם אחת (" + (w2 - w1) + "), והקובץ החדש נמצא (" + d301 + "), ושוב לא (" + (DbScope.walks - w2) + ") " + bad(r301),
+                            bad(r301).isEmpty() && a301.equals("א,ב") && b301.equals("א,ב") && c301.equals("א") && w1 == w0
+                                    && d301.equals("א,ב,ג") && w2 == w1 + 1 && e301.equals(d301) && DbScope.walks == w2);
+                }
                 go("המשך ()\nבטל אופן \"" + m282 + "\"\n", here, vars, lib);
             }
         } catch (Throwable t) {
