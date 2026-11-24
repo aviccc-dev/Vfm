@@ -431,6 +431,11 @@ public final class Tests {
                         && ss298.indexOf("root.addView(nothing,") < ss298.indexOf("root.addView(list,")
                         && Words.Find.nothing("vfm*2", "").contains("vfm*2") && Words.Find.nothing("x", "הערה").contains("הערה")
                         && !Words.Find.nothing("", null).contains("—"));
+        String hb302 = read(new File(System.getProperty("vfm.src"), "src/com/tikiyot/vfm/masachim/rechivim/HistoryBox.java"));
+        check("מבנה 302: ההיסטוריה נגללת — עד " + HistoryBox.SHOWN + " שורות לפי התוכן; יותר — גובה קבוע (" + HistoryBox.heightDp(21) + "dp) והשאר בגלילה",
+                HistoryBox.heightDp(0) == -2 && HistoryBox.heightDp(HistoryBox.SHOWN) == -2 && HistoryBox.heightDp(HistoryBox.SHOWN + 1) > 0
+                        && HistoryBox.heightDp(21) == HistoryBox.heightDp(6) && HistoryBox.heightDp(21) < 300
+                        && hb302.contains("view = new android.widget.ScrollView(a);") && hb302.contains("heightDp(list.isEmpty() ? 0 : list.size() + 1)"));
         int ed288 = dl287.indexOf("private void edit(final Store.Item it) {"), ee288 = dl287.indexOf("private void done(String msg) {", ed288);
         String edit288 = ed288 > 0 && ee288 > ed288 ? dl287.substring(ed288, ee288) : "";
         check("מבנה 288: עריכה של רשימה חכמה — אותו חלון של רשימה ידנית (שם, צלמית, תיאור, \"למה\"); התנאי, המיון והתצוגה נשמרים כמו שהם; "

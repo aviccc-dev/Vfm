@@ -24,7 +24,19 @@ final class HistoryBox {
         void saved(List<String> list);
     }
 
-    final LinearLayout view;
+    /** מבנה 302: מה שהמסך מציג — נגלל; השורות עצמן — בתוכו. */
+    final android.widget.ScrollView view;
+    private final LinearLayout rows;
+    /** מבנה 302: עד כמה שורות נראות בלי גלילה, והגובה המשוער של שורה (dp). */
+    static final int SHOWN = 5, ROW_DP = 44;
+
+    /**
+     * מבנה 302 (הביקורת אחרי מ0.53, 2): הגובה של ההיסטוריה — עד SHOWN שורות לפי התוכן (‎-2); יותר — גובה קבוע, והשאר בגלילה.
+     * עד כאן — עד 20 שורות בחלק שאינו נגלל: עם מקלדת פתוחה התחתונות ו"ניקוי" יצאו מהמסך. n — השורות, כולל "ניקוי".
+     */
+    static int heightDp(int n) {
+        return n <= SHOWN ? -2 : SHOWN * ROW_DP + ROW_DP / 2;                 // חצי שורה נוספת — רואים שיש עוד
+    }
     private final Activity a;
     private final Host host;
     private List<String> list;
@@ -36,8 +48,10 @@ final class HistoryBox {
         this.host = host;
         this.max = max;
         this.list = Search.remember(list, null, max);
-        view = new LinearLayout(a);
-        view.setOrientation(LinearLayout.VERTICAL);
+        view = new android.widget.ScrollView(a);
+        rows = new LinearLayout(a);
+        rows.setOrientation(LinearLayout.VERTICAL);
+        view.addView(rows);
         fill();
     }
 
@@ -57,7 +71,7 @@ final class HistoryBox {
     }
 
     private void fill() {
-        view.removeAllViews();
+        rows.removeAllViews();
         for (final String w : list) {
             TextView t = Ui.info(a);
             t.setText(Words.Find.historyItem(w));
@@ -65,7 +79,7 @@ final class HistoryBox {
             t.setOnClickListener(new View.OnClickListener() {
                 @Override public void onClick(View v) { host.use(w); }
             });
-            view.addView(t);
+            rows.addView(t);
         }
         if (!list.isEmpty()) {
             TextView clear = Ui.info(a);
@@ -81,8 +95,10 @@ final class HistoryBox {
                     });
                 }
             });
-            view.addView(clear);
+            rows.addView(clear);
         }
+        int h = heightDp(list.isEmpty() ? 0 : list.size() + 1);
+        view.setLayoutParams(new LinearLayout.LayoutParams(-1, h < 0 ? h : Ui.dp(a, h)));
         show(empty);
     }
 
