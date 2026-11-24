@@ -646,7 +646,22 @@ public class SearchScreen extends Activity implements Clip.Holder, PlaceChip.Pla
 
     /** 153: התנאי — ההגדרות שבחלונית ועוד מה שבשורת ההקלדה. */
     String query() {
-        String q = SmartLists.withHere(SmartLists.join(parts == null ? "" : parts.build(), input.getText().toString()), hereDir());
+        return withPlace(SmartLists.withHere(written(), hereDir()));
+    }
+
+    /**
+     * מבנה 304 (הביקורת אחרי מ0.53, 4): מה שנשמר לרשימה חכמה — התנאי כמו שנכתב, עם המקום: %כאן% נשאר משתנה (עד כאן השמירה שלחה
+     * את התנאי אחרי ההחלפה, ורשימה חכמה עם %כאן% קיבלה תיקייה קבועה). כל השמירות מהחלונית לוקחות מכאן.
+     */
+    String toSave() {
+        return withPlace(written());
+    }
+
+    private String written() {
+        return SmartLists.join(parts == null ? "" : parts.build(), input.getText().toString());
+    }
+
+    private String withPlace(String q) {
         return q.trim().isEmpty() || place == null || wide ? q : SmartLists.join(place, q);   // מבנה 283: המקום — רק כשמחפשים משהו
     }
 

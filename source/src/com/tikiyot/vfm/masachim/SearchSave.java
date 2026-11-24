@@ -63,7 +63,7 @@ final class SearchSave {
             pickDone();
             return;
         }
-        final String q = SmartLists.orAll(s.query());                         // מבנה 294: ריק — כל הקבצים בכל הכוננים
+        final String q = SmartLists.orAll(s.toSave());                         // מבנה 294: ריק — כל הקבצים בכל הכוננים
         if (isNew()) {
             saveNew(q);
             return;
@@ -143,7 +143,7 @@ final class SearchSave {
      * שהטופס הנפרד החזיר — בשורה של קובץ פקודות %כאן% הוא משתנה). המסך נסגר, והעורך מקבל.
      */
     private void pickDone() {
-        final String q = SmartLists.orAll(SmartLists.join(s.parts.build(), s.input.getText().toString()));   // מבנה 294
+        final String q = SmartLists.orAll(s.toSave());   // מבנה 294
         Ui.askText(s, Words.Find.PICK, s.getTitle().toString(), Words.Short.NAME_HINT, new Ui.Text1() {
             @Override
             public void ok(String value) {
@@ -160,7 +160,7 @@ final class SearchSave {
 
     void saveAs() {
         if (noKind()) return;
-        final String q = SmartLists.orAll(s.query()), so = s.srt.by, w = s.view;   // מבנה 294
+        final String q = SmartLists.orAll(s.toSave()), so = s.srt.by, w = s.view;   // מבנה 294
         Ui.askText(s, Words.Find.SAVE_AS_TITLE, s.input.getText().toString().trim(), Words.Short.NAME_HINT, new Ui.Text1() {   // מ0.30: שם משלו — לא "תבנית"
             @Override
             public void ok(String value) {

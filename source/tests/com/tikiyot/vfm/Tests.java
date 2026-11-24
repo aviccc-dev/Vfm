@@ -398,7 +398,7 @@ public final class Tests {
                         + "והתנאי — בלי המקום ובלי להחליף את %כאן%; ביטול — בלי תשובה",
                 lab292.contains("startActivityForResult(SearchScreen.pick(LabScreen.this, name, cond, sort), REQ_SMART);") && !lab292.contains("DbSmartForm.ask(")
                         && lab292.contains("if (res != RESULT_OK || data == null) return;")
-                        && ss287.contains("final String q = SmartLists.orAll(SmartLists.join(s.parts.build(), s.input.getText().toString()));")
+                        && ss287.contains("final String q = SmartLists.orAll(s.toSave());")
                         && ss287.contains("s.setResult(android.app.Activity.RESULT_OK, r);") && ss287.contains("return (newMode != null && smartId == 0) || pick;"));
         String sf293 = read(new File(System.getProperty("vfm.src"), "src/com/tikiyot/vfm/masachim/rechivim/SmartForm.java")),
                 db293 = read(new File(System.getProperty("vfm.src"), "src/com/tikiyot/vfm/masachim/rechivim/DbSmartForm.java"));
@@ -453,6 +453,13 @@ public final class Tests {
                         && Sort.SIZE.equals(g303.get(SmartLists.SORT)) && none303.by.equals(Sort.RANK) && bad303.by.equals(Sort.RANK)
                         && Sort.forSearch(false, Sort.DATE, null).by.equals(Sort.DATE)
                         && only290.contains("srt = Sort.forSearch(fixed || saves.onSmart(), extraSort, Sort.tool(Conf.SEARCH, \"\"));"));
+        String sv304 = read(new File(System.getProperty("vfm.src"), "src/com/tikiyot/vfm/masachim/SearchSave.java"));
+        int ts304 = only290.indexOf("String toSave() {");
+        check("מבנה 304: כל שמירה מהחלונית (שמירה, חדשה, שמירה בשם, \"✓ לבחור\") שומרת את התנאי כמו שנכתב — %כאן% נשאר משתנה; רק החיפוש עצמו מחליף אותו",
+                !sv304.contains("s.query()") && sv304.split("s\\.toSave\\(\\)", -1).length - 1 == 3 && ts304 > 0
+                        && only290.substring(ts304, only290.indexOf("}", ts304)).contains("withPlace(written())")
+                        && only290.contains("return withPlace(SmartLists.withHere(written(), hereDir()));")
+                        && SmartLists.withHere("מקור:%כאן% דוח", "/a b").equals("מקור:«/a b» דוח"));
         int ed288 = dl287.indexOf("private void edit(final Store.Item it) {"), ee288 = dl287.indexOf("private void done(String msg) {", ed288);
         String edit288 = ed288 > 0 && ee288 > ed288 ? dl287.substring(ed288, ee288) : "";
         check("מבנה 288: עריכה של רשימה חכמה — אותו חלון של רשימה ידנית (שם, צלמית, תיאור, \"למה\"); התנאי, המיון והתצוגה נשמרים כמו שהם; "
