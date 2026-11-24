@@ -436,6 +436,23 @@ public final class Tests {
                 HistoryBox.heightDp(0) == -2 && HistoryBox.heightDp(HistoryBox.SHOWN) == -2 && HistoryBox.heightDp(HistoryBox.SHOWN + 1) > 0
                         && HistoryBox.heightDp(21) == HistoryBox.heightDp(6) && HistoryBox.heightDp(21) < 300
                         && hb302.contains("view = new android.widget.ScrollView(a);") && hb302.contains("heightDp(list.isEmpty() ? 0 : list.size() + 1)"));
+        // מבנה 303: לרשימה חכמה — המיון שלה; המיון של החיפוש הרגיל — בנפרד
+        final java.util.Map<String, String> g303 = new java.util.HashMap<String, String>();
+        g303.put(SmartLists.SORT, Sort.SIZE);
+        Sort.Store st303 = new Sort.Store() {
+            @Override public String get(String k, String d) { return g303.containsKey(k) ? g303.get(k) : d; }
+            @Override public void set(String k, String v) { g303.put(k, v); }
+        };
+        Sort list303 = Sort.forSearch(true, Sort.DATE, st303), plain303 = Sort.forSearch(false, Sort.DATE, st303),
+                none303 = Sort.forSearch(true, null, st303), bad303 = Sort.forSearch(true, "אין מיון כזה", st303);
+        list303.choose(java.util.Arrays.asList(list303.options()).indexOf(Sort.NAME), list303.options().length);
+        try { Thread.sleep(60); } catch (InterruptedException e) { Thread.currentThread().interrupt(); }
+        check("מבנה 303: רשימה חכמה נפתחת במיון שלה (" + Sort.forSearch(true, Sort.DATE, st303).by + ") גם כשבחיפוש נבחר מיון אחר (" + plain303.by
+                        + "); בחירה בתפריט בתוך רשימה חכמה אינה נכתבת להגדרות החיפוש (" + g303.get(SmartLists.SORT) + "); בלי מיון משלה — ברירת המחדל",
+                Sort.forSearch(true, Sort.DATE, st303).by.equals(Sort.DATE) && plain303.by.equals(Sort.SIZE) && list303.by.equals(Sort.NAME)
+                        && Sort.SIZE.equals(g303.get(SmartLists.SORT)) && none303.by.equals(Sort.RANK) && bad303.by.equals(Sort.RANK)
+                        && Sort.forSearch(false, Sort.DATE, null).by.equals(Sort.DATE)
+                        && only290.contains("srt = Sort.forSearch(fixed || saves.onSmart(), extraSort, Sort.tool(Conf.SEARCH, \"\"));"));
         int ed288 = dl287.indexOf("private void edit(final Store.Item it) {"), ee288 = dl287.indexOf("private void done(String msg) {", ed288);
         String edit288 = ed288 > 0 && ee288 > ed288 ? dl287.substring(ed288, ee288) : "";
         check("מבנה 288: עריכה של רשימה חכמה — אותו חלון של רשימה ידנית (שם, צלמית, תיאור, \"למה\"); התנאי, המיון והתצוגה נשמרים כמו שהם; "

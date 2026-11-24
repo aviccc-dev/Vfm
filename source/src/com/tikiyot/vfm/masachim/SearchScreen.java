@@ -236,9 +236,7 @@ public class SearchScreen extends Activity implements Clip.Holder, PlaceChip.Pla
         wide = "כן".equals(setting(SmartLists.WHOLE, "לא"));  // תחביר
         paths = "כן".equals(setting(SmartLists.PATHS, "לא"));  // תחביר
         loose = !"לא".equals(setting(SmartLists.LOOSE, "כן"));  // תחביר
-        Sort.Store st = Sort.tool(Conf.SEARCH, "");
-        srt = Sort.withAdded(Sort.RANK, true, st);
-        if (extraSort != null && st.get(SmartLists.SORT, "").isEmpty()) srt.prefer(extraSort);
+        srt = Sort.forSearch(fixed || saves.onSmart(), extraSort, Sort.tool(Conf.SEARCH, ""));   // מבנה 303: לרשימה חכמה — המיון שלה
         if (fixed && getWindow() != null)
             getWindow().setSoftInputMode(android.view.WindowManager.LayoutParams.SOFT_INPUT_STATE_ALWAYS_HIDDEN);
         String title = getIntent().getStringExtra(EXTRA_TITLE);

@@ -98,6 +98,18 @@ public final class Sort {
         return def;
     }
 
+    /**
+     * מבנה 303 (הביקורת אחרי מ0.53, 3 — המשתמש, 25.11: "כן" — לכל רשימה חכמה המיון שלה, והמיון של החיפוש הרגיל נשמר בנפרד):
+     * המיון של מסך החיפוש. list — על המסך רשימה חכמה (קיימת, חדשה, או תנאי שהעורך מבקש): המיון שלה (own), ומה שבוחרים בתפריט חל
+     * על הפתיחה הזו ואינו נכתב להגדרות החיפוש — נשמר לרשימה רק ב"💾 שמירה". אחרת — המיון של החיפוש (search), כמו תמיד.
+     * עד כאן: מי שבחר פעם מיון בחיפוש — כל הרשימות החכמות נפתחו במיון הזה, ו"💾 שמירה" כתבה אותו לרשימה.
+     */
+    public static Sort forSearch(boolean list, String own, Store search) {
+        Sort s = withAdded(RANK, true, list ? null : search);
+        if (own != null && (list || search == null || search.get(SmartLists.SORT, "").isEmpty())) s.prefer(own);
+        return s;
+    }
+
     /** ברירת מחדל שהגיעה מבחוץ (כלי בלי סעיף משלו): רק אם היא אפשרות חוקית. */
     public void prefer(String v) {
         if (valid(v)) by = v;
