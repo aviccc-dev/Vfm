@@ -579,7 +579,7 @@ public class DbScreen extends Activity {
         });
     }
 
-    /** רשימת הגיבויים (כל אחד נבדק מול הרישום), ו"גיבוי עכשיו". נגיעה בגיבוי — שחזור ממנו. */
+    /** רשימת הגיבויים (כל אחד נבדק מול הרישום), ו"גיבוי עכשיו". נגיעה בגיבוי — מחזירה אותו לרשימה חדשה באופן "שחזור" (מבנה 311). */
     private void backupMenu() {
         final AlertDialog wait = new AlertDialog.Builder(this).setMessage(Words.Db.BACKUPS_CHECKING).setCancelable(false).show();
         final Backups bk = backups(mode);
@@ -608,7 +608,7 @@ public class DbScreen extends Activity {
                             public void onClick(DialogInterface d, int which) {
                                 int i = canBackup ? which - 1 : which;
                                 if (canBackup && which == 0) backupNow();
-                                else if (i >= 0 && i < all.size()) restoreAsk(all.get(i), states[i]);
+                                else if (i >= 0 && i < all.size()) restoreToList(all.get(i), states[i]);   // מבנה 311
                             }
                         });
                     }
@@ -641,6 +641,47 @@ public class DbScreen extends Activity {
                 });
             }
         }).start();
+    }
+
+    /**
+     * מבנה 311 (המשתמש, 25.11.2026: "גיבוי יחזור רק לאופן שחזור, ומשם כל אחד יעשה מה שהוא רוצה"): נגיעה בגיבוי — שואלים, ואז
+     * הפקודה "שחזר גיבוי" דרך המנהל. כאן נשארים רק חלון האישור, ההמתנה וההודעה; האופן שעל המסך אינו משתנה.
+     */
+    private void restoreToList(final Backups.Entry e, int state) {
+        String no = state == Backups.KEPT_DAMAGED ? Words.Db.KEPT_DAMAGED_INFO : state == Backups.BAD ? Words.Db.BACKUP_BAD
+                : e.text ? Words.DbCmd.RESTORE_BK_TEXT : null;
+        if (no != null) {
+            new AlertDialog.Builder(this).setMessage(no).setPositiveButton(Words.OK, null).show();
+            return;
+        }
+        final Library lib = Library.get(this);
+        final String m = mode;
+        new AlertDialog.Builder(this).setMessage(Words.Db.restoreToListAsk(m, when(e), DbRestore.MODE))
+                .setPositiveButton(Words.Db.RESTORE_TO_LIST, new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface d, int w) {
+                        final Manager.Act act = Manager.onRestoreBackup(m, e.name, Paths.work(), BatchUi.vars(DbScreen.this, Paths.work()), lib);
+                        if (act.error() != null) {
+                            Ui.toast(DbScreen.this, act.error());
+                            return;
+                        }
+                        final AlertDialog wait = new AlertDialog.Builder(DbScreen.this).setMessage(Words.Db.RESTORE_TO_LIST_WAIT).setCancelable(false).show();
+                        new Thread(new Runnable() {
+                            @Override
+                            public void run() {
+                                final String text = act.say(lib);
+                                runOnUiThread(new Runnable() {
+                                    @Override
+                                    public void run() {
+                                        wait.dismiss();
+                                        if (isFinishing()) return;
+                                        new AlertDialog.Builder(DbScreen.this).setMessage(text).setPositiveButton(Words.OK, null).show();
+                                    }
+                                });
+                            }
+                        }).start();
+                    }
+                }).setNegativeButton(Words.CANCEL, null).show();
     }
 
     /** בונה מסד מהגיבוי (ברקע, בקובץ נפרד), מציג מה יש בו מול מה שיש עכשיו, ורק אחרי אישור מחליף. */

@@ -640,6 +640,15 @@ final class Manager {
     }
 
     /**
+     * מבנה 311 (המשתמש, 25.11.2026: "גיבוי יחזור רק לאופן שחזור"): גיבוי של אופן — לרשימה חדשה באופן "שחזור", מהמסך:
+     * "שחזר גיבוי "<אופן>" "" "<הקובץ>"", כמו בקובץ פקודות (שם הרשימה — ריק: האופן והתאריך של הגיבוי).
+     */
+    static Act onRestoreBackup(String mode, String file, java.io.File here, java.util.Map<String, String> vars, Library lib) {
+        String text = Commands.word(Commands.get(Syntax.RESTORE_BK)) + " \"" + mode + "\" \"\" \"" + file + "\"\n";
+        return new Act(text, Batch.plan(text, here, vars, lib), null);
+    }
+
+    /**
      * מבנה 127: הגדרה של התוכנה, מהמסך — "הגדר "%שם-חדש%" "%תוכן%"": המפתח (כמו שהוא בקובץ ההגדרות) והערך — מהבחירה, ואינם
      * מפוענחים. אותו כלל כמו בשורה כתובה (Conf.SETTINGS): הגדרה שאינה מוכרת, או ערך שאינו מתאים — סירוב מהתכנון.
      */

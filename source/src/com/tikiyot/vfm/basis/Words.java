@@ -2902,6 +2902,13 @@ public final class Words {
         public static final String BACKUP_NOW = "💾 גיבוי עכשיו (עותק וגם טקסט)";
         public static final String BACKUPS_CHECKING = "בודק את הגיבויים מול הרישום…";
         public static final String BACKUP_SAVING = "שומר גיבוי…";
+        /** מבנה 311: נגיעה בגיבוי — מחזירה אותו לרשימה חדשה באופן "שחזור". */
+        public static final String RESTORE_TO_LIST = "להחזיר", RESTORE_TO_LIST_WAIT = "מחזיר את הגיבוי לרשימה חדשה…";
+
+        public static String restoreToListAsk(String mode, String when, String to) {
+            return "להחזיר את הגיבוי של \"" + mode + "\" מ־" + when + "?\n\nהוא יחזור לרשימה חדשה באופן \"" + to + "\", ומשם אפשר להעתיק מה שצריך. "
+                    + "האופן \"" + mode + "\" לא ישתנה.";
+        }
         public static final String RESTORE_BUILDING = "בונה מסד מהגיבוי ובודק אותו. המסד הנוכחי עוד לא משתנה…";
         public static final String RESTORE_YES = "♻️ שחזור";
         public static final String RESTORE_FROM_BACKUP = "♻️ שחזור מגיבוי";

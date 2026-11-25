@@ -1914,6 +1914,15 @@ final class DbCmdTests {
                                     && Commands.get(Syntax.RESTORE_BK) != null && Commands.get(Syntax.RESTORE_DROP) != null
                                     && !CmdMatrix.skipped(Syntax.RESTORE_BK) && !CmdMatrix.skipped(Syntax.RESTORE_DROP)
                                     && CmdMatrix.text(true).contains("בטל שחזור \"" + CmdMatrix.LIST + " — שחזור "));
+                    // מבנה 311: מהמסך — נגיעה בגיבוי: "שחזר גיבוי "<אופן>" "" "<הקובץ>"" דרך המנהל; מסך המסד אינו מחזיר בעצמו
+                    Manager.Act a311 = Manager.onRestoreBackup(m282, e309.name, here, vars, lib);
+                    String s311 = a311.error() != null ? a311.error() : a311.say(lib);
+                    String ds311 = Files.readUtf8(new File(System.getProperty("vfm.src"), "src/com/tikiyot/vfm/masachim/DbScreen.java"));
+                    o.check("מבנה 311: נגיעה בגיבוי במסך המסד — דרך המנהל, לרשימה חדשה באופן \"שחזור\" (" + s311 + "); המסך רק שואל, ממתין ומראה",
+                            a311.error() == null && s311.contains("לרשימה \"" + r309.list + " (3)\"") && s311.contains("לא השתנו")
+                                    && ds311.contains("restoreToList(all.get(i), states[i]);") && ds311.contains("Manager.onRestoreBackup(m, e.name,")
+                                    && !ds311.contains("DbRestore.toList") && !ds311.contains("DbRestore.drop")
+                                    && Words.Db.restoreToListAsk("א", "ב", "ג").contains("האופן \"א\" לא ישתנה"));
                     go("המשך ()\nבטל אופן \"" + DbRestore.MODE + "\"\n", here, vars, lib);
                 }
                 go("המשך ()\nבטל אופן \"" + m282 + "\"\n", here, vars, lib);
