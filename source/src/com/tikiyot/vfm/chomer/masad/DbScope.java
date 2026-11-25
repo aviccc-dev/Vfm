@@ -141,7 +141,9 @@ final class DbScope {
                         else if (!found.equals(it.name)) two = true;   // שני שמות שנראים אותו דבר בחיפוש ("Abc", "abc")
                     }
                 if (found == null) {
-                    r.error = Words.Find.scopeMissing(Names.pathText(path), Words.ListCmdW.noList(seg.trim()));
+                    // מבנה 308 (המשתמש, 25.11.2026: "צריכים לכתוב רשימה הוסרה"): רשימה שנמחקה אינה נשארת במסד (לא בסל) — ולכן
+                    // "הוסרה או שאינה קיימת"; שינוי שם כבר אינו מגיע לכאן (307)
+                    r.error = Words.Find.scopeMissing(Names.pathText(path), Words.Find.scopeRemoved(seg.trim()));
                     return r;
                 }
                 if (two) {
@@ -152,7 +154,7 @@ final class DbScope {
             }
             DbPaths.Found f = DbPaths.listAt(s, mode, real);
             if (f.error != null || f.id == 0) {
-                r.error = Words.Find.scopeMissing(Names.pathText(real), f.error != null ? f.error : Words.ListCmdW.noList(Names.label(real)));
+                r.error = Words.Find.scopeMissing(Names.pathText(real), f.error != null ? f.error : Words.Find.scopeRemoved(Names.label(real)));
                 return r;
             }
             id = f.id;

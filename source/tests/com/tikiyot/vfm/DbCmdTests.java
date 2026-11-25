@@ -1844,6 +1844,14 @@ final class DbCmdTests {
                                     && said307.contains("רשימות חכמות שמחפשות ברשימה: ") && said307.contains("חכמה 307 א, חכמה 307 ב")   // ועוד אחת מ־287
                                     && Words.DbCmd.followedSmart(java.util.Arrays.asList("א", "ב")).equals(" · עודכנו 2 רשימות חכמות שמחפשות ברשימה: א, ב")
                                     && Words.DbCmd.followedSmart(java.util.Arrays.asList("א")).equals(" · עודכנה רשימה חכמה אחת שמחפשת ברשימה: א"));
+                    // מבנה 308 (המשתמש, 25.11.2026: "צריכים לכתוב רשימה הוסרה"): הרשימה שמחפשים בה הוסרה — אין תוצאות, ונאמר שהוסרה
+                    List<String> r308 = go("המשך ()\nאופן \"" + m282 + "\"\nבטל ידנית \"ניירת 307/Abc\"\n", here, vars, lib);
+                    Library.Result g308 = lib.list(want307a), up308 = lib.list("חשבון " + Cond.inList(m282, java.util.Arrays.asList("ניירת 307")));
+                    o.check("מבנה 308: הרשימה שמחפשים בה הוסרה — אין תוצאות, ונאמר שהוסרה (" + g308.note + "); הרשימה שמעליה — ממשיכה ("
+                                    + names282(up308) + ") " + bad(r308),
+                            bad(r308).isEmpty() && g308.hits.isEmpty() && g308.note != null && g308.note.contains("לא נעשה")
+                                    && g308.note.contains(Words.Find.scopeRemoved("Abc")) && Words.Find.scopeRemoved("א").equals("הרשימה \"א\" הוסרה או שאינה קיימת")
+                                    && !names282(up308).isEmpty() && (up308.note == null || !up308.note.contains("הוסרה")));
                 }
                 go("המשך ()\nבטל אופן \"" + m282 + "\"\n", here, vars, lib);
             }

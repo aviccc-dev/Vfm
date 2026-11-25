@@ -195,6 +195,11 @@ public final class Words {
             return "החיפוש ברשימה \"" + where + "\" לא נעשה — " + why;
         }
 
+        /** מבנה 308: הרשימה שמחפשים בה אינה במסד — הוסרה (רשימה שנמחקה אינה נשארת בסל), או שלא הייתה. */
+        public static String scopeRemoved(String name) {
+            return "הרשימה \"" + name + "\" הוסרה או שאינה קיימת";
+        }
+
         public static String scopeNoMode(String m) {
             return "אין אופן בשם \"" + m + "\"";
         }
