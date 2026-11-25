@@ -153,6 +153,8 @@ public final class Words {
         public static final String SETTINGS = "⚙ הגדרות", SAVE_AS = "💾 שמירה בשם — רשימה חכמה בבית…", SAVE_AS_TITLE = "שמירה בשם — רשימה חכמה בבית",
                 ALL_DRIVES = "אין מקורות = כל הכוננים", HINT = "חיפוש…";
         public static final String CLEAR = "ניקוי שורת החיפוש";   // מבנה 281
+        /** מבנה 306: השורה השנייה ברשימה חכמה — סינון בתוך מה שהרשימה מצאה (לא נשמר ברשימה). */
+        public static final String WITHIN_HINT = "🔎 סינון בתוך התוצאות…";
         /** מבנה 282: "רשימה:" — החיפוש ברשימה, כשהרשימה לא נמצאה. */
         public static final String SCOPE_NO_DB = "המסד לא נפתח", SCOPE_NO_HOME = "אין בית באופן הזה";
 

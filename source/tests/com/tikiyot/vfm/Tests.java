@@ -460,6 +460,27 @@ public final class Tests {
                         && only290.substring(ts304, only290.indexOf("}", ts304)).contains("withPlace(written())")
                         && only290.contains("return withPlace(SmartLists.withHere(written(), hereDir()));")
                         && SmartLists.withHere("מקור:%כאן% דוח", "/a b").equals("מקור:«/a b» דוח"));
+        // מבנה 306 (המשתמש, 25.11.2026: "כן"): שורת "סינון בתוך התוצאות" של רשימה חכמה — מצטרפת רק לחיפוש שעל המסך
+        int sq306 = only290.indexOf("private String searchQuery() {"), q306 = only290.indexOf("    String query() {"),
+                ts306 = only290.indexOf("String toSave() {"), wr306 = only290.indexOf("private String written() {"),
+                rm306 = only290.indexOf("private void remember() {");
+        check("מבנה 306: הכלל — הסינון מצטרף לתנאי של הרשימה כ\"וגם\"; בלי סינון — התנאי כמו שהוא; בלי תנאי — אין במה לסנן (לא חיפוש בכל המכשיר)",
+                SmartLists.within("סוג:pdf דוח", " חשבון ").equals("סוג:pdf דוח חשבון") && SmartLists.within(" סוג:pdf ", "").equals("סוג:pdf")
+                        && SmartLists.within("סוג:pdf", null).equals("סוג:pdf") && SmartLists.within("", "חשבון").isEmpty()
+                        && SmartLists.within(null, "חשבון").isEmpty() && SmartLists.within("  ", "חשבון").isEmpty());
+        check("מבנה 306: במסך — השורה קיימת רק ברשימה חכמה (fixed), הטקסט במילון; היא נכנסת רק ל־searchQuery — לא לתנאי (query), לא לשמירה "
+                        + "(toSave, written) ולא להיסטוריה; \"לא נמצא\" אומר גם אותה",
+                sq306 > 0 && q306 > sq306 && ts306 > q306 && wr306 > ts306 && rm306 > 0
+                        && only290.contains("if (fixed) {                                                          // מבנה 306")
+                        && only290.contains("within = Ui.field(this, \"\", Words.Find.WITHIN_HINT);")
+                        && only290.substring(sq306, only290.indexOf("\n    }", sq306)).contains("return SmartLists.within(q, filterText());")
+                        && only290.split("filterText\\(\\)", -1).length - 1 == 3      // ההגדרה, החיפוש, "לא נמצא"
+                        && !only290.substring(q306, only290.indexOf("\n    }", q306)).contains("ilter")
+                        && !only290.substring(ts306, only290.indexOf("\n    }", ts306)).contains("ilter")
+                        && !only290.substring(wr306, only290.indexOf("\n    }", wr306)).contains("ilter")
+                        && !only290.substring(rm306, only290.indexOf("\n    }", rm306)).contains("ilter")
+                        && only290.contains("Words.Find.nothing(SmartLists.join(input.getText().toString(), filterText()), note)")
+                        && !sv304.contains("within") && !sv304.contains("filterText") && Words.Find.WITHIN_HINT.contains("בתוך התוצאות"));
         int ed288 = dl287.indexOf("private void edit(final Store.Item it) {"), ee288 = dl287.indexOf("private void done(String msg) {", ed288);
         String edit288 = ed288 > 0 && ee288 > ed288 ? dl287.substring(ed288, ee288) : "";
         check("מבנה 288: עריכה של רשימה חכמה — אותו חלון של רשימה ידנית (שם, צלמית, תיאור, \"למה\"); התנאי, המיון והתצוגה נשמרים כמו שהם; "

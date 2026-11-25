@@ -215,6 +215,9 @@ public class SearchScreen extends Activity implements Clip.Holder, PlaceChip.Pla
                 schedule();
             }
         });
+        if (within != null) SmartForm.onChange(within, new Runnable() {       // מבנה 306
+            @Override public void run() { schedule(); }
+        });
         parts.watch(new Runnable() {                                          // 153: שינוי בהגדרות — מיד
             @Override public void run() { schedule(); }
         });
@@ -252,6 +255,10 @@ public class SearchScreen extends Activity implements Clip.Holder, PlaceChip.Pla
         input.setTextSize(18);
         input.setPadding(Ui.dp(this, 12), Ui.dp(this, 10), Ui.dp(this, 12), Ui.dp(this, 10));
         root.addView(SmartForm.fieldRow(this, input));                        // מבנה 281: נגיעה בוחרת, ✕ מנקה
+        if (fixed) {                                                          // מבנה 306: סינון בתוך התוצאות של הרשימה
+            within = Ui.field(this, "", Words.Find.WITHIN_HINT);
+            root.addView(SmartForm.fieldRow(this, within));
+        }
         head = ScrollRoom.head(this);
         root.addView(head, new LinearLayout.LayoutParams(-1, -2));
         if (place != null)                                                    // מבנה 283: "מחפש ב: <המקום> ▾"
@@ -492,7 +499,7 @@ public class SearchScreen extends Activity implements Clip.Holder, PlaceChip.Pla
             nothing.setVisibility(View.GONE);
             return;
         }
-        nothing.setText(Words.Find.nothing(input.getText().toString().trim(), note));
+        nothing.setText(Words.Find.nothing(SmartLists.join(input.getText().toString(), filterText()), note));
         nothing.setVisibility(View.VISIBLE);
     }
 
@@ -641,7 +648,18 @@ public class SearchScreen extends Activity implements Clip.Holder, PlaceChip.Pla
 
     private String searchQuery() {
         String q = query();
-        return q.trim().isEmpty() || quick == null ? q : SmartLists.join(q, quick.cond());
+        if (!q.trim().isEmpty() && quick != null) q = SmartLists.join(q, quick.cond());
+        return SmartLists.within(q, filterText());
+    }
+
+    /**
+     * מבנה 306 (המשתמש, 25.11.2026: "כן"): שורת "סינון בתוך התוצאות" של רשימה חכמה — נפרדת מהתנאי של הרשימה. מצטרפת
+     * רק לחיפוש שעל המסך (searchQuery), ולא ל־query ול־toSave: שמירה של הרשימה אינה לוקחת אותה, וגם ההיסטוריה לא.
+     */
+    private EditText within;
+
+    private String filterText() {
+        return within == null ? "" : within.getText().toString().trim();
     }
 
     /** 153: התנאי — ההגדרות שבחלונית ועוד מה שבשורת ההקלדה. */

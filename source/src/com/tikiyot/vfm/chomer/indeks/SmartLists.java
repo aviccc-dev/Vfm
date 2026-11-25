@@ -137,6 +137,15 @@ final class SmartLists {
         return a.isEmpty() ? b : b.isEmpty() ? a : a + " " + b;
     }
 
+    /**
+     * מבנה 306 (המשתמש, 25.11.2026: "כן") — סינון בתוך התוצאות של רשימה חכמה: התנאי של הרשימה נשאר שלם, והסינון
+     * מצטרף אליו כתנאי נוסף ("וגם"). בלי סינון — התנאי כמו שהוא; בלי תנאי — אין תוצאות לסנן בתוכן, והסינון לבדו
+     * אינו חיפוש בכל המכשיר.
+     */
+    static String within(String cond, String filter) {
+        return cond == null || cond.trim().isEmpty() ? "" : join(cond, filter);
+    }
+
     private static String view(String v) {
         for (String m : FolderView.MODES) if (m.equals(v)) return m;
         return FolderView.FLAT;

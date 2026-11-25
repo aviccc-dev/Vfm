@@ -1730,6 +1730,14 @@ final class DbCmdTests {
                         n297 = names282(lib.list("חשבון -\"ב " + all282));   // "-*ב" — מוציא את שניהם: ב יש גם ב"חשבון"
                 o.check("מבנה 297: בחיפוש — הכוכבית ממלאת ולא מעגנת (" + w297 + "), מרכאות — תחילת מילה (" + q297 + "), \"בלי\" עם כוכבית (" + n297 + ")",
                         w297.equals("א") && q297.equals("א,ב") && n297.equals("א"));
+                // מבנה 306: סינון בתוך התוצאות של רשימה חכמה — רק מה שהרשימה כבר מצאה, ורק מה שעונה גם על הסינון
+                String l306 = "חשבון " + all282, f306 = names282(lib.list(SmartLists.within(l306, "א"))),
+                        n306 = names282(lib.list(SmartLists.within(l306, "-\"ב"))), e306 = names282(lib.list(SmartLists.within(l306, ""))),
+                        x306 = names282(lib.list(SmartLists.within(l306, "אין-כזה-306"))), o306 = names282(lib.list(SmartLists.within(l306, "סוג:txt")));
+                o.check("מבנה 306: סינון בתוך התוצאות — מילה (" + f306 + "), \"בלי\" (" + n306 + "), ריק — הרשימה כולה (" + e306 + "), מה שאין (" + x306
+                                + "), תנאי (" + o306 + "); בלי תנאי של רשימה — כלום",
+                        f306.equals("א") && n306.equals("א") && e306.equals("א,ב") && x306.isEmpty() && o306.equals("א,ב")
+                                && lib.list(SmartLists.within("", "חשבון")).hits.isEmpty());
                 // מבנה 283: התנאי שהמסך בונה (Cond.inList) — אותו חיפוש
                 String sl283 = names282(lib.list("חשבון " + Cond.inList(m282, java.util.Arrays.asList("מסמכים", "Abc")))),
                         sh283 = names282(lib.list("חשבון " + Cond.inList(m282, new ArrayList<String>())));

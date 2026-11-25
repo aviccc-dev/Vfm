@@ -26,6 +26,15 @@ public final class SmartForm {
      * מבנה 281 (אפיון החיפוש, 7–8; המשתמש: "כאשר אני נוגע בשורת החיפוש, מה שקיים בה נצבע" · "הכל"): שורת החיפוש — נגיעה ראשונה
      * בוחרת את כל מה שכתוב (הקלדה מחליפה; נגיעה נוספת — הסמן במקום), ו־✕ בקצה מנקה בנגיעה אחת (רק כשיש מה לנקות).
      */
+    /** מבנה 306: כל שינוי בשדה — מריץ. */
+    public static void onChange(EditText field, final Runnable run) {
+        field.addTextChangedListener(new TextWatcher() {
+            @Override public void beforeTextChanged(CharSequence s, int st, int c, int af) { }
+            @Override public void onTextChanged(CharSequence s, int st, int b, int c) { }
+            @Override public void afterTextChanged(Editable e) { run.run(); }
+        });
+    }
+
     public static LinearLayout fieldRow(final Activity a, final EditText input) {
         input.setSelectAllOnFocus(true);
         LinearLayout row = new LinearLayout(a);
