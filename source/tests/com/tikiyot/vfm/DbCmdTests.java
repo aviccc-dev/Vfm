@@ -1853,6 +1853,50 @@ final class DbCmdTests {
                                     && g308.note.contains(Words.Find.scopeRemoved("Abc")) && Words.Find.scopeRemoved("א").equals("הרשימה \"א\" הוסרה או שאינה קיימת")
                                     && !names282(up308).isEmpty() && (up308.note == null || !up308.note.contains("הוסרה")));
                 }
+                // מבנה 309 (המשתמש, 25.11.2026: "גיבוי יחזור רק לאופן שחזור… תיפתח רשימה חדשה בשם האופן והתאריך"): הגיבוי — לרשימה
+                // חדשה באופן "שחזור"; האופן והגיבוי לא משתנים
+                {
+                    final int[] n309 = new int[4];
+                    Db.write(Db.app, m282, Backups.OP_DELETE, new Db.Use<Void>() {    // עותק "לפני" — הגיבוי שיוחזר
+                        @Override public Void run(SqlStore st) {
+                            n309[0] = st.lists().size();
+                            n309[1] = DbScope.in(st, m282, new ArrayList<String>()).files.size();
+                            return null;
+                        }
+                    });
+                    Backups.Entry e309 = null;
+                    for (Backups.Entry e : Db.backupsOf(Db.app, m282).list()) if (e309 == null && !e.text) e309 = e;
+                    String sha309 = e309 == null ? "" : Backups.sha(e309.file);
+                    final DbRestore.Res r309 = DbRestore.toList(Db.app, m282, null, Reserved.FILES),
+                            again309 = DbRestore.toList(Db.app, m282, e309 == null ? "?" : e309.name, Reserved.FILES),
+                            none309 = DbRestore.toList(Db.app, "אין אופן 309", null, Reserved.FILES),
+                            wrong309 = DbRestore.toList(Db.app, m282, "אין גיבוי כזה.db", Reserved.FILES);
+                    final String[] in309 = {""};
+                    if (r309.ok) Db.read(Db.app, DbRestore.MODE, new Db.Use<Void>() {
+                        @Override public Void run(SqlStore st) {
+                            DbScope.Res all = DbScope.in(st, DbRestore.MODE, java.util.Arrays.asList(r309.list));
+                            n309[2] = all.error != null ? -1 : all.files.size();
+                            long id = DbPaths.find(st, DbRestore.MODE, java.util.Arrays.asList(r309.list));
+                            for (Store.Member m : st.members(id)) in309[0] += m.item.name + ",";
+                            return null;
+                        }
+                    });
+                    Db.read(Db.app, m282, new Db.Use<Void>() {
+                        @Override public Void run(SqlStore st) { n309[3] = st.lists().size(); return null; }
+                    });
+                    o.check("מבנה 309: גיבוי של אופן חוזר לרשימה חדשה באופן \"שחזור\" (" + r309.text + "); בתוכה מה שהיה (" + in309[0] + " " + n309[2]
+                                    + " קבצים מתוך " + n309[1] + "); פעם שנייה — רשימה נוספת (" + again309.list + "); האופן והגיבוי לא השתנו; בלי גיבוי — נאמר ("
+                                    + none309.text + " · " + wrong309.text + ")",
+                            e309 != null && r309.ok && r309.items > 0 && r309.list.equals(DbRestore.listName(m282, e309.time()))
+                                    && r309.list.startsWith(m282 + " ") && !r309.list.contains(":") && in309[0].contains("ניירת 307,")
+                                    && in309[0].contains("חכמה 307 א,") && n309[1] > 0 && n309[2] == n309[1] && n309[3] == n309[0]
+                                    && again309.ok && again309.list.equals(r309.list + " (2)") && sha309.equals(Backups.sha(e309.file))
+                                    && r309.text.contains(DbRestore.MODE) && r309.text.contains(r309.list)
+                                    && !none309.ok && none309.text.equals(Words.DbCmd.restoreBkNone("אין אופן 309"))
+                                    && !wrong309.ok && wrong309.text.equals(Words.DbCmd.restoreBkNoSuch(m282, "אין גיבוי כזה.db"))
+                                    && DbRestore.MODE.equals("שחזור"));
+                    go("המשך ()\nבטל אופן \"" + DbRestore.MODE + "\"\n", here, vars, lib);
+                }
                 go("המשך ()\nבטל אופן \"" + m282 + "\"\n", here, vars, lib);
             }
         } catch (Throwable t) {

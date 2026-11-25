@@ -2602,6 +2602,27 @@ public final class Words {
             return names.size() == 1 ? " · עודכן קובץ פקודות אחד שפונה לרשימה: " + sb : " · עודכנו " + names.size() + " קובצי פקודות שפונים לרשימה: " + sb;
         }
 
+        /** מבנה 309: גיבוי של אופן חוזר לרשימה חדשה באופן "שחזור" (DbRestore). */
+        public static final String RESTORE_BK_TEXT = "גיבוי טקסט אינו חוזר לרשימה — לבחור עותק של המסד (‎.db)",
+                RESTORE_BK_NO_MODE = "האופן \"שחזור\" לא נפתח — הגיבוי לא הוחזר";
+
+        public static String restoreBkNone(String mode) {
+            return "אין גיבוי תקין של האופן \"" + mode + "\"";
+        }
+
+        public static String restoreBkNoSuch(String mode, String name) {
+            return "אין גיבוי בשם \"" + name + "\" לאופן \"" + mode + "\"";
+        }
+
+        public static String restoreBkBad(String name) {
+            return "הגיבוי \"" + name + "\" אינו תקין — לא הוחזר";
+        }
+
+        public static String restoreBkDone(String mode, String when, String to, String list, int n) {
+            return "הגיבוי של \"" + mode + "\" מ־" + when + " הוחזר לאופן \"" + to + "\", לרשימה \"" + list + "\" (" + n
+                    + " פריטים). האופן \"" + mode + "\" והגיבוי לא השתנו";
+        }
+
         /** מבנה 307: רשימה ששינתה שם — גם הרשימות החכמות שמחפשות בה ("רשימה:") מקבלות את השם החדש. */
         public static final String FOLLOW_SMART_FAILED = " · ⚠ הרשימות החכמות שמחפשות ברשימה לא עודכנו (הפרטים ביומן)";
 
