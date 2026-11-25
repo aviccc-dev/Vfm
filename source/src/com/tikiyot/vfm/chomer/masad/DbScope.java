@@ -86,6 +86,45 @@ final class DbScope {
         }
     }
 
+    /**
+     * מבנה 307 (המשתמש, 25.11.2026: "א" — חיפוש שנשמר מתוך רשימה נשאר ברשימה; "כל שינוי ומחיקת רשימה — כל מה שקשור אליה מה
+     * יעשה"): רשימה ששינתה שם (id: from ← to, באופן mode; s — המסד אחרי השינוי). תנאי שיש בו "רשימה:" שפונה אליה — חוזר עם
+     * השם החדש; לא פונה — null. "פונה" — הכלל של קובצי הפקודות (Verbs.renamed, מ0.42): הדרך עם השם החדש מובילה לאותה רשימה,
+     * והישנה אינה מובילה לאחרת. מוחלף רק השם; שאר הרכיבים — כמו שנכתבו (גם "-רשימה:").
+     */
+    static String renamed(String cond, Store s, String mode, long id, String from, String to) {
+        if (cond == null || from == null || to == null || from.equals(to) || cond.indexOf(Cond.LIST) < 0) return null;
+        StringBuilder out = new StringBuilder();
+        boolean changed = false;
+        for (String token : Cond.tokens(cond)) {
+            String not = token.length() > 1 && token.startsWith(Cond.NOT) && !token.startsWith(Cond.NOT + Cond.NOT) ? Cond.NOT : "";
+            String body = token.substring(not.length());
+            int c = body.indexOf(':');
+            List<String> segs = Cond.keyIs(body, Cond.LIST) ? Names.parsePath(body.substring(c + 1)) : new ArrayList<String>();
+            if (segs.size() > 1 && Text.norm(segs.get(0)).equals(Text.norm(mode))) {
+                List<String> path = new ArrayList<String>(segs.subList(1, segs.size()));
+                boolean mine = false;
+                for (int k = 0; k < path.size(); k++) {
+                    if (!path.get(k).trim().equals(from)) continue;
+                    List<String> q = new ArrayList<String>(path.subList(0, k + 1));
+                    long was = DbPaths.find(s, mode, q);
+                    if (was != 0 && was != id) continue;                       // הישנה מובילה לרשימה אחרת — היא לא שלנו
+                    q.set(k, to);
+                    if (DbPaths.find(s, mode, q) != id) continue;
+                    path.set(k, to);
+                    mine = true;
+                }
+                if (mine) {
+                    path.add(0, segs.get(0));
+                    body = body.substring(0, c + 1) + Names.pathText(path);
+                    changed = true;
+                }
+            }
+            out.append(out.length() > 0 ? " " : "").append(not).append(Cond.quoteToken(body));
+        }
+        return changed ? out.toString() : null;
+    }
+
     /** בתוך מסד פתוח: path — הרשימות מתחת לבית (מנורמלות); ריקה — הבית. */
     static Res in(Store s, String mode, List<String> path) {
         Res r = new Res();

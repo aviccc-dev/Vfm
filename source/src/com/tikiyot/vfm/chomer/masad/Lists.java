@@ -277,6 +277,31 @@ final class Lists {
         return out;
     }
 
+    /**
+     * מבנה 307: אחרי שינוי שם של רשימה ידנית — הרשימות החכמות של האופן שמחפשות בה ("רשימה:", DbScope.renamed) מקבלות את השם
+     * החדש, בעסקה אחת. מחזיר את השמות שלהן (להודעה). רק באופן של הרשימה; רשימה חכמה באופן אחר שפונה לכאן — לא.
+     */
+    static List<String> scopeRenamed(Store s, String mode, long id, String from, String to) {
+        List<String> done = new ArrayList<String>();
+        Store.Item it = s.item(id);
+        if (it == null || it.type != Store.LIST) return done;
+        final java.util.Map<Long, String> now = new java.util.LinkedHashMap<Long, String>();
+        for (Store.Item sm : s.smarts()) {
+            String n = DbScope.renamed(s.prop(sm.id, Store.P_COND), s, mode, id, from, to);
+            if (n == null) continue;
+            now.put(sm.id, n);
+            done.add(sm.name);
+        }
+        if (now.isEmpty()) return done;
+        s.atomic(new Store.Work() {
+            @Override
+            public void run(Store t) {
+                for (java.util.Map.Entry<Long, String> e : now.entrySet()) t.setProp(e.getKey(), Store.P_COND, e.getValue());
+            }
+        }, true);
+        return done;
+    }
+
     /** מבנה 105: מה שבטופס של רשימה חכמה קיימת — לפי SMART_FORM (כדי לתת לאחרת את ההגדרות שלה). */
     static java.util.Map<String, String> smartProps(Store s, long id) {
         java.util.Map<String, String> m = new java.util.HashMap<String, String>();

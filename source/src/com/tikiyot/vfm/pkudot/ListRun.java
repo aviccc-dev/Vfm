@@ -86,13 +86,19 @@ final class ListRun {
     static void follow(Store s, String mode, DbListCmd.Res r) {
         try {
             List<File> fs = Shortcuts.listRenamed(s, mode, r.renamed, r.renamedFrom, r.renamedTo);
-            if (fs.isEmpty()) return;
             List<String> names = new ArrayList<String>();
             for (File f : fs) names.add(Text.stem(f.getName()));
-            r.text = (r.text == null ? "" : r.text) + Words.DbCmd.followed(names);
+            if (!names.isEmpty()) r.text = (r.text == null ? "" : r.text) + Words.DbCmd.followed(names);
         } catch (Throwable t) {
             Log.e("DbListCmd.follow", t);
             r.text = (r.text == null ? "" : r.text) + Words.DbCmd.FOLLOW_FAILED;
+        }
+        try {                                                                    // מבנה 307: גם הרשימות החכמות שמחפשות בה
+            List<String> smarts = Lists.scopeRenamed(s, mode, r.renamed, r.renamedFrom, r.renamedTo);
+            if (!smarts.isEmpty()) r.text = (r.text == null ? "" : r.text) + Words.DbCmd.followedSmart(smarts);
+        } catch (Throwable t) {
+            Log.e("DbListCmd.follow — רשימות חכמות", t);
+            r.text = (r.text == null ? "" : r.text) + Words.DbCmd.FOLLOW_SMART_FAILED;
         }
     }
 }

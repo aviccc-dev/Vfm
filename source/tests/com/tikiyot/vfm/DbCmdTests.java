@@ -1799,6 +1799,52 @@ final class DbCmdTests {
                             bad(r301).isEmpty() && a301.equals("א,ב") && b301.equals("א,ב") && c301.equals("א") && w1 == w0
                                     && d301.equals("א,ב,ג") && w2 == w1 + 1 && e301.equals(d301) && DbScope.walks == w2);
                 }
+                // מבנה 307 (המשתמש, 25.11.2026): רשימה ששינתה שם — הרשימות החכמות שמחפשות בה ("רשימה:") מקבלות את השם החדש, ונאמר
+                {
+                    final String c307a = "חשבון " + Cond.inList(m282, java.util.Arrays.asList("מסמכים", "Abc")),
+                            c307b = "סוג:txt -" + Cond.inList(m282, java.util.Arrays.asList("מסמכים")), c307c = "חשבון מסמכים",
+                            c307d = "חשבון " + Cond.inList("אופן אחר 307", java.util.Arrays.asList("מסמכים"));
+                    final long[] id307 = new long[1];
+                    final String[] pure307 = new String[4];
+                    Db.write(Db.app, m282, null, new Db.Use<Void>() {
+                        @Override public Void run(SqlStore st) {
+                            Lists.saveSmart(st, 0, 0, "חכמה 307 א", c307a, null);
+                            Lists.saveSmart(st, 0, 0, "חכמה 307 ב", c307b, null);
+                            Lists.saveSmart(st, 0, 0, "חכמה 307 ג", c307c, null);
+                            Lists.saveSmart(st, 0, 0, "חכמה 307 ד", c307d, null);
+                            id307[0] = DbPaths.find(st, m282, java.util.Arrays.asList("מסמכים"));
+                            // הכלל לבדו, לפני שינוי השם: השם החדש עוד אינו מוביל לרשימה — אין מה להחליף
+                            pure307[0] = String.valueOf(DbScope.renamed(c307a, st, m282, id307[0], "מסמכים", "ניירת 307"));
+                            return null;
+                        }
+                    });
+                    String before307 = names282(lib.list(c307a));
+                    List<String> r307 = go("המשך ()\nאופן \"" + m282 + "\"\nREN ידנית \"מסמכים\" \"ניירת 307\"\n", here, vars, lib);
+                    final Map<String, String> now307 = new java.util.HashMap<String, String>();
+                    Db.read(Db.app, m282, new Db.Use<Void>() {
+                        @Override public Void run(SqlStore st) {
+                            for (Store.Item it : st.smarts()) now307.put(it.name, st.prop(it.id, Store.P_COND));
+                            pure307[1] = String.valueOf(DbScope.renamed(c307c, st, m282, id307[0], "מסמכים", "ניירת 307"));          // מילה, לא "רשימה:"
+                            pure307[2] = String.valueOf(DbScope.renamed(c307d, st, m282, id307[0], "מסמכים", "ניירת 307"));          // אופן אחר
+                            pure307[3] = String.valueOf(DbScope.renamed(c307a, st, m282, id307[0] + 999, "מסמכים", "ניירת 307"));    // רשימה אחרת
+                            return null;
+                        }
+                    });
+                    String want307a = "חשבון " + Cond.inList(m282, java.util.Arrays.asList("ניירת 307", "Abc")),
+                            want307b = "סוג:txt -" + Cond.inList(m282, java.util.Arrays.asList("ניירת 307"));
+                    String after307 = names282(lib.list(String.valueOf(now307.get("חכמה 307 א")))), old307 = lib.list(c307a).note;
+                    String said307 = String.valueOf(r307);
+                    o.check("מבנה 307: שינוי שם של רשימה — הרשימות החכמות שמחפשות בה מקבלות את השם החדש (" + now307.get("חכמה 307 א") + " · "
+                                    + now307.get("חכמה 307 ב") + "), וממשיכות למצוא (" + before307 + " ← " + after307 + "); מילה רגילה ואופן אחר — לא נוגעים; "
+                                    + "ונאמר בהודעה " + bad(r307),
+                            bad(r307).isEmpty() && want307a.equals(now307.get("חכמה 307 א")) && want307b.equals(now307.get("חכמה 307 ב"))
+                                    && c307c.equals(now307.get("חכמה 307 ג")) && c307d.equals(now307.get("חכמה 307 ד"))
+                                    && before307.equals("ב") && after307.equals("ב") && old307 != null && old307.contains("לא נעשה")
+                                    && "null".equals(pure307[0]) && "null".equals(pure307[1]) && "null".equals(pure307[2]) && "null".equals(pure307[3])
+                                    && said307.contains("רשימות חכמות שמחפשות ברשימה: ") && said307.contains("חכמה 307 א, חכמה 307 ב")   // ועוד אחת מ־287
+                                    && Words.DbCmd.followedSmart(java.util.Arrays.asList("א", "ב")).equals(" · עודכנו 2 רשימות חכמות שמחפשות ברשימה: א, ב")
+                                    && Words.DbCmd.followedSmart(java.util.Arrays.asList("א")).equals(" · עודכנה רשימה חכמה אחת שמחפשת ברשימה: א"));
+                }
                 go("המשך ()\nבטל אופן \"" + m282 + "\"\n", here, vars, lib);
             }
         } catch (Throwable t) {

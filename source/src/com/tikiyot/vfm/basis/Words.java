@@ -2597,6 +2597,16 @@ public final class Words {
             return names.size() == 1 ? " · עודכן קובץ פקודות אחד שפונה לרשימה: " + sb : " · עודכנו " + names.size() + " קובצי פקודות שפונים לרשימה: " + sb;
         }
 
+        /** מבנה 307: רשימה ששינתה שם — גם הרשימות החכמות שמחפשות בה ("רשימה:") מקבלות את השם החדש. */
+        public static final String FOLLOW_SMART_FAILED = " · ⚠ הרשימות החכמות שמחפשות ברשימה לא עודכנו (הפרטים ביומן)";
+
+        public static String followedSmart(java.util.List<String> names) {
+            StringBuilder sb = new StringBuilder();
+            for (String n : names) sb.append(sb.length() > 0 ? ", " : "").append(n);
+            return names.size() == 1 ? " · עודכנה רשימה חכמה אחת שמחפשת ברשימה: " + sb
+                    : " · עודכנו " + names.size() + " רשימות חכמות שמחפשות ברשימה: " + sb;
+        }
+
         // מ0.42 — ודא מסד · ודא … באינדקס · צור אופן
         public static final String VERIFY_DB_WHAT = "המסד — המנוע מול ה־SQLite של המכשיר, ותקינות המסד של כל אופן";
 
