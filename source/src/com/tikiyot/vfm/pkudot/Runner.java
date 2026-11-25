@@ -302,7 +302,8 @@ final class Runner {
 
     static int kind(Batch.Step s) {
         if (s.cmd.equals("MD")) return K_CREATE;
-        if (s.cmd.equals("DEL") || s.cmd.equals("RD") || s.cmd.equals(Syntax.PURGE) || s.cmd.equals(Syntax.DROP_MODE)) return K_DELETE;   // מ0.45
+        if (s.cmd.equals("DEL") || s.cmd.equals("RD") || s.cmd.equals(Syntax.PURGE) || s.cmd.equals(Syntax.DROP_MODE)
+                || s.cmd.equals(Syntax.RESTORE_DROP)) return K_DELETE;   // מ0.45; מבנה 310
         if (s.cmd.equals("COPY") || s.cmd.equals("MOVE") || s.cmd.equals("REN")) return s.share ? K_READ : K_CHANGE;
         return K_READ;
     }

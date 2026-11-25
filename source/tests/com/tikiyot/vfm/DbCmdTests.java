@@ -1895,6 +1895,25 @@ final class DbCmdTests {
                                     && !none309.ok && none309.text.equals(Words.DbCmd.restoreBkNone("אין אופן 309"))
                                     && !wrong309.ok && wrong309.text.equals(Words.DbCmd.restoreBkNoSuch(m282, "אין גיבוי כזה.db"))
                                     && DbRestore.MODE.equals("שחזור"));
+                    // מבנה 310 (המשתמש: "ומה הבעיה שהבדיקה גם תמחק אותה. ועל הדרך תוסיף בפקודה מחיקה סופית"): שתי הפקודות
+                    String s310 = String.valueOf(go("המשך ()\nשחזר גיבוי \"" + m282 + "\" \"שם 310\"\nודא אופן \"" + DbRestore.MODE + "\" קיים\n"
+                            + "בטל שחזור \"שם 310\"\nבטל שחזור \"שם 310\"\nשחזר גיבוי \"אין אופן 310\"\n", here, vars, lib));
+                    final boolean[] left310 = {true};
+                    Db.read(Db.app, DbRestore.MODE, new Db.Use<Void>() {
+                        @Override public Void run(SqlStore st) {
+                            left310[0] = DbPaths.find(st, DbRestore.MODE, java.util.Arrays.asList("שם 310")) != 0;
+                            return null;
+                        }
+                    });
+                    o.check("מבנה 310: \"שחזר גיבוי\" (בשם שנכתב) ו\"בטל שחזור\" (פעם שנייה — בלי שינוי, לא כישלון); בלי גיבוי — נאמר; צורה שגויה — נעצרת בתכנון " + s310,
+                            s310.contains("לרשימה \"שם 310\"") && s310.contains(Words.DbCmd.restoreDropped("שם 310", DbRestore.MODE))
+                                    && s310.contains(Words.DbCmd.restoreDropNone("שם 310", DbRestore.MODE)) && s310.contains(Words.DbCmd.restoreBkNone("אין אופן 310"))
+                                    && !left310[0] && Batch.plan("שחזר גיבוי\n", here, vars, lib).blocked() && Batch.plan("בטל שחזור\n", here, vars, lib).blocked()
+                                    && Batch.plan("שחזר גיבוי \"א\" \"ב/ג\"\n", here, vars, lib).blocked()
+                                    && !Batch.plan("שחזר גיבוי \"א\" \"ב\" \"יומי 2026-11-24.db\"\n", here, vars, lib).blocked()
+                                    && Commands.get(Syntax.RESTORE_BK) != null && Commands.get(Syntax.RESTORE_DROP) != null
+                                    && !CmdMatrix.skipped(Syntax.RESTORE_BK) && !CmdMatrix.skipped(Syntax.RESTORE_DROP)
+                                    && CmdMatrix.text(true).contains("בטל שחזור \"" + CmdMatrix.LIST + " — שחזור "));
                     go("המשך ()\nבטל אופן \"" + DbRestore.MODE + "\"\n", here, vars, lib);
                 }
                 go("המשך ()\nבטל אופן \"" + m282 + "\"\n", here, vars, lib);

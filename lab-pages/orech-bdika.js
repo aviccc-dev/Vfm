@@ -190,6 +190,13 @@ const wait=ms=>new Promise(r=>setTimeout(r,ms));
   say('תוכנה שאינה מכירה עיצוב: אין פרטים, אין בתפריט, לא מוצעת בהקלדה, והשורה נשארת כמו שהיא',b.Mo.compat.design===false&&b.Mo.CMDS['עצב'].det.length===0
     &&b.Mo.CMDS['עצב'].auto===true&&!b.it('עיצוב')&&b.Mo.fromLine(l0)===null&&rawRow&&b.get().split('\n')[0]===l0&&!b.er.length);
   b.W.close();
+  // גרסה 25 (מבנה 310): "שחזר גיבוי" ו"בטל שחזור" — נקראות ונכתבות; מוצעות רק בתוכנה שאומרת שהיא מכירה (info.features: restore)
+  const r=page({}),r0=page({__noRestore:true}),l1='שחזר גיבוי "מסמכים"',l2='בטל שחזור "מסמכים 24.11.2026 14.30"';
+  const offered=p=>p.Mo.menu().some(g=>g[1].indexOf('שחזר גיבוי')>=0&&g[1].indexOf('בטל שחזור')>=0);
+  r.set(l1+'\n'+l2+'\n');
+  say('גרסה 25: "שחזר גיבוי" ו"בטל שחזור" — נקראות ונכתבות ('+r.get().replace('\n',' · ')+'); בלי restore — לא מוצעות',r.Mo.compat.restore===true&&r0.Mo.compat.restore===false
+    &&!!r.Mo.fromLine(l1)&&!!r.Mo.fromLine(l2)&&r.get().split('\n')[0]===l1&&r.get().split('\n')[1]===l2&&offered(r)&&!offered(r0)&&!r.er.length&&!r0.er.length);
+  r.W.close();r0.W.close();
   // תוכנה כמו מ0.47: מכירה את "עצב", בלי "הפריט", בלי תווית הסוג ובלי נוסח — מוצע רק מה שהיא מסרה
   const c=page({__m047:true});
   c.set('עצב תוכנה /טורים:3\n');c.hit(c.row(0));c.hit(c.chip(0,'פרטים'));

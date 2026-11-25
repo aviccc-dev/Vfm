@@ -227,7 +227,8 @@ final class Commands {
             HE_COMP = "השווה", HE_START = "הפעל", HE_ECHO = "הודעה", HE_REM = "הערה",   // תחביר
             HE_MD = "צור תיקייה", HE_RD = "מחק תיקייה", HE_DEEP = "/עמוק", HE_HIDDEN = "/נסתרים";   // תחביר
     private static final String[][] TWO_WORDS = {{HE_MD, "MD"}, {HE_RD, "RD"},
-            {Words.DbCmd.N_DROP_MODE, Syntax.DROP_MODE}, {Words.DbCmd.N_DROP_MODE_OLD, Syntax.DROP_MODE}, {Words.DbCmd.N_UNTRASH, Syntax.UNTRASH}, {Words.Cmd.N_EXAMPLES, Syntax.EXAMPLES}, {Words.DbCmd.N_PURGE, Syntax.PURGE}};   // מ0.45
+            {Words.DbCmd.N_DROP_MODE, Syntax.DROP_MODE}, {Words.DbCmd.N_DROP_MODE_OLD, Syntax.DROP_MODE}, {Words.DbCmd.N_UNTRASH, Syntax.UNTRASH}, {Words.Cmd.N_EXAMPLES, Syntax.EXAMPLES}, {Words.DbCmd.N_PURGE, Syntax.PURGE},   // מ0.45
+            {Words.DbCmd.N_RESTORE_BK, Syntax.RESTORE_BK}, {Words.DbCmd.N_RESTORE_DROP, Syntax.RESTORE_DROP}};   // מבנה 310
     static final String[][] HE_SWITCHES = {{HE_DEEP, "/S"}, {HE_HIDDEN, "/A:H"}};
 
     /** השורה בצורה שהמנוע קורא: "צור תיקייה" ← MD, "מחק תיקייה" ← RD, והמתגים העבריים ← האנגליים (מחוץ למרכאות). */
@@ -332,6 +333,10 @@ final class Commands {
             new Def(Syntax.PURGE, Words.DbCmd.N_PURGE, null, Family.FILE, Words.DbCmd.W_PURGE,
                     list(pos(Type.PATH, Words.Def.P_FILE, Words.DbCmd.H_PURGE)), null),
             new Def(Syntax.EXAMPLES, Words.Cmd.N_EXAMPLES, null, Family.FILE, Words.Cmd.W_EXAMPLES, new Param[0], null),   // מבנה 123
+            new Def(Syntax.RESTORE_BK, Words.DbCmd.N_RESTORE_BK, null, Family.FILE, Words.DbCmd.W_RESTORE_BK,   // מבנה 310
+                    list(pos(Type.NAME, Words.DbCmd.N_MODE, Words.DbCmd.H_RESTORE_BK)), null),
+            new Def(Syntax.RESTORE_DROP, Words.DbCmd.N_RESTORE_DROP, null, Family.FILE, Words.DbCmd.W_RESTORE_DROP,
+                    list(pos(Type.NAME, Words.DbCmd.P_RESTORE_LIST, Words.DbCmd.H_RESTORE_DROP)), null),
             new Def(Syntax.SET, Words.Cmd.N_SET, new String[]{Words.Cmd.N_SET}, Family.FILE, Words.Cmd.W_SET,   // מבנה 127
                     list(pos(Type.TEXT, Words.Cmd.P_SET_KEY, Words.Cmd.H_SET_KEY), pos(Type.TEXT, Words.Cmd.P_SET_VALUE, Words.Cmd.H_SET_VALUE)), null),
             new Def(Syntax.PACK, Words.Cmd.N_PACK, new String[]{Words.Cmd.N_PACK}, Family.FILE, Words.Cmd.W_PACK,

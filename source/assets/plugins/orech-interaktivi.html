@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="vfm-plugin" content="עורך אינטראקטיבי">
-<meta name="vfm-plugin-version" content="24">
+<meta name="vfm-plugin-version" content="25">
 <meta name="vfm-lab" content="עורך אינטראקטיבי">
 <meta name="vfm-lab-version" content="8">
 <title>עורך אינטראקטיבי</title>
@@ -137,7 +137,7 @@ button:focus-visible,.fi:focus-visible{outline:2px solid var(--accent);outline-o
 window.VfmEditorModel=(function(){
 "use strict";
 // מ0.40 התוכנה מכירה "תוסף" (הוסף תוסף, פתח תוסף…); הגרסה הקודמת — "מעבדה". העמוד בודק בהתחלה, וכותב מה שהמנוע המותקן מכיר
-const compat={plugins:true,v45:true,n4:true,n15:true,n16:true,design:false,listcolors:false};   // n15 — גרסה 15: התוכנה מכירה "ארוז" ו"פרוס" (info.features: zip)
+const compat={plugins:true,v45:true,n4:true,n15:true,n16:true,design:false,listcolors:false,restore:false};   // n15 — גרסה 15: התוכנה מכירה "ארוז" ו"פרוס" (info.features: zip)
 //   // v45 — מ0.45 ומעלה (מחק אופן, הסל, ודא תקין…); n4 — גרסה 14: התוכנה מכירה "/מגיבוי" ו"ודא רציף"
 const q=s=>'"'+s+'"';
 const qv=v=>/[\s"]/.test(v)||v===''?q(v):v;
@@ -207,6 +207,8 @@ const NEW_N4=['מגיבוי'],NEW_N4_CMDS=['ודא רציף'];
 const NEW_N15_CMDS=['ארוז','פרוס','שחזר דוגמאות'];
 // גרסה 16: הגדר (info.features: set)
 const NEW_N16_CMDS=['הגדר'];
+// גרסה 25: שחזר גיבוי · בטל שחזור (info.features: restore) — גיבוי חוזר לרשימה חדשה באופן "שחזור"
+const NEW_N25_CMDS=['שחזר גיבוי','בטל שחזור'];
 // גרסה 21: עצב · ודא עיצוב (info.features: design) — והפרטים שלהן באים מהתוכנה (setDesign, למטה)
 const NEW_SHAPE_CMDS=['עצב','ודא עיצוב'];
 const DATES=['מהיום','מהשבוע','מהחודש','מהשנה','תאריך אחר'];
@@ -333,6 +335,11 @@ const CMDS={
     slots:[{link:'את',kind:'text',label:'הגדרה'},{link:'ל',kind:'text',label:'ערך'}],det:[]},
   // גרסה 15: ארוז · פרוס · שחזר דוגמאות
   'שחזר דוגמאות':{w:'שחזר דוגמאות',en:'EXAMPLES',read:['EXAMPLES'],form:'fixed',what:'מחזיר את רשימות הדוגמאות (באופן "דוגמאות") למצב ההתחלתי; גיבוי של המסד לפני. קבצים בכונן — לא נוגע',slots:[],det:[]},
+  // גרסה 25: שחזר גיבוי · בטל שחזור
+  'שחזר גיבוי':{w:'שחזר גיבוי',en:'RESTOREBK',read:['RESTOREBK'],form:'name1',what:'מחזיר גיבוי של אופן לרשימה חדשה באופן "שחזור" — כל מה שהיה באופן, בשם האופן והתאריך של הגיבוי. האופן עצמו והגיבוי לא משתנים; משם מעתיקים מה שצריך',
+    slots:[{link:'',kind:'mode',label:'בחירת אופן'}],det:[]},
+  'בטל שחזור':{w:'בטל שחזור',en:'RESTOREDROP',read:['RESTOREDROP'],form:'name1',what:'מוציא רשימה שחזרה מגיבוי מהאופן "שחזור" — לגמרי, עם מה שרק שלה (עותק של המסד לפני). הגיבוי עצמו נשאר',
+    slots:[{link:'',kind:'text',label:'שם הרשימה'}],det:[]},
   'ארוז':{w:'ארוז',en:'PACK',read:['PACK'],what:'אורז תיקייה לקובץ zip לידה (התיקייה נשארת; שם תפוס — "(2)")',
     slots:[{link:'את',kind:'pick',pk:['folder']}],det:[]},
   'פרוס':{w:'פרוס',en:'UNPACK',read:['UNPACK'],what:'פורס קובץ zip לתיקייה חדשה לידו (הקובץ נשאר; שם תפוס — "(2)")',
@@ -376,10 +383,10 @@ const MENU=[
   ['הודעות וכתיבה',['הודעה','הערה','כתוב','דוח']],
   ['בדיקות וזרימה',['ודא','ודא שגיאה','ודא מסד','ודא תקין','ודא רציף','ודא אופן','קטע','המתן','המשך','כלול','לולאה','הדמיה','בדיקה','מדידה']],
   ['כותרת הקובץ',['צלמית','שם','למה']],
-  ['המסד והתוספים',['אופן','צור אופן','בטל אופן','שחזר דוגמאות','גבה','רענן','הגדר','הוסף תוסף','החלף תוסף']]   // גרסה 9: "אופן" — כאן (המשתמש לא מצא אותה ב"רשימות")
+  ['המסד והתוספים',['אופן','צור אופן','בטל אופן','שחזר דוגמאות','שחזר גיבוי','בטל שחזור','גבה','רענן','הגדר','הוסף תוסף','החלף תוסף']]   // גרסה 9: "אופן" — כאן (המשתמש לא מצא אותה ב"רשימות")
 ];
 // מ0.40: "הוסף תוסף" ו"החלף תוסף" ירדו (העמודים עוברים ב"העבר"); בגרסה הקודמת — עדיין בתפריט
-function menu(){return MENU.map(([g,ks])=>[g,(compat.plugins?ks.filter(k=>k!=='הוסף תוסף'&&k!=='החלף תוסף'):ks).filter(k=>compat.v45||NEW045_CMDS.indexOf(k)<0).filter(k=>compat.n4||NEW_N4_CMDS.indexOf(k)<0).filter(k=>compat.n15||NEW_N15_CMDS.indexOf(k)<0).filter(k=>compat.n16||NEW_N16_CMDS.indexOf(k)<0).filter(k=>compat.design||NEW_SHAPE_CMDS.indexOf(k)<0)]).filter(([g,ks])=>ks.length);}
+function menu(){return MENU.map(([g,ks])=>[g,(compat.plugins?ks.filter(k=>k!=='הוסף תוסף'&&k!=='החלף תוסף'):ks).filter(k=>compat.v45||NEW045_CMDS.indexOf(k)<0).filter(k=>compat.n4||NEW_N4_CMDS.indexOf(k)<0).filter(k=>compat.n15||NEW_N15_CMDS.indexOf(k)<0).filter(k=>compat.n16||NEW_N16_CMDS.indexOf(k)<0).filter(k=>compat.restore||NEW_N25_CMDS.indexOf(k)<0).filter(k=>compat.design||NEW_SHAPE_CMDS.indexOf(k)<0)]).filter(([g,ks])=>ks.length);}
 
 // הצורות שנקראות: מילים ← הפקודה (הארוכה קודם)
 const READS=[];
@@ -759,7 +766,8 @@ const can=n=>typeof V[n]==='function';
 Mo.compat.plugins=can('runFile');            // מ0.40 ומעלה
 Mo.compat.v45=can('commandMatrix');          // מ0.45 ומעלה
 Mo.compat.n15=(function(){try{return (' '+(JSON.parse(can('info')?V.info():'{}').features||'')+' ').indexOf(' zip ')>=0;}catch(e){return false;}})();   // גרסה 15: "ארוז", "פרוס"
-Mo.compat.n16=(function(){try{return (' '+(JSON.parse(can('info')?V.info():'{}').features||'')+' ').indexOf(' set ')>=0;}catch(e){return false;}})();   // גרסה 16: "הגדר"
+Mo.compat.n16=(function(){try{return (' '+(JSON.parse(can('info')?V.info():'{}').features||'')+' ').indexOf(' set ')>=0;}catch(e){return false;}})();
+Mo.compat.restore=(function(){try{return (' '+(JSON.parse(can('info')?V.info():'{}').features||'')+' ').indexOf(' restore ')>=0;}catch(e){return false;}})();   // גרסה 25: "שחזר גיבוי", "בטל שחזור"   // גרסה 16: "הגדר"
 Mo.compat.n4=(function(){try{return (' '+(JSON.parse(can('info')?V.info():'{}').features||'')+' ').indexOf(' steady ')>=0;}catch(e){return false;}})();   // גרסה 14: "/מגיבוי", "ודא רציף"
 Mo.compat.listcolors=(function(){try{return (' '+(JSON.parse(can('info')?V.info():'{}').features||'')+' ').indexOf(' listcolors ')>=0;}catch(e){return false;}})();   // גרסה 24: צבעים גם לרשימה
 // גרסה 21: "עצב" — רק לתוכנה שאומרת שהיא מכירה (info.features: design), ומה שהיא מוסרת: המתגים, הערכים והטווחים
@@ -1572,7 +1580,7 @@ function demoBridge(){
       ['הצג תווית','/הצג-תווית:',['כן','לא'],'showTag'],['מוסתר חיוור','/מוסתר-חיוור:',['כן','לא'],'fade'],
       ['צלמית לצד השם','/צלמית-לצד-השם:',['כן','לא'],'side'],['הצג שם','/הצג-שם:',['כן','לא'],'showName']]};
   if(window.__m047){delete DESIGN.shape;delete DESIGN.kinds;delete DESIGN.switches.wording;delete DESIGN.switches['תווית'];DESIGN.texts.pop();}
-  const FEATS='steady dropclean zip set cmdfolders'+(window.__noDesign?'':' design namesize'+(window.__noListColors?'':' listcolors'));   // __noListColors — כמו תוכנה שלפני מבנה 269 (מ0.49 ומטה)
+  const FEATS='steady dropclean zip set cmdfolders'+(window.__noRestore?'':' restore')+(window.__noDesign?'':' design namesize'+(window.__noListColors?'':' listcolors'));   // __noListColors — כמו תוכנה שלפני מבנה 269 (מ0.49 ומטה)
   const files={'/k/גיבוי שבועי.vbat':'הערה גיבוי חודשי\nהעתק "%הורדות%\\חשבוניות" "%כרטיס%\\גיבוי" /עמוק\nמחק "%הורדות%\\זמני\\*.tmp" /נסתרים /תאריך:חודש\nפתח רשימה "עבודה"\nCOPY "%הורדות%\\הסכם.docx" "%כרטיס%"\nצור תיקייה "%כרטיס%\\גיבוי\\חדשה"\nחזור 3\nהודעה סבב %סבב%\nסוף\n:: הערה ישנה\n'};
   const store={};
   const later=(id,v)=>setTimeout(()=>window.vfmResult(id,v),30);

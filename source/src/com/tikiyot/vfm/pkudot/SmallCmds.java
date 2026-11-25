@@ -63,6 +63,8 @@ final class SmallCmds {
             ModeCmds.planDropMode(s, Verbs.withVars(tk.get(1).trim(), vars), sim);
             return true;
         }
+        if (cmd.equals(Syntax.RESTORE_BK)) { RestoreCmd.plan(s, tk, vars, sim); return true; }        // מבנה 310: שחזר גיבוי
+        if (cmd.equals(Syntax.RESTORE_DROP)) { RestoreCmd.planDrop(s, tk, vars, sim); return true; }  // מבנה 310: בטל שחזור
         if (cmd.equals(Syntax.EXAMPLES)) return planExamples(plan, s, cmd, tk, here, vars, sim);   // מבנה 123: שחזר דוגמאות (מה שהמסך עשה בעצמו)
         if (cmd.equals(Syntax.SET)) {                                                  // מבנה 127: הגדר "<הגדרה>" "<ערך>"
             planSet(s, tk, vars, sim);

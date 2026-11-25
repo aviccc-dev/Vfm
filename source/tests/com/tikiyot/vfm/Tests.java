@@ -5696,7 +5696,7 @@ public final class Tests {
     /** 1.22.5: ההגדרה האחת — שלמה, תואמת למנוע, וכל פרמטר עם שם והסבר. */
     private static void v1225() {
         check("1.22.5: פקודות הקבצים — אותן ובאותו סדר (מ0.14: ודא)",
-                java.util.Arrays.equals(Commands.fileNames(), new String[]{"COPY", "MOVE", "DEL", "REN", "MD", "RD", "COMP", "LINK", "VERIFY", "MODE", "CONTINUE", "WRITE", "WAIT", "BACKUP", "REFRESH", "REPORT", "CALL", "START", "ECHO", "REM", "SECTION", "DROPMODE", "UNTRASH", "PURGE", "EXAMPLES", "SET", "PACK", "UNPACK"}));   // מ0.44: קטע; מ0.45: מחק אופן, שחזר מהסל, רוקן סל; מבנה 122: ארוז, פרוס
+                java.util.Arrays.equals(Commands.fileNames(), new String[]{"COPY", "MOVE", "DEL", "REN", "MD", "RD", "COMP", "LINK", "VERIFY", "MODE", "CONTINUE", "WRITE", "WAIT", "BACKUP", "REFRESH", "REPORT", "CALL", "START", "ECHO", "REM", "SECTION", "DROPMODE", "UNTRASH", "PURGE", "EXAMPLES", "RESTOREBK", "RESTOREDROP", "SET", "PACK", "UNPACK"}));   // מ0.44: קטע; מ0.45: מחק אופן, שחזר מהסל, רוקן סל; מבנה 122: ארוז, פרוס; מבנה 310: שחזר גיבוי, בטל שחזור
         check("1.22.5: שמות נרדפים", Commands.canonical("MKDIR").equals("MD") && Commands.canonical("rmdir").equals("RD")
                 && Commands.canonical("ERASE").equals("DEL") && Commands.canonical("RENAME").equals("REN")
                 && Commands.canonical("copy").equals("COPY") && Commands.canonical("FORMAT").equals("FORMAT")

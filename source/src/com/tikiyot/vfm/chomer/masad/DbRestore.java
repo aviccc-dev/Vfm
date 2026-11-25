@@ -53,8 +53,38 @@ final class DbRestore {
         return null;
     }
 
+    /**
+     * מבנה 310 (המשתמש: "תוסיף בפקודה מחיקה סופית"): הרשימה name שבבית של האופן "שחזור" — יוצאת לגמרי, עם מה שרק שלה (כמו כל
+     * מחיקת רשימה; עותק של המסד לפני). אין אופן "שחזור" או אין רשימה כזו — בלי שינוי, ואינו כישלון (ניקוי שאפשר להריץ שוב).
+     */
+    static Res drop(android.content.Context c, final String name) {
+        if (!Db.dbModes(c).contains(MODE)) return new Res(true, Words.DbCmd.restoreDropNone(name, MODE), null, 0);
+        try {
+            return Db.write(c, MODE, Backups.OP_DELETE, new Db.Use<Res>() {
+                @Override
+                public Res run(SqlStore t) {
+                    long home = DbPaths.home(t);
+                    for (Store.Member m : t.members(home)) {
+                        if (m.item.type != Store.LIST || !m.item.name.equals(name)) continue;
+                        Lists.removeFrom(t, home, m.item.id);
+                        return new Res(true, Words.DbCmd.restoreDropped(name, MODE), name, 1);
+                    }
+                    return new Res(true, Words.DbCmd.restoreDropNone(name, MODE), null, 0);
+                }
+            });
+        } catch (Throwable t) {
+            Log.e("DbRestore.drop", t);
+            return new Res(false, Words.Db.failed(String.valueOf(t.getMessage())), null, 0);
+        }
+    }
+
     /** מחזיר את הגיבוי (backup — שם הקובץ; null — האחרון התקין) של srcMode לרשימה חדשה באופן "שחזור". */
-    static Res toList(android.content.Context c, final String srcMode, String backup, Runnable systemFiles) {
+    static Res toList(android.content.Context c, String srcMode, String backup, Runnable systemFiles) {
+        return toList(c, srcMode, backup, null, systemFiles);
+    }
+
+    /** מבנה 310: as — השם של הרשימה החדשה; null — האופן והתאריך של הגיבוי. תפוס — "(2)". */
+    static Res toList(android.content.Context c, final String srcMode, String backup, final String as, Runnable systemFiles) {
         String[] why = {null};
         final Backups.Entry e = pick(Db.backupsOf(c, srcMode), backup, why, srcMode);
         if (e == null) return new Res(false, why[0], null, 0);
@@ -71,7 +101,7 @@ final class DbRestore {
                 @Override
                 public Res run(SqlStore t) {
                     long home = DbPaths.home(t);
-                    String name = DbMore.freeName(t, home, Store.LIST, listName(srcMode, e.time()));
+                    String name = DbMore.freeName(t, home, Store.LIST, as != null ? as : listName(srcMode, e.time()));
                     long into = Lists.newList(t, home, name);
                     int n = 0;
                     long was = DbPaths.home(from);

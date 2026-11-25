@@ -211,6 +211,14 @@ final class CmdMatrix {
             out.add("מחק \"" + d("לסל " + k + ".txt") + "\"");
             out.add(Commands.word(def) + " \"" + d("לסל " + k + ".txt") + "\"" + sw);
             out.add("ודא \"" + d("לסל " + k + ".txt") + "\" /בסל:0");
+        } else if (name.equals(Syntax.RESTORE_BK) || name.equals(Syntax.RESTORE_DROP)) {
+            // מבנה 310 (המשתמש: "ומה הבעיה שהבדיקה גם תמחק אותה"): מחיקת רשימה עושה עותק "לפני" — יש גיבוי להחזיר; ומה שחזר — יוצא
+            if (!db) return false;
+            String back = LIST + " — שחזור " + k;
+            out.add("צור תיקייה ידנית \"" + LIST + "/לשחזור " + k + "\"");
+            out.add("בטל ידנית \"" + LIST + "/לשחזור " + k + "\"");
+            out.add(Commands.word(Commands.get(Syntax.RESTORE_BK)) + " \"" + Words.DbCmd.TEST_MODE + "\" \"" + back + "\"" + sw);
+            out.add(Commands.word(Commands.get(Syntax.RESTORE_DROP)) + " \"" + back + "\"" + sw);
         } else {
             return false;                                                        // אין דוגמה — בדיקת המחשב נכשלת על זה
         }

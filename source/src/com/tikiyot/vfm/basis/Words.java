@@ -2602,6 +2602,37 @@ public final class Words {
             return names.size() == 1 ? " · עודכן קובץ פקודות אחד שפונה לרשימה: " + sb : " · עודכנו " + names.size() + " קובצי פקודות שפונים לרשימה: " + sb;
         }
 
+        /** מבנה 310: הפקודות של ההחזרה מגיבוי. */
+        public static final String N_RESTORE_BK = "שחזר גיבוי", N_RESTORE_DROP = "בטל שחזור",  // תחביר
+                W_RESTORE_BK = "מחזיר גיבוי של אופן לרשימה חדשה באופן \"שחזור\" — כל מה שהיה באופן, בשם האופן והתאריך של הגיבוי. "
+                        + "האופן עצמו והגיבוי לא משתנים; משם מעתיקים מה שצריך. אחרי שם האופן אפשר לכתוב שם אחר לרשימה, ואחריו את קובץ הגיבוי "
+                        + "(בלי — האחרון התקין)",
+                H_RESTORE_BK = "האופן שהגיבוי שלו",
+                RESTORE_BK_USAGE = "צורה: שחזר גיבוי \"<אופן>\" [\"<שם הרשימה>\" [\"<קובץ הגיבוי>\"]]",
+                W_RESTORE_DROP = "מוציא רשימה שחזרה מגיבוי מהאופן \"שחזור\" — לגמרי, עם מה שרק שלה (עותק של המסד לפני). הגיבוי עצמו נשאר",
+                P_RESTORE_LIST = "שם הרשימה", H_RESTORE_DROP = "הרשימה שבאופן \"שחזור\"",
+                RESTORE_DROP_USAGE = "צורה: בטל שחזור \"<שם הרשימה>\"";
+
+        public static String restoreBkBadName(String name) {
+            return "\"" + name + "\" אינו שם של רשימה";
+        }
+
+        public static String restoreBkWill(String mode, String to) {
+            return "הגיבוי של \"" + mode + "\" יוחזר לרשימה חדשה באופן \"" + to + "\"";
+        }
+
+        public static String restoreDropWill(String name, String in) {
+            return "הרשימה \"" + name + "\" תצא מהאופן \"" + in + "\" — לגמרי";
+        }
+
+        public static String restoreDropped(String name, String in) {
+            return "הרשימה \"" + name + "\" יצאה מהאופן \"" + in + "\"";
+        }
+
+        public static String restoreDropNone(String name, String in) {
+            return "אין רשימה \"" + name + "\" באופן \"" + in + "\" — בלי שינוי";
+        }
+
         /** מבנה 309: גיבוי של אופן חוזר לרשימה חדשה באופן "שחזור" (DbRestore). */
         public static final String RESTORE_BK_TEXT = "גיבוי טקסט אינו חוזר לרשימה — לבחור עותק של המסד (‎.db)",
                 RESTORE_BK_NO_MODE = "האופן \"שחזור\" לא נפתח — הגיבוי לא הוחזר";

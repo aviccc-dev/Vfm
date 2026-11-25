@@ -73,6 +73,8 @@ final class Syntax {
      * ו"ודא תקין" — כל השורות מתחילת הקטע (או הקובץ) רצו בלי כישלון (לבדיקה שנבנית מהגדרת הפקודות, CmdMatrix).
      */
     static final String DROP_MODE = "DROPMODE", UNTRASH = "UNTRASH", PURGE = "PURGE", OK_SINCE = "OKSINCE";
+    /** מבנה 310: שחזר גיבוי (לרשימה חדשה באופן "שחזור") · בטל שחזור (הרשימה יוצאת משם לגמרי). */
+    static final String RESTORE_BK = "RESTOREBK", RESTORE_DROP = "RESTOREDROP";
     /** מ0.17: קישור — אותה רשימה / אותו פריט גם במקום נוסף (במסד). */
     static final String LINK = "LINK";
     /** מ0.15: עומק מרבי של CALL בתוך CALL. */
